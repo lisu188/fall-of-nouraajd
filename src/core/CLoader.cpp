@@ -1106,6 +1106,7 @@ void CMapLoader::handleObjectLayer(const std::shared_ptr<CMap> &map, const json 
         }
         if (object.contains("properties") && object["properties"].is_object()) {
             const json &objectProperties = object["properties"];
+            CGameObject::PropertyNotificationBatch notificationBatch(*mapObject);
             for (auto &[key, value] : objectProperties.items()) {
                 try {
                     CSerialization::setProperty(mapObject, key, CJsonUtil::clone(value));

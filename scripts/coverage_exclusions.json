@@ -248,13 +248,13 @@
         "231",
         "275",
         "301",
-        "316",
-        "338",
-        "344",
-        "352",
-        "364",
-        "370",
-        "387"
+        "317",
+        "339",
+        "345",
+        "353",
+        "365",
+        "371",
+        "388"
       ]
     },
     {
@@ -801,7 +801,7 @@
       "path": "src/object/CGameObject.h",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "166"
+        "184"
       ]
     },
     {

@@ -40,6 +40,12 @@ CGameObject::~CGameObject() { CPythonOverrides::release(this); }
 
 CGameObject::CGameObject() {}
 
+CGameObject::PropertyNotificationBatch::PropertyNotificationBatch(CGameObject &object) : object(object) {
+    this->object.beginPropertyNotificationBatch();
+}
+
+CGameObject::PropertyNotificationBatch::~PropertyNotificationBatch() { object.endPropertyNotificationBatch(); }
+
 std::shared_ptr<CMap> CGameObject::getMap() {
     auto currentGame = getGame();
     return currentGame ? currentGame->getMap() : nullptr;
@@ -162,6 +168,35 @@ void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> objec
 void CGameObject::notifyPropertyChanged(const std::string &name) {
     signal("propertyChanged", name);
     signal(name + "Changed");
+}
+
+void CGameObject::notifyPropertiesChanged(const std::set<std::string> &names) {
+    if (!names.empty()) {
+        signal("propertiesChanged", names);
+    }
+}
+
+void CGameObject::beginPropertyNotificationBatch() { ++propertyNotificationBatchDepth; }
+
+void CGameObject::endPropertyNotificationBatch() {
+    if (propertyNotificationBatchDepth <= 0) {
+        return;
+    }
+    --propertyNotificationBatchDepth;
+    if (propertyNotificationBatchDepth > 0 || batchedPropertyNotifications.empty()) {
+        return;
+    }
+    auto names = std::move(batchedPropertyNotifications);
+    batchedPropertyNotifications.clear();
+    notifyPropertiesChanged(names);
+}
+
+void CGameObject::recordPropertyChanged(const std::string &name) {
+    if (propertyNotificationBatchDepth > 0) {
+        batchedPropertyNotifications.insert(name);
+        return;
+    }
+    notifyPropertyChanged(name);
 }
 
 bool CGameObject::hasProperty(std::string name) { return this->meta()->has_property<CGameObject>(name, this->ptr()); }

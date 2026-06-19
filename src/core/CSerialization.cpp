@@ -306,6 +306,7 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     }
     if (object && config->is_object() && config->count("properties")) {
         auto properties = &(*config)["properties"];
+        CGameObject::PropertyNotificationBatch notificationBatch(*object);
         for (auto &[key, value] : properties->items()) {
             try {
                 CSerialization::setProperty(object, key, CJsonUtil::alias(config, value));
