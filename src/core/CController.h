@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CObject.h"
 
 class CGameFightPanel;
+class CMap;
 
 class CController : public CGameObject {
     V_META(CController, CGameObject, vstd::meta::empty())
@@ -80,6 +81,8 @@ class CFightController : public CGameObject {
 
     virtual void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 
+    virtual bool isCancelled(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
+
     virtual void setOpponents(std::shared_ptr<CCreature> me, const std::vector<std::shared_ptr<CCreature>> &opponents);
 
     virtual std::shared_ptr<CCreature> selectOpponent(std::shared_ptr<CCreature> me,
@@ -107,6 +110,8 @@ class CPlayerFightController : public CFightController {
 
     void end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
+    bool isCancelled(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
+
     void setOpponents(std::shared_ptr<CCreature> me, const std::vector<std::shared_ptr<CCreature>> &opponents) override;
 
     std::shared_ptr<CCreature> selectOpponent(std::shared_ptr<CCreature> me,
@@ -115,6 +120,11 @@ class CPlayerFightController : public CFightController {
 
   private:
     std::shared_ptr<CGameFightPanel> fightPanel;
+    std::weak_ptr<CMap> encounterMap;
+    std::weak_ptr<CCreature> controlledCreature;
+    bool cancelled = false;
+
+    bool hasCancelledContext(std::shared_ptr<CCreature> me);
 };
 
 // should accept script

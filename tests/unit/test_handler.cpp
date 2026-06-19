@@ -26,12 +26,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "gui/CGui.h"
+#include "gui/panel/CGamePanel.h"
 #include "object/CCreature.h"
+#include "object/CInteraction.h"
 #include "object/CEffect.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 #include "test_harness.h"
+#include "veventloop.h"
 
 #include <SDL.h>
 #include <pybind11/embed.h>
@@ -439,6 +443,44 @@ void test_fight_handler_reports_cancelled_quit_event() {
                 "cancelled combat should publish the interrupted status text");
 }
 
+void test_fight_handler_reports_cancelled_closed_fight_panel() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = CGameLoader::loadGame();
+    CGameLoader::loadGui(game);
+    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
+
+    auto player = game->getMap()->getPlayer();
+    player->setHp(10);
+    auto action = game->createObject<CInteraction>("CInteraction");
+    action->setName("unitPanelCancelledAction");
+    action->setManaCost(0);
+    player->addAction(action);
+
+    auto defender = add_test_creature(game, "unitPanelCancelledDefender", 1, 0);
+    auto gui = game->getGui();
+    bool closed_panel = false;
+    vstd::event_loop<>::instance()->invoke([gui, &closed_panel]() {
+        auto panel = vstd::cast<CGamePanel>(gui->findChild("CGameFightPanel"));
+        expect_true(panel != nullptr, "fight panel should exist while player action selection is waiting");
+        if (panel) {
+            panel->close();
+            closed_panel = true;
+        }
+    });
+
+    const auto result = CFightHandler::fightManyResult(player, {defender});
+
+    expect_true(closed_panel, "test callback should close the fight panel during action selection");
+    expect_true(result.outcome == CFightOutcome::Cancelled, "closed fight panel should cancel combat immediately");
+    expect_true(result.rounds == 1, "panel cancellation during the first action should report the active round");
+    expect_true(result.survivor == player && result.opponent == defender,
+                "panel cancellation should keep participant metadata");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("interrupted") != std::string::npos,
+                "panel cancellation should publish the interrupted status text");
+}
+
 void test_fight_handler_counts_effect_duration_as_progress() {
     auto game = load_empty_game();
     auto attacker = add_test_creature(game, "unitTimedEffectAttacker");
@@ -583,6 +625,7 @@ int main() {
     test_fight_handler_reports_explicit_outcomes_and_final_status();
     test_fight_handler_reports_invalid_result_metadata();
     test_fight_handler_reports_cancelled_quit_event();
+    test_fight_handler_reports_cancelled_closed_fight_panel();
     test_fight_handler_counts_effect_duration_as_progress();
     test_playtest_trace_records_native_limits_and_quest_completion();
     test_fight_handler_records_outcome_trace_metadata();

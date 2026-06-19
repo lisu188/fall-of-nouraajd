@@ -490,6 +490,8 @@ void CFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCre
 
 void CFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {}
 
+bool CFightController::isCancelled(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) { return false; }
+
 void CFightController::setOpponents(std::shared_ptr<CCreature> me,
                                     const std::vector<std::shared_ptr<CCreature>> &opponents) {}
 
@@ -504,31 +506,56 @@ std::shared_ptr<CCreature> CFightController::selectOpponent(std::shared_ptr<CCre
 }
 
 void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    cancelled = false;
+    fightPanel = nullptr;
+    encounterMap.reset();
+    controlledCreature.reset();
     if (!me || !me->getMap() || !me->getMap()->getGame()) {
+        cancelled = true;
         return;
     }
-    vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-        fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
-        fightPanel->setEnemies({opponent});
-        gui->pushChild(fightPanel);
-    });
+    encounterMap = me->getMap();
+    controlledCreature = me;
+    auto gui = me->getMap()->getGame()->getGui();
+    if (!gui) {
+        cancelled = true;
+        return;
+    }
+    fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
+    fightPanel->resetCancellation();
+    fightPanel->setEnemies({opponent});
+    gui->pushChild(fightPanel);
 }
 
 bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     if (!me || !opponent || !me->getMap() || !me->getMap()->getGame()) {
+        cancelled = true;
+        return false;
+    }
+    if (hasCancelledContext(me)) {
+        cancelled = true;
         return false;
     }
     bool used = false;
-    vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-        // TODO: what about mana cost?
-        auto target = fightPanel && fightPanel->getEnemy() ? fightPanel->getEnemy() : opponent;
-        if (fightPanel && target) {
-            if (auto action = fightPanel->selectInteraction()) {
-                me->useAction(action, target);
-                used = true;
-            }
+    auto gui = me->getMap()->getGame()->getGui();
+    if (!gui) {
+        cancelled = true;
+        return false;
+    }
+
+    // TODO: what about mana cost?
+    auto target = fightPanel && fightPanel->getEnemy() ? fightPanel->getEnemy() : opponent;
+    if (fightPanel && target) {
+        if (auto action = fightPanel->selectInteraction()) {
+            me->useAction(action, target);
+            used = true;
         }
-    });
+        if (fightPanel->isCancelled() || hasCancelledContext(me)) {
+            cancelled = true;
+        }
+    } else {
+        cancelled = true;
+    }
     return used;
 }
 
@@ -542,6 +569,14 @@ void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<
             fightPanel = nullptr;
         }
     });
+}
+
+bool CPlayerFightController::isCancelled(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
+    if (cancelled || hasCancelledContext(me)) {
+        cancelled = true;
+        return true;
+    }
+    return false;
 }
 
 void CPlayerFightController::setOpponents(std::shared_ptr<CCreature> me,
@@ -560,4 +595,21 @@ CPlayerFightController::selectOpponent(std::shared_ptr<CCreature> me,
         return fightPanel->getEnemy();
     }
     return CFightController::selectOpponent(me, opponents, opponent);
+}
+
+bool CPlayerFightController::hasCancelledContext(std::shared_ptr<CCreature> me) {
+    auto startedMap = encounterMap.lock();
+    auto controlled = controlledCreature.lock();
+    if (!me || !startedMap || !controlled || controlled != me || me->getMap() != startedMap ||
+        startedMap->getObjectByName(me->getName()) != me) {
+        return true;
+    }
+
+    auto game = me->getGame();
+    if (!game || game->getMap() != startedMap) {
+        return true;
+    }
+
+    auto gui = game->getGui();
+    return !gui || !fightPanel || fightPanel->isCancelled() || gui->findChild(fightPanel) == nullptr;
 }

@@ -413,6 +413,12 @@ CFightResult CFightHandler::fightManyResult(std::shared_ptr<CCreature> attacker,
 
                 if (!CTags::isTagPresent(attacker->getEffects(), CTag::Stun)) {
                     attackerController->control(attacker, current);
+                    if (attackerController->isCancelled(attacker, current)) {
+                        result.outcome = CFightOutcome::Cancelled;
+                        result.survivor = attacker;
+                        result.opponent = current;
+                        break;
+                    }
                     remove_dead_opponents(encounterMap, attacker, opponents, attacker);
                     if (!attacker->isAlive()) {
                         result.outcome = CFightOutcome::AttackerDefeat;
@@ -457,6 +463,12 @@ CFightResult CFightHandler::fightManyResult(std::shared_ptr<CCreature> attacker,
             if (!CTags::isTagPresent(actor->getEffects(), CTag::Stun)) {
                 if (auto controller = actor->getFightController()) {
                     controller->control(actor, attacker);
+                    if (controller->isCancelled(actor, attacker)) {
+                        result.outcome = CFightOutcome::Cancelled;
+                        result.survivor = attacker;
+                        result.opponent = actor;
+                        break;
+                    }
                 }
                 if (!attacker->isAlive()) {
                     remove_dead_opponents(encounterMap, attacker, opponents, attacker);
