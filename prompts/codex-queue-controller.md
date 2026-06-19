@@ -312,23 +312,28 @@ The claim pull request changes only the workbook.
      --body-file "$CLAIM_PR_BODY")
    ```
 
-8. Enable squash auto-merge according to `AGENTS.md`:
+8. Merge the XLSX-only claim PR immediately after confirming the diff touches only
+   `planning/fall_of_nouraajd_issue_proposals.xlsx` and queue validation passed. Do not wait for GitHub Actions on
+   workbook-only claim PRs:
 
    ```bash
    CLAIM_PR_NUMBER=$(gh pr view "$CLAIM_PR_URL" --json number --jq .number)
-   gh pr merge "$CLAIM_PR_NUMBER" --auto --squash
+   gh pr merge "$CLAIM_PR_NUMBER" --squash
    ```
 
-9. Because the remote claim is the concurrency guard, do not start implementation until the claim PR has actually merged. After enabling auto-merge, do not idle solely waiting for checks: record the claim as pending, continue supervising other safe work, and periodically re-check:
+9. Because the remote claim is the concurrency guard, do not start implementation until the claim PR has actually merged. If repository settings block immediate merge, enable auto-merge, record the claim as pending, continue supervising other safe work, and periodically re-check:
 
    ```bash
    gh pr view "$CLAIM_PR_NUMBER" --json state,mergeStateStatus,mergedAt
-   gh pr checks "$CLAIM_PR_NUMBER" || true
    ```
 
 10. Once the PR state is `MERGED`, fetch `origin/main` and verify the workbook there contains the matching issue, owner, and claim ID before creating the implementation branch.
 
 If the claim PR conflicts, fails validation, or cannot merge, do not start implementation. Report the exact blocker and leave the PR intact for review.
+
+Use the same immediate squash-merge rule for heartbeat, reclaim, priority, dependency, or other controller-approved
+queue-state PRs when the reviewed diff is XLSX-only and queue validation passed. Do not poll or wait for GitHub Actions
+on XLSX-only controller coordination PRs.
 
 ## Phase 2: create the implementation worktree
 
@@ -569,7 +574,10 @@ After the implementation PR is actually merged:
 7. Commit only the workbook.
 8. Push the status branch.
 9. Open a workbook-only PR titled `[queue] Complete <ISSUE_KEY>` that links the merged implementation PR.
-10. Enable squash auto-merge. Do not idle solely waiting; continue other safe controller work, but do not unlock dependent issues until the status PR is actually merged.
+10. Merge the XLSX-only status PR immediately with squash merge after confirming the diff touches only
+   `planning/fall_of_nouraajd_issue_proposals.xlsx` and queue validation passed. Do not wait for GitHub Actions on
+   workbook-only terminal-status PRs. If repository settings block immediate merge, enable auto-merge and continue other
+   safe controller work, but do not unlock dependent issues until the status PR is actually merged.
 11. Only after that merge may dependent issues be considered eligible.
 
 For terminal failure states, use the same fresh status-branch process:

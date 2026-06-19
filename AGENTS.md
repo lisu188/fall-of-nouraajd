@@ -16,7 +16,10 @@ When acting as the Codex queue controller for `planning/fall_of_nouraajd_issue_p
 `prompts/codex-queue-controller.md` and `docs/codex-agent-queue.md`.
 
 The workbook on `main` is the single queue source of truth. Controller instances are the only writers of the workbook;
-worker implementation branches must never modify it. Every controller instance must start by generating or recording a
+worker implementation branches must never modify it. Workbook-only queue-state PRs that update only
+`planning/fall_of_nouraajd_issue_proposals.xlsx` are CI-exempt controller coordination changes: after reviewing the diff
+and running queue validation, merge them immediately with squash merge instead of waiting for GitHub Actions. Every
+controller instance must start by generating or recording a
 unique controller ID with `python3 scripts/issue_queue.py controller-id` and use owner names under that prefix, such as
 `controller/<controller-id>/subagent-1`, so concurrent controllers do not collide. Serialize queue state changes through
 workbook-only pull requests. Each claim or terminal status PR should mark exactly one issue unless the controller
@@ -221,8 +224,8 @@ for coverage-relevant changes. Additional Windows, release, MCP gameplay, manual
 needed only when the task explicitly targets that surface or the user requests it. Report local commands, skipped or
 blocked local commands, and CI job names/conclusions separately; never imply a skipped local command passed. When CI
 polling supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge. If
-GitHub merges before polling finishes, continue polling the exact PR head or resulting `main` workflow and report any
-failure as a regression requiring immediate follow-up.
+GitHub merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and
+continue from the merged state.
 
 Windows Release equivalent:
 
