@@ -1,9 +1,10 @@
 # Local Codex agent queue
 
-This workflow lets one controller Codex process coordinate local worker subagents while the committed XLSX workbook
-remains the canonical task queue. The controller owns Git worktrees, queue-state pull requests, implementation pull
-requests, and terminal workbook updates. Worker subagents implement code in isolated branches and must never edit the
-workbook.
+This workflow lets one or more controller Codex processes coordinate local worker subagents while the committed XLSX
+workbook remains the canonical task queue. Controller instances own Git worktrees, queue-state pull requests,
+implementation pull requests, and terminal workbook updates. Worker subagents implement code in isolated branches and
+must never edit the workbook. Each controller instance must use a unique controller ID in its worker owner names so
+concurrent controllers can be distinguished.
 
 ## Files
 
@@ -53,6 +54,18 @@ Validate first:
 python3 scripts/issue_queue.py validate
 ```
 
+Generate a controller identity once at startup and reuse it for every owner string emitted by that controller:
+
+```bash
+CONTROLLER_ID="$(python3 scripts/issue_queue.py controller-id --plain)"
+OWNER_PREFIX="controller/${CONTROLLER_ID}"
+OWNER="${OWNER_PREFIX}/subagent-1"
+python3 scripts/issue_queue.py controller-id --controller-id "$CONTROLLER_ID"
+```
+
+Owner names must include the controller ID, for example `controller/ctrl-host-1234-abcd1234/subagent-1`. Do not use
+generic owners such as `controller/subagent-1`; multiple controllers may be running at the same time.
+
 The queue CLI `claim` command is deterministic: it picks the first eligible row by priority and workbook order. The
 controller workflow requires explicit random selection instead. Before each claim, fetch latest `origin/main`, read the
 merged workbook, and calculate the complete eligible set by excluding:
@@ -83,11 +96,15 @@ the dependency, conflict, highest-priority-tier, randomized story/substory, reso
 dependency, status, or scope change must be approved by the user or controller and merged through a serialized
 workbook-only pull request before it affects dispatch.
 
+Assign one read-only QA role when subagent capacity permits. QA reviews issue selection risk, diff scope, regression
+coverage, validation commands, GitHub Actions evidence, and merge readiness. QA must not claim issues, edit the
+workbook, or start heavy validation unless the controller explicitly delegates a bounded validation task.
+
 After selecting an exact issue, claim that row:
 
 ```bash
 python3 scripts/issue_queue.py claim \
-  --owner controller/subagent-1 \
+  --owner "$OWNER" \
   --lease-minutes 1440 \
   --issue "$ISSUE_NAME"
 ```
@@ -111,7 +128,7 @@ To claim an exact row:
 
 ```bash
 python3 scripts/issue_queue.py claim \
-  --owner controller/subagent-1 \
+  --owner "$OWNER" \
   --issue '[EPIC_01][STORY_01][SUBSTORY_01]Add explicit fight outcome model'
 ```
 
@@ -121,7 +138,7 @@ Generate the exact worker prompt after claiming:
 python3 scripts/issue_queue.py prompt \
   --issue "$ISSUE_NAME" \
   --claim-id "$CLAIM_ID" \
-  --owner controller/subagent-1
+  --owner "$OWNER"
 ```
 
 Alternatively use `claim --format prompt`.
@@ -143,6 +160,10 @@ When eight implementation workers are not safe, prefer assigning one standby sub
 refill decision has a current prioritization brief. When eight safe implementation issues exist, the project manager
 should run as extra read-only capacity rather than displacing an implementation worker.
 
+Assign one standby or extra read-only subagent as QA whenever capacity permits. QA reviews selection risk, diffs,
+tests, GitHub Actions evidence, and merge readiness; it must not claim issues, edit the workbook, or start heavy
+validation unless the controller assigns a bounded QA validation task.
+
 Poll every active worker through the available subagent/task interface. If direct polling is unavailable, require
 structured status updates from the worker.
 
@@ -150,6 +171,7 @@ After every controller loop iteration, cleanup audit, claim or pull-request stat
 work, print a live status table containing at least:
 
 - worker owner;
+- controller ID;
 - issue key;
 - current phase;
 - progress estimate;
@@ -161,6 +183,7 @@ work, print a live status table containing at least:
 - current resource and disk state;
 - cleanup state, including prunable worktree metadata and accumulated run/worktree size when known;
 - project-manager prioritization brief state or the reason no project-manager subagent is available;
+- QA review state or the reason no QA subagent is available;
 - blockers;
 - next controller action.
 
@@ -191,7 +214,7 @@ When the controller needs to persist a heartbeat, it does so from a fresh workbo
 python3 scripts/issue_queue.py heartbeat \
   --issue "$ISSUE_NAME" \
   --claim-id "$CLAIM_ID" \
-  --owner controller/subagent-1 \
+  --owner "$OWNER" \
   --progress 20 \
   --note 'Root cause verified in CFightHandler.cpp and CCreature.cpp'
 ```
@@ -213,7 +236,7 @@ EOF
 python3 scripts/issue_queue.py complete \
   --issue "$ISSUE_NAME" \
   --claim-id "$CLAIM_ID" \
-  --owner controller/subagent-1 \
+  --owner "$OWNER" \
   --summary-file /tmp/task-summary.txt \
   --validation-file /tmp/task-validation.txt
 ```
@@ -255,7 +278,7 @@ Verified source or environment blocker:
 python3 scripts/issue_queue.py block \
   --issue "$ISSUE_NAME" \
   --claim-id "$CLAIM_ID" \
-  --owner controller/subagent-1 \
+  --owner "$OWNER" \
   --note 'Referenced runtime object cannot be confirmed from source'
 ```
 

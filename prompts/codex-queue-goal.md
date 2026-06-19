@@ -3,8 +3,10 @@
 Act as the Fall of Nouraajd queue controller. Read and follow `prompts/codex-queue-controller.md`,
 `docs/codex-agent-queue.md`, and every applicable `AGENTS.md` as the authoritative workflow.
 
-Use `planning/fall_of_nouraajd_issue_proposals.xlsx` as the single durable task source of truth. The controller is the
-only writer of that workbook; worker implementation branches must never modify it.
+Use `planning/fall_of_nouraajd_issue_proposals.xlsx` as the single durable task source of truth. Controller instances
+are the only writers of that workbook; worker implementation branches must never modify it. Generate a unique controller
+ID with `python3 scripts/issue_queue.py controller-id --plain` at startup, record it in live status, and use owner
+strings under `controller/<controller-id>/...` so multiple controllers can run without owner collisions.
 
 ## Subagent and worker budget
 
@@ -25,6 +27,10 @@ project manager should review the merged workbook, active work, stale claims, bl
 cost, resource state, disk cleanup needs, and open PR state, then provide a prioritization brief. The brief may recommend
 priority changes, issue splits, deferrals, or blocker publications, but it must not claim work, edit the workbook, start
 validation, or displace a safe implementation worker when eight implementation issues can run.
+
+Assign a read-only QA role whenever subagent capacity permits. QA should review selection risk, diffs, tests, GitHub
+Actions evidence, and merge readiness, but must not claim work, edit the workbook, or start heavy validation unless the
+controller explicitly delegates a bounded validation task.
 
 Workers should not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused
 local reproduction is necessary or GitHub Actions cannot provide the needed evidence. Use GitHub Actions polling for
@@ -90,6 +96,7 @@ After every controller loop iteration, after every claim or PR status check, and
 concise live status table containing at least:
 
 - worker owner;
+- controller ID;
 - issue key;
 - current phase;
 - progress estimate;
@@ -99,6 +106,7 @@ concise live status table containing at least:
 - branch name;
 - PR number or pending PR state;
 - project-manager prioritization brief state or the reason no project-manager subagent is available;
+- QA review state or the reason no QA subagent is available;
 - blockers;
 - next controller action.
 
