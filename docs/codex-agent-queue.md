@@ -279,6 +279,12 @@ platform, release, MCP gameplay, manual, or issue-specific validation is needed 
 or the user requests it. Do not enable auto-merge until CI-polled validation passes when it is the only full-validation
 evidence.
 
+Workbook-only queue-state PRs that update only `planning/fall_of_nouraajd_issue_proposals.xlsx` are different from
+implementation PRs. After reviewing that the diff is XLSX-only and running `python3 scripts/issue_queue.py validate`,
+merge the claim, terminal-status, heartbeat, reclaim, priority, dependency, or other approved queue-state PR immediately
+with squash merge; do not wait for GitHub Actions to finish. If repository settings block direct merge, enable
+auto-merge and continue controller work instead of idling on Actions.
+
 If the implementation PR has already merged, stop waiting on its Actions run even if a poll command is still running.
 Fetch `origin/main`, verify the merge, and proceed with the next controller step.
 
