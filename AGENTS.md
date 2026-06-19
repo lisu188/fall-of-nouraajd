@@ -41,6 +41,13 @@ After exclusions, keep only the highest currently available priority tier. Group
 randomly select one story with equal probability, then randomly select one eligible substory in that story. Do not fall
 back to spreadsheet order and do not include ineligible rows in the random choice.
 
+Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
+project manager should summarize the highest available priority tier, candidate story groups, dependency unlocks, stale
+or blocked work, validation and resource cost, scope conflicts, and any source-backed priority-change recommendations.
+The role is advisory: it must not claim work, edit files, touch the workbook, start validation, or override dependency,
+conflict, priority-tier, randomized selection, RAM, disk, or PR requirements. Priority, dependency, status, or scope
+changes affect dispatch only after an approved workbook-only pull request merges into `main`.
+
 For each selected issue, merge a workbook-only `IN_PROGRESS` claim PR before implementation starts. After the claim PR
 actually merges, create a fresh implementation worktree from updated `origin/main`, assign exactly one worker subagent,
 and pass it the generated issue prompt plus any controller overrides. Workers must inspect source, verify root cause,
@@ -51,9 +58,9 @@ merges.
 
 After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
 concise live status table. Include worker owner, issue key, phase, progress estimate, last action, changed files,
-running validation command, branch, PR state, disk/RAM state, cleanup state, blockers, and next controller action. Use
-subagent status polling or structured worker updates for live status; the workbook is durable queue state, not the
-live worker-status channel.
+running validation command, branch, PR state, disk/RAM state, cleanup state, project-manager brief state, blockers, and
+next controller action. Use subagent status polling or structured worker updates for live status; the workbook is
+durable queue state, not the live worker-status channel.
 
 For local RAM safety, queue-controller workers must not use high-parallelism builds. Adapt repository build commands
 such as `-j$(nproc)` to `-j1` unless the user explicitly allows a higher count. Recalculate the RAM-safe heavy-job budget
