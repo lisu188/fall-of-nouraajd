@@ -38,6 +38,24 @@ void refresh_proxy_children(const std::shared_ptr<CGameGraphicsObject> &object) 
         refresh_proxy_children(child);
     }
 }
+
+void clear_combat_status(const std::shared_ptr<CGui> &gui, const std::vector<std::shared_ptr<CCreature>> &enemies,
+                         const std::shared_ptr<CCreature> &enemy) {
+    if (gui && gui->getGame() && gui->getGame()->getMap()) {
+        gui->getGame()->getMap()->setStringProperty("combatStatus", "");
+        return;
+    }
+    if (enemy && enemy->getMap()) {
+        enemy->getMap()->setStringProperty("combatStatus", "");
+        return;
+    }
+    for (const auto &candidate : enemies) {
+        if (candidate && candidate->getMap()) {
+            candidate->getMap()->setStringProperty("combatStatus", "");
+            return;
+        }
+    }
+}
 } // namespace
 
 CListView::collection_pointer CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
@@ -159,6 +177,7 @@ void CGameFightPanel::cancel() {
 void CGameFightPanel::resetCancellation() { cancelled = false; }
 
 void CGameFightPanel::close() {
+    clear_combat_status(getGui(), enemies, enemy.lock());
     cancel();
     CGamePanel::close();
 }
@@ -190,6 +209,7 @@ void CGameFightPanel::setEnemies(const std::vector<std::shared_ptr<CCreature>> &
     auto current_it = std::find(enemies.begin(), enemies.end(), current);
     enemy =
         current_it != enemies.end() ? *current_it : (enemies.empty() ? std::shared_ptr<CCreature>() : enemies.front());
+    clear_combat_status(getGui(), enemies, enemy.lock());
     if (enemy.lock()) {
         refreshEncounterViews();
     } else {

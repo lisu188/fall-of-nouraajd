@@ -395,6 +395,9 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
                 "legacy fightMany should still return false for unresolved combat");
     expect_true(stalemate_controller->start_count == 2 && stalemate_controller->end_count == 2,
                 "controller cleanup should also run for the legacy stalemate call");
+    expect_true(stalemate_game->getMap()->getStringProperty("combatStatus").find("stalled after 20 rounds") !=
+                    std::string::npos,
+                "stale-loop termination should publish a diagnostic stalled status");
 
     auto legacy_victory_game = load_empty_game();
     auto legacy_victor = add_test_creature(legacy_victory_game, "unitLegacyOutcomeVictor");
@@ -439,16 +442,22 @@ void test_fight_handler_reports_invalid_result_metadata() {
 
     auto game = load_empty_game();
     auto attacker = add_test_creature(game, "unitInvalidMetadataAttacker");
+    game->getMap()->setStringProperty("combatStatus", "previous encounter status");
     const auto empty_opponents = CFightHandler::fightManyResult(attacker, {});
     expect_true(empty_opponents.outcome == CFightOutcome::Invalid,
                 "combat without active opponents should return invalid");
+    expect_true(game->getMap()->getStringProperty("combatStatus").empty(),
+                "invalid combat without active opponents should clear previous combat status");
 
     auto controllerless = add_test_creature(game, "unitControllerlessAttacker", 2, 0);
     auto defender = add_test_creature(game, "unitControllerlessDefender", 3, 0);
     controllerless->setFightController(nullptr);
+    game->getMap()->setStringProperty("combatStatus", "previous encounter status");
     const auto controllerless_result = CFightHandler::fightManyResult(controllerless, {defender});
     expect_true(controllerless_result.outcome == CFightOutcome::Invalid,
                 "attackers without fight controllers should return invalid");
+    expect_true(game->getMap()->getStringProperty("combatStatus").empty(),
+                "invalid combat without a fight controller should clear previous combat status");
     expect_true(game->getMap()->getObjectByName(defender->getName()) == defender,
                 "invalid controller checks should not mutate active opponents");
 }
@@ -478,8 +487,8 @@ void test_fight_handler_reports_cancelled_quit_event() {
                 "cancelled combat should stay distinct from resolved bool outcomes");
     expect_true(attacker_controller->start_count == 1 && attacker_controller->end_count == 1,
                 "controller cleanup should run when combat is cancelled");
-    expect_true(game->getMap()->getStringProperty("combatStatus").find("interrupted") != std::string::npos,
-                "cancelled combat should publish the interrupted status text");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "cancelled combat should publish the cancelled status text");
 }
 
 void test_fight_handler_reports_cancelled_closed_fight_panel() {
@@ -522,8 +531,51 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
                 "panel cancellation should keep participant metadata");
     expect_true(handler_controller->start_count == 1 && handler_controller->end_count == 1,
                 "controller cleanup should run when combat is cancelled");
-    expect_true(game->getMap()->getStringProperty("combatStatus").find("interrupted") != std::string::npos,
-                "panel cancellation should publish the interrupted status text");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "panel cancellation should publish the cancelled status text");
+}
+
+void test_fight_panel_resets_status_between_sequential_encounters() {
+    auto game = load_empty_game();
+    auto encounterMap = game->getMap();
+
+    auto first_victor = add_test_creature(game, "unitFirstStatusVictor");
+    first_victor->setLabel("First status victor");
+    first_victor->setFightController(std::make_shared<KillingFightController>());
+    auto first_defeated = add_test_creature(game, "unitFirstStatusDefeated", 1, 0);
+
+    const auto first = CFightHandler::fightManyResult(first_victor, {first_defeated});
+    const auto first_status = encounterMap->getStringProperty("combatStatus");
+    expect_true(first.outcome == CFightOutcome::AttackerVictory, "first status-isolation fight should resolve");
+    expect_true(first_status.find("First status victor survives the encounter") != std::string::npos,
+                "first fight should publish an intentional final status");
+
+    auto second_victor = add_test_creature(game, "unitSecondStatusVictor", 2, 0);
+    second_victor->setLabel("Second status victor");
+    second_victor->setFightController(std::make_shared<KillingFightController>());
+    auto second_defeated = add_test_creature(game, "unitSecondStatusDefeated", 3, 0);
+    auto reopened_panel = game->createObject<CGameFightPanel>("CGameFightPanel");
+    expect_true(reopened_panel != nullptr, "headless fight panel should be constructible for status isolation");
+    if (!reopened_panel) {
+        return;
+    }
+
+    reopened_panel->setEnemies({second_defeated});
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "opening a fight panel for a later encounter should not display previous final status");
+
+    encounterMap->setStringProperty("combatStatus", "Combat round 99 begins.");
+    reopened_panel->close();
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "closing a fight panel should clear previous round status");
+
+    const auto second = CFightHandler::fightManyResult(second_victor, {second_defeated});
+    const auto second_status = encounterMap->getStringProperty("combatStatus");
+    expect_true(second.outcome == CFightOutcome::AttackerVictory, "second status-isolation fight should resolve");
+    expect_true(second_status.find("Second status victor survives the encounter") != std::string::npos,
+                "second fight should publish its own final status");
+    expect_true(second_status.find("First status victor") == std::string::npos,
+                "second fight status should not include the previous encounter");
 }
 
 void test_fight_handler_counts_effect_duration_as_progress() {
@@ -728,6 +780,7 @@ int main() {
     test_fight_handler_reports_invalid_result_metadata();
     test_fight_handler_reports_cancelled_quit_event();
     test_fight_handler_reports_cancelled_closed_fight_panel();
+    test_fight_panel_resets_status_between_sequential_encounters();
     test_fight_handler_counts_effect_duration_as_progress();
     test_playtest_trace_records_native_limits_and_quest_completion();
     test_playtest_trace_environment_targets_and_fallback_ids();
