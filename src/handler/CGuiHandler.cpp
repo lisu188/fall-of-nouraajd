@@ -228,11 +228,11 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
 
     game->getGui()->pushChild(panel);
 
-    vstd::wait_until([&]() { return selected != nullptr; });
+    vstd::wait_until([&]() { return selected != nullptr || !panel->getGui(); });
 
     panel->close();
 
-    return *selected;
+    return selected ? *selected : "";
 }
 
 void CGuiHandler::showTooltip(std::string text, int x, int y) {
