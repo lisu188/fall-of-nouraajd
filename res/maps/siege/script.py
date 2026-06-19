@@ -1,5 +1,6 @@
 def load(self, context):
     from game import CTag
+    from game import CCreature
     from game import CEvent
     from game import CQuest
     from game import CTrigger
@@ -71,8 +72,36 @@ def load(self, context):
             self.setStringProperty("animation", "images/misc/closed_door")
             self.setBoolProperty("enabled", False)
             self.setBoolProperty("destroyed", False)
+            self.setBoolProperty("pendingSeal", False)
+
+        def hasCreatureAtGate(self):
+            gate_coords = self.getCoords()
+            occupied = False
+
+            def checkObject(ob):
+                nonlocal occupied
+                coords = ob.getCoords()
+                if (
+                    isinstance(ob, CCreature)
+                    and coords.x == gate_coords.x
+                    and coords.y == gate_coords.y
+                    and coords.z == gate_coords.z
+                ):
+                    occupied = True
+
+            self.getMap().forObjects(checkObject, lambda ob: not occupied)
+            return occupied
+
+        def completePendingSeal(self):
+            if self.hasCreatureAtGate():
+                return
+            self.setBoolProperty("canStep", False)
+            self.setBoolProperty("pendingSeal", False)
 
         def onTurn(self, event):
+            if self.getBoolProperty("destroyed") and self.getBoolProperty("pendingSeal"):
+                self.completePendingSeal()
+                return
             if self.getBoolProperty("enabled") and not self.getBoolProperty("destroyed") and randint(1, 10) == 10:
                 logger("Spawning new creature")
                 if randint(1, 10) == 10:
@@ -91,8 +120,9 @@ def load(self, context):
                 if self.getMap().getGame().getGuiHandler().showQuestion("Do You want to seal the gate?"):
                     self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag(CTag.WAND))
                     self.setBoolProperty("destroyed", True)
+                    self.setBoolProperty("pendingSeal", True)
                     self.setStringProperty("animation", "images/misc/closed_door")
-                    self.setBoolProperty("canStep", False)
+                    self.completePendingSeal()
             else:
                 self.getMap().getGame().getGuiHandler().showInfo("You need a wand to seal the gate!")
 

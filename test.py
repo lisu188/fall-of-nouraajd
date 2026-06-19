@@ -10883,6 +10883,73 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("siege")
 
     @game_test
+    def test_siege_spawn_points_start_closed_and_unsealed(self):
+        _g, game_map, _player = load_game_map_with_player("siege")
+        spawn_names = ["spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"]
+        spawn_states = {}
+
+        for name in spawn_names:
+            spawn_point = find_runtime_object(game_map, name)
+            spawn_states[name] = {
+                "animation": spawn_point.getStringProperty("animation"),
+                "destroyed": spawn_point.getBoolProperty("destroyed"),
+                "enabled": spawn_point.getBoolProperty("enabled"),
+                "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+            }
+            self.assertFalse(spawn_states[name]["enabled"])
+            self.assertFalse(spawn_states[name]["destroyed"])
+            self.assertFalse(spawn_states[name]["pendingSeal"])
+            self.assertEqual("images/misc/closed_door", spawn_states[name]["animation"])
+
+        return True, json.dumps(spawn_states, sort_keys=True)
+
+    @game_test
+    def test_siege_spawn_point_defers_blocking_sealed_occupied_gate(self):
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        game = load_game_module()
+        original_show_question = game.CGuiHandler.showQuestion
+
+        try:
+            game.CGuiHandler.showQuestion = lambda self, message: True
+            _g, game_map, player = load_game_map_with_player("siege")
+            spawn_point = find_runtime_object(game_map, "spawnPoint1")
+            spawn_coords = spawn_point.getCoords()
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+            player.addItem("magicWand")
+            spawn_point.setBoolProperty("enabled", True)
+            spawn_point.setBoolProperty("canStep", True)
+            spawn_point.onEnter(FakeEvent(player))
+
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertTrue(spawn_point.getBoolProperty("canStep"))
+
+            exit_coords = find_adjacent_walkable_tile(game_map, spawn_coords)
+            player.moveTo(exit_coords.x, exit_coords.y, exit_coords.z)
+            spawn_point.onTurn(None)
+
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertFalse(spawn_point.getBoolProperty("canStep"))
+        finally:
+            game.CGuiHandler.showQuestion = original_show_question
+
+        return True, json.dumps(
+            {
+                "canStep": spawn_point.getBoolProperty("canStep"),
+                "destroyed": spawn_point.getBoolProperty("destroyed"),
+                "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_map_walkthrough_test(self):
         return execute_walkthrough("test")
 
