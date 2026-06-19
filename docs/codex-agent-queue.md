@@ -109,10 +109,16 @@ Alternatively use `claim --format prompt`.
 
 ## Live worker status
 
-Keep at most four implementation workers active at once, but make the active worker count RAM-aware. Before dispatching
-or refilling workers, inspect current available RAM, swap pressure, and running heavy build/test/coverage/Xvfb/MCP jobs.
-Set the live worker budget to the smaller of four and the number of workers the machine can support without memory
-pressure. Leave slots empty when RAM is tight, and raise the count again only after the RAM gate clears.
+Keep at least four live subagents attached to the controller whenever the subagent interface is available. Keep four
+implementation issues active whenever four safe, eligible, non-conflicting issues exist, and make that active
+implementation count RAM-aware. Before dispatching or refilling implementation workers, inspect current available RAM,
+swap pressure, and running heavy build/test/coverage/Xvfb/MCP jobs. Set the live implementation worker budget to the
+smaller of four and the number of workers the machine can support without memory pressure. If the controller cannot keep
+four issue workers active, report the concrete eligibility, conflict, status, RAM, or repository-safety blocker.
+
+Standby subagents may help with lightweight status polling, eligibility summaries, or review preparation only when fewer
+than four implementation issues can safely run. They must not claim issues, edit files, touch the workbook, start builds,
+run tests, or launch coverage/Xvfb/MCP validation.
 
 Poll every active worker through the available subagent/task interface. If direct polling is unavailable, require
 structured status updates from the worker.
@@ -241,7 +247,11 @@ python3 scripts/issue_queue.py show --issue "$ISSUE_NAME"
 - Worker implementation branches must not modify `planning/fall_of_nouraajd_issue_proposals.xlsx`.
 - Serialize workbook claim, heartbeat, and terminal-status pull requests; do not keep multiple binary workbook PRs open for merge.
 - To spare RAM, queue-controller workers must use serial local builds such as `-j1` unless the user explicitly allows more parallelism.
-- Do not run multiple heavy build, test, coverage, Xvfb, or MCP validation jobs concurrently across workers.
-- Recalculate the RAM-safe worker budget before each dispatch/refill and before starting heavy validation; fewer than
-  four active workers can still be the correct budget.
+- Multiple heavy build, test, coverage, Xvfb, or MCP validation jobs may run concurrently only inside the current
+  RAM-safe heavy-job budget. If all heavy jobs are explicitly serial, such as `-j1` or equivalent, and RAM has headroom
+  with no swap pressure, that budget can be at least four concurrent heavy jobs.
+- Keep at least four live subagents and four active implementation issues whenever four issues are safe and eligible,
+  using standby roles only when fewer than four implementation workers are safe.
+- Recalculate the RAM-safe implementation worker and heavy-job budgets before each dispatch/refill and before starting
+  heavy validation; fewer than four active implementation workers or heavy jobs can still be the correct budget.
 - If RAM-safety limits or missing worker status prevent safe dispatch, stop filling worker slots until the blocker clears.
