@@ -7,7 +7,7 @@ on:
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -17,11 +17,11 @@ jobs:
     outputs:
       coverage-needed: ${{ steps.coverage-needed.outputs.run }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
           cache: pip
@@ -85,11 +85,11 @@ jobs:
       GAME_TEST_TIMINGS_FILE: test/test-timings-linux.json
       GAME_XVFB_JOBS: "4"
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           submodules: recursive
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
           cache: pip
@@ -115,7 +115,7 @@ jobs:
           echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
           echo "prefix=${{ runner.os }}-ccache-release-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -123,7 +123,7 @@ jobs:
             ${{ steps.ccache.outputs.prefix }}
             ${{ runner.os }}-ccache-
       - name: Cache Python test timings
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-${{ github.run_id }}
@@ -156,14 +156,14 @@ jobs:
         run: cmake --build cmake-build-release --target package -j"$(nproc)"
       - name: publish
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fall-of-nouraajd-linux
           path: cmake-build-release/fall-of-nouraajd-*.tar.gz
       - name: Save ccache
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -179,11 +179,11 @@ jobs:
       GAME_TEST_TIMINGS_FILE: test/test-timings-linux-coverage.json
       GAME_XVFB_JOBS: "4"
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           submodules: recursive
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
           cache: pip
@@ -209,7 +209,7 @@ jobs:
           echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
           echo "prefix=${{ runner.os }}-ccache-coverage-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -217,7 +217,7 @@ jobs:
             ${{ steps.ccache.outputs.prefix }}
             ${{ runner.os }}-ccache-
       - name: Cache Python test timings
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
@@ -235,7 +235,7 @@ jobs:
       - name: Save ccache
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ steps.ccache.outputs.dir }}
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -261,9 +261,9 @@ jobs:
       VCPKG_TARGET_TRIPLET: x64-windows-release
       WINDOWS_FAST_TOOLS_DIR: ${{ github.workspace }}\.windows-tools\bin
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
           cache: pip
@@ -307,7 +307,7 @@ jobs:
           "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
       - &enable-vcpkg-x-gha
         name: Enable vcpkg x-gha binary cache
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
@@ -364,18 +364,29 @@ jobs:
           & $sccacheExe --version
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
-          key: ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v2-${{ hashFiles('vcpkg.json', 'cmake/triplets/*.cmake', 'configure.bat', 'CMakeLists.txt', 'cmake/**/*.cmake') }}
+          key: ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v3-${{ hashFiles('vcpkg.json', 'cmake/triplets/*.cmake', 'configure.bat') }}
           restore-keys: |
-            ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v2-${{ hashFiles('vcpkg.json', 'cmake/triplets/*.cmake', 'configure.bat', 'CMakeLists.txt', 'cmake/**/*.cmake') }}-
+            ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v3-
       - &validate-vcpkg-installed
         name: Validate vcpkg installed cache
         id: validate-vcpkg-installed
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
+
+          function Write-ValidationResult {
+            param(
+              [string]$Valid,
+              [string]$Reason
+            )
+
+            "valid=$Valid" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "reason=$Reason" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            $Reason
+          }
 
           $tripletRoot = Join-Path $env:VCPKG_INSTALLED_DIR $env:VCPKG_TARGET_TRIPLET
           $expectedPaths = @(
@@ -415,29 +426,23 @@ jobs:
           $allowModifiedOnly = $env:VCPKG_ALLOW_MODIFIED_INSTALLED_CACHE -eq "1"
 
           if ($missing.Count -gt 0) {
-            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "vcpkg installed cache is missing expected files: $($missing -join ', ')"
+            Write-ValidationResult "false" "vcpkg installed cache is missing expected files: $($missing -join ', ')"
           } elseif ($dryRunExit -ne 0) {
-            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "vcpkg dry-run validation failed with exit code $dryRunExit."
+            Write-ValidationResult "false" "vcpkg dry-run validation failed with exit code $dryRunExit."
             $dryRunText
           } elseif ($dryRunText -match $needsInstallPattern) {
             if ($allowModifiedOnly -and $hasOnlyModifiedPackageActions) {
-              "valid=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-              "vcpkg installed cache has runner-local ABI metadata drift; required files are present."
+              Write-ValidationResult "true" "vcpkg installed cache has runner-local ABI metadata drift; required files are present."
               $dryRunText
             } else {
-              "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-              "vcpkg installed cache is incomplete; dry-run would install additional packages."
+              Write-ValidationResult "false" "vcpkg installed cache is incomplete; dry-run would install additional packages."
               $dryRunText
             }
           } elseif ($dryRunText -notmatch "The following packages are already installed") {
-            "valid=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "vcpkg dry-run did not confirm that all requested packages are already installed."
+            Write-ValidationResult "false" "vcpkg dry-run did not confirm that all requested packages are already installed."
             $dryRunText
           } else {
-            "valid=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            "vcpkg installed cache is valid."
+            Write-ValidationResult "true" "vcpkg installed cache is valid."
           }
       - name: Install native deps
         if: steps.validate-vcpkg-installed.outputs.valid != 'true'
@@ -449,7 +454,7 @@ jobs:
             "--x-install-root=$env:VCPKG_INSTALLED_DIR"
       - name: Save vcpkg installed tree
         if: steps.validate-vcpkg-installed.outputs.valid != 'true'
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ steps.restore-vcpkg-installed.outputs.cache-primary-key }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -465,6 +470,48 @@ jobs:
             throw "No vcpkg installed cache key was produced."
           }
           "key=$key" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Summarize vcpkg installed cache
+        if: always()
+        shell: pwsh
+        run: |
+          function Format-Value {
+            param([string]$Value)
+            if ([string]::IsNullOrWhiteSpace($Value)) {
+              return "<none>"
+            }
+            return $Value
+          }
+
+          $primary = Format-Value "${{ steps.restore-vcpkg-installed.outputs.cache-primary-key }}"
+          $matched = Format-Value "${{ steps.restore-vcpkg-installed.outputs.cache-matched-key }}"
+          $selected = Format-Value "${{ steps.select-vcpkg-installed-cache.outputs.key }}"
+          $valid = Format-Value "${{ steps.validate-vcpkg-installed.outputs.valid }}"
+          $reason = Format-Value "${{ steps.validate-vcpkg-installed.outputs.reason }}"
+
+          if ($valid -eq "true") {
+            $cacheAction = "install skipped"
+          } elseif ($matched -ne "<none>") {
+            $cacheAction = "restored cache rejected and fully reseeded"
+          } else {
+            $cacheAction = "no usable cache restored; fully reseeded"
+          }
+
+          "vcpkg cache action: $cacheAction"
+          "vcpkg primary cache key: $primary"
+          "vcpkg matched cache key: $matched"
+          "vcpkg selected cache key: $selected"
+          "vcpkg validation reason: $reason"
+
+          @(
+            "### windows-deps vcpkg installed cache",
+            "",
+            "- Action: $cacheAction",
+            "- Primary key: ``$primary``",
+            "- Matched key: ``$matched``",
+            "- Selected key: ``$selected``",
+            "- Validation: $valid",
+            "- Reason: $reason"
+          ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
   windows:
     needs: windows-deps
@@ -472,11 +519,11 @@ jobs:
     timeout-minutes: 120
     env: *windows-env
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           submodules: recursive
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.12"
           cache: pip
@@ -497,7 +544,7 @@ jobs:
       - *setup-windows-fast-tools
       - name: Restore vcpkg installed tree
         id: restore-vcpkg-installed
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
@@ -522,18 +569,74 @@ jobs:
       - name: Save repaired vcpkg installed tree
         if: steps.repair-vcpkg-installed.outputs.repaired == 'true'
         continue-on-error: true
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}-windows
-      - name: Cache sccache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      - name: Summarize restored vcpkg installed cache
+        if: always()
+        shell: pwsh
+        run: |
+          function Format-Value {
+            param([string]$Value)
+            if ([string]::IsNullOrWhiteSpace($Value)) {
+              return "<none>"
+            }
+            return $Value
+          }
+
+          $selected = Format-Value "${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}"
+          $cacheHit = Format-Value "${{ steps.restore-vcpkg-installed.outputs.cache-hit }}"
+          $valid = Format-Value "${{ steps.validate-vcpkg-installed.outputs.valid }}"
+          $reason = Format-Value "${{ steps.validate-vcpkg-installed.outputs.reason }}"
+          $repaired = Format-Value "${{ steps.repair-vcpkg-installed.outputs.repaired }}"
+
+          if ($cacheHit -ne "true") {
+            $cacheAction = "required cache missing"
+          } elseif ($repaired -eq "true") {
+            $cacheAction = "repaired"
+          } elseif ($valid -eq "true") {
+            $cacheAction = "install skipped"
+          } else {
+            $cacheAction = "repair required but not completed"
+          }
+
+          "vcpkg cache action: $cacheAction"
+          "vcpkg selected cache key: $selected"
+          "vcpkg restore cache hit: $cacheHit"
+          "vcpkg validation reason: $reason"
+
+          @(
+            "### windows vcpkg installed cache",
+            "",
+            "- Action: $cacheAction",
+            "- Selected key: ``$selected``",
+            "- Cache hit: $cacheHit",
+            "- Validation: $valid",
+            "- Reason: $reason"
+          ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+      - name: Detect sccache metadata
+        id: windows-sccache
+        shell: pwsh
+        run: |
+          $toolset = $env:VCToolsVersion
+          if (-not $toolset) {
+            $toolset = "unknown"
+          }
+          $toolset = $toolset -replace "[^A-Za-z0-9_.-]", "-"
+          $sccacheVersion = $env:SCCACHE_VERSION -replace "[^A-Za-z0-9_.-]", "-"
+          "prefix=${{ runner.os }}-sccache-$sccacheVersion-msvc-$toolset-" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Restore sccache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: ${{ runner.os }}-sccache-${{ hashFiles('**/CMakeLists.txt', 'configure.bat') }}
-          restore-keys: ${{ runner.os }}-sccache-
+          key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ steps.windows-sccache.outputs.prefix }}
+            ${{ runner.os }}-sccache-${{ env.SCCACHE_VERSION }}-
+            ${{ runner.os }}-sccache-
       - name: Cache Python test timings
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-${{ github.run_id }}
@@ -609,7 +712,14 @@ jobs:
           if not errorlevel 1 sccache --show-stats
       - name: publish
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fall-of-nouraajd-windows
           path: cmake-build-release/fall-of-nouraajd-*.zip
+      - name: Save sccache
+        if: always() && steps.windows-sccache.outputs.prefix != ''
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
