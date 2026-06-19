@@ -74,23 +74,7 @@ BUILTIN_CLASSES = {
     "CWeapon",
 }
 PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
-REVIEWED_ABSTRACT_INTERNAL_CLASSES = {
-    "CConfigResource",
-    "CConfigResourceLoader",
-    "CEventHandler",
-    "CGame",
-    "CGameEvent",
-    "CGameEventCaused",
-    "CGuiHandler",
-    "CMap",
-    "CNativeContentPlugin",
-    "CObjectHandler",
-    "CPlugin",
-    "CResource",
-    "CResourceLoader",
-    "CRngHandler",
-    "CTextResource",
-}
+TYPE_REGISTRATION_EXCLUSIONS_PATH = Path("scripts/type_registration_exclusions.json")
 
 
 @dataclass(frozen=True)
@@ -108,6 +92,21 @@ class ConfigEntry:
     key: str
     data: Any
     path: Path
+
+
+@dataclass(frozen=True)
+class RegistrationExclusionUse:
+    path: str
+    location: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class RegistrationExclusion:
+    class_name: str
+    reason: str
+    owner_module: str
+    allowed_uses: tuple[RegistrationExclusionUse, ...] = ()
 
 
 @dataclass
@@ -270,11 +269,12 @@ class ContentValidator:
         self.native_plugin_registered_classes: set[str] = set()
         self.native_plugin_declared_class_sources: dict[str, set[str]] = {}
         self.python_registered_classes: set[str] = set()
-        self.reviewed_abstract_internal_classes: set[str] = set(REVIEWED_ABSTRACT_INTERNAL_CLASSES)
+        self.registration_exclusions: dict[str, RegistrationExclusion] = {}
 
     def validate(self) -> list[ValidationIssue]:
         self._collect_engine_classes()
         self._collect_plugin_classes()
+        self._load_type_registration_exclusions()
         self._load_global_configs()
         self._load_maps()
         self._validate_global_configs()
@@ -437,6 +437,105 @@ class ContentValidator:
             self._issue(path, f"line {exc.lineno} column {exc.colno}", exc.msg)
             return None
 
+    def _load_type_registration_exclusions(self) -> None:
+        path = self.repo_root / TYPE_REGISTRATION_EXCLUSIONS_PATH
+        if not path.exists():
+            return
+        data = self._load_json(path)
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        exclusions = data.get("exclusions")
+        if not isinstance(exclusions, list):
+            self._issue(path, "exclusions", "expected array")
+            return
+        for index, raw_entry in enumerate(exclusions):
+            location = f"exclusions[{index}]"
+            exclusion = self._parse_registration_exclusion(path, location, raw_entry)
+            if not exclusion:
+                continue
+            if exclusion.class_name in self.registration_exclusions:
+                self._issue(path, f"{location}.className", f'duplicate exclusion for "{exclusion.class_name}"')
+                continue
+            if exclusion.class_name not in self._known_registration_exclusion_classes():
+                self._issue(
+                    path,
+                    f"{location}.className",
+                    f'excluded class "{exclusion.class_name}" is not metadata-declared or registered',
+                )
+                continue
+            self.registration_exclusions[exclusion.class_name] = exclusion
+
+    def _parse_registration_exclusion(self, path: Path, location: str, raw_entry: Any) -> RegistrationExclusion | None:
+        if not isinstance(raw_entry, dict):
+            self._issue(path, location, "expected exclusion object")
+            return None
+        class_name = raw_entry.get("className")
+        reason = raw_entry.get("reason")
+        owner_module = raw_entry.get("ownerModule")
+        valid = True
+        if not isinstance(class_name, str) or not class_name:
+            self._issue(path, f"{location}.className", "expected non-empty class name")
+            valid = False
+        if not isinstance(reason, str) or not reason:
+            self._issue(path, f"{location}.reason", "expected non-empty reason")
+            valid = False
+        if not isinstance(owner_module, str) or not owner_module:
+            self._issue(path, f"{location}.ownerModule", "expected non-empty owner/module")
+            valid = False
+        allowed_uses = self._parse_registration_exclusion_allowed_uses(
+            path, f"{location}.allowedUses", raw_entry.get("allowedUses", [])
+        )
+        if not valid or allowed_uses is None:
+            return None
+        return RegistrationExclusion(
+            class_name=class_name,
+            reason=reason,
+            owner_module=owner_module,
+            allowed_uses=tuple(allowed_uses),
+        )
+
+    def _parse_registration_exclusion_allowed_uses(
+        self, path: Path, location: str, raw_uses: Any
+    ) -> list[RegistrationExclusionUse] | None:
+        if not isinstance(raw_uses, list):
+            self._issue(path, location, "expected array")
+            return None
+        allowed_uses: list[RegistrationExclusionUse] = []
+        for index, raw_use in enumerate(raw_uses):
+            use_location = f"{location}[{index}]"
+            if not isinstance(raw_use, dict):
+                self._issue(path, use_location, "expected allowed use object")
+                return None
+            use_path = raw_use.get("path")
+            use_config_location = raw_use.get("location")
+            reason = raw_use.get("reason")
+            valid = True
+            if not isinstance(use_path, str) or not use_path:
+                self._issue(path, f"{use_location}.path", "expected non-empty path")
+                valid = False
+            if not isinstance(use_config_location, str) or not use_config_location:
+                self._issue(path, f"{use_location}.location", "expected non-empty location")
+                valid = False
+            if not isinstance(reason, str) or not reason:
+                self._issue(path, f"{use_location}.reason", "expected non-empty reason")
+                valid = False
+            if not valid:
+                return None
+            allowed_uses.append(RegistrationExclusionUse(path=use_path, location=use_config_location, reason=reason))
+        return allowed_uses
+
+    def _known_registration_exclusion_classes(self) -> set[str]:
+        return (
+            self.fallback_registered_classes
+            | self.metadata_declared_classes
+            | self.static_registered_classes
+            | self.native_plugin_registered_classes
+            | self.python_registered_classes
+        )
+
     def _parse_script(self, path: Path) -> ScriptInfo | None:
         if not path.exists():
             return None
@@ -483,7 +582,7 @@ class ContentValidator:
             | self.python_registered_classes
             | set(extra_registered_classes or set())
         )
-        return classes - self.reviewed_abstract_internal_classes
+        return classes - set(self.registration_exclusions)
 
     def _validate_config_entry(
         self, entry: ConfigEntry, visible: dict[str, ConfigEntry], known_classes: set[str]
@@ -519,10 +618,15 @@ class ContentValidator:
             is_object_node = self._is_object_node(value)
             class_name = value.get("class")
             if is_object_node or in_object_node:
-                if isinstance(class_name, str) and class_name not in known_classes:
-                    self._issue(path, f"{location}.class", self._class_reference_message(class_name, "class"))
+                class_location = f"{location}.class"
+                if (
+                    isinstance(class_name, str)
+                    and class_name not in known_classes
+                    and not self._excluded_use_is_allowed(path, class_location, class_name)
+                ):
+                    self._issue(path, class_location, self._class_reference_message(class_name, "class"))
                 elif class_name is not None and not isinstance(class_name, str):
-                    self._issue(path, f"{location}.class", "expected string class name")
+                    self._issue(path, class_location, "expected string class name")
             for key, child in value.items():
                 self._validate_object_classes(path, append_field(location, key), child, known_classes, is_object_node)
         elif isinstance(value, list):
@@ -619,7 +723,11 @@ class ContentValidator:
                     f"{location}.data[{index}]",
                     f"tile id {tile_id} has no tilesets[0].tileproperties[{tile_id - 1}].type",
                 )
-            elif tile_type not in visible and tile_type not in known_classes:
+            elif (
+                tile_type not in visible
+                and tile_type not in known_classes
+                and not self._excluded_use_is_allowed(context.map_path, f"{location}.data[{index}]", tile_type)
+            ):
                 self._issue(
                     context.map_path,
                     f"{location}.data[{index}]",
@@ -659,7 +767,11 @@ class ContentValidator:
             object_type = obj.get("type")
             if not isinstance(object_type, str) or not object_type:
                 self._issue(context.map_path, f"{object_location}.type", "expected non-empty object type")
-            elif object_type not in visible and object_type not in known_classes:
+            elif (
+                object_type not in visible
+                and object_type not in known_classes
+                and not self._excluded_use_is_allowed(context.map_path, f"{object_location}.type", object_type)
+            ):
                 self._issue(
                     context.map_path,
                     f"{object_location}.type",
@@ -831,7 +943,11 @@ class ContentValidator:
         object_names = context.placed_names | context.script_info.named_objects | {"player"}
         for call in context.script_info.calls:
             if call.name in SCRIPT_REF_CALLS:
-                if call.value not in visible and call.value not in known_classes:
+                if (
+                    call.value not in visible
+                    and call.value not in known_classes
+                    and not self._excluded_use_is_allowed(context.script_info.path, call.location, call.value)
+                ):
                     self._issue(
                         context.script_info.path,
                         call.location,
@@ -935,14 +1051,28 @@ class ContentValidator:
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
 
     def _class_reference_message(self, class_name: str, label: str) -> str:
-        if class_name in self.reviewed_abstract_internal_classes:
-            return f'{label} "{class_name}" is reviewed as abstract/internal and cannot be used as content'
+        exclusion = self.registration_exclusions.get(class_name)
+        if exclusion:
+            return (
+                f'{label} "{class_name}" is excluded from content instantiation: '
+                f"{exclusion.reason} (owner/module: {exclusion.owner_module})"
+            )
         if class_name in self.native_plugin_declared_class_sources:
             owners = ", ".join(sorted(self.native_plugin_declared_class_sources[class_name]))
             return f'{label} "{class_name}" is registered by native plugin code but no manifest entry loads {owners}'
         if class_name in self.metadata_declared_classes:
             return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
         return f'unknown {label} "{class_name}"'
+
+    def _excluded_use_is_allowed(self, path: Path, location: str, class_name: str) -> bool:
+        exclusion = self.registration_exclusions.get(class_name)
+        if not exclusion:
+            return False
+        relative_path = self._rel(path)
+        return any(
+            allowed_use.path == relative_path and allowed_use.location == location
+            for allowed_use in exclusion.allowed_uses
+        )
 
 
 def iter_map_objects(map_data: Any) -> list[dict[str, Any]]:

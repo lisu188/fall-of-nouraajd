@@ -1,0 +1,79 @@
+{
+  "exclusions": [
+    {
+      "className": "CConfigResource",
+      "reason": "Provider-owned resource cache entry; loaded from resource providers, not content factories.",
+      "ownerModule": "src/core/CProvider"
+    },
+    {
+      "className": "CConfigResourceLoader",
+      "reason": "Provider-owned resource loader; constructed by provider setup, not content config.",
+      "ownerModule": "src/core/CProvider"
+    },
+    {
+      "className": "CEventHandler",
+      "reason": "Runtime event dispatcher owned by the game loop; content should use CEvent or CTrigger instances.",
+      "ownerModule": "src/handler/CEventHandler"
+    },
+    {
+      "className": "CGame",
+      "reason": "Runtime root object created by the loader; content config should not instantiate another game.",
+      "ownerModule": "src/core/CGame"
+    },
+    {
+      "className": "CGameEvent",
+      "reason": "Transient event envelope created by handlers during dispatch, not persisted or configured content.",
+      "ownerModule": "src/handler/CEventHandler"
+    },
+    {
+      "className": "CGameEventCaused",
+      "reason": "Transient event envelope created by handlers during dispatch, not persisted or configured content.",
+      "ownerModule": "src/handler/CEventHandler"
+    },
+    {
+      "className": "CGuiHandler",
+      "reason": "Runtime GUI coordinator owned by CGame; GUI content uses registered GUI objects instead.",
+      "ownerModule": "src/handler/CGuiHandler"
+    },
+    {
+      "className": "CMap",
+      "reason": "Map runtime container loaded from authored map resources; not nested content config.",
+      "ownerModule": "src/core/CMap"
+    },
+    {
+      "className": "CNativeContentPlugin",
+      "reason": "Plugin loader abstraction created by the native plugin host, not content config.",
+      "ownerModule": "src/core/CPlugin"
+    },
+    {
+      "className": "CObjectHandler",
+      "reason": "Runtime factory and registry owned by CGame; content should reference constructible game types.",
+      "ownerModule": "src/handler/CObjectHandler"
+    },
+    {
+      "className": "CPlugin",
+      "reason": "Plugin loader abstraction created by plugin initialization, not content config.",
+      "ownerModule": "src/core/CPlugin"
+    },
+    {
+      "className": "CResource",
+      "reason": "Provider-owned resource cache entry; loaded from resource providers, not content factories.",
+      "ownerModule": "src/core/CProvider"
+    },
+    {
+      "className": "CResourceLoader",
+      "reason": "Provider-owned resource loader; constructed by provider setup, not content config.",
+      "ownerModule": "src/core/CProvider"
+    },
+    {
+      "className": "CRngHandler",
+      "reason": "Runtime random service owned by CGame; content config should not instantiate it directly.",
+      "ownerModule": "src/handler/CRngHandler"
+    },
+    {
+      "className": "CTextResource",
+      "reason": "Provider-owned text resource cache entry; loaded from resource providers, not content factories.",
+      "ownerModule": "src/core/CProvider"
+    }
+  ]
+}
