@@ -228,6 +228,41 @@ class IssueQueueTest(unittest.TestCase):
         self.assertIn("dependencies-not-done", rejected[self.issue_c][0])
         self.assertTrue(any(reason.startswith("active-file-overlap") for reason in rejected[self.issue_d]))
 
+    def test_controller_id_generates_unique_owner_prefix(self) -> None:
+        first = issue_queue.generateControllerId(hostname="Build Host.local", pid=1234, unique="ABCDEF12")
+        second = issue_queue.generateControllerId(hostname="Build Host.local", pid=1234, unique="98765432")
+
+        self.assertEqual("ctrl-build-host-1234-abcdef12", first)
+        self.assertEqual("ctrl-build-host-1234-98765432", second)
+        self.assertNotEqual(first, second)
+        self.assertEqual("controller/ctrl-build-host-1234-abcdef12", issue_queue.controllerOwnerPrefix(first))
+        self.assertEqual(
+            "controller/ctrl-build-host-1234-abcdef12/subagent-1",
+            issue_queue.controllerOwner(first, "Subagent 1"),
+        )
+
+    def test_controller_id_cli_prints_owner_prefix_without_workbook(self) -> None:
+        missing_workbook = Path(self.temp_dir.name) / "missing.xlsx"
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = issue_queue.main(
+                [
+                    "controller-id",
+                    "--controller-id",
+                    "ctrl-demo-1",
+                    "--worker",
+                    "QA Agent",
+                    "--workbook",
+                    str(missing_workbook),
+                ]
+            )
+        payload = json.loads(stdout.getvalue())
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual("ctrl-demo-1", payload["controllerId"])
+        self.assertEqual("controller/ctrl-demo-1", payload["ownerPrefix"])
+        self.assertEqual("controller/ctrl-demo-1/qa-agent", payload["exampleOwner"])
+
     def test_wrong_claim_id_cannot_update_task(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1")
         with self.assertRaises(issue_queue.QueueError):

@@ -6,8 +6,9 @@ cross-process lock file, loads the workbook, validates the requested claim, and
 replaces the workbook atomically after a successful save.
 
 This tool intentionally does not perform git, branch, commit, push, or pull
-request operations. It is suitable for one controller Codex agent coordinating
-multiple local subagents that share a filesystem.
+request operations. It is suitable for one or more controller Codex agents
+coordinating local subagents, provided each controller uses a unique owner
+prefix for its workers.
 """
 
 from __future__ import annotations
@@ -562,6 +563,41 @@ def readTextOption(text: str | None, filePath: str | None, optionName: str) -> s
     if filePath:
         return Path(filePath).read_text(encoding="utf-8").strip()
     return (text or "").strip()
+
+
+def ownerSegment(value: Any, fallback: str = "unknown", maxLength: int = 48) -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"[^a-z0-9_.-]+", "-", text).strip("-_.")
+    return (text[:maxLength].strip("-_.") or fallback)[:maxLength]
+
+
+def generateControllerId(
+    hostname: str | None = None,
+    pid: int | None = None,
+    unique: str | None = None,
+) -> str:
+    host = ownerSegment((hostname or socket.gethostname()).split(".", 1)[0], fallback="host", maxLength=32)
+    process_id = pid if pid is not None else os.getpid()
+    suffix = ownerSegment(unique or uuid.uuid4().hex[:8], fallback="run", maxLength=16)
+    return f"ctrl-{host}-{process_id}-{suffix}"
+
+
+def controllerOwnerPrefix(controllerId: str) -> str:
+    controller = ownerSegment(controllerId, fallback="controller", maxLength=96)
+    return f"controller/{controller}"
+
+
+def controllerOwner(controllerId: str, worker: str = "subagent-1") -> str:
+    return f"{controllerOwnerPrefix(controllerId)}/{ownerSegment(worker, fallback='worker', maxLength=48)}"
+
+
+def controllerIdentityPayload(controllerId: str | None = None, worker: str = "subagent-1") -> dict[str, str]:
+    generated = controllerId or generateControllerId()
+    return {
+        "controllerId": generated,
+        "ownerPrefix": controllerOwnerPrefix(generated),
+        "exampleOwner": controllerOwner(generated, worker),
+    }
 
 
 def resolveWorkbookPath(rawPath: str | Path | None) -> Path:
@@ -1281,6 +1317,12 @@ def buildParser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    controllerParser = subparsers.add_parser("controller-id", help="Generate a unique controller owner prefix")
+    addCommonArguments(controllerParser)
+    controllerParser.add_argument("--controller-id", help="Reuse an existing controller id instead of generating one")
+    controllerParser.add_argument("--worker", default="subagent-1", help="Worker name for the example owner")
+    controllerParser.add_argument("--plain", action="store_true", help="Print only the controller id")
+
     initParser = subparsers.add_parser("init", help="Add missing workflow columns and normalize legacy statuses")
     addCommonArguments(initParser)
 
@@ -1374,6 +1416,14 @@ def buildParser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = buildParser()
     args = parser.parse_args(argv)
+    if args.command == "controller-id":
+        payload = controllerIdentityPayload(args.controller_id, args.worker)
+        if args.plain:
+            print(payload["controllerId"])
+        else:
+            printJson(payload)
+        return 0
+
     workbookPath = resolveWorkbookPath(args.workbook)
 
     try:
