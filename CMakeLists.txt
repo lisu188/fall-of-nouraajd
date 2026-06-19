@@ -559,6 +559,7 @@ function(add_game_unit_test target_name)
     add_test(NAME "${test_name}" COMMAND ${target_name})
     set_tests_properties("${test_name}" PROPERTIES
         LABELS "for_unit_tests;unit;${target_name}"
+        TIMEOUT 60
     )
     if (WIN32)
         if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)

@@ -13,6 +13,7 @@ concurrency:
 jobs:
   linux:
     runs-on: ubuntu-24.04
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -100,11 +101,14 @@ jobs:
       - name: performance guard (native)
         run: ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
       - name: test (python gameplay)
+        timeout-minutes: 45
         run: python3 test.py --suite gameplay --jobs "$(nproc)"
       - name: test (python ui)
+        timeout-minutes: 45
         run: GAME_XVFB_JOBS=4 python3 test.py --suite ui --jobs "$(nproc)"
       - name: coverage
         if: steps.coverage-needed.outputs.run == 'true'
+        timeout-minutes: 60
         run: ./scripts/run_coverage.sh
       - name: ccache stats after coverage
         if: always()
@@ -125,6 +129,7 @@ jobs:
 
   windows-deps:
     runs-on: windows-2022
+    timeout-minutes: 120
     outputs:
       vcpkg-installed-cache-key: ${{ steps.select-vcpkg-installed-cache.outputs.key }}
     env: &windows-env
@@ -349,6 +354,7 @@ jobs:
   windows:
     needs: windows-deps
     runs-on: windows-2022
+    timeout-minutes: 120
     env: *windows-env
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -463,6 +469,7 @@ jobs:
           ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
           if errorlevel 1 exit /b 1
       - name: test (python gameplay)
+        timeout-minutes: 45
         shell: cmd
         run: |
           set GAME_BUILD_DIR=cmake-build-release

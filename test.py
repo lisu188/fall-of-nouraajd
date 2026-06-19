@@ -148,6 +148,16 @@ GAMEPLAY_TEST_PREFIXES = (
 GAMEPLAY_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_http_notification_response_declares_empty_body",
 }
+COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
+    "ConsoleEventIsolationTest.test_console_key_history_in_fresh_process",
+    "GameTest.test_map_walkthroughs",
+    "McpServerTest.test_stdio_map_walkthrough_multilevel",
+    "McpServerTest.test_stdio_map_walkthrough_nouraajd",
+    "McpServerTest.test_stdio_map_walkthrough_ritual",
+    "McpServerTest.test_stdio_map_walkthrough_siege",
+    "McpServerTest.test_stdio_map_walkthrough_test",
+    "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
+}
 SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
@@ -13817,6 +13827,27 @@ class CoverageReportTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "glob"):
                 coverage_report.load_include_prefixes(root, ["src/*.cpp"])
 
+    def test_coverage_report_gcov_timeout_reports_data_file(self):
+        coverage_report = self._load_coverage_report_module()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            gcda = root / "sample.gcda"
+            gcda.write_bytes(b"")
+
+            original_run = coverage_report.subprocess.run
+
+            def fake_run(*args, **kwargs):
+                self.assertEqual(7.5, kwargs.get("timeout"))
+                raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+
+            coverage_report.subprocess.run = fake_run
+            try:
+                with self.assertRaisesRegex(RuntimeError, r"gcov timed out after 7.5s for .*sample\.gcda"):
+                    coverage_report.collect_reports_for_gcda(gcda, root / "gcov-output", 7.5)
+            finally:
+                coverage_report.subprocess.run = original_run
+
     def test_coverage_exclusion_audit_reports_raw_counts_and_snippets(self):
         coverage_report = self._load_coverage_report_module()
 
@@ -14047,7 +14078,16 @@ class TestRunnerSuiteTest(unittest.TestCase):
             ],
             filter_test_names_by_suite(sample_names, "ui"),
         )
-        self.assertEqual(sample_names, filter_test_names_by_suite(sample_names, "coverage-safe"))
+        self.assertEqual(
+            [
+                "CoverageReportTest.test_coverage_paths_accept_noncanonical_root",
+                "GameTest.test_map_walkthrough_nouraajd",
+                "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+                XVFB_GAMEPLAY_PARENT_TEST,
+                "XvfbGameplayProcessTest.test_screenshot_inventory_panel_has_rendered_pixels",
+            ],
+            filter_test_names_by_suite(sample_names, "coverage-safe"),
+        )
 
     def test_suite_commands_are_documented_and_used_by_automation(self):
         build_workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
@@ -14062,6 +14102,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertIn("python test.py --suite gameplay", build_workflow)
         self.assertIn("python3 test.py --suite full", release_workflow)
         self.assertIn("python3 test.py --suite coverage-safe", coverage_script)
+        self.assertIn("COVERAGE_PYTHON_TIMEOUT_SECONDS", coverage_script)
+        self.assertIn("--gcov-timeout", coverage_script)
 
         for suite_name in VALID_TEST_SUITES:
             self.assertIn(f"--suite {suite_name}", testing_docs)
@@ -15237,7 +15279,9 @@ def selected_unittest_args(unittest_argv):
 
 
 def test_name_matches_suite(test_name, suite_name):
-    if suite_name in {"coverage-safe", "full"}:
+    if suite_name == "coverage-safe":
+        return test_name not in COVERAGE_SAFE_EXCLUDED_TEST_NAMES
+    if suite_name == "full":
         return True
     if suite_name == "fast":
         return test_name in FAST_TEST_NAMES or test_name.startswith(FAST_TEST_PREFIXES)

@@ -132,8 +132,8 @@ steps.
 Also run `./scripts/run_coverage.sh` when a change touches tests (for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`, `src/object/**`,
 `native_plugins/**`, or the coverage tooling. The default coverage run uses the Python reporter with
-`scripts/coverage_exclusions.json` and enforces a 95% eligible-line gate; see
-`docs/testing.md` for details, including recommended branch-protection checks.
+`scripts/coverage_exclusions.json`, runs the bounded `coverage-safe` Python suite, and enforces a 95% eligible-line
+gate; see `docs/testing.md` for details, including recommended branch-protection checks.
 Content JSON validation and its focused fixture tests run without needing the
 compiled `_game` module, but other tests require it to be built.
 `requirements-dev.txt` is the pinned source for pip-managed Python test tools

@@ -18,6 +18,12 @@ def parse_args():
     parser.add_argument("--report-dir", required=True, type=Path)
     parser.add_argument("--min-line", required=True, type=float)
     parser.add_argument("--jobs", default=max(1, os.cpu_count() or 1), type=positive_int)
+    parser.add_argument(
+        "--gcov-timeout",
+        default=positive_float(os.environ.get("COVERAGE_GCOV_TIMEOUT_SECONDS", "120")),
+        type=positive_float,
+        help="Seconds allowed for each gcov JSON extraction command.",
+    )
     parser.add_argument("--line-exclusions", type=Path, help="Reviewed root-relative line exclusion manifest.")
     parser.add_argument(
         "--include-prefix",
@@ -40,6 +46,16 @@ def positive_int(value: str) -> int:
         raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from exc
     if parsed < 1:
         raise argparse.ArgumentTypeError("--jobs must be at least 1")
+    return parsed
+
+
+def positive_float(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a number") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("--gcov-timeout must be greater than 0")
     return parsed
 
 
@@ -230,15 +246,19 @@ def scope_line_exclusions(root: Path, exclusions, include_prefixes=()):
     }
 
 
-def collect_reports_for_gcda(gcda: Path, output_dir: Path):
+def collect_reports_for_gcda(gcda: Path, output_dir: Path, timeout_seconds: float):
     output_dir.mkdir()
-    subprocess.run(
-        ["gcov", "-j", "-p", str(gcda)],
-        cwd=output_dir,
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    try:
+        subprocess.run(
+            ["gcov", "-j", "-p", str(gcda)],
+            cwd=output_dir,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"gcov timed out after {timeout_seconds:g}s for {gcda}") from exc
 
     reports = []
     for report_path in sorted(output_dir.glob("*.gcov.json.gz")):
@@ -247,7 +267,7 @@ def collect_reports_for_gcda(gcda: Path, output_dir: Path):
     return reports
 
 
-def collect_gcov_reports(build_dir: Path, jobs: int):
+def collect_gcov_reports(build_dir: Path, jobs: int, timeout_seconds: float):
     gcda_files = sorted(build_dir.rglob("*.gcda"))
     if not gcda_files:
         raise RuntimeError(f"No .gcda files found under {build_dir}")
@@ -260,12 +280,12 @@ def collect_gcov_reports(build_dir: Path, jobs: int):
 
         if jobs == 1:
             for index, gcda in enumerate(gcda_files):
-                reports.extend(collect_reports_for_gcda(gcda, tmp_path / f"gcov-{index}"))
+                reports.extend(collect_reports_for_gcda(gcda, tmp_path / f"gcov-{index}", timeout_seconds))
             return reports
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as executor:
             futures = [
-                executor.submit(collect_reports_for_gcda, gcda, tmp_path / f"gcov-{index}")
+                executor.submit(collect_reports_for_gcda, gcda, tmp_path / f"gcov-{index}", timeout_seconds)
                 for index, gcda in enumerate(gcda_files)
             ]
             for future in concurrent.futures.as_completed(futures):
@@ -455,7 +475,7 @@ def main():
 
     include_prefixes = load_include_prefixes(root, args.include_prefix)
     exclusions = load_line_exclusions(root, args.line_exclusions)
-    reports = collect_gcov_reports(build_dir, args.jobs)
+    reports = collect_gcov_reports(build_dir, args.jobs, args.gcov_timeout)
     merged = merge_line_counts(root, reports, include_prefixes)
     exclusions = scope_line_exclusions(root, exclusions, include_prefixes)
     validate_line_exclusions(root, merged, exclusions)
