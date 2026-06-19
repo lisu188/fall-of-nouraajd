@@ -308,12 +308,31 @@ class IssueQueueTest(unittest.TestCase):
         self.assertTrue(payload["eligible"])
         self.assertEqual("P0", payload["highestPriority"])
         self.assertFalse(payload["allowFileOverlap"])
+        self.assertEqual(0, payload["activeCount"])
+        self.assertEqual(0, payload["unexpiredActiveCount"])
+        self.assertEqual(0, payload["staleClaimCount"])
+        self.assertEqual({"total": 0, "unexpired": 0, "stale": 0}, payload["activeClaims"])
         self.assertIn(
             "direct target-file overlap excluded unless --allow-file-overlap is used",
             payload["mechanicalFilters"],
         )
         self.assertIn("storyGroups", payload)
         self.assertIn("rejected", payload)
+
+    def test_shortlist_reports_unexpired_and_stale_active_counts(self) -> None:
+        expired = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(expired["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=10)
+        unexpired = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-2", leaseMinutes=30)
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        payload = issue_queue.shortlistTasks(state, seed="active-counts")
+
+        self.assertEqual(2, payload["activeCount"])
+        self.assertEqual(1, payload["unexpiredActiveCount"])
+        self.assertEqual(1, payload["staleClaimCount"])
+        self.assertEqual({"total": 2, "unexpired": 1, "stale": 1}, payload["activeClaims"])
+        self.assertEqual([expired["Issue Name"]], [item["issueName"] for item in payload["staleClaims"]])
+        self.assertNotIn(unexpired["Issue Name"], [item["issueName"] for item in payload["staleClaims"]])
 
     def test_controller_id_generates_unique_owner_prefix(self) -> None:
         first = issue_queue.generateControllerId(hostname="Build Host.local", pid=1234, unique="ABCDEF12")

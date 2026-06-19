@@ -203,10 +203,11 @@ pause for a priority/status update, or report a blocker. Do not use the brief as
 
 Use `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
 read-only mechanical selector before each claim. The command reports eligible highest-priority story groups, stale
-claims, rejection summaries, and a seeded recommended issue without mutating the workbook. Treat the recommendation as
-evidence for the project-manager brief and final controller review; still exclude source-backed indirect conflicts that
-the exact target-file filter cannot detect. Claim only after final review with `claim --issue`, which revalidates under
-the workbook lock.
+claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, rejection summaries, and a seeded
+recommended issue without mutating the workbook. Use the unexpired count, not raw `activeCount`, when deciding whether
+the active-worker floor is genuinely satisfied. Treat the recommendation as evidence for the project-manager brief and
+final controller review; still exclude source-backed indirect conflicts that the exact target-file filter cannot detect.
+Claim only after final review with `claim --issue`, which revalidates under the workbook lock.
 
 Exclude every row that has:
 
