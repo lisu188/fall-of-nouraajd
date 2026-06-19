@@ -46,6 +46,12 @@ class CGameFightPanel : public CGamePanel {
 
     std::shared_ptr<CInteraction> selectInteraction();
 
+    bool isCancelled() const;
+
+    void cancel();
+
+    void resetCancellation();
+
     std::shared_ptr<CCreature> getEnemy();
 
     void setEnemy(std::shared_ptr<CCreature> en);
@@ -62,6 +68,7 @@ class CGameFightPanel : public CGamePanel {
     std::weak_ptr<CInteraction> selected;
     std::weak_ptr<CItem> selectedItem;
     std::weak_ptr<CInteraction> finalSelected;
+    bool cancelled = false;
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
     void refreshEncounterViews();
