@@ -52,6 +52,8 @@ class CGameFightPanel : public CGamePanel {
 
     void resetCancellation();
 
+    void close();
+
     std::shared_ptr<CCreature> getEnemy();
 
     void setEnemy(std::shared_ptr<CCreature> en);
