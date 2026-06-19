@@ -639,6 +639,19 @@ NOURAAJD_QUEST_DESCRIPTIONS = {
     "victorQuest": "Find Victor's daughter by following tavern and town-hall clues to the courtyard.",
     "amuletQuest": "Find the stolen amulet for the old woman.",
 }
+NOURAAJD_QUEST_REWARDS = {
+    "rolfQuest": "Starts the Gooby hunt.",
+    "mainQuest": "200 gold from relieved townsfolk.",
+    "deliverLetterQuest": "Unlocks scribe-desk scroll crafting.",
+    "retrieveRelicQuest": "Unlocks stronger alchemy recipes.",
+    "cleanseCaveQuest": "Opens the road to the ritual chapel.",
+    "octoBogzQuest": "1000 gold and the Shadow Blade.",
+    "victorQuest": (
+        "500 gold, healing, and one-time access to buy Victor's remaining potions "
+        "if you reach the courtyard in time."
+    ),
+    "amuletQuest": "50 gold.",
+}
 
 
 def load_sdl_library():
@@ -2830,6 +2843,7 @@ def walkthrough_nouraajd_map():
     ]
     assert start_events, "The Nouraajd walkthrough should start from an authored StartEvent."
     start_coords = start_events[0].getCoords()
+    initial_skulls = player.countItems("skullOfRolf")
     player.moveTo(start_coords.x, start_coords.y, start_coords.z)
     pump_event_loop(5)
     assert player.countItems("letterFromRolf") >= 1, "StartEvent should grant Rolf's letter."
@@ -2840,14 +2854,24 @@ def walkthrough_nouraajd_map():
     player.checkQuests()
     assert quest_state("rolf") == "skull_recovered"
     assert quest_state("main") == "awaiting_gooby"
+    assert player.countItems("skullOfRolf") == initial_skulls + 1
+    assert game_map.getBoolProperty("completed_rolf")
+    assert find_runtime_object(game_map, "gooby1") is not None
     assert_completed("rolfQuest")
     assert_active("mainQuest")
 
     gooby = find_runtime_object(game_map, "gooby1")
+    gooby_gold = player.getGold()
     game_map.removeObjectByName(gooby.getName())
     player.checkQuests()
     assert quest_state("main") == "gooby_slain"
+    assert player.getGold() == gooby_gold + 200
+    assert game_map.getBoolProperty("GOOBY_REWARD_CLAIMED")
+    assert game_map.getBoolProperty("completed_gooby")
     assert_completed("mainQuest")
+    main_quest = find_player_quest(player, "mainQuest")
+    main_quest.onComplete()
+    assert player.getGold() == gooby_gold + 200
 
     town_hall = g.createObject("townHallDialog")
     beren = g.createObject("berenDialog")
@@ -2862,6 +2886,7 @@ def walkthrough_nouraajd_map():
     assert quest_state("beren_chain") == "letter_delivered"
     assert player.countItems("letterToBeren") == 0
     assert player.getBoolProperty("CAN_CRAFT_SCROLLS")
+    assert game_map.getBoolProperty("DELIVERED_LETTER")
     assert_completed("deliverLetterQuest")
     assert_active("retrieveRelicQuest")
 
@@ -2874,6 +2899,7 @@ def walkthrough_nouraajd_map():
     assert quest_state("beren_chain") == "relic_returned_waiting_kill"
     assert player.countItems("holyRelic") == 0
     assert player.getBoolProperty("CAN_BREW_GREATER_POTIONS")
+    assert game_map.getBoolProperty("RELIC_RETURNED")
     assert_completed("retrieveRelicQuest")
     assert_active("cleanseCaveQuest")
 
@@ -2959,6 +2985,8 @@ def walkthrough_nouraajd_map():
     assert game_map_bad.getObjectByName("cultLeaderQuest") is None
     assert not any(obj.getName() and obj.getName().startswith("victorCultist") for obj in game_map_bad.getObjects())
     assert "victorQuest" in completed_quest_names(player_bad)
+    victor_bad_quest = find_player_quest(player_bad, "victorQuest")
+    assert victor_bad_quest.getReward() == "No reward if Victor's daughter is taken."
 
     return {
         "map": "nouraajd",
@@ -2968,6 +2996,7 @@ def walkthrough_nouraajd_map():
         "gold": player.getGold(),
         "active_quests": quest_names(player),
         "completed_quests": completed_quest_names(player),
+        "gooby_reward_claimed": game_map.getBoolProperty("GOOBY_REWARD_CLAIMED"),
         "current_map": g.getMap().mapName,
     }
 
@@ -9788,9 +9817,11 @@ class GameTest(unittest.TestCase):
 
         self.assertEqual(expected_sell_costs, sell_costs)
         self.assertEqual({"DaggerOfVileHeart": 5000, "ShadowBlade": 5000}, buyback_costs)
-        self.assertLess(player.getGold() + 1000 + 500, sell_costs["DaggerOfVileHeart"])
+        self.assertLess(200, sell_costs["LesserLifePotion"])
+        self.assertLess(player.getGold() + 200 + 1000 + 500, sell_costs["DaggerOfVileHeart"])
         self.assertIn("Starting gold: 0", economy_doc)
         self.assertIn("Merchant buyback prices are capped at 5000 gold", economy_doc)
+        self.assertIn("main Gooby quest pays 200 gold once", economy_doc)
 
         return True, json.dumps(
             {
@@ -10014,6 +10045,11 @@ class GameTest(unittest.TestCase):
             self.assertEqual(game_map.getNumericProperty("VICTOR_COURTYARD_TURN"), -1)
             self.assertIn("victorRewardDialog", captured["dialogs"])
             self.assertIn("victorMarket", captured["trades"])
+            config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+            self.assertEqual(
+                ["LesserLifePotion", "LifePotion", "LesserManaPotion", "ManaPotion"],
+                [item["ref"] for item in config["victorMarket"]["properties"]["items"]],
+            )
             self.assertTrue(town_hall.victor_good_end())
             victor_quest = find_player_quest(player, "victorQuest")
             self.assertIn("survived", victor_quest.getObjective())
@@ -10080,6 +10116,7 @@ class GameTest(unittest.TestCase):
         self.assertTrue(town_hall.victor_bad_end())
         victor_quest = find_player_quest(player, "victorQuest")
         self.assertIn("was taken", victor_quest.getObjective())
+        self.assertEqual("No reward if Victor's daughter is taken.", victor_quest.getReward())
         self.assertIn("scrubbed clean", victor_quest.getHint())
         self.assertIsNone(game_map.getObjectByName("cultLeaderQuest"))
         self.assertFalse(
@@ -10163,8 +10200,10 @@ class GameTest(unittest.TestCase):
         self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
         self.assertEqual(player.getGold() - start_gold, 50)
         self.assertFalse(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
+        self.assertTrue(game_map.getBoolProperty("AMULET_RETURNED"))
         self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
         self.assertIsNone(game_map.getObjectByName("oldWoman"))
+        assert_player_quest_state(self, player, "amuletQuest", completed=True)
 
         quest_dialog.start_amulet_quest()
         self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
@@ -10190,14 +10229,21 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_nouraajd_octobogz_unique_reward_is_not_duplicated(self):
         g, game_map, player = load_game_map_with_player("nouraajd")
-        quest = g.createObject("octoBogzQuest")
+        travelers = g.createObject("dialog")
         start_gold = player.getGold()
 
-        quest.onComplete()
+        travelers.accept_quest()
+        self.assertEqual(game_map.getStringProperty("quest_state_octobogz_contract"), "active")
+        self.assertIn("octoBogzQuest", quest_names(player))
+        game_map.removeObjectByName("cave2")
+        player.checkQuests()
+
         self.assertEqual(player.getGold() - start_gold, 1000)
         self.assertEqual(player.countItems("ShadowBlade"), 1)
         self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+        assert_player_quest_state(self, player, "octoBogzQuest", completed=True)
 
+        quest = find_player_quest(player, "octoBogzQuest")
         quest.onComplete()
         self.assertEqual(player.getGold() - start_gold, 1000)
         self.assertEqual(player.countItems("ShadowBlade"), 1)
@@ -10207,6 +10253,39 @@ class GameTest(unittest.TestCase):
                 "gold_delta": player.getGold() - start_gold,
                 "shadow_blades": player.countItems("ShadowBlade"),
                 "reward_claimed": game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"),
+                "quest_state_octobogz_contract": game_map.getStringProperty("quest_state_octobogz_contract"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_nouraajd_octobogz_late_contract_claims_existing_clear_reward(self):
+        g, game_map, player = load_game_map_with_player("nouraajd")
+        travelers = g.createObject("dialog")
+        start_gold = player.getGold()
+
+        game_map.removeObjectByName("cave2")
+        self.assertEqual(game_map.getStringProperty("quest_state_octobogz_contract"), "completed")
+        self.assertNotIn("octoBogzQuest", quest_names(player))
+        self.assertFalse(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+
+        travelers.accept_quest()
+
+        self.assertEqual(player.getGold() - start_gold, 1000)
+        self.assertEqual(player.countItems("ShadowBlade"), 1)
+        self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+        assert_player_quest_state(self, player, "octoBogzQuest", completed=True)
+
+        travelers.accept_quest()
+        self.assertEqual(player.getGold() - start_gold, 1000)
+        self.assertEqual(player.countItems("ShadowBlade"), 1)
+
+        return True, json.dumps(
+            {
+                "gold_delta": player.getGold() - start_gold,
+                "shadow_blades": player.countItems("ShadowBlade"),
+                "reward_claimed": game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"),
+                "quest_state_octobogz_contract": game_map.getStringProperty("quest_state_octobogz_contract"),
             },
             sort_keys=True,
         )
@@ -10396,17 +10475,25 @@ class GameTest(unittest.TestCase):
             self.assertIn("mainQuest", quest_names(player))
 
             gooby = find_runtime_object(game_map, "gooby1")
+            start_gold = player.getGold()
             game_map.removeObjectByName(gooby.getName())
             player.checkQuests()
 
             self.assertEqual("gooby_slain", game_map.getStringProperty("quest_state_main"))
             self.assertTrue(game_map.getBoolProperty("completed_gooby"))
+            self.assertTrue(game_map.getBoolProperty("GOOBY_REWARD_CLAIMED"))
+            self.assertEqual(start_gold + 200, player.getGold())
             assert_player_quest_state(self, player, "mainQuest", completed=True)
+            main_quest = find_player_quest(player, "mainQuest")
+            main_quest.onComplete()
+            self.assertEqual(start_gold + 200, player.getGold())
 
             results[player_type] = {
                 "quest_state_rolf": game_map.getStringProperty("quest_state_rolf"),
                 "quest_state_main": game_map.getStringProperty("quest_state_main"),
                 "completed_gooby": game_map.getBoolProperty("completed_gooby"),
+                "gooby_reward_claimed": game_map.getBoolProperty("GOOBY_REWARD_CLAIMED"),
+                "gold_delta": player.getGold() - start_gold,
                 "completed_quests": completed_quest_names(player),
             }
 
@@ -11257,6 +11344,15 @@ class GameTest(unittest.TestCase):
         self.assertIn("Reward: Starts the Gooby hunt.", text)
         self.assertIn("Hint: The cave entrance lies beyond Nouraajd's roads.", text)
 
+        g_rewards, _reward_map, reward_player = load_game_map_with_player("nouraajd")
+        for quest_id in NOURAAJD_QUEST_REWARDS:
+            reward_player.addQuest(quest_id)
+        game.CGameLoader.loadGui(g_rewards)
+        reward_panel = g_rewards.createObject("questPanel")
+        reward_text = reward_panel.getText(g_rewards.getGui())
+        for reward in NOURAAJD_QUEST_REWARDS.values():
+            self.assertIn(f"Reward: {reward}", reward_text)
+
         g_completed, completed_map, completed_player = load_game_map_with_player("nouraajd")
         completed_player.addQuest("rolfQuest")
         completed_map.removeObjectByName("cave1")
@@ -11269,7 +11365,7 @@ class GameTest(unittest.TestCase):
         self.assertIn("[Active] Vanquish the Dreaded Gooby", text_after_completion)
 
         return True, json.dumps(
-            {"before": text, "after": text_after_completion},
+            {"before": text, "all_rewards": reward_text, "after": text_after_completion},
             sort_keys=True,
         )
 
@@ -13332,19 +13428,23 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual("awaiting_gooby", quest_state("main"))
         assert_completed("rolfQuest")
         assert_active("mainQuest")
-        capture_nouraajd_quest_log(
+        main_quest_text = capture_nouraajd_quest_log(
             self,
             g,
             "xvfb_nouraajd_quest_log_rolf_completed_main_active",
             active=("mainQuest",),
             completed=completed_quests,
         )
+        self.assertIn("Reward: 200 gold from relieved townsfolk.", main_quest_text)
 
         gooby = find_runtime_object(game_map, "gooby1")
+        gooby_gold = player.getGold()
         run_blocking_gui_action(game, lambda: game_map.removeObjectByName(gooby.getName()), push_space_key)
         run_blocking_gui_action(game, player.checkQuests, push_space_key)
         self.assertTrue(game_map.getBoolProperty("completed_gooby"))
         self.assertEqual("gooby_slain", quest_state("main"))
+        self.assertEqual(gooby_gold + 200, player.getGold())
+        self.assertTrue(game_map.getBoolProperty("GOOBY_REWARD_CLAIMED"))
         assert_completed("mainQuest")
 
         town_hall = g.createObject("townHallDialog")
