@@ -220,6 +220,18 @@ class FixedStepController : public CController {
     int turnEndedCount = 0;
 };
 
+class MovementOriginProbeCreature : public CCreature {
+  public:
+    void afterMove() override {
+        observedOriginDuringAfterMove = getPendingMoveOrigin();
+        CCreature::afterMove();
+        originClearedAfterBaseAfterMove = !getPendingMoveOrigin().has_value();
+    }
+
+    std::optional<Coords> observedOriginDuringAfterMove;
+    bool originClearedAfterBaseAfterMove = false;
+};
+
 std::shared_ptr<CStats> creature_stats() {
     auto stats = std::make_shared<CStats>();
     stats->setMainStat("intelligence");
@@ -387,6 +399,49 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
     expect_true(map->getObjects().empty(), "removeObjects should erase matching objects from a cloned iteration");
 }
 
+void test_map_navigation_edges_update_revision() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, 4}});
+    map->setYBounds({{0, 4}});
+    map->setWrapX({{0, 1}});
+
+    const auto initial_revision = map->getNavigationRevision();
+    CNavigationEdge bridge;
+    bridge.source = Coords(-1, 2, 0);
+    bridge.target = Coords(1, 2, 0);
+    bridge.enabled = true;
+    bridge.bidirectional = true;
+    bridge.movementCost = 3;
+    bridge.sourceObjectName = "ropeBridge";
+
+    map->addNavigationEdge(bridge);
+    expect_true(map->getNavigationRevision() > initial_revision,
+                "adding a navigation edge should bump navigation revision");
+
+    const auto revision_after_add = map->getNavigationRevision();
+    const auto &edges = map->getNavigationEdges();
+    expect_true(edges.size() == 1, "added navigation edge should be stored by the map");
+    expect_true(edges.front().source == Coords(4, 2, 0), "navigation edge source should be normalized");
+    expect_true(edges.front().target == Coords(1, 2, 0), "navigation edge target should be normalized");
+    expect_true(edges.front().enabled, "navigation edge should preserve enabled state");
+    expect_true(edges.front().bidirectional, "navigation edge should preserve directionality");
+    expect_true(edges.front().movementCost == 3, "navigation edge should preserve movement cost");
+    expect_true(edges.front().sourceObjectName == std::optional<std::string>("ropeBridge"),
+                "navigation edge should preserve source object name");
+
+    const std::optional<std::string> bridge_name = "ropeBridge";
+    expect_true(!map->removeNavigationEdge(Coords(4, 2, 0), Coords(0, 2, 0), bridge_name),
+                "removing a missing navigation edge should report false");
+    expect_true(map->getNavigationRevision() == revision_after_add,
+                "removing a missing navigation edge should not bump navigation revision");
+
+    expect_true(map->removeNavigationEdge(Coords(-1, 2, 0), Coords(1, 2, 0), bridge_name),
+                "removing an existing navigation edge should report true");
+    expect_true(map->getNavigationEdges().empty(), "removed navigation edge should leave map storage");
+    expect_true(map->getNavigationRevision() > revision_after_add,
+                "removing an existing navigation edge should bump navigation revision");
+}
+
 void test_map_defensive_branches_and_strict_validation() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, -1}});
@@ -520,6 +575,44 @@ void test_map_move_interrupts_invalid_planned_steps() {
     expect_true(blocked_creature->getCoords() == Coords(1, 1, 0), "blocked creatures should stay in place");
 }
 
+void test_creature_tracks_pending_move_origin_only_during_after_move() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto origin_tile = std::make_shared<CTile>();
+    origin_tile->setCanStep(true);
+    auto destination_tile = std::make_shared<CTile>();
+    destination_tile->setCanStep(true);
+    map->addTile(origin_tile, 1, 1, 0);
+    map->addTile(destination_tile, 2, 1, 0);
+
+    auto creature = std::make_shared<MovementOriginProbeCreature>();
+    creature->setName("movementOriginProbe");
+    creature->setGame(game);
+    creature->setBaseStats(creature_stats());
+    creature->setLevel(1);
+    creature->setHp(creature->getHpMax());
+    creature->setPosX(1);
+    creature->setPosY(1);
+    creature->setPosZ(0);
+    map->addObject(creature);
+
+    expect_true(!creature->getPendingMoveOrigin().has_value(),
+                "pending move origin should be empty before movement starts");
+
+    creature->move(1, 0, 0);
+
+    expect_true(creature->observedOriginDuringAfterMove.has_value(),
+                "pending move origin should be populated during afterMove");
+    expect_true(creature->observedOriginDuringAfterMove == Coords(1, 1, 0),
+                "pending move origin should record the normalized pre-step coordinate");
+    expect_true(creature->originClearedAfterBaseAfterMove, "base afterMove should clear pending move origin");
+    expect_true(!creature->getPendingMoveOrigin().has_value(),
+                "pending move origin should be empty after movement finishes");
+}
+
 void test_map_player_trigger_registration_is_idempotent() {
     auto game = CGameLoader::loadGame();
     auto map = std::make_shared<CMap>();
@@ -636,8 +729,10 @@ int main() {
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
     test_map_tiles_bounds_wrapping_and_object_cache();
+    test_map_navigation_edges_update_revision();
     test_map_defensive_branches_and_strict_validation();
     test_map_move_interrupts_invalid_planned_steps();
+    test_creature_tracks_pending_move_origin_only_during_after_move();
     test_map_player_trigger_registration_is_idempotent();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();

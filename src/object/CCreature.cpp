@@ -25,6 +25,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 
+#include <utility>
+
+namespace {
+template <typename Callback> class ScopeExit {
+  public:
+    explicit ScopeExit(Callback callback) : callback(std::move(callback)) {}
+    ~ScopeExit() {
+        if (active) {
+            callback();
+        }
+    }
+
+    void release() { active = false; }
+
+  private:
+    Callback callback;
+    bool active = true;
+};
+} // namespace
+
 bool visitablePredicate(std::shared_ptr<CMapObject> object) { return vstd::cast<CVisitable>(object).operator bool(); };
 
 void CCreature::setActions(std::set<std::shared_ptr<CInteraction>> value) {
@@ -499,6 +519,9 @@ void CCreature::setGold(int value) {
 }
 
 void CCreature::beforeMove() {
+    auto map = getMap();
+    pendingMoveOrigin = map ? map->normalizeCoords(getCoords()) : getCoords();
+    ScopeExit clearOnFailure([this]() { pendingMoveOrigin.reset(); });
     auto self = this->ptr<CCreature>();
 
     auto func = [self](std::shared_ptr<CMapObject> object) {
@@ -507,9 +530,11 @@ void CCreature::beforeMove() {
     };
 
     getMap()->forObjectsAtCoords(getCoords(), func, visitablePredicate);
+    clearOnFailure.release();
 }
 
 void CCreature::afterMove() {
+    ScopeExit clearPendingMoveOrigin([this]() { pendingMoveOrigin.reset(); });
     auto self = this->ptr<CCreature>();
     auto map = getMap();
     if (!map) {
@@ -556,6 +581,8 @@ void CCreature::afterMove() {
         map->forObjectsAtCoords(arrival, eventAction, visitablePredicate);
     }
 }
+
+const std::optional<Coords> &CCreature::getPendingMoveOrigin() const { return pendingMoveOrigin; }
 
 void CCreature::addGold(int gold) { this->setGold(this->getGold() + gold); }
 

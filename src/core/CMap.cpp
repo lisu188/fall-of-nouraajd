@@ -184,6 +184,29 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
 
 std::uint64_t CMap::getNavigationRevision() const { return navigationRevision; }
 
+const std::vector<CNavigationEdge> &CMap::getNavigationEdges() const { return navigationEdges; }
+
+void CMap::addNavigationEdge(CNavigationEdge edge) {
+    edge.source = normalizeCoords(edge.source);
+    edge.target = normalizeCoords(edge.target);
+    navigationEdges.push_back(std::move(edge));
+    bumpNavigationRevision();
+}
+
+bool CMap::removeNavigationEdge(Coords source, Coords target, std::optional<std::string> sourceObjectName) {
+    source = normalizeCoords(source);
+    target = normalizeCoords(target);
+    auto it = std::ranges::find_if(navigationEdges, [&](const CNavigationEdge &edge) {
+        return edge.source == source && edge.target == target && edge.sourceObjectName == sourceObjectName;
+    });
+    if (it == navigationEdges.end()) {
+        return false;
+    }
+    navigationEdges.erase(it);
+    bumpNavigationRevision();
+    return true;
+}
+
 std::size_t CMap::getObjectCacheEntryCountForTesting() const { return mapObjectsCache.size(); }
 
 void performance_guard::resetMapCoordinateLookupProbe() {

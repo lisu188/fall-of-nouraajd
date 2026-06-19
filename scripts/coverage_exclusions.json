@@ -98,16 +98,16 @@
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
         "65",
-        "263",
-        "412",
-        "538",
-        "574",
-        "605",
-        "658",
-        "725",
-        "761",
-        "768",
-        "774"
+        "286",
+        "435",
+        "561",
+        "597",
+        "628",
+        "681",
+        "748",
+        "784",
+        "791",
+        "797"
       ]
     },
     {
@@ -396,15 +396,15 @@
       "path": "src/gui/object/CGameGraphicsObject.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "81",
-        "108-109",
-        "121",
-        "195",
-        "211",
-        "214",
-        "235-236",
-        "242",
-        "256"
+        "111",
+        "150-151",
+        "163",
+        "237",
+        "253",
+        "256",
+        "277-278",
+        "284",
+        "298"
       ]
     },
     {
@@ -749,20 +749,20 @@
       "path": "src/object/CCreature.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "101",
-        "272",
-        "354",
-        "370",
-        "431",
-        "448",
-        "516",
-        "591",
-        "607",
-        "621",
-        "637",
-        "639",
-        "643",
-        "659"
+        "121",
+        "292",
+        "374",
+        "390",
+        "451",
+        "468",
+        "541",
+        "618",
+        "634",
+        "648",
+        "664",
+        "666",
+        "670",
+        "686"
       ]
     },
     {
