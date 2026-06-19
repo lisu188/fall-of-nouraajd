@@ -837,6 +837,10 @@ def shortlistTasks(
         allowFileOverlap=allowFileOverlap,
     )
     counts = statusCounts(state)
+    activeCount = counts.get(STATUS_IN_PROGRESS, 0)
+    stale = staleClaims(state)
+    staleClaimCount = len(stale)
+    unexpiredActiveCount = max(0, activeCount - staleClaimCount)
     selectionSeed = seed or uuid.uuid4().hex
     fileOverlapFilter = (
         "direct target-file overlap allowed by --allow-file-overlap"
@@ -853,8 +857,15 @@ def shortlistTasks(
         "storyGroups": [],
         "selected": None,
         "statusCounts": counts,
-        "activeCount": counts.get(STATUS_IN_PROGRESS, 0),
-        "staleClaims": staleClaims(state),
+        "activeCount": activeCount,
+        "unexpiredActiveCount": unexpiredActiveCount,
+        "staleClaimCount": staleClaimCount,
+        "activeClaims": {
+            "total": activeCount,
+            "unexpired": unexpiredActiveCount,
+            "stale": staleClaimCount,
+        },
+        "staleClaims": stale,
         "rejectedCount": len(rejected),
         "rejectionSummary": rejectionSummary(rejected),
         "mechanicalFilters": [

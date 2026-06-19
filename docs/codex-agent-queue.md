@@ -79,9 +79,10 @@ python3 scripts/issue_queue.py shortlist \
 
 The shortlist command does not mutate the workbook. It filters queue status, dependencies, optional CLI filters, and
 direct target-file overlaps, keeps only the highest currently eligible priority tier for `storyGroups`, and emits a
-seeded recommended `selected.issue.issueName`. Treat that output as mechanical evidence for the controller and
-project-manager brief, not as an automatic claim. The controller and PM must still inspect active-scope conflicts not
-represented by exact target-file overlap, including:
+seeded recommended `selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`,
+`activeClaims.stale`, `staleClaimCount`, and `staleClaims` so expired leases are not mistaken for live worker capacity.
+Treat that output as mechanical evidence for the controller and project-manager brief, not as an automatic claim. The
+controller and PM must still inspect active-scope conflicts not represented by exact target-file overlap, including:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with unfinished dependencies;
