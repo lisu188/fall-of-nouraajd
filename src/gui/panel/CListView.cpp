@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CEventHandler.h"
 #include <cstdlib>
 #include <exception>
+#include <utility>
 
 namespace {
 std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> &gui,
@@ -430,6 +431,18 @@ std::string CListView::getRefreshEvent() { return refreshEvent; }
 
 void CListView::setRefreshEvent(std::string refreshEvent) { CListView::refreshEvent = refreshEvent; }
 
+bool CListView::getRefreshOnPropertyChanged() { return refreshOnPropertyChanged; }
+
+void CListView::setRefreshOnPropertyChanged(bool refreshOnPropertyChanged) {
+    CListView::refreshOnPropertyChanged = refreshOnPropertyChanged;
+}
+
+std::set<std::string> CListView::getRefreshProperties() { return refreshProperties; }
+
+void CListView::setRefreshProperties(std::set<std::string> refreshProperties) {
+    CListView::refreshProperties = std::move(refreshProperties);
+}
+
 void CListView::initialize() {
     auto self = this->ptr<CListView>();
     vstd::call_when(
@@ -438,15 +451,121 @@ void CListView::initialize() {
                    self->getGui()->getGame()->getMap() != nullptr;
         },
         [self]() {
-            if (self->refreshObject) {
-                auto refreshTarget = self->refreshObject->invoke(self->getGui()->getGame(), self);
-                if (refreshTarget) {
-                    refreshTarget->connect(self->refreshEvent, self, "refresh");
-                    refreshTarget->connect(self->refreshEvent, self, "refreshAll");
-                }
-            }
+            self->refreshSubscriptions();
             self->refresh();
         });
+}
+
+void CListView::refreshFromRefreshEvent() { refreshFromSubscription(); }
+
+void CListView::refreshFromPropertyChanged(std::string propertyName) {
+    refreshSubscriptions();
+    if (shouldRefreshForProperty(propertyName)) {
+        refreshFromSubscription();
+    }
+}
+
+void CListView::refreshFromPropertiesChanged(std::set<std::string> propertyNames) {
+    refreshSubscriptions();
+    bool shouldRefresh = refreshOnPropertyChanged;
+    for (const auto &propertyName : propertyNames) {
+        shouldRefresh = shouldRefresh || shouldRefreshForProperty(propertyName);
+    }
+    if (shouldRefresh) {
+        refreshFromSubscription();
+    }
+}
+
+void CListView::refreshFromPropertySpecificChanged() {
+    refreshSubscriptions();
+    refreshFromSubscription();
+}
+
+std::shared_ptr<CGameObject> CListView::resolveRefreshTarget() {
+    if (!refreshObject) {
+        return nullptr;
+    }
+    auto gui = getGui();
+    if (!gui || !gui->getGame()) {
+        return nullptr;
+    }
+    return refreshObject->invoke(gui->getGame(), this->ptr<CListView>());
+}
+
+void CListView::refreshSubscriptions() {
+    auto refreshTarget = resolveRefreshTarget();
+    auto subscribedTarget = refreshSubscriptionTarget.lock();
+    if (subscribedTarget == refreshTarget && subscribedRefreshEvent == refreshEvent &&
+        subscribedRefreshOnPropertyChanged == refreshOnPropertyChanged &&
+        subscribedRefreshProperties == refreshProperties) {
+        return;
+    }
+
+    disconnectRefreshSubscriptions();
+    refreshSubscriptionTarget = refreshTarget;
+    subscribedRefreshEvent = refreshEvent;
+    subscribedRefreshOnPropertyChanged = refreshOnPropertyChanged;
+    subscribedRefreshProperties = refreshProperties;
+    connectRefreshSubscriptions(refreshTarget);
+}
+
+void CListView::disconnectRefreshSubscriptions() {
+    auto refreshTarget = refreshSubscriptionTarget.lock();
+    if (!refreshTarget) {
+        return;
+    }
+
+    auto self = this->ptr<CListView>();
+    if (!subscribedRefreshEvent.empty()) {
+        refreshTarget->disconnect(subscribedRefreshEvent, self, "refreshFromRefreshEvent");
+    }
+    if (subscribedRefreshOnPropertyChanged) {
+        refreshTarget->disconnect("propertyChanged", self, "refreshFromPropertyChanged");
+    }
+    if (subscribedRefreshOnPropertyChanged || !subscribedRefreshProperties.empty()) {
+        refreshTarget->disconnect("propertiesChanged", self, "refreshFromPropertiesChanged");
+    }
+    if (!subscribedRefreshOnPropertyChanged) {
+        for (const auto &propertyName : subscribedRefreshProperties) {
+            if (!propertyName.empty()) {
+                refreshTarget->disconnect(propertyName + "Changed", self, "refreshFromPropertySpecificChanged");
+            }
+        }
+    }
+}
+
+void CListView::connectRefreshSubscriptions(const std::shared_ptr<CGameObject> &refreshTarget) {
+    if (!refreshTarget) {
+        return;
+    }
+
+    auto self = this->ptr<CListView>();
+    if (!refreshEvent.empty()) {
+        refreshTarget->connect(refreshEvent, self, "refreshFromRefreshEvent");
+    }
+    if (refreshOnPropertyChanged) {
+        refreshTarget->connect("propertyChanged", self, "refreshFromPropertyChanged");
+    }
+    if (refreshOnPropertyChanged || !refreshProperties.empty()) {
+        refreshTarget->connect("propertiesChanged", self, "refreshFromPropertiesChanged");
+    }
+    if (!refreshOnPropertyChanged) {
+        for (const auto &propertyName : refreshProperties) {
+            if (!propertyName.empty()) {
+                refreshTarget->connect(propertyName + "Changed", self, "refreshFromPropertySpecificChanged");
+            }
+        }
+    }
+}
+
+void CListView::refreshFromSubscription() {
+    refreshSubscriptions();
+    refresh();
+    refreshAll();
+}
+
+bool CListView::shouldRefreshForProperty(const std::string &propertyName) const {
+    return refreshOnPropertyChanged || refreshProperties.contains(propertyName);
 }
 
 int CListView::getXPrefferedSize() const { return xPrefferedSize; }

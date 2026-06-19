@@ -31,12 +31,19 @@ class CListView : public CProxyTargetGraphicsObject {
            V_PROPERTY(CListView, std::string, rightClickCallback, getRightClickCallback, setRightClickCallback),
            V_PROPERTY(CListView, std::shared_ptr<CScript>, refreshObject, getRefreshObject, setRefreshObject),
            V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent, setRefreshEvent),
+           V_PROPERTY(CListView, bool, refreshOnPropertyChanged, getRefreshOnPropertyChanged,
+                      setRefreshOnPropertyChanged),
+           V_PROPERTY(CListView, std::set<std::string>, refreshProperties, getRefreshProperties, setRefreshProperties),
            V_PROPERTY(CListView, int, xPrefferedSize, getXPrefferedSize, setXPrefferedSize),
            V_PROPERTY(CListView, int, yPrefferedSize, getYPrefferedSize, setYPrefferedSize),
            V_PROPERTY(CListView, int, tileSize, getTileSize, setTileSize),
            V_PROPERTY(CListView, bool, allowOversize, getAllowOversize, setAllowOversize),
            V_PROPERTY(CListView, bool, showEmpty, getShowEmpty, setShowEmpty),
-           V_PROPERTY(CListView, bool, grouping, getGrouping, setGrouping), V_METHOD(CListView, initialize))
+           V_PROPERTY(CListView, bool, grouping, getGrouping, setGrouping), V_METHOD(CListView, initialize),
+           V_METHOD(CListView, refreshFromRefreshEvent),
+           V_METHOD(CListView, refreshFromPropertyChanged, void, std::string),
+           V_METHOD(CListView, refreshFromPropertiesChanged, void, std::set<std::string>),
+           V_METHOD(CListView, refreshFromPropertySpecificChanged))
 
     std::string collection;
 
@@ -63,10 +70,38 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void setRefreshEvent(std::string refreshEvent);
 
+    bool getRefreshOnPropertyChanged();
+
+    void setRefreshOnPropertyChanged(bool refreshOnPropertyChanged);
+
+    std::set<std::string> getRefreshProperties();
+
+    void setRefreshProperties(std::set<std::string> refreshProperties);
+
     void initialize();
+
+    void refreshFromRefreshEvent();
+
+    void refreshFromPropertyChanged(std::string propertyName);
+
+    void refreshFromPropertiesChanged(std::set<std::string> propertyNames);
+
+    void refreshFromPropertySpecificChanged();
 
   private:
     std::string refreshEvent;
+
+    bool refreshOnPropertyChanged = false;
+
+    std::set<std::string> refreshProperties;
+
+    std::weak_ptr<CGameObject> refreshSubscriptionTarget;
+
+    std::string subscribedRefreshEvent;
+
+    bool subscribedRefreshOnPropertyChanged = false;
+
+    std::set<std::string> subscribedRefreshProperties;
 
     bool allowOversize = true;
 
@@ -196,4 +231,18 @@ class CListView : public CProxyTargetGraphicsObject {
                      std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
 
     int getItemTypesCount(const std::shared_ptr<CGui> &gui);
+
+  protected:
+    virtual std::shared_ptr<CGameObject> resolveRefreshTarget();
+
+  private:
+    void refreshSubscriptions();
+
+    void disconnectRefreshSubscriptions();
+
+    void connectRefreshSubscriptions(const std::shared_ptr<CGameObject> &refreshTarget);
+
+    void refreshFromSubscription();
+
+    bool shouldRefreshForProperty(const std::string &propertyName) const;
 };

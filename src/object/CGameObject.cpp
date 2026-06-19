@@ -165,6 +165,20 @@ void CGameObject::connect(std::string signal, std::shared_ptr<CGameObject> objec
     connections.emplace_back(signal, object, slot);
 }
 
+void CGameObject::disconnect(const std::string &signal, const std::shared_ptr<CGameObject> &object,
+                             const std::string &slot) {
+    auto it = connections.begin();
+    while (it != connections.end()) {
+        auto &[connectedSignal, connectedObject, connectedSlot] = *it;
+        auto target = connectedObject.lock();
+        if (!target || (connectedSignal == signal && target == object && connectedSlot == slot)) {
+            it = connections.erase(it);
+            continue;
+        }
+        ++it;
+    }
+}
+
 void CGameObject::notifyPropertyChanged(const std::string &name) {
     signal("propertyChanged", name);
     signal(name + "Changed");

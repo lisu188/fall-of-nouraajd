@@ -26,11 +26,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CWidget.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
+#include "gui/panel/CListView.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
+
+#include <utility>
 
 namespace {
 
@@ -104,6 +107,37 @@ class MouseEventRecorder : public CGameGraphicsObject {
     int last_wheel_y = 0;
 };
 
+class RefreshCountingListView : public CListView {
+  public:
+    int getSizeX(std::shared_ptr<CGui>) override { return 1; }
+
+    int getSizeY(std::shared_ptr<CGui>) override { return 1; }
+
+    std::list<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui>, int, int) override {
+        ++refresh_count;
+        return {};
+    }
+
+    void setResolvedRefreshTarget(std::shared_ptr<CGameObject> refresh_target) {
+        resolvedRefreshTarget = std::move(refresh_target);
+    }
+
+    int refresh_count = 0;
+
+  protected:
+    std::shared_ptr<CGameObject> resolveRefreshTarget() override { return resolvedRefreshTarget; }
+
+  private:
+    std::shared_ptr<CGameObject> resolvedRefreshTarget;
+};
+
+void drain_event_loop() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+}
+
 std::shared_ptr<MouseEventRecorder> attach_mouse_recorder(const std::shared_ptr<CGui> &gui) {
     auto recorder = std::make_shared<MouseEventRecorder>();
     auto layout = std::make_shared<CLayout>();
@@ -133,11 +167,122 @@ std::shared_ptr<DropTargetRecorder> attach_drop_target_recorder(const std::share
     return recorder;
 }
 
+std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+    return game;
+}
+
 void test_widget_ignores_unarmed_non_left_clicks() {
     auto widget = std::make_shared<CWidget>();
 
     expect_true(!widget->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
                 "plain widget should ignore right clicks when no click callback is armed");
+}
+
+void test_list_view_refreshes_from_generic_property_notifications() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    list->setResolvedRefreshTarget(refresh_target);
+    list->setRefreshOnPropertyChanged(true);
+    gui->pushChild(list);
+
+    list->initialize();
+    drain_event_loop();
+    const int after_initial_refresh = list->refresh_count;
+
+    refresh_target->setNumericProperty("threat", 1);
+    drain_event_loop();
+
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "generic propertyChanged subscription should refresh the list for any changed property");
+}
+
+void test_list_view_refresh_event_compatibility() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    list->setResolvedRefreshTarget(refresh_target);
+    list->setRefreshEvent("legacyRefresh");
+    gui->pushChild(list);
+
+    list->initialize();
+    drain_event_loop();
+    const int after_initial_refresh = list->refresh_count;
+
+    refresh_target->signal("legacyRefresh");
+    drain_event_loop();
+
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "legacy no-argument refreshEvent subscription should still refresh the list");
+}
+
+void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    create_gui_game(gui);
+    auto first_target = std::make_shared<CGameObject>();
+    auto second_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    list->setResolvedRefreshTarget(first_target);
+    list->setRefreshProperties({"label"});
+    gui->pushChild(list);
+
+    list->initialize();
+    drain_event_loop();
+    const int after_initial_refresh = list->refresh_count;
+
+    first_target->setStringProperty("label", "first");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "property-specific subscription should refresh for the selected property");
+
+    first_target->setNumericProperty("threat", 1);
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "property-specific subscription should ignore unrelated property notifications");
+
+    list->setResolvedRefreshTarget(second_target);
+    first_target->setStringProperty("label", "handoff");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 2,
+                "subscription refresh should reconnect when the resolved refresh target changes");
+
+    first_target->setStringProperty("label", "stale");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 2,
+                "old refresh target should be disconnected after reconnecting to a new target");
+
+    second_target->setStringProperty("label", "second");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 3,
+                "new refresh target should drive later property-specific refreshes");
+
+    list->setResolvedRefreshTarget(nullptr);
+    second_target->setStringProperty("label", "to-null");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 4,
+                "subscription refresh should handle the refresh script resolving to null");
+
+    second_target->setStringProperty("label", "after-null");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 4,
+                "previous refresh target should be disconnected when the refresh script resolves to null");
 }
 
 std::shared_ptr<CStats> player_stats() {
@@ -419,6 +564,9 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_widget_ignores_unarmed_non_left_clicks();
+    test_list_view_refreshes_from_generic_property_notifications();
+    test_list_view_refresh_event_compatibility();
+    test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
