@@ -554,15 +554,20 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(issue_queue.STATUS_IN_PROGRESS, task.status)
         self.assertEqual(claim["claimId"], task.values["Claim ID"])
 
-    def test_validate_warns_about_expired_in_progress_lease(self) -> None:
-        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
-        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10)
+    def test_validate_warns_only_for_claims_at_reclaim_threshold(self) -> None:
+        recent_claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(recent_claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=239)
+        old_claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-2", leaseMinutes=1)
+        self.set_claim_times(old_claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=241)
 
         state = issue_queue.loadQueue(self.workbook_path)
         errors, warnings = issue_queue.validateQueueState(state)
 
         self.assertEqual([], errors)
-        self.assertTrue(any("IN_PROGRESS lease expired" in warning for warning in warnings), warnings)
+        self.assertEqual(1, len(warnings), warnings)
+        self.assertIn("IN_PROGRESS stale claim", warnings[0])
+        self.assertIn("240-minute reclaim threshold", warnings[0])
+        self.assertIn("reclaim-stale --dry-run", warnings[0])
 
     def test_reclaim_stale_claim_ignores_recent_heartbeat(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)

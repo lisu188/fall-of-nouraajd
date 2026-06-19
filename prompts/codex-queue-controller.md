@@ -444,9 +444,9 @@ workbook. The default reclaim age threshold is 240 minutes; pass `--older-than-m
 controller has an explicit reason to override it. The dry-run output includes `activeClaims`, `staleCount`, and
 `reclaimableStaleCount`; use those fields to distinguish active claims from rows eligible under the current
 heartbeat-age threshold. Dry-run rows are queue-timing candidates only and include `reclaimReady: false`; use mutating
-`reclaim-stale` only when the claim is genuinely stale and no recoverable work remains. Treat `validate` warnings about
-expired `IN_PROGRESS` leases and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only
-recovery signals, not permission to reclaim without inspection.
+`reclaim-stale` only when the claim is genuinely stale and no recoverable work remains. Treat `validate` stale-claim
+warnings and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only recovery signals, not
+permission to reclaim without inspection.
 
 ## Resource-aware validation
 
