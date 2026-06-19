@@ -50,7 +50,10 @@ eligible set. Exclude:
 
 Keep only the highest currently available priority tier. Group remaining candidates by `(Epic #, Story #)`, randomly
 select one story with equal probability, then randomly select one eligible substory in that story. Never default to
-spreadsheet order, and never randomize an ineligible issue into consideration.
+spreadsheet order, and never randomize an ineligible issue into consideration. Use
+`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
+read-only mechanical selector before each claim; still review source-backed indirect conflicts before claiming the final
+exact issue with `claim --issue`.
 
 Use the project-manager prioritization brief to decide whether to proceed, publish a queue-state update, or report a
 blocker. Do not use it as an ad hoc override: priority, dependency, status, or scope changes affect dispatch only after
