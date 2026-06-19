@@ -725,6 +725,7 @@ def eligibleTasks(
 def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
+    now = utcNow()
 
     missing = [header for header in ALL_HEADERS if header not in state.headers]
     if missing:
@@ -776,6 +777,11 @@ def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires valid Updated At UTC")
             if leaseUntil is None:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires valid Lease Until UTC")
+            elif leaseUntil <= now:
+                warnings.append(
+                    f"Row {task.row}: IN_PROGRESS lease expired at {formatUtc(leaseUntil)}; "
+                    "inspect the worker and run reclaim-stale --dry-run before reclaiming"
+                )
             if attempt < 1:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires Attempt >= 1")
             if progress >= 100:
@@ -840,7 +846,62 @@ def taskPayload(task: TaskRecord) -> dict[str, Any]:
     payload["Status"] = task.status
     payload["Dependencies Parsed"] = task.dependencies
     payload["Target Files Parsed"] = sorted(task.targetFiles)
+    payload.update(taskLeasePayload(task, utcNow()))
     return payload
+
+
+def ageMinutes(now: datetime, then: datetime | None) -> int | None:
+    if then is None:
+        return None
+    return max(0, int((now - then).total_seconds() // 60))
+
+
+def taskLeasePayload(task: TaskRecord, now: datetime) -> dict[str, Any]:
+    if task.status != STATUS_IN_PROGRESS:
+        return {}
+    lease = parseUtc(task.values.get("Lease Until UTC"))
+    updated = parseUtc(task.values.get("Updated At UTC")) or parseUtc(task.values.get("Claimed At UTC"))
+    expired = lease is None or lease <= now
+    return {
+        "leaseExpired": expired,
+        "leaseExpiredMinutes": ageMinutes(now, lease) if expired else None,
+        "updatedAgeMinutes": ageMinutes(now, updated),
+        "staleReason": "missing lease" if lease is None else "lease expired" if expired else None,
+    }
+
+
+def staleClaimPayload(task: TaskRecord, now: datetime, olderThanMinutes: int = 0) -> dict[str, Any] | None:
+    if task.status != STATUS_IN_PROGRESS:
+        return None
+    lease = parseUtc(task.values.get("Lease Until UTC"))
+    updated = parseUtc(task.values.get("Updated At UTC")) or parseUtc(task.values.get("Claimed At UTC"))
+    leasePayload = taskLeasePayload(task, now)
+    expired = bool(leasePayload.get("leaseExpired"))
+    oldEnough = updated is None or updated <= now - timedelta(minutes=olderThanMinutes)
+    if not expired or not oldEnough:
+        return None
+
+    return {
+        "issueName": task.issueName,
+        "row": task.row,
+        "owner": str(task.values.get("Owner") or ""),
+        "claimId": str(task.values.get("Claim ID") or ""),
+        "updatedAtUtc": formatUtc(updated) if updated else None,
+        "leaseUntilUtc": formatUtc(lease) if lease else None,
+        **leasePayload,
+    }
+
+
+def staleClaims(state: QueueState, olderThanMinutes: int = 0, now: datetime | None = None) -> list[dict[str, Any]]:
+    if olderThanMinutes < 0:
+        raise QueueError("--older-than-minutes must be non-negative")
+    now = now or utcNow()
+    records = [
+        record
+        for task in sorted(state.tasks, key=taskSortKey)
+        if (record := staleClaimPayload(task, now, olderThanMinutes)) is not None
+    ]
+    return records
 
 
 def claimTask(
@@ -1062,15 +1123,8 @@ def reclaimStaleTasks(
             ensureWorkflowSchema(state)
             state = refreshTasks(state)
             now = utcNow()
-            for task in state.tasks:
-                if task.status != STATUS_IN_PROGRESS:
-                    continue
-                lease = parseUtc(task.values.get("Lease Until UTC"))
-                updated = parseUtc(task.values.get("Updated At UTC")) or parseUtc(task.values.get("Claimed At UTC"))
-                expired = lease is None or lease <= now
-                oldEnough = updated is None or updated <= now - timedelta(minutes=olderThanMinutes)
-                if not expired or not oldEnough:
-                    continue
+            for stale in staleClaims(state, olderThanMinutes=olderThanMinutes, now=now):
+                task = taskByName(state, stale["issueName"])
                 priorOwner = str(task.values.get("Owner") or "unknown")
                 priorClaim = str(task.values.get("Claim ID") or "unknown")
                 setValue(state, task.row, "Status", STATUS_NOT_STARTED)
@@ -1089,7 +1143,13 @@ def reclaimStaleTasks(
                 )
                 setValue(state, task.row, "Result Summary", None)
                 setValue(state, task.row, "Validation Results", None)
-                reclaimed.append({"issueName": task.issueName, "priorOwner": priorOwner, "priorClaimId": priorClaim})
+                reclaimed.append(
+                    {
+                        **stale,
+                        "priorOwner": priorOwner,
+                        "priorClaimId": priorClaim,
+                    }
+                )
             if reclaimed:
                 atomicSave(state, workbookPath)
             return reclaimed
@@ -1188,22 +1248,24 @@ def printTable(tasks: Sequence[TaskRecord]) -> None:
     if not tasks:
         print("No tasks.")
         return
+    now = utcNow()
     rows = [
         (
             task.status,
             task.priority,
             str(task.values.get("Owner") or ""),
             str(task.values.get("Progress %") or 0),
+            "expired" if taskLeasePayload(task, now).get("leaseExpired") else "",
             task.issueName,
         )
         for task in tasks
     ]
-    widths = [max(len(row[index]) for row in rows + [("STATUS", "PRI", "OWNER", "%", "ISSUE")]) for index in range(5)]
-    header = ("STATUS", "PRI", "OWNER", "%", "ISSUE")
-    print("  ".join(header[index].ljust(widths[index]) for index in range(5)))
-    print("  ".join("-" * widths[index] for index in range(5)))
+    header = ("STATUS", "PRI", "OWNER", "%", "LEASE", "ISSUE")
+    widths = [max(len(row[index]) for row in rows + [header]) for index in range(len(header))]
+    print("  ".join(header[index].ljust(widths[index]) for index in range(len(header))))
+    print("  ".join("-" * widths[index] for index in range(len(header))))
     for row in rows:
-        print("  ".join(row[index].ljust(widths[index]) for index in range(5)))
+        print("  ".join(row[index].ljust(widths[index]) for index in range(len(header))))
 
 
 def addCommonArguments(parser: argparse.ArgumentParser) -> None:
@@ -1304,6 +1366,7 @@ def buildParser() -> argparse.ArgumentParser:
     reclaimParser = subparsers.add_parser("reclaim-stale", help="Release expired IN_PROGRESS claims")
     addCommonArguments(reclaimParser)
     reclaimParser.add_argument("--older-than-minutes", type=int, default=0)
+    reclaimParser.add_argument("--dry-run", action="store_true", help="Report stale claims without modifying the queue")
 
     return parser
 
@@ -1460,15 +1523,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
         if args.command == "reclaim-stale":
-            printJson(
-                {
-                    "reclaimed": reclaimStaleTasks(
-                        workbookPath,
-                        olderThanMinutes=args.older_than_minutes,
-                        lockTimeoutSeconds=args.lock_timeout_seconds,
-                    )
-                }
-            )
+            if args.dry_run:
+                state = loadQueue(workbookPath, writable=False)
+                try:
+                    printJson({"stale": staleClaims(state, olderThanMinutes=args.older_than_minutes)})
+                finally:
+                    state.workbook.close()
+            else:
+                printJson(
+                    {
+                        "reclaimed": reclaimStaleTasks(
+                            workbookPath,
+                            olderThanMinutes=args.older_than_minutes,
+                            lockTimeoutSeconds=args.lock_timeout_seconds,
+                        )
+                    }
+                )
             return 0
 
         raise QueueError(f"Unsupported command {args.command}")
