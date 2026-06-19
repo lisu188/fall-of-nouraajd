@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -86,9 +86,7 @@ def load(self, context):
     @register(context)
     class Chest(CBuilding):
         def onEnter(self, event):
-            self.getMap().getGame().getLootHandler().addRandomLoot(
-                self.getMap().getPlayer(), self.getNumericProperty("value")
-            )
+            self.getGame().getRngHandler().addRandomLoot(self.getMap().getPlayer(), self.getNumericProperty("value"))
 
     @register(context)
     class Cave(CBuilding):

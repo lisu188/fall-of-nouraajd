@@ -3436,6 +3436,21 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_chest_on_enter_grants_random_loot_to_real_player(self):
+        _g, game_map, player = load_game_map_with_player("test", "Warrior")
+        chest = game_map.getGame().createObject("chest")
+        self.assertIsNotNone(chest)
+        chest.setNumericProperty("value", 20)
+        game_map.addObject(chest)
+
+        before_items = len(player.getItems())
+        chest.onEnter(None)
+        after_items = len(player.getItems())
+
+        self.assertGreater(after_items, before_items)
+        return True, json.dumps({"before": before_items, "after": after_items}, sort_keys=True)
+
+    @game_test
     def test_array_deserialize_skips_bad_entries_and_consumers_are_safe(self):
         game = load_game_module()
 
