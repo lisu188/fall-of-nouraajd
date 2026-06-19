@@ -182,6 +182,32 @@ class ContentValidatorTest(unittest.TestCase):
             'unknown class "MissingEventClass"',
         )
 
+    def test_metadata_declared_unregistered_class_reports_distinctly(self):
+        root = self.make_fixture()
+        declared_header = root / "src/object/CDeclaredOnly.h"
+        declared_header.parent.mkdir(parents=True)
+        declared_header.write_text(
+            textwrap.dedent("""
+                class CDeclaredOnly {
+                    V_META(CDeclaredOnly, CGameObject, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["declaredOnly"] = {"class": "CDeclaredOnly"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "declaredOnly.class",
+            'class "CDeclaredOnly" is declared in metadata but is not registered as constructible content',
+        )
+
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
         for substring in substrings:
