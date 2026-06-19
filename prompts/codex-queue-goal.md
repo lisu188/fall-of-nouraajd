@@ -63,11 +63,14 @@ After the claim PR actually merges into `main`, create an isolated implementatio
 `origin/main`. Assign exactly one worker subagent and pass it the generated issue prompt. The worker must inspect
 relevant source files, verify repository-specific claims against current project files and GitHub raw source where
 available, perform root-cause analysis, make the smallest backward-compatible change, add required regression coverage,
-run focused validation, run full required validation where feasible, and report exact commands and outcomes.
+run focused validation, satisfy full required validation locally or by completed GitHub Actions polling where feasible,
+and report exact commands and outcomes.
 
 The controller must review every worker diff before commit and PR, ensure only intended files are staged, then commit,
-push, open the implementation PR, and enable squash auto-merge according to repository rules. Do not mark the issue
-`DONE` until the implementation PR is actually merged.
+push, and open the implementation PR. When CI polling supplies full validation evidence, poll
+`python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux` to success before enabling squash auto-merge; add
+`--require-step coverage` for coverage-relevant changes. Do not mark the issue `DONE` until the implementation PR is
+actually merged.
 
 After an implementation PR actually merges, publish and merge a fresh workbook-only terminal-status PR marking that
 issue `DONE` with the reviewed summary and exact validation results. Publish `BLOCKED`, `FAILED`, or `CANCELLED` through
