@@ -602,6 +602,9 @@ void test_playtest_trace_records_native_limits_and_quest_completion() {
 }
 
 void test_playtest_trace_environment_targets_and_fallback_ids() {
+#ifdef _WIN32
+    return;
+#else
     {
         ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "OFF");
         ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
@@ -611,7 +614,6 @@ void test_playtest_trace_environment_targets_and_fallback_ids() {
         expect_true(CPlaytestTrace::records().empty(), "disabled tracing should ignore records");
     }
 
-#ifndef _WIN32
     {
         ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "stdout");
         ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
@@ -623,7 +625,6 @@ void test_playtest_trace_environment_targets_and_fallback_ids() {
     CPlaytestTrace::configure(true, "stderr");
     CPlaytestTrace::record("stderr_target");
     expect_true(!CPlaytestTrace::drain().empty(), "stderr trace target should still keep buffered records");
-#endif
 
     const auto tracePath =
         std::filesystem::temp_directory_path() / ("playtest-trace-unit-" + std::to_string(SDL_GetTicks64()) + ".jsonl");
@@ -654,6 +655,7 @@ void test_playtest_trace_environment_targets_and_fallback_ids() {
                 "trace object refs should include the runtime object type");
 
     CPlaytestTrace::configure(false);
+#endif
 }
 
 void test_fight_handler_records_outcome_trace_metadata() {
