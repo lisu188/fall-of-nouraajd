@@ -96,6 +96,10 @@ The claim branch and pull request must be workbook-only and must merge before im
 actually merges into `main`, create the implementation worktree from the updated `origin/main`, generate the worker
 prompt, and assign exactly one worker to that implementation branch.
 
+When a controller loop does not make any new claim, still fetch and inspect `origin/main` before deciding that work is
+blocked or exhausted. Other claim, implementation, status, or reclaim PRs may have merged while the controller was
+polling workers or CI; the next eligible set must come from the refreshed merged workbook.
+
 The CLI considers a row mechanically eligible only when:
 
 - status is `NOT_STARTED`;
@@ -236,6 +240,9 @@ changed-path rule runs its `coverage` step; use `--require-step coverage` for co
 platform, release, MCP gameplay, manual, or issue-specific validation is needed only when the task targets that surface
 or the user requests it. Do not enable auto-merge until CI-polled validation passes when it is the only full-validation
 evidence.
+
+If the implementation PR has already merged, stop waiting on its Actions run even if a poll command is still running.
+Fetch `origin/main`, verify the merge, and proceed with the next controller step.
 
 `DONE` requires a result summary, validation results, `Progress %=100`, and a completion timestamp. Do not mark `DONE`
 while implementation auto-merge is merely queued.
