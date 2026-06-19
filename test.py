@@ -3476,14 +3476,22 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_chest_on_enter_grants_random_loot_to_real_player(self):
-        _g, game_map, player = load_game_map_with_player("test", "Warrior")
+        g, game_map, player = load_game_map_with_player("test", "Warrior")
         chest = game_map.getGame().createObject("chest")
         self.assertIsNotNone(chest)
         chest.setNumericProperty("value", 20)
         game_map.addObject(chest)
 
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
         before_items = len(player.getItems())
-        chest.onEnter(None)
+        self.assertFalse(hasattr(g, "getLootHandler"))
+        chest.onEnter(FakeEvent(player))
         after_items = len(player.getItems())
 
         self.assertGreater(after_items, before_items)
