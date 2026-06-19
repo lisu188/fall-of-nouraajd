@@ -801,7 +801,7 @@
       "path": "src/object/CGameObject.h",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "166"
+        "184"
       ]
     },
     {
