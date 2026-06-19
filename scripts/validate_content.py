@@ -459,6 +459,13 @@ class ContentValidator:
             if exclusion.class_name in self.registration_exclusions:
                 self._issue(path, f"{location}.className", f'duplicate exclusion for "{exclusion.class_name}"')
                 continue
+            if exclusion.class_name not in self._known_registration_exclusion_classes():
+                self._issue(
+                    path,
+                    f"{location}.className",
+                    f'excluded class "{exclusion.class_name}" is not metadata-declared or registered',
+                )
+                continue
             self.registration_exclusions[exclusion.class_name] = exclusion
 
     def _parse_registration_exclusion(self, path: Path, location: str, raw_entry: Any) -> RegistrationExclusion | None:
@@ -519,6 +526,15 @@ class ContentValidator:
                 return None
             allowed_uses.append(RegistrationExclusionUse(path=use_path, location=use_config_location, reason=reason))
         return allowed_uses
+
+    def _known_registration_exclusion_classes(self) -> set[str]:
+        return (
+            self.fallback_registered_classes
+            | self.metadata_declared_classes
+            | self.static_registered_classes
+            | self.native_plugin_registered_classes
+            | self.python_registered_classes
+        )
 
     def _parse_script(self, path: Path) -> ScriptInfo | None:
         if not path.exists():

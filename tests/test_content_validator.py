@@ -266,6 +266,45 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertEqual([], [str(issue) for issue in issues])
 
+    def test_reviewed_registration_exclusion_rejects_unknown_allowlisted_class(self):
+        root = self.make_fixture()
+        self.write_registration_exclusions(
+            root,
+            [
+                {
+                    "className": "CReviewedTypo",
+                    "reason": "Fixture typo should not be trusted.",
+                    "ownerModule": "tests/content-validator",
+                    "allowedUses": [
+                        {
+                            "path": "res/maps/broken/config.json",
+                            "location": "reviewedTypo.class",
+                            "reason": "This exact allowance must not hide an unknown class.",
+                        }
+                    ],
+                }
+            ],
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["reviewedTypo"] = {"class": "CReviewedTypo"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "scripts/type_registration_exclusions.json",
+            "exclusions[0].className",
+            'excluded class "CReviewedTypo" is not metadata-declared or registered',
+        )
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "reviewedTypo.class",
+            'unknown class "CReviewedTypo"',
+        )
+
     def test_static_type_registration_makes_class_constructible(self):
         root = self.make_fixture()
         self.write_declared_cpp_class(root, "CStaticRegistered")
