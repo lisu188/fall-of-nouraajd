@@ -369,13 +369,13 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
                 "direct attacker victory should report survivor and opponent metadata");
     expect_true(victory.resolved() && victory.attackerSucceeded(),
                 "result helpers should identify successful resolved combat");
-    expect_true(CFightHandler::fightManyOutcome(victor, {defeated}) == CFightOutcome::Invalid,
-                "enum compatibility wrapper should still be constructible for invalid post-victory input");
     expect_true(victory_controller->start_count == 1 && victory_controller->end_count == 1,
                 "attacker controller should start and end exactly once on victory");
     expect_true(victory_game->getMap()->getStringProperty("combatStatus").find("survives the encounter") !=
                     std::string::npos,
                 "attacker victory should preserve the survivor status text");
+    expect_true(CFightHandler::fightManyOutcome(victor, {defeated}) == CFightOutcome::Invalid,
+                "enum compatibility wrapper should still be constructible for invalid post-victory input");
 
     auto stalemate_game = load_empty_game();
     auto stalled_attacker = add_test_creature(stalemate_game, "unitStalledAttacker");
@@ -563,6 +563,11 @@ void test_fight_panel_resets_status_between_sequential_encounters() {
     reopened_panel->setEnemies({second_defeated});
     expect_true(encounterMap->getStringProperty("combatStatus").empty(),
                 "opening a fight panel for a later encounter should not display previous final status");
+
+    encounterMap->setStringProperty("combatStatus", "Previous victor survives the encounter.");
+    reopened_panel->setEnemy(second_defeated);
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "setting a fight panel enemy directly should also clear previous combat status");
 
     encounterMap->setStringProperty("combatStatus", "Combat round 99 begins.");
     reopened_panel->close();

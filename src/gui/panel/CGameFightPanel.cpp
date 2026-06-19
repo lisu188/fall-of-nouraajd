@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameFightPanel.h"
 #include <algorithm>
+#include <string>
 #include <unordered_set>
 
 #include "core/CMap.h"
@@ -39,20 +40,40 @@ void refresh_proxy_children(const std::shared_ptr<CGameGraphicsObject> &object) 
     }
 }
 
-void clear_combat_status(const std::shared_ptr<CGui> &gui, const std::vector<std::shared_ptr<CCreature>> &enemies,
-                         const std::shared_ptr<CCreature> &enemy) {
+std::shared_ptr<CMap> combat_status_map(const std::shared_ptr<CGui> &gui,
+                                        const std::vector<std::shared_ptr<CCreature>> &enemies,
+                                        const std::shared_ptr<CCreature> &enemy) {
     if (gui && gui->getGame() && gui->getGame()->getMap()) {
-        gui->getGame()->getMap()->setStringProperty("combatStatus", "");
-        return;
+        return gui->getGame()->getMap();
     }
     if (enemy && enemy->getMap()) {
-        enemy->getMap()->setStringProperty("combatStatus", "");
-        return;
+        return enemy->getMap();
     }
     for (const auto &candidate : enemies) {
         if (candidate && candidate->getMap()) {
-            candidate->getMap()->setStringProperty("combatStatus", "");
-            return;
+            return candidate->getMap();
+        }
+    }
+    return nullptr;
+}
+
+bool is_stale_combat_status(const std::string &status) {
+    return status.starts_with("Combat round ") || status.find("survives the encounter") != std::string::npos ||
+           status.find(" is defeated.") != std::string::npos || status.find("cancelled") != std::string::npos;
+}
+
+void clear_combat_status(const std::shared_ptr<CGui> &gui, const std::vector<std::shared_ptr<CCreature>> &enemies,
+                         const std::shared_ptr<CCreature> &enemy) {
+    if (auto map = combat_status_map(gui, enemies, enemy)) {
+        map->setStringProperty("combatStatus", "");
+    }
+}
+
+void clear_stale_combat_status(const std::shared_ptr<CGui> &gui, const std::vector<std::shared_ptr<CCreature>> &enemies,
+                               const std::shared_ptr<CCreature> &enemy) {
+    if (auto map = combat_status_map(gui, enemies, enemy)) {
+        if (is_stale_combat_status(map->getStringProperty("combatStatus"))) {
+            map->setStringProperty("combatStatus", "");
         }
     }
 }
@@ -189,6 +210,7 @@ void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
         enemies.push_back(en);
     }
     enemy = en && en->isAlive() ? en : nullptr;
+    clear_stale_combat_status(getGui(), enemies, enemy.lock());
     if (enemy.lock()) {
         refreshEncounterViews();
     } else {
@@ -209,7 +231,7 @@ void CGameFightPanel::setEnemies(const std::vector<std::shared_ptr<CCreature>> &
     auto current_it = std::find(enemies.begin(), enemies.end(), current);
     enemy =
         current_it != enemies.end() ? *current_it : (enemies.empty() ? std::shared_ptr<CCreature>() : enemies.front());
-    clear_combat_status(getGui(), enemies, enemy.lock());
+    clear_stale_combat_status(getGui(), enemies, enemy.lock());
     if (enemy.lock()) {
         refreshEncounterViews();
     } else {
