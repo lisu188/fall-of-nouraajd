@@ -326,12 +326,14 @@ python3 scripts/issue_queue.py reclaim-stale --dry-run --older-than-minutes 30
 python3 scripts/issue_queue.py reclaim-stale --older-than-minutes 30
 ```
 
-The dry run lists stale rows without modifying the workbook. Inspect the worker worktree, branch, pull request, and any
-recoverable changes before running the mutating command. Run the mutating command only from a fresh workbook-only branch
-and publish it through the same serialized queue-state PR process as claims and terminal statuses. Reclaimed rows are
-not eligible for dispatch until that reclaim PR actually merges. The mutating command only reclaims rows whose lease is
-already expired and whose last update is at least the specified age. Reclaimed rows return to `NOT_STARTED`, retain the
-incremented `Attempt`, and receive an audit note describing the previous owner and claim.
+The dry run lists stale rows without modifying the workbook and reports `activeClaims`, `staleCount`, and
+`reclaimableStaleCount`. `staleCount` is the total expired active-claim count; `reclaimableStaleCount` is the number of
+rows returned by the current `--older-than-minutes` threshold. Inspect the worker worktree, branch, pull request, and
+any recoverable changes before running the mutating command. Run the mutating command only from a fresh workbook-only
+branch and publish it through the same serialized queue-state PR process as claims and terminal statuses. Reclaimed rows
+are not eligible for dispatch until that reclaim PR actually merges. The mutating command only reclaims rows whose lease
+is already expired and whose last update is at least the specified age. Reclaimed rows return to `NOT_STARTED`, retain
+the incremented `Attempt`, and receive an audit note describing the previous owner and claim.
 
 `validate` warns about expired `IN_PROGRESS` leases without failing the workbook, and `list --status IN_PROGRESS --json`
 includes derived lease-expiration fields for read-only controller status checks.
