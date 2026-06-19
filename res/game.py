@@ -37,6 +37,13 @@ def record_playtest_trace(event, **fields):
         _native_record_playtest_trace_json(event, json.dumps(fields, sort_keys=True))
 
 
+def claim_once(owner, property_name):
+    if owner.getBoolProperty(property_name):
+        return False
+    owner.setBoolProperty(property_name, True)
+    return True
+
+
 def playtest_object_ref(obj):
     if obj is None:
         return None
