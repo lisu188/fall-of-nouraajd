@@ -221,6 +221,10 @@ Do not start additional workers when live worker status is missing, when the nex
 or when actual resource or disk pressure requires waiting for validation or cleanup to finish. Keep at least eight
 subagents alive by assigning standby-only work when fewer than eight implementation slots are safe.
 
+If a dispatch/refill loop does not publish a new claim, still fetch and inspect `origin/main` before deciding the next
+action. Another claim, implementation, terminal-status, or reclaim PR may have merged while the controller was polling
+workers or CI, and the next eligible set must be recalculated from the refreshed merged workbook.
+
 ## Phase 1: publish an `IN_PROGRESS` claim
 
 The claim pull request changes only the workbook.
@@ -506,7 +510,10 @@ delivery path for Linux compilation and testing. For coverage-relevant changes, 
 native-build validation is a fallback only when CI cannot provide the needed evidence or a focused local reproduction is
 necessary.
 
-Do not mark the task `DONE` when auto-merge is merely queued. Record the issue as awaiting implementation merge, continue other safe controller work, and re-check later. Proceed to terminal queue publication only after the PR state is actually `MERGED`. Do not bypass failing checks or unresolved conflicts.
+Do not mark the task `DONE` when auto-merge is merely queued. Record the issue as awaiting implementation merge,
+continue other safe controller work, and re-check later. If the implementation PR is already `MERGED`, stop waiting for
+its GitHub Actions run even if a poll is still active; fetch `origin/main`, verify the merged commit, and proceed to
+terminal queue publication. Do not bypass failing checks or unresolved conflicts on an open PR.
 
 If the implementation PR cannot merge, keep the task `IN_PROGRESS` while the worker fixes the verified problem. Use `FAILED` or `BLOCKED` only when continuing is no longer safe or possible.
 

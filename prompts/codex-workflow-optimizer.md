@@ -191,6 +191,8 @@ Repeat the following cycle:
      validation notes before enabling auto-merge.
    - Enable squash auto-merge according to `AGENTS.md`.
    - Do not treat queued auto-merge as merged.
+   - If a PR is already merged, stop waiting on its Actions run, fetch `origin/main`, and continue from the merged
+     commit.
    - Poll the PR and checks regularly.
    - Wait for actual merge before starting dependent optimization work.
    - Independent read-only auditing may continue while a PR is pending.
@@ -203,6 +205,8 @@ Repeat the following cycle:
    - Re-run baseline workflow validation.
     - Compare behavior with the previous baseline.
     - Start the next optimization cycle.
+   - When a cycle made no new queue claims, still fetch and inspect `origin/main` before deciding that no safe work
+     remains; other claim, implementation, status, or reclaim PRs may have merged while checks were polling.
 
 ## Periodic integration policy
 

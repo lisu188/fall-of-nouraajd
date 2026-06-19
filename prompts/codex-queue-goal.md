@@ -72,6 +72,10 @@ covers the required checks. When CI polling supplies full validation evidence, p
 `--require-step coverage` for coverage-relevant changes. Do not mark the issue `DONE` until the implementation PR is
 actually merged.
 
+If an implementation PR is already merged, stop waiting on its Actions run, fetch `origin/main`, verify the merged
+commit, and continue with terminal queue publication. When a controller loop makes no new claim, still fetch and inspect
+`origin/main` before declaring that work is blocked or exhausted; other queue or implementation PRs may have merged.
+
 After an implementation PR actually merges, publish and merge a fresh workbook-only terminal-status PR marking that
 issue `DONE` with the reviewed summary and exact validation results. Publish `BLOCKED`, `FAILED`, or `CANCELLED` through
 the same serialized workbook-only process when appropriate. A worker failure must not block other independent workers

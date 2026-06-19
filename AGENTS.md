@@ -61,6 +61,10 @@ running validation command, branch, PR state, resource state, cleanup state, pro
 next controller action. Use subagent status polling or structured worker updates for live status; the workbook is
 durable queue state, not the live worker-status channel.
 
+When a controller loop does not publish any new claim, still fetch and inspect `origin/main` before the next decision.
+Check whether claim, implementation, status, or reclaim PRs merged elsewhere and update live state from the merged
+workbook before dispatching, stopping, or declaring that no eligible work remains.
+
 For PR delivery, do not run local native builds, `ctest`, full Python suites, or coverage unless a focused local
 reproduction is necessary or GitHub Actions cannot provide the needed evidence. Use cheap focused local checks for fast
 feedback, then outsource compilation, native tests, performance guards, full Python suites, and coverage to GitHub
@@ -551,7 +555,7 @@ After finishing a change, always complete the repository delivery workflow:
 4. Push the branch to the remote.
 5. Open a pull request targeting `main`.
 6. Run `gh pr merge <PR_NUMBER> --auto --squash` for the pull request by default, unless the user explicitly asks not to, GitHub reports that the merge command is unavailable, or CI polling is supplying the full validation evidence and has not passed yet. Replace `<PR_NUMBER>` with the pull request just opened.
-7. If GitHub queues auto-merge, do not wait for checks to finish unless those checks are the selected CI-polled validation evidence. If GitHub merges immediately, report that outcome plainly.
+7. If GitHub queues auto-merge, do not wait for checks to finish unless those checks are the selected CI-polled validation evidence and the PR is still open. If the PR has already merged, stop waiting on its Actions run, fetch `origin/main`, and continue from the merged commit.
 
 Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not bypass failing required checks or unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, merging, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, merge conflicts, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
