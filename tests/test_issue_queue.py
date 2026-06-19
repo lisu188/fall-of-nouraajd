@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import multiprocessing
 import tempfile
 import unittest
@@ -192,6 +195,26 @@ class IssueQueueTest(unittest.TestCase):
     def xml_bytes(element: ET.Element) -> bytes:
         return ET.tostring(element, encoding="utf-8", xml_declaration=True)
 
+    def set_claim_times(
+        self,
+        issue_name: str,
+        *,
+        lease_minutes_from_now: int | None,
+        updated_minutes_ago: int | None = None,
+    ) -> None:
+        document = issue_queue.XlsxDocument.load(self.workbook_path)
+        state = issue_queue.loadQueue(self.workbook_path)
+        task = issue_queue.taskByName(state, issue_name)
+        if lease_minutes_from_now is None:
+            document.setCell(task.row, state.headers["Lease Until UTC"], None)
+        else:
+            lease = issue_queue.formatUtc(issue_queue.utcNow() + timedelta(minutes=lease_minutes_from_now))
+            document.setCell(task.row, state.headers["Lease Until UTC"], lease)
+        if updated_minutes_ago is not None:
+            updated = issue_queue.formatUtc(issue_queue.utcNow() - timedelta(minutes=updated_minutes_ago))
+            document.setCell(task.row, state.headers["Updated At UTC"], updated)
+        document.save(self.workbook_path)
+
     def test_claim_respects_priority_dependency_and_active_file_overlap(self) -> None:
         first = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1")
         self.assertEqual(self.issue_b, first["Issue Name"])
@@ -262,20 +285,163 @@ class IssueQueueTest(unittest.TestCase):
 
     def test_reclaim_stale_claim(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
-        document = issue_queue.XlsxDocument.load(self.workbook_path)
-        state = issue_queue.loadQueue(self.workbook_path)
-        task = issue_queue.taskByName(state, claim["Issue Name"])
-        past = issue_queue.formatUtc(issue_queue.utcNow() - timedelta(minutes=10))
-        document.setCell(task.row, state.headers["Lease Until UTC"], past)
-        document.setCell(task.row, state.headers["Updated At UTC"], past)
-        document.save(self.workbook_path)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=10)
 
         reclaimed = issue_queue.reclaimStaleTasks(self.workbook_path, olderThanMinutes=5)
         self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in reclaimed])
         state = issue_queue.loadQueue(self.workbook_path)
         task = issue_queue.taskByName(state, claim["Issue Name"])
         self.assertEqual(issue_queue.STATUS_NOT_STARTED, task.status)
+        self.assertFalse(task.values["Owner"])
         self.assertFalse(task.values["Claim ID"])
+        self.assertFalse(task.values["Claimed At UTC"])
+        self.assertFalse(task.values["Lease Until UTC"])
+        self.assertFalse(task.values["Completed At UTC"])
+        self.assertEqual(0, task.values["Progress %"])
+        self.assertEqual(1, task.values["Attempt"])
+        self.assertIn("controller/subagent-1", task.values["Last Note"])
+        self.assertIn(claim["claimId"], task.values["Last Note"])
+        self.assertFalse(task.values["Result Summary"])
+        self.assertFalse(task.values["Validation Results"])
+        errors, warnings = issue_queue.validateQueueState(state)
+        self.assertEqual([], errors)
+        self.assertEqual([], warnings)
+
+    def test_stale_claims_detect_expired_in_progress_without_mutating(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=10)
+
+        state = issue_queue.loadQueue(self.workbook_path)
+        stale = issue_queue.staleClaims(state, olderThanMinutes=5)
+
+        self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in stale])
+        self.assertEqual("controller/subagent-1", stale[0]["owner"])
+        self.assertEqual(claim["claimId"], stale[0]["claimId"])
+        self.assertEqual("lease expired", stale[0]["staleReason"])
+        self.assertTrue(stale[0]["leaseExpired"])
+        state = issue_queue.loadQueue(self.workbook_path)
+        task = issue_queue.taskByName(state, claim["Issue Name"])
+        payload = issue_queue.taskPayload(task)
+        self.assertTrue(payload["leaseExpired"])
+        self.assertEqual("lease expired", payload["staleReason"])
+        self.assertEqual(issue_queue.STATUS_IN_PROGRESS, task.status)
+        self.assertEqual(claim["claimId"], task.values["Claim ID"])
+
+    def test_validate_warns_about_expired_in_progress_lease(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10)
+
+        state = issue_queue.loadQueue(self.workbook_path)
+        errors, warnings = issue_queue.validateQueueState(state)
+
+        self.assertEqual([], errors)
+        self.assertTrue(any("IN_PROGRESS lease expired" in warning for warning in warnings), warnings)
+
+    def test_reclaim_stale_claim_ignores_unexpired_lease(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=10, updated_minutes_ago=30)
+
+        reclaimed = issue_queue.reclaimStaleTasks(self.workbook_path, olderThanMinutes=5)
+
+        self.assertEqual([], reclaimed)
+        state = issue_queue.loadQueue(self.workbook_path)
+        task = issue_queue.taskByName(state, claim["Issue Name"])
+        self.assertEqual(issue_queue.STATUS_IN_PROGRESS, task.status)
+        self.assertEqual(claim["claimId"], task.values["Claim ID"])
+        self.assertFalse(issue_queue.taskPayload(task)["leaseExpired"])
+
+    def test_reclaim_stale_claim_respects_older_than_grace_period(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=1)
+
+        reclaimed = issue_queue.reclaimStaleTasks(self.workbook_path, olderThanMinutes=5)
+
+        self.assertEqual([], reclaimed)
+        state = issue_queue.loadQueue(self.workbook_path)
+        task = issue_queue.taskByName(state, claim["Issue Name"])
+        self.assertEqual(issue_queue.STATUS_IN_PROGRESS, task.status)
+        self.assertEqual(claim["claimId"], task.values["Claim ID"])
+
+    def test_reclaimed_claim_rejects_prior_credentials_and_can_be_reclaimed(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=10)
+        issue_queue.reclaimStaleTasks(self.workbook_path, olderThanMinutes=5)
+
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.heartbeatTask(
+                self.workbook_path,
+                issueName=claim["Issue Name"],
+                claimId=claim["claimId"],
+                owner="controller/subagent-1",
+                progress=20,
+                note="old claim should fail",
+            )
+        next_claim = issue_queue.claimTask(
+            self.workbook_path,
+            owner="controller/subagent-2",
+            issueName=claim["Issue Name"],
+        )
+
+        self.assertNotEqual(claim["claimId"], next_claim["claimId"])
+        self.assertEqual(2, next_claim["Attempt"])
+
+    def test_reclaim_stale_rejects_negative_age_threshold(self) -> None:
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.staleClaims(issue_queue.loadQueue(self.workbook_path), olderThanMinutes=-1)
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.reclaimStaleTasks(self.workbook_path, olderThanMinutes=-1)
+
+    def test_reclaim_stale_dry_run_reports_without_mutating(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=10)
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = issue_queue.main(
+                [
+                    "reclaim-stale",
+                    "--workbook",
+                    str(self.workbook_path),
+                    "--older-than-minutes",
+                    "5",
+                    "--dry-run",
+                ]
+            )
+        payload = json.loads(stdout.getvalue())
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in payload["stale"]])
+        state = issue_queue.loadQueue(self.workbook_path)
+        task = issue_queue.taskByName(state, claim["Issue Name"])
+        self.assertEqual(issue_queue.STATUS_IN_PROGRESS, task.status)
+        self.assertEqual(claim["claimId"], task.values["Claim ID"])
+
+    def test_list_table_marks_expired_in_progress_lease(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=10)
+        state = issue_queue.loadQueue(self.workbook_path)
+        tasks = issue_queue.listTasks(state, {issue_queue.STATUS_IN_PROGRESS}, None, None)
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            issue_queue.printTable(tasks)
+
+        output = stdout.getvalue()
+        self.assertIn("LEASE", output)
+        self.assertIn("expired", output)
+
+    def test_stale_claims_treat_missing_lease_as_recoverable_stale_state(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=None, updated_minutes_ago=10)
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        errors, warnings = issue_queue.validateQueueState(state)
+        stale = issue_queue.staleClaims(state, olderThanMinutes=5)
+
+        self.assertTrue(any("requires valid Lease Until UTC" in error for error in errors), errors)
+        self.assertEqual([], warnings)
+        self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in stale])
+        self.assertEqual("missing lease", stale[0]["staleReason"])
 
     def test_validate_detects_dependency_cycle(self) -> None:
         self.create_workbook(
