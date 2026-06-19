@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 
+#include <set>
+
 class CGameEvent;
 
 class CMap;
@@ -41,6 +43,20 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
   public:
     static std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
+
+    class PropertyNotificationBatch {
+      public:
+        explicit PropertyNotificationBatch(CGameObject &object);
+
+        ~PropertyNotificationBatch();
+
+        PropertyNotificationBatch(const PropertyNotificationBatch &) = delete;
+
+        PropertyNotificationBatch &operator=(const PropertyNotificationBatch &) = delete;
+
+      private:
+        CGameObject &object;
+    };
 
     CGameObject();
 
@@ -65,7 +81,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
         } else {
             this->meta()->set_dynamic_property<CGameObject, T>(name, object, property);
         }
-        notifyPropertyChanged(name);
+        recordPropertyChanged(name);
     }
 
     template <typename T> T getProperty(std::string name) {
@@ -148,6 +164,8 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     void notifyPropertyChanged(const std::string &name);
 
+    void notifyPropertiesChanged(const std::set<std::string> &names);
+
     template <bool now = false, typename... Args> void signal(std::string signal, Args... args) {
         // vstd::logger::debug(signal, args...);
         auto it = connections.begin();
@@ -176,6 +194,12 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     std::shared_ptr<CGameObject> _clone();
 
+    void beginPropertyNotificationBatch();
+
+    void endPropertyNotificationBatch();
+
+    void recordPropertyChanged(const std::string &name);
+
     vstd::lazy<CAnimation> graphicsObject;
 
     std::string type;
@@ -188,6 +212,9 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     CTags tags;
 
     std::weak_ptr<CGame> game;
+
+    int propertyNotificationBatchDepth = 0;
+    std::set<std::string> batchedPropertyNotifications;
 };
 
 class CVisitable {
