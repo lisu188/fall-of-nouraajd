@@ -63,8 +63,10 @@ an approved workbook-only pull request merges into `main`.
 ## Claim, implementation, and completion flow
 
 For every selected issue, serialize workbook updates. Publish and merge a workbook-only claim PR marking exactly that
-issue `IN_PROGRESS` before implementation begins. Do not batch multiple XLSX claim edits unless the workflow explicitly
-permits it and every selected issue is proven independent.
+issue `IN_PROGRESS` before implementation begins. After confirming the diff is XLSX-only and queue validation passed,
+merge workbook-only claim, terminal-status, heartbeat, reclaim, priority, dependency, or other approved queue-state PRs
+immediately with squash merge; do not wait for GitHub Actions on XLSX-only controller coordination PRs. Do not batch
+multiple XLSX claim edits unless the workflow explicitly permits it and every selected issue is proven independent.
 
 After the claim PR actually merges into `main`, create an isolated implementation worktree and branch from the updated
 `origin/main`. Assign exactly one worker subagent and pass it the generated issue prompt. The worker must inspect
