@@ -535,7 +535,10 @@ class IssueQueueTest(unittest.TestCase):
     def test_reclaim_stale_dry_run_reports_without_mutating(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
         self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=10)
+        recent_claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-2", leaseMinutes=1)
+        self.set_claim_times(recent_claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=1)
 
+        before = self.workbook_path.read_bytes()
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):
             exit_code = issue_queue.main(
@@ -551,11 +554,20 @@ class IssueQueueTest(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
 
         self.assertEqual(0, exit_code)
+        self.assertEqual(str(self.workbook_path.resolve()), payload["workbook"])
+        self.assertEqual(5, payload["olderThanMinutes"])
+        self.assertEqual(2, payload["staleCount"])
+        self.assertEqual(1, payload["reclaimableStaleCount"])
+        self.assertEqual({"total": 2, "unexpired": 0, "stale": 2}, payload["activeClaims"])
         self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in payload["stale"]])
+        self.assertEqual(before, self.workbook_path.read_bytes())
         state = issue_queue.loadQueue(self.workbook_path)
         task = issue_queue.taskByName(state, claim["Issue Name"])
+        recent_task = issue_queue.taskByName(state, recent_claim["Issue Name"])
         self.assertEqual(issue_queue.STATUS_IN_PROGRESS, task.status)
         self.assertEqual(claim["claimId"], task.values["Claim ID"])
+        self.assertEqual(issue_queue.STATUS_IN_PROGRESS, recent_task.status)
+        self.assertEqual(recent_claim["claimId"], recent_task.values["Claim ID"])
 
     def test_list_table_marks_expired_in_progress_lease(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
