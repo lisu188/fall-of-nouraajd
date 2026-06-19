@@ -357,8 +357,9 @@ that reclaim PR actually merges. The mutating command reclaims rows whose last u
 even if their lease is still in the future. Reclaimed rows return to `NOT_STARTED`, retain the incremented `Attempt`,
 and receive an audit note describing the previous owner and claim.
 
-`validate` warns about expired `IN_PROGRESS` leases without failing the workbook, and `list --status IN_PROGRESS --json`
-includes derived lease-expiration fields for read-only controller status checks.
+`validate` warns about `IN_PROGRESS` claims only after they meet the current reclaim age threshold without failing the
+workbook, and `list --status IN_PROGRESS --json` includes derived lease-expiration fields for read-only controller
+status checks.
 
 ## Inspection commands
 

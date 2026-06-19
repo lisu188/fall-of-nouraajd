@@ -1060,9 +1060,11 @@ def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires valid Updated At UTC")
             if leaseUntil is None:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires valid Lease Until UTC")
-            elif leaseUntil <= now:
+            if stale := staleClaimPayload(task, now):
                 warnings.append(
-                    f"Row {task.row}: IN_PROGRESS lease expired at {formatUtc(leaseUntil)}; "
+                    f"Row {task.row}: IN_PROGRESS stale claim ({stale['staleReason']}; "
+                    f"last update {stale['updatedAtUtc'] or 'missing'} meets "
+                    f"{stale['staleThresholdMinutes']}-minute reclaim threshold); "
                     "inspect the worker and run reclaim-stale --dry-run before reclaiming"
                 )
             if attempt < 1:
