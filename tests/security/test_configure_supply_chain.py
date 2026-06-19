@@ -71,6 +71,42 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         self.assertRegex(requirements_text, re.compile(r"^black==[0-9]+(?:\.[0-9]+)*$", re.MULTILINE))
         self.assertNotRegex(requirements_text, re.compile(r"^pybind11\b", re.IGNORECASE | re.MULTILINE))
 
+    def test_linux_coverage_job_uploads_failure_report_artifact(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+        match = re.search(r"(?ms)^  linux-coverage:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)", workflow_text)
+        self.assertIsNotNone(match)
+        job_body = match.group("body")
+
+        self.assertIn("- name: coverage", job_body)
+        self.assertIn("- name: Upload coverage report", job_body)
+        self.assertLess(job_body.index("- name: coverage"), job_body.index("- name: Upload coverage report"))
+        self.assertRegex(
+            job_body,
+            re.compile(
+                r"(?ms)- name: Upload coverage report\n"
+                r"\s+if: always\(\)\n"
+                r"\s+uses: actions/upload-artifact@[0-9a-f]{40}\n"
+                r"\s+with:\n"
+                r"\s+name: linux-coverage-report\n"
+                r"\s+path: \|\n"
+                r"\s+coverage/\n"
+                r"\s+test/test-timings-linux-coverage\.json\n"
+                r"\s+if-no-files-found: warn"
+            ),
+        )
+
+    def test_linux_coverage_path_filter_matches_required_policy(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+        match = re.search(r"(?ms)- name: detect coverage need\n(?P<body>.*?)(?=^      - name:|\Z)", workflow_text)
+        self.assertIsNotNone(match)
+        detection_body = match.group("body")
+
+        self.assertIn("test.py|tests/unit/*|scripts/run_coverage.sh", detection_body)
+        self.assertIn("scripts/coverage_report.py", detection_body)
+        self.assertIn("scripts/coverage_exclusions.json", detection_body)
+        self.assertIn("native_plugins/*|src/core/*|src/handler/*|src/object/*", detection_body)
+        self.assertNotIn("test.py|tests/*|", detection_body)
+
 
 if __name__ == "__main__":
     unittest.main()

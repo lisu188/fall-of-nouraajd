@@ -62,7 +62,7 @@ jobs:
           run_coverage=false
           while IFS= read -r path; do
             case "${path}" in
-              test.py|tests/*|scripts/run_coverage.sh|scripts/coverage_report.py|scripts/coverage_exclusions.json|native_plugins/*|src/core/*|src/handler/*|src/object/*)
+              test.py|tests/unit/*|scripts/run_coverage.sh|scripts/coverage_report.py|scripts/coverage_exclusions.json|native_plugins/*|src/core/*|src/handler/*|src/object/*)
                 run_coverage=true
                 break
                 ;;
@@ -225,6 +225,15 @@ jobs:
       - name: coverage
         timeout-minutes: 60
         run: ./scripts/run_coverage.sh
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: linux-coverage-report
+          path: |
+            coverage/
+            test/test-timings-linux-coverage.json
+          if-no-files-found: warn
       - name: ccache stats after coverage
         if: always()
         shell: bash
