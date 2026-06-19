@@ -20,8 +20,9 @@ Nouraajd is the first sustained campaign hub, so its economy should support reco
 
 ## Rewards
 
+- The main Gooby quest pays 200 gold once, enough for a basic scroll but not a 400-gold potion.
 - The amulet quest pays 50 gold once.
 - Victor's good ending pays 500 gold, heals the player, and opens his remaining potion market once.
 - The OctoBogz contract pays 1000 gold and one Shadow Blade once.
 
-These values keep early potion purchases limited: before optional rewards, the player cannot buy market potions; after the first major rewards, potion access improves but remains finite and tied to authored stock.
+These values keep early potion purchases limited: before optional rewards, the player can buy a basic scroll but not market potions; after the first major rewards, potion access improves but remains finite and tied to authored stock.
