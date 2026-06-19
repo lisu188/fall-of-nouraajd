@@ -660,6 +660,8 @@ void init_game_module(py::module_ &m) {
         .def("getMap", &CMapObject::getMap, "Return the map containing this object.")
         .def("moveTo", moveTo, "Move this object to absolute coordinates.")
         .def("move", move, "Move this object by relative coordinate delta.")
+        .def("relocateWithoutMoveHooks", &CMapObject::relocateWithoutMoveHooks,
+             "Relocate this object without invoking movement hooks.")
         .def("getCoords", &CMapObject::getCoords, "Return current map coordinates.")
         .def("setCoords", &CMapObject::setCoords, "Set map coordinates.");
 
