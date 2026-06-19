@@ -74,6 +74,14 @@ class CGameGraphicsObject : public CGameObject {
 
     virtual bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y);
 
+    virtual bool mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
+                                  int yrel);
+
+    virtual bool mouseWheelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int wheelX,
+                                 int wheelY);
+
+    virtual bool mouseCancelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type);
+
     virtual void renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
     void registerEventCallback(

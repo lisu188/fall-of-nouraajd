@@ -23,6 +23,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/panel/CGamePanel.h"
 
+#include <utility>
+
+namespace {
+std::pair<int, int> getMouseWheelPosition(const SDL_MouseWheelEvent &wheel) {
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+    return {wheel.mouseX, wheel.mouseY};
+#else
+    int x = 0;
+    int y = 0;
+    SDL_GetMouseState(&x, &y);
+    return {x, y};
+#endif
+}
+} // namespace
+
 void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {}
 
 void CGameGraphicsObject::render(std::shared_ptr<CGui> renderer, int frameTime) {
@@ -74,6 +89,21 @@ bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
                 return this->mouseEvent(gui, (SDL_EventType)event->type, event->button.button,
                                         event->button.x - transPos->x, event->button.y - transPos->y);
             }
+        } else if (event->type == SDL_MOUSEMOTION) {
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, event->motion.x, event->motion.y) || modal) {
+                return this->mouseMotionEvent(gui, (SDL_EventType)event->type, event->motion.x - transPos->x,
+                                              event->motion.y - transPos->y, event->motion.xrel, event->motion.yrel);
+            }
+        } else if (event->type == SDL_MOUSEWHEEL) {
+            auto [x, y] = getMouseWheelPosition(event->wheel);
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, x, y) || modal) {
+                return this->mouseWheelEvent(gui, (SDL_EventType)event->type, x - transPos->x, y - transPos->y,
+                                             event->wheel.x, event->wheel.y);
+            }
+        } else if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_LEAVE) {
+            return this->mouseCancelEvent(gui, (SDL_EventType)event->type);
         }
         // TODO: check if we are not consuming too many events
         return modal;
@@ -88,6 +118,18 @@ bool CGameGraphicsObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_Eve
 bool CGameGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     return false;
 }
+
+bool CGameGraphicsObject::mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
+                                           int yrel) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseWheelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int wheelX,
+                                          int wheelY) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseCancelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type) { return false; }
 
 void CGameGraphicsObject::registerEventCallback(
     std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> pred,
