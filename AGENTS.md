@@ -32,8 +32,10 @@ free disk space, existing run/worktree usage, and running heavy jobs so the cont
 but do not impose a fixed RAM cap or rewrite build parallelism solely by workflow policy. Dispatch work whenever issue
 eligibility, live worker status, and repository safety allow it. Use standby subagents only when fewer than eight
 implementation issues can safely run; they may do lightweight status, eligibility, or review-prep tasks, but must not
-claim issues, edit files, or run heavy validation. Before filling each free worker slot, fetch the
-latest `origin/main`, recalculate the full eligible set from the merged workbook, and exclude:
+claim issues, edit files, or run heavy validation. Each controller instance must also keep at least four non-stale
+implementation claims under its own `controller/<controller-id>` owner prefix whenever four eligible issues can safely
+be claimed by that controller. Stale owned claims do not count toward this floor. Before filling each free worker slot,
+fetch the latest `origin/main`, recalculate the full eligible set from the merged workbook, and exclude:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with dependencies that are not `DONE`;
@@ -46,13 +48,15 @@ Use it to prioritize review and decide whether a source-backed active-scope conf
 After exclusions, keep only the highest currently available priority tier. Group candidates by `(Epic #, Story #)`,
 randomly select one story with equal probability, then randomly select one eligible substory in that story. Do not fall
 back to spreadsheet order and do not include ineligible rows in the random choice. Use
-`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
-read-only mechanical selector before each claim; it reports eligible highest-priority story groups, stale claims,
-`activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, target-file overlap advisories, rejection summaries,
-and a seeded recommendation without mutating the workbook. Use the unexpired count, not raw `activeCount`, when deciding
-whether the active-worker floor is genuinely satisfied. The controller and project manager must still inspect target-file
-overlap advisories and exclude source-backed active-scope conflicts, then claim the final exact issue with `claim --issue`
-so eligibility is rechecked under the workbook lock.
+`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
+as the read-only mechanical selector before each claim; it reports eligible highest-priority story groups, stale claims,
+`activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, `controllerCapacity`, target-file overlap advisories,
+rejection summaries, and a seeded recommendation without mutating the workbook. Use the unexpired count, not raw
+`activeCount`, when deciding whether the global active-worker floor is genuinely satisfied. Use
+`controllerCapacity.deficitToFloor` and `controllerCapacity.fillableDeficit` to decide whether this controller must keep
+claiming to satisfy its four-owned-issue floor. The controller and project manager must still inspect target-file overlap
+advisories and exclude source-backed active-scope conflicts, then claim the final exact issue with `claim --issue` so
+eligibility is rechecked under the workbook lock.
 
 Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
 project manager should summarize the highest available priority tier, candidate story groups, dependency unlocks, stale

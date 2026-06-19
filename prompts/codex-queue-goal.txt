@@ -15,6 +15,10 @@ least eight implementation issues active whenever eight safe, eligible, non-conf
 issues as the minimum operating target, not a best-effort aspiration. Before every dispatch, refill, or heavy validation
 decision, note current RAM, active worker status, disk/run-worktree state, and running build/test/coverage/Xvfb/MCP jobs
 so the controller avoids obvious resource pressure without imposing a fixed RAM cap.
+Each controller instance must also keep at least four non-stale active claims under its own owner prefix whenever four
+eligible issues can safely be claimed by that controller. Stale owned claims do not count toward this floor; use
+`controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` before every refill, and keep claiming until the
+deficit is zero, the fillable deficit is zero, or a concrete blocker is printed.
 
 When worker status is missing, conflicts block selection, no safe eligible issue exists, or the machine is under actual
 resource pressure, keep excess subagents in standby instead of assigning unsafe implementation work. Refill active
@@ -53,10 +57,10 @@ exclusion. Use it to guide source inspection, sequencing, and project-manager ri
 Keep only the highest currently available priority tier. Group remaining candidates by (Epic #, Story #), randomly
 select one story with equal probability, then randomly select one eligible substory in that story. Never default to
 spreadsheet order, and never randomize an ineligible issue into consideration. Use
-`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
-read-only mechanical selector before each claim. Use its activeClaims.unexpired and stale-claim fields for active worker
-capacity decisions, review target-file overlap advisories, then still exclude source-backed active-scope conflicts before
-claiming the final exact issue with `claim --issue`.
+`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
+as the read-only mechanical selector before each claim. Use its activeClaims.unexpired, stale-claim, and
+controllerCapacity fields for active worker capacity decisions, review target-file overlap advisories, then still exclude
+source-backed active-scope conflicts before claiming the final exact issue with `claim --issue`.
 
 Use the project-manager prioritization brief to decide whether to proceed, publish a queue-state update, or report a
 blocker. Do not use it as an ad hoc override: priority, dependency, status, or scope changes affect dispatch only after
