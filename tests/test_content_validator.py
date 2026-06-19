@@ -208,6 +208,103 @@ class ContentValidatorTest(unittest.TestCase):
             'class "CDeclaredOnly" is declared in metadata but is not registered as constructible content',
         )
 
+    def test_reviewed_registration_exclusion_reports_reason_and_owner(self):
+        root = self.make_fixture()
+        self.write_declared_cpp_class(root, "CReviewedMetadataOnly")
+        self.write_registration_exclusions(
+            root,
+            [
+                {
+                    "className": "CReviewedMetadataOnly",
+                    "reason": "Fixture-only metadata carrier.",
+                    "ownerModule": "tests/content-validator",
+                }
+            ],
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["reviewedMetadataOnly"] = {"class": "CReviewedMetadataOnly"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "reviewedMetadataOnly.class",
+            'class "CReviewedMetadataOnly" is excluded from content instantiation',
+            "Fixture-only metadata carrier.",
+            "owner/module: tests/content-validator",
+        )
+
+    def test_reviewed_registration_exclusion_can_allow_exact_config_use(self):
+        root = self.make_fixture()
+        self.write_declared_cpp_class(root, "CReviewedAllowed")
+        self.write_registration_exclusions(
+            root,
+            [
+                {
+                    "className": "CReviewedAllowed",
+                    "reason": "Fixture-only metadata carrier.",
+                    "ownerModule": "tests/content-validator",
+                    "allowedUses": [
+                        {
+                            "path": "res/maps/broken/config.json",
+                            "location": "reviewedAllowed.class",
+                            "reason": "Regression fixture for exact reviewed allowance.",
+                        }
+                    ],
+                }
+            ],
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["reviewedAllowed"] = {"class": "CReviewedAllowed"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_reviewed_registration_exclusion_rejects_unknown_allowlisted_class(self):
+        root = self.make_fixture()
+        self.write_registration_exclusions(
+            root,
+            [
+                {
+                    "className": "CReviewedTypo",
+                    "reason": "Fixture typo should not be trusted.",
+                    "ownerModule": "tests/content-validator",
+                    "allowedUses": [
+                        {
+                            "path": "res/maps/broken/config.json",
+                            "location": "reviewedTypo.class",
+                            "reason": "This exact allowance must not hide an unknown class.",
+                        }
+                    ],
+                }
+            ],
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["reviewedTypo"] = {"class": "CReviewedTypo"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "scripts/type_registration_exclusions.json",
+            "exclusions[0].className",
+            'excluded class "CReviewedTypo" is not metadata-declared or registered',
+        )
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "reviewedTypo.class",
+            'unknown class "CReviewedTypo"',
+        )
+
     def test_static_type_registration_makes_class_constructible(self):
         root = self.make_fixture()
         self.write_declared_cpp_class(root, "CStaticRegistered")
@@ -309,6 +406,11 @@ class ContentValidatorTest(unittest.TestCase):
             """).lstrip(),
             encoding="utf-8",
         )
+
+    def write_registration_exclusions(self, root, exclusions):
+        manifest = root / "scripts/type_registration_exclusions.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        write_json(manifest, {"exclusions": exclusions})
 
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
