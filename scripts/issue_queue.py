@@ -31,7 +31,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Iterable, Sequence
 
 DEFAULT_WORKBOOK = Path("planning/fall_of_nouraajd_issue_proposals.xlsx")
 ISSUE_SHEET = "Issue Proposals"
@@ -699,12 +699,18 @@ def statusByIssue(state: QueueState) -> dict[str, str]:
     return {task.issueName: task.status for task in state.tasks}
 
 
-def activeTargetFiles(state: QueueState) -> set[str]:
+def activeTargetFiles(state: QueueState, excludeIssueName: str | None = None) -> set[str]:
     files: set[str] = set()
     for task in state.tasks:
+        if excludeIssueName is not None and task.issueName == excludeIssueName:
+            continue
         if task.status == STATUS_IN_PROGRESS:
             files.update(task.targetFiles)
     return files
+
+
+def taskActiveFileOverlaps(state: QueueState, task: TaskRecord) -> list[str]:
+    return sorted(task.targetFiles & activeTargetFiles(state, excludeIssueName=task.issueName))
 
 
 def taskSortKey(task: TaskRecord) -> tuple[Any, ...]:
@@ -729,7 +735,6 @@ def eligibleTasks(
     allowFileOverlap: bool = False,
 ) -> tuple[list[TaskRecord], dict[str, list[str]]]:
     statuses = statusByIssue(state)
-    activeFiles = activeTargetFiles(state)
     eligible: list[TaskRecord] = []
     rejected: dict[str, list[str]] = {}
     for task in state.tasks:
@@ -747,16 +752,24 @@ def eligibleTasks(
         incomplete = [dependency for dependency in task.dependencies if statuses.get(dependency) != STATUS_DONE]
         if incomplete:
             reasons.append("dependencies-not-done:" + ",".join(incomplete))
-        if not allowFileOverlap:
-            overlap = sorted(task.targetFiles & activeFiles)
-            if overlap:
-                reasons.append("active-file-overlap:" + ",".join(overlap))
         if reasons:
             rejected[task.issueName] = reasons
         else:
             eligible.append(task)
     eligible.sort(key=taskSortKey)
     return eligible, rejected
+
+
+def targetFileOverlapAdvisories(state: QueueState, tasks: Iterable[TaskRecord] | None = None) -> dict[str, list[str]]:
+    activeFiles = activeTargetFiles(state)
+    advisories: dict[str, list[str]] = {}
+    for task in tasks if tasks is not None else state.tasks:
+        if task.status != STATUS_NOT_STARTED:
+            continue
+        overlap = sorted(task.targetFiles & activeFiles)
+        if overlap:
+            advisories[task.issueName] = overlap
+    return advisories
 
 
 def rejectionReasonKey(reason: str) -> str:
@@ -812,7 +825,7 @@ def stableChoice(items: Sequence[Any], seed: str, namespace: str, key: Any) -> A
     )
 
 
-def shortTaskPayload(task: TaskRecord) -> dict[str, Any]:
+def shortTaskPayload(task: TaskRecord, activeFiles: set[str] | None = None) -> dict[str, Any]:
     return {
         "issueName": task.issueName,
         "row": task.row,
@@ -825,6 +838,7 @@ def shortTaskPayload(task: TaskRecord) -> dict[str, Any]:
         "substoryTitle": str(task.values.get("Substory Title") or "").strip(),
         "component": str(task.values.get("Component") or "").strip(),
         "targetFiles": sorted(task.targetFiles),
+        "activeFileOverlaps": sorted(task.targetFiles & activeFiles) if activeFiles is not None else [],
         "dependencies": task.dependencies,
         "validation": str(task.values.get("Validation / Tests") or "").strip(),
     }
@@ -849,16 +863,14 @@ def shortlistTasks(
     counts = statusCounts(state)
     stale = staleClaims(state)
     activeClaims = activeClaimSummary(state, stale)
+    activeFiles = activeTargetFiles(state)
+    advisoryOverlaps = targetFileOverlapAdvisories(state)
     selectionSeed = seed or uuid.uuid4().hex
-    fileOverlapFilter = (
-        "direct target-file overlap allowed by --allow-file-overlap"
-        if allowFileOverlap
-        else "direct target-file overlap excluded unless --allow-file-overlap is used"
-    )
     payload: dict[str, Any] = {
         "eligible": bool(eligible),
         "selectionSeed": selectionSeed,
         "allowFileOverlap": allowFileOverlap,
+        "targetFileOverlapPolicy": "advisory",
         "eligibleCount": len(eligible),
         "highestPriority": None,
         "highestPriorityEligibleCount": 0,
@@ -872,14 +884,16 @@ def shortlistTasks(
         "staleClaims": stale,
         "rejectedCount": len(rejected),
         "rejectionSummary": rejectionSummary(rejected),
+        "advisoryTargetFileOverlapCount": len(advisoryOverlaps),
         "mechanicalFilters": [
             "status=NOT_STARTED",
             "dependencies=DONE",
-            fileOverlapFilter,
+            "direct target-file overlaps reported as advisory metadata",
         ],
     }
     if includeRejected:
         payload["rejected"] = rejected
+        payload["advisoryTargetFileOverlaps"] = advisoryOverlaps
     if not eligible:
         payload["reason"] = "No eligible task"
         return payload
@@ -916,7 +930,7 @@ def shortlistTasks(
                 "priority": highestPriority,
                 "eligibleCount": len(tasks),
                 "selected": key == selectedStoryKey,
-                "issues": [shortTaskPayload(task) for task in tasks],
+                "issues": [shortTaskPayload(task, activeFiles=activeFiles) for task in tasks],
             }
         )
 
@@ -927,7 +941,7 @@ def shortlistTasks(
             "storyGroups": storyGroups,
             "selected": {
                 "storyKey": storyKeyText(selectedStoryKey),
-                "issue": shortTaskPayload(selectedTask),
+                "issue": shortTaskPayload(selectedTask, activeFiles=activeFiles),
             },
         }
     )
@@ -1052,12 +1066,14 @@ def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
-def taskPayload(task: TaskRecord) -> dict[str, Any]:
+def taskPayload(task: TaskRecord, state: QueueState | None = None) -> dict[str, Any]:
     payload = {key: value for key, value in task.values.items()}
     payload["Row"] = task.row
     payload["Status"] = task.status
     payload["Dependencies Parsed"] = task.dependencies
     payload["Target Files Parsed"] = sorted(task.targetFiles)
+    payload["Target File Overlap Policy"] = "advisory"
+    payload["Active File Overlaps"] = taskActiveFileOverlaps(state, task) if state is not None else []
     payload.update(taskLeasePayload(task, utcNow()))
     return payload
 
@@ -1195,7 +1211,7 @@ def claimTask(
 
             state = refreshTasks(state)
             claimed = taskByName(state, task.issueName)
-            payload = taskPayload(claimed)
+            payload = taskPayload(claimed, state=state)
             payload.update({"claimed": True, "claimId": claimId, "owner": owner})
             return payload
         finally:
@@ -1244,7 +1260,7 @@ def heartbeatTask(
             setValue(state, task.row, "Lease Until UTC", formatUtc(now + timedelta(minutes=leaseMinutes)))
             atomicSave(state, workbookPath)
             state = refreshTasks(state)
-            return taskPayload(taskByName(state, issueName))
+            return taskPayload(taskByName(state, issueName), state=state)
         finally:
             state.workbook.close()
 
@@ -1292,7 +1308,7 @@ def finishTask(
                 setValue(state, task.row, "Last Note", note.strip() or status.title())
             atomicSave(state, workbookPath)
             state = refreshTasks(state)
-            return taskPayload(taskByName(state, issueName))
+            return taskPayload(taskByName(state, issueName), state=state)
         finally:
             state.workbook.close()
 
@@ -1327,7 +1343,7 @@ def releaseTask(
             setValue(state, task.row, "Validation Results", None)
             atomicSave(state, workbookPath)
             state = refreshTasks(state)
-            return taskPayload(taskByName(state, issueName))
+            return taskPayload(taskByName(state, issueName), state=state)
         finally:
             state.workbook.close()
 
@@ -1533,7 +1549,11 @@ def buildParser() -> argparse.ArgumentParser:
     nextParser.add_argument("--priority", action="append", default=[])
     nextParser.add_argument("--epic")
     nextParser.add_argument("--component")
-    nextParser.add_argument("--allow-file-overlap", action="store_true")
+    nextParser.add_argument(
+        "--allow-file-overlap",
+        action="store_true",
+        help="Compatibility no-op; target-file overlaps are advisory.",
+    )
 
     shortlistParser = subparsers.add_parser(
         "shortlist",
@@ -1543,7 +1563,11 @@ def buildParser() -> argparse.ArgumentParser:
     shortlistParser.add_argument("--priority", action="append", default=[])
     shortlistParser.add_argument("--epic")
     shortlistParser.add_argument("--component")
-    shortlistParser.add_argument("--allow-file-overlap", action="store_true")
+    shortlistParser.add_argument(
+        "--allow-file-overlap",
+        action="store_true",
+        help="Compatibility no-op; target-file overlaps are advisory.",
+    )
     shortlistParser.add_argument("--seed", help="Stable seed for reproducible story and substory selection")
     shortlistParser.add_argument("--include-rejected", action="store_true", help="Include per-issue rejection reasons")
     shortlistParser.add_argument("--json", action="store_true", help="Output JSON (default)")
@@ -1556,7 +1580,11 @@ def buildParser() -> argparse.ArgumentParser:
     claimParser.add_argument("--priority", action="append", default=[])
     claimParser.add_argument("--epic")
     claimParser.add_argument("--component")
-    claimParser.add_argument("--allow-file-overlap", action="store_true")
+    claimParser.add_argument(
+        "--allow-file-overlap",
+        action="store_true",
+        help="Compatibility no-op; target-file overlaps are advisory.",
+    )
     claimParser.add_argument("--format", choices=("json", "prompt"), default="json")
 
     heartbeatParser = subparsers.add_parser("heartbeat", help="Update progress and extend an active claim lease")
@@ -1655,12 +1683,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                     statuses = {normalizeStatus(item) for item in args.status} if args.status else None
                     tasks = listTasks(state, statuses, args.owner, args.epic)
                     if args.json:
-                        printJson([taskPayload(task) for task in tasks])
+                        printJson([taskPayload(task, state=state) for task in tasks])
                     else:
                         printTable(tasks)
                     return 0
                 if args.command == "show":
-                    printJson(taskPayload(taskByName(state, args.issue)))
+                    printJson(taskPayload(taskByName(state, args.issue), state=state))
                     return 0
                 if args.command == "next":
                     priorities = {item.upper() for item in args.priority} or None
@@ -1674,7 +1702,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if not eligible:
                         printJson({"eligible": False, "reason": "No eligible task", "rejected": rejected})
                         return 3
-                    printJson({"eligible": True, "task": taskPayload(eligible[0])})
+                    printJson({"eligible": True, "task": taskPayload(eligible[0], state=state)})
                     return 0
                 if args.command == "shortlist":
                     priorities = {item.upper() for item in args.priority} or None

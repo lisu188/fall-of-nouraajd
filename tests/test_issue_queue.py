@@ -221,18 +221,32 @@ class IssueQueueTest(unittest.TestCase):
             document.setCell(task.row, state.headers["Updated At UTC"], updated)
         document.save(self.workbook_path)
 
-    def test_claim_respects_priority_dependency_and_active_file_overlap(self) -> None:
+    def test_claim_treats_target_file_overlap_as_advisory(self) -> None:
         first = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1")
         self.assertEqual(self.issue_b, first["Issue Name"])
-
-        second = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-2")
-        self.assertEqual(self.issue_a, second["Issue Name"])
+        self.assertEqual("advisory", first["Target File Overlap Policy"])
+        self.assertEqual([], first["Active File Overlaps"])
 
         state = issue_queue.loadQueue(self.workbook_path)
         eligible, rejected = issue_queue.eligibleTasks(state)
-        self.assertEqual([], eligible)
+        self.assertEqual([self.issue_d, self.issue_a], [task.issueName for task in eligible])
         self.assertIn("dependencies-not-done", rejected[self.issue_c][0])
-        self.assertTrue(any(reason.startswith("active-file-overlap") for reason in rejected[self.issue_d]))
+        self.assertNotIn(self.issue_d, rejected)
+        self.assertEqual(
+            {"[EPIC_01][STORY_01][SUBSTORY_04]Overlaps active file": ["src/shared.cpp"]},
+            issue_queue.targetFileOverlapAdvisories(state),
+        )
+
+        second = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-2")
+        self.assertEqual(self.issue_d, second["Issue Name"])
+        self.assertEqual("advisory", second["Target File Overlap Policy"])
+        self.assertEqual(["src/shared.cpp"], second["Active File Overlaps"])
+
+        state = issue_queue.loadQueue(self.workbook_path)
+        eligible, rejected = issue_queue.eligibleTasks(state)
+        self.assertEqual([self.issue_a], [task.issueName for task in eligible])
+        self.assertIn("dependencies-not-done", rejected[self.issue_c][0])
+        self.assertNotIn("active-file-overlap", issue_queue.rejectionSummary(rejected))
 
     def test_shortlist_groups_highest_priority_and_selects_seeded_issue(self) -> None:
         first_story = "[EPIC_01][STORY_01][SUBSTORY_01]First high priority story"
@@ -274,8 +288,9 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(second_story, story_two_payload["selected"]["issue"]["issueName"])
         allow_overlap_payload = issue_queue.shortlistTasks(state, seed="demo-seed", allowFileOverlap=True)
         self.assertTrue(allow_overlap_payload["allowFileOverlap"])
+        self.assertEqual("advisory", allow_overlap_payload["targetFileOverlapPolicy"])
         self.assertIn(
-            "direct target-file overlap allowed by --allow-file-overlap",
+            "direct target-file overlaps reported as advisory metadata",
             allow_overlap_payload["mechanicalFilters"],
         )
         self.assertNotIn(
@@ -284,6 +299,25 @@ class IssueQueueTest(unittest.TestCase):
         )
         self.assertIn(blocked, payload["rejected"])
         self.assertEqual(1, payload["rejectionSummary"]["dependencies-not-done"])
+        self.assertEqual(0, payload["advisoryTargetFileOverlapCount"])
+
+    def test_shortlist_reports_target_file_overlap_advisory_without_rejecting(self) -> None:
+        issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1")
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        payload = issue_queue.shortlistTasks(state, seed="overlap-advisory", includeRejected=True)
+
+        self.assertTrue(payload["eligible"])
+        self.assertEqual("advisory", payload["targetFileOverlapPolicy"])
+        self.assertEqual("P0", payload["highestPriority"])
+        self.assertEqual(2, payload["eligibleCount"])
+        self.assertEqual(1, payload["highestPriorityEligibleCount"])
+        self.assertEqual(self.issue_d, payload["selected"]["issue"]["issueName"])
+        self.assertEqual(["src/shared.cpp"], payload["selected"]["issue"]["activeFileOverlaps"])
+        self.assertEqual(1, payload["advisoryTargetFileOverlapCount"])
+        self.assertEqual({self.issue_d: ["src/shared.cpp"]}, payload["advisoryTargetFileOverlaps"])
+        self.assertNotIn(self.issue_d, payload["rejected"])
+        self.assertNotIn("active-file-overlap", payload["rejectionSummary"])
 
     def test_shortlist_cli_reports_without_mutating_workbook(self) -> None:
         before = self.workbook_path.read_bytes()
@@ -308,12 +342,14 @@ class IssueQueueTest(unittest.TestCase):
         self.assertTrue(payload["eligible"])
         self.assertEqual("P0", payload["highestPriority"])
         self.assertFalse(payload["allowFileOverlap"])
+        self.assertEqual("advisory", payload["targetFileOverlapPolicy"])
         self.assertEqual(0, payload["activeCount"])
         self.assertEqual(0, payload["unexpiredActiveCount"])
         self.assertEqual(0, payload["staleClaimCount"])
         self.assertEqual({"total": 0, "unexpired": 0, "stale": 0}, payload["activeClaims"])
+        self.assertEqual(0, payload["advisoryTargetFileOverlapCount"])
         self.assertIn(
-            "direct target-file overlap excluded unless --allow-file-overlap is used",
+            "direct target-file overlaps reported as advisory metadata",
             payload["mechanicalFilters"],
         )
         self.assertIn("storyGroups", payload)
