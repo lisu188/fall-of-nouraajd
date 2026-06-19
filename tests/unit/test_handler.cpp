@@ -38,9 +38,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <SDL.h>
 #include <pybind11/embed.h>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -71,6 +76,34 @@ class CancellingFightController : public NoProgressFightController {
     bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return false; }
 
     bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+};
+
+void set_environment_variable(const std::string &name, const std::optional<std::string> &value) {
+#ifdef _WIN32
+    _putenv_s(name.c_str(), value ? value->c_str() : "");
+#else
+    if (value) {
+        setenv(name.c_str(), value->c_str(), 1);
+    } else {
+        unsetenv(name.c_str());
+    }
+#endif
+}
+
+class ScopedEnvironmentVariable {
+  public:
+    ScopedEnvironmentVariable(std::string name, std::optional<std::string> value) : name(std::move(name)) {
+        if (const char *existing = std::getenv(this->name.c_str())) {
+            previous = std::string(existing);
+        }
+        set_environment_variable(this->name, value);
+    }
+
+    ~ScopedEnvironmentVariable() { set_environment_variable(name, previous); }
+
+  private:
+    std::string name;
+    std::optional<std::string> previous;
 };
 
 class LethalEffect : public CEffect {
@@ -568,6 +601,63 @@ void test_playtest_trace_records_native_limits_and_quest_completion() {
     CPlaytestTrace::configure(false);
 }
 
+void test_playtest_trace_environment_targets_and_fallback_ids() {
+#ifdef _WIN32
+    return;
+#else
+    {
+        ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "OFF");
+        ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
+        CPlaytestTrace::configureFromEnvironment();
+        expect_true(!CPlaytestTrace::enabled(), "disabled trace environment values should disable tracing");
+        CPlaytestTrace::record("disabled_trace_should_not_record");
+        expect_true(CPlaytestTrace::records().empty(), "disabled tracing should ignore records");
+    }
+
+    {
+        ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "stdout");
+        ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
+        CPlaytestTrace::configureFromEnvironment();
+        CPlaytestTrace::record("stdout_target");
+        expect_true(!CPlaytestTrace::drain().empty(), "stdout trace environment target should enable tracing");
+    }
+
+    CPlaytestTrace::configure(true, "stderr");
+    CPlaytestTrace::record("stderr_target");
+    expect_true(!CPlaytestTrace::drain().empty(), "stderr trace target should still keep buffered records");
+
+    const auto tracePath =
+        std::filesystem::temp_directory_path() / ("playtest-trace-unit-" + std::to_string(SDL_GetTicks64()) + ".jsonl");
+    CPlaytestTrace::configure(true, tracePath.generic_string());
+    CPlaytestTrace::record("file_target");
+    std::ifstream stream(tracePath);
+    std::string line;
+    std::getline(stream, line);
+    expect_true(line.find("file_target") != std::string::npos, "file trace target should append JSON lines");
+    std::filesystem::remove(tracePath);
+
+    auto namedObject = std::make_shared<CGameObject>();
+    const auto longName = std::string(200, 'n');
+    namedObject->setName(longName);
+    const auto namedRef = CPlaytestTrace::objectRef(namedObject);
+    expect_true(namedRef.value("id", std::string()).size() == 160,
+                "trace object refs should truncate long fallback names");
+    expect_true(namedRef.value("name", std::string()).size() == 160,
+                "trace object refs should truncate long object names");
+
+    auto typedObject = std::make_shared<CGameObject>();
+    typedObject->setName("");
+    typedObject->setType("UnitTraceType");
+    const auto typedRef = CPlaytestTrace::objectRef(typedObject);
+    expect_true(typedRef.value("id", std::string()) == "UnitTraceType",
+                "trace object refs should fall back to object type when id and name are empty");
+    expect_true(typedRef.value("type", std::string()) == "UnitTraceType",
+                "trace object refs should include the runtime object type");
+
+    CPlaytestTrace::configure(false);
+#endif
+}
+
 void test_fight_handler_records_outcome_trace_metadata() {
     CPlaytestTrace::configure(true);
     try {
@@ -640,6 +730,7 @@ int main() {
     test_fight_handler_reports_cancelled_closed_fight_panel();
     test_fight_handler_counts_effect_duration_as_progress();
     test_playtest_trace_records_native_limits_and_quest_completion();
+    test_playtest_trace_environment_targets_and_fallback_ids();
     test_fight_handler_records_outcome_trace_metadata();
     test_player_respawn_normalizes_wrapped_entry_coords();
 

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CJsonUtil.h"
 #include "core/CGame.h"
+#include "core/CList.h"
 #include "core/CPathFinder.h"
 #include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
@@ -529,6 +530,32 @@ void test_property_setters_emit_change_signals() {
     expect_true(probe->threat_changed_calls == 1, "setNumericProperty should emit the property-specific signal");
 }
 
+template <typename T, typename ValueType> bool has_primitive_value_type() {
+    auto value_type = CTypes::primitiveValueType<T>();
+    return CTypes::isPrimitiveType<T>() && value_type.has_value() &&
+           value_type.value() == std::type_index(typeid(ValueType));
+}
+
+void test_reviewed_value_wrappers_have_explicit_primitive_metadata() {
+    expect_true(has_primitive_value_type<CListString, std::set<std::string>>(),
+                "CListString should be an explicitly registered string-set primitive wrapper");
+    expect_true(has_primitive_value_type<CListInt, std::set<int>>(),
+                "CListInt should be an explicitly registered integer-set primitive wrapper");
+    expect_true(has_primitive_value_type<CMapStringString, std::map<std::string, std::string>>(),
+                "CMapStringString should be an explicitly registered string-string map primitive wrapper");
+    expect_true(has_primitive_value_type<CMapStringInt, std::map<std::string, int>>(),
+                "CMapStringInt should be an explicitly registered string-integer map primitive wrapper");
+    expect_true(has_primitive_value_type<CMapIntString, std::map<int, std::string>>(),
+                "CMapIntString should be an explicitly registered integer-string map primitive wrapper");
+    expect_true(has_primitive_value_type<CMapIntInt, std::map<int, int>>(),
+                "CMapIntInt should be an explicitly registered integer-integer map primitive wrapper");
+
+    expect_true(CTypes::primitiveTypes()->size() == 6, "only reviewed value wrappers should be primitive types");
+    expect_true(!CTypes::isPrimitiveType<CScript>(), "single-property CScript should not be primitive by shape");
+    expect_true(!CTypes::primitiveValueType<CScript>().has_value(), "CScript should not have primitive value metadata");
+    expect_true(!CTypes::isPrimitiveType<CStats>(), "multi-property value-like objects should not be primitive");
+}
+
 void test_delayed_future_handlers_run_through_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     const int previous_fps = loop->getFps();
@@ -760,6 +787,7 @@ int main() {
     test_unknown_tag_rejection();
     test_tag_mutation_iteration_and_range_helpers();
     test_property_setters_emit_change_signals();
+    test_reviewed_value_wrappers_have_explicit_primitive_metadata();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
