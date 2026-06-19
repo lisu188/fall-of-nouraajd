@@ -98,16 +98,16 @@
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
         "65",
-        "263",
-        "412",
-        "538",
-        "574",
-        "605",
-        "658",
-        "725",
-        "761",
-        "768",
-        "774"
+        "286",
+        "435",
+        "561",
+        "597",
+        "628",
+        "681",
+        "748",
+        "784",
+        "791",
+        "797"
       ]
     },
     {
