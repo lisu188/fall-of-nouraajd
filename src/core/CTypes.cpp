@@ -36,11 +36,26 @@ CTypes::serializers() {
     return &reg;
 }
 
+std::unordered_map<std::type_index, std::type_index> *CTypes::primitiveTypes() {
+    static std::unordered_map<std::type_index, std::type_index> _primitive_types;
+    return &_primitive_types;
+}
+
 bool CTypes::is_map_type(std::type_index index) { return vstd::ctn(*map_types(), index); }
 
 bool CTypes::is_pointer_type(std::type_index index) { return vstd::ctn(*pointer_types(), index); }
 
 bool CTypes::is_array_type(std::type_index index) { return vstd::ctn(*array_types(), index); }
+
+bool CTypes::isPrimitiveType(std::type_index index) { return vstd::ctn(*primitiveTypes(), index); }
+
+std::optional<std::type_index> CTypes::primitiveValueType(std::type_index index) {
+    auto found = primitiveTypes()->find(index);
+    if (found == primitiveTypes()->end()) {
+        return std::nullopt;
+    }
+    return found->second;
+}
 
 std::unordered_set<std::type_index> *CTypes::map_types() {
     static std::unordered_set<std::type_index> _map_types;
