@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 
@@ -58,6 +59,10 @@ Coords first_adjacent_walkable(const std::shared_ptr<CMap> &map, Coords origin) 
         }
     }
     return origin;
+}
+
+bool contains_coords(const std::vector<Coords> &coords, Coords target) {
+    return std::ranges::find(coords, target) != coords.end();
 }
 
 void test_scene_manager_state_duplicate_and_player_transfer() {
@@ -468,6 +473,68 @@ void test_map_navigation_edges_update_revision() {
                 "removing an existing navigation edge should bump navigation revision");
 }
 
+void test_map_navigation_neighbors_include_registered_edges() {
+    auto map = std::make_shared<CMap>();
+    const Coords origin(2, 2, 0);
+
+    auto base_neighbors = map->getNavigationNeighbors(origin);
+    expect_true(contains_coords(base_neighbors, origin + EAST), "navigation neighbors should include east cardinal");
+    expect_true(contains_coords(base_neighbors, origin + WEST), "navigation neighbors should include west cardinal");
+    expect_true(contains_coords(base_neighbors, origin + SOUTH), "navigation neighbors should include south cardinal");
+    expect_true(contains_coords(base_neighbors, origin + NORTH), "navigation neighbors should include north cardinal");
+    expect_true(!contains_coords(base_neighbors, origin),
+                "navigation neighbors should not include self unless requested");
+    expect_true(contains_coords(map->getNavigationNeighbors(origin, true), origin),
+                "navigation neighbors should include self when requested");
+
+    CNavigationEdge portal;
+    portal.source = origin;
+    portal.target = Coords(9, 9, 0);
+    portal.enabled = true;
+    portal.sourceObjectName = "portal";
+    map->registerNavigationEdge(portal);
+
+    CNavigationEdge closed_portal;
+    closed_portal.source = origin;
+    closed_portal.target = Coords(8, 8, 0);
+    closed_portal.enabled = false;
+    closed_portal.sourceObjectName = "portal";
+    map->registerNavigationEdge(closed_portal);
+
+    CNavigationEdge bridge;
+    bridge.source = Coords(6, 2, 0);
+    bridge.target = origin;
+    bridge.enabled = true;
+    bridge.bidirectional = true;
+    bridge.sourceObjectName = "bridge";
+    map->registerNavigationEdge(bridge);
+
+    auto edge_neighbors = map->getNavigationNeighbors(origin);
+    expect_true(contains_coords(edge_neighbors, portal.target),
+                "navigation neighbors should include enabled edge targets");
+    expect_true(!contains_coords(edge_neighbors, closed_portal.target),
+                "navigation neighbors should exclude disabled edge targets");
+    expect_true(contains_coords(edge_neighbors, bridge.source),
+                "navigation neighbors should include reverse targets for bidirectional edges");
+
+    const auto revision_after_edges = map->getNavigationRevision();
+    expect_true(map->unregisterNavigationEdgesForObject("portal") == 2,
+                "unregistering by object name should remove all matching navigation edges");
+    auto remaining_neighbors = map->getNavigationNeighbors(origin);
+    expect_true(!contains_coords(remaining_neighbors, portal.target),
+                "unregistered navigation edges should no longer be returned");
+    expect_true(contains_coords(remaining_neighbors, bridge.source),
+                "unregistering one object should leave other object edges active");
+    expect_true(map->getNavigationRevision() > revision_after_edges,
+                "unregistering matching navigation edges should bump navigation revision");
+
+    const auto revision_after_missing = map->getNavigationRevision();
+    expect_true(map->unregisterNavigationEdgesForObject("missing") == 0,
+                "unregistering a missing object name should remove no edges");
+    expect_true(map->getNavigationRevision() == revision_after_missing,
+                "unregistering a missing object name should not bump navigation revision");
+}
+
 void test_map_defensive_branches_and_strict_validation() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, -1}});
@@ -804,6 +871,7 @@ int main() {
     test_scene_manager_rejects_cross_game_requests();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_map_navigation_edges_update_revision();
+    test_map_navigation_neighbors_include_registered_edges();
     test_map_defensive_branches_and_strict_validation();
     test_map_move_interrupts_invalid_planned_steps();
     test_creature_tracks_pending_move_origin_only_during_after_move();
