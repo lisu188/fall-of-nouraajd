@@ -208,6 +208,108 @@ class ContentValidatorTest(unittest.TestCase):
             'class "CDeclaredOnly" is declared in metadata but is not registered as constructible content',
         )
 
+    def test_static_type_registration_makes_class_constructible(self):
+        root = self.make_fixture()
+        self.write_declared_cpp_class(root, "CStaticRegistered")
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() { CTypes::register_type<CStaticRegistered, CGameObject>(); }\n",
+            encoding="utf-8",
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["staticRegistered"] = {"class": "CStaticRegistered"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_manifest_native_plugin_registration_makes_class_constructible(self):
+        root = self.make_fixture()
+        self.write_native_registration_fixture(root, "CManifestNative")
+        write_json(
+            root / "res/plugins/manifest.json",
+            {
+                "global": [
+                    {
+                        "kind": "dynamic",
+                        "id": "nativeOptional",
+                        "library": "plugins/native/native_optional",
+                        "entry": "native_optional_load_v1",
+                    }
+                ],
+                "maps": {},
+            },
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["manifestNative"] = {"class": "CManifestNative"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_unloaded_native_plugin_registration_reports_manifest_diagnostic(self):
+        root = self.make_fixture()
+        self.write_native_registration_fixture(root, "CUnloadedNative")
+        write_json(root / "res/plugins/manifest.json", {"global": [], "maps": {}})
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["unloadedNative"] = {"class": "CUnloadedNative"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "unloadedNative.class",
+            'class "CUnloadedNative" is registered by native plugin code',
+            "native_optional:native_optional_load_v1",
+        )
+
+    def write_declared_cpp_class(self, root, class_name):
+        declared_header = root / "src/object/CDeclaredOnly.h"
+        declared_header.parent.mkdir(parents=True, exist_ok=True)
+        declared_header.write_text(
+            textwrap.dedent(f"""
+                class {class_name} {{
+                    V_META({class_name}, CGameObject, vstd::meta::empty())
+                }};
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def write_native_registration_fixture(self, root, class_name):
+        self.write_declared_cpp_class(root, class_name)
+        native_plugin = root / "src/plugin/NativePlugin.cpp"
+        native_plugin.parent.mkdir(parents=True, exist_ok=True)
+        native_plugin.write_text(
+            textwrap.dedent(f"""
+                namespace native_plugin {{
+                bool register_optional(const NativePluginHostV1 *host) {{
+                    bool registered = true;
+                    registered = register_type<{class_name}, CGameObject>(host) && registered;
+                    return registered;
+                }}
+                }}
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        native_entry = root / "native_plugins/native_optional.cpp"
+        native_entry.parent.mkdir(parents=True, exist_ok=True)
+        native_entry.write_text(
+            textwrap.dedent("""
+                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v1(const NativePluginHostV1 *host) {
+                    return native_plugin::register_optional(host);
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
         for substring in substrings:
