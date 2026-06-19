@@ -296,6 +296,7 @@ def printEvaluation(
     if evaluation.missingSteps:
         print(f"missing steps: {', '.join(evaluation.missingSteps)}")
     print(evaluation.message)
+    sys.stdout.flush()
 
 
 def pollChecks(
