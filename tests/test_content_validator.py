@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.validate_content import validate_repo
+from scripts.validate_content import ContentValidator, validate_repo
 
 
 class ContentValidatorTest(unittest.TestCase):
@@ -153,6 +153,115 @@ class ContentValidatorTest(unittest.TestCase):
             'ensure_quest("missingQuest")',
             'unknown quest id "missingQuest"',
         )
+
+    def test_script_analyzer_collects_quest_state_and_property_usage(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            textwrap.dedent("""
+                def load(self, context):
+                    from game import CQuest
+                    from game import LegacyBoolFlag
+                    from game import QuestStateStore
+                    from game import register
+
+                    TRANSITION_GUARD = "transition_guard"
+
+                    def _grant_quest(player, quest_name):
+                        player.addQuest(quest_name)
+
+                    def _set_bool_property_default(obj, name, value):
+                        if not hasattr(obj, name):
+                            obj.setBoolProperty(name, value)
+
+                    def _quest_system_from(obj):
+                        return QuestSystem(obj.getGame().getMap())
+
+                    class QuestSystem(QuestStateStore):
+                        QUEST_KEYS = {
+                            "main": "quest_state_main",
+                            "side": "quest_state_side",
+                        }
+
+                        QUEST_DEFAULTS = {
+                            "main": "locked",
+                            "side": "not_started",
+                        }
+
+                        LEGACY_BOOL_FLAGS = (
+                            LegacyBoolFlag("MAIN_DONE", "main", states=("done",)),
+                            LegacyBoolFlag("SIDE_OPEN", "side", excluded_states=("locked",)),
+                        )
+
+                        def advance(self, player):
+                            if self.get_state("main") == "locked":
+                                self._set_state("main", "active")
+                                _grant_quest(player, "goodQuest")
+                                player.addQuest("bonusQuest")
+                            side_state = self.get_state("side")
+                            if side_state in ("not_started", "active"):
+                                self._set_state("side", "done")
+                            self.set_state("side", "public_done")
+                            next_state = "done" if player.getBoolProperty("has_relic") else "failed"
+                            self._set_state("main", next_state)
+                            if player.getBoolProperty(TRANSITION_GUARD):
+                                player.setBoolProperty(TRANSITION_GUARD, False)
+                            self.map.setBoolProperty("MAIN_DONE", True)
+                            self.map.setNumericProperty("MAIN_TURN", self.map.getTurn())
+                            self.map.getNumericProperty("MAIN_TURN")
+                            _set_bool_property_default(player, "skill_flag", False)
+
+                        def main_done(self):
+                            return self.get_state("main") in ("done", "failed")
+
+                        def side_done(self):
+                            return self.state_in("side", ("done",))
+
+                    @register(context)
+                    class GoodQuest(CQuest):
+                        def isCompleted(self):
+                            return _quest_system_from(self).get_state("main") == "done"
+                """).lstrip(),
+            encoding="utf-8",
+        )
+        info = ContentValidator(root)._parse_script(script_path)
+        self.assertIsNotNone(info)
+        if info is None:
+            return
+
+        main_state = info.quest_states["main"]
+        self.assertEqual("quest_state_main", main_state.storage_key)
+        self.assertEqual("locked", main_state.default_state)
+        self.assertEqual({"locked", "done", "failed"}, main_state.read_states)
+        self.assertEqual({"active", "done", "failed"}, main_state.written_states)
+        self.assertEqual({"done", "failed"}, main_state.terminal_check_states)
+
+        side_state = info.quest_states["side"]
+        self.assertEqual("quest_state_side", side_state.storage_key)
+        self.assertEqual("not_started", side_state.default_state)
+        self.assertEqual({"not_started", "active", "done"}, side_state.read_states)
+        self.assertEqual({"done", "public_done"}, side_state.written_states)
+        self.assertEqual({"done"}, side_state.terminal_check_states)
+
+        legacy_flags = {flag.name: flag for flag in info.legacy_bool_flags}
+        self.assertEqual("main", legacy_flags["MAIN_DONE"].quest)
+        self.assertEqual(("done",), legacy_flags["MAIN_DONE"].states)
+        self.assertEqual("side", legacy_flags["SIDE_OPEN"].quest)
+        self.assertEqual(("locked",), legacy_flags["SIDE_OPEN"].excluded_states)
+
+        quest_grants = {(call.name, call.value) for call in info.quest_grants}
+        self.assertIn(("_grant_quest", "goodQuest"), quest_grants)
+        self.assertIn(("addQuest", "bonusQuest"), quest_grants)
+
+        property_reads = {(access.owner, access.name, access.method) for access in info.property_reads}
+        property_writes = {(access.owner, access.name, access.method) for access in info.property_writes}
+        self.assertIn(("player", "has_relic", "getBoolProperty"), property_reads)
+        self.assertIn(("player", "transition_guard", "getBoolProperty"), property_reads)
+        self.assertIn(("map", "MAIN_TURN", "getNumericProperty"), property_reads)
+        self.assertIn(("player", "transition_guard", "setBoolProperty"), property_writes)
+        self.assertIn(("map", "MAIN_DONE", "setBoolProperty"), property_writes)
+        self.assertIn(("map", "MAIN_TURN", "setNumericProperty"), property_writes)
+        self.assertIn(("player", "skill_flag", "setBoolProperty"), property_writes)
 
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")

@@ -24,6 +24,14 @@ SCRIPT_ITEM_CALLS = {"addItem"}
 SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_grant_quest", "grant_quest"}
 SCRIPT_MAP_CALLS = {"changeMap"}
 SCRIPT_OBJECT_NAME_CALLS = {"getObjectByName", "removeObjectByName"}
+SCRIPT_PROPERTY_READ_CALLS = {"getBoolProperty", "getNumericProperty", "getStringProperty"}
+SCRIPT_PROPERTY_WRITE_CALLS = {"setBoolProperty", "setNumericProperty", "setStringProperty", "incProperty"}
+SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS = {
+    "_set_bool_property_default": "setBoolProperty",
+    "_set_numeric_property_default": "setNumericProperty",
+    "set_bool_property_default": "setBoolProperty",
+    "set_numeric_property_default": "setNumericProperty",
+}
 KNOWN_EVENT_NAMES = {
     "onCreate",
     "onDestroy",
@@ -123,12 +131,51 @@ class ScriptCall:
 
 
 @dataclass
+class ScriptQuestStateUsage:
+    storage_key: str | None = None
+    default_state: str | None = None
+    read_states: set[str] = field(default_factory=set)
+    written_states: set[str] = field(default_factory=set)
+    terminal_check_states: set[str] = field(default_factory=set)
+
+
+@dataclass(frozen=True)
+class ScriptLegacyBoolFlag:
+    name: str
+    quest: str
+    states: tuple[str, ...]
+    excluded_states: tuple[str, ...]
+    lineno: int
+    context: str
+
+
+@dataclass(frozen=True)
+class ScriptPropertyAccess:
+    owner: str
+    access: str
+    name: str
+    method: str
+    lineno: int
+    context: str
+
+    @property
+    def location(self) -> str:
+        call = f'{self.method}("{self.name}")'
+        return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
+
+
+@dataclass
 class ScriptInfo:
     path: Path
     classes: set[str] = field(default_factory=set)
     registered_classes: set[str] = field(default_factory=set)
     methods_by_class: dict[str, set[str]] = field(default_factory=dict)
     calls: list[ScriptCall] = field(default_factory=list)
+    quest_grants: list[ScriptCall] = field(default_factory=list)
+    quest_states: dict[str, ScriptQuestStateUsage] = field(default_factory=dict)
+    legacy_bool_flags: list[ScriptLegacyBoolFlag] = field(default_factory=list)
+    property_reads: list[ScriptPropertyAccess] = field(default_factory=list)
+    property_writes: list[ScriptPropertyAccess] = field(default_factory=list)
     trigger_targets: list[ScriptCall] = field(default_factory=list)
     named_objects: set[str] = field(default_factory=set)
 
@@ -150,6 +197,8 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self.info = ScriptInfo(path=path)
         self._class_stack: list[str] = []
         self._function_stack: list[str] = []
+        self._state_alias_stack: list[dict[str, str]] = []
+        self._string_values_stack: list[dict[str, set[str]]] = []
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
@@ -165,18 +214,44 @@ class ScriptAnalyzer(ast.NodeVisitor):
         if self._class_stack:
             self.info.methods_by_class.setdefault(self._class_stack[-1], set()).add(node.name)
         self._function_stack.append(node.name)
+        self._state_alias_stack.append({})
+        self._string_values_stack.append({})
         for child in node.body:
             self.visit(child)
+        self._string_values_stack.pop()
+        self._state_alias_stack.pop()
         self._function_stack.pop()
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> Any:
         self.visit_FunctionDef(node)
+
+    def visit_Assign(self, node: ast.Assign) -> Any:
+        self._record_class_constant_assignment(node)
+        self._record_local_assignment(node.targets, node.value)
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> Any:
+        if node.value is not None:
+            self._record_class_constant_assignment(node)
+            self._record_local_assignment([node.target], node.value)
+        self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> Any:
         name = call_name(node.func)
         if name:
             self._record_script_call(name, node)
             self._record_named_object(name, node)
+            self._record_quest_state_call(name, node)
+            self._record_property_access(name, node)
+        self.generic_visit(node)
+
+    def visit_Compare(self, node: ast.Compare) -> Any:
+        self._record_quest_state_comparison(node, terminal=False)
+        self.generic_visit(node)
+
+    def visit_Return(self, node: ast.Return) -> Any:
+        if node.value is not None and self._is_terminal_state_context():
+            self._record_terminal_state_checks(node.value)
         self.generic_visit(node)
 
     def _record_script_call(self, name: str, node: ast.Call) -> None:
@@ -188,7 +263,10 @@ class ScriptAnalyzer(ast.NodeVisitor):
             name
             in SCRIPT_REF_CALLS | SCRIPT_ITEM_CALLS | SCRIPT_QUEST_CALLS | SCRIPT_MAP_CALLS | SCRIPT_OBJECT_NAME_CALLS
         ):
-            self.info.calls.append(ScriptCall(name=name, value=literal, lineno=node.lineno, context=context))
+            call = ScriptCall(name=name, value=literal, lineno=node.lineno, context=context)
+            self.info.calls.append(call)
+            if name in SCRIPT_QUEST_CALLS:
+                self.info.quest_grants.append(call)
 
     def _record_named_object(self, name: str, node: ast.Call) -> None:
         if name == "setStringProperty" and len(node.args) >= 2:
@@ -196,6 +274,231 @@ class ScriptAnalyzer(ast.NodeVisitor):
             value = string_literal(node.args[1])
             if key == "name" and value:
                 self.info.named_objects.add(value)
+
+    def _record_class_constant_assignment(self, node: ast.Assign | ast.AnnAssign) -> None:
+        if not self._class_stack:
+            return
+        value = node.value
+        if value is None:
+            return
+        for target in assignment_targets(node):
+            name = assigned_name(target)
+            if name == "QUEST_KEYS":
+                self._record_quest_keys(value)
+            elif name == "QUEST_DEFAULTS":
+                self._record_quest_defaults(value)
+            elif name == "LEGACY_BOOL_FLAGS":
+                self._record_legacy_bool_flags(value, getattr(node, "lineno", 0))
+
+    def _record_local_assignment(self, targets: list[ast.expr], value: ast.AST) -> None:
+        if not self._state_alias_stack or not self._string_values_stack:
+            return
+        state_aliases = self._state_alias_stack[-1]
+        string_values = self._string_values_stack[-1]
+        quest_key = get_state_key(value)
+        literal_values = self._literal_string_values(value)
+        for target in targets:
+            target_name = assigned_name(target)
+            if target_name is None:
+                continue
+            if quest_key:
+                state_aliases[target_name] = quest_key
+            else:
+                state_aliases.pop(target_name, None)
+            if literal_values:
+                string_values[target_name] = set(literal_values)
+            else:
+                string_values.pop(target_name, None)
+
+    def _record_quest_keys(self, value: ast.AST) -> None:
+        for quest_key, storage_key in literal_string_dict(value).items():
+            self._quest_state_usage(quest_key).storage_key = storage_key
+
+    def _record_quest_defaults(self, value: ast.AST) -> None:
+        for quest_key, state in literal_string_dict(value).items():
+            self._quest_state_usage(quest_key).default_state = state
+
+    def _record_legacy_bool_flags(self, value: ast.AST, lineno: int) -> None:
+        for call in iter_calls(value):
+            if call_name(call.func) != "LegacyBoolFlag" or len(call.args) < 2:
+                continue
+            flag_name = string_literal(call.args[0])
+            quest_key = string_literal(call.args[1])
+            if not flag_name or not quest_key:
+                continue
+            self.info.legacy_bool_flags.append(
+                ScriptLegacyBoolFlag(
+                    name=flag_name,
+                    quest=quest_key,
+                    states=tuple(sorted(self._keyword_string_values(call, "states"))),
+                    excluded_states=tuple(sorted(self._keyword_string_values(call, "excluded_states"))),
+                    lineno=getattr(call, "lineno", lineno),
+                    context=self._context,
+                )
+            )
+
+    def _record_quest_state_call(self, name: str, node: ast.Call) -> None:
+        if name in {"_set_state", "set_state"} and len(node.args) >= 2:
+            quest_key = string_literal(node.args[0])
+            if quest_key:
+                for state in self._literal_string_values(node.args[1]):
+                    self._quest_state_usage(quest_key).written_states.add(state)
+        elif name == "state_in" and len(node.args) >= 2:
+            quest_key = string_literal(node.args[0])
+            if quest_key:
+                for state in self._literal_string_values(node.args[1]):
+                    self._quest_state_usage(quest_key).read_states.add(state)
+
+    def _record_quest_state_comparison(self, node: ast.Compare, terminal: bool) -> None:
+        operands = [node.left, *node.comparators]
+        for index, operator in enumerate(node.ops):
+            left = operands[index]
+            right = operands[index + 1]
+            if isinstance(operator, (ast.Eq, ast.NotEq, ast.In, ast.NotIn)):
+                self._record_comparison_pair(left, right, terminal)
+                self._record_comparison_pair(right, left, terminal)
+
+    def _record_comparison_pair(self, state_expr: ast.AST, value_expr: ast.AST, terminal: bool) -> None:
+        quest_key = self._state_key_from_expr(state_expr)
+        if not quest_key:
+            return
+        states = self._literal_string_values(value_expr)
+        if not states:
+            return
+        usage = self._quest_state_usage(quest_key)
+        usage.read_states.update(states)
+        if terminal:
+            usage.terminal_check_states.update(states)
+
+    def _record_terminal_state_checks(self, node: ast.AST) -> None:
+        if isinstance(node, ast.Compare):
+            self._record_quest_state_comparison(node, terminal=True)
+            return
+        if isinstance(node, ast.BoolOp):
+            for value in node.values:
+                self._record_terminal_state_checks(value)
+            return
+        if isinstance(node, ast.UnaryOp):
+            self._record_terminal_state_checks(node.operand)
+            return
+        if isinstance(node, ast.Call) and call_name(node.func) == "state_in" and len(node.args) >= 2:
+            quest_key = string_literal(node.args[0])
+            if not quest_key:
+                return
+            states = self._literal_string_values(node.args[1])
+            usage = self._quest_state_usage(quest_key)
+            usage.read_states.update(states)
+            usage.terminal_check_states.update(states)
+
+    def _record_property_access(self, name: str, node: ast.Call) -> None:
+        if name in SCRIPT_PROPERTY_READ_CALLS and node.args:
+            self._record_property_accesses("read", name, self._property_receiver(node), node.args[0], node)
+        elif name in SCRIPT_PROPERTY_WRITE_CALLS and node.args:
+            self._record_property_accesses("write", name, self._property_receiver(node), node.args[0], node)
+        elif name in SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS and len(node.args) >= 2:
+            self._record_property_accesses(
+                "write",
+                SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS[name],
+                self._receiver_kind(node.args[0]),
+                node.args[1],
+                node,
+            )
+
+    def _record_property_accesses(
+        self, access: str, method: str, owner: str, property_expr: ast.AST, node: ast.Call
+    ) -> None:
+        target = self.info.property_reads if access == "read" else self.info.property_writes
+        for property_name in self._literal_string_values(property_expr):
+            target.append(
+                ScriptPropertyAccess(
+                    owner=owner,
+                    access=access,
+                    name=property_name,
+                    method=method,
+                    lineno=node.lineno,
+                    context=self._context,
+                )
+            )
+
+    def _property_receiver(self, node: ast.Call) -> str:
+        if isinstance(node.func, ast.Attribute):
+            return self._receiver_kind(node.func.value)
+        return "unknown"
+
+    def _receiver_kind(self, node: ast.AST) -> str:
+        if isinstance(node, ast.Name):
+            if node.id == "player" or node.id.endswith("_player"):
+                return "player"
+            if node.id in {"game_map", "map"} or node.id.endswith("_map"):
+                return "map"
+            return "unknown"
+        if isinstance(node, ast.Attribute):
+            if isinstance(node.value, ast.Name) and node.value.id == "self" and node.attr == "map":
+                return "map"
+            return self._receiver_kind(node.value)
+        if isinstance(node, ast.Call):
+            name = call_name(node.func)
+            if name == "getPlayer":
+                return "player"
+            if name == "getMap":
+                return "map"
+            if name in {"getObjectByName", "createObject", "getCause"}:
+                return "object"
+            if isinstance(node.func, ast.Attribute):
+                return self._receiver_kind(node.func.value)
+        return "unknown"
+
+    def _literal_string_values(self, node: ast.AST) -> set[str]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return {node.value}
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            values: set[str] = set()
+            for element in node.elts:
+                values.update(self._literal_string_values(element))
+            return values
+        if isinstance(node, ast.IfExp):
+            return self._literal_string_values(node.body) | self._literal_string_values(node.orelse)
+        if isinstance(node, ast.Name) and self._string_values_stack:
+            for string_values in reversed(self._string_values_stack):
+                if node.id in string_values:
+                    return set(string_values[node.id])
+        return set()
+
+    def _keyword_string_values(self, node: ast.Call, keyword_name: str) -> set[str]:
+        for keyword in node.keywords:
+            if keyword.arg == keyword_name:
+                return self._literal_string_values(keyword.value)
+        return set()
+
+    def _state_key_from_expr(self, node: ast.AST) -> str | None:
+        quest_key = get_state_key(node)
+        if quest_key:
+            return quest_key
+        if isinstance(node, ast.Name) and self._state_alias_stack:
+            for state_aliases in reversed(self._state_alias_stack):
+                if node.id in state_aliases:
+                    return state_aliases[node.id]
+        return None
+
+    def _quest_state_usage(self, quest_key: str) -> ScriptQuestStateUsage:
+        return self.info.quest_states.setdefault(quest_key, ScriptQuestStateUsage())
+
+    def _is_terminal_state_context(self) -> bool:
+        if not self._function_stack:
+            return False
+        function_name = self._function_stack[-1]
+        return (
+            function_name == "isCompleted"
+            or function_name == "victor_has_ended"
+            or function_name.startswith("is_")
+            or function_name.endswith(
+                ("_completed", "_delivered", "_returned", "_ended", "_done", "_purged", "_good_end", "_bad_end")
+            )
+        )
+
+    @property
+    def _context(self) -> str:
+        return ".".join([*self._class_stack, *self._function_stack])
 
 
 def call_name(func: ast.AST) -> str | None:
@@ -218,6 +521,42 @@ def first_string_arg(node: ast.Call) -> str | None:
         if literal is not None:
             return literal
     return None
+
+
+def assignment_targets(node: ast.Assign | ast.AnnAssign) -> list[ast.expr]:
+    if isinstance(node, ast.Assign):
+        return node.targets
+    return [node.target]
+
+
+def assigned_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def get_state_key(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Call) and call_name(node.func) == "get_state" and node.args:
+        return string_literal(node.args[0])
+    return None
+
+
+def literal_string_dict(node: ast.AST) -> dict[str, str]:
+    if not isinstance(node, ast.Dict):
+        return {}
+    values: dict[str, str] = {}
+    for key_node, value_node in zip(node.keys, node.values):
+        key = string_literal(key_node) if key_node is not None else None
+        value = string_literal(value_node)
+        if key is not None and value is not None:
+            values[key] = value
+    return values
+
+
+def iter_calls(node: ast.AST) -> list[ast.Call]:
+    return [child for child in ast.walk(node) if isinstance(child, ast.Call)]
 
 
 def is_python_registration_decorator(decorator: ast.AST) -> bool:
