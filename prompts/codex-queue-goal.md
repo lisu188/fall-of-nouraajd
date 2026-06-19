@@ -21,6 +21,12 @@ back to four as soon as the blocker clears. Standby subagents may do lightweight
 or review prep, but must not claim issues, edit files, touch the workbook, start builds, run tests, or launch
 coverage/Xvfb/MCP validation.
 
+Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
+project manager should review the merged workbook, active work, stale claims, blockers, dependency chains, validation
+cost, RAM/disk limits, and open PR state, then provide a prioritization brief. The brief may recommend priority changes,
+issue splits, deferrals, or blocker publications, but it must not claim work, edit the workbook, start validation, or
+displace a safe implementation worker when four implementation issues can run.
+
 Workers must not use parallel local builds. Adapt repository-local commands such as `-j$(nproc)` to `-j1` unless the
 user explicitly allows a higher job count. Recalculate the RAM-safe heavy-job budget before validation. If every heavy
 job is explicitly serial, such as `-j1` or an equivalent one-worker test setting, and RAM has headroom with no swap
@@ -42,6 +48,10 @@ eligible set. Exclude:
 Keep only the highest currently available priority tier. Group remaining candidates by `(Epic #, Story #)`, randomly
 select one story with equal probability, then randomly select one eligible substory in that story. Never default to
 spreadsheet order, and never randomize an ineligible issue into consideration.
+
+Use the project-manager prioritization brief to decide whether to proceed, publish a queue-state update, or report a
+blocker. Do not use it as an ad hoc override: priority, dependency, status, or scope changes affect dispatch only after
+an approved workbook-only pull request merges into `main`.
 
 ## Claim, implementation, and completion flow
 
@@ -81,6 +91,7 @@ concise live status table containing at least:
 - current validation command if one is running;
 - branch name;
 - PR number or pending PR state;
+- project-manager prioritization brief state or the reason no project-manager subagent is available;
 - blockers;
 - next controller action.
 
