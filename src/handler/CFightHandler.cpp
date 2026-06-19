@@ -303,15 +303,15 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
 
 std::string final_status_message(CFightOutcome outcome, const std::string &attackerName) {
     switch (outcome) {
-    case CFightOutcome::attackerVictory:
+    case CFightOutcome::AttackerVictory:
         return attackerName + " survives the encounter.";
-    case CFightOutcome::attackerDefeat:
+    case CFightOutcome::AttackerDefeat:
         return attackerName + " is defeated.";
-    case CFightOutcome::stalemate:
+    case CFightOutcome::Stalled:
         return "The encounter remains unresolved.";
-    case CFightOutcome::interrupted:
+    case CFightOutcome::Cancelled:
         return "The encounter was interrupted.";
-    case CFightOutcome::invalid:
+    case CFightOutcome::Invalid:
         return "";
     }
     return "";
@@ -319,35 +319,46 @@ std::string final_status_message(CFightOutcome outcome, const std::string &attac
 
 } // namespace
 
+bool CFightResult::resolved() const {
+    return outcome == CFightOutcome::AttackerVictory || outcome == CFightOutcome::AttackerDefeat;
+}
+
+bool CFightResult::attackerSucceeded() const { return outcome == CFightOutcome::AttackerVictory; }
+
 bool CFightHandler::fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b) { return fightMany(a, {b}); }
 
 bool CFightHandler::fightMany(std::shared_ptr<CCreature> attacker,
                               const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
-    const auto outcome = fightManyOutcome(attacker, encounterOpponents);
-    return outcome == CFightOutcome::attackerVictory || outcome == CFightOutcome::attackerDefeat;
+    return fightManyResult(attacker, encounterOpponents).resolved();
 }
 
 CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacker,
                                               const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
+    return fightManyResult(attacker, encounterOpponents).outcome;
+}
+
+CFightResult CFightHandler::fightManyResult(std::shared_ptr<CCreature> attacker,
+                                            const std::vector<std::shared_ptr<CCreature>> &encounterOpponents) {
+    CFightResult result;
     if (!attacker) {
-        return CFightOutcome::invalid;
+        return result;
     }
     auto encounterMap = attacker->getMap();
     const auto attackerName = combat_name(attacker);
     if (!is_active_participant(encounterMap, attacker)) {
-        return CFightOutcome::invalid;
+        return result;
     }
 
     auto opponents = sanitize_opponents(encounterMap, attacker, encounterOpponents);
     if (opponents.empty()) {
-        return CFightOutcome::invalid;
+        return result;
     }
 
     auto allOpponents = opponents;
     auto current = opponents.front();
     auto attackerController = attacker->getFightController();
     if (!attackerController) {
-        return CFightOutcome::invalid;
+        return result;
     }
     attackerController->setOpponents(attacker, opponents);
     attackerController->start(attacker, current);
@@ -366,20 +377,22 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
     }
 
     int stale_turns = 0;
-    CFightOutcome outcome = CFightOutcome::invalid;
-    for (int turn = 0; turn < 100 && stale_turns < 20 && outcome == CFightOutcome::invalid &&
+    for (int turn = 0; turn < 100 && stale_turns < 20 && result.outcome == CFightOutcome::Invalid &&
                        is_active_participant(encounterMap, attacker) && !opponents.empty();
          ++turn) {
         if (SDL_HasEvent(SDL_QUIT)) {
-            outcome = CFightOutcome::interrupted;
+            result.outcome = CFightOutcome::Cancelled;
+            result.survivor = attacker;
+            result.opponent = current;
             break;
         }
+        result.rounds = turn + 1;
         update_combat_status(encounterMap, attacker, opponents, "Combat round " + vstd::str(turn + 1) + " begins.");
         auto before = encounter_state(attacker, opponents);
         const auto turnOrder = build_turn_order(encounterMap, attacker, opponents);
 
         for (const auto &actor : turnOrder) {
-            if (outcome != CFightOutcome::invalid || !is_active_participant(encounterMap, attacker) ||
+            if (result.outcome != CFightOutcome::Invalid || !is_active_participant(encounterMap, attacker) ||
                 opponents.empty()) {
                 break;
             }
@@ -391,7 +404,9 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
 
                 auto effect_result = apply_effects_with_result(attacker);
                 if (!attacker->isAlive()) {
-                    outcome = CFightOutcome::attackerDefeat;
+                    result.outcome = CFightOutcome::AttackerDefeat;
+                    result.survivor = effect_result.caster;
+                    result.opponent = attacker;
                     defeat_attacker(encounterMap, attacker, opponents, effect_result.caster);
                     break;
                 }
@@ -400,12 +415,16 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
                     attackerController->control(attacker, current);
                     remove_dead_opponents(encounterMap, attacker, opponents, attacker);
                     if (!attacker->isAlive()) {
-                        outcome = CFightOutcome::attackerDefeat;
+                        result.outcome = CFightOutcome::AttackerDefeat;
+                        result.survivor = current;
+                        result.opponent = attacker;
                         defeat_attacker(encounterMap, attacker, opponents, current);
                         break;
                     }
                     if (opponents.empty()) {
-                        outcome = CFightOutcome::attackerVictory;
+                        result.outcome = CFightOutcome::AttackerVictory;
+                        result.survivor = attacker;
+                        result.opponent = current;
                         break;
                     }
                     current = resolve_target(encounterMap, attacker, opponents, current);
@@ -426,7 +445,9 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
             if (!actor->isAlive()) {
                 if (remove_dead_opponents(encounterMap, attacker, opponents, effect_result.caster)) {
                     if (opponents.empty()) {
-                        outcome = CFightOutcome::attackerVictory;
+                        result.outcome = CFightOutcome::AttackerVictory;
+                        result.survivor = attacker;
+                        result.opponent = actor;
                         break;
                     }
                     current = resolve_target(encounterMap, attacker, opponents, current);
@@ -439,7 +460,9 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
                 }
                 if (!attacker->isAlive()) {
                     remove_dead_opponents(encounterMap, attacker, opponents, attacker);
-                    outcome = CFightOutcome::attackerDefeat;
+                    result.outcome = CFightOutcome::AttackerDefeat;
+                    result.survivor = actor;
+                    result.opponent = attacker;
                     defeat_attacker(encounterMap, attacker, opponents, actor);
                     break;
                 }
@@ -448,18 +471,22 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
             }
             if (remove_dead_opponents(encounterMap, attacker, opponents, attacker)) {
                 if (opponents.empty()) {
-                    outcome = CFightOutcome::attackerVictory;
+                    result.outcome = CFightOutcome::AttackerVictory;
+                    result.survivor = attacker;
+                    result.opponent = actor;
                     break;
                 }
                 current = resolve_target(encounterMap, attacker, opponents, current);
             }
         }
 
-        if (outcome != CFightOutcome::invalid || !is_active_participant(encounterMap, attacker)) {
+        if (result.outcome != CFightOutcome::Invalid || !is_active_participant(encounterMap, attacker)) {
             break;
         }
         if (opponents.empty()) {
-            outcome = CFightOutcome::attackerVictory;
+            result.outcome = CFightOutcome::AttackerVictory;
+            result.survivor = attacker;
+            result.opponent = current;
             break;
         }
 
@@ -467,13 +494,18 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
         stale_turns = after == before ? stale_turns + 1 : 0;
     }
 
-    if (outcome == CFightOutcome::invalid) {
+    if (result.outcome == CFightOutcome::Invalid) {
         if (!is_active_participant(encounterMap, attacker)) {
-            outcome = CFightOutcome::attackerDefeat;
+            result.outcome = CFightOutcome::AttackerDefeat;
+            result.opponent = attacker;
         } else if (opponents.empty()) {
-            outcome = CFightOutcome::attackerVictory;
+            result.outcome = CFightOutcome::AttackerVictory;
+            result.survivor = attacker;
+            result.opponent = current;
         } else {
-            outcome = CFightOutcome::stalemate;
+            result.outcome = CFightOutcome::Stalled;
+            result.survivor = attacker;
+            result.opponent = current;
         }
     }
 
@@ -484,9 +516,9 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
         }
     }
 
-    if (outcome != CFightOutcome::invalid) {
-        const bool include_initiative = outcome != CFightOutcome::attackerDefeat;
-        update_combat_status(encounterMap, attacker, opponents, final_status_message(outcome, attackerName),
+    if (result.outcome != CFightOutcome::Invalid) {
+        const bool include_initiative = result.outcome != CFightOutcome::AttackerDefeat;
+        update_combat_status(encounterMap, attacker, opponents, final_status_message(result.outcome, attackerName),
                              include_initiative);
     }
 
@@ -494,14 +526,16 @@ CFightOutcome CFightHandler::fightManyOutcome(std::shared_ptr<CCreature> attacke
         json fields = {
             {"attacker", CPlaytestTrace::objectRef(attacker)},
             {"opponents", CPlaytestTrace::objectRefs(allOpponents)},
-            {"outcome", static_cast<int>(outcome)},
-            {"outcomeName", final_status_message(outcome, attackerName)},
+            {"outcome", static_cast<int>(result.outcome)},
+            {"outcomeName", final_status_message(result.outcome, attackerName)},
+            {"rounds", result.rounds},
+            {"survivor", CPlaytestTrace::objectRef(result.survivor)},
         };
         CPlaytestTrace::addMapContext(fields, encounterMap);
         CPlaytestTrace::record("combat_finished", fields);
     }
 
-    return outcome;
+    return result;
 }
 
 void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const std::shared_ptr<CCreature> &b) {

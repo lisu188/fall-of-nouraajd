@@ -23,7 +23,29 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CCreature;
 
-enum class CFightOutcome { invalid, attackerVictory, attackerDefeat, stalemate, interrupted };
+enum class CFightOutcome {
+    Invalid = 0,
+    AttackerVictory = 1,
+    AttackerDefeat = 2,
+    Stalled = 3,
+    Cancelled = 4,
+
+    invalid = Invalid,
+    attackerVictory = AttackerVictory,
+    attackerDefeat = AttackerDefeat,
+    stalemate = Stalled,
+    interrupted = Cancelled,
+};
+
+struct CFightResult {
+    CFightOutcome outcome = CFightOutcome::Invalid;
+    int rounds = 0;
+    std::shared_ptr<CCreature> survivor;
+    std::shared_ptr<CCreature> opponent;
+
+    bool resolved() const;
+    bool attackerSucceeded() const;
+};
 
 class CFightHandler {
   public:
@@ -31,6 +53,9 @@ class CFightHandler {
 
     static bool fightMany(std::shared_ptr<CCreature> attacker,
                           const std::vector<std::shared_ptr<CCreature>> &opponents);
+
+    static CFightResult fightManyResult(std::shared_ptr<CCreature> attacker,
+                                        const std::vector<std::shared_ptr<CCreature>> &opponents);
 
     static CFightOutcome fightManyOutcome(std::shared_ptr<CCreature> attacker,
                                           const std::vector<std::shared_ptr<CCreature>> &opponents);

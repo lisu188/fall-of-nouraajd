@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 #include "test_harness.h"
 
+#include <SDL.h>
 #include <pybind11/embed.h>
 #include <memory>
 #include <set>
@@ -221,7 +222,7 @@ void test_fight_handler_rejects_stale_and_cross_map_participants() {
     expect_true(map->getObjectByName("unitReplaceableOpponent") == replacement,
                 "removeObject should not erase a same-name replacement through a stale reference");
 
-    expect_true(CFightHandler::fightManyOutcome(attacker, {stale}) == CFightOutcome::invalid,
+    expect_true(CFightHandler::fightManyOutcome(attacker, {stale}) == CFightOutcome::Invalid,
                 "stale same-name opponents should be rejected before combat starts");
     expect_true(map->getObjectByName("unitReplaceableOpponent") == replacement,
                 "combat with a stale opponent should not mutate the replacement");
@@ -232,7 +233,7 @@ void test_fight_handler_rejects_stale_and_cross_map_participants() {
 
     auto second_game = load_empty_game();
     auto cross_map = add_test_creature(second_game, "unitCrossMapOpponent", 1, 0);
-    expect_true(CFightHandler::fightManyOutcome(attacker, {cross_map}) == CFightOutcome::invalid,
+    expect_true(CFightHandler::fightManyOutcome(attacker, {cross_map}) == CFightOutcome::Invalid,
                 "cross-map opponents should fail closed");
     expect_true(map->getObjectByName(attacker->getName()) == attacker,
                 "cross-map rejection should leave the attacker map unchanged");
@@ -250,7 +251,7 @@ void test_fight_handler_attributes_lethal_effects_to_valid_casters() {
 
     const auto outcome = CFightHandler::fightManyOutcome(attacker, {selected, caster});
 
-    expect_true(outcome == CFightOutcome::attackerDefeat, "attacker death from an effect should be attackerDefeat");
+    expect_true(outcome == CFightOutcome::AttackerDefeat, "attacker death from an effect should be AttackerDefeat");
     expect_true(caster->countItems("unitCasterOwnedLoot") == 1,
                 "the effect caster should receive transferable loot from the defeated attacker");
     expect_true(selected->countItems("unitCasterOwnedLoot") == 0,
@@ -264,7 +265,7 @@ void test_fight_handler_attributes_lethal_effects_to_valid_casters() {
 
     const auto victory = CFightHandler::fightManyOutcome(effect_attacker, {effect_victim});
 
-    expect_true(victory == CFightOutcome::attackerVictory, "opponent effect death should resolve as attacker victory");
+    expect_true(victory == CFightOutcome::AttackerVictory, "opponent effect death should resolve as attacker victory");
     expect_true(effect_attacker->countItems("unitDelayedOpponentLoot") == 1,
                 "attacker-owned delayed effects should grant opponent loot once");
     expect_true(second_game->getMap()->getObjectByName(effect_victim->getName()) == nullptr,
@@ -280,7 +281,7 @@ void test_fight_handler_attributes_lethal_effects_to_valid_casters() {
 
     const auto invalid_outcome = CFightHandler::fightManyOutcome(invalid_victim, {unrelated});
 
-    expect_true(invalid_outcome == CFightOutcome::attackerDefeat,
+    expect_true(invalid_outcome == CFightOutcome::AttackerDefeat,
                 "invalid-caster lethal effects should still resolve the loser");
     expect_true(unrelated->countItems("unitInvalidCasterLoot") == 0,
                 "invalid effect casters should not cause unrelated opponents to receive loot");
@@ -289,15 +290,32 @@ void test_fight_handler_attributes_lethal_effects_to_valid_casters() {
 }
 
 void test_fight_handler_reports_explicit_outcomes_and_final_status() {
+    const CFightResult default_result;
+    expect_true(default_result.outcome == CFightOutcome::Invalid && default_result.rounds == 0,
+                "default fight results should construct as invalid with no rounds");
+    expect_true(!default_result.resolved() && !default_result.attackerSucceeded(),
+                "default fight results should not collapse invalid combat into a resolved bool");
+
     auto victory_game = load_empty_game();
     auto victor = add_test_creature(victory_game, "unitOutcomeVictor");
     victor->setFightController(std::make_shared<KillingFightController>());
     auto defeated = add_test_creature(victory_game, "unitOutcomeDefeated", 1, 0);
     auto victory_controller = std::dynamic_pointer_cast<KillingFightController>(victor->getFightController());
+    const CFightResult cancelled_result{CFightOutcome::Cancelled, 3, victor, defeated};
+    expect_true(cancelled_result.outcome == CFightOutcome::Cancelled && cancelled_result.rounds == 3,
+                "fight results should construct with explicit cancelled outcome data");
 
-    const auto victory = CFightHandler::fightManyOutcome(victor, {defeated});
+    const auto victory = CFightHandler::fightManyResult(victor, {defeated});
 
-    expect_true(victory == CFightOutcome::attackerVictory, "direct attacker victory should be reported explicitly");
+    expect_true(victory.outcome == CFightOutcome::AttackerVictory,
+                "direct attacker victory should be reported explicitly");
+    expect_true(victory.rounds == 1, "direct attacker victory should report the completed round count");
+    expect_true(victory.survivor == victor && victory.opponent == defeated,
+                "direct attacker victory should report survivor and opponent metadata");
+    expect_true(victory.resolved() && victory.attackerSucceeded(),
+                "result helpers should identify successful resolved combat");
+    expect_true(CFightHandler::fightManyOutcome(victor, {defeated}) == CFightOutcome::Invalid,
+                "enum compatibility wrapper should still be constructible for invalid post-victory input");
     expect_true(victory_controller->start_count == 1 && victory_controller->end_count == 1,
                 "attacker controller should start and end exactly once on victory");
     expect_true(victory_game->getMap()->getStringProperty("combatStatus").find("survives the encounter") !=
@@ -310,13 +328,25 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     const auto stalemate_controller =
         std::dynamic_pointer_cast<NoProgressFightController>(stalled_attacker->getFightController());
 
-    const auto stalemate = CFightHandler::fightManyOutcome(stalled_attacker, {stalled_defender});
+    const auto stalemate = CFightHandler::fightManyResult(stalled_attacker, {stalled_defender});
 
-    expect_true(stalemate == CFightOutcome::stalemate, "no-progress combat should report stalemate");
+    expect_true(stalemate.outcome == CFightOutcome::Stalled, "no-progress combat should report stalled outcome");
+    expect_true(stalemate.rounds == 20, "stalled combat should report the stale round budget consumed");
+    expect_true(stalemate.survivor == stalled_attacker && stalemate.opponent == stalled_defender,
+                "stalled combat should keep participant metadata instead of only returning false");
+    expect_true(!stalemate.resolved() && !stalemate.attackerSucceeded(),
+                "result helpers should keep stalled combat separate from resolved combat");
     expect_true(!CFightHandler::fightMany(stalled_attacker, {stalled_defender}),
                 "legacy fightMany should still return false for unresolved combat");
     expect_true(stalemate_controller->start_count == 2 && stalemate_controller->end_count == 2,
                 "controller cleanup should also run for the legacy stalemate call");
+
+    auto legacy_victory_game = load_empty_game();
+    auto legacy_victor = add_test_creature(legacy_victory_game, "unitLegacyOutcomeVictor");
+    legacy_victor->setFightController(std::make_shared<KillingFightController>());
+    auto legacy_defeated = add_test_creature(legacy_victory_game, "unitLegacyOutcomeDefeated", 1, 0);
+    expect_true(CFightHandler::fight(legacy_victor, legacy_defeated),
+                "legacy two-creature bool wrapper should still return true for resolved victory");
 
     auto player_game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(player_game, "empty", "Warrior");
@@ -330,12 +360,41 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     const auto defeat = CFightHandler::fightManyOutcome(player, {killer});
     const auto status = player_map->getStringProperty("combatStatus");
 
-    expect_true(defeat == CFightOutcome::attackerDefeat, "player defeat should remain visible after respawn");
+    expect_true(defeat == CFightOutcome::AttackerDefeat, "player defeat should remain visible after respawn");
     expect_true(player_map->getObjectByName("player") == player && player->isAlive() && player->getHp() == 1,
                 "player defeat should keep the existing respawn behavior");
     expect_true(status.find("survives the encounter") == std::string::npos,
                 "defeated respawned players must not be reported as surviving");
     expect_true(status.find("defeated") != std::string::npos, "final defeat status should be explicit");
+}
+
+void test_fight_handler_reports_cancelled_quit_event() {
+    expect_true(SDL_InitSubSystem(SDL_INIT_EVENTS) == 0, "SDL event subsystem should initialize for quit events");
+    SDL_FlushEvent(SDL_QUIT);
+
+    auto game = load_empty_game();
+    auto attacker = add_test_creature(game, "unitCancelledAttacker");
+    auto defender = add_test_creature(game, "unitCancelledDefender", 1, 0);
+    const auto attacker_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(attacker->getFightController());
+
+    SDL_Event quit_event{};
+    quit_event.type = SDL_QUIT;
+    expect_true(SDL_PushEvent(&quit_event) == 1, "SDL_QUIT event should be queued for cancellation coverage");
+
+    const auto result = CFightHandler::fightManyResult(attacker, {defender});
+    SDL_FlushEvent(SDL_QUIT);
+
+    expect_true(result.outcome == CFightOutcome::Cancelled, "queued SDL_QUIT should report cancelled combat");
+    expect_true(result.rounds == 0, "cancelled combat before a turn should report no completed rounds");
+    expect_true(result.survivor == attacker && result.opponent == defender,
+                "cancelled combat should keep participant metadata");
+    expect_true(!result.resolved() && !result.attackerSucceeded(),
+                "cancelled combat should stay distinct from resolved bool outcomes");
+    expect_true(attacker_controller->start_count == 1 && attacker_controller->end_count == 1,
+                "controller cleanup should run when combat is cancelled");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("interrupted") != std::string::npos,
+                "cancelled combat should publish the interrupted status text");
 }
 
 void test_fight_handler_counts_effect_duration_as_progress() {
@@ -351,7 +410,7 @@ void test_fight_handler_counts_effect_duration_as_progress() {
 
     const auto outcome = CFightHandler::fightManyOutcome(attacker, {defender});
 
-    expect_true(outcome == CFightOutcome::stalemate, "timed no-damage effects should still end in stalemate");
+    expect_true(outcome == CFightOutcome::Stalled, "timed no-damage effects should still end in stalled outcome");
     expect_true(effect->ticks == 25, "duration changes should prevent stale termination before effect expiration");
     expect_true(attacker->getEffects().empty(), "expired effects should be removed before stale termination resumes");
     expect_true(game->getMap()->getObjectByName(attacker->getName()) == attacker &&
@@ -391,6 +450,7 @@ int main() {
     test_fight_handler_rejects_stale_and_cross_map_participants();
     test_fight_handler_attributes_lethal_effects_to_valid_casters();
     test_fight_handler_reports_explicit_outcomes_and_final_status();
+    test_fight_handler_reports_cancelled_quit_event();
     test_fight_handler_counts_effect_duration_as_progress();
     test_player_respawn_normalizes_wrapped_entry_coords();
 
