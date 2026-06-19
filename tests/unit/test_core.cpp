@@ -85,19 +85,32 @@ struct ConceptStepCost {
 
 class PropertyChangeProbe : public CGameObject {
     V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
+           V_METHOD(PropertyChangeProbe, onPropertiesChanged, void, std::set<std::string>),
            V_METHOD(PropertyChangeProbe, onLabelChanged), V_METHOD(PropertyChangeProbe, onThreatChanged))
 
   public:
     void onPropertyChanged(std::string property_name) { changed_properties.push_back(property_name); }
+
+    void onPropertiesChanged(std::set<std::string> property_names) {
+        changed_property_batches.push_back(property_names);
+    }
 
     void onLabelChanged() { ++label_changed_calls; }
 
     void onThreatChanged() { ++threat_changed_calls; }
 
     std::vector<std::string> changed_properties;
+    std::vector<std::set<std::string>> changed_property_batches;
     int label_changed_calls = 0;
     int threat_changed_calls = 0;
 };
+
+void drain_event_loop() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+}
 
 static_assert(fn::PathPassability<ConceptCanStep>);
 static_assert(fn::PathWaypoint<ConceptWaypoint>);
@@ -519,13 +532,11 @@ void test_property_setters_emit_change_signals() {
     object->setStringProperty("label", "Alert");
     object->setNumericProperty("threat", 7);
 
-    auto loop = vstd::event_loop<>::instance();
-    for (int i = 0; i < 5; ++i) {
-        loop->run();
-    }
+    drain_event_loop();
 
     expect_true((probe->changed_properties == std::vector<std::string>{"label", "threat"}),
                 "propertyChanged should include string and numeric property names");
+    expect_true(probe->changed_property_batches.empty(), "ordinary property setters should not emit batch signals");
     expect_true(probe->label_changed_calls == 1, "setStringProperty should emit the property-specific signal");
     expect_true(probe->threat_changed_calls == 1, "setNumericProperty should emit the property-specific signal");
 }
@@ -554,6 +565,104 @@ void test_reviewed_value_wrappers_have_explicit_primitive_metadata() {
     expect_true(!CTypes::isPrimitiveType<CScript>(), "single-property CScript should not be primitive by shape");
     expect_true(!CTypes::primitiveValueType<CScript>().has_value(), "CScript should not have primitive value metadata");
     expect_true(!CTypes::isPrimitiveType<CStats>(), "multi-property value-like objects should not be primitive");
+}
+
+void test_nested_property_notification_batches_emit_one_deterministic_signal() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+    object->connect("propertiesChanged", probe, "onPropertiesChanged");
+    object->connect("labelChanged", probe, "onLabelChanged");
+    object->connect("threatChanged", probe, "onThreatChanged");
+
+    {
+        CGameObject::PropertyNotificationBatch outerBatch(*object);
+        object->setStringProperty("label", "Alert");
+        {
+            CGameObject::PropertyNotificationBatch innerBatch(*object);
+            object->setNumericProperty("threat", 7);
+            object->setStringProperty("label", "Updated");
+        }
+    }
+
+    drain_event_loop();
+
+    const std::vector<std::set<std::string>> expected_batches{{"label", "threat"}};
+    expect_true(probe->changed_properties.empty(), "batched property changes should suppress per-field notifications");
+    expect_true(probe->changed_property_batches == expected_batches,
+                "nested property batches should emit one sorted unique-name batch");
+    expect_true(probe->label_changed_calls == 0, "batched string changes should suppress property-specific signals");
+    expect_true(probe->threat_changed_calls == 0, "batched numeric changes should suppress property-specific signals");
+}
+
+void test_object_deserialization_batches_property_notifications() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+    object->connect("propertiesChanged", probe, "onPropertiesChanged");
+    object->connect("labelChanged", probe, "onLabelChanged");
+    object->connect("threatChanged", probe, "onThreatChanged");
+    game->getObjectHandler()->registerType("ObservedObject", [object]() { return object; });
+
+    auto config = std::make_shared<json>();
+    (*config)["class"] = "ObservedObject";
+    (*config)["properties"]["description"] = "deserialized";
+    (*config)["properties"]["label"] = "Alert";
+    (*config)["properties"]["threat"] = 7;
+
+    auto deserialized =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, config);
+    drain_event_loop();
+
+    const std::vector<std::set<std::string>> expected_batches{{"description", "label", "threat"}};
+    expect_true(deserialized == object, "test setup should deserialize the pre-connected observed object");
+    expect_true(probe->changed_properties.empty(),
+                "deserialization should not emit one propertyChanged signal per configured field");
+    expect_true(probe->changed_property_batches == expected_batches,
+                "deserialization should emit one consolidated property batch with all changed fields");
+    expect_true(probe->label_changed_calls == 0, "deserialization batches should suppress field-specific signals");
+    expect_true(probe->threat_changed_calls == 0, "deserialization batches should suppress dynamic field signals");
+}
+
+void test_object_clone_batches_property_notifications() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto source = std::make_shared<CGameObject>();
+    source->setGame(game);
+    source->setType("ObservedCloneObject");
+    source->setStringProperty("description", "source");
+    source->setStringProperty("label", "Alert");
+    source->setNumericProperty("threat", 7);
+
+    auto clone_target = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    clone_target->connect("propertyChanged", probe, "onPropertyChanged");
+    clone_target->connect("propertiesChanged", probe, "onPropertiesChanged");
+    clone_target->connect("labelChanged", probe, "onLabelChanged");
+    clone_target->connect("threatChanged", probe, "onThreatChanged");
+    game->getObjectHandler()->registerType("ObservedCloneObject", [clone_target]() { return clone_target; });
+
+    auto clone = source->clone<CGameObject>();
+    drain_event_loop();
+
+    expect_true(clone == clone_target, "clone should use the registered pre-connected clone target");
+    expect_true(probe->changed_properties.empty(), "clone should not emit one propertyChanged signal per cloned field");
+    expect_true(probe->changed_property_batches.size() == 1,
+                "clone should emit one consolidated property batch through deserialization");
+    expect_true(probe->changed_property_batches.front().contains("description") &&
+                    probe->changed_property_batches.front().contains("label") &&
+                    probe->changed_property_batches.front().contains("threat"),
+                "clone property batch should include all cloned fields changed by the test");
+    expect_true(probe->label_changed_calls == 0, "clone batches should suppress field-specific signals");
+    expect_true(probe->threat_changed_calls == 0, "clone batches should suppress dynamic field signals");
 }
 
 void test_delayed_future_handlers_run_through_event_loop() {
@@ -788,6 +897,9 @@ int main() {
     test_tag_mutation_iteration_and_range_helpers();
     test_property_setters_emit_change_signals();
     test_reviewed_value_wrappers_have_explicit_primitive_metadata();
+    test_nested_property_notification_batches_emit_one_deterministic_signal();
+    test_object_deserialization_batches_property_notifications();
+    test_object_clone_batches_property_notifications();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
