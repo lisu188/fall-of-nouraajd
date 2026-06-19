@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
         } else {
             this->meta()->set_dynamic_property<CGameObject, T>(name, object, property);
         }
+        notifyPropertyChanged(name);
     }
 
     template <typename T> T getProperty(std::string name) {
@@ -144,6 +145,8 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     std::shared_ptr<CAnimation> getGraphicsObject();
 
     void connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot);
+
+    void notifyPropertyChanged(const std::string &name);
 
     template <bool now = false, typename... Args> void signal(std::string signal, Args... args) {
         // vstd::logger::debug(signal, args...);
