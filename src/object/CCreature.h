@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <optional>
+
 #include "core/CStats.h"
 #include "object/CMapObject.h"
 
@@ -228,6 +230,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     virtual void afterMove();
 
+    const std::optional<Coords> &getPendingMoveOrigin() const;
+
     void addGold(int gold);
 
     void takeGold(int gold);
@@ -264,6 +268,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     std::shared_ptr<CController> controller;
 
     std::shared_ptr<CFightController> fightController;
+
+    std::optional<Coords> pendingMoveOrigin;
 
     int gold = 0;
     int exp = 0;
