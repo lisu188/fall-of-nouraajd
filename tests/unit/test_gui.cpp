@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "gui/CGui.h"
+#include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CWidget.h"
@@ -51,6 +52,55 @@ class CountingRenderObject : public CGameGraphicsObject {
   private:
     int &render_count;
 };
+
+class MouseEventRecorder : public CGameGraphicsObject {
+  public:
+    bool mouseMotionEvent(std::shared_ptr<CGui>, SDL_EventType type, int x, int y, int xrel, int yrel) override {
+        ++motion_count;
+        last_type = type;
+        last_x = x;
+        last_y = y;
+        last_xrel = xrel;
+        last_yrel = yrel;
+        return true;
+    }
+
+    bool mouseWheelEvent(std::shared_ptr<CGui>, SDL_EventType type, int x, int y, int wheelX, int wheelY) override {
+        ++wheel_count;
+        last_type = type;
+        last_x = x;
+        last_y = y;
+        last_wheel_x = wheelX;
+        last_wheel_y = wheelY;
+        return true;
+    }
+
+    bool mouseCancelEvent(std::shared_ptr<CGui>, SDL_EventType type) override {
+        ++cancel_count;
+        last_type = type;
+        return true;
+    }
+
+    int motion_count = 0;
+    int wheel_count = 0;
+    int cancel_count = 0;
+    SDL_EventType last_type = SDL_FIRSTEVENT;
+    int last_x = 0;
+    int last_y = 0;
+    int last_xrel = 0;
+    int last_yrel = 0;
+    int last_wheel_x = 0;
+    int last_wheel_y = 0;
+};
+
+std::shared_ptr<MouseEventRecorder> attach_mouse_recorder(const std::shared_ptr<CGui> &gui) {
+    auto recorder = std::make_shared<MouseEventRecorder>();
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(10, 20, 100, 80);
+    recorder->setLayout(layout);
+    gui->pushChild(recorder);
+    return recorder;
+}
 
 void test_widget_ignores_unarmed_non_left_clicks() {
     auto widget = std::make_shared<CWidget>();
@@ -138,6 +188,73 @@ void test_panel_event_callbacks_stop_after_close() {
     expect_true(!gui->findChild(panel), "closed panel should be detached from the GUI");
 }
 
+void test_gui_routes_mouse_motion_to_target_child() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto recorder = attach_mouse_recorder(gui);
+
+    SDL_Event event{};
+    event.type = SDL_MOUSEMOTION;
+    event.motion.x = 35;
+    event.motion.y = 55;
+    event.motion.xrel = 4;
+    event.motion.yrel = -3;
+
+    expect_true(gui->event(&event), "mouse motion over a child should be consumed by that child");
+    expect_true(recorder->motion_count == 1, "mouse motion should be routed to the child handler");
+    expect_true(recorder->last_type == SDL_MOUSEMOTION, "mouse motion handler should receive the SDL event type");
+    expect_true(recorder->last_x == 25 && recorder->last_y == 35,
+                "mouse motion coordinates should be relative to the child layout");
+    expect_true(recorder->last_xrel == 4 && recorder->last_yrel == -3,
+                "mouse motion relative deltas should be preserved");
+}
+
+void test_gui_routes_mouse_wheel_to_target_child() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto recorder = attach_mouse_recorder(gui);
+
+    SDL_Event event{};
+    event.type = SDL_MOUSEWHEEL;
+    event.wheel.x = -1;
+    event.wheel.y = 2;
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+    event.wheel.mouseX = 40;
+    event.wheel.mouseY = 70;
+#else
+    recorder->setModal(true);
+#endif
+
+    expect_true(gui->event(&event), "mouse wheel over a child should be consumed by that child");
+    expect_true(recorder->wheel_count == 1, "mouse wheel should be routed to the child handler");
+    expect_true(recorder->last_type == SDL_MOUSEWHEEL, "mouse wheel handler should receive the SDL event type");
+    expect_true(recorder->last_wheel_x == -1 && recorder->last_wheel_y == 2, "mouse wheel deltas should be preserved");
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+    expect_true(recorder->last_x == 30 && recorder->last_y == 50,
+                "mouse wheel coordinates should be relative to the child layout");
+#endif
+}
+
+void test_gui_routes_window_leave_as_mouse_cancel() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto recorder = attach_mouse_recorder(gui);
+
+    SDL_Event event{};
+    event.type = SDL_WINDOWEVENT;
+    event.window.event = SDL_WINDOWEVENT_LEAVE;
+
+    expect_true(gui->event(&event), "window leave should be consumed by a child cancel handler");
+    expect_true(recorder->cancel_count == 1, "window leave should be routed as mouse cancellation");
+    expect_true(recorder->last_type == SDL_WINDOWEVENT, "mouse cancel handler should receive the SDL event type");
+}
+
 void test_render_traversal_stops_after_detach() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -168,6 +285,9 @@ int main() {
     test_widget_ignores_unarmed_non_left_clicks();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_panel_event_callbacks_stop_after_close();
+    test_gui_routes_mouse_motion_to_target_child();
+    test_gui_routes_mouse_wheel_to_target_child();
+    test_gui_routes_window_leave_as_mouse_cancel();
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
 

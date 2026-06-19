@@ -396,15 +396,15 @@
       "path": "src/gui/object/CGameGraphicsObject.cpp",
       "reason": "Reviewed legacy uncovered branch baseline; unreviewed coverage changes remain visible in the 95% scoped line gate.",
       "ranges": [
-        "81",
-        "108-109",
-        "121",
-        "195",
-        "211",
-        "214",
-        "235-236",
-        "242",
-        "256"
+        "111",
+        "150-151",
+        "163",
+        "237",
+        "253",
+        "256",
+        "277-278",
+        "284",
+        "298"
       ]
     },
     {
