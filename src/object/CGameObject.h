@@ -162,6 +162,8 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     void connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot);
 
+    void disconnect(const std::string &signal, const std::shared_ptr<CGameObject> &object, const std::string &slot);
+
     void notifyPropertyChanged(const std::string &name);
 
     void notifyPropertiesChanged(const std::set<std::string> &names);
