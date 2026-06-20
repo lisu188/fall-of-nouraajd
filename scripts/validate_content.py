@@ -26,6 +26,7 @@ SCRIPT_MAP_CALLS = {"changeMap"}
 SCRIPT_OBJECT_NAME_CALLS = {"getObjectByName", "removeObjectByName"}
 SCRIPT_PROPERTY_READ_CALLS = {"getBoolProperty", "getNumericProperty", "getStringProperty"}
 SCRIPT_PROPERTY_WRITE_CALLS = {"setBoolProperty", "setNumericProperty", "setStringProperty", "incProperty"}
+SCRIPT_BOOL_PROPERTY_METHODS = {"getBoolProperty", "setBoolProperty"}
 SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS = {
     "_set_bool_property_default": "setBoolProperty",
     "_set_numeric_property_default": "setNumericProperty",
@@ -160,6 +161,11 @@ class ScriptLegacyBoolFlag:
     lineno: int
     context: str
 
+    @property
+    def location(self) -> str:
+        call = f'LegacyBoolFlag("{self.name}")'
+        return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
+
 
 @dataclass(frozen=True)
 class ScriptPropertyAccess:
@@ -174,6 +180,60 @@ class ScriptPropertyAccess:
     def location(self) -> str:
         call = f'{self.method}("{self.name}")'
         return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
+
+
+@dataclass(frozen=True)
+class ScriptPropertyHygieneAllowance:
+    path: str
+    owner: str
+    name: str
+    reason: str
+
+
+SCRIPT_PROPERTY_HYGIENE_ALLOWLIST = (
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/nouraajd/script.py",
+        owner="player",
+        name="CAN_CRAFT_SCROLLS",
+        reason="Crafting recipes read this player compatibility flag through unlockFlag configuration.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/nouraajd/script.py",
+        owner="player",
+        name="CAN_BREW_GREATER_POTIONS",
+        reason="Crafting recipes read this player compatibility flag through unlockFlag configuration.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/multilevel/script.py",
+        owner="map",
+        name="used_stairs_up",
+        reason="Walkthrough and MCP validation read this map telemetry flag outside map script source.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/multilevel/script.py",
+        owner="map",
+        name="used_stairs_down",
+        reason="Walkthrough and MCP validation read this map telemetry flag outside map script source.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/multilevel/script.py",
+        owner="map",
+        name="visited_multilevel_start",
+        reason="Map entry marker is intentionally externally observable instead of read by map script source.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/ritual/script.py",
+        owner="map",
+        name="ritual_started",
+        reason="Walkthrough and MCP validation read this progression flag outside map script source.",
+    ),
+    ScriptPropertyHygieneAllowance(
+        path="res/maps/siege/script.py",
+        owner="map",
+        name="campaign_completed",
+        reason="Campaign completion marker is intentionally externally observable after quest completion.",
+    ),
+)
 
 
 @dataclass
@@ -510,7 +570,10 @@ class ScriptAnalyzer(ast.NodeVisitor):
 
     @property
     def _context(self) -> str:
-        return ".".join([*self._class_stack, *self._function_stack])
+        function_stack = self._function_stack
+        if self._class_stack and function_stack and function_stack[0] == "load":
+            function_stack = function_stack[1:]
+        return ".".join([*self._class_stack, *function_stack])
 
 
 def call_name(func: ast.AST) -> str | None:
@@ -607,7 +670,11 @@ class TriggerAnalyzer(ast.NodeVisitor):
 
 
 class ContentValidator:
-    def __init__(self, repo_root: Path) -> None:
+    def __init__(
+        self,
+        repo_root: Path,
+        property_hygiene_allowlist: tuple[ScriptPropertyHygieneAllowance, ...] | None = None,
+    ) -> None:
         self.repo_root = repo_root.resolve()
         self.issues: list[ValidationIssue] = []
         self.global_entries: dict[str, ConfigEntry] = {}
@@ -624,6 +691,9 @@ class ContentValidator:
         self.native_plugin_declared_class_sources: dict[str, set[str]] = {}
         self.python_registered_classes: set[str] = set()
         self.registration_exclusions: dict[str, RegistrationExclusion] = {}
+        self.property_hygiene_allowlist = (
+            SCRIPT_PROPERTY_HYGIENE_ALLOWLIST if property_hygiene_allowlist is None else property_hygiene_allowlist
+        )
 
     def validate(self) -> list[ValidationIssue]:
         self._collect_engine_classes()
@@ -923,6 +993,7 @@ class ContentValidator:
         self._validate_map_json(context, visible, known_classes)
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes)
+        self._validate_script_property_hygiene(context)
 
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)
@@ -1408,6 +1479,107 @@ class ContentValidator:
                     self._issue(context.script_info.path, trigger.location, f'unknown trigger event "{trigger.value}"')
             elif trigger.name == "trigger target" and trigger.value not in object_names:
                 self._issue(context.script_info.path, trigger.location, f'unknown trigger target "{trigger.value}"')
+
+    def _validate_script_property_hygiene(self, context: MapContext) -> None:
+        info = context.script_info
+        if not info:
+            return
+
+        valid_legacy_flags = self._validate_legacy_bool_flags(info)
+        accesses_by_key: dict[tuple[str, str], dict[str, list[ScriptPropertyAccess]]] = {}
+        owners_by_property: dict[str, set[str]] = {}
+        unknown_accesses: list[ScriptPropertyAccess] = []
+
+        for legacy_flag in valid_legacy_flags:
+            owners_by_property.setdefault(legacy_flag, set()).add("map")
+
+        for access in info.property_reads + info.property_writes:
+            if access.method not in SCRIPT_BOOL_PROPERTY_METHODS:
+                continue
+            if access.owner in {"map", "player"}:
+                owners_by_property.setdefault(access.name, set()).add(access.owner)
+                by_access = accesses_by_key.setdefault((access.owner, access.name), {"read": [], "write": []})
+                by_access[access.access].append(access)
+            elif access.owner == "unknown":
+                unknown_accesses.append(access)
+
+        for property_name, owners in sorted(owners_by_property.items()):
+            if len(owners) <= 1:
+                continue
+            first_access = self._first_property_access(info, property_name)
+            location = first_access.location if first_access else f'property "{property_name}"'
+            owner_list = ", ".join(sorted(owners))
+            self._issue(
+                info.path, location, f'bool property "{property_name}" is used on multiple owners: {owner_list}'
+            )
+
+        for (owner, property_name), accesses in sorted(accesses_by_key.items()):
+            if owner == "map" and property_name in valid_legacy_flags:
+                continue
+            if self._property_hygiene_allowance_reason(info.path, owner, property_name):
+                continue
+
+            reads = accesses["read"]
+            writes = accesses["write"]
+            if reads and not writes:
+                self._issue(
+                    info.path,
+                    reads[0].location,
+                    f'{owner} bool property "{property_name}" is read without a write/default, legacy sync, '
+                    "or allowlist",
+                )
+            elif writes and not reads:
+                self._issue(
+                    info.path,
+                    writes[0].location,
+                    f'write-only {owner} bool property "{property_name}" has no read, legacy sync, or allowlist',
+                )
+
+        reviewed_names = set(owners_by_property)
+        for allowance in self.property_hygiene_allowlist:
+            if allowance.path == self._rel(info.path):
+                reviewed_names.add(allowance.name)
+        for access in unknown_accesses:
+            if access.name not in reviewed_names:
+                continue
+            if self._property_hygiene_allowance_reason(info.path, "unknown", access.name):
+                continue
+            self._issue(
+                info.path,
+                access.location,
+                f'bool property "{access.name}" has unknown receiver; manual review required to classify ownership',
+            )
+
+    def _validate_legacy_bool_flags(self, info: ScriptInfo) -> set[str]:
+        valid_flags: set[str] = set()
+        for flag in info.legacy_bool_flags:
+            usage = info.quest_states.get(flag.quest)
+            if usage is None or not usage.storage_key:
+                self._issue(
+                    info.path,
+                    flag.location,
+                    f'legacy bool flag "{flag.name}" references unknown quest key "{flag.quest}"',
+                )
+                continue
+            valid_flags.add(flag.name)
+        return valid_flags
+
+    def _first_property_access(self, info: ScriptInfo, property_name: str) -> ScriptPropertyAccess | None:
+        accesses = [
+            access
+            for access in info.property_reads + info.property_writes
+            if access.name == property_name and access.owner in {"map", "player"}
+        ]
+        if not accesses:
+            return None
+        return min(accesses, key=lambda access: access.lineno)
+
+    def _property_hygiene_allowance_reason(self, path: Path, owner: str, property_name: str) -> str | None:
+        relative_path = self._rel(path)
+        for allowance in self.property_hygiene_allowlist:
+            if allowance.path == relative_path and allowance.owner == owner and allowance.name == property_name:
+                return allowance.reason
+        return None
 
     def _entry_is_quest(self, entry: ConfigEntry, visible: dict[str, ConfigEntry]) -> bool:
         resolved = self._resolve_entry(entry, visible)
