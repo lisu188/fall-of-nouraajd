@@ -791,6 +791,15 @@ void test_game_context_owns_distinct_gui_handlers_per_game() {
                 "separate CGame instances should receive distinct GUI handlers");
 }
 
+void test_game_context_rejects_services_without_owner_game() {
+    auto context = std::make_shared<CGameContext>(std::shared_ptr<CGame>());
+
+    expect_runtime_error([&]() { context->getGuiHandler(); },
+                         "CGuiHandler creation should require an active owning game");
+    expect_runtime_error([&]() { context->getRngHandler(); },
+                         "CRngHandler creation should require an active owning game");
+}
+
 void test_delayed_future_handlers_run_through_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     const int previous_fps = loop->getFps();
@@ -1028,6 +1037,7 @@ int main() {
     test_object_deserialization_batches_property_notifications();
     test_object_clone_batches_property_notifications();
     test_game_context_owns_distinct_gui_handlers_per_game();
+    test_game_context_rejects_services_without_owner_game();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
