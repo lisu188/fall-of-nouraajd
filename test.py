@@ -2303,6 +2303,235 @@ def find_map_object_definition(map_name, object_name):
     raise AssertionError(f"Could not find object definition '{object_name}' in res/maps/{map_name}/map.json.")
 
 
+def map_source_mentions(map_name, token):
+    map_dir = MAPS_DIR / map_name
+    if not map_dir.is_dir():
+        raise AssertionError(f"Could not find source directory res/maps/{map_name}.")
+
+    mentions = []
+    for path in sorted(map_dir.glob("*")):
+        if path.suffix not in {".json", ".py"}:
+            continue
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if token in line:
+                mentions.append(f"{path.relative_to(REPO_ROOT)}:{line_number}")
+    return mentions
+
+
+def map_dialog_sources(map_name):
+    map_dir = MAPS_DIR / map_name
+    if not map_dir.is_dir():
+        raise AssertionError(f"Could not find source directory res/maps/{map_name}.")
+
+    dialogs = {}
+    for path in sorted(map_dir.glob("*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
+        for dialog_id, value in data.items():
+            if isinstance(value, dict) and str(value.get("class", "")).endswith("Dialog"):
+                dialogs[dialog_id] = {"path": path, "definition": value}
+    return dialogs
+
+
+def require_source_dialog(map_name, dialog_id):
+    dialogs = map_dialog_sources(map_name)
+    if dialog_id in dialogs:
+        return dialogs[dialog_id]
+
+    available = ", ".join(sorted(dialogs)) or "none"
+    raise AssertionError(
+        f"Could not find dialog id '{dialog_id}' in res/maps/{map_name}/*.json. "
+        f"Available source dialog ids: {available}."
+    )
+
+
+def collect_source_dialog_hooks(dialog_definition):
+    actions = {}
+    conditions = {}
+
+    def visit(node):
+        if isinstance(node, dict):
+            properties = node.get("properties")
+            if isinstance(properties, dict):
+                action = properties.get("action")
+                condition = properties.get("condition")
+                if isinstance(action, str) and action:
+                    source_conditions = actions.setdefault(action, set())
+                    source_conditions.add(condition if isinstance(condition, str) and condition else None)
+                if isinstance(condition, str) and condition:
+                    source_actions = conditions.setdefault(condition, set())
+                    source_actions.add(action if isinstance(action, str) and action else None)
+            for value in node.values():
+                visit(value)
+        elif isinstance(node, list):
+            for value in node:
+                visit(value)
+
+    visit(dialog_definition)
+    return actions, conditions
+
+
+def assert_mcp_engine_export(name):
+    if name not in mcp.MCP_ALLOWED_EXPORTS:
+        raise AssertionError(f"MCP scenario helper requires exported engine call {name}.")
+
+
+def assert_mcp_handle_method(class_name, method_name):
+    if method_name not in mcp.MCP_ALLOWED_HANDLE_METHODS.get(class_name, set()):
+        raise AssertionError(f"MCP scenario helper requires exported handle method {class_name}.{method_name}.")
+
+
+class McpScenarioHarness:
+    """Headless scenario helper that mirrors the MCP handle surface used by subagent tests.
+
+    Start with `McpScenarioHarness.start("nouraajd")`, use `invokeDialogAction()` for source-backed dialog
+    actions, use `removeObjectByName()` for authored destroy-trigger scenarios, and call `snapshot()` for stable
+    quest, inventory, flag, and object assertions without GUI state.
+    """
+
+    def __init__(self, game_instance, map_name):
+        self.gameInstance = game_instance
+        self.mapName = map_name
+        self.refresh()
+
+    @classmethod
+    def start(cls, map_name="nouraajd", player_name=DEFAULT_PLAYER, pump_iterations=5):
+        for name in (
+            "CGameLoader.loadGame",
+            "CGameLoader.startGameWithPlayer",
+            "event_loop.instance",
+        ):
+            assert_mcp_engine_export(name)
+        for class_name, method_name in (
+            ("CGame", "getMap"),
+            ("CMap", "getPlayer"),
+        ):
+            assert_mcp_handle_method(class_name, method_name)
+
+        game_module = load_game_module()
+        game_instance = game_module.CGameLoader.loadGame()
+        game_module.CGameLoader.startGameWithPlayer(game_instance, map_name, player_name)
+        scenario = cls(game_instance, map_name)
+        scenario.pump(pump_iterations)
+        return scenario
+
+    def refresh(self):
+        self.gameMap = self.gameInstance.getMap()
+        self.player = self.gameMap.getPlayer()
+        return self
+
+    def pump(self, iterations=1):
+        assert_mcp_engine_export("event_loop.instance")
+        assert_mcp_handle_method("event_loop", "run")
+        game_module = load_game_module()
+        loop = game_module.event_loop.instance()
+        for _ in range(max(int(iterations), 0)):
+            loop.run()
+        return self.refresh()
+
+    def runtimeObject(self, object_name):
+        assert_mcp_handle_method("CMap", "getObjectByName")
+        obj = self.gameMap.getObjectByName(object_name)
+        if obj is not None:
+            return obj
+
+        mentions = map_source_mentions(self.mapName, object_name)
+        if mentions:
+            source_note = "source mentions: " + ", ".join(mentions[:6])
+        else:
+            source_note = f"no source mention found under res/maps/{self.mapName}"
+        raise AssertionError(f"Could not find runtime object '{object_name}' on map '{self.mapName}' ({source_note}).")
+
+    def createDialog(self, dialog_id):
+        source = require_source_dialog(self.mapName, dialog_id)
+        assert_mcp_handle_method("CGame", "createObject")
+        dialog = self.gameInstance.createObject(dialog_id)
+        if dialog is None or not hasattr(dialog, "invokeAction") or not hasattr(dialog, "invokeCondition"):
+            path = source["path"].relative_to(REPO_ROOT)
+            raise AssertionError(f"Source dialog '{dialog_id}' from {path} did not create a CDialog-compatible object.")
+        return dialog, source
+
+    def invokeDialogAction(self, dialog_id, action, *, condition=None, require_condition=True, pump_iterations=3):
+        dialog, source = self.createDialog(dialog_id)
+        source_actions, source_conditions = collect_source_dialog_hooks(source["definition"])
+        source_path = source["path"].relative_to(REPO_ROOT)
+        if action not in source_actions:
+            available = ", ".join(sorted(source_actions)) or "none"
+            raise AssertionError(
+                f"Dialog action '{dialog_id}.{action}' is not declared in {source_path}; "
+                f"available source actions: {available}."
+            )
+
+        action_conditions = sorted(item for item in source_actions[action] if item)
+        condition_name = condition
+        if condition_name is None and len(action_conditions) == 1:
+            condition_name = action_conditions[0]
+        if condition_name is not None:
+            if condition_name not in source_conditions:
+                available = ", ".join(sorted(source_conditions)) or "none"
+                raise AssertionError(
+                    f"Dialog condition '{dialog_id}.{condition_name}' is not declared in {source_path}; "
+                    f"available source conditions: {available}."
+                )
+            assert_mcp_handle_method("CDialog", "invokeCondition")
+            condition_value = dialog.invokeCondition(condition_name)
+            if require_condition and not condition_value:
+                raise AssertionError(
+                    f"Source condition '{dialog_id}.{condition_name}' returned false before action '{action}'."
+                )
+
+        assert_mcp_handle_method("CDialog", "invokeAction")
+        dialog.invokeAction(action)
+        self.pump(pump_iterations)
+        return dialog
+
+    def removeObjectByName(self, object_name, *, check_quests=True, pump_iterations=3):
+        obj = self.runtimeObject(object_name)
+        assert_mcp_handle_method("CGameObject", "getName")
+        assert_mcp_handle_method("CMap", "removeObjectByName")
+        runtime_name = obj.getName() or object_name
+        self.gameMap.removeObjectByName(runtime_name)
+        self.pump(pump_iterations)
+        if check_quests:
+            assert_mcp_handle_method("CPlayer", "checkQuests")
+            self.player.checkQuests()
+            self.pump(1)
+        return runtime_name
+
+    def snapshot(
+        self,
+        *,
+        quest_state_names=NOURAAJD_QUEST_STATE_NAMES,
+        map_flags=NOURAAJD_MAP_BOOL_FLAGS,
+        player_flags=NOURAAJD_PLAYER_BOOL_FLAGS,
+        item_ids=NOURAAJD_INVENTORY_ITEMS,
+        object_names=(),
+        object_prefixes=(),
+        object_bool_properties=None,
+    ):
+        self.refresh()
+        object_bool_properties = object_bool_properties or {}
+        return {
+            "map": self.gameMap.mapName,
+            "turn": self.gameMap.getTurn(),
+            "quest_states": {
+                quest: self.gameMap.getStringProperty(f"quest_state_{quest}") for quest in quest_state_names
+            },
+            "map_flags": {flag: self.gameMap.getBoolProperty(flag) for flag in map_flags},
+            "player_flags": {flag: self.player.getBoolProperty(flag) for flag in player_flags},
+            "items": {item_id: self.player.countItems(item_id) for item_id in item_ids},
+            "active_quests": quest_names(self.player),
+            "completed_quests": completed_quest_names(self.player),
+            "objects": named_object_presence(self.gameMap, object_names),
+            "object_prefix_counts": named_object_prefix_counts(self.gameMap, object_prefixes),
+            "object_bool_properties": {
+                object_name: {flag: self.runtimeObject(object_name).getBoolProperty(flag) for flag in flags}
+                for object_name, flags in object_bool_properties.items()
+            },
+        }
+
+
 def load_object_configs(map_name=None):
     configs = {}
     for path in sorted((REPO_ROOT / "res/config").glob("*.json")):
@@ -11877,6 +12106,78 @@ class GameTest(unittest.TestCase):
             )
         )
         return ok, json.dumps(summary, sort_keys=True)
+
+    @game_test
+    def test_mcp_scenario_harness_drives_nouraajd_rolf_gooby(self):
+        scenario = McpScenarioHarness.start("nouraajd", DEFAULT_PLAYER)
+        door_triggers = ("nouraajdDoorTrigger1", "nouraajdDoorTrigger2", "nouraajdDoorTrigger3")
+        watched_objects = ("cave1", "gooby1", "nouraajdDoor", *door_triggers)
+
+        initial = scenario.snapshot(
+            object_names=watched_objects,
+            object_bool_properties={"nouraajdDoor": ("opened",)},
+        )
+        self.assertEqual("awaiting_skull", initial["quest_states"]["rolf"])
+        self.assertEqual("locked", initial["quest_states"]["main"])
+        self.assertGreaterEqual(initial["items"]["letterFromRolf"], 1)
+        self.assertIn("rolfQuest", initial["active_quests"])
+        self.assertTrue(initial["objects"]["cave1"])
+        self.assertFalse(initial["objects"]["gooby1"])
+
+        scenario.invokeDialogAction("doorDialog", "open_door")
+        after_door = scenario.snapshot(
+            object_names=watched_objects,
+            object_bool_properties={"nouraajdDoor": ("opened",)},
+        )
+        self.assertTrue(after_door["object_bool_properties"]["nouraajdDoor"]["opened"])
+        self.assertFalse(any(after_door["objects"][name] for name in door_triggers))
+
+        scenario.removeObjectByName("cave1")
+        after_rolf = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("skull_recovered", after_rolf["quest_states"]["rolf"])
+        self.assertEqual("awaiting_gooby", after_rolf["quest_states"]["main"])
+        self.assertEqual(initial["items"]["skullOfRolf"] + 1, after_rolf["items"]["skullOfRolf"])
+        self.assertTrue(after_rolf["map_flags"]["completed_rolf"])
+        self.assertIn("rolfQuest", after_rolf["completed_quests"])
+        self.assertIn("mainQuest", after_rolf["active_quests"])
+        self.assertTrue(after_rolf["objects"]["gooby1"])
+
+        scenario.removeObjectByName("gooby1")
+        after_gooby = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("gooby_slain", after_gooby["quest_states"]["main"])
+        self.assertTrue(after_gooby["map_flags"]["completed_gooby"])
+        self.assertIn("mainQuest", after_gooby["completed_quests"])
+        self.assertFalse(after_gooby["objects"]["gooby1"])
+
+        with self.assertRaisesRegex(AssertionError, "available source actions"):
+            scenario.invokeDialogAction("doorDialog", "missing_action")
+        with self.assertRaisesRegex(AssertionError, "no source mention found"):
+            scenario.runtimeObject("missingScenarioObject")
+
+        return True, json.dumps(
+            {
+                "initial": {
+                    "quest_states": initial["quest_states"],
+                    "items": initial["items"],
+                    "objects": initial["objects"],
+                },
+                "after_door": {
+                    "door": after_door["object_bool_properties"]["nouraajdDoor"],
+                    "objects": after_door["objects"],
+                },
+                "after_rolf": {
+                    "quest_states": after_rolf["quest_states"],
+                    "items": after_rolf["items"],
+                    "objects": after_rolf["objects"],
+                },
+                "after_gooby": {
+                    "quest_states": after_gooby["quest_states"],
+                    "flags": after_gooby["map_flags"],
+                    "objects": after_gooby["objects"],
+                },
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_game_simulation_gui_tree_and_screenshot_helpers(self):
