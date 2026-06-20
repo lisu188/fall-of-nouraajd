@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import subprocess
 import sys
@@ -16,6 +17,18 @@ DEFAULT_WORKFLOW = "build.yml"
 DEFAULT_INTERVAL_SECONDS = 30
 DEFAULT_TIMEOUT_SECONDS = 7200
 SUCCESS_CONCLUSION = "SUCCESS"
+COVERAGE_STEP = "coverage"
+COVERAGE_PATH_PATTERNS = (
+    "test.py",
+    "tests/unit/*",
+    "scripts/run_coverage.sh",
+    "scripts/coverage_report.py",
+    "scripts/coverage_exclusions.json",
+    "native_plugins/*",
+    "src/core/*",
+    "src/handler/*",
+    "src/object/*",
+)
 
 
 @dataclass(frozen=True)
@@ -98,6 +111,21 @@ def selectRunForHead(runs: Sequence[dict[str, Any]], headSha: str) -> dict[str, 
 def appendUniqueJob(jobs: list[JobRun], job: JobRun) -> None:
     if not any(existing.name == job.name for existing in jobs):
         jobs.append(job)
+
+
+def changedPathRequiresCoverage(path: str) -> bool:
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in COVERAGE_PATH_PATTERNS)
+
+
+def changedFilesRequireCoverage(paths: Sequence[str]) -> bool:
+    return any(changedPathRequiresCoverage(path) for path in paths)
+
+
+def appendUniqueStep(steps: Sequence[str], step: str) -> tuple[str, ...]:
+    normalized = tuple(steps)
+    if step in normalized:
+        return normalized
+    return (*normalized, step)
 
 
 def evaluateRun(
@@ -285,6 +313,20 @@ def runGhPrView(pr: str, repo: str | None) -> dict[str, Any]:
     return payload
 
 
+def runGhPrFiles(pr: str, repo: str | None) -> tuple[str, ...]:
+    command = ghCommandWithRepo(["gh", "pr", "diff", pr, "--name-only"], repo)
+    result = subprocess.run(
+        command,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise PollError(result.stderr.strip() or result.stdout.strip() or f"{' '.join(command)} failed")
+    return tuple(line.strip() for line in result.stdout.splitlines() if line.strip())
+
+
 def runGhRunList(headSha: str, workflow: str, repo: str | None) -> list[dict[str, Any]]:
     command = ghCommandWithRepo(
         [
@@ -366,6 +408,7 @@ def pollChecks(
     requiredSteps: Sequence[str],
     intervalSeconds: int,
     timeoutSeconds: int,
+    autoRequireCoverage: bool = True,
 ) -> CheckEvaluation:
     started = time.monotonic()
     pr_payload = runGhPrView(pr, repo)
@@ -374,13 +417,18 @@ def pollChecks(
         printEvaluation(pr_payload, None, pr_state_evaluation, requiredSteps)
         return pr_state_evaluation
     head_sha = str(pr_payload["headRefOid"])
+    effective_steps = tuple(requiredSteps)
+    if autoRequireCoverage and COVERAGE_STEP not in effective_steps:
+        changed_files = runGhPrFiles(pr, repo)
+        if changedFilesRequireCoverage(changed_files):
+            effective_steps = appendUniqueStep(effective_steps, COVERAGE_STEP)
 
     while True:
         runs = runGhRunList(head_sha, workflow, repo)
         run_summary = selectRunForHead(runs, head_sha)
         run_payload = runGhRunView(run_summary["databaseId"], repo) if run_summary else None
-        evaluation = evaluateRun(run_payload, requiredJobs, requiredSteps)
-        printEvaluation(pr_payload, run_payload, evaluation, requiredSteps)
+        evaluation = evaluateRun(run_payload, requiredJobs, effective_steps)
+        printEvaluation(pr_payload, run_payload, evaluation, effective_steps)
         if evaluation.succeeded or evaluation.failed:
             return evaluation
         if time.monotonic() - started >= timeoutSeconds:
@@ -395,7 +443,7 @@ def pollChecks(
         latest_pr_payload = runGhPrView(pr, repo)
         pr_state_evaluation = evaluatePrState(latest_pr_payload)
         if pr_state_evaluation is not None:
-            printEvaluation(latest_pr_payload, None, pr_state_evaluation, requiredSteps)
+            printEvaluation(latest_pr_payload, None, pr_state_evaluation, effective_steps)
             return pr_state_evaluation
 
 
@@ -426,7 +474,15 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
         action="append",
         dest="steps",
         default=[],
-        help="Required step name that must pass somewhere in the selected workflow run. May be repeated.",
+        help=(
+            "Required step name that must pass somewhere in the selected workflow run. May be repeated. "
+            "Coverage is auto-required when PR paths match the build workflow coverage rule."
+        ),
+    )
+    parser.add_argument(
+        "--no-auto-require-coverage",
+        action="store_true",
+        help="Do not auto-require the coverage step when PR paths match the workflow coverage rule.",
     )
     parser.add_argument(
         "--interval-seconds",
@@ -456,6 +512,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             requiredSteps=steps,
             intervalSeconds=args.interval_seconds,
             timeoutSeconds=args.timeout_seconds,
+            autoRequireCoverage=not args.no_auto_require_coverage,
         )
     except PollError as exc:
         print(f"poll_pr_checks: {exc}", file=sys.stderr)

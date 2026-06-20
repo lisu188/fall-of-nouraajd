@@ -278,7 +278,9 @@ full Python suite, and coverage by polling GitHub Actions instead of duplicating
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
 ```
 
-For coverage-relevant changes, require the conditional coverage step explicitly:
+For coverage-relevant changes, the poller auto-requires the conditional coverage step when changed paths match the
+workflow coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that
+check:
 
 ```bash
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
@@ -286,12 +288,13 @@ python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step cover
 
 Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
 necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Report focused local checks
-separately from CI-polled validation. Passing `build / linux` is sufficient PR delivery evidence for Linux compilation, native tests,
-native performance guards, Python suites, and conditional coverage. It proves coverage only when the workflow's
-changed-path rule runs its `coverage` step; use `--require-step coverage` for coverage-relevant changes. Additional
-platform, release, MCP gameplay, manual, or issue-specific validation is needed only when the task targets that surface
-or the user requests it. Do not enable auto-merge until CI-polled validation passes when it is the only full-validation
-evidence.
+separately from CI-polled validation. Passing `build / linux` is sufficient PR delivery evidence for Linux compilation,
+native tests, native performance guards, Python suites, and conditional coverage. It proves coverage only when the
+workflow's changed-path rule runs its `coverage` step somewhere in the selected build workflow run, currently in the
+conditional `linux-coverage` job; the poller auto-adds this step for coverage-relevant PR paths. Additional platform,
+release, MCP gameplay, manual, or issue-specific validation is needed only when the task targets that surface or the
+user requests it.
+Do not enable auto-merge until CI-polled validation passes when it is the only full-validation evidence.
 
 Workbook-only queue-state PRs that update only `planning/fall_of_nouraajd_issue_proposals.xlsx` are different from
 implementation PRs. After reviewing that the diff is XLSX-only and running `python3 scripts/issue_queue.py validate`,

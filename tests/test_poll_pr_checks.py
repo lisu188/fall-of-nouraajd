@@ -3,9 +3,12 @@ from __future__ import annotations
 import io
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
 
 from scripts import poll_pr_checks
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class PollPrChecksTest(unittest.TestCase):
@@ -56,6 +59,18 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertTrue(evaluation.succeeded)
         self.assertEqual("success", evaluation.state)
         self.assertEqual("linux", evaluation.jobs[0].name)
+
+    def test_changed_files_require_coverage_for_workflow_paths(self) -> None:
+        self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["src/core/CGame.cpp"]))
+        self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["src/handler/CFightHandler.cpp"]))
+        self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["tests/unit/test_core.cpp"]))
+        self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["scripts/coverage_exclusions.json"]))
+        self.assertFalse(poll_pr_checks.changedFilesRequireCoverage(["docs/testing.md", "scripts/poll_pr_checks.py"]))
+
+    def test_coverage_path_patterns_match_workflow_detector(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
+        for pattern in poll_pr_checks.COVERAGE_PATH_PATTERNS:
+            self.assertIn(pattern, workflow)
 
     def test_evaluate_run_treats_missing_run_as_pending(self) -> None:
         evaluation = poll_pr_checks.evaluateRun(None, ["linux"], [])
@@ -295,6 +310,98 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertTrue(evaluation.succeeded)
         run_list.assert_not_called()
 
+    def test_poll_checks_auto_requires_coverage_for_coverage_relevant_paths(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        completed_run = self.runPayload(
+            [
+                self.jobPayload(name="linux"),
+                self.jobPayload(
+                    name="linux-coverage",
+                    steps=[{"name": "coverage", "status": "completed", "conclusion": "failure"}],
+                ),
+            ]
+        )
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("src/core/CGame.cpp",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("linux-coverage/coverage=FAILURE", evaluation.message)
+
+    def test_poll_checks_does_not_auto_require_coverage_for_unmatched_paths(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        completed_run = self.runPayload([self.jobPayload(name="linux")])
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("docs/testing.md",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.succeeded)
+
+    def test_poll_checks_can_disable_auto_coverage_requirement(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        completed_run = self.runPayload([self.jobPayload(name="linux")])
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles") as files,
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                    autoRequireCoverage=False,
+                )
+
+        self.assertTrue(evaluation.succeeded)
+        files.assert_not_called()
+
     def test_poll_checks_stops_if_pr_merges_while_job_is_pending(self) -> None:
         open_pr = {
             "headRefOid": "abc123",
@@ -312,6 +419,7 @@ class PollPrChecksTest(unittest.TestCase):
 
         with (
             patch.object(poll_pr_checks, "runGhPrView", side_effect=[open_pr, merged_pr]),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=()),
             patch.object(
                 poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]
             ) as run_list,
