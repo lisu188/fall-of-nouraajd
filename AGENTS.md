@@ -50,13 +50,16 @@ randomly select one story with equal probability, then randomly select one eligi
 back to spreadsheet order and do not include ineligible rows in the random choice. Use
 `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
 as the read-only mechanical selector before each claim; it reports eligible highest-priority story groups, stale claims,
-`activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, `controllerCapacity`, target-file overlap advisories,
-rejection summaries, and a seeded recommendation without mutating the workbook. Use the unexpired count, not raw
+`activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, `activeClaims.leaseExpired`,
+`activeClaims.inactive`, `controllerCapacity`, target-file overlap advisories, rejection summaries, and a seeded
+recommendation without mutating the workbook. `activeClaims.unexpired` means live/pollable rows that are neither
+reclaimable-stale nor lease-expired. Use the unexpired count, not raw
 `activeCount`, when deciding whether the global active-worker floor is genuinely satisfied. Use
-`controllerCapacity.deficitToFloor` and `controllerCapacity.fillableDeficit` to decide whether this controller must keep
-claiming to satisfy its four-owned-issue floor. The controller and project manager must still inspect target-file overlap
-advisories and exclude source-backed active-scope conflicts, then claim the final exact issue with `claim --issue` so
-eligibility is rechecked under the workbook lock.
+`controllerCapacity.activeNonStale`, `controllerCapacity.leaseExpiredOwned`,
+`controllerCapacity.deficitToFloor`, and `controllerCapacity.fillableDeficit` to decide whether this controller must
+keep claiming to satisfy its four-owned-issue floor. The controller and project manager must still inspect target-file
+overlap advisories and exclude source-backed active-scope conflicts, then claim the final exact issue with `claim
+--issue` so eligibility is rechecked under the workbook lock.
 
 Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
 project manager should summarize the highest available priority tier, candidate story groups, dependency unlocks, stale

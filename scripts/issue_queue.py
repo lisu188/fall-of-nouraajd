@@ -701,18 +701,40 @@ def statusByIssue(state: QueueState) -> dict[str, str]:
     return {task.issueName: task.status for task in state.tasks}
 
 
-def activeTargetFiles(state: QueueState, excludeIssueName: str | None = None) -> set[str]:
+def inactiveClaimIssueNames(
+    state: QueueState,
+    stale: Sequence[dict[str, Any]] | None = None,
+    now: datetime | None = None,
+) -> set[str]:
+    now = now or utcNow()
+    staleIssues = {record["issueName"] for record in (stale if stale is not None else staleClaims(state, now=now))}
+    leaseExpiredIssues = {
+        task.issueName
+        for task in state.tasks
+        if task.status == STATUS_IN_PROGRESS and bool(taskLeasePayload(task, now).get("leaseExpired"))
+    }
+    return staleIssues | leaseExpiredIssues
+
+
+def activeTargetFiles(
+    state: QueueState,
+    excludeIssueName: str | None = None,
+    stale: Sequence[dict[str, Any]] | None = None,
+    now: datetime | None = None,
+    includeInactive: bool = False,
+) -> set[str]:
+    inactiveIssues = set() if includeInactive else inactiveClaimIssueNames(state, stale=stale, now=now)
     files: set[str] = set()
     for task in state.tasks:
         if excludeIssueName is not None and task.issueName == excludeIssueName:
             continue
-        if task.status == STATUS_IN_PROGRESS:
+        if task.status == STATUS_IN_PROGRESS and (includeInactive or task.issueName not in inactiveIssues):
             files.update(task.targetFiles)
     return files
 
 
-def taskActiveFileOverlaps(state: QueueState, task: TaskRecord) -> list[str]:
-    return sorted(task.targetFiles & activeTargetFiles(state, excludeIssueName=task.issueName))
+def taskActiveFileOverlaps(state: QueueState, task: TaskRecord, now: datetime | None = None) -> list[str]:
+    return sorted(task.targetFiles & activeTargetFiles(state, excludeIssueName=task.issueName, now=now))
 
 
 def taskSortKey(task: TaskRecord) -> tuple[Any, ...]:
@@ -762,8 +784,13 @@ def eligibleTasks(
     return eligible, rejected
 
 
-def targetFileOverlapAdvisories(state: QueueState, tasks: Iterable[TaskRecord] | None = None) -> dict[str, list[str]]:
-    activeFiles = activeTargetFiles(state)
+def targetFileOverlapAdvisories(
+    state: QueueState,
+    tasks: Iterable[TaskRecord] | None = None,
+    stale: Sequence[dict[str, Any]] | None = None,
+    now: datetime | None = None,
+) -> dict[str, list[str]]:
+    activeFiles = activeTargetFiles(state, stale=stale, now=now)
     advisories: dict[str, list[str]] = {}
     for task in tasks if tasks is not None else state.tasks:
         if task.status != STATUS_NOT_STARTED:
@@ -794,13 +821,25 @@ def statusCounts(state: QueueState) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
-def activeClaimSummary(state: QueueState, stale: Sequence[dict[str, Any]]) -> dict[str, int]:
-    activeCount = statusCounts(state).get(STATUS_IN_PROGRESS, 0)
-    staleCount = len(stale)
+def activeClaimSummary(
+    state: QueueState,
+    stale: Sequence[dict[str, Any]],
+    now: datetime | None = None,
+) -> dict[str, int]:
+    now = now or utcNow()
+    activeTasks = [task for task in state.tasks if task.status == STATUS_IN_PROGRESS]
+    staleIssues = {record["issueName"] for record in stale}
+    leaseExpiredIssues = {
+        task.issueName for task in activeTasks if bool(taskLeasePayload(task, now).get("leaseExpired"))
+    }
+    inactiveIssues = staleIssues | leaseExpiredIssues
+    liveCount = sum(1 for task in activeTasks if task.issueName not in inactiveIssues)
     return {
-        "total": activeCount,
-        "unexpired": max(0, activeCount - staleCount),
-        "stale": staleCount,
+        "total": len(activeTasks),
+        "unexpired": liveCount,
+        "stale": len(stale),
+        "leaseExpired": len(leaseExpiredIssues),
+        "inactive": len(activeTasks) - liveCount,
     }
 
 
@@ -824,6 +863,11 @@ def controllerCapacityPayload(
     ownerPrefix = controllerOwnerPrefix(controllerId)
     stale = staleClaims(state, now=now)
     staleIssues = {record["issueName"] for record in stale}
+    leaseExpiredIssues = {
+        task.issueName
+        for task in state.tasks
+        if task.status == STATUS_IN_PROGRESS and bool(taskLeasePayload(task, now).get("leaseExpired"))
+    }
     activeTasks = [
         task
         for task in state.tasks
@@ -831,7 +875,10 @@ def controllerCapacityPayload(
         and ownerMatchesPrefix(str(task.values.get("Owner") or "").strip(), ownerPrefix)
     ]
     staleTasks = [task for task in activeTasks if task.issueName in staleIssues]
-    liveTasks = [task for task in activeTasks if task.issueName not in staleIssues]
+    leaseExpiredTasks = [task for task in activeTasks if task.issueName in leaseExpiredIssues]
+    liveTasks = [
+        task for task in activeTasks if task.issueName not in staleIssues and task.issueName not in leaseExpiredIssues
+    ]
     deficit = max(0, activeFloor - len(liveTasks))
     fillable = min(deficit, eligibleCount) if eligibleCount is not None else deficit
     return {
@@ -841,12 +888,15 @@ def controllerCapacityPayload(
         "activeTotal": len(activeTasks),
         "activeNonStale": len(liveTasks),
         "staleOwned": len(staleTasks),
+        "leaseExpiredOwned": len(leaseExpiredTasks),
+        "inactiveOwned": len(activeTasks) - len(liveTasks),
         "deficitToFloor": deficit,
         "eligibleCount": eligibleCount,
         "fillableDeficit": fillable,
         "needsRefill": fillable > 0,
         "activeIssues": [task.issueName for task in sorted(liveTasks, key=taskSortKey)],
         "staleIssues": [task.issueName for task in sorted(staleTasks, key=taskSortKey)],
+        "leaseExpiredIssues": [task.issueName for task in sorted(leaseExpiredTasks, key=taskSortKey)],
     }
 
 
@@ -910,11 +960,12 @@ def shortlistTasks(
         component=component,
         allowFileOverlap=allowFileOverlap,
     )
+    now = utcNow()
     counts = statusCounts(state)
-    stale = staleClaims(state)
-    activeClaims = activeClaimSummary(state, stale)
-    activeFiles = activeTargetFiles(state)
-    advisoryOverlaps = targetFileOverlapAdvisories(state)
+    stale = staleClaims(state, now=now)
+    activeClaims = activeClaimSummary(state, stale, now=now)
+    activeFiles = activeTargetFiles(state, stale=stale, now=now)
+    advisoryOverlaps = targetFileOverlapAdvisories(state, stale=stale, now=now)
     selectionSeed = seed or uuid.uuid4().hex
     payload: dict[str, Any] = {
         "eligible": bool(eligible),
@@ -947,6 +998,7 @@ def shortlistTasks(
             controllerId=controllerId,
             activeFloor=controllerActiveFloor,
             eligibleCount=len(eligible),
+            now=now,
         )
     if includeRejected:
         payload["rejected"] = rejected
@@ -1067,6 +1119,13 @@ def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
                     f"{stale['staleThresholdMinutes']}-minute reclaim threshold); "
                     "inspect the worker and run reclaim-stale --dry-run before reclaiming"
                 )
+            elif leaseUntil is not None and bool(taskLeasePayload(task, now).get("leaseExpired")):
+                warnings.append(
+                    f"Row {task.row}: IN_PROGRESS lease expired but last update "
+                    f"{formatUtc(updatedAt) if updatedAt else 'missing'} has not met "
+                    f"{DEFAULT_RECLAIM_AGE_MINUTES}-minute reclaim threshold; inspect worker status before refresh "
+                    "or later reclaim-stale --dry-run"
+                )
             if attempt < 1:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires Attempt >= 1")
             if progress >= 100:
@@ -1125,15 +1184,16 @@ def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
-def taskPayload(task: TaskRecord, state: QueueState | None = None) -> dict[str, Any]:
+def taskPayload(task: TaskRecord, state: QueueState | None = None, now: datetime | None = None) -> dict[str, Any]:
+    now = now or utcNow()
     payload = {key: value for key, value in task.values.items()}
     payload["Row"] = task.row
     payload["Status"] = task.status
     payload["Dependencies Parsed"] = task.dependencies
     payload["Target Files Parsed"] = sorted(task.targetFiles)
     payload["Target File Overlap Policy"] = "advisory"
-    payload["Active File Overlaps"] = taskActiveFileOverlaps(state, task) if state is not None else []
-    payload.update(taskLeasePayload(task, utcNow()))
+    payload["Active File Overlaps"] = taskActiveFileOverlaps(state, task, now=now) if state is not None else []
+    payload.update(taskLeasePayload(task, now))
     return payload
 
 
@@ -1331,7 +1391,10 @@ def heartbeatTask(
             if note.strip():
                 setValue(state, task.row, "Last Note", note.strip())
             setValue(state, task.row, "Updated At UTC", formatUtc(now))
-            setValue(state, task.row, "Lease Until UTC", formatUtc(now + timedelta(minutes=leaseMinutes)))
+            requestedLeaseUntil = now + timedelta(minutes=leaseMinutes)
+            currentLeaseUntil = parseUtc(task.values.get("Lease Until UTC"))
+            leaseUntil = max(currentLeaseUntil, requestedLeaseUntil) if currentLeaseUntil else requestedLeaseUntil
+            setValue(state, task.row, "Lease Until UTC", formatUtc(leaseUntil))
             atomicSave(state, workbookPath)
             state = refreshTasks(state)
             return taskPayload(taskByName(state, issueName), state=state)
@@ -1925,7 +1988,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             },
                             "reclaimableStaleCount": len(stale),
                             "staleCount": len(stale),
-                            "activeClaims": activeClaimSummary(state, stale),
+                            "activeClaims": activeClaimSummary(state, stale, now=now),
                             "stale": markStaleClaimsForInspection(stale),
                         }
                     )
