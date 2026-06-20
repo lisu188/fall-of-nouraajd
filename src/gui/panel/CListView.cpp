@@ -85,12 +85,10 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     if (gui) {
         auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
         auto self = this->ptr<CListView>();
-        gui->startDragSession(self, object, index, rect->x + x, rect->y + y, invokeSelect(gui, index, object));
+        gui->startDragSession(self, object, index, rect->x + x, rect->y + y);
         gui->capturePointer(self);
     }
-    if (!gui || !gui->hasDragSession() || !gui->getDragSession()->sourceCallbackDeferred) {
-        invokeCallback(gui, index, object);
-    }
+    invokeCallback(gui, index, object);
     return true;
 }
 
