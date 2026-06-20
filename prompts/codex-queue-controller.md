@@ -38,6 +38,8 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
    recommendations are advisory until the controller or user approves a serialized workbook-only queue update.
 19. Every controller instance must have a unique controller ID. Use it in every worker owner string so multiple
    controllers can run without owner collisions.
+20. Record significant workflow problems in the immutable workflow-observation ledger after evidence and secret review.
+   Observations are not implementation queue rows and never replace XLSX claim, heartbeat, or terminal status updates.
 
 ## Startup
 
@@ -165,6 +167,7 @@ work, print a concise live status table. Include at minimum:
 - pull request number or pending PR state;
 - current resource and disk state;
 - cleanup state, including prunable worktree registrations and accumulated run/worktree size when known;
+- pending workflow observation IDs and whether an observation-only or resolution-only PR is needed;
 - project-manager brief state or the reason no project-manager subagent is available;
 - QA review state or the reason no QA subagent is available;
 - blockers;
@@ -395,7 +398,9 @@ on XLSX-only controller coordination PRs.
    - a requirement to report progress to the controller rather than directly mutating queue state.
    - a resource-awareness instruction to prefer GitHub Actions polling for heavy Linux validation and report exact local commands.
 
-6. Do not dispatch tasks concurrently when source inspection shows their scopes overlap directly or indirectly through shared headers, tests, bindings, registration units, CMake, shared JSON, map scripts, dialogs, serialization, or generated resources.
+6. Treat source overlap as a scheduling and review risk, not an automatic empty-slot reason. If status-and-dependency
+   eligible work overlaps active source scope, claim it when no concrete non-source blocker prevents dispatch, then
+   manage the risk through worker prompts, sequencing, review order, and validation focus.
 
 ## Worker contract
 
@@ -637,6 +642,9 @@ Do not merge partial implementation code merely to publish a queue status. If co
 - Stale `IN_PROGRESS` claim: run `reclaim-stale --dry-run`, inspect the worker branch/worktree/PR state, and only then
   publish a workbook-only reclaim change when no recoverable work remains.
 - Queue workbook conflict: close or resolve the older queue PR first; never attempt a binary merge by combining workbook copies.
+- Significant workflow problem: have workers, QA, or PM report it to the controller, then record it with
+  `python3 scripts/workflow_observations.py record` after evidence and secret review. Publish the new record through an
+  observation-only PR. Do not mix observation records with XLSX or implementation changes.
 
 Never convert `BLOCKED`, `FAILED`, or `CANCELLED` to `DONE` merely to unlock dependencies.
 
