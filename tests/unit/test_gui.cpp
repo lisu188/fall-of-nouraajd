@@ -197,12 +197,11 @@ void test_list_view_refreshes_from_generic_property_notifications() {
     create_gui_game(gui);
     auto refresh_target = std::make_shared<CGameObject>();
     auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
     list->setResolvedRefreshTarget(refresh_target);
     list->setRefreshOnPropertyChanged(true);
-    gui->pushChild(list);
 
-    list->initialize();
-    drain_event_loop();
+    list->refresh();
     const int after_initial_refresh = list->refresh_count;
 
     refresh_target->setNumericProperty("threat", 1);
@@ -220,12 +219,11 @@ void test_list_view_refresh_event_compatibility() {
     create_gui_game(gui);
     auto refresh_target = std::make_shared<CGameObject>();
     auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
     list->setResolvedRefreshTarget(refresh_target);
     list->setRefreshEvent("legacyRefresh");
-    gui->pushChild(list);
 
-    list->initialize();
-    drain_event_loop();
+    list->refresh();
     const int after_initial_refresh = list->refresh_count;
 
     refresh_target->signal("legacyRefresh");
@@ -244,12 +242,11 @@ void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
     auto first_target = std::make_shared<CGameObject>();
     auto second_target = std::make_shared<CGameObject>();
     auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
     list->setResolvedRefreshTarget(first_target);
     list->setRefreshProperties({"label"});
-    gui->pushChild(list);
 
-    list->initialize();
-    drain_event_loop();
+    list->refresh();
     const int after_initial_refresh = list->refresh_count;
 
     first_target->setStringProperty("label", "first");

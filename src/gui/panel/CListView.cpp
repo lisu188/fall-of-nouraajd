@@ -425,22 +425,30 @@ void CListView::setSelect(std::string select) { CListView::select = select; }
 
 std::shared_ptr<CScript> CListView::getRefreshObject() { return refreshObject; }
 
-void CListView::setRefreshObject(std::shared_ptr<CScript> refreshObject) { CListView::refreshObject = refreshObject; }
+void CListView::setRefreshObject(std::shared_ptr<CScript> refreshObject) {
+    CListView::refreshObject = refreshObject;
+    refreshSubscriptions();
+}
 
 std::string CListView::getRefreshEvent() { return refreshEvent; }
 
-void CListView::setRefreshEvent(std::string refreshEvent) { CListView::refreshEvent = refreshEvent; }
+void CListView::setRefreshEvent(std::string refreshEvent) {
+    CListView::refreshEvent = refreshEvent;
+    refreshSubscriptions();
+}
 
 bool CListView::getRefreshOnPropertyChanged() { return refreshOnPropertyChanged; }
 
 void CListView::setRefreshOnPropertyChanged(bool refreshOnPropertyChanged) {
     CListView::refreshOnPropertyChanged = refreshOnPropertyChanged;
+    refreshSubscriptions();
 }
 
 std::set<std::string> CListView::getRefreshProperties() { return refreshProperties; }
 
 void CListView::setRefreshProperties(std::set<std::string> refreshProperties) {
     CListView::refreshProperties = std::move(refreshProperties);
+    refreshSubscriptions();
 }
 
 void CListView::initialize() {
