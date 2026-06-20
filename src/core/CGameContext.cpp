@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGameContext.h"
 #include "core/CGame.h"
+#include "handler/CGuiHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
@@ -31,6 +32,17 @@ std::shared_ptr<CObjectHandler> CGameContext::getObjectHandler() {
         objectHandler = std::make_shared<CObjectHandler>();
     }
     return objectHandler;
+}
+
+std::shared_ptr<CGuiHandler> CGameContext::getGuiHandler() {
+    if (!guiHandler) {
+        auto owner = game.lock();
+        if (!owner) {
+            throw std::runtime_error("Cannot create CGuiHandler without an active CGame.");
+        }
+        guiHandler = std::make_shared<CGuiHandler>(owner);
+    }
+    return guiHandler;
 }
 
 std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {

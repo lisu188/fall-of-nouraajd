@@ -82,7 +82,6 @@ class CGame : public CGameObject {
     std::shared_ptr<CSlotConfig> getSlotConfiguration();
 
   private:
-    vstd::lazy<CGuiHandler> guiHandler;
     vstd::lazy<CSlotConfig> slotConfiguration;
 
     std::shared_ptr<CGameContext> context;
