@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
-#include "core/CSerialization.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/object/CGameGraphicsObject.h"
@@ -27,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/embed.h>
 
 #include <limits>
+#include <vector>
 
 namespace {
 
@@ -64,44 +64,38 @@ std::shared_ptr<DropTargetRecorder> attach_drop_target_recorder(const std::share
     return recorder;
 }
 
-std::shared_ptr<json> serialize_gui_tree(const std::shared_ptr<CGui> &gui) {
-    return CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(gui);
-}
-
-const json *find_serialized_drag_proxy(const std::shared_ptr<json> &gui_tree) {
-    if (!gui_tree || !gui_tree->contains("properties")) {
-        return nullptr;
+std::vector<std::shared_ptr<CGameGraphicsObject>> drag_proxy_children(const std::shared_ptr<CGui> &gui) {
+    std::vector<std::shared_ptr<CGameGraphicsObject>> proxies;
+    if (!gui) {
+        return proxies;
     }
-    const auto &properties = (*gui_tree)["properties"];
-    if (!properties.contains("children") || !properties["children"].is_array()) {
-        return nullptr;
-    }
-
-    const json *proxy = nullptr;
-    for (const auto &child : properties["children"]) {
-        if (!child.contains("properties") || !child["properties"].contains("priority")) {
-            continue;
-        }
-        if (child["properties"]["priority"].get<int>() == std::numeric_limits<int>::max()) {
-            if (proxy) {
-                return nullptr;
-            }
-            proxy = &child;
+    for (const auto &child : gui->getChildren()) {
+        if (child && child->getPriority() == std::numeric_limits<int>::max()) {
+            proxies.push_back(child);
         }
     }
-    return proxy;
+    return proxies;
 }
 
-std::string serialized_layout_value(const json &node, const std::string &key) {
-    if (!node.contains("properties")) {
-        return "";
+std::shared_ptr<CGameGraphicsObject> expect_one_drag_proxy_child(const std::shared_ptr<CGui> &gui,
+                                                                 const char *message) {
+    auto proxies = drag_proxy_children(gui);
+    expect_true(proxies.size() == 1, message);
+    return proxies.empty() ? nullptr : proxies.front();
+}
+
+void expect_no_drag_proxy_child(const std::shared_ptr<CGui> &gui, const char *message) {
+    expect_true(drag_proxy_children(gui).empty(), message);
+}
+
+void expect_proxy_rect(const std::shared_ptr<CGameGraphicsObject> &proxy, int x, int y, int w, int h,
+                       const char *message) {
+    if (!proxy || !proxy->getLayout()) {
+        expect_true(false, message);
+        return;
     }
-    const auto &properties = node["properties"];
-    if (!properties.contains("layout") || !properties["layout"].contains("properties")) {
-        return "";
-    }
-    const auto &layout = properties["layout"]["properties"];
-    return layout.contains(key) && layout[key].is_string() ? layout[key].get<std::string>() : "";
+    auto rect = proxy->getLayout()->getRect(proxy);
+    expect_true(rect && rect->x == x && rect->y == y && rect->w == w && rect->h == h, message);
 }
 
 std::shared_ptr<CGameObject> drag_payload(const std::shared_ptr<CGame> &game) {
@@ -111,7 +105,7 @@ std::shared_ptr<CGameObject> drag_payload(const std::shared_ptr<CGame> &game) {
     return payload;
 }
 
-void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_cancel() {
+void test_gui_drag_session_attaches_proxy_child_and_removes_it_after_drop_or_cancel() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
@@ -124,42 +118,22 @@ void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_c
     auto target = attach_drop_target_recorder(gui);
 
     gui->startDragSession(source, drag_payload(game), 4, 40, 50);
-    auto initial_tree = serialize_gui_tree(gui);
-    const json *initial_proxy = find_serialized_drag_proxy(initial_tree);
-    expect_true(initial_proxy != nullptr, "drag start should attach a serialized high-priority proxy child");
-    if (initial_proxy) {
-        expect_true(serialized_layout_value(*initial_proxy, "x") == "15" &&
-                        serialized_layout_value(*initial_proxy, "y") == "25",
-                    "drag proxy should be centered on the start pointer coordinates");
-        expect_true(serialized_layout_value(*initial_proxy, "w") == "50" &&
-                        serialized_layout_value(*initial_proxy, "h") == "50",
-                    "drag proxy should use the GUI tile size for its serialized layout");
-    }
+    auto initial_proxy = expect_one_drag_proxy_child(gui, "drag start should attach one high-priority proxy child");
+    expect_proxy_rect(initial_proxy, 15, 25, 50, 50, "drag proxy should be centered on the start pointer coordinates");
 
     gui->updateDragSession(90, 110);
-    auto moved_tree = serialize_gui_tree(gui);
-    const json *moved_proxy = find_serialized_drag_proxy(moved_tree);
-    expect_true(moved_proxy != nullptr, "drag update should keep one serialized high-priority proxy child");
-    if (moved_proxy) {
-        expect_true(serialized_layout_value(*moved_proxy, "x") == "65" &&
-                        serialized_layout_value(*moved_proxy, "y") == "85",
-                    "drag proxy serialized layout should follow pointer coordinates");
-    }
+    auto moved_proxy = expect_one_drag_proxy_child(gui, "drag update should keep one high-priority proxy child");
+    expect_true(moved_proxy == initial_proxy, "drag update should reuse the existing proxy child");
+    expect_proxy_rect(moved_proxy, 65, 85, 50, 50, "drag proxy layout should follow pointer coordinates");
 
     gui->acceptDragSession(target);
-    auto accepted_tree = serialize_gui_tree(gui);
-    expect_true(find_serialized_drag_proxy(accepted_tree) == nullptr,
-                "accepted drag should remove the serialized proxy child");
+    expect_no_drag_proxy_child(gui, "accepted drag should remove the proxy child");
     gui->clearDragSession();
 
     gui->startDragSession(source, drag_payload(game), 5, 60, 70);
-    auto restarted_tree = serialize_gui_tree(gui);
-    expect_true(find_serialized_drag_proxy(restarted_tree) != nullptr,
-                "new drag should attach a fresh serialized proxy child");
+    expect_one_drag_proxy_child(gui, "new drag should attach a fresh proxy child");
     gui->cancelDragSession();
-    auto canceled_tree = serialize_gui_tree(gui);
-    expect_true(find_serialized_drag_proxy(canceled_tree) == nullptr,
-                "canceled drag should remove the serialized proxy child");
+    expect_no_drag_proxy_child(gui, "canceled drag should remove the proxy child");
     gui->clearDragSession();
 }
 
@@ -168,7 +142,7 @@ void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_c
 int main() {
     pybind11::scoped_interpreter guard{};
 
-    test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_cancel();
+    test_gui_drag_session_attaches_proxy_child_and_removes_it_after_drop_or_cancel();
 
     return finish_tests();
 }
