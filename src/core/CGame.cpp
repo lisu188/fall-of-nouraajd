@@ -38,9 +38,7 @@ std::shared_ptr<CGameContext> CGame::getContext() {
     return context;
 }
 
-std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
-    return guiHandler.get([this]() { return std::make_shared<CGuiHandler>(this->ptr<CGame>()); });
-}
+std::shared_ptr<CGuiHandler> CGame::getGuiHandler() { return getContext()->getGuiHandler(); }
 
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() { return getContext()->getScriptHandler(); }
 
