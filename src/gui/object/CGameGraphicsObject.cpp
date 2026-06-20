@@ -168,8 +168,13 @@ void CGameGraphicsObject::addChild(const std::shared_ptr<CGameGraphicsObject> &c
 }
 
 void CGameGraphicsObject::removeChild(const std::shared_ptr<CGameGraphicsObject> &child) {
+    auto gui = getGui();
     if (children.erase(child)) {
         child->removeParent();
+        if (gui) {
+            gui->releasePointerCaptureFor(child);
+            gui->cancelDragSessionFor(child);
+        }
     }
 }
 
