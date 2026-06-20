@@ -604,17 +604,17 @@ class ContentValidatorTest(unittest.TestCase):
             textwrap.dedent("""
                 class CGameObject {
                     V_META(CGameObject, vstd::meta::empty,
-                           V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                            V_PROPERTY(CGameObject, std::string, name, getName, setName))
                 };
 
                 class CPropertyBase {
                     V_META(CPropertyBase, CGameObject,
-                           V_PROPERTY(CPropertyBase, std::set<std::shared_ptr<CItem>>, loot, getLoot, setLoot))
+                            V_PROPERTY(CPropertyBase, std::set<std::shared_ptr<CItem>>, loot, getLoot, setLoot))
                 };
 
                 class CPropertyDerived {
                     V_META(CPropertyDerived, CPropertyBase,
-                           V_PROPERTY(CPropertyDerived, int, count, getCount, setCount))
+                            V_PROPERTY(CPropertyDerived, int, count, getCount, setCount))
                 };
             """).lstrip(),
             encoding="utf-8",
