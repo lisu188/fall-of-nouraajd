@@ -23,7 +23,6 @@ COVERAGE_PATH_PATTERNS = (
     "tests/unit/*",
     "scripts/run_coverage.sh",
     "scripts/coverage_report.py",
-    "scripts/coverage_exclusions.json",
     "native_plugins/*",
     "src/core/*",
     "src/handler/*",

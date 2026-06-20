@@ -185,7 +185,7 @@ The script:
 - runs `python3 test.py --suite coverage-safe` against the coverage build with a finite outer timeout
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
 - uses the repo-local Python reporter by default; set `COVERAGE_REPORTER=gcovr` only for diagnostic comparison
-- applies line exclusions from `scripts/coverage_exclusions.json` unless `COVERAGE_LINE_EXCLUSIONS` is overridden
+- rejects line-exclusion controls; every instrumented line in scope is part of the gate
 - fails if eligible line coverage is below the default `MIN_COVERAGE=95` gate
 
 Optional coverage speed controls:
@@ -203,5 +203,5 @@ The canonical coverage report is scoped to production/native plugin code by defa
 COVERAGE_INCLUDE_PREFIXES="src native_plugins" ./scripts/run_coverage.sh
 ```
 
-`scripts/run_coverage.sh` uses that scope unless `COVERAGE_INCLUDE_PREFIXES` is overridden. The reviewed line exclusion
-manifest is `scripts/coverage_exclusions.json`; entries outside the active coverage scope are not part of the line gate.
+`scripts/run_coverage.sh` uses that scope unless `COVERAGE_INCLUDE_PREFIXES` is overridden. Coverage line exclusions are
+not supported; every instrumented line under the active scope is part of the line gate.
