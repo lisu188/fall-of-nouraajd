@@ -49,6 +49,22 @@ explicit human approval. A controller-owned implementation PR marked `failing_ci
 not use source overlap alone to leave the controller below its four live non-stale owned claims when eligible work
 exists.
 
+## Workflow observation ledger
+
+Use `scripts/workflow_observations.py` and `docs/codex-workflow-observations.md` for durable workflow-problem evidence.
+The ledger is separate from `planning/fall_of_nouraajd_issue_proposals.xlsx`; it records queue/lease faults, stale state,
+PR or merge failures, CI waste, prompt drift, resource or recovery failures, missing worker status, unsafe ambiguity, and
+repeated manual intervention. It is not an implementation backlog and must not be used as queue authority.
+
+Observation records live under `planning/workflow_observations/records/`; resolution receipts live under
+`planning/workflow_observations/resolutions/`. Files are immutable one-record-per-file JSON. Do not edit or delete old
+records or receipts. Workers, QA, and project-manager agents report observations to the controller; the controller
+reviews evidence and publishes observation-only or resolution-only PRs.
+
+Record-only and resolution-only PRs are not CI-exempt under the current repository policy. They need not be globally
+serialized because each ID maps to a unique immutable file, but they must run `python3 scripts/workflow_observations.py
+validate` and follow the normal PR merge policy unless a future repository instruction explicitly exempts them.
+
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
 ## Queue controller workflow
@@ -130,8 +146,9 @@ according to the pull request merge policy; do not mark the issue `DONE` until t
 After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
 concise live status table. Include controller ID, worker owner, issue key, phase, progress estimate, last action,
 changed files, running validation command, branch, PR state, resource state, cleanup state, project-manager brief state,
-QA review state, open-PR audit summary, blockers, and next controller action. Use subagent status polling or structured
-worker updates for live status; the workbook is durable queue state, not the live worker-status channel.
+QA review state, open-PR audit summary, pending workflow observation IDs, blockers, and next controller action. Use
+subagent status polling or structured worker updates for live status; the workbook is durable queue state, not the
+live worker-status channel.
 
 When a controller loop does not publish any new claim, still fetch and inspect `origin/main` before the next decision.
 Check whether claim, implementation, status, or reclaim PRs merged elsewhere and update live state from the merged

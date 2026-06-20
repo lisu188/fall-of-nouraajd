@@ -16,7 +16,10 @@ Before every optimization cycle, inspect the current versions from `origin/main`
 - `docs/codex-agent-queue.md`
 - `scripts/issue_queue.py`
 - `tests/test_issue_queue.py`
+- `scripts/workflow_observations.py`
+- `docs/codex-workflow-observations.md`
 - `planning/fall_of_nouraajd_issue_proposals.xlsx`
+- `planning/workflow_observations/`
 - `.github/workflows/build.yml`
 - directly related scripts, tests, hooks, prompts, or configuration discovered during inspection
 
@@ -45,6 +48,7 @@ Relevant optimization areas include:
 - deterministic tests;
 - documentation and prompt drift;
 - failure reporting and observability;
+- workflow observation capture and resolution;
 - migration from binary queue storage only when explicitly approved.
 
 Do not consume or modify normal gameplay backlog items merely to create optimization work. Do not change the queue storage format without an explicit compatibility design, migration path, tests, and user approval.
@@ -102,6 +106,7 @@ Print a concise live status table containing:
 - branch and worktree;
 - PR number and merge state;
 - open-PR audit summary;
+- open workflow-observation summary and pending observation IDs;
 - blocker;
 - next controller action.
 
@@ -118,14 +123,18 @@ Repeat the following cycle:
      run/worktrees.
    - Classify stale/open PR debt with `scripts/pr_review_audit.py` before cleanup, stale-branch decisions, or merge
      decisions; treat the result as read-only evidence.
+   - Run `python3 scripts/workflow_observations.py validate`, review open observations, and use
+     `python3 scripts/workflow_observations.py next` as evidence before selecting a new optimization.
    - Never destroy or overwrite unreviewed work.
 
 2. Establish evidence
    - Run the narrow workflow validation:
      - `python3 scripts/issue_queue.py validate`
+     - `python3 scripts/workflow_observations.py validate`
      - `python3 -m unittest tests.test_issue_queue`
      - `python3 -m unittest tests.test_controller_resource_audit`
      - `python3 -m unittest tests.test_pr_review_audit`
+     - `python3 -m unittest tests.test_workflow_observations`
      - `python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes`
    - Collect relevant evidence such as failures, test duration, queue conflicts, stale claims, PR-state errors,
      unnecessary rebuilds, resource pressure, disk pressure, stale run/worktrees, prunable worktree metadata, and
@@ -136,6 +145,7 @@ Repeat the following cycle:
    - Have the audit, review, and project-manager agents propose concrete candidates.
    - Rank candidates by correctness impact, failure risk, developer-time reduction, testability, and scope.
    - Select the smallest coherent improvement with a clear root cause and measurable expected result.
+   - Reference selected workflow-observation IDs in branch names, commit messages, or PR text where practical.
    - Prefer bug fixes, missing guards, deterministic tests, and removal of verified duplication over broad redesigns.
 
 4. Isolate work
@@ -148,6 +158,8 @@ Repeat the following cycle:
    - Make the smallest safe change.
    - Preserve existing CLI contracts, queue statuses, workbook compatibility, branch naming, and public behavior unless explicitly migrating them.
    - Keep documentation, prompts, implementation, and tests synchronized.
+   - Record significant workflow problems with `scripts/workflow_observations.py record` after evidence and secret
+     review; do not record routine progress or gameplay defects.
 
 6. Keep resources in mind
    - Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
@@ -201,6 +213,8 @@ Repeat the following cycle:
      commit.
    - Poll the PR and checks regularly.
    - Wait for actual merge before starting dependent optimization work.
+   - After a workflow fix merges and post-merge verification passes, publish a separate resolution-only receipt PR for
+     any selected workflow-observation IDs.
    - Independent read-only auditing may continue while a PR is pending.
 
 10. Continue from updated `main`
