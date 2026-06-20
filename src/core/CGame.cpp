@@ -23,7 +23,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 CGame::CGame() {}
 
-CGame::~CGame() {}
+CGame::~CGame() {
+    if (context) {
+        context->advanceTransitionGeneration();
+    }
+}
 
 void CGame::changeMap(std::string file) { CGameLoader::changeMap(this->ptr<CGame>(), std::move(file)); }
 

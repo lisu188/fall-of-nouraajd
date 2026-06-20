@@ -18,8 +18,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
 #include "core/CSerialization.h"
@@ -65,6 +67,37 @@ bool contains_coords(const std::vector<Coords> &coords, Coords target) {
     return std::ranges::find(coords, target) != coords.end();
 }
 
+struct TraceReset {
+    ~TraceReset() { CPlaytestTrace::configure(false); }
+};
+
+std::vector<json> drain_trace_json() {
+    std::vector<json> records;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        records.push_back(json::parse(line));
+    }
+    return records;
+}
+
+bool has_trace_event(const std::vector<json> &records, const std::string &event) {
+    for (const auto &record : records) {
+        if (record.contains("event") && record["event"].get<std::string>() == event) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool has_trace_event_reason(const std::vector<json> &records, const std::string &event, const std::string &reason) {
+    for (const auto &record : records) {
+        if (record.contains("event") && record["event"].get<std::string>() == event && record.contains("reason") &&
+            record["reason"].get<std::string>() == reason) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void test_scene_manager_state_duplicate_and_player_transfer() {
     auto game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
@@ -98,6 +131,91 @@ void test_scene_manager_state_duplicate_and_player_transfer() {
                 "scene manager should return to idle after transition completion");
     expect_true(!manager->isTransitionPending(), "completed scene transition should clear pending state");
     expect_true(manager->getPendingMapName().empty(), "completed scene transition should clear pending map name");
+}
+
+void test_scene_manager_transition_generation_start_and_commit() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+
+    auto context = game->getContext();
+    auto initial_generation = context->captureTransitionGeneration();
+    auto manager = game->getSceneManager();
+
+    expect_true(manager->requestMapChange(game, "ritual"), "scene manager should accept a transition request");
+    auto started_generation = context->getTransitionGeneration();
+    expect_true(started_generation == initial_generation + 1,
+                "accepted scene transition should advance generation when it starts");
+    expect_true(!context->isTransitionGenerationCurrent(initial_generation),
+                "pre-transition generation should be stale after transition start");
+    expect_true(context->isTransitionGenerationCurrent(started_generation),
+                "transition-start generation should remain current before commit");
+
+    pump_event_loop_iterations();
+
+    auto committed_generation = context->getTransitionGeneration();
+    expect_true(committed_generation == started_generation + 1,
+                "completed scene transition should advance generation when it commits");
+    expect_true(!context->isTransitionGenerationCurrent(started_generation),
+                "transition-start generation should be stale after commit");
+    expect_true(context->isTransitionGenerationCurrent(committed_generation),
+                "committed transition generation should be current");
+}
+
+void test_scene_manager_stale_transition_generation_clears_pending_state() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+
+    auto old_map = game->getMap();
+    auto manager = game->getSceneManager();
+    auto context = game->getContext();
+
+    expect_true(manager->requestMapChange(game, "ritual"), "scene manager should accept a transition request");
+    auto started_generation = context->captureTransitionGeneration();
+    context->advanceTransitionGeneration();
+
+    pump_event_loop_iterations();
+
+    expect_true(game->getMap() == old_map, "stale transition generation should not replace the active map");
+    expect_true(!context->isTransitionGenerationCurrent(started_generation),
+                "manually advanced transition generation should make the request stale");
+    expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "stale transition callback should clear pending state");
+    expect_true(!manager->isTransitionPending(), "stale transition callback should not leave a pending transition");
+    expect_true(manager->getPendingMapName().empty(), "stale transition callback should clear pending map name");
+}
+
+void test_scene_manager_trace_rejections_and_completion() {
+    TraceReset reset;
+    CPlaytestTrace::configure(true);
+
+    auto standalone_manager = std::make_shared<CSceneManager>();
+    expect_true(!standalone_manager->requestMapChange(nullptr, "ritual"),
+                "trace-enabled scene manager should reject null-game requests");
+
+    auto first_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(first_game, "test", "Warrior");
+    auto second_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(second_game, "test", "Warrior");
+    auto first_manager = first_game->getSceneManager();
+
+    expect_true(!first_manager->requestMapChange(second_game, "ritual"),
+                "trace-enabled scene manager should reject mismatched game requests");
+    expect_true(first_manager->requestMapChange(first_game, "ritual"),
+                "trace-enabled scene manager should accept a valid transition");
+    expect_true(!first_manager->requestMapChange(first_game, "siege"),
+                "trace-enabled scene manager should reject duplicate pending transitions");
+
+    pump_event_loop_iterations();
+
+    auto records = drain_trace_json();
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "missing_game"),
+                "trace should record missing-game rejection");
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "mismatched_scene_manager"),
+                "trace should record mismatched-manager rejection");
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "transition_pending"),
+                "trace should record duplicate pending transition rejection");
+    expect_true(has_trace_event(records, "map_transition_requested"), "trace should record accepted transitions");
+    expect_true(has_trace_event(records, "map_transition_completed"), "trace should record completed transitions");
 }
 
 void test_scene_manager_repeated_transitions_and_controller_usability() {
@@ -866,6 +984,9 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_scene_manager_state_duplicate_and_player_transfer();
+    test_scene_manager_transition_generation_start_and_commit();
+    test_scene_manager_stale_transition_generation_clears_pending_state();
+    test_scene_manager_trace_rejections_and_completion();
     test_scene_manager_repeated_transitions_and_controller_usability();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();

@@ -424,7 +424,13 @@ void init_game_module(py::module_ &m) {
         .def("getObjectHandler", &CGameContext::getObjectHandler, "Return the object factory/registry handler.")
         .def("getGuiHandler", &CGameContext::getGuiHandler, "Return the GUI handler service.")
         .def("getScriptHandler", &CGameContext::getScriptHandler, "Return the Python script execution service.")
-        .def("getRngHandler", &CGameContext::getRngHandler, "Return the random encounter/loot handler.");
+        .def("getRngHandler", &CGameContext::getRngHandler, "Return the random encounter/loot handler.")
+        .def("getTransitionGeneration", &CGameContext::getTransitionGeneration,
+             "Return the current transition/session generation.")
+        .def("captureTransitionGeneration", &CGameContext::captureTransitionGeneration,
+             "Capture the current transition/session generation for deferred callbacks.")
+        .def("isTransitionGenerationCurrent", &CGameContext::isTransitionGenerationCurrent,
+             "Return whether a captured transition/session generation is still current.");
 
     py::enum_<CSceneManager::TransitionState>(m, "CSceneTransitionState", "Scene transition lifecycle state.")
         .value("Idle", CSceneManager::TransitionState::Idle)
