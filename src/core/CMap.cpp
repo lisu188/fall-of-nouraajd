@@ -186,12 +186,39 @@ std::uint64_t CMap::getNavigationRevision() const { return navigationRevision; }
 
 const std::vector<CNavigationEdge> &CMap::getNavigationEdges() const { return navigationEdges; }
 
-void CMap::addNavigationEdge(CNavigationEdge edge) {
+std::vector<Coords> CMap::getNavigationNeighbors(Coords coords, bool includeSelf) const {
+    coords = normalizeCoords(coords);
+    auto neighbors = getAdjacentCoords(coords, includeSelf);
+
+    auto add_unique = [&neighbors, this](Coords candidate) {
+        candidate = normalizeCoords(candidate);
+        if (std::ranges::find(neighbors, candidate) == neighbors.end()) {
+            neighbors.push_back(candidate);
+        }
+    };
+
+    for (const auto &edge : navigationEdges) {
+        if (!edge.enabled) {
+            continue;
+        }
+        if (edge.source == coords) {
+            add_unique(edge.target);
+        } else if (edge.bidirectional && edge.target == coords) {
+            add_unique(edge.source);
+        }
+    }
+
+    return neighbors;
+}
+
+void CMap::registerNavigationEdge(CNavigationEdge edge) {
     edge.source = normalizeCoords(edge.source);
     edge.target = normalizeCoords(edge.target);
     navigationEdges.push_back(std::move(edge));
     bumpNavigationRevision();
 }
+
+void CMap::addNavigationEdge(CNavigationEdge edge) { registerNavigationEdge(std::move(edge)); }
 
 bool CMap::removeNavigationEdge(Coords source, Coords target, std::optional<std::string> sourceObjectName) {
     source = normalizeCoords(source);
@@ -205,6 +232,20 @@ bool CMap::removeNavigationEdge(Coords source, Coords target, std::optional<std:
     navigationEdges.erase(it);
     bumpNavigationRevision();
     return true;
+}
+
+std::size_t CMap::unregisterNavigationEdgesForObject(const std::string &sourceObjectName) {
+    const auto old_size = navigationEdges.size();
+    navigationEdges.erase(std::remove_if(navigationEdges.begin(), navigationEdges.end(),
+                                         [&](const CNavigationEdge &edge) {
+                                             return edge.sourceObjectName && *edge.sourceObjectName == sourceObjectName;
+                                         }),
+                          navigationEdges.end());
+    const auto removed = old_size - navigationEdges.size();
+    if (removed > 0) {
+        bumpNavigationRevision();
+    }
+    return removed;
 }
 
 std::size_t CMap::getObjectCacheEntryCountForTesting() const { return mapObjectsCache.size(); }
@@ -613,7 +654,7 @@ void CMap::dumpPaths(std::string path) {
             }
             return std::nullopt;
         },
-        [this](auto coords) { return this->getAdjacentCoords(coords); },
+        [this](auto coords) { return this->getNavigationNeighbors(coords); },
         [this](auto from, auto to) { return this->getDistance(from, to); });
 }
 

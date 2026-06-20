@@ -9252,6 +9252,58 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_map_navigation_edge_bindings(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        game_map = g.getMap()
+
+        origin = game.Coords(2, 2, 0)
+        portal_target = game.Coords(9, 9, 0)
+        disabled_target = game.Coords(8, 8, 0)
+        bridge_source = game.Coords(6, 2, 0)
+
+        def coord_values(coords):
+            return sorted((coord.x, coord.y, coord.z) for coord in coords)
+
+        base_neighbors = coord_values(game_map.getNavigationNeighbors(origin))
+        self_neighbors = coord_values(game_map.getNavigationNeighbors(origin, True))
+
+        game_map.registerNavigationEdge(origin, portal_target, True, False, 1, "portal")
+        game_map.registerNavigationEdge(origin, disabled_target, False, False, 1, "portal")
+        game_map.registerNavigationEdge(bridge_source, origin, True, True, 1, "bridge")
+
+        edge_neighbors = coord_values(game_map.getNavigationNeighbors(origin))
+        removed = game_map.unregisterNavigationEdgesForObject("portal")
+        remaining_neighbors = coord_values(game_map.getNavigationNeighbors(origin))
+        missing_removed = game_map.unregisterNavigationEdgesForObject("missing")
+
+        expected_cardinal = {(3, 2, 0), (1, 2, 0), (2, 3, 0), (2, 1, 0)}
+        success = (
+            expected_cardinal.issubset(set(base_neighbors))
+            and (2, 2, 0) not in base_neighbors
+            and (2, 2, 0) in self_neighbors
+            and (9, 9, 0) in edge_neighbors
+            and (8, 8, 0) not in edge_neighbors
+            and (6, 2, 0) in edge_neighbors
+            and removed == 2
+            and (9, 9, 0) not in remaining_neighbors
+            and (6, 2, 0) in remaining_neighbors
+            and missing_removed == 0
+        )
+        return success, json.dumps(
+            {
+                "baseNeighbors": base_neighbors,
+                "edgeNeighbors": edge_neighbors,
+                "missingRemoved": missing_removed,
+                "remainingNeighbors": remaining_neighbors,
+                "removed": removed,
+                "selfNeighbors": self_neighbors,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_pathfinder(self):
         game = load_game_module()
 

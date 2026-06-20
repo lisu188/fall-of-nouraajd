@@ -175,6 +175,21 @@ py::list map_get_objects_at_coords(const std::shared_ptr<CMap> &map, Coords coor
     return objects;
 }
 
+void map_register_navigation_edge(const std::shared_ptr<CMap> &map, Coords source, Coords target, bool enabled = true,
+                                  bool bidirectional = false, int movementCost = 1,
+                                  py::object sourceObjectName = py::none()) {
+    CNavigationEdge edge;
+    edge.source = source;
+    edge.target = target;
+    edge.enabled = enabled;
+    edge.bidirectional = bidirectional;
+    edge.movementCost = movementCost;
+    if (!sourceObjectName.is_none()) {
+        edge.sourceObjectName = sourceObjectName.cast<std::string>();
+    }
+    map->registerNavigationEdge(std::move(edge));
+}
+
 void game_object_setattr(CGameObject &self, const std::string &name, const py::handle &value) {
     if (py::isinstance<py::bool_>(value)) {
         self.setBoolProperty(name, value.cast<bool>());
@@ -546,6 +561,7 @@ void init_game_module(py::module_ &m) {
     int (CMap::*getMovementCost)(Coords) = &CMap::getMovementCost;
     std::shared_ptr<CTile> (CMap::*getTile)(int, int, int) = &CMap::getTile;
     void (CMap::*addObject)(const std::shared_ptr<CMapObject> &) = &CMap::addObject;
+    std::vector<Coords> (CMap::*getNavigationNeighbors)(Coords, bool) const = &CMap::getNavigationNeighbors;
 
     py::class_<CMap, CGameObject, std::shared_ptr<CMap>>(
         m, "CMap", "Runtime map containing tiles, map objects, triggers, and turn state.")
@@ -573,6 +589,13 @@ void init_game_module(py::module_ &m) {
         .def("getObjects", &map_get_objects, "Return a Python list of map objects.")
         .def("getObjectsAtCoords", &map_get_objects_at_coords,
              "Return a Python list of map objects at the given coordinates.")
+        .def("getNavigationNeighbors", getNavigationNeighbors, py::arg("coords"), py::arg("includeSelf") = false,
+             "Return cardinal neighbors plus enabled registered navigation edges.")
+        .def("registerNavigationEdge", &map_register_navigation_edge, py::arg("source"), py::arg("target"),
+             py::arg("enabled") = true, py::arg("bidirectional") = false, py::arg("movementCost") = 1,
+             py::arg("sourceObjectName") = py::none(), "Register a navigation edge for map pathing.")
+        .def("unregisterNavigationEdgesForObject", &CMap::unregisterNavigationEdgesForObject,
+             py::arg("sourceObjectName"), "Remove all navigation edges registered by an object name.")
         .def("getTurn", &CMap::getTurn, "Return the current turn counter.");
 
     std::shared_ptr<CGameObject> (*createObjectByType)(std::shared_ptr<CObjectHandler>, std::shared_ptr<CGame>,

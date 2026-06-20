@@ -196,9 +196,15 @@ class CMap : public CGameObject {
 
     const std::vector<CNavigationEdge> &getNavigationEdges() const;
 
+    std::vector<Coords> getNavigationNeighbors(Coords coords, bool includeSelf = false) const;
+
+    void registerNavigationEdge(CNavigationEdge edge);
+
     void addNavigationEdge(CNavigationEdge edge);
 
     bool removeNavigationEdge(Coords source, Coords target, std::optional<std::string> sourceObjectName = std::nullopt);
+
+    std::size_t unregisterNavigationEdgesForObject(const std::string &sourceObjectName);
 
     std::size_t getObjectCacheEntryCountForTesting() const;
 
