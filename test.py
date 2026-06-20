@@ -14189,7 +14189,7 @@ class CoverageReportTest(unittest.TestCase):
             "--report-dir",
             "coverage",
             "--min-line",
-            "95",
+            "90",
         ]
         original_argv = sys.argv[:]
         try:

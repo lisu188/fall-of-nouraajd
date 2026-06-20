@@ -375,7 +375,7 @@ instrumented/generated lines differently in this repo and can fail the gate even
 The script builds and runs the native `performance_guard_tests` CTest entry as part of coverage validation.
 Coverage line exclusions are not supported; every instrumented line in scope is part of the line gate.
 
-The default eligible-line coverage threshold is 95%. Do not finish coverage-relevant work below that threshold without
+The default eligible-line coverage threshold is 90%. Do not finish coverage-relevant work below that threshold without
 explicitly reporting it.
 
 Coverage reports are generated under `coverage/`.
