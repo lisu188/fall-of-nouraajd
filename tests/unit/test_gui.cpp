@@ -108,6 +108,8 @@ class MouseEventRecorder : public CGameGraphicsObject {
 };
 
 class RefreshCountingListView : public CListView {
+    V_META(RefreshCountingListView, CListView, vstd::meta::empty())
+
   public:
     int getSizeX(std::shared_ptr<CGui>) override { return 1; }
 
