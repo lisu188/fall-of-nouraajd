@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CStats.h"
 #include "object/CCreature.h"
 #include "object/CItem.h"
+#include "object/CMapObject.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
 #include "test_harness.h"
@@ -29,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/embed.h>
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -63,18 +65,43 @@ std::shared_ptr<CTile> tile(bool can_step) {
     return result;
 }
 
-std::shared_ptr<CMap> open_tile_map(const std::shared_ptr<CGame> &game, int width, int height) {
+std::shared_ptr<CMap> open_tile_map(const std::shared_ptr<CGame> &game, int width, int height, int levels = 1) {
     auto map = std::make_shared<CMap>();
     game->setMap(map);
     map->setGame(game);
-    map->setXBounds({{0, width - 1}});
-    map->setYBounds({{0, height - 1}});
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            map->addTile(tile(true), x, y, 0);
+    std::map<int, int> x_bounds;
+    std::map<int, int> y_bounds;
+    for (int z = 0; z < levels; ++z) {
+        x_bounds[z] = width - 1;
+        y_bounds[z] = height - 1;
+    }
+    map->setXBounds(x_bounds);
+    map->setYBounds(y_bounds);
+    for (int z = 0; z < levels; ++z) {
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                map->addTile(tile(true), x, y, z);
+            }
         }
     }
     return map;
+}
+
+std::shared_ptr<CPlayer> player_at(const std::shared_ptr<CGame> &game, Coords coords) {
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    player->setCoords(coords);
+    return player;
+}
+
+void add_navigation_edge(const std::shared_ptr<CMap> &map, Coords source, Coords target, bool bidirectional = false) {
+    CNavigationEdge edge;
+    edge.source = source;
+    edge.target = target;
+    edge.enabled = true;
+    edge.bidirectional = bidirectional;
+    map->registerNavigationEdge(edge);
 }
 
 void test_movement_controller_null_and_no_map_paths() {
@@ -188,6 +215,59 @@ void test_npc_random_controller_clears_stale_blocked_path() {
                 "NPC random controller should either stay put or replan to a passable step");
 }
 
+void test_player_controller_uses_navigation_neighbors_for_cross_level_route() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
+    controller->setTarget(player, Coords(2, 0, 1));
+
+    auto first = resolve_coords(controller->control(player));
+    expect_true(first == Coords(1, 0, 0), "player navigation route should first approach the authored edge");
+    player->moveTo(first);
+    controller->onStepCommitted(player, first);
+
+    auto second = resolve_coords(controller->control(player));
+    expect_true(second == Coords(1, 0, 1), "player navigation route should cross the authored z-level edge");
+    player->moveTo(second);
+    controller->onStepCommitted(player, second);
+
+    auto third = resolve_coords(controller->control(player));
+    expect_true(third == Coords(2, 0, 1), "player navigation route should finish on the target level");
+}
+
+void test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
+
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("unitTargetAcrossLevels");
+    target->setCoords(Coords(2, 0, 1));
+    map->addObject(target);
+
+    auto chaser = creature_at(0, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("unitChaserAcrossLevels");
+    chaser->setHp(1);
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget("unitTargetAcrossLevels");
+    chaser->setController(controller);
+    map->addObject(chaser);
+
+    performance_guard::clearTargetFlowCache();
+    auto first = resolve_coords(controller->control(chaser));
+    expect_true(first == Coords(1, 0, 0), "target flow field should approach an authored z-level edge");
+    chaser->moveTo(first);
+
+    auto second = resolve_coords(controller->control(chaser));
+    expect_true(second == Coords(1, 0, 1), "target flow field should cross the authored z-level edge");
+}
+
 void test_fight_controller_guard_paths_and_fallbacks() {
     auto attacker = creature_at(0, 0, 0);
     auto opponent = creature_at(1, 0, 0);
@@ -264,6 +344,8 @@ int main() {
     test_movement_controller_null_and_no_map_paths();
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();
+    test_player_controller_uses_navigation_neighbors_for_cross_level_route();
+    test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();
     test_fight_controller_guard_paths_and_fallbacks();
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
 

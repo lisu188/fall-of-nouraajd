@@ -39,9 +39,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/embed.h>
 
 #include <algorithm>
+#include <array>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <set>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -65,6 +69,19 @@ Coords first_adjacent_walkable(const std::shared_ptr<CMap> &map, Coords origin) 
 
 bool contains_coords(const std::vector<Coords> &coords, Coords target) {
     return std::ranges::find(coords, target) != coords.end();
+}
+
+std::pair<int, int> read_png_dimensions(const std::filesystem::path &path) {
+    std::ifstream input(path, std::ios::binary);
+    std::array<unsigned char, 24> header{};
+    input.read(reinterpret_cast<char *>(header.data()), static_cast<std::streamsize>(header.size()));
+
+    auto read_big_endian = [](const unsigned char *bytes) {
+        return (static_cast<int>(bytes[0]) << 24) | (static_cast<int>(bytes[1]) << 16) |
+               (static_cast<int>(bytes[2]) << 8) | static_cast<int>(bytes[3]);
+    };
+
+    return {read_big_endian(&header[16]), read_big_endian(&header[20])};
 }
 
 struct TraceReset {
@@ -708,6 +725,49 @@ void test_map_navigation_neighbors_include_registered_edges() {
                 "unregistering a missing object name should not bump navigation revision");
 }
 
+void test_map_dump_paths_uses_navigation_neighbors() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 10}});
+    map->setYBounds({{0, 0}});
+
+    for (int x = 0; x <= 10; ++x) {
+        auto blocked = std::make_shared<CTile>();
+        blocked->setCanStep(false);
+        expect_true(map->addTile(blocked, x, 0, 0), "blocked dump-path fixture tile should be added");
+    }
+
+    for (int x : {0, 10}) {
+        map->removeTile(x, 0, 0);
+        auto open = std::make_shared<CTile>();
+        open->setCanStep(true);
+        expect_true(map->addTile(open, x, 0, 0), "open dump-path fixture tile should be added");
+    }
+
+    CNavigationEdge edge;
+    edge.source = Coords(0, 0, 0);
+    edge.target = Coords(10, 0, 0);
+    edge.enabled = true;
+    map->registerNavigationEdge(edge);
+
+    auto player = std::make_shared<CPlayer>();
+    player->setBaseStats(creature_stats());
+    map->setPlayer(player);
+
+    const auto output_path = std::filesystem::temp_directory_path() / "navigation-neighbor-path-dump.png";
+    std::filesystem::remove(output_path);
+    map->dumpPaths(output_path.string());
+
+    expect_true(std::filesystem::exists(output_path), "navigation-neighbor path dump should create a PNG");
+    expect_true(std::filesystem::file_size(output_path) > 0, "navigation-neighbor path dump should be non-empty");
+    auto [width, height] = read_png_dimensions(output_path);
+    expect_true(width == 44 && height == 4,
+                "navigation-neighbor path dump should include the authored edge target in its bounds");
+    std::filesystem::remove(output_path);
+}
+
 void test_map_defensive_branches_and_strict_validation() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, -1}});
@@ -1049,6 +1109,7 @@ int main() {
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_map_navigation_edges_update_revision();
     test_map_navigation_neighbors_include_registered_edges();
+    test_map_dump_paths_uses_navigation_neighbors();
     test_map_defensive_branches_and_strict_validation();
     test_map_move_interrupts_invalid_planned_steps();
     test_creature_tracks_pending_move_origin_only_during_after_move();

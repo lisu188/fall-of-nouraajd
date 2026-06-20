@@ -46,6 +46,51 @@ struct TargetFlowField {
 std::mutex targetFlowMutex;
 std::vector<std::shared_ptr<TargetFlowField>> targetFlowCache;
 
+bool contains_navigation_neighbor(const std::shared_ptr<CMap> &map, Coords from, Coords to) {
+    if (!map) {
+        return false;
+    }
+    to = map->normalizeCoords(to);
+    auto neighbors = map->getNavigationNeighbors(from);
+    return std::ranges::find(neighbors, to) != neighbors.end();
+}
+
+void add_unique_candidate(const std::shared_ptr<CMap> &map, std::vector<Coords> &candidates, Coords candidate) {
+    candidate = map->normalizeCoords(candidate);
+    if (std::ranges::find(candidates, candidate) == candidates.end()) {
+        candidates.push_back(candidate);
+    }
+}
+
+std::vector<Coords> get_reverse_navigation_neighbors(const std::shared_ptr<CMap> &map, Coords coords) {
+    coords = map->normalizeCoords(coords);
+    auto candidates = map->getNavigationNeighbors(coords);
+    if (map->getNavigationEdges().empty()) {
+        return candidates;
+    }
+
+    for (const auto &edge : map->getNavigationEdges()) {
+        if (!edge.enabled) {
+            continue;
+        }
+        if (edge.target == coords) {
+            add_unique_candidate(map, candidates, edge.source);
+        }
+        if (edge.bidirectional && edge.source == coords) {
+            add_unique_candidate(map, candidates, edge.target);
+        }
+    }
+
+    std::vector<Coords> reachable;
+    for (auto candidate : candidates) {
+        candidate = map->normalizeCoords(candidate);
+        if (candidate != coords && contains_navigation_neighbor(map, candidate, coords)) {
+            add_unique_candidate(map, reachable, candidate);
+        }
+    }
+    return reachable;
+}
+
 bool creature_can_follow_step(const std::shared_ptr<CCreature> &creature, const Coords &step) {
     if (!creature || !creature->getMap()) {
         return false;
@@ -53,7 +98,7 @@ bool creature_can_follow_step(const std::shared_ptr<CCreature> &creature, const 
     auto map = creature->getMap();
     auto current = map->normalizeCoords(creature->getCoords());
     auto target = map->normalizeCoords(step);
-    return target != current && map->canStep(target);
+    return target != current && map->canStep(target) && contains_navigation_neighbor(map, current, target);
 }
 
 std::shared_ptr<TargetFlowField> build_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
@@ -85,7 +130,7 @@ std::shared_ptr<TargetFlowField> build_target_flow_field(const std::shared_ptr<C
             continue;
         }
 
-        for (auto previous : map->getAdjacentCoords(current.coords)) {
+        for (auto previous : get_reverse_navigation_neighbors(map, current.coords)) {
             if (previous != goal && !map->canStep(previous)) {
                 continue;
             }
@@ -231,7 +276,7 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
                         creature->getCoords(), candidate,
                         [creature](const Coords &c) { return creature->getMap()->canStep(c); },
                         [](auto) -> std::optional<Coords> { return std::nullopt; },
-                        [creature](const Coords &coords) { return creature->getMap()->getAdjacentCoords(coords); },
+                        [creature](const Coords &coords) { return creature->getMap()->getNavigationNeighbors(coords); },
                         [creature](const Coords &from, const Coords &to) {
                             return creature->getMap()->getDistance(from, to);
                         });
@@ -457,7 +502,8 @@ bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
         return false;
     }
     auto next = map->normalizeCoords(it->second);
-    return next != player->getCoords() && map->canStep(next);
+    return next != player->getCoords() && map->canStep(next) &&
+           contains_navigation_neighbor(map, player->getCoords(), next);
 }
 
 bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) { return hasPendingPath(player); }
@@ -465,16 +511,8 @@ bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) { return ha
 std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
     return CPathFinder::findPath(
         player->getCoords(), *target, [player](Coords coords) { return player->getMap()->canStep(coords); },
-        [player](auto coords) -> std::optional<Coords> {
-            for (auto ob : player->getMap()->getObjectsAtCoords(coords)) {
-                if (ob->getBoolProperty("waypoint")) {
-                    return Coords(ob->getNumericProperty("x"), ob->getNumericProperty("y"),
-                                  ob->getNumericProperty("z"));
-                }
-            }
-            return std::nullopt;
-        },
-        [player](const Coords &coords) { return player->getMap()->getAdjacentCoords(coords); },
+        [](auto) -> std::optional<Coords> { return std::nullopt; },
+        [player](const Coords &coords) { return player->getMap()->getNavigationNeighbors(coords); },
         [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); });
 }
 
