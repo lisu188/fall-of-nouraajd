@@ -49,6 +49,8 @@ std::optional<std::string> backupSlotFromFilename(const std::filesystem::path &f
 
 std::optional<std::string> readSnapshotMapName(const std::shared_ptr<json> &snapshot);
 
+// Decodes every supported on-disk save shape through the schema migration registry and returns the
+// current in-memory snapshot shape consumed by strict CSerialization deserialization.
 std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr<json> &document);
 
 std::expected<std::shared_ptr<json>, std::string> buildEnvelope(const std::shared_ptr<json> &snapshot,

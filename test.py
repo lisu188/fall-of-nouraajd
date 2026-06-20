@@ -7393,6 +7393,46 @@ class GameTest(unittest.TestCase):
             cleanup_save_slot(save_name)
 
     @game_test
+    def test_old_schema_save_envelope_loads_through_migration_registry(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("old_schema_migration")
+        save_path = save_primary_path(save_name)
+        cleanup_save_slot(save_name)
+        save_path.parent.mkdir(exist_ok=True)
+        _source_game, source_map, _player = load_game_map_with_player("test")
+        marker = f"old-schema-marker-{time.time_ns()}"
+        source_map.description = marker
+        old_schema_save = {
+            "format": SAVE_FORMAT,
+            "schemaVersion": 0,
+            "mapName": "test",
+            "snapshot": json.loads(game.jsonify(source_map)),
+        }
+        save_path.write_text(json.dumps(old_schema_save), encoding="utf-8")
+
+        try:
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            self.assertEqual(marker, loaded_map.description)
+
+            game.CMapLoader.save(loaded_map, save_name)
+            saved_json = json.loads(save_path.read_text(encoding="utf-8"))
+            snapshot = assert_save_envelope(self, saved_json, "test")
+            self.assertEqual(marker, snapshot.get("properties", {}).get("description"))
+
+            return True, json.dumps(
+                {
+                    "old_schema_loaded": True,
+                    "resaved_schema": saved_json.get("schemaVersion"),
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
     def test_legacy_save_rejects_noncanonical_player_name_without_activation(self):
         game = load_game_module()
 
@@ -7863,11 +7903,6 @@ class GameTest(unittest.TestCase):
                 "missing_schema",
                 {"format": SAVE_FORMAT, "mapName": "test", "snapshot": valid_snapshot},
                 "save envelope is missing integer schemaVersion",
-            ),
-            (
-                "old_schema",
-                {"format": SAVE_FORMAT, "schemaVersion": 0, "mapName": "test", "snapshot": valid_snapshot},
-                "unsupported save schema version",
             ),
             (
                 "missing_map_name",

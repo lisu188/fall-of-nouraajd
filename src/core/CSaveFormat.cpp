@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cctype>
+#include <map>
 
 namespace CSaveFormat {
 
@@ -91,6 +92,68 @@ std::optional<std::string> readSnapshotMapName(const std::shared_ptr<json> &snap
     return (*snapshot)["properties"]["mapName"].get<std::string>();
 }
 
+namespace {
+
+constexpr int LEGACY_SCHEMA_VERSION = 0;
+
+struct SourceDocument {
+    int schemaVersion = SCHEMA_VERSION;
+    std::shared_ptr<json> snapshot;
+    std::string mapName;
+    Encoding encoding = Encoding::Versioned;
+};
+
+using Migration = std::expected<std::shared_ptr<json>, std::string> (*)(const SourceDocument &source);
+
+std::expected<std::shared_ptr<json>, std::string> migrateCurrentSchema(const SourceDocument &source) {
+    if (!source.snapshot || !source.snapshot->is_object()) {
+        return std::unexpected("save migration source snapshot is not an object");
+    }
+    return source.snapshot;
+}
+
+std::expected<std::shared_ptr<json>, std::string> migrateLegacySchema(const SourceDocument &source) {
+    if (!source.snapshot || !source.snapshot->is_object()) {
+        return std::unexpected("save migration source snapshot is not an object");
+    }
+    return std::make_shared<json>(*source.snapshot);
+}
+
+const std::map<int, Migration> &migrationRegistry() {
+    static const std::map<int, Migration> registry = {
+        {LEGACY_SCHEMA_VERSION, migrateLegacySchema},
+        {SCHEMA_VERSION, migrateCurrentSchema},
+    };
+    return registry;
+}
+
+std::expected<DecodedDocument, std::string> migrateToCurrentSnapshot(const SourceDocument &source) {
+    if (source.schemaVersion > SCHEMA_VERSION) {
+        return std::unexpected("save schema version is newer than this game build");
+    }
+
+    auto migration = migrationRegistry().find(source.schemaVersion);
+    if (migration == migrationRegistry().end()) {
+        return std::unexpected("unsupported save schema version");
+    }
+
+    auto snapshot = migration->second(source);
+    if (!snapshot) {
+        return std::unexpected(snapshot.error());
+    }
+
+    auto snapshotMapName = readSnapshotMapName(*snapshot);
+    if (!snapshotMapName) {
+        return std::unexpected("save snapshot is missing a valid CMap mapName");
+    }
+    if (*snapshotMapName != source.mapName) {
+        return std::unexpected("save envelope mapName does not match snapshot mapName");
+    }
+    return DecodedDocument{*snapshot, source.mapName, source.encoding};
+}
+
+} // namespace
+
 std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr<json> &document) {
     if (!document || !document->is_object()) {
         return std::unexpected("save root is not a JSON object");
@@ -107,9 +170,6 @@ std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr
         if (schemaVersion > SCHEMA_VERSION) {
             return std::unexpected("save schema version is newer than this game build");
         }
-        if (schemaVersion != SCHEMA_VERSION) {
-            return std::unexpected("unsupported save schema version");
-        }
         if (!document->contains("mapName") || !(*document)["mapName"].is_string()) {
             return std::unexpected("save envelope is missing string mapName");
         }
@@ -121,14 +181,7 @@ std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr
             return std::unexpected("save envelope is missing object snapshot");
         }
         auto snapshot = CJsonUtil::alias(document, (*document)["snapshot"]);
-        auto snapshotMapName = readSnapshotMapName(snapshot);
-        if (!snapshotMapName) {
-            return std::unexpected("save snapshot is missing a valid CMap mapName");
-        }
-        if (*snapshotMapName != mapName) {
-            return std::unexpected("save envelope mapName does not match snapshot mapName");
-        }
-        return DecodedDocument{snapshot, mapName, Encoding::Versioned};
+        return migrateToCurrentSnapshot(SourceDocument{schemaVersion, snapshot, mapName, Encoding::Versioned});
     }
 
     auto legacyMapName = readSnapshotMapName(document);
@@ -138,7 +191,7 @@ std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr
     if (!isValidMapName(*legacyMapName)) {
         return std::unexpected("legacy save contains invalid mapName");
     }
-    return DecodedDocument{document, *legacyMapName, Encoding::Legacy};
+    return migrateToCurrentSnapshot(SourceDocument{LEGACY_SCHEMA_VERSION, document, *legacyMapName, Encoding::Legacy});
 }
 
 std::expected<std::shared_ptr<json>, std::string> buildEnvelope(const std::shared_ptr<json> &snapshot,
