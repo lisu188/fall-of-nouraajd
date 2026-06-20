@@ -248,6 +248,17 @@ class IssueQueueTest(unittest.TestCase):
         self.assertIn("dependencies-not-done", rejected[self.issue_c][0])
         self.assertNotIn("active-file-overlap", issue_queue.rejectionSummary(rejected))
 
+    def test_target_file_overlap_advisory_ignores_reclaimable_stale_claim(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=30)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=30, updated_minutes_ago=241)
+
+        state = issue_queue.loadQueue(self.workbook_path)
+        payload = issue_queue.shortlistTasks(state, seed="stale-overlap", includeRejected=True)
+
+        self.assertEqual({}, issue_queue.targetFileOverlapAdvisories(state))
+        self.assertEqual(0, payload["advisoryTargetFileOverlapCount"])
+        self.assertEqual({}, payload["advisoryTargetFileOverlaps"])
+
     def test_shortlist_groups_highest_priority_and_selects_seeded_issue(self) -> None:
         first_story = "[EPIC_01][STORY_01][SUBSTORY_01]First high priority story"
         second_story = "[EPIC_01][STORY_02][SUBSTORY_01]Second high priority story"
@@ -348,7 +359,10 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(0, payload["activeCount"])
         self.assertEqual(0, payload["unexpiredActiveCount"])
         self.assertEqual(0, payload["staleClaimCount"])
-        self.assertEqual({"total": 0, "unexpired": 0, "stale": 0}, payload["activeClaims"])
+        self.assertEqual(
+            {"total": 0, "unexpired": 0, "stale": 0, "leaseExpired": 0, "inactive": 0},
+            payload["activeClaims"],
+        )
         self.assertEqual(4, payload["controllerCapacity"]["activeFloor"])
         self.assertEqual(0, payload["controllerCapacity"]["activeNonStale"])
         self.assertEqual(4, payload["controllerCapacity"]["deficitToFloor"])
@@ -372,9 +386,92 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(2, payload["activeCount"])
         self.assertEqual(1, payload["unexpiredActiveCount"])
         self.assertEqual(1, payload["staleClaimCount"])
-        self.assertEqual({"total": 2, "unexpired": 1, "stale": 1}, payload["activeClaims"])
+        self.assertEqual(
+            {"total": 2, "unexpired": 1, "stale": 1, "leaseExpired": 1, "inactive": 1},
+            payload["activeClaims"],
+        )
         self.assertEqual([expired["Issue Name"]], [item["issueName"] for item in payload["staleClaims"]])
         self.assertNotIn(unexpired["Issue Name"], [item["issueName"] for item in payload["staleClaims"]])
+
+    def test_shortlist_does_not_count_expired_recent_lease_as_live_capacity(self) -> None:
+        expired_recent = issue_queue.claimTask(
+            self.workbook_path,
+            owner="controller/ctrl-demo/subagent-1",
+            leaseMinutes=1,
+        )
+        self.set_claim_times(expired_recent["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=1)
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        payload = issue_queue.shortlistTasks(
+            state,
+            seed="expired-capacity",
+            controllerId="ctrl-demo",
+            controllerActiveFloor=4,
+            includeRejected=True,
+        )
+
+        self.assertEqual(1, payload["activeCount"])
+        self.assertEqual(0, payload["unexpiredActiveCount"])
+        self.assertEqual(0, payload["staleClaimCount"])
+        self.assertEqual(set(), issue_queue.activeTargetFiles(state))
+        self.assertEqual({}, issue_queue.targetFileOverlapAdvisories(state))
+        self.assertEqual(0, payload["advisoryTargetFileOverlapCount"])
+        self.assertEqual({}, payload["advisoryTargetFileOverlaps"])
+        self.assertEqual(
+            {"total": 1, "unexpired": 0, "stale": 0, "leaseExpired": 1, "inactive": 1},
+            payload["activeClaims"],
+        )
+        self.assertEqual([], payload["staleClaims"])
+        capacity = payload["controllerCapacity"]
+        self.assertEqual(1, capacity["activeTotal"])
+        self.assertEqual(0, capacity["activeNonStale"])
+        self.assertEqual(0, capacity["staleOwned"])
+        self.assertEqual(1, capacity["leaseExpiredOwned"])
+        self.assertEqual(1, capacity["inactiveOwned"])
+        self.assertEqual(4, capacity["deficitToFloor"])
+        self.assertTrue(capacity["needsRefill"])
+        self.assertEqual([], capacity["activeIssues"])
+        self.assertEqual([expired_recent["Issue Name"]], capacity["leaseExpiredIssues"])
+
+    def test_controller_capacity_refills_when_raw_active_count_meets_floor_but_leases_expired(self) -> None:
+        issues = [f"[EPIC_01][STORY_02][SUBSTORY_{index:02d}]Capacity issue {index}" for index in range(1, 7)]
+        self.create_workbook(
+            [self.task_row(issue, "P0", None, f"src/capacity_{index}.cpp") for index, issue in enumerate(issues)]
+        )
+        claims = [
+            issue_queue.claimTask(
+                self.workbook_path,
+                owner=f"controller/ctrl-demo/subagent-{index}",
+                leaseMinutes=1,
+            )
+            for index in range(1, 5)
+        ]
+        for claim in claims:
+            self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=1)
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        payload = issue_queue.shortlistTasks(
+            state,
+            seed="expired-floor",
+            controllerId="ctrl-demo",
+            controllerActiveFloor=4,
+        )
+
+        self.assertEqual(4, payload["activeCount"])
+        self.assertEqual(0, payload["unexpiredActiveCount"])
+        self.assertEqual(
+            {"total": 4, "unexpired": 0, "stale": 0, "leaseExpired": 4, "inactive": 4},
+            payload["activeClaims"],
+        )
+        capacity = payload["controllerCapacity"]
+        self.assertEqual(4, capacity["activeTotal"])
+        self.assertEqual(0, capacity["activeNonStale"])
+        self.assertEqual(4, capacity["leaseExpiredOwned"])
+        self.assertEqual(4, capacity["inactiveOwned"])
+        self.assertEqual(4, capacity["deficitToFloor"])
+        self.assertEqual(2, capacity["eligibleCount"])
+        self.assertEqual(2, capacity["fillableDeficit"])
+        self.assertTrue(capacity["needsRefill"])
 
     def test_shortlist_reports_controller_capacity_floor(self) -> None:
         live = issue_queue.claimTask(self.workbook_path, owner="controller/ctrl-demo/subagent-1", leaseMinutes=30)
@@ -396,12 +493,15 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(2, capacity["activeTotal"])
         self.assertEqual(1, capacity["activeNonStale"])
         self.assertEqual(1, capacity["staleOwned"])
+        self.assertEqual(0, capacity["leaseExpiredOwned"])
+        self.assertEqual(1, capacity["inactiveOwned"])
         self.assertEqual(3, capacity["deficitToFloor"])
         self.assertEqual(payload["eligibleCount"], capacity["eligibleCount"])
         self.assertEqual(min(3, payload["eligibleCount"]), capacity["fillableDeficit"])
         self.assertTrue(capacity["needsRefill"])
         self.assertEqual([live["Issue Name"]], capacity["activeIssues"])
         self.assertEqual([stale["Issue Name"]], capacity["staleIssues"])
+        self.assertEqual([], capacity["leaseExpiredIssues"])
 
     def test_controller_id_generates_unique_owner_prefix(self) -> None:
         first = issue_queue.generateControllerId(hostname="Build Host.local", pid=1234, unique="ABCDEF12")
@@ -449,6 +549,50 @@ class IssueQueueTest(unittest.TestCase):
                 progress=20,
                 note="should fail",
             )
+
+    def test_heartbeat_preserves_longer_existing_lease(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1440)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=1440, updated_minutes_ago=30)
+        state = issue_queue.loadQueue(self.workbook_path)
+        before_task = issue_queue.taskByName(state, claim["Issue Name"])
+        before_lease = issue_queue.parseUtc(before_task.values["Lease Until UTC"])
+
+        issue_queue.heartbeatTask(
+            self.workbook_path,
+            issueName=claim["Issue Name"],
+            claimId=claim["claimId"],
+            owner="controller/subagent-1",
+            progress=20,
+            note="root cause found",
+            leaseMinutes=120,
+        )
+
+        state = issue_queue.loadQueue(self.workbook_path)
+        after_task = issue_queue.taskByName(state, claim["Issue Name"])
+        self.assertEqual(before_lease, issue_queue.parseUtc(after_task.values["Lease Until UTC"]))
+        self.assertEqual(20, after_task.values["Progress %"])
+        self.assertEqual("root cause found", after_task.values["Last Note"])
+
+    def test_heartbeat_refreshes_stale_claim_out_of_stale_report(self) -> None:
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
+        self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=241)
+        state = issue_queue.loadQueue(self.workbook_path)
+        self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in issue_queue.staleClaims(state)])
+
+        issue_queue.heartbeatTask(
+            self.workbook_path,
+            issueName=claim["Issue Name"],
+            claimId=claim["claimId"],
+            owner="controller/subagent-1",
+            progress=20,
+            note="worker is alive",
+            leaseMinutes=60,
+        )
+
+        state = issue_queue.loadQueue(self.workbook_path)
+        self.assertEqual([], issue_queue.staleClaims(state))
+        active = issue_queue.activeClaimSummary(state, [], now=issue_queue.utcNow())
+        self.assertEqual({"total": 1, "unexpired": 1, "stale": 0, "leaseExpired": 0, "inactive": 0}, active)
 
     def test_complete_satisfies_dependency(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1")
@@ -554,7 +698,7 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(issue_queue.STATUS_IN_PROGRESS, task.status)
         self.assertEqual(claim["claimId"], task.values["Claim ID"])
 
-    def test_validate_warns_only_for_claims_at_reclaim_threshold(self) -> None:
+    def test_validate_warns_for_expired_leases_before_and_after_reclaim_threshold(self) -> None:
         recent_claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
         self.set_claim_times(recent_claim["Issue Name"], lease_minutes_from_now=-10, updated_minutes_ago=239)
         old_claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-2", leaseMinutes=1)
@@ -564,10 +708,11 @@ class IssueQueueTest(unittest.TestCase):
         errors, warnings = issue_queue.validateQueueState(state)
 
         self.assertEqual([], errors)
-        self.assertEqual(1, len(warnings), warnings)
-        self.assertIn("IN_PROGRESS stale claim", warnings[0])
-        self.assertIn("240-minute reclaim threshold", warnings[0])
-        self.assertIn("reclaim-stale --dry-run", warnings[0])
+        self.assertEqual(2, len(warnings), warnings)
+        self.assertTrue(any("IN_PROGRESS lease expired" in warning for warning in warnings), warnings)
+        self.assertTrue(any("has not met 240-minute reclaim threshold" in warning for warning in warnings), warnings)
+        self.assertTrue(any("IN_PROGRESS stale claim" in warning for warning in warnings), warnings)
+        self.assertTrue(any("reclaim-stale --dry-run" in warning for warning in warnings), warnings)
 
     def test_reclaim_stale_claim_ignores_recent_heartbeat(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=1)
@@ -649,7 +794,10 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(5, payload["olderThanMinutes"])
         self.assertEqual(1, payload["staleCount"])
         self.assertEqual(1, payload["reclaimableStaleCount"])
-        self.assertEqual({"total": 2, "unexpired": 1, "stale": 1}, payload["activeClaims"])
+        self.assertEqual(
+            {"total": 2, "unexpired": 0, "stale": 1, "leaseExpired": 2, "inactive": 2},
+            payload["activeClaims"],
+        )
         self.assertTrue(payload["reclaimSafety"]["timingOnly"])
         self.assertTrue(payload["reclaimSafety"]["requiresInspection"])
         self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in payload["stale"]])
@@ -687,6 +835,10 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(240, payload["olderThanMinutes"])
         self.assertEqual(1, payload["staleCount"])
         self.assertEqual(1, payload["reclaimableStaleCount"])
+        self.assertEqual(
+            {"total": 2, "unexpired": 0, "stale": 1, "leaseExpired": 2, "inactive": 2},
+            payload["activeClaims"],
+        )
         self.assertEqual([claim["Issue Name"]], [item["issueName"] for item in payload["stale"]])
         self.assertEqual(before, self.workbook_path.read_bytes())
         state = issue_queue.loadQueue(self.workbook_path)
