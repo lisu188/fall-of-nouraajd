@@ -128,9 +128,9 @@ Maintain at least eight live subagents and keep at least eight implementation is
 implementation issues can safely run, assign the excess subagents only lightweight standby roles such as status polling,
 eligibility summaries, or review preparation, and print the exact blocker preventing eight active issues. Standby
 subagents must not claim issues, edit files, start builds, run tests, or touch the workbook.
-Each controller must also keep at least four of its own non-stale workbook claims active when four eligible issues can
-be safely claimed. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the current
-controller's floor; stale owned claims do not count. Continue claim/refill iterations until
+Each controller must also keep at least four of its own live workbook claims active when four eligible issues can be
+safely claimed. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the current
+controller's floor; stale owned claims and lease-expired owned claims do not count. Continue claim/refill iterations until
 `controllerCapacity.deficitToFloor` is zero, `controllerCapacity.fillableDeficit` is zero, or a concrete eligibility,
 resource, repository-safety, or worker-status blocker is printed.
 
@@ -211,9 +211,11 @@ pause for a priority/status update, or report a blocker. Do not use the brief as
 Use
 `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
 as the read-only mechanical selector before each claim. The command reports eligible highest-priority story groups,
-stale claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, rejection summaries, and a seeded
-recommended issue without mutating the workbook. Use the unexpired count, not raw `activeCount`, when deciding whether
-the global active-worker floor is genuinely satisfied. Use `controllerCapacity.activeNonStale`,
+stale claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`,
+`activeClaims.leaseExpired`, `activeClaims.inactive`, rejection summaries, and a seeded recommended issue without
+mutating the workbook. `activeClaims.unexpired` means live/pollable rows that are neither reclaimable-stale nor
+lease-expired. Use the unexpired count, not raw `activeCount`, when deciding whether the global active-worker floor is
+genuinely satisfied. Use `controllerCapacity.activeNonStale`, `controllerCapacity.leaseExpiredOwned`,
 `controllerCapacity.deficitToFloor`, and `controllerCapacity.fillableDeficit` to enforce this controller's four-issue
 owned-claim floor before stopping a refill loop. It also reports target-file overlap advisories through
 `advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps`. Treat the
@@ -433,29 +435,31 @@ python3 scripts/issue_queue.py heartbeat \
   --claim-id "$CLAIM_ID" \
   --owner "$OWNER" \
   --progress "$PROGRESS" \
-  --note "$NOTE"
+  --note "$NOTE" \
+  --lease-minutes 1440
 ```
 
-Commit and merge that workbook-only change using the same status-PR process as claim publication.
+Commit and merge that workbook-only change using the same status-PR process as claim publication. A heartbeat preserves
+an existing later lease and extends the lease only when the requested renewal would move it farther into the future.
 
 If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, then run
 `python3 scripts/issue_queue.py reclaim-stale --dry-run` to list stale `IN_PROGRESS` claims without mutating the
 workbook. The default reclaim age threshold is 240 minutes; pass `--older-than-minutes <minutes>` only when the
 controller has an explicit reason to override it. The dry-run output includes `activeClaims`, `staleCount`, and
-`reclaimableStaleCount`; use those fields to distinguish active claims from rows eligible under the current
+`reclaimableStaleCount`; use those fields to distinguish live claims from inactive rows eligible under the current
 heartbeat-age threshold. Dry-run rows are queue-timing candidates only and include `reclaimReady: false`; use mutating
 `reclaim-stale` only when the claim is genuinely stale and no recoverable work remains. Treat `validate` stale-claim
-warnings and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only recovery signals, not
-permission to reclaim without inspection.
+warnings, expired-lease warnings, and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only
+recovery signals, not permission to reclaim without inspection.
 
 ## Resource-aware validation
 
 The controller keeps resource pressure in mind without enforcing a fixed RAM gate or mandatory serial builds. For PR
 delivery, do not run local native builds, `ctest`, full Python suites, or coverage unless a focused local reproduction is
 necessary or GitHub Actions cannot provide the needed evidence. Before any necessary local heavy command, note current
-available RAM, disk pressure, running heavy jobs, and worker status. Treat eight active issue workers as the minimum
-target whenever safe eligible work exists; record the concrete blocker if actual resource pressure prevents eight active
-issues. Also treat four non-stale owned claims as this controller's minimum active target whenever
+available RAM, disk pressure, running heavy jobs, and worker status. Treat eight live issue workers as the minimum
+target whenever safe eligible work exists; record the concrete blocker if actual resource pressure prevents eight live
+issues. Also treat four live owned claims as this controller's minimum active target whenever
 `controllerCapacity.fillableDeficit` is greater than zero; record the concrete blocker if the controller cannot close
 that deficit.
 

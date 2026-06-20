@@ -81,12 +81,14 @@ python3 scripts/issue_queue.py shortlist \
 The shortlist command does not mutate the workbook. It filters queue status, dependencies, and optional CLI filters,
 keeps only the highest currently eligible priority tier for `storyGroups`, and emits a seeded recommended
 `selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`,
-`staleClaimCount`, `staleClaims`, `advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue
-`activeFileOverlaps` so stale claims and exact target-file overlaps can inform dispatch decisions without becoming
-automatic blockers. When `--controller-id` is provided, it also reports `controllerCapacity`: the current controller's
-non-stale active issues, stale owned issues, deficit to the four-issue controller floor, and fillable deficit from the
-current eligible set. Treat that output as mechanical evidence for the controller and project-manager brief, not as an
-automatic claim. The controller and PM must still inspect source-backed active-scope conflicts, including:
+`activeClaims.leaseExpired`, `activeClaims.inactive`, `staleClaimCount`, `staleClaims`,
+`advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps` so stale claims,
+expired leases, and exact target-file overlaps can inform dispatch decisions without becoming automatic blockers.
+`activeClaims.unexpired` means live/pollable rows that are neither reclaimable-stale nor lease-expired. When
+`--controller-id` is provided, it also reports `controllerCapacity`: the current controller's live active issues,
+stale owned issues, lease-expired owned issues, deficit to the four-issue controller floor, and fillable deficit from
+the current eligible set. Treat that output as mechanical evidence for the controller and project-manager brief, not as
+an automatic claim. The controller and PM must still inspect source-backed active-scope conflicts, including:
 
 - rows whose status is not `NOT_STARTED`;
 - rows with unfinished dependencies;
@@ -245,10 +247,12 @@ python3 scripts/issue_queue.py heartbeat \
   --claim-id "$CLAIM_ID" \
   --owner "$OWNER" \
   --progress 20 \
-  --note 'Root cause verified in CFightHandler.cpp and CCreature.cpp'
+  --note 'Root cause verified in CFightHandler.cpp and CCreature.cpp' \
+  --lease-minutes 1440
 ```
 
-Every heartbeat extends the lease. Recommended checkpoints are 5%, 20%, 70%, and 90%.
+Every heartbeat preserves an existing later lease and extends the lease only when the requested renewal would move it
+farther into the future. Recommended checkpoints are 5%, 20%, 70%, and 90%.
 
 Complete only after the implementation pull request has actually merged and validation results have been reviewed:
 
@@ -360,9 +364,9 @@ that reclaim PR actually merges. The mutating command reclaims rows whose last u
 even if their lease is still in the future. Reclaimed rows return to `NOT_STARTED`, retain the incremented `Attempt`,
 and receive an audit note describing the previous owner and claim.
 
-`validate` warns about `IN_PROGRESS` claims only after they meet the current reclaim age threshold without failing the
-workbook, and `list --status IN_PROGRESS --json` includes derived lease-expiration fields for read-only controller
-status checks.
+`validate` warns about expired `IN_PROGRESS` leases before they meet the reclaim age threshold, and warns about stale
+claims after they meet the threshold, without failing the workbook. `list --status IN_PROGRESS --json` includes derived
+lease-expiration fields for read-only controller status checks.
 
 ## Inspection commands
 
