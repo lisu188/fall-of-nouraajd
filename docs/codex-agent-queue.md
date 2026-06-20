@@ -9,8 +9,10 @@ concurrent controllers can be distinguished.
 ## Files
 
 - `planning/fall_of_nouraajd_issue_proposals.xlsx` — canonical queue and human-readable backlog.
+- `planning/workflow_observations/` — immutable workflow-observation records and resolution receipts; not a task queue.
 - `scripts/issue_queue.py` — atomic claim/progress/completion CLI.
 - `scripts/pr_review_audit.py` — read-only stale/open PR classification helper for merge, cleanup, and dispatch review.
+- `scripts/workflow_observations.py` — read-only/append-only workflow-observation ledger CLI.
 - `prompts/codex-queue-controller.md` — controller-agent operating prompt.
 - `tests/test_issue_queue.py` — focused queue and concurrency regressions.
 
@@ -141,6 +143,24 @@ Controller-owned implementation PRs classified as `failing_ci`, `needs_update_re
 resolved. They do not reintroduce source-overlap as a hard claim exclusion: keep the exact four non-stale owned-claim
 target whenever status-and-dependency eligible work exists and no concrete non-source blocker prevents dispatch.
 
+## Workflow observations
+
+Use `docs/codex-workflow-observations.md` for the durable workflow-observation ledger. Observations are immutable JSON
+evidence files for workflow problems such as queue/lease faults, missing live worker status, stale state, PR or merge
+failures, CI waste, prompt drift, resource or recovery failures, unsafe ambiguity, and repeated manual intervention.
+They are not gameplay defects, routine progress updates, or implementation queue rows.
+
+Workers, QA, and project-manager agents report observations to the controller. They do not publish ledger files. The
+controller reviews evidence for secrets and relevance, runs `python3 scripts/workflow_observations.py validate`, and
+publishes observation-only PRs that add only `planning/workflow_observations/records/<id>.json`. After a workflow fix
+merges and post-merge verification passes, publish a separate resolution-only PR that adds only
+`planning/workflow_observations/resolutions/<id>.json`.
+
+Observation-only and resolution-only PRs are not CI-exempt under the current repository policy. They do not need the
+global XLSX serialization lane because each record or receipt is a unique immutable path, but same-ID publication must
+fail and the normal PR merge policy still applies. Include pending observation IDs in live status when a record or
+resolution is awaiting publication.
+
 Assign one read-only QA role when subagent capacity permits. QA reviews issue selection risk, diff scope, regression
 coverage, validation commands, GitHub Actions evidence, and merge readiness. QA must not claim issues, edit the
 workbook, or start heavy validation unless the controller explicitly delegates a bounded validation task.
@@ -242,6 +262,7 @@ work, print a live status table containing at least:
 - cleanup state, including prunable worktree metadata and accumulated run/worktree size when known;
 - open-PR audit summary, including any controller-owned PR requiring update, CI fix, human review, or never-touch
   recovery;
+- pending workflow observation IDs and whether an observation-only or resolution-only PR is needed;
 - project-manager prioritization brief state or the reason no project-manager subagent is available;
 - QA review state or the reason no QA subagent is available;
 - blockers;
