@@ -533,3 +533,24 @@
   - Historical pre-95% coverage-gate evidence: `./scripts/run_coverage.sh` passed report generation with
     `lines: 90.17% (9493 out of 10528)` before the current threshold was enforced.
 - Blockers if unresolved: None.
+
+## Batch 28
+- Location: `docs/navigation.md`, `TODO_WORKLOG.md`
+- Original TODO or summary: Row 82 asked to record the movement-cost decision before expanding the navigation contract.
+- Status: documented
+- What was changed: Added a navigation architecture note that keeps phase-1 movement cost scoped to route selection and
+  explicitly excludes turn-budget or extra turn-consumption semantics unless future source evidence and regression
+  coverage justify that contract expansion.
+- Why the change is correct: Source verification shows `CPathFinder` can consume weighted step costs, but current map
+  controllers do not pass a map step-cost callback, `CMap::getMovementCost(...)` still returns `1`, registered
+  navigation-edge costs are stored but not applied by `getNavigationNeighbors(...)`, target flow fields add unit cost
+  per step, and `CMap::move()` commits one selected step per active creature before incrementing the map turn once.
+- Validation performed:
+  - source verification of `docs/`, `src/core/CMap.cpp`, `src/core/CMap.h`, `src/core/CPathFinder.cpp`,
+    `src/core/CPathFinder.h`, `src/core/CController.cpp`, `src/core/CModule.cpp`, `tests/unit/test_map.cpp`, `test.py`,
+    `todo.txt`, and `TODO_WORKLOG.md`
+  - `git diff --check`
+  - `git diff --no-index --check /dev/null docs/navigation.md` -> no whitespace diagnostics; exited `1` because the
+    file is new
+- Blockers if unresolved: Manual review should confirm that future implementation issues treat this as a route-selection
+  decision only and do not infer movement-point or turn-budget behavior from the stored `movementCost` field.
