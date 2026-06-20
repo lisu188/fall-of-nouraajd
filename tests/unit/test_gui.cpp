@@ -201,7 +201,7 @@ void test_list_view_refreshes_from_generic_property_notifications() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto gui = std::make_shared<CGui>();
-    [[maybe_unused]] auto game = create_gui_game(gui);
+    auto game = create_gui_game(gui);
     auto refresh_target = std::make_shared<CGameObject>();
     auto list = std::make_shared<RefreshCountingListView>();
     gui->pushChild(list);
@@ -223,7 +223,7 @@ void test_list_view_refresh_event_compatibility() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto gui = std::make_shared<CGui>();
-    [[maybe_unused]] auto game = create_gui_game(gui);
+    auto game = create_gui_game(gui);
     auto refresh_target = std::make_shared<CGameObject>();
     auto list = std::make_shared<RefreshCountingListView>();
     gui->pushChild(list);
@@ -245,7 +245,7 @@ void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto gui = std::make_shared<CGui>();
-    [[maybe_unused]] auto game = create_gui_game(gui);
+    auto game = create_gui_game(gui);
     auto first_target = std::make_shared<CGameObject>();
     auto second_target = std::make_shared<CGameObject>();
     auto list = std::make_shared<RefreshCountingListView>();
