@@ -1,0 +1,30 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "test",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable backup recovery fixture",
+      "mapName": "test",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "posx": 3,
+            "posy": 4,
+            "posz": 0,
+            "quests": [],
+            "typeId": "Warrior"
+          }
+        }
+      ],
+      "tiles": [],
+      "triggers": [],
+      "turn": 13
+    }
+  }
+}

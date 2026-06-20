@@ -127,6 +127,7 @@ FAST_TEST_PREFIXES = (
     "CoverageReportTest.",
     "PlayBootstrapTest.",
     "QuestStateHelperTest.",
+    "SaveFixtureTest.",
     "TestRunnerSuiteTest.",
 )
 FAST_TEST_NAMES = {
@@ -228,6 +229,7 @@ def unique_save_name(prefix):
 
 SAVE_FORMAT = "fall-of-nouraajd-save"
 SAVE_SCHEMA_VERSION = 1
+SAVE_FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "save_compatibility"
 
 
 def save_primary_path(slot_name):
@@ -273,6 +275,316 @@ def assert_save_envelope(test_case, saved_document, map_name):
     test_case.assertEqual("CMap", snapshot.get("class"))
     test_case.assertEqual(map_name, snapshot.get("properties", {}).get("mapName"))
     return snapshot
+
+
+IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS = {
+    "legacy_unversioned_test_map": {
+        "primary": "legacy_unversioned_test_map.json",
+        "summary": {
+            "encoding": "legacy",
+            "map": "test",
+            "turn": 11,
+            "description": "immutable legacy unversioned fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [1, 2, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "schema_v1_test_map": {
+        "primary": "schema_v1_test_map.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "test",
+            "turn": 12,
+            "description": "immutable schema v1 fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [2, 3, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "invalid_primary_valid_backup": {
+        "primary": "invalid_primary_valid_backup.json",
+        "backup": "invalid_primary_valid_backup.json.bak",
+        "primaryInvalidJson": True,
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "test",
+            "turn": 13,
+            "description": "immutable backup recovery fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [3, 4, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "nouraajd_active_quests_v1": {
+        "primary": "nouraajd_active_quests_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "nouraajd",
+            "turn": 77,
+            "description": "immutable Nouraajd active quest fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [43, 99, 0],
+                "activeQuests": ["rolfQuest", "victorQuest"],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {
+                "amulet": "not_started",
+                "beren_chain": "letter_pending",
+                "main": "locked",
+                "octobogz_contract": "not_started",
+                "rolf": "awaiting_skull",
+                "victor": "met_victor",
+            },
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "nouraajd_runtime_spawned_quest_actors_v1": {
+        "primary": "nouraajd_runtime_spawned_quest_actors_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "nouraajd",
+            "turn": 104,
+            "description": "immutable Nouraajd runtime quest actor fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [45, 100, 0],
+                "activeQuests": ["amuletQuest", "victorQuest"],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {
+                "amulet": "active",
+                "beren_chain": "letter_pending",
+                "main": "locked",
+                "octobogz_contract": "not_started",
+                "rolf": "awaiting_skull",
+                "victor": "encounter_active",
+            },
+            "trueFlags": ["VICTOR_COURTYARD_FOUND", "VICTOR_CULTISTS_SPAWNED"],
+            "numericProperties": {"VICTOR_COURTYARD_TURN": 100},
+            "objects": [
+                {"name": "amuletGoblin", "typeId": "goblinThief"},
+                {"name": "cultLeaderQuest", "typeId": "CultLeader"},
+                {"name": "victorCultist1", "typeId": "Cultist"},
+            ],
+        },
+    },
+    "ritual_progression_v1": {
+        "primary": "ritual_progression_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "ritual",
+            "turn": 39,
+            "description": "immutable ritual progression fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [3, 22, 0],
+                "activeQuests": [
+                    "destroyAnchorsQuest",
+                    "finalResolutionQuest",
+                    "rescueCaptiveQuest",
+                    "ritualQuest",
+                ],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": ["anchors_destroyed", "leader_spawned", "ritual_initialized", "ritual_started"],
+            "numericProperties": {"anchors_destroyed_count": 3, "ritual_countdown": 62},
+            "objects": [{"name": "ritualLeader", "typeId": "ritualLeaderTemplate"}],
+        },
+    },
+    "siege_progression_v1": {
+        "primary": "siege_progression_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "siege",
+            "turn": 51,
+            "description": "immutable siege progression fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [12, 8, 0],
+                "activeQuests": ["defendSiegeQuest"],
+                "completedQuests": [],
+                "items": ["magicWand"],
+            },
+            "questStates": {},
+            "trueFlags": ["siege_initialized"],
+            "numericProperties": {},
+            "objects": [{"name": "spawnPoint1", "typeId": "SiegeSpawnPoint"}],
+        },
+    },
+}
+
+
+def fixture_document_snapshot(document):
+    if document.get("format") == SAVE_FORMAT:
+        return "versioned", document.get("snapshot", {})
+    return "legacy", document
+
+
+def fixture_object_type_id(obj):
+    properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+    return properties.get("typeId") or obj.get("ref") or obj.get("class")
+
+
+def fixture_named_objects(snapshot):
+    objects = []
+    for obj in snapshot.get("properties", {}).get("objects", []):
+        properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        name = properties.get("name")
+        if name and name != "player":
+            objects.append({"name": name, "typeId": fixture_object_type_id(obj)})
+    return sorted(objects, key=lambda item: item["name"])
+
+
+def fixture_player_summary(snapshot):
+    for obj in snapshot.get("properties", {}).get("objects", []):
+        properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        if obj.get("class") == "CPlayer" or properties.get("name") == "player":
+            return {
+                "class": obj.get("class") or obj.get("ref"),
+                "name": properties.get("name"),
+                "typeId": properties.get("typeId"),
+                "coords": [properties.get("posx", 0), properties.get("posy", 0), properties.get("posz", 0)],
+                "activeQuests": fixture_quest_ids(properties.get("quests", [])),
+                "completedQuests": fixture_quest_ids(properties.get("completedQuests", [])),
+                "items": fixture_item_ids(properties.get("items", [])),
+            }
+    raise AssertionError("Save fixture snapshot does not contain a canonical player object.")
+
+
+def fixture_quest_ids(quests):
+    quest_ids = []
+    for quest in quests:
+        if not isinstance(quest, dict):
+            continue
+        properties = quest.get("properties", {})
+        quest_ids.append(properties.get("typeId") or properties.get("name") or quest.get("ref") or quest.get("class"))
+    return sorted(quest_id for quest_id in quest_ids if quest_id)
+
+
+def fixture_item_ids(items):
+    item_ids = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        properties = item.get("properties", {})
+        item_ids.append(properties.get("typeId") or properties.get("name") or item.get("ref") or item.get("class"))
+    return sorted(item_id for item_id in item_ids if item_id)
+
+
+def save_fixture_summary(document):
+    encoding, snapshot = fixture_document_snapshot(document)
+    properties = snapshot.get("properties", {})
+    summary = {
+        "encoding": encoding,
+        "map": properties.get("mapName"),
+        "turn": properties.get("turn", 0),
+        "description": properties.get("description", ""),
+        "player": fixture_player_summary(snapshot),
+        "questStates": {
+            key.removeprefix("quest_state_"): value
+            for key, value in sorted(properties.items())
+            if key.startswith("quest_state_")
+        },
+        "trueFlags": sorted(
+            key for key, value in properties.items() if isinstance(value, bool) and value and key != "canStep"
+        ),
+        "numericProperties": {
+            key: value
+            for key, value in sorted(properties.items())
+            if key
+            in {
+                "VICTOR_COURTYARD_TURN",
+                "anchors_destroyed_count",
+                "ritual_countdown",
+            }
+        },
+        "objects": fixture_named_objects(snapshot),
+    }
+    if encoding == "versioned":
+        summary["schemaVersion"] = document.get("schemaVersion")
+    return summary
+
+
+class SaveFixtureTest(unittest.TestCase):
+    maxDiff = None
+
+    def test_immutable_save_fixture_summaries_match_expected(self):
+        self.assertTrue(SAVE_FIXTURE_DIR.is_dir(), f"Missing fixture directory: {SAVE_FIXTURE_DIR}")
+        expected_files = set()
+        for expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.values():
+            expected_files.add(expected["primary"])
+            if expected.get("backup"):
+                expected_files.add(expected["backup"])
+
+        actual_files = {path.name for path in SAVE_FIXTURE_DIR.iterdir() if path.is_file()}
+        self.assertEqual(expected_files, actual_files)
+
+        for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
+            primary = SAVE_FIXTURE_DIR / expected["primary"]
+            self.assertTrue(primary.is_file(), fixture_name)
+            if expected.get("primaryInvalidJson"):
+                with self.assertRaises(json.JSONDecodeError, msg=fixture_name):
+                    json.loads(primary.read_text(encoding="utf-8"))
+                document_path = SAVE_FIXTURE_DIR / expected["backup"]
+            else:
+                document_path = primary
+
+            document = json.loads(document_path.read_text(encoding="utf-8"))
+            if document.get("format") == SAVE_FORMAT:
+                assert_save_envelope(self, document, expected["summary"]["map"])
+            self.assertEqual(expected["summary"], save_fixture_summary(document), fixture_name)
 
 
 class ProgressTextTestResult(unittest.TextTestResult):

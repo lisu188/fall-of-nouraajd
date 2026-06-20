@@ -1,0 +1,54 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "siege",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable siege progression fixture",
+      "mapName": "siege",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [
+              {
+                "ref": "magicWand"
+              }
+            ],
+            "name": "player",
+            "posx": 12,
+            "posy": 8,
+            "posz": 0,
+            "quests": [
+              {
+                "class": "DefendSiegeQuest",
+                "properties": {
+                  "name": "defendSiegeQuest",
+                  "typeId": "defendSiegeQuest"
+                }
+              }
+            ],
+            "typeId": "Warrior"
+          }
+        },
+        {
+          "class": "CEvent",
+          "properties": {
+            "enabled": true,
+            "name": "spawnPoint1",
+            "posx": 14,
+            "posy": 9,
+            "posz": 0,
+            "typeId": "SiegeSpawnPoint"
+          }
+        }
+      ],
+      "siege_initialized": true,
+      "tiles": [],
+      "triggers": [],
+      "turn": 51
+    }
+  }
+}
