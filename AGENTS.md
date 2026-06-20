@@ -32,6 +32,23 @@ Actions run, fetch `origin/main`, verify the merge, and continue from the merged
 instructions say not to merge or not to enable auto-merge, follow those instructions and leave the PR open with the
 validation evidence.
 
+Before closing stale PRs, deleting branches, merging old work, or using open PRs as dispatch evidence, classify the PR
+debt with the read-only audit:
+
+```bash
+python3 scripts/pr_review_audit.py --input /tmp/pr-review-snapshot.json --format table
+```
+
+Feed it a normalized JSON snapshot containing changed files, merge state, check rollup, queue linkage, and recovery
+state. The audit separates `actionCategory` from `prType` so workbook-only queue PRs, active-claim implementation PRs,
+workflow PRs, stale linked claims, and cleanup candidates can be reviewed consistently. Its output is advisory and
+read-only: it must never close PRs, delete branches, edit the workbook, or override failed checks. Destructive cleanup,
+obsolete/duplicate PR closure, stale-claim recovery, dirty worktree recovery, and any merge with missing signals require
+explicit human approval. A controller-owned implementation PR marked `failing_ci`, `needs_update_rebase`,
+`human_review_required`, or `never_touch` is controller attention debt; resolve or assign recovery for that PR, but do
+not use source overlap alone to leave the controller below its four live non-stale owned claims when eligible work
+exists.
+
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
 ## Queue controller workflow
@@ -113,8 +130,8 @@ according to the pull request merge policy; do not mark the issue `DONE` until t
 After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
 concise live status table. Include controller ID, worker owner, issue key, phase, progress estimate, last action,
 changed files, running validation command, branch, PR state, resource state, cleanup state, project-manager brief state,
-QA review state, blockers, and next controller action. Use subagent status polling or structured worker updates for
-live status; the workbook is durable queue state, not the live worker-status channel.
+QA review state, open-PR audit summary, blockers, and next controller action. Use subagent status polling or structured
+worker updates for live status; the workbook is durable queue state, not the live worker-status channel.
 
 When a controller loop does not publish any new claim, still fetch and inspect `origin/main` before the next decision.
 Check whether claim, implementation, status, or reclaim PRs merged elsewhere and update live state from the merged
