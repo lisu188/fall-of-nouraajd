@@ -81,6 +81,11 @@ BUILTIN_CLASSES = {
     "CTrigger",
     "CWeapon",
 }
+REVIEWED_DYNAMIC_PROPERTIES = {
+    "CCreature": {"class"},
+    "CDialogState": {"condition"},
+    "CScroll": {"singleUse"},
+}
 PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
 TYPE_REGISTRATION_EXCLUSIONS_PATH = Path("scripts/type_registration_exclusions.json")
 
@@ -115,6 +120,13 @@ class RegistrationExclusion:
     reason: str
     owner_module: str
     allowed_uses: tuple[RegistrationExclusionUse, ...] = ()
+
+
+@dataclass(frozen=True)
+class CppMetadataProperty:
+    owner_class: str
+    name: str
+    type_token: str
 
 
 @dataclass
@@ -604,6 +616,9 @@ class ContentValidator:
         self.plugin_info: list[ScriptInfo] = []
         self.fallback_registered_classes: set[str] = set(BUILTIN_CLASSES)
         self.metadata_declared_classes: set[str] = set()
+        self.metadata_class_bases: dict[str, str | None] = {}
+        self.metadata_properties: dict[str, dict[str, CppMetadataProperty]] = {}
+        self._metadata_property_schema_cache: dict[str, dict[str, CppMetadataProperty] | None] = {}
         self.static_registered_classes: set[str] = set()
         self.native_plugin_registered_classes: set[str] = set()
         self.native_plugin_declared_class_sources: dict[str, set[str]] = {}
@@ -640,10 +655,14 @@ class ContentValidator:
                         continue
                     if path.name.endswith("TypeRegistration.cpp"):
                         self.static_registered_classes.add(class_name)
-                for match in re.finditer(r"V_META\(\s*([A-Za-z_]\w*)", text):
-                    class_name = match.group(1)
-                    if is_concrete_cpp_class_name(class_name):
-                        self.metadata_declared_classes.add(class_name)
+                for class_name, base_class, properties in iter_cpp_metadata_declarations(text):
+                    self.metadata_declared_classes.add(class_name)
+                    self.metadata_class_bases.setdefault(class_name, base_class)
+                    if base_class is not None:
+                        self.metadata_class_bases[class_name] = base_class
+                    class_properties = self.metadata_properties.setdefault(class_name, {})
+                    for cpp_property in properties:
+                        class_properties[cpp_property.name] = cpp_property
         self._collect_native_plugin_classes()
 
     def _collect_native_plugin_classes(self) -> None:
@@ -929,6 +948,7 @@ class ContentValidator:
         self._validate_object_shape(entry.path, entry.key, entry.data)
         self._validate_refs(entry.path, entry.key, entry.data, visible)
         self._validate_object_classes(entry.path, entry.key, entry.data, known_classes)
+        self._validate_object_properties(entry.path, entry.key, entry.data, visible)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -986,6 +1006,82 @@ class ContentValidator:
         elif isinstance(value, list):
             for index, child in enumerate(value):
                 self._validate_refs(path, append_index(location, index), child, visible)
+
+    def _validate_object_properties(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        if isinstance(value, dict):
+            if self._is_object_node(value):
+                self._validate_object_node_properties(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_object_properties(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_object_properties(path, append_index(location, index), child, visible)
+
+    def _validate_object_node_properties(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict):
+            return
+        class_name = self._effective_object_class(value, visible)
+        if not class_name or class_name in self.python_registered_classes:
+            return
+        property_schema = self._metadata_property_schema(class_name)
+        if property_schema is None:
+            return
+        dynamic_properties = REVIEWED_DYNAMIC_PROPERTIES.get(class_name, set())
+        properties_location = append_field(location, "properties")
+        for property_name in properties:
+            if property_name not in property_schema and property_name not in dynamic_properties:
+                self._issue(
+                    path,
+                    append_field(properties_location, property_name),
+                    f'unknown property "{property_name}" for class "{class_name}"',
+                )
+
+    def _effective_object_class(
+        self, value: dict[str, Any], visible: dict[str, ConfigEntry], seen_refs: set[str] | None = None
+    ) -> str | None:
+        class_name = value.get("class")
+        if isinstance(class_name, str):
+            return class_name
+        ref = value.get("ref")
+        if not isinstance(ref, str):
+            return None
+        seen = set(seen_refs or set())
+        if ref in seen:
+            return None
+        seen.add(ref)
+        ref_entry = visible.get(ref)
+        if ref_entry is None or not isinstance(ref_entry.data, dict):
+            return None
+        return self._effective_object_class(ref_entry.data, visible, seen)
+
+    def _metadata_property_schema(
+        self, class_name: str, seen_classes: set[str] | None = None
+    ) -> dict[str, CppMetadataProperty] | None:
+        if seen_classes is None and class_name in self._metadata_property_schema_cache:
+            return self._metadata_property_schema_cache[class_name]
+        if class_name not in self.metadata_class_bases and class_name not in self.metadata_properties:
+            if seen_classes is None:
+                self._metadata_property_schema_cache[class_name] = None
+            return None
+        seen = set(seen_classes or set())
+        if class_name in seen:
+            return {}
+        seen.add(class_name)
+        properties: dict[str, CppMetadataProperty] = {}
+        base_class = self.metadata_class_bases.get(class_name)
+        if base_class:
+            base_properties = self._metadata_property_schema(base_class, seen)
+            if base_properties:
+                properties.update(base_properties)
+        properties.update(self.metadata_properties.get(class_name, {}))
+        if seen_classes is None:
+            self._metadata_property_schema_cache[class_name] = properties
+        return properties
 
     def _validate_top_level_ref_cycles(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
         for entry in list(context.config_entries.values()) + list(self.global_entries.values()):
@@ -1494,6 +1590,135 @@ def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
         if is_concrete_cpp_class_name(name):
             names.add(name)
     return names
+
+
+def iter_cpp_metadata_declarations(text: str) -> list[tuple[str, str | None, list[CppMetadataProperty]]]:
+    declarations: list[tuple[str, str | None, list[CppMetadataProperty]]] = []
+    text = strip_cpp_comments(text)
+    for body in iter_cpp_macro_bodies(text, "V_META"):
+        args = split_cpp_args(body)
+        if len(args) < 2:
+            continue
+        class_name = normalize_cpp_class_token(args[0])
+        if not is_concrete_cpp_class_name(class_name):
+            continue
+        base_class = normalize_cpp_class_token(args[1])
+        if not is_concrete_cpp_class_name(base_class):
+            base_class = None
+        properties: list[CppMetadataProperty] = []
+        for property_body in iter_cpp_macro_bodies(body, "V_PROPERTY"):
+            property_args = split_cpp_args(property_body)
+            if len(property_args) < 3:
+                continue
+            owner_class = normalize_cpp_class_token(property_args[0])
+            property_name = property_args[2].strip()
+            if not is_concrete_cpp_class_name(owner_class) or not re.match(r"^[A-Za-z_]\w*$", property_name):
+                continue
+            properties.append(
+                CppMetadataProperty(
+                    owner_class=owner_class,
+                    name=property_name,
+                    type_token=normalize_cpp_type_token(property_args[1]),
+                )
+            )
+        declarations.append((class_name, base_class, properties))
+    return declarations
+
+
+def strip_cpp_comments(text: str) -> str:
+    return re.sub(r"/\*.*?\*/|//[^\n\r]*", "", text, flags=re.DOTALL)
+
+
+def iter_cpp_macro_bodies(text: str, macro_name: str) -> list[str]:
+    bodies: list[str] = []
+    pattern = re.compile(rf"\b{re.escape(macro_name)}\s*\(")
+    for match in pattern.finditer(text):
+        open_index = text.find("(", match.start(), match.end())
+        close_index = find_matching_parenthesis(text, open_index)
+        if close_index is not None:
+            bodies.append(text[open_index + 1 : close_index])
+    return bodies
+
+
+def find_matching_parenthesis(text: str, open_index: int) -> int | None:
+    if open_index < 0 or open_index >= len(text) or text[open_index] != "(":
+        return None
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(open_index, len(text)):
+        char = text[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def split_cpp_args(text: str) -> list[str]:
+    args: list[str] = []
+    start = 0
+    paren_depth = 0
+    angle_depth = 0
+    square_depth = 0
+    brace_depth = 0
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(text):
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            paren_depth += 1
+        elif char == ")":
+            paren_depth = max(0, paren_depth - 1)
+        elif char == "<":
+            angle_depth += 1
+        elif char == ">":
+            angle_depth = max(0, angle_depth - 1)
+        elif char == "[":
+            square_depth += 1
+        elif char == "]":
+            square_depth = max(0, square_depth - 1)
+        elif char == "{":
+            brace_depth += 1
+        elif char == "}":
+            brace_depth = max(0, brace_depth - 1)
+        elif char == "," and paren_depth == 0 and angle_depth == 0 and square_depth == 0 and brace_depth == 0:
+            args.append(text[start:index].strip())
+            start = index + 1
+    tail = text[start:].strip()
+    if tail:
+        args.append(tail)
+    return args
+
+
+def normalize_cpp_class_token(raw: str) -> str:
+    return re.sub(r"\s+", "", raw.strip())
+
+
+def normalize_cpp_type_token(raw: str) -> str:
+    token = re.sub(r"\s+", " ", raw.strip())
+    return re.sub(r"\s*([<>,:&*])\s*", r"\1", token)
 
 
 def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
