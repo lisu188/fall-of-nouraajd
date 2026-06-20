@@ -38,6 +38,51 @@ struct effect_application_result {
     std::shared_ptr<CCreature> caster;
 };
 
+class FightControllerEndGuard {
+  public:
+    ~FightControllerEndGuard() { endAll(); }
+
+    void start(const std::shared_ptr<CFightController> &controller, const std::shared_ptr<CCreature> &creature,
+               const std::shared_ptr<CCreature> &opponent) {
+        if (!controller) {
+            return;
+        }
+        controller->start(creature, opponent);
+        startedControllers.push_back({controller, creature, opponent, nullptr, false});
+    }
+
+    void start(const std::shared_ptr<CFightController> &controller, const std::shared_ptr<CCreature> &creature,
+               const std::shared_ptr<CCreature> *opponent) {
+        if (!controller) {
+            return;
+        }
+        controller->start(creature, opponent ? *opponent : std::shared_ptr<CCreature>());
+        startedControllers.push_back({controller, creature, std::shared_ptr<CCreature>(), opponent, false});
+    }
+
+    void endAll() {
+        for (auto &started : startedControllers) {
+            if (started.ended || !started.controller) {
+                continue;
+            }
+            started.ended = true;
+            started.controller->end(started.creature,
+                                    started.currentOpponent ? *started.currentOpponent : started.startedOpponent);
+        }
+    }
+
+  private:
+    struct StartedController {
+        std::shared_ptr<CFightController> controller;
+        std::shared_ptr<CCreature> creature;
+        std::shared_ptr<CCreature> startedOpponent;
+        const std::shared_ptr<CCreature> *currentOpponent;
+        bool ended;
+    };
+
+    std::vector<StartedController> startedControllers;
+};
+
 std::vector<effect_state_type> effect_state(const std::shared_ptr<CCreature> &creature) {
     std::vector<effect_state_type> state;
     if (!creature) {
@@ -352,10 +397,11 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
         return result;
     }
     attackerController->setOpponents(attacker, opponents);
-    attackerController->start(attacker, current);
+    FightControllerEndGuard controllerEndGuard;
+    controllerEndGuard.start(attackerController, attacker, &current);
     for (const auto &opponent : allOpponents) {
         if (auto controller = opponent->getFightController()) {
-            controller->start(opponent, attacker);
+            controllerEndGuard.start(controller, opponent, attacker);
         }
     }
     if (CPlaytestTrace::enabled()) {
@@ -512,12 +558,7 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
         }
     }
 
-    attackerController->end(attacker, current);
-    for (const auto &opponent : allOpponents) {
-        if (auto controller = opponent->getFightController()) {
-            controller->end(opponent, attacker);
-        }
-    }
+    controllerEndGuard.endAll();
 
     if (result.outcome != CFightOutcome::Invalid) {
         const bool include_initiative = result.outcome != CFightOutcome::AttackerDefeat;
