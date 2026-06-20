@@ -64,7 +64,6 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["src/core/CGame.cpp"]))
         self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["src/handler/CFightHandler.cpp"]))
         self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["tests/unit/test_core.cpp"]))
-        self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["scripts/coverage_exclusions.json"]))
         self.assertFalse(poll_pr_checks.changedFilesRequireCoverage(["docs/testing.md", "scripts/poll_pr_checks.py"]))
 
     def test_coverage_path_patterns_match_workflow_detector(self) -> None:

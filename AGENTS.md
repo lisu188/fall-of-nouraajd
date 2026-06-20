@@ -373,7 +373,7 @@ coverage reproduction is necessary. Local coverage command:
 `COVERAGE_REPORTER=gcovr ./scripts/run_coverage.sh` only for diagnostic comparison; gcovr has counted extra
 instrumented/generated lines differently in this repo and can fail the gate even when the canonical reporter passes.
 The script builds and runs the native `performance_guard_tests` CTest entry as part of coverage validation.
-Line exclusions are tracked in `scripts/coverage_exclusions.json` by default.
+Coverage line exclusions are not supported; every instrumented line in scope is part of the line gate.
 
 The default eligible-line coverage threshold is 95%. Do not finish coverage-relevant work below that threshold without
 explicitly reporting it.
