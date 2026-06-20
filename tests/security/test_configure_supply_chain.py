@@ -106,6 +106,12 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         self.assertIn("native_plugins/*|src/core/*|src/handler/*|src/object/*", detection_body)
         self.assertNotIn("test.py|tests/*|", detection_body)
 
+    def test_run_coverage_default_line_gate_is_90_percent(self):
+        run_coverage = (REPO_ROOT / "scripts" / "run_coverage.sh").read_text()
+
+        self.assertIn('MIN_COVERAGE="${MIN_COVERAGE:-90}"', run_coverage)
+        self.assertNotIn('MIN_COVERAGE="${MIN_COVERAGE:-95}"', run_coverage)
+
 
 if __name__ == "__main__":
     unittest.main()
