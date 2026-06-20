@@ -6,7 +6,31 @@ These instructions apply to the entire repository unless a more specific `AGENTS
 
 The default branch is `main`.
 
-Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. Pull request squash auto-merge is the default; after opening a pull request, run `gh pr merge <PR_NUMBER> --auto --squash` unless the user explicitly asks not to, GitHub reports that the merge command is unavailable, or the pull request is intentionally using CI-polled validation as the full validation evidence. When CI-polled validation replaces local heavy validation, poll the required GitHub Actions check(s) to success before enabling auto-merge. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
+Keep changes narrow. Do not modify unrelated files, generated build output, packaged artifacts, dependency lock state, or submodule SHAs unless the task explicitly requires it. Do not rebase or update from `main` unless asked. If a task requires touching `random-dungeon-generator` or `vstd`, state that clearly and rerun the full validation workflow.
+
+## Pull request merge policy
+
+Never push directly to `main`. Publish reviewable pull requests and use squash merging only.
+
+For ordinary implementation or workflow-optimization PRs, run focused local validation, open the PR, and use GitHub
+Actions polling for heavy Linux validation when the workflow covers the required evidence. If CI polling supplies the
+full validation evidence, run `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux` to success before enabling
+auto-merge; add `--require-step coverage` for coverage-relevant changes. After the required evidence is present, run
+`gh pr merge <PR_NUMBER> --auto --squash` unless the user explicitly asks not to, GitHub reports that auto-merge is
+unavailable, or branch protection/check state prevents it. If validation or auto-merge is blocked, report the exact
+blocker and leave the PR intact.
+
+For workbook-only queue-state PRs that update only `planning/fall_of_nouraajd_issue_proposals.xlsx`, first confirm the
+diff is XLSX-only and `python3 scripts/issue_queue.py validate` passed. Then merge the claim, terminal-status,
+heartbeat, reclaim, priority, dependency, or other approved queue-state PR immediately with
+`gh pr merge <PR_NUMBER> --squash`; do not wait for GitHub Actions on these CI-exempt controller coordination PRs. If
+repository settings block direct merge, enable auto-merge and continue supervising other safe work, but do not treat the
+queue update as durable until the PR is actually merged.
+
+Do not treat queued auto-merge as merged. If a PR merges while checks are still being polled, stop waiting on that
+Actions run, fetch `origin/main`, verify the merge, and continue from the merged commit. When newer user or system
+instructions say not to merge or not to enable auto-merge, follow those instructions and leave the PR open with the
+validation evidence.
 
 When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
 
@@ -77,8 +101,8 @@ actually merges, create a fresh implementation worktree from updated `origin/mai
 and pass it the generated issue prompt plus any controller overrides. Workers must inspect source, verify root cause,
 make the smallest backward-compatible change, add regression coverage, run focused and required validation where
 feasible, and report exact commands and outcomes. The controller reviews the diff, commits, pushes, opens the
-implementation PR, polls required CI first when CI supplies full validation evidence, and enables squash auto-merge; do
-not mark the issue `DONE` until that implementation PR actually merges.
+implementation PR, polls required CI first when CI supplies full validation evidence, and enables squash auto-merge
+according to the pull request merge policy; do not mark the issue `DONE` until that implementation PR actually merges.
 
 After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
 concise live status table. Include controller ID, worker owner, issue key, phase, progress estimate, last action,
@@ -95,11 +119,12 @@ reproduction is necessary or GitHub Actions cannot provide the needed evidence. 
 feedback, then outsource compilation, native tests, performance guards, full Python suites, and coverage to GitHub
 Actions polling. Report the exact local commands used.
 
-For local disk safety, run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill decisions, before
-any necessary local heavy validation, after every controller loop iteration, and after any merged checkpoint cleanup.
-Treat low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree metadata as blockers to
-new work until reported or cleaned safely. Remove only completed clean worktrees, use `git worktree prune` only for
-prunable metadata after review, and do not delete branches unless explicitly asked.
+For local repository and disk safety, run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill
+decisions, before any necessary local heavy validation, after every controller loop iteration, and after any merged
+checkpoint cleanup. Treat unreadable Git state, unresolved `HEAD` or `origin/main`, zero-byte loose Git objects,
+zero-byte Git ref files, low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree
+metadata as blockers to new work until reported or cleaned safely. Remove only completed clean worktrees, use
+`git worktree prune` only for prunable metadata after review, and do not delete branches unless explicitly asked.
 
 ## Project overview
 
@@ -581,8 +606,16 @@ After finishing a change, always complete the repository delivery workflow:
 3. Commit the change with a clear, specific commit message.
 4. Push the branch to the remote.
 5. Open a pull request targeting `main`.
-6. Run `gh pr merge <PR_NUMBER> --auto --squash` for the pull request by default, unless the user explicitly asks not to, GitHub reports that the merge command is unavailable, or CI polling is supplying the full validation evidence and has not passed yet. Replace `<PR_NUMBER>` with the pull request just opened.
-7. If GitHub queues auto-merge, do not wait for checks to finish unless those checks are the selected CI-polled validation evidence and the PR is still open. If the PR has already merged, stop waiting on its Actions run, fetch `origin/main`, and continue from the merged commit.
+6. For implementation PRs, poll the selected GitHub Actions evidence to success before auto-merge when CI polling is
+   replacing local heavy validation.
+7. Run `gh pr merge <PR_NUMBER> --auto --squash` after required evidence is present unless the user explicitly asks not
+   to, GitHub reports that auto-merge is unavailable, or branch protection/check state blocks it. Replace `<PR_NUMBER>`
+   with the pull request just opened.
+8. For workbook-only queue-state PRs, use the immediate squash-merge rule in the pull request merge policy after
+   confirming the diff is XLSX-only and queue validation passed.
+9. If GitHub queues auto-merge, do not wait for checks to finish unless those checks are the selected CI-polled
+   validation evidence and the PR is still open. If the PR has already merged, stop waiting on its Actions run, fetch
+   `origin/main`, and continue from the merged commit.
 
 Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not bypass failing required checks or unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, merging, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, merge conflicts, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
