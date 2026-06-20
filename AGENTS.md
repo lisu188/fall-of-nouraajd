@@ -50,28 +50,33 @@ workbook-only pull requests. Each claim or terminal status PR should mark exactl
 workflow explicitly permits batching and all selected issues are proven independent.
 
 Keep at least eight live subagents attached to the controller whenever the subagent interface is available. Keep at least
-eight implementation issues active whenever eight safe, eligible, non-conflicting issues exist. Treat eight active issues as
-the minimum operating target, not a best-effort aspiration. Before filling any implementation slot, note current RAM,
+eight implementation issues active whenever eight status-and-dependency eligible implementation issues exist. Treat eight
+active issues as the minimum operating target, not a best-effort aspiration. Before filling any implementation slot, note current RAM,
 free disk space, existing run/worktree usage, and running heavy jobs so the controller avoids obvious resource pressure,
 but do not impose a fixed RAM cap or rewrite build parallelism solely by workflow policy. Dispatch work whenever issue
 eligibility, live worker status, and repository safety allow it. Use standby subagents only when fewer than eight
-implementation issues can safely run; they may do lightweight status, eligibility, or review-prep tasks, but must not
-claim issues, edit files, or run heavy validation. Each controller instance must also keep at least four non-stale
-implementation claims under its own `controller/<controller-id>` owner prefix whenever four eligible issues can safely
-be claimed by that controller. Stale owned claims do not count toward this floor. Before filling each free worker slot,
-fetch the latest `origin/main`, recalculate the full eligible set from the merged workbook, and exclude:
+implementation issues are safe for non-source reasons; they may do lightweight status, eligibility, or review-prep tasks,
+but must not claim issues, edit files, or run heavy validation. Each controller instance must keep exactly four non-stale
+implementation claims under its own `controller/<controller-id>` owner prefix whenever at least four status-and-dependency
+eligible issues are available for that controller. Stale owned claims do not count toward this target, and a controller
+must not claim a fifth live implementation issue. Before filling each free worker slot, fetch the latest `origin/main`,
+recalculate the full eligible set from the merged workbook, and exclude:
 
 - rows whose status is not `NOT_STARTED`;
-- rows with dependencies that are not `DONE`;
-- active-scope conflicts, including source-backed direct or indirect conflicts through shared headers, bindings, tests,
-  CMake, map scripts, dialog/config files, serialization, generated resources, or shared runtime systems.
+- rows with dependencies that are not `DONE`.
 
-Treat exact `Target Files / Modules` overlap with active work as advisory scope evidence, not as an automatic exclusion.
-Use it to prioritize review and decide whether a source-backed active-scope conflict exists.
+Treat exact `Target Files / Modules` overlap, shared source areas, open implementation PRs, shared headers, bindings,
+tests, CMake, map scripts, dialog/config files, serialization, generated resources, and shared runtime systems as
+advisory coordination evidence, not automatic claim exclusions. Use these signals to shape worker prompts, expected
+merge/rebase risk, review order, and validation focus. Do not leave an implementation slot empty solely because the next
+status-and-dependency eligible issue overlaps active work; claim it and manage the overlap unless a non-source blocker
+such as missing live worker status, repository safety, resource pressure, authentication, queue validation failure, or an
+unmerged workbook-state PR prevents safe dispatch.
 
 After exclusions, keep only the highest currently available priority tier. Group candidates by `(Epic #, Story #)`,
 randomly select one story with equal probability, then randomly select one eligible substory in that story. Do not fall
-back to spreadsheet order and do not include ineligible rows in the random choice. Use
+back to spreadsheet order, do not include status/dependency-ineligible rows in the random choice, and do not fall back to
+a lower priority tier merely to avoid source overlap. Use
 `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
 as the read-only mechanical selector before each claim; it reports eligible highest-priority story groups, stale claims,
 `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, `activeClaims.leaseExpired`,
@@ -80,16 +85,17 @@ recommendation without mutating the workbook. `activeClaims.unexpired` means liv
 reclaimable-stale nor lease-expired. Use the unexpired count, not raw
 `activeCount`, when deciding whether the global active-worker floor is genuinely satisfied. Use
 `controllerCapacity.activeNonStale`, `controllerCapacity.leaseExpiredOwned`,
-`controllerCapacity.deficitToFloor`, and `controllerCapacity.fillableDeficit` to decide whether this controller must
-keep claiming to satisfy its four-owned-issue floor. The controller and project manager must still inspect target-file
-overlap advisories and exclude source-backed active-scope conflicts, then claim the final exact issue with `claim
---issue` so eligibility is rechecked under the workbook lock.
+`controllerCapacity.deficitToFloor`, `controllerCapacity.fillableDeficit`, `controllerCapacity.activeLimit`,
+`controllerCapacity.availableSlots`, `controllerCapacity.overLimitBy`, and `controllerCapacity.overCapacity` to decide
+whether this controller must refill to four, stop at four, or report over-capacity. The controller and project manager
+must still inspect and record target-file/source-overlap advisories, then claim the final exact issue with
+`claim --issue` so status and dependency eligibility is rechecked under the workbook lock.
 
 Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
 project manager should summarize the highest available priority tier, candidate story groups, dependency unlocks, stale
-or blocked work, validation and resource cost, scope conflicts, and any source-backed priority-change recommendations.
+or blocked work, validation and resource cost, scope-overlap advisories, and any source-backed priority-change recommendations.
 The role is advisory: it must not claim work, edit files, touch the workbook, start validation, or override dependency,
-conflict, priority-tier, randomized selection, resource, cleanup, or PR requirements. Priority, dependency, status, or scope
+priority-tier, randomized selection, resource, cleanup, or PR requirements. Priority, dependency, status, or scope
 changes affect dispatch only after an approved workbook-only pull request merges into `main`.
 
 Assign one read-only QA subagent whenever subagent capacity permits. The QA role reviews diffs, regression coverage,
