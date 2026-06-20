@@ -11740,6 +11740,59 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_siege_spawn_point_ignores_dead_gate_creatures_when_completing_seal(self):
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        game = load_game_module()
+        original_show_question = game.CGuiHandler.showQuestion
+
+        try:
+            game.CGuiHandler.showQuestion = lambda self, message: True
+            g, game_map, player = load_game_map_with_player("siege")
+            spawn_point = find_runtime_object(game_map, "spawnPoint1")
+            spawn_coords = spawn_point.getCoords()
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+
+            defeated_creature = g.createObject("siegePritz")
+            defeated_creature.name = "defeatedGateOccupant"
+            game_map.addObject(defeated_creature)
+            defeated_creature.relocateWithoutMoveHooks(spawn_coords)
+            defeated_creature.setHp(0)
+
+            player.addItem("magicWand")
+            spawn_point.setBoolProperty("enabled", True)
+            spawn_point.setBoolProperty("canStep", True)
+            spawn_point.onEnter(FakeEvent(player))
+
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertFalse(defeated_creature.isAlive())
+
+            exit_coords = find_adjacent_walkable_tile(game_map, spawn_coords)
+            player.moveTo(exit_coords.x, exit_coords.y, exit_coords.z)
+            spawn_point.onTurn(None)
+
+            self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertFalse(spawn_point.getBoolProperty("canStep"))
+        finally:
+            game.CGuiHandler.showQuestion = original_show_question
+
+        return True, json.dumps(
+            {
+                "canStep": spawn_point.getBoolProperty("canStep"),
+                "defeated_creature_alive": defeated_creature.isAlive(),
+                "destroyed": spawn_point.getBoolProperty("destroyed"),
+                "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_siege_spawn_point_seal_consumes_one_wand_once_while_pending(self):
         class FakeEvent:
             def __init__(self, cause):
