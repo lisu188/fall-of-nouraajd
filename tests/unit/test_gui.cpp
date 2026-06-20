@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
+#include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
@@ -171,6 +173,11 @@ std::shared_ptr<DropTargetRecorder> attach_drop_target_recorder(const std::share
 }
 
 std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
+    type_registration::registerGuiTypes();
+    type_registration::registerGuiPanelTypes();
+    CTypes::register_type_metadata<RefreshCountingListView, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
+                                   CGameObject>();
+
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
     game->setMap(map);
