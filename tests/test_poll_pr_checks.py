@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts import poll_pr_checks
+from scripts import ci_change_classifier, poll_pr_checks
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -62,14 +62,16 @@ class PollPrChecksTest(unittest.TestCase):
 
     def test_changed_files_require_coverage_for_workflow_paths(self) -> None:
         self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["src/core/CGame.cpp"]))
+        self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["src/gui/panel/CListView.cpp"]))
         self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["src/handler/CFightHandler.cpp"]))
         self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["tests/unit/test_core.cpp"]))
         self.assertFalse(poll_pr_checks.changedFilesRequireCoverage(["docs/testing.md", "scripts/poll_pr_checks.py"]))
 
     def test_coverage_path_patterns_match_workflow_detector(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
-        for pattern in poll_pr_checks.COVERAGE_PATH_PATTERNS:
-            self.assertIn(pattern, workflow)
+
+        self.assertEqual(ci_change_classifier.COVERAGE_PATH_PATTERNS, poll_pr_checks.COVERAGE_PATH_PATTERNS)
+        self.assertIn("scripts/ci_change_classifier.py", workflow)
 
     def test_evaluate_run_treats_missing_run_as_pending(self) -> None:
         evaluation = poll_pr_checks.evaluateRun(None, ["linux"], [])
@@ -327,7 +329,7 @@ class PollPrChecksTest(unittest.TestCase):
 
         with (
             patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
-            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("src/core/CGame.cpp",)),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("src/gui/panel/CListView.cpp",)),
             patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
             patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
         ):

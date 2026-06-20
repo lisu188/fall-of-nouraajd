@@ -55,6 +55,42 @@ class PrReviewAuditTest(unittest.TestCase):
         self.assertIn("workbook_only_queue_pr", review["buckets"])
         self.assertIn("confirm XLSX-only diff", review["recommendedActions"][0])
 
+    def test_workbook_only_queue_pr_does_not_poll_pending_ci(self) -> None:
+        review = self.classify(
+            {
+                "number": 121,
+                "title": "Claim queue row",
+                "files": ["planning/fall_of_nouraajd_issue_proposals.xlsx"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [{"name": "build / linux", "status": "in_progress"}],
+            }
+        )
+
+        self.assertEqual("ready_to_merge", review["actionCategory"])
+        self.assertEqual("workbook_only_queue_pr", review["prType"])
+        self.assertEqual("pending", review["checkState"])
+        self.assertEqual(["build / linux"], review["pendingChecks"])
+        self.assertIn("ci_exempt_pending", review["buckets"])
+        self.assertNotIn("poll", review["buckets"])
+        self.assertTrue(review["mergeAllowed"])
+        self.assertIn("confirm XLSX-only diff", review["recommendedActions"][0])
+
+    def test_workbook_only_queue_pr_still_blocks_failed_ci(self) -> None:
+        review = self.classify(
+            {
+                "number": 122,
+                "title": "Claim queue row",
+                "files": ["planning/fall_of_nouraajd_issue_proposals.xlsx"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [{"name": "build / linux", "status": "completed", "conclusion": "failure"}],
+            }
+        )
+
+        self.assertEqual("failing_ci", review["actionCategory"])
+        self.assertEqual("workbook_only_queue_pr", review["prType"])
+        self.assertFalse(review["mergeAllowed"])
+        self.assertIn("required check failure: build / linux", review["blockers"])
+
     def test_dirty_and_failing_pr_requires_update_before_ci_fix(self) -> None:
         review = self.classify(
             {
@@ -158,6 +194,186 @@ class PrReviewAuditTest(unittest.TestCase):
                         "name": "linux-coverage",
                         "status": "COMPLETED",
                         "conclusion": "SKIPPED",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("ready_to_merge", review["actionCategory"])
+        self.assertEqual("success", review["checkState"])
+        self.assertEqual([], review["failedChecks"])
+
+    def test_newer_duplicate_check_success_replaces_older_cancelled_attempt(self) -> None:
+        review = self.classify(
+            {
+                "number": 123,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "CANCELLED",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:10:00Z",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("ready_to_merge", review["actionCategory"])
+        self.assertEqual("success", review["checkState"])
+        self.assertEqual([], review["failedChecks"])
+
+    def test_newer_duplicate_check_pending_replaces_older_failure(self) -> None:
+        review = self.classify(
+            {
+                "number": 124,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "IN_PROGRESS",
+                        "startedAt": "2026-06-20T10:15:00Z",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("poll", review["actionCategory"])
+        self.assertEqual("pending", review["checkState"])
+        self.assertEqual([], review["failedChecks"])
+        self.assertEqual(["linux"], review["pendingChecks"])
+
+    def test_newer_duplicate_check_failure_replaces_older_success(self) -> None:
+        review = self.classify(
+            {
+                "number": 125,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "completedAt": "2026-06-20T10:15:00Z",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("failing_ci", review["actionCategory"])
+        self.assertEqual("failure", review["checkState"])
+        self.assertEqual(["linux"], review["failedChecks"])
+
+    def test_same_label_checks_from_different_workflows_remain_independent(self) -> None:
+        review = self.classify(
+            {
+                "number": 126,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "lint",
+                        "workflowName": "fast",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "__typename": "CheckRun",
+                        "name": "lint",
+                        "workflowName": "full",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "completedAt": "2026-06-20T10:05:00Z",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("failing_ci", review["actionCategory"])
+        self.assertEqual(["lint"], review["failedChecks"])
+
+    def test_missing_duplicate_ordering_uses_conservative_state(self) -> None:
+        review = self.classify(
+            {
+                "number": 127,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("failing_ci", review["actionCategory"])
+        self.assertEqual("failure", review["checkState"])
+        self.assertEqual(["linux"], review["failedChecks"])
+
+    def test_attempt_number_orders_duplicate_checks_without_timestamps(self) -> None:
+        review = self.classify(
+            {
+                "number": 128,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "checkSuite": {"workflowRun": {"runAttempt": 1}},
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "run_attempt": 2,
                     },
                 ],
             }
@@ -307,6 +523,26 @@ class PrReviewAuditTest(unittest.TestCase):
         self.assertEqual("branch_cleanup_candidate", review["actionCategory"])
         self.assertTrue(review["humanApprovalRequired"])
         self.assertFalse(review["cleanupAllowed"])
+
+    def test_github_merged_state_is_cleanup_candidate_only(self) -> None:
+        review = self.classify(
+            {
+                "number": 129,
+                "state": "MERGED",
+                "mergedAt": "2026-06-20T18:59:01Z",
+                "mergeCommit": {"oid": "25a5a983d2085cd92564fa56a1349648416e8a2b"},
+                "files": ["planning/fall_of_nouraajd_issue_proposals.xlsx"],
+                "mergeStateStatus": "UNKNOWN",
+                "statusCheckRollup": [{"name": "linux", "status": "IN_PROGRESS"}],
+            }
+        )
+
+        self.assertEqual("branch_cleanup_candidate", review["actionCategory"])
+        self.assertEqual("workbook_only_queue_pr", review["prType"])
+        self.assertEqual("pending", review["checkState"])
+        self.assertTrue(review["humanApprovalRequired"])
+        self.assertFalse(review["mergeAllowed"])
+        self.assertNotIn("PR state is merged", review["blockers"])
 
     def test_dirty_local_recovery_state_is_never_touch(self) -> None:
         review = self.classify(

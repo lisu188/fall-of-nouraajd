@@ -9,6 +9,7 @@ import sys
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -43,6 +44,16 @@ class CheckSummary:
     failed: tuple[str, ...] = ()
     pending: tuple[str, ...] = ()
     total: int = 0
+
+
+@dataclass(frozen=True)
+class CheckAttempt:
+    identity: tuple[str, str]
+    name: str
+    state: str
+    timestamp: float | None
+    attempt: int | None
+    index: int
 
 
 def normalizeToken(value: Any) -> str:
@@ -112,6 +123,115 @@ def checkName(check: dict[str, Any], fallback: str) -> str:
     return str(firstValue(check, "name", "context", "checkName", "job", default=fallback))
 
 
+def nestedValue(mapping: dict[str, Any], *names: str) -> Any:
+    value: Any = mapping
+    for name in names:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(name)
+    return value
+
+
+def checkWorkflowName(check: dict[str, Any]) -> str:
+    workflow = firstValue(check, "workflowName", "workflow_name", "workflow", default="")
+    if isinstance(workflow, dict):
+        workflow = firstValue(workflow, "name", "workflowName", "workflow_name", default="")
+    return str(workflow or "")
+
+
+def checkIdentity(check: dict[str, Any], fallback: str) -> tuple[str, str]:
+    workflow = normalizeToken(checkWorkflowName(check))
+    name = normalizeToken(checkName(check, fallback))
+    return (workflow, name)
+
+
+def parseTimestamp(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp()
+
+
+def checkTimestamp(check: dict[str, Any]) -> float | None:
+    timestamps = [
+        parseTimestamp(firstValue(check, name, default=None))
+        for name in (
+            "completedAt",
+            "completed_at",
+            "updatedAt",
+            "updated_at",
+            "startedAt",
+            "started_at",
+            "createdAt",
+            "created_at",
+        )
+    ]
+    timestamps = [timestamp for timestamp in timestamps if timestamp is not None]
+    return max(timestamps) if timestamps else None
+
+
+def parseAttempt(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def checkAttemptNumber(check: dict[str, Any]) -> int | None:
+    values = [
+        firstValue(
+            check,
+            "runAttempt",
+            "run_attempt",
+            "attempt",
+            "attemptNumber",
+            "attempt_number",
+            "checkRunAttempt",
+            "check_run_attempt",
+            default=None,
+        ),
+        nestedValue(check, "checkSuite", "workflowRun", "runAttempt"),
+        nestedValue(check, "check_suite", "workflow_run", "run_attempt"),
+        nestedValue(check, "workflowRun", "runAttempt"),
+        nestedValue(check, "workflow_run", "run_attempt"),
+    ]
+    attempts = [attempt for attempt in (parseAttempt(value) for value in values) if attempt is not None]
+    return max(attempts) if attempts else None
+
+
+def currentCheckAttempt(attempts: Sequence[CheckAttempt]) -> CheckAttempt:
+    if not attempts:
+        raise ValueError("check attempt group cannot be empty")
+    if all(attempt.timestamp is not None for attempt in attempts):
+        return max(
+            attempts,
+            key=lambda attempt: (
+                attempt.timestamp,
+                attempt.attempt if attempt.attempt is not None else -1,
+                attempt.index,
+            ),
+        )
+    if all(attempt.attempt is not None for attempt in attempts):
+        return max(attempts, key=lambda attempt: (attempt.attempt, attempt.index))
+
+    stateRank = {"failure": 3, "pending": 2, "unknown": 1, "success": 0}
+    return max(attempts, key=lambda attempt: (stateRank[attempt.state], attempt.index))
+
+
 def stateFromCheck(check: dict[str, Any]) -> str:
     state = normalizeToken(firstValue(check, "state", "status", default=""))
     conclusion = normalizeToken(firstValue(check, "conclusion", "result", default=""))
@@ -177,19 +297,31 @@ def checkSummary(record: dict[str, Any]) -> CheckSummary:
     if isinstance(rawChecks, str) or not isinstance(rawChecks, Iterable):
         rawChecks = [rawChecks]
 
-    failed: list[str] = []
-    pending: list[str] = []
+    byIdentity: dict[tuple[str, str], list[CheckAttempt]] = {}
     unknown = False
     checks = list(rawChecks or ())
     for index, rawCheck in enumerate(checks, start=1):
         check = rawCheck if isinstance(rawCheck, dict) else {"state": rawCheck}
         name = checkName(check, f"check {index}")
         state = stateFromCheck(check)
-        if state == "failure":
-            failed.append(name)
-        elif state == "pending":
-            pending.append(name)
-        elif state == "unknown":
+        attempt = CheckAttempt(
+            identity=checkIdentity(check, f"check {index}"),
+            name=name,
+            state=state,
+            timestamp=checkTimestamp(check),
+            attempt=checkAttemptNumber(check),
+            index=index,
+        )
+        byIdentity.setdefault(attempt.identity, []).append(attempt)
+
+    failed: list[str] = []
+    pending: list[str] = []
+    for attempt in (currentCheckAttempt(attempts) for attempts in byIdentity.values()):
+        if attempt.state == "failure":
+            failed.append(attempt.name)
+        elif attempt.state == "pending":
+            pending.append(attempt.name)
+        elif attempt.state == "unknown":
             unknown = True
 
     if failed:
@@ -284,7 +416,11 @@ def actionFromSignals(
 ) -> tuple[str, list[str]]:
     buckets: list[str] = [prType]
     state = normalizeToken(firstValue(record, "state", default="open"))
-    merged = truthy(firstValue(record, "merged", "isMerged", default=False))
+    merged = (
+        state == "merged"
+        or truthy(firstValue(record, "merged", "isMerged", default=False))
+        or bool(firstValue(record, "mergedAt", "merged_at", "mergeCommit", "merge_commit", default=None))
+    )
     branchMerged = truthy(firstValue(record, "branchMergedToMain", "branch_merged_to_main", default=False))
     draft = truthy(firstValue(record, "draft", "isDraft", default=False))
     reviewDecision = normalizeToken(firstValue(record, "reviewDecision", "review_decision", default=""))
@@ -332,7 +468,10 @@ def actionFromSignals(
         blockers.append("required check failure: " + ", ".join(checks.failed))
         buckets.append("failing_ci")
     elif checks.state == "pending":
-        buckets.append("poll")
+        if prType == "workbook_only_queue_pr":
+            buckets.append("ci_exempt_pending")
+        else:
+            buckets.append("poll")
     elif checks.state == "unknown":
         blockers.append("check rollup is missing or unrecognized")
         buckets.append("human_review_required")

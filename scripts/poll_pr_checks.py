@@ -12,22 +12,17 @@ import time
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+try:
+    from ci_change_classifier import COVERAGE_PATH_PATTERNS
+except ImportError:  # pragma: no cover - used when imported as scripts.poll_pr_checks
+    from scripts.ci_change_classifier import COVERAGE_PATH_PATTERNS
+
 DEFAULT_JOBS = ("linux",)
 DEFAULT_WORKFLOW = "build.yml"
 DEFAULT_INTERVAL_SECONDS = 30
 DEFAULT_TIMEOUT_SECONDS = 7200
 SUCCESS_CONCLUSION = "SUCCESS"
 COVERAGE_STEP = "coverage"
-COVERAGE_PATH_PATTERNS = (
-    "test.py",
-    "tests/unit/*",
-    "scripts/run_coverage.sh",
-    "scripts/coverage_report.py",
-    "native_plugins/*",
-    "src/core/*",
-    "src/handler/*",
-    "src/object/*",
-)
 
 
 @dataclass(frozen=True)

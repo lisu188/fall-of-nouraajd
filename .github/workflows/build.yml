@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     outputs:
-      coverage-needed: ${{ steps.coverage-needed.outputs.run }}
+      coverage-needed: ${{ steps.change-classification.outputs.coverage-needed }}
+      native-needed: ${{ steps.change-classification.outputs.native-needed }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
@@ -47,8 +48,8 @@ jobs:
           python3 -m unittest tests.test_content_validator
       - name: test (python fast)
         run: python3 test.py --suite fast
-      - name: detect coverage need
-        id: coverage-needed
+      - name: classify changed paths
+        id: change-classification
         shell: bash
         run: |
           set -euo pipefail
@@ -70,24 +71,19 @@ jobs:
             fi
           fi
 
-          run_coverage=false
-          while IFS= read -r path; do
-            case "${path}" in
-              test.py|tests/unit/*|scripts/run_coverage.sh|scripts/coverage_report.py|native_plugins/*|src/core/*|src/handler/*|src/object/*)
-                run_coverage=true
-                break
-                ;;
-            esac
-          done < <(git diff --name-only "${base}" "${head}")
-
-          echo "run=${run_coverage}" >> "${GITHUB_OUTPUT}"
-          if [[ "${run_coverage}" == "true" ]]; then
-            echo "Coverage is required for this change."
-          else
-            echo "Coverage is not required for the changed paths."
+          force_native=()
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            force_native=(--force-native)
           fi
 
+          python3 scripts/ci_change_classifier.py \
+            --base "${base}" \
+            --head "${head}" \
+            "${force_native[@]}" \
+            --github-output "${GITHUB_OUTPUT}"
+
   linux:
+    needs: linux-fast
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -109,7 +105,11 @@ jobs:
         run: python3 -m pip install --upgrade -r requirements-dev.txt
       - name: Smoke test Python deps
         run: python3 -c "from PIL import Image; import black; print('python deps ok')"
+      - name: Skip native validation
+        if: needs.linux-fast.outputs.native-needed != 'true'
+        run: echo "Native validation is not required for these changed paths."
       - name: Install native deps
+        if: needs.linux-fast.outputs.native-needed == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
@@ -118,6 +118,7 @@ jobs:
             libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
             xvfb xauth
       - name: Detect ccache metadata
+        if: needs.linux-fast.outputs.native-needed == 'true'
         id: ccache
         shell: bash
         run: |
@@ -126,6 +127,7 @@ jobs:
           echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
           echo "prefix=${{ runner.os }}-ccache-release-${compiler_id}-" >> "${GITHUB_OUTPUT}"
       - name: Restore ccache
+        if: needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ steps.ccache.outputs.dir }}
@@ -134,45 +136,53 @@ jobs:
             ${{ steps.ccache.outputs.prefix }}
             ${{ runner.os }}-ccache-
       - name: Cache Python test timings
+        if: needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: ${{ env.GAME_TEST_TIMINGS_FILE }}
           key: ${{ runner.os }}-test-timings-linux-${{ github.run_id }}
           restore-keys: ${{ runner.os }}-test-timings-linux-
       - name: configure
+        if: needs.linux-fast.outputs.native-needed == 'true'
         run: GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
       - name: build test targets
+        if: needs.linux-fast.outputs.native-needed == 'true'
         run: cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"
       - name: Smoke test game imports
+        if: needs.linux-fast.outputs.native-needed == 'true'
         run: PYTHONPATH=cmake-build-release:res python3 -c "import _game; import game; print('game imports ok')"
       - name: ccache stats after build
-        if: always()
+        if: always() && needs.linux-fast.outputs.native-needed == 'true'
         shell: bash
         run: |
           if command -v ccache >/dev/null 2>&1; then
             ccache --show-stats
           fi
       - name: test (c++)
+        if: needs.linux-fast.outputs.native-needed == 'true'
         run: ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
       - name: performance guard (native)
+        if: needs.linux-fast.outputs.native-needed == 'true'
         run: ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
       - name: test (python gameplay)
+        if: needs.linux-fast.outputs.native-needed == 'true'
         timeout-minutes: 45
         run: python3 test.py --suite gameplay --jobs "$(nproc)"
       - name: test (python ui)
+        if: needs.linux-fast.outputs.native-needed == 'true'
         timeout-minutes: 45
         run: python3 test.py --suite ui --jobs "$(nproc)"
       - name: package
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
         run: cmake --build cmake-build-release --target package -j"$(nproc)"
       - name: publish
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fall-of-nouraajd-linux
           path: cmake-build-release/fall-of-nouraajd-*.tar.gz
       - name: Save ccache
-        if: always()
+        if: always() && needs.linux-fast.outputs.native-needed == 'true'
         continue-on-error: true
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
@@ -261,6 +271,8 @@ jobs:
           key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
 
   windows-deps:
+    needs: linux-fast
+    if: needs.linux-fast.outputs.native-needed == 'true'
     runs-on: windows-2022
     timeout-minutes: 120
     outputs:
@@ -534,7 +546,10 @@ jobs:
           ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
   windows:
-    needs: windows-deps
+    needs:
+      - linux-fast
+      - windows-deps
+    if: needs.linux-fast.outputs.native-needed == 'true'
     runs-on: windows-2022
     timeout-minutes: 120
     env: *windows-env
