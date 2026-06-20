@@ -480,20 +480,23 @@ the implementation PR and polling GitHub Actions instead of duplicating those he
 python3 scripts/poll_pr_checks.py "$PR_NUMBER" --check linux
 ```
 
-For coverage-relevant changes, require the conditional coverage step explicitly:
+For coverage-relevant changes, the poller auto-requires the conditional coverage step when changed paths match the
+workflow coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that
+check:
 
 ```bash
 python3 scripts/poll_pr_checks.py "$PR_NUMBER" --check linux --require-step coverage
 ```
 
 Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
-necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is sufficient PR
-delivery evidence for Linux compilation, native tests, native performance guards, Python suites, and conditional
-coverage. It proves coverage only when the workflow's changed-path rule runs its `coverage` step; use
-`--require-step coverage` for coverage-relevant changes. Additional platform, release, MCP gameplay, manual, or
-issue-specific validation is needed only when the task targets that surface or the user requests it. Record focused local
-checks, skipped local heavy commands, CI job names, conclusions, URLs, and the exact PR head separately. If CI polling
-supplies the full validation evidence, do not enable auto-merge until the selected check(s) have passed.
+necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is
+sufficient PR delivery evidence for Linux compilation, native tests, native performance guards, Python suites, and
+conditional coverage. It proves coverage only when the workflow's changed-path rule runs its `coverage` step somewhere
+in the selected build workflow run, currently in the conditional `linux-coverage` job; the poller auto-adds this step
+for coverage-relevant PR paths. Additional platform, release, MCP gameplay, manual, or issue-specific validation is
+needed only when the task targets that surface or the user requests it. Record focused local checks, skipped local heavy
+commands, CI job names, conclusions, URLs, and the exact PR head separately. If CI polling supplies the full validation
+evidence, do not enable auto-merge until the selected check(s) have passed.
 
 Workers and standby subagents may perform lightweight source inspection and prepare summaries while heavy validation runs.
 Do not dispatch additional implementation work when doing so would leave active workers unpollable. Empty implementation
@@ -518,8 +521,8 @@ Before committing:
    tests, full Python suites, and coverage evidence when the PR workflow covers those checks.
 6. For gameplay changes, confirm required MCP validation; for GUI changes, confirm required Xvfb validation; for
    performance-sensitive changes, confirm deterministic performance guards and evidence from CI or local runs; for
-   coverage-relevant changes, verify that the CI-polled `linux` job ran coverage successfully or record why local
-   coverage was required instead.
+   coverage-relevant changes, verify that the selected build workflow run included a successful `coverage` step,
+   currently in `linux-coverage`, or record why local coverage was required instead.
 
 Then commit and push only intended implementation files:
 
