@@ -64,8 +64,13 @@ void CProxyTargetGraphicsObject::refresh() {
 }
 
 void CProxyTargetGraphicsObject::addProxyObject(std::shared_ptr<CGui> gui, int &x, int &y) {
+    auto game = gui ? gui->getGame() : nullptr;
+    if (!game) {
+        vstd::logger::warning("Skipping proxy object without game context:", proxyLayout);
+        return;
+    }
     std::shared_ptr<CProxyGraphicsObject> nh = std::make_shared<CProxyGraphicsObject>(x, y);
-    std::shared_ptr<CLayout> layout1 = gui->getGame()->template createObject<CLayout>(proxyLayout);
+    std::shared_ptr<CLayout> layout1 = game->template createObject<CLayout>(proxyLayout);
     if (!layout1) {
         vstd::logger::warning("Skipping proxy object with missing layout:", proxyLayout);
         return;
