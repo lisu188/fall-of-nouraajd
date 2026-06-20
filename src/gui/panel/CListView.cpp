@@ -54,6 +54,12 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
         const auto *session = gui->getDragSession();
         const bool sourceIsSelf = session->sourceWidget.lock() == self;
         if (sourceIsSelf) {
+            int index = -1;
+            std::shared_ptr<CGameObject> object;
+            if (session->sourceCallbackDeferred && !session->canceled && !dragMoved(*session) &&
+                tryGetClickedObject(gui, x, y, index, object)) {
+                invokeCallback(gui, index, object);
+            }
             return true;
         }
         int index = -1;
@@ -79,10 +85,12 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     if (gui) {
         auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
         auto self = this->ptr<CListView>();
-        gui->startDragSession(self, object, index, rect->x + x, rect->y + y);
+        gui->startDragSession(self, object, index, rect->x + x, rect->y + y, invokeSelect(gui, index, object));
         gui->capturePointer(self);
     }
-    invokeCallback(gui, index, object);
+    if (!gui || !gui->hasDragSession() || !gui->getDragSession()->sourceCallbackDeferred) {
+        invokeCallback(gui, index, object);
+    }
     return true;
 }
 
@@ -367,12 +375,17 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
                 return true;
             }
             if (button == SDL_BUTTON_LEFT) {
+                const bool deferSourceCallback = self->invokeSelect(gui, itemIndex, object);
+                bool dragStarted = false;
                 if (auto source = sourceGraphic.lock()) {
                     auto rect = source->getLayout() ? source->getLayout()->getRect(source) : CUtil::rect(0, 0, 0, 0);
-                    gui->startDragSession(self, object, itemIndex, rect->x + x, rect->y + y);
+                    gui->startDragSession(self, object, itemIndex, rect->x + x, rect->y + y, deferSourceCallback);
                     gui->capturePointer(self);
+                    dragStarted = gui->hasDragSession();
                 }
-                self->invokeCallback(gui, itemIndex, object);
+                if (!deferSourceCallback || !dragStarted) {
+                    self->invokeCallback(gui, itemIndex, object);
+                }
                 return true;
             }
             if (button == SDL_BUTTON_RIGHT) {

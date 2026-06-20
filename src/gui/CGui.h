@@ -44,6 +44,7 @@ class CGui : public CGameGraphicsObject {
         SDL_Point current{0, 0};
         std::weak_ptr<CGameGraphicsObject> acceptedTarget;
         bool canceled = false;
+        bool sourceCallbackDeferred = false;
     };
 
     using CGameGraphicsObject::render;
@@ -91,7 +92,7 @@ class CGui : public CGameGraphicsObject {
     bool isPointerCapturedBy(const std::shared_ptr<CGameGraphicsObject> &widget) const;
 
     void startDragSession(std::shared_ptr<CGameGraphicsObject> sourceWidget, std::shared_ptr<CGameObject> payload,
-                          int sourceIndex, int startX, int startY);
+                          int sourceIndex, int startX, int startY, bool sourceCallbackDeferred = false);
 
     void updateDragSession(int currentX, int currentY);
 

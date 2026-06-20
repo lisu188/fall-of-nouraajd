@@ -125,12 +125,18 @@ bool CGui::isPointerCapturedBy(const std::shared_ptr<CGameGraphicsObject> &widge
 }
 
 void CGui::startDragSession(std::shared_ptr<CGameGraphicsObject> sourceWidget, std::shared_ptr<CGameObject> payload,
-                            int sourceIndex, int startX, int startY) {
+                            int sourceIndex, int startX, int startY, bool sourceCallbackDeferred) {
     if (!sourceWidget || !sourceWidget->isAttachedToGui(this->ptr<CGui>())) {
         return;
     }
-    dragSession =
-        DragSession{sourceWidget, std::move(payload), sourceIndex, {startX, startY}, {startX, startY}, {}, false};
+    DragSession session;
+    session.sourceWidget = sourceWidget;
+    session.payload = std::move(payload);
+    session.sourceIndex = sourceIndex;
+    session.start = {startX, startY};
+    session.current = {startX, startY};
+    session.sourceCallbackDeferred = sourceCallbackDeferred;
+    dragSession = std::move(session);
 }
 
 void CGui::updateDragSession(int currentX, int currentY) {
