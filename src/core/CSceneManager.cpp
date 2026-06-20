@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CSceneManager.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
@@ -61,6 +62,9 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
 
     transitionState = TransitionState::TransitionPending;
     pendingMapName = mapName;
+    auto context = game->getContext();
+    context->advanceTransitionGeneration();
+    const auto expectedGeneration = context->captureTransitionGeneration();
     if (CPlaytestTrace::enabled()) {
         json fields = {
             {"accepted", true},
@@ -72,12 +76,45 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
     }
 
     auto manager = shared_from_this();
-    vstd::call_later([manager, game, mapName]() {
+    std::weak_ptr<CGame> weakGame = game;
+    std::weak_ptr<CGameContext> weakContext = context;
+    vstd::call_later([manager, weakGame, weakContext, expectedGeneration, mapName]() {
+        auto resetIfStillPending = [&manager, &mapName]() {
+            if (manager->transitionState == TransitionState::TransitionPending && manager->pendingMapName == mapName) {
+                manager->resetTransition();
+            }
+        };
+        auto game = weakGame.lock();
+        auto context = weakContext.lock();
+        if (!game || !context || !context->isTransitionGenerationCurrent(expectedGeneration)) {
+            resetIfStillPending();
+            return;
+        }
         if (manager->transitionState != TransitionState::TransitionPending || manager->pendingMapName != mapName) {
             return;
         }
-        vstd::call_when([game]() { return !game->getMap() || !game->getMap()->isMoving(); },
-                        [manager, game, mapName]() { manager->performMapChange(game, mapName); });
+        vstd::call_when(
+            [weakGame, weakContext, expectedGeneration]() {
+                auto game = weakGame.lock();
+                auto context = weakContext.lock();
+                return !game || !context || !context->isTransitionGenerationCurrent(expectedGeneration) ||
+                       !game->getMap() || !game->getMap()->isMoving();
+            },
+            [manager, weakGame, weakContext, expectedGeneration, mapName]() {
+                auto resetIfStillPending = [&manager, &mapName]() {
+                    if (manager->transitionState == TransitionState::TransitionPending &&
+                        manager->pendingMapName == mapName) {
+                        manager->resetTransition();
+                    }
+                };
+                auto game = weakGame.lock();
+                auto context = weakContext.lock();
+                if (!game || !context || !context->isTransitionGenerationCurrent(expectedGeneration)) {
+                    resetIfStillPending();
+                    return;
+                }
+                manager->performMapChange(game, mapName);
+            });
     });
     return true;
 }
@@ -119,6 +156,7 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
             }
             game->getMap()->setTurn(oldMap->getTurn());
         }
+        game->getContext()->advanceTransitionGeneration();
         if (CPlaytestTrace::enabled()) {
             CPlaytestTrace::addMapContext(traceFields, game->getMap());
             traceFields["result"] = "completed";
