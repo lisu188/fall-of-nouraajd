@@ -17,18 +17,20 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 7. Never use `git reset --hard`, `git clean`, force-push, or destructive checkout operations against a worktree containing unreviewed user changes.
 8. Use a separate Git worktree and branch for every claim publication, implementation task, and terminal queue update.
 9. Keep at least eight live subagents attached to the controller whenever the subagent interface is available.
-10. Keep at least eight implementation issues active whenever eight safe, eligible, non-conflicting issues exist. Treat
-   eight active issues as the minimum operating target, not a best-effort aspiration.
-11. Keep at least four non-stale implementation issues active under this controller's own owner prefix whenever four
-   eligible issues can safely be claimed by this controller. Stale owned claims do not count toward that floor.
+10. Keep at least eight implementation issues active whenever eight status-and-dependency eligible implementation issues
+   exist. Treat eight active issues as the minimum operating target, not a best-effort aspiration.
+11. Keep exactly four non-stale implementation issues active under this controller's own owner prefix whenever four
+   status-and-dependency eligible issues are available for this controller. Stale owned claims and lease-expired claims
+   do not count toward that target, and a controller must not claim a fifth live implementation issue.
 12. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
 13. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
 14. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
 15. Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
    reproduction is necessary or GitHub Actions cannot provide the needed evidence. Outsource heavy validation to GitHub
    Actions polling.
-16. If fewer than eight issue workers are active or this controller has fewer than four non-stale owned claims, document
-   the concrete eligibility, conflict, status, resource, or repository safety blocker that prevents filling the slot.
+16. If fewer than eight issue workers are active, this controller has fewer than four non-stale owned claims, or this
+   controller has more than four non-stale owned claims, document the concrete status, dependency, live-worker-status,
+   resource, authentication, queue-validation, workbook-PR, repository-safety, or over-capacity blocker.
 17. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
    loop, and after merged-checkpoint cleanup. Treat low free disk or stale run/worktree pressure as blockers to new work
    until safely reported or cleaned.
@@ -124,19 +126,22 @@ Use lowercase ASCII, hyphens, and repository-approved naming. Do not reuse a bra
 
 ## Live status reporting
 
-Maintain at least eight live subagents and keep at least eight implementation issues active whenever safe. If fewer than eight
-implementation issues can safely run, assign the excess subagents only lightweight standby roles such as status polling,
-eligibility summaries, or review preparation, and print the exact blocker preventing eight active issues. Standby
-subagents must not claim issues, edit files, start builds, run tests, or touch the workbook.
-Each controller must also keep at least four of its own live workbook claims active when four eligible issues can be
-safely claimed. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the current
-controller's floor; stale owned claims and lease-expired owned claims do not count. Continue claim/refill iterations until
-`controllerCapacity.deficitToFloor` is zero, `controllerCapacity.fillableDeficit` is zero, or a concrete eligibility,
-resource, repository-safety, or worker-status blocker is printed.
+Maintain at least eight live subagents and keep at least eight implementation issues active whenever status-and-dependency
+eligible issues exist. If fewer than eight implementation issues can safely run for non-source reasons, assign the excess
+subagents only lightweight standby roles such as status polling, eligibility summaries, or review preparation, and print
+the exact blocker preventing eight active issues. Standby subagents must not claim issues, edit files, start builds, run
+tests, or touch the workbook.
+Each controller must also keep exactly four of its own live workbook claims active when four status-and-dependency
+eligible issues are available. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the
+current controller's capacity; stale owned claims and lease-expired owned claims do not count. Continue claim/refill
+iterations until `controllerCapacity.deficitToFloor` is zero, `controllerCapacity.fillableDeficit` is zero, or a concrete
+status, dependency, resource, repository-safety, queue-validation, workbook-PR, authentication, or worker-status blocker
+is printed. If `controllerCapacity.overCapacity` is true, stop claiming and report `controllerCapacity.overLimitBy`.
 
 When subagent capacity permits, keep one read-only project manager attached to the controller. The project manager may
 be an extra subagent beyond active implementation workers, or a standby role when fewer than eight implementation issues
-are safe. It must not reduce the floor of eight active implementation issues when eight safe issues exist.
+are safe for non-source reasons. It must not reduce the floor of eight active implementation issues when eight
+status-and-dependency eligible issues exist.
 
 When subagent capacity permits, keep one read-only QA subagent attached to the controller. QA reviews selected issue
 risk, diffs, tests, CI evidence, and merge readiness. QA must not claim issues, edit files, touch the workbook, or run
@@ -176,11 +181,11 @@ subagent is available, the controller must perform this checklist directly and s
 
 The project manager produces a concise prioritization brief containing:
 
-- the highest available priority tier after dependency, status, conflict, resource, and disk review;
+- the highest available priority tier after dependency, status, resource, and disk review;
 - candidate `(Epic #, Story #)` groups in that tier;
 - work likely to unblock dependent issues;
 - stale, blocked, failed, or repeatedly deferred work that needs controller attention;
-- scope conflicts, validation cost, resource risk, and sequencing risk;
+- scope-overlap advisories, validation cost, resource risk, and sequencing risk;
 - recommended priority changes, issue splits, deferrals, or blocker publications with source-backed evidence.
 
 Project-manager recommendations do not bypass the queue rules. The controller must still keep only the highest
@@ -199,9 +204,9 @@ python3 scripts/controller_resource_audit.py --json
 
 Use the audit plus current available memory, active worker status, disk pressure, accumulated run/worktree usage,
 prunable worktree metadata, and running heavy build/test/coverage/Xvfb/MCP jobs as scheduling context. These checks
-inform dispatch, but they do not impose a fixed RAM cap. If actual resource pressure, missing worker status, or
-repository state prevents safe implementation work, keep the extra subagents in standby and record the blocker rather
-than assigning unsafe implementation issues.
+inform dispatch, but they do not impose a fixed RAM cap. If actual resource pressure, missing worker status,
+authentication, queue validation, an unmerged workbook-state PR, or repository state prevents safe implementation work,
+keep the extra subagents in standby and record the blocker rather than assigning unsafe implementation issues.
 
 For each free slot, fetch the latest merged queue state from `origin/main` and calculate the complete
 eligible set yourself. The `claim` command is deterministic by workbook order, so use it only after selecting the exact
@@ -216,8 +221,11 @@ stale claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stal
 mutating the workbook. `activeClaims.unexpired` means live/pollable rows that are neither reclaimable-stale nor
 lease-expired. Use the unexpired count, not raw `activeCount`, when deciding whether the global active-worker floor is
 genuinely satisfied. Use `controllerCapacity.activeNonStale`, `controllerCapacity.leaseExpiredOwned`,
-`controllerCapacity.deficitToFloor`, and `controllerCapacity.fillableDeficit` to enforce this controller's four-issue
-owned-claim floor before stopping a refill loop. It also reports target-file overlap advisories through
+`controllerCapacity.deficitToFloor`, `controllerCapacity.fillableDeficit`, `controllerCapacity.activeLimit`,
+`controllerCapacity.availableSlots`, `controllerCapacity.overLimitBy`, and `controllerCapacity.overCapacity` to enforce
+this controller's exactly-four owned-claim target before stopping a refill loop. A controller must refill below four
+non-stale owned implementation claims and must not claim a fifth live implementation issue. It also reports target-file
+overlap advisories through
 `advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps`. Treat the
 recommendation and overlap advisories as evidence for the project-manager brief and final controller review; do not
 exclude a task solely because its exact `Target Files / Modules` overlap active work.
@@ -226,13 +234,13 @@ Claim only after final review with `claim --issue`, which revalidates under the 
 Exclude every row that has:
 
 - a status other than `NOT_STARTED`;
-- any dependency that is not `DONE`;
-- a source-backed active-scope conflict;
-- an indirect conflict through shared headers, bindings, tests, CMake, map scripts, dialog/config files, serialization,
-  generated resources, or shared runtime systems.
+- any dependency that is not `DONE`.
 
-Use exact target-file overlap with active work as an advisory guide for source inspection and sequencing decisions. If
-inspection confirms that the overlap is a real active-scope conflict, exclude or defer it on that basis.
+Use exact target-file overlap, open implementation PRs, and indirect shared scope through headers, bindings, tests, CMake,
+map scripts, dialog/config files, serialization, generated resources, or runtime systems as advisory coordination
+signals. They should shape worker prompts, review order, expected rebase/merge risk, and validation focus. Do not
+exclude, defer, or stop solely because a status-and-dependency eligible issue overlaps active work; claim it and manage
+the overlap unless a non-source blocker prevents safe dispatch.
 
 After exclusions:
 
@@ -241,7 +249,8 @@ After exclusions:
 3. Randomly select one story with equal probability.
 4. Randomly select one eligible substory within the chosen story.
 
-Never default to spreadsheet order, and never randomize an ineligible issue into consideration.
+Never default to spreadsheet order, never randomize a status/dependency-ineligible issue into consideration, and never
+fall back to a lower priority tier merely to avoid source overlap.
 
 ## Dispatch loop
 
@@ -260,9 +269,10 @@ For each free subagent slot:
 
 Do not bypass dependencies to keep workers occupied.
 
-Do not start additional workers when live worker status is missing, when the next candidate conflicts with active work,
-or when actual resource or disk pressure requires waiting for validation or cleanup to finish. Keep at least eight
-subagents alive by assigning standby-only work when fewer than eight implementation slots are safe.
+Do not start additional workers when live worker status is missing or when actual resource, disk, authentication,
+queue-validation, repository-state, or workbook-PR pressure requires waiting for validation or cleanup to finish. Source
+overlap with active work is not, by itself, a reason to leave a worker slot empty. Keep at least eight subagents alive by
+assigning standby-only work when fewer than eight implementation slots are safe for non-source reasons.
 
 If a dispatch/refill loop does not publish a new claim, still fetch and inspect `origin/main` before deciding the next
 action. Another claim, implementation, terminal-status, or reclaim PR may have merged while the controller was polling
@@ -458,10 +468,10 @@ The controller keeps resource pressure in mind without enforcing a fixed RAM gat
 delivery, do not run local native builds, `ctest`, full Python suites, or coverage unless a focused local reproduction is
 necessary or GitHub Actions cannot provide the needed evidence. Before any necessary local heavy command, note current
 available RAM, disk pressure, running heavy jobs, and worker status. Treat eight live issue workers as the minimum
-target whenever safe eligible work exists; record the concrete blocker if actual resource pressure prevents eight live
-issues. Also treat four live owned claims as this controller's minimum active target whenever
-`controllerCapacity.fillableDeficit` is greater than zero; record the concrete blocker if the controller cannot close
-that deficit.
+target whenever status-and-dependency eligible work exists; record the concrete blocker if actual resource pressure
+prevents eight live issues. Also treat four live owned claims as this controller's exact active target: refill whenever
+`controllerCapacity.fillableDeficit` is greater than zero, do not claim when `controllerCapacity.availableSlots` is zero,
+and report `controllerCapacity.overLimitBy` when the controller is over capacity.
 
 Repository instructions may show local build examples such as `-j$(nproc)`. Treat them as local equivalents, not the
 default PR delivery path. Record the reason and exact command in worker reports and PR bodies whenever local heavy
@@ -504,9 +514,11 @@ evidence, do not enable auto-merge until the selected check(s) have passed.
 
 Workers and standby subagents may perform lightweight source inspection and prepare summaries while heavy validation runs.
 Do not dispatch additional implementation work when doing so would leave active workers unpollable. Empty implementation
-slots should be filled until at least eight issues are active unless the eligibility set, conflicts, missing status,
-actual resource pressure, or repository safety prevents it. The subagent floor is satisfied by standby subagents only
-when eight active implementation issues are not safe.
+slots should be filled until at least eight issues are active unless status/dependency eligibility, missing worker
+status, actual resource pressure, queue validation, workbook-PR serialization, authentication, or repository safety
+prevents it. Source overlap and open implementation PR overlap are scheduling risks, not empty-slot reasons. The
+subagent floor is satisfied by standby subagents only when eight active implementation issues are not safe for those
+non-source reasons.
 
 ## Phase 3: review and publish implementation
 
@@ -658,7 +670,6 @@ Stop dispatching new tasks when:
 - GitHub authentication or repository identity cannot be verified;
 - no eligible `NOT_STARTED` task remains;
 - all remaining work is blocked by dependencies;
-- every safe task conflicts with active work;
 - available subagent capacity is exhausted;
 - live worker status cannot be polled or recovered safely;
 - actual resource pressure requires waiting before more work can start;

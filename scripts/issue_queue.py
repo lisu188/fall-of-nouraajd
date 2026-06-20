@@ -101,6 +101,7 @@ ISSUE_NAME_PATTERN = re.compile(r"^\[EPIC_\d{2}\]\[STORY_\d{2}\]\[SUBSTORY_\d{2}
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
 DEFAULT_RECLAIM_AGE_MINUTES = 240
 DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR = 4
+DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT = 4
 
 
 class QueueError(RuntimeError):
@@ -851,11 +852,16 @@ def controllerCapacityPayload(
     state: QueueState,
     controllerId: str,
     activeFloor: int = DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR,
+    activeLimit: int = DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT,
     eligibleCount: int | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     if activeFloor < 0:
         raise QueueError("--controller-active-floor must be non-negative")
+    if activeLimit < 0:
+        raise QueueError("--controller-active-limit must be non-negative")
+    if activeLimit < activeFloor:
+        raise QueueError("--controller-active-limit must be greater than or equal to --controller-active-floor")
     controllerId = controllerId.strip()
     if not controllerId:
         raise QueueError("--controller-id must be non-empty")
@@ -879,18 +885,25 @@ def controllerCapacityPayload(
     liveTasks = [
         task for task in activeTasks if task.issueName not in staleIssues and task.issueName not in leaseExpiredIssues
     ]
-    deficit = max(0, activeFloor - len(liveTasks))
-    fillable = min(deficit, eligibleCount) if eligibleCount is not None else deficit
+    activeNonStale = len(liveTasks)
+    deficit = max(0, activeFloor - activeNonStale)
+    availableSlots = max(0, activeLimit - activeNonStale)
+    overLimitBy = max(0, activeNonStale - activeLimit)
+    fillable = min(deficit, availableSlots, eligibleCount) if eligibleCount is not None else min(deficit, availableSlots)
     return {
         "controllerId": controllerId,
         "ownerPrefix": ownerPrefix,
         "activeFloor": activeFloor,
+        "activeLimit": activeLimit,
         "activeTotal": len(activeTasks),
-        "activeNonStale": len(liveTasks),
+        "activeNonStale": activeNonStale,
         "staleOwned": len(staleTasks),
         "leaseExpiredOwned": len(leaseExpiredTasks),
-        "inactiveOwned": len(activeTasks) - len(liveTasks),
+        "inactiveOwned": len(activeTasks) - activeNonStale,
         "deficitToFloor": deficit,
+        "availableSlots": availableSlots,
+        "overLimitBy": overLimitBy,
+        "overCapacity": overLimitBy > 0,
         "eligibleCount": eligibleCount,
         "fillableDeficit": fillable,
         "needsRefill": fillable > 0,
@@ -952,6 +965,7 @@ def shortlistTasks(
     includeRejected: bool = False,
     controllerId: str | None = None,
     controllerActiveFloor: int = DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR,
+    controllerActiveLimit: int = DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT,
 ) -> dict[str, Any]:
     eligible, rejected = eligibleTasks(
         state,
@@ -997,6 +1011,7 @@ def shortlistTasks(
             state,
             controllerId=controllerId,
             activeFloor=controllerActiveFloor,
+            activeLimit=controllerActiveLimit,
             eligibleCount=len(eligible),
             now=now,
         )
@@ -1708,7 +1723,7 @@ def buildParser() -> argparse.ArgumentParser:
     shortlistParser.add_argument("--seed", help="Stable seed for reproducible story and substory selection")
     shortlistParser.add_argument("--include-rejected", action="store_true", help="Include per-issue rejection reasons")
     shortlistParser.add_argument("--json", action="store_true", help="Output JSON (default)")
-    shortlistParser.add_argument("--controller-id", help="Include active-worker floor status for this controller")
+    shortlistParser.add_argument("--controller-id", help="Include active-worker capacity status for this controller")
     shortlistParser.add_argument(
         "--controller-active-floor",
         type=int,
@@ -1716,6 +1731,15 @@ def buildParser() -> argparse.ArgumentParser:
         help=(
             "Minimum non-stale active issues this controller should keep when eligible work exists "
             f"(default: {DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR})"
+        ),
+    )
+    shortlistParser.add_argument(
+        "--controller-active-limit",
+        type=int,
+        default=DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT,
+        help=(
+            "Maximum non-stale active issues this controller should own at once "
+            f"(default: {DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT})"
         ),
     )
 
@@ -1872,6 +1896,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                             includeRejected=args.include_rejected,
                             controllerId=args.controller_id,
                             controllerActiveFloor=args.controller_active_floor,
+                            controllerActiveLimit=args.controller_active_limit,
                         )
                     )
                     return 0

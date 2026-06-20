@@ -364,8 +364,12 @@ class IssueQueueTest(unittest.TestCase):
             payload["activeClaims"],
         )
         self.assertEqual(4, payload["controllerCapacity"]["activeFloor"])
+        self.assertEqual(4, payload["controllerCapacity"]["activeLimit"])
         self.assertEqual(0, payload["controllerCapacity"]["activeNonStale"])
         self.assertEqual(4, payload["controllerCapacity"]["deficitToFloor"])
+        self.assertEqual(4, payload["controllerCapacity"]["availableSlots"])
+        self.assertEqual(0, payload["controllerCapacity"]["overLimitBy"])
+        self.assertFalse(payload["controllerCapacity"]["overCapacity"])
         self.assertEqual(3, payload["controllerCapacity"]["fillableDeficit"])
         self.assertEqual(0, payload["advisoryTargetFileOverlapCount"])
         self.assertIn(
@@ -407,6 +411,7 @@ class IssueQueueTest(unittest.TestCase):
             seed="expired-capacity",
             controllerId="ctrl-demo",
             controllerActiveFloor=4,
+            controllerActiveLimit=4,
             includeRejected=True,
         )
 
@@ -429,6 +434,10 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(1, capacity["leaseExpiredOwned"])
         self.assertEqual(1, capacity["inactiveOwned"])
         self.assertEqual(4, capacity["deficitToFloor"])
+        self.assertEqual(4, capacity["activeLimit"])
+        self.assertEqual(4, capacity["availableSlots"])
+        self.assertEqual(0, capacity["overLimitBy"])
+        self.assertFalse(capacity["overCapacity"])
         self.assertTrue(capacity["needsRefill"])
         self.assertEqual([], capacity["activeIssues"])
         self.assertEqual([expired_recent["Issue Name"]], capacity["leaseExpiredIssues"])
@@ -455,6 +464,7 @@ class IssueQueueTest(unittest.TestCase):
             seed="expired-floor",
             controllerId="ctrl-demo",
             controllerActiveFloor=4,
+            controllerActiveLimit=4,
         )
 
         self.assertEqual(4, payload["activeCount"])
@@ -469,11 +479,15 @@ class IssueQueueTest(unittest.TestCase):
         self.assertEqual(4, capacity["leaseExpiredOwned"])
         self.assertEqual(4, capacity["inactiveOwned"])
         self.assertEqual(4, capacity["deficitToFloor"])
+        self.assertEqual(4, capacity["activeLimit"])
+        self.assertEqual(4, capacity["availableSlots"])
+        self.assertEqual(0, capacity["overLimitBy"])
+        self.assertFalse(capacity["overCapacity"])
         self.assertEqual(2, capacity["eligibleCount"])
         self.assertEqual(2, capacity["fillableDeficit"])
         self.assertTrue(capacity["needsRefill"])
 
-    def test_shortlist_reports_controller_capacity_floor(self) -> None:
+    def test_shortlist_reports_controller_capacity_target(self) -> None:
         live = issue_queue.claimTask(self.workbook_path, owner="controller/ctrl-demo/subagent-1", leaseMinutes=30)
         stale = issue_queue.claimTask(self.workbook_path, owner="controller/ctrl-demo/subagent-2", leaseMinutes=30)
         self.set_claim_times(stale["Issue Name"], lease_minutes_from_now=30, updated_minutes_ago=241)
@@ -484,24 +498,79 @@ class IssueQueueTest(unittest.TestCase):
             seed="capacity",
             controllerId="ctrl-demo",
             controllerActiveFloor=4,
+            controllerActiveLimit=4,
         )
 
         capacity = payload["controllerCapacity"]
         self.assertEqual("ctrl-demo", capacity["controllerId"])
         self.assertEqual("controller/ctrl-demo", capacity["ownerPrefix"])
         self.assertEqual(4, capacity["activeFloor"])
+        self.assertEqual(4, capacity["activeLimit"])
         self.assertEqual(2, capacity["activeTotal"])
         self.assertEqual(1, capacity["activeNonStale"])
         self.assertEqual(1, capacity["staleOwned"])
         self.assertEqual(0, capacity["leaseExpiredOwned"])
         self.assertEqual(1, capacity["inactiveOwned"])
         self.assertEqual(3, capacity["deficitToFloor"])
+        self.assertEqual(3, capacity["availableSlots"])
+        self.assertEqual(0, capacity["overLimitBy"])
+        self.assertFalse(capacity["overCapacity"])
         self.assertEqual(payload["eligibleCount"], capacity["eligibleCount"])
         self.assertEqual(min(3, payload["eligibleCount"]), capacity["fillableDeficit"])
         self.assertTrue(capacity["needsRefill"])
         self.assertEqual([live["Issue Name"]], capacity["activeIssues"])
         self.assertEqual([stale["Issue Name"]], capacity["staleIssues"])
         self.assertEqual([], capacity["leaseExpiredIssues"])
+
+    def test_shortlist_reports_controller_capacity_limit(self) -> None:
+        issues = [f"[EPIC_01][STORY_03][SUBSTORY_{index:02d}]Limit issue {index}" for index in range(1, 7)]
+        self.create_workbook(
+            [self.task_row(issue, "P0", None, f"src/limit_{index}.cpp") for index, issue in enumerate(issues)]
+        )
+        claims = [
+            issue_queue.claimTask(
+                self.workbook_path,
+                owner=f"controller/ctrl-demo/subagent-{index}",
+                leaseMinutes=30,
+            )
+            for index in range(1, 6)
+        ]
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        payload = issue_queue.shortlistTasks(
+            state,
+            seed="capacity-limit",
+            controllerId="ctrl-demo",
+            controllerActiveFloor=4,
+            controllerActiveLimit=4,
+        )
+
+        capacity = payload["controllerCapacity"]
+        self.assertEqual(5, payload["activeCount"])
+        self.assertEqual(5, capacity["activeTotal"])
+        self.assertEqual(5, capacity["activeNonStale"])
+        self.assertEqual(4, capacity["activeFloor"])
+        self.assertEqual(4, capacity["activeLimit"])
+        self.assertEqual(0, capacity["deficitToFloor"])
+        self.assertEqual(0, capacity["availableSlots"])
+        self.assertEqual(1, capacity["overLimitBy"])
+        self.assertTrue(capacity["overCapacity"])
+        self.assertEqual(1, capacity["eligibleCount"])
+        self.assertEqual(0, capacity["fillableDeficit"])
+        self.assertFalse(capacity["needsRefill"])
+        self.assertEqual([claim["Issue Name"] for claim in claims], capacity["activeIssues"])
+
+    def test_controller_capacity_rejects_limit_below_floor(self) -> None:
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.shortlistTasks(
+                state,
+                seed="bad-capacity",
+                controllerId="ctrl-demo",
+                controllerActiveFloor=4,
+                controllerActiveLimit=3,
+            )
 
     def test_controller_id_generates_unique_owner_prefix(self) -> None:
         first = issue_queue.generateControllerId(hostname="Build Host.local", pid=1234, unique="ABCDEF12")
