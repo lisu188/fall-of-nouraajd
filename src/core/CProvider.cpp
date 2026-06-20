@@ -526,6 +526,10 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
         // manager
         vstd::logger::warning("Loading empty animation");
     }
+    if (!animation) {
+        vstd::logger::warning("Skipping animation with unregistered animation type:", object->getAnimation());
+        return nullptr;
+    }
     animation->setObject(object);
     return animation;
 }
@@ -533,6 +537,10 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
 std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, std::string path,
                                                              bool custom) {
     std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
+    if (!object) {
+        vstd::logger::warning("Skipping animation path with unregistered CGameObject type:", path);
+        return nullptr;
+    }
     object->setAnimation(std::move(path));
     auto animation = getAnimation(game, object, custom);
     if (animation) {

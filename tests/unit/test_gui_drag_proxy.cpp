@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGame.h"
 #include "core/CSerialization.h"
+#include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/object/CGameGraphicsObject.h"
@@ -111,14 +113,25 @@ std::shared_ptr<CGameObject> drag_payload(const std::shared_ptr<CGame> &game) {
     return payload;
 }
 
+std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
+    type_registration::registerGuiTypes();
+    type_registration::registerGuiAnimationTypes();
+
+    auto game = std::make_shared<CGame>();
+    game->setGui(gui);
+    gui->setGame(game);
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    return game;
+}
+
 void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_cancel() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
-    auto game = std::make_shared<CGame>();
     auto gui = std::make_shared<CGui>();
-    game->setGui(gui);
-    gui->setGame(game);
+    auto game = create_gui_game(gui);
 
     auto source = attach_mouse_recorder(gui);
     auto target = attach_drop_target_recorder(gui);
