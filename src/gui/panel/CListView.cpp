@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/object/CWidget.h"
 #include "handler/CEventHandler.h"
+#include <cstdlib>
 #include <exception>
 
 namespace {
@@ -39,11 +40,37 @@ std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> 
     animation->setLayout(std::make_shared<CParentLayout>());
     return animation;
 }
+
+bool dragMoved(const CGui::DragSession &session) {
+    return std::abs(session.current.x - session.start.x) > 0 || std::abs(session.current.y - session.start.y) > 0;
+}
 } // namespace
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {}
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT && gui && gui->hasDragSession()) {
+        auto self = this->ptr<CListView>();
+        const auto *session = gui->getDragSession();
+        const bool sourceIsSelf = session->sourceWidget.lock() == self;
+        if (sourceIsSelf) {
+            int index = -1;
+            std::shared_ptr<CGameObject> object;
+            if (session->sourceCallbackDeferred && !session->canceled && !dragMoved(*session) &&
+                tryGetClickedObject(gui, x, y, index, object)) {
+                invokeCallback(gui, index, object);
+            }
+            return true;
+        }
+        int index = -1;
+        std::shared_ptr<CGameObject> object;
+        if (!session->canceled && dragMoved(*session) && tryGetClickedObject(gui, x, y, index, object)) {
+            invokeCallback(gui, index, object);
+            gui->acceptDragSession(self);
+            return true;
+        }
+        return false;
+    }
     if (type != SDL_MOUSEBUTTONDOWN || (button != SDL_BUTTON_LEFT && button != SDL_BUTTON_RIGHT)) {
         return true;
     }
@@ -54,6 +81,12 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     }
     if (button == SDL_BUTTON_RIGHT) {
         return invokeRightClickCallback(gui, index, object);
+    }
+    if (gui) {
+        auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
+        auto self = this->ptr<CListView>();
+        gui->startDragSession(self, object, index, rect->x + x, rect->y + y);
+        gui->capturePointer(self);
     }
     invokeCallback(gui, index, object);
     return true;
@@ -328,25 +361,36 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
                         int itemIndex) const {
     auto self = const_cast<CListView *>(this)->ptr<CListView>();
     auto object = indexedCollection.find(itemIndex)->second;
+    auto itemAnimation = createListItemAnimation(gui, object);
+    std::weak_ptr<CGameGraphicsObject> sourceGraphic = itemAnimation;
     std::shared_ptr<CGameGraphicsObject> objectGraphic =
-        createListItemAnimation(gui, object)
-            ->withCallback(
-                [self, itemIndex, object](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
-                    if (type != SDL_MOUSEBUTTONDOWN) {
-                        return false;
-                    }
-                    if (!self->isAttachedToGui(gui)) {
-                        return true;
-                    }
-                    if (button == SDL_BUTTON_LEFT) {
-                        self->invokeCallback(gui, itemIndex, object);
-                        return true;
-                    }
-                    if (button == SDL_BUTTON_RIGHT) {
-                        return self->invokeRightClickCallback(gui, itemIndex, object);
-                    }
-                    return false;
-                });
+        itemAnimation->withCallback([self, sourceGraphic, itemIndex,
+                                     object](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+            if (type != SDL_MOUSEBUTTONDOWN) {
+                return false;
+            }
+            if (!self->isAttachedToGui(gui)) {
+                return true;
+            }
+            if (button == SDL_BUTTON_LEFT) {
+                const bool deferSourceCallback = self->invokeSelect(gui, itemIndex, object);
+                bool dragStarted = false;
+                if (auto source = sourceGraphic.lock()) {
+                    auto rect = source->getLayout() ? source->getLayout()->getRect(source) : CUtil::rect(0, 0, 0, 0);
+                    gui->startDragSession(self, object, itemIndex, rect->x + x, rect->y + y, deferSourceCallback);
+                    gui->capturePointer(self);
+                    dragStarted = gui->hasDragSession();
+                }
+                if (!deferSourceCallback || !dragStarted) {
+                    self->invokeCallback(gui, itemIndex, object);
+                }
+                return true;
+            }
+            if (button == SDL_BUTTON_RIGHT) {
+                return self->invokeRightClickCallback(gui, itemIndex, object);
+            }
+            return false;
+        });
     objectGraphic->setPriority(2);
     return_val.push_back(objectGraphic);
 }

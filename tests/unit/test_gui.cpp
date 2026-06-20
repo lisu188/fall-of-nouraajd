@@ -55,6 +55,15 @@ class CountingRenderObject : public CGameGraphicsObject {
 
 class MouseEventRecorder : public CGameGraphicsObject {
   public:
+    bool mouseEvent(std::shared_ptr<CGui>, SDL_EventType type, int button, int x, int y) override {
+        ++button_count;
+        last_type = type;
+        last_button = button;
+        last_x = x;
+        last_y = y;
+        return true;
+    }
+
     bool mouseMotionEvent(std::shared_ptr<CGui>, SDL_EventType type, int x, int y, int xrel, int yrel) override {
         ++motion_count;
         last_type = type;
@@ -81,10 +90,12 @@ class MouseEventRecorder : public CGameGraphicsObject {
         return true;
     }
 
+    int button_count = 0;
     int motion_count = 0;
     int wheel_count = 0;
     int cancel_count = 0;
     SDL_EventType last_type = SDL_FIRSTEVENT;
+    int last_button = 0;
     int last_x = 0;
     int last_y = 0;
     int last_xrel = 0;
@@ -97,6 +108,26 @@ std::shared_ptr<MouseEventRecorder> attach_mouse_recorder(const std::shared_ptr<
     auto recorder = std::make_shared<MouseEventRecorder>();
     auto layout = std::make_shared<CLayout>();
     layout->setRect(10, 20, 100, 80);
+    recorder->setLayout(layout);
+    gui->pushChild(recorder);
+    return recorder;
+}
+
+class DropTargetRecorder : public MouseEventRecorder {
+  public:
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override {
+        MouseEventRecorder::mouseEvent(gui, type, button, x, y);
+        if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT && gui && gui->hasDragSession()) {
+            gui->acceptDragSession(this->ptr<CGameGraphicsObject>());
+        }
+        return true;
+    }
+};
+
+std::shared_ptr<DropTargetRecorder> attach_drop_target_recorder(const std::shared_ptr<CGui> &gui) {
+    auto recorder = std::make_shared<DropTargetRecorder>();
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(200, 20, 100, 80);
     recorder->setLayout(layout);
     gui->pushChild(recorder);
     return recorder;
@@ -211,6 +242,27 @@ void test_gui_routes_mouse_motion_to_target_child() {
                 "mouse motion relative deltas should be preserved");
 }
 
+void test_gui_routes_mouse_button_up_without_drag_to_target_child() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto recorder = attach_mouse_recorder(gui);
+
+    SDL_Event event{};
+    event.type = SDL_MOUSEBUTTONUP;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = 35;
+    event.button.y = 55;
+
+    expect_true(gui->event(&event), "mouse button up without a drag should use normal hit testing");
+    expect_true(recorder->button_count == 1, "mouse button up should be routed to the target child");
+    expect_true(recorder->last_type == SDL_MOUSEBUTTONUP, "mouse button handler should receive the SDL event type");
+    expect_true(recorder->last_button == SDL_BUTTON_LEFT, "mouse button handler should receive the SDL button");
+    expect_true(recorder->last_x == 25 && recorder->last_y == 35,
+                "mouse button coordinates should be relative to the child layout");
+}
+
 void test_gui_routes_mouse_wheel_to_target_child() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -255,6 +307,90 @@ void test_gui_routes_window_leave_as_mouse_cancel() {
     expect_true(recorder->last_type == SDL_WINDOWEVENT, "mouse cancel handler should receive the SDL event type");
 }
 
+void test_gui_pointer_capture_routes_drag_release_and_clears_session() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto source = attach_mouse_recorder(gui);
+    auto target = attach_drop_target_recorder(gui);
+    auto payload = std::make_shared<CGameObject>();
+
+    gui->startDragSession(source, payload, 7, 20, 30);
+    gui->capturePointer(source);
+
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 220;
+    motion.motion.y = 55;
+    motion.motion.xrel = 200;
+    motion.motion.yrel = 25;
+
+    expect_true(gui->event(&motion), "captured mouse motion outside the source should be consumed");
+    expect_true(source->motion_count == 1, "captured source should receive motion outside its rectangle");
+    expect_true(target->motion_count == 0, "motion should not be rerouted to the hovered target during capture");
+    expect_true(gui->hasDragSession(), "drag session should remain active during captured motion");
+    expect_true(gui->hasPointerCapture(), "pointer capture should remain active during captured motion");
+
+    SDL_Event button_up{};
+    button_up.type = SDL_MOUSEBUTTONUP;
+    button_up.button.button = SDL_BUTTON_LEFT;
+    button_up.button.x = 220;
+    button_up.button.y = 55;
+
+    expect_true(gui->event(&button_up), "drop over target should be consumed");
+    expect_true(target->button_count == 1, "drop target should receive the release under the pointer");
+    expect_true(source->button_count == 1, "captured source should also receive the release");
+    expect_true(!gui->hasDragSession(), "drop should clear the drag session");
+    expect_true(!gui->hasPointerCapture(), "drop should clear pointer capture");
+}
+
+void test_gui_pointer_capture_does_not_duplicate_same_source_release() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto source = attach_mouse_recorder(gui);
+
+    gui->startDragSession(source, std::make_shared<CGameObject>(), 7, 20, 30);
+    gui->capturePointer(source);
+
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 36;
+    motion.motion.y = 56;
+    motion.motion.xrel = 1;
+    motion.motion.yrel = 1;
+
+    expect_true(gui->event(&motion), "same-source jitter motion should be captured");
+
+    SDL_Event button_up{};
+    button_up.type = SDL_MOUSEBUTTONUP;
+    button_up.button.button = SDL_BUTTON_LEFT;
+    button_up.button.x = 36;
+    button_up.button.y = 56;
+
+    expect_true(gui->event(&button_up), "same-source release should be handled");
+    expect_true(source->button_count == 1, "same-source release should not be dispatched twice");
+    expect_true(!gui->hasDragSession(), "same-source release should clear the drag session");
+    expect_true(!gui->hasPointerCapture(), "same-source release should clear pointer capture");
+}
+
+void test_gui_pointer_capture_clears_when_captured_widget_is_removed() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto source = attach_mouse_recorder(gui);
+
+    gui->startDragSession(source, std::make_shared<CGameObject>(), 3, 20, 30);
+    gui->capturePointer(source);
+    gui->removeChild(source);
+
+    expect_true(!gui->hasDragSession(), "removing the captured widget should clear the drag session");
+    expect_true(!gui->hasPointerCapture(), "removing the captured widget should clear pointer capture");
+}
+
 void test_render_traversal_stops_after_detach() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -286,8 +422,12 @@ int main() {
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
+    test_gui_routes_mouse_button_up_without_drag_to_target_child();
     test_gui_routes_mouse_wheel_to_target_child();
     test_gui_routes_window_leave_as_mouse_cancel();
+    test_gui_pointer_capture_routes_drag_release_and_clears_session();
+    test_gui_pointer_capture_does_not_duplicate_same_source_release();
+    test_gui_pointer_capture_clears_when_captured_widget_is_removed();
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
 
