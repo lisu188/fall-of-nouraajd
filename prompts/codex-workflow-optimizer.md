@@ -39,7 +39,7 @@ Relevant optimization areas include:
 - Git worktree lifecycle;
 - branch and PR creation;
 - merge-state detection;
-- stale branch or stale claim recovery;
+- stale branch, stale PR, or stale claim recovery;
 - CI and validation efficiency;
 - resource-aware scheduling;
 - deterministic tests;
@@ -52,7 +52,9 @@ Do not consume or modify normal gameplay backlog items merely to create optimiza
 ## Multiagent operating model
 
 Maintain enough live subagents to support the active workflow target; queue-controller operation uses at least eight
-active implementation issues whenever eight safe, eligible, non-conflicting issues exist.
+active implementation issues whenever eight status-and-dependency eligible issues exist and no concrete non-source
+blocker prevents safe dispatch. Each controller must keep exactly four non-stale owned implementation claims when four
+status-and-dependency eligible issues are available for that controller, and must not claim a fifth.
 
 Use these roles, rotating them when useful:
 
@@ -99,6 +101,7 @@ Print a concise live status table containing:
 - current command or validation;
 - branch and worktree;
 - PR number and merge state;
+- open-PR audit summary;
 - blocker;
 - next controller action.
 
@@ -113,6 +116,8 @@ Repeat the following cycle:
    - Fetch `origin/main`.
    - Inspect open workflow-related PRs, active worktrees, branches, dirty state, disk usage, and accumulated
      run/worktrees.
+   - Classify stale/open PR debt with `scripts/pr_review_audit.py` before cleanup, stale-branch decisions, or merge
+     decisions; treat the result as read-only evidence.
    - Never destroy or overwrite unreviewed work.
 
 2. Establish evidence
@@ -120,6 +125,7 @@ Repeat the following cycle:
      - `python3 scripts/issue_queue.py validate`
      - `python3 -m unittest tests.test_issue_queue`
      - `python3 -m unittest tests.test_controller_resource_audit`
+     - `python3 -m unittest tests.test_pr_review_audit`
      - `python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes`
    - Collect relevant evidence such as failures, test duration, queue conflicts, stale claims, PR-state errors,
      unnecessary rebuilds, resource pressure, disk pressure, stale run/worktrees, prunable worktree metadata, and

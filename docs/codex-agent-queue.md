@@ -10,6 +10,7 @@ concurrent controllers can be distinguished.
 
 - `planning/fall_of_nouraajd_issue_proposals.xlsx` — canonical queue and human-readable backlog.
 - `scripts/issue_queue.py` — atomic claim/progress/completion CLI.
+- `scripts/pr_review_audit.py` — read-only stale/open PR classification helper for merge, cleanup, and dispatch review.
 - `prompts/codex-queue-controller.md` — controller-agent operating prompt.
 - `tests/test_issue_queue.py` — focused queue and concurrency regressions.
 
@@ -120,6 +121,26 @@ the dependency, highest-priority-tier, randomized story/substory, resource, clea
 dependency, status, or scope change must be approved by the user or controller and merged through a serialized
 workbook-only pull request before it affects dispatch.
 
+Before cleanup, stale-PR closure, stale-branch cleanup, or merge decisions, run a read-only open-PR review audit against
+a normalized snapshot that includes changed files, merge state, CI rollup, queue linkage, and any local recovery signals:
+
+```bash
+python3 scripts/pr_review_audit.py --input /tmp/pr-review-snapshot.json --format table
+```
+
+The audit emits an `actionCategory` such as `ready_to_merge`, `poll`, `failing_ci`, `needs_update_rebase`,
+`human_review_required`, `obsolete_duplicate_close`, `branch_cleanup_candidate`, or `never_touch`, plus a separate
+`prType` such as `workbook_only_queue_pr`, `implementation_pr_with_active_workbook_claim`, `workflow_pr`, or
+`unknown_pr`. Treat the result as advisory evidence for the controller and project-manager brief. It does not close PRs,
+delete branches, touch the workbook, or bypass failing checks. Human approval is required before closing obsolete or
+duplicate PRs, deleting local or remote branches, reclaiming recoverable stale claims, touching dirty worktrees, or
+merging any PR with missing classification signals.
+
+Controller-owned implementation PRs classified as `failing_ci`, `needs_update_rebase`, `human_review_required`, or
+`never_touch` require controller attention or explicit recovery assignment before the controller treats their issues as
+resolved. They do not reintroduce source-overlap as a hard claim exclusion: keep the exact four non-stale owned-claim
+target whenever status-and-dependency eligible work exists and no concrete non-source blocker prevents dispatch.
+
 Assign one read-only QA role when subagent capacity permits. QA reviews issue selection risk, diff scope, regression
 coverage, validation commands, GitHub Actions evidence, and merge readiness. QA must not claim issues, edit the
 workbook, or start heavy validation unless the controller explicitly delegates a bounded validation task.
@@ -219,6 +240,8 @@ work, print a live status table containing at least:
 - pull request number or pending PR state;
 - current resource and disk state;
 - cleanup state, including prunable worktree metadata and accumulated run/worktree size when known;
+- open-PR audit summary, including any controller-owned PR requiring update, CI fix, human review, or never-touch
+  recovery;
 - project-manager prioritization brief state or the reason no project-manager subagent is available;
 - QA review state or the reason no QA subagent is available;
 - blockers;
