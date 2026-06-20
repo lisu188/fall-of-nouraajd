@@ -163,6 +163,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
 SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
+    "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
     XVFB_GAMEPLAY_PARENT_TEST,
 }
 SERIAL_TEST_PREFIXES = ("McpServerTest.test_stdio_map_walkthrough_",)
@@ -225,6 +226,10 @@ def unique_save_name(prefix):
     shard = os.environ.get("GAME_TEST_SHARD")
     shard_part = f"-{shard}" if shard else ""
     return f"{prefix}{shard_part}-{os.getpid()}-{time.time_ns()}"
+
+
+def unique_map_name(prefix):
+    return unique_save_name(prefix)
 
 
 SAVE_FORMAT = "fall-of-nouraajd-save"
@@ -5788,12 +5793,13 @@ class GameTest(unittest.TestCase):
         map_root = Path.cwd() / "maps"
         save_name = unique_save_name("quest_dependency_loader")
         save_path = Path.cwd() / "save" / f"{save_name}.json"
+        map_prefix = unique_map_name("quest_dependency_loader_map")
         map_dirs = [
-            map_root / "unit_class_source",
-            map_root / "unit_type_source",
-            map_root / "unit_empty_config",
-            map_root / "unit_scalar_config",
-            map_root / "unit_bad@map",
+            map_root / f"{map_prefix}_class_source",
+            map_root / f"{map_prefix}_type_source",
+            map_root / f"{map_prefix}_empty_config",
+            map_root / f"{map_prefix}_scalar_config",
+            map_root / f"{map_prefix}_bad@map",
         ]
 
         try:
