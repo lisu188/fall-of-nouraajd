@@ -22,10 +22,12 @@ FAILURE_STATES = {
     "error",
     "failure",
     "failed",
+    "stale",
     "startup_failure",
     "timed_out",
 }
 PENDING_STATES = {"expected", "in_progress", "pending", "queued", "requested", "waiting"}
+NEUTRAL_STATES = {"neutral", "skipped"}
 
 CLEAN_MERGE_STATES = {"clean", "has_hooks"}
 UPDATE_MERGE_STATES = {"behind", "conflicting", "dirty"}
@@ -120,6 +122,8 @@ def stateFromCheck(check: dict[str, Any]) -> str:
             return "failure"
     if state in {"completed", "complete"} and not conclusion:
         return "unknown"
+    if conclusion in NEUTRAL_STATES or state in NEUTRAL_STATES or rollup in NEUTRAL_STATES:
+        return "success"
     if conclusion in SUCCESS_STATES or state in SUCCESS_STATES or rollup in SUCCESS_STATES:
         return "success"
     if state in PENDING_STATES or conclusion in PENDING_STATES or rollup in PENDING_STATES:
@@ -148,6 +152,8 @@ def checkSummary(record: dict[str, Any]) -> CheckSummary:
         "checks",
         "checkRuns",
         "check_runs",
+        "statusCheckRollup",
+        "status_check_rollup",
         "statusChecks",
         "status_checks",
         default=None,

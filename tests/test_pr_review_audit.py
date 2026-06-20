@@ -86,6 +86,87 @@ class PrReviewAuditTest(unittest.TestCase):
         self.assertEqual("workflow_pr", review["prType"])
         self.assertEqual(["build / linux"], review["pendingChecks"])
 
+    def test_status_check_rollup_list_reports_pending_checks(self) -> None:
+        review = self.classify(
+            {
+                "number": 118,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux-fast",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                    },
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "status": "IN_PROGRESS",
+                        "conclusion": "",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("poll", review["actionCategory"])
+        self.assertEqual("pending", review["checkState"])
+        self.assertEqual(["linux"], review["pendingChecks"])
+
+    def test_status_check_rollup_list_reports_failures(self) -> None:
+        review = self.classify(
+            {
+                "number": 119,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "UNKNOWN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux-fast",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                    },
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("failing_ci", review["actionCategory"])
+        self.assertEqual("failure", review["checkState"])
+        self.assertEqual(["linux"], review["failedChecks"])
+
+    def test_skipped_status_check_rollup_entry_is_non_blocking(self) -> None:
+        review = self.classify(
+            {
+                "number": 120,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                    },
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux-coverage",
+                        "status": "COMPLETED",
+                        "conclusion": "SKIPPED",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("ready_to_merge", review["actionCategory"])
+        self.assertEqual("success", review["checkState"])
+        self.assertEqual([], review["failedChecks"])
+
     def test_stale_linked_claim_requires_human_review(self) -> None:
         review = self.classify(
             {
