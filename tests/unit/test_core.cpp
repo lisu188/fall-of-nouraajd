@@ -36,6 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -469,6 +470,73 @@ void test_json_parse_expected_success_and_failure() {
     expect_true(!duplicate_key.has_value(), "parse_expected should reject duplicate object keys");
     expect_true(CJsonUtil::from_string("{", "unit-json-wrapper") == nullptr,
                 "from_string should keep the public nullptr behavior on parse failure");
+}
+
+void test_json_parse_dump_and_type_helpers() {
+    const auto parsed = json::parse(
+        R"({"array":["line\nnext",18446744073709551615,1.5,true,false,null],"empty":{},"name":"nouraajd"})");
+    expect_true(parsed.is_object(), "parsed JSON document should be an object");
+    expect_true(parsed.size() == 3, "object size should count parsed keys");
+    expect_true(parsed.count("array") == 1, "count should report existing object keys");
+    expect_true(parsed.count("missing") == 0, "count should reject missing object keys");
+    expect_true(parsed["array"].is_array(), "parsed array should keep array type");
+    expect_true(parsed["array"].size() == 6, "parsed array should keep every entry");
+    expect_true(parsed["array"][0].get<std::string>() == "line\nnext", "parsed string should preserve escapes");
+    expect_true(parsed["array"][1].get<unsigned long long>() == 18446744073709551615ull,
+                "parsed unsigned integer should keep full uint64 range");
+    expect_true(parsed["array"][2].get<double>() == 1.5, "parsed floating point value should keep precision");
+    expect_true(parsed["array"][3].get<bool>(), "parsed true value should keep boolean type");
+    expect_true(!parsed["array"][4].get<bool>(), "parsed false value should keep boolean type");
+    expect_true(parsed["array"][5].is_null(), "parsed null should keep null type");
+    expect_true(parsed["missing"].is_null(), "missing object lookup should return null value");
+    expect_true(parsed["array"][99].is_null(), "missing array lookup should return null value");
+    expect_true(parsed.value("name", std::string("fallback")) == "nouraajd",
+                "value should return typed object members");
+    expect_true(parsed.value("missing", std::string("fallback")) == "fallback",
+                "value should use fallback for missing members");
+    expect_true(parsed.value("array", std::string("fallback")) == "fallback",
+                "value should use fallback for type mismatches");
+
+    json constructed;
+    constructed["quote"] = "a\"b\\c\b\f\n\r\t";
+    constructed["number"] = -7;
+    constructed["unsigned"] = 7u;
+    constructed["double"] = 2.25;
+    constructed["nan"] = std::numeric_limits<double>::quiet_NaN();
+    constructed["items"] = json::array({nullptr, "tail"});
+    constructed["items"][4] = "expanded";
+    constructed.erase("missing");
+
+    const auto compact = constructed.dump();
+    expect_true(compact.find(R"("quote":"a\"b\\c\b\f\n\r\t")") != std::string::npos,
+                "compact dump should escape strings");
+    expect_true(compact.find(R"("nan":null)") != std::string::npos,
+                "compact dump should serialize non-finite numbers as null");
+    expect_true(compact.find(R"("items":[null,"tail",null,null,"expanded"])") != std::string::npos,
+                "compact dump should serialize expanded arrays");
+
+    const auto pretty = constructed.dump(2);
+    expect_true(pretty.find("\n  \"items\": [") != std::string::npos, "pretty dump should indent objects");
+    expect_true(pretty.find("\n    \"expanded\"") != std::string::npos, "pretty dump should indent arrays");
+
+    expect_true(json(nullptr).dump() == "null", "null JSON should dump as null");
+    expect_true(json("text").size() == 4, "string size should report character count");
+    bool missing_key_threw = false;
+    try {
+        parsed.at("missing");
+    } catch (const std::out_of_range &) {
+        missing_key_threw = true;
+    }
+    expect_true(missing_key_threw, "object at() should reject missing keys");
+
+    bool non_array_threw = false;
+    try {
+        parsed["name"].at(std::size_t{0});
+    } catch (const std::out_of_range &) {
+        non_array_threw = true;
+    }
+    expect_true(non_array_threw, "array at() should reject non-array values");
+    expect_runtime_error([&]() { parsed["name"].get<int>(); }, "integer get should reject string values");
 }
 
 void test_sdl_raii_alias_owns_surface() {
@@ -1024,6 +1092,7 @@ int main() {
     test_toroidal_pathfinder_prefers_wrapped_route();
     test_toroidal_pathfinder_wraps_on_both_axes();
     test_json_parse_expected_success_and_failure();
+    test_json_parse_dump_and_type_helpers();
     test_sdl_raii_alias_owns_surface();
     test_direction_mapping();
     test_rect_bounds_inclusion();
