@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/panel/CListView.h"
+#include "handler/CObjectHandler.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "test_harness.h"
@@ -176,6 +177,8 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     game->setGui(gui);
     map->setGame(game);
     gui->setGame(game);
+    game->getObjectHandler()->registerType(CProxyGraphicsLayout::static_meta()->name(),
+                                           []() { return std::make_shared<CProxyGraphicsLayout>(); });
     return game;
 }
 
