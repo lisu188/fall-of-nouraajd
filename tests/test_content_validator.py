@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.validate_content import ContentValidator, validate_repo
+from scripts.validate_content import ContentValidator, ScriptPropertyHygieneAllowance, validate_repo
 
 
 class ContentValidatorTest(unittest.TestCase):
@@ -262,6 +262,203 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertIn(("map", "MAIN_DONE", "setBoolProperty"), property_writes)
         self.assertIn(("map", "MAIN_TURN", "setNumericProperty"), property_writes)
         self.assertIn(("player", "skill_flag", "setBoolProperty"), property_writes)
+
+    def test_given_player_bool_read_without_default_when_validating_then_reports_uninitialized_property(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    player = self.getMap().getPlayer()
+                    if player.getBoolProperty("has_relic"):
+                        player.addGold(1)
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            "StartEvent.onEnter",
+            'getBoolProperty("has_relic")',
+            'player bool property "has_relic" is read without a write/default',
+        )
+
+    def test_given_stale_map_bool_write_when_validating_then_reports_write_only_property(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    game_map = self.getMap()
+                    game_map.setBoolProperty("STALE_FLAG", True)
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            "StartEvent.onEnter",
+            'setBoolProperty("STALE_FLAG")',
+            'write-only map bool property "STALE_FLAG"',
+        )
+
+    def test_given_stale_player_bool_write_when_validating_then_reports_write_only_property(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    player = self.getMap().getPlayer()
+                    player.setBoolProperty("STALE_PLAYER_FLAG", True)
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            "StartEvent.onEnter",
+            'setBoolProperty("STALE_PLAYER_FLAG")',
+            'write-only player bool property "STALE_PLAYER_FLAG"',
+        )
+
+    def test_given_map_and_player_bool_name_collision_when_validating_then_reports_owner_collision(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    game_map = self.getMap()
+                    player = game_map.getPlayer()
+                    game_map.setBoolProperty("shared_flag", True)
+                    game_map.getBoolProperty("shared_flag")
+                    player.setBoolProperty("shared_flag", True)
+                    player.getBoolProperty("shared_flag")
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'bool property "shared_flag" is used on multiple owners: map, player',
+        )
+
+    def test_given_unknown_receiver_for_reviewed_bool_when_validating_then_reports_manual_review(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    game_map = self.getMap()
+                    game_map.setBoolProperty("reviewed_flag", True)
+                    game_map.getBoolProperty("reviewed_flag")
+                    if holder.getBoolProperty("reviewed_flag"):
+                        game_map.getPlayer().addGold(1)
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'getBoolProperty("reviewed_flag")',
+            'bool property "reviewed_flag" has unknown receiver; manual review required',
+        )
+
+    def test_given_unknown_legacy_bool_quest_key_when_validating_then_reports_missing_mapping(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                LEGACY_BOOL_FLAGS = (
+                    LegacyBoolFlag("BROKEN_LEGACY_FLAG", "missing", states=("done",)),
+                )
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'LegacyBoolFlag("BROKEN_LEGACY_FLAG")',
+            'legacy bool flag "BROKEN_LEGACY_FLAG" references unknown quest key "missing"',
+        )
+
+    def test_given_valid_legacy_bool_sync_when_validating_then_accepts_map_flag_read(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+                LEGACY_BOOL_FLAGS = (
+                    LegacyBoolFlag("MAIN_DONE", "main", states=("done",)),
+                )
+
+                def complete(self):
+                    self._set_state("main", "done")
+
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    game_map = self.getMap()
+                    if game_map.getBoolProperty("MAIN_DONE"):
+                        game_map.getPlayer().addGold(1)
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_given_allowlisted_compatibility_flag_when_validating_then_suppresses_write_only_diagnostic(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    game_map = self.getMap()
+                    game_map.setBoolProperty("STALE_FLAG", True)
+            """,
+        )
+        allowance = ScriptPropertyHygieneAllowance(
+            path="res/maps/broken/script.py",
+            owner="map",
+            name="STALE_FLAG",
+            reason="Regression fixture for an externally read compatibility flag.",
+        )
+
+        issues = ContentValidator(root, property_hygiene_allowlist=(allowance,)).validate()
+
+        self.assertEqual([], [str(issue) for issue in issues])
 
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
@@ -784,6 +981,36 @@ def write_script(path, script_quest, script_map):
             """).lstrip(),
         encoding="utf-8",
     )
+
+
+def write_property_hygiene_script(path, body):
+    header = textwrap.dedent("""
+        def load(self, context):
+            from game import CDialog
+            from game import CEvent
+            from game import CQuest
+            from game import LegacyBoolFlag
+            from game import QuestStateStore
+            from game import register
+        """).lstrip()
+    script_body = textwrap.indent(textwrap.dedent(body).strip(), "    ")
+    trailer = textwrap.indent(
+        textwrap.dedent("""
+            @register(context)
+            class GoodQuest(CQuest):
+                pass
+
+            @register(context)
+            class BrokenDialog(CDialog):
+                def valid_action(self):
+                    pass
+
+                def valid_condition(self):
+                    return True
+            """).strip(),
+        "    ",
+    )
+    path.write_text(f"{header}\n{script_body}\n\n{trailer}\n", encoding="utf-8")
 
 
 def read_json(path):
