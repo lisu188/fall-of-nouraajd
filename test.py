@@ -5961,6 +5961,102 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_fight_bool_wrappers_preserve_outcome_compatibility(self):
+        game = load_game_module()
+
+        def new_session():
+            session = game.CGameLoader.loadGame()
+            game.CGameLoader.startGame(session, "empty")
+            return session, session.getMap()
+
+        def add_creature(session, game_map, type_name, name, x, hp=10):
+            creature = session.createObject(type_name)
+            creature.name = name
+            creature.moveTo(x, 0, 0)
+            game_map.addObject(creature)
+            creature.setHp(hp)
+            return creature
+
+        def configure_passive(creature):
+            creature.baseStats.agility = 10
+            creature.baseStats.hit = 0
+            creature.baseStats.dmgMin = 0
+            creature.baseStats.dmgMax = 0
+            creature.baseStats.crit = 0
+            creature.setFightController(creature.getGame().createObject("CFightController"))
+
+        invalid_session, invalid_map = new_session()
+        invalid_attacker = add_creature(invalid_session, invalid_map, "CCreature", "unitBoolInvalidAttacker", 0)
+        configure_passive(invalid_attacker)
+        invalid_result = game.CFightHandler.fightMany(invalid_attacker, [])
+
+        victory_session, victory_map = new_session()
+        victor = add_creature(victory_session, victory_map, "GoblinThief", "unitBoolVictoryAttacker", 0)
+        defeated = add_creature(victory_session, victory_map, "GoblinThief", "unitBoolVictoryDefender", 1, hp=1)
+        victor.baseStats.agility = 100
+        victor.baseStats.hit = 100
+        victor.baseStats.dmgMin = 500
+        victor.baseStats.dmgMax = 500
+        victor.baseStats.crit = 0
+        defeated.baseStats.hit = 0
+        defeated.baseStats.dmgMin = 0
+        defeated.baseStats.dmgMax = 0
+        defeated.baseStats.crit = 0
+        victory_result = game.CFightHandler.fight(victor, defeated)
+
+        defeat_session, defeat_map = new_session()
+        defeated_attacker = add_creature(defeat_session, defeat_map, "CCreature", "unitBoolDefeatedAttacker", 0, hp=1)
+        killer = add_creature(defeat_session, defeat_map, "GoblinThief", "unitBoolDefeatKiller", 1)
+        configure_passive(defeated_attacker)
+        defeated_attacker.baseStats.agility = 1
+        killer.baseStats.agility = 100
+        killer.baseStats.hit = 100
+        killer.baseStats.dmgMin = 500
+        killer.baseStats.dmgMax = 500
+        killer.baseStats.crit = 0
+        defeat_result = game.CFightHandler.fightMany(defeated_attacker, [killer])
+
+        stalled_session, stalled_map = new_session()
+        stalled_attacker = add_creature(stalled_session, stalled_map, "CCreature", "unitBoolStalledAttacker", 0)
+        stalled_defender = add_creature(stalled_session, stalled_map, "CCreature", "unitBoolStalledDefender", 1)
+        configure_passive(stalled_attacker)
+        configure_passive(stalled_defender)
+        started = time.monotonic()
+        stalled_result = game.CFightHandler.fightMany(stalled_attacker, [stalled_defender])
+        stalled_elapsed = time.monotonic() - started
+
+        cancelled_session, cancelled_map = new_session()
+        cancelled_attacker = add_creature(cancelled_session, cancelled_map, "CCreature", "unitBoolCancelledAttacker", 0)
+        cancelled_defender = add_creature(cancelled_session, cancelled_map, "CCreature", "unitBoolCancelledDefender", 1)
+        configure_passive(cancelled_attacker)
+        configure_passive(cancelled_defender)
+        drain_sdl_events()
+        push_sdl_quit_event()
+        try:
+            cancelled_result = game.CFightHandler.fightMany(cancelled_attacker, [cancelled_defender])
+        finally:
+            drain_sdl_events()
+
+        self.assertFalse(invalid_result)
+        self.assertTrue(victory_result)
+        self.assertTrue(defeat_result)
+        self.assertFalse(stalled_result)
+        self.assertFalse(cancelled_result)
+        self.assertLess(stalled_elapsed, COMBAT_STALE_LOOP_TIMEOUT_SECONDS)
+
+        return True, json.dumps(
+            {
+                "cancelled": cancelled_result,
+                "defeat": defeat_result,
+                "invalid": invalid_result,
+                "stalled": stalled_result,
+                "stalled_elapsed": stalled_elapsed,
+                "victory": victory_result,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_shadow_bolt_can_configure_its_effect(self):
         game = load_game_module()
         original_randint = game.randint
