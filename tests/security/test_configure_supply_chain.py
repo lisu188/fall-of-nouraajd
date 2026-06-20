@@ -97,14 +97,20 @@ class ConfigureSupplyChainTest(unittest.TestCase):
 
     def test_linux_coverage_path_filter_matches_required_policy(self):
         workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
-        match = re.search(r"(?ms)- name: detect coverage need\n(?P<body>.*?)(?=^      - name:|\Z)", workflow_text)
-        self.assertIsNotNone(match)
-        detection_body = match.group("body")
+        classifier_text = (REPO_ROOT / "scripts" / "ci_change_classifier.py").read_text()
 
-        self.assertIn("test.py|tests/unit/*|scripts/run_coverage.sh", detection_body)
-        self.assertIn("scripts/coverage_report.py", detection_body)
-        self.assertIn("native_plugins/*|src/core/*|src/handler/*|src/object/*", detection_body)
-        self.assertNotIn("test.py|tests/*|", detection_body)
+        self.assertIn("- name: classify changed paths", workflow_text)
+        self.assertIn("python3 scripts/ci_change_classifier.py", workflow_text)
+        self.assertIn('"test.py"', classifier_text)
+        self.assertIn('"tests/unit/*"', classifier_text)
+        self.assertIn('"scripts/run_coverage.sh"', classifier_text)
+        self.assertIn('"scripts/coverage_report.py"', classifier_text)
+        self.assertIn('"native_plugins/*"', classifier_text)
+        self.assertIn('"src/core/*"', classifier_text)
+        self.assertIn('"src/gui/*"', classifier_text)
+        self.assertIn('"src/handler/*"', classifier_text)
+        self.assertIn('"src/object/*"', classifier_text)
+        self.assertNotIn('"tests/*"', classifier_text)
 
     def test_run_coverage_default_line_gate_is_90_percent(self):
         run_coverage = (REPO_ROOT / "scripts" / "run_coverage.sh").read_text()

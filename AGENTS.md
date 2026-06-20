@@ -300,15 +300,17 @@ python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step cover
 Run heavy local Linux validation only when the PR workflow cannot cover the required evidence, a focused local
 reproduction is necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the PR
 `build / linux` check, polled with `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux`, is sufficient PR
-delivery evidence for Linux compilation, native tests, native performance guards, Python suites, and conditional
-coverage. Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step somewhere in the
-selected build workflow run, currently in the conditional `linux-coverage` job; the poller auto-adds this step for
-coverage-relevant PR paths. Additional Windows, release, MCP gameplay, manual, or platform-specific validation is needed
-only when the task explicitly targets that surface or the user requests it. Report local commands, skipped or blocked
-local commands, and CI job names/conclusions separately; never imply a skipped local command passed. When CI polling
-supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge. If GitHub
-merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and continue
-from the merged state.
+delivery evidence for the validation class selected by `scripts/ci_change_classifier.py`: native/source/content changes
+run Linux compilation, native tests, native performance guards, Python suites, and conditional coverage, while
+workflow-only docs/prompts/tooling changes keep a terminal `linux` check but skip unrelated native-heavy steps after
+focused workflow validation. Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step
+somewhere in the selected build workflow run, currently in the conditional `linux-coverage` job; the poller auto-adds
+this step for coverage-relevant PR paths. Additional Windows, release, MCP gameplay, manual, or platform-specific
+validation is needed only when the task explicitly targets that surface or the user requests it. Report local commands,
+skipped or blocked local commands, and CI job names/conclusions separately; never imply a skipped local command passed.
+When CI polling supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge.
+If GitHub merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and
+continue from the merged state.
 
 Windows Release equivalent:
 
