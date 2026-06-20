@@ -88,6 +88,16 @@ bool has_trace_event(const std::vector<json> &records, const std::string &event)
     return false;
 }
 
+int count_trace_event(const std::vector<json> &records, const std::string &event) {
+    int count = 0;
+    for (const auto &record : records) {
+        if (record.contains("event") && record["event"].get<std::string>() == event) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 bool has_trace_event_reason(const std::vector<json> &records, const std::string &event, const std::string &reason) {
     for (const auto &record : records) {
         if (record.contains("event") && record["event"].get<std::string>() == event && record.contains("reason") &&
@@ -131,6 +141,51 @@ void test_scene_manager_state_duplicate_and_player_transfer() {
                 "scene manager should return to idle after transition completion");
     expect_true(!manager->isTransitionPending(), "completed scene transition should clear pending state");
     expect_true(manager->getPendingMapName().empty(), "completed scene transition should clear pending map name");
+}
+
+void test_game_change_map_duplicate_requests_commit_once() {
+    TraceReset reset;
+    CPlaytestTrace::configure(true);
+
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto old_map = game->getMap();
+    auto player = old_map->getPlayer();
+    old_map->setTurn(23);
+    auto manager = game->getSceneManager();
+
+    game->changeMap("ritual");
+    game->changeMap("siege");
+
+    expect_true(manager->getPendingMapName() == "ritual",
+                "CGame::changeMap duplicate request should keep the first pending target");
+    expect_true(game->getMap() == old_map, "CGame::changeMap should defer the map swap until the event loop runs");
+
+    pump_event_loop_iterations();
+
+    auto new_map = game->getMap();
+    int player_object_count = 0;
+    for (const auto &object : new_map->getObjects()) {
+        if (object.get() == player.get()) {
+            ++player_object_count;
+        }
+    }
+
+    auto records = drain_trace_json();
+    expect_true(new_map != old_map, "one queued CGame::changeMap request should commit after the event loop runs");
+    expect_true(new_map->getMapName() == "ritual", "first CGame::changeMap request should determine the destination");
+    expect_true(new_map->getMapName() != "siege", "duplicate CGame::changeMap request should not commit later");
+    expect_true(new_map->getTurn() == 23, "single committed transition should preserve the old map turn");
+    expect_true(new_map->getPlayer() == player, "single committed transition should transfer the same player object");
+    expect_true(player_object_count == 1, "single committed transition should attach the player exactly once");
+    expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "single committed transition should return the scene manager to idle");
+    expect_true(count_trace_event(records, "map_transition_requested") == 1,
+                "duplicate CGame::changeMap calls should queue exactly one transition request");
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "transition_pending"),
+                "duplicate CGame::changeMap call should be rejected as pending");
+    expect_true(count_trace_event(records, "map_transition_completed") == 1,
+                "duplicate CGame::changeMap calls should commit exactly one transition");
 }
 
 void test_scene_manager_transition_generation_start_and_commit() {
@@ -984,6 +1039,7 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_scene_manager_state_duplicate_and_player_transfer();
+    test_game_change_map_duplicate_requests_commit_once();
     test_scene_manager_transition_generation_start_and_commit();
     test_scene_manager_stale_transition_generation_clears_pending_state();
     test_scene_manager_trace_rejections_and_completion();

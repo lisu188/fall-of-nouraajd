@@ -46,8 +46,9 @@ read-only: it must never close PRs, delete branches, edit the workbook, or overr
 obsolete/duplicate PR closure, stale-claim recovery, dirty worktree recovery, and any merge with missing signals require
 explicit human approval. A controller-owned implementation PR marked `failing_ci`, `needs_update_rebase`,
 `human_review_required`, or `never_touch` is controller attention debt; resolve or assign recovery for that PR, but do
-not use source overlap alone to leave the controller below its four live non-stale owned claims when eligible work
-exists.
+not use source overlap alone to leave the controller below its four owned implementation slots when eligible work exists.
+Unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable rows remain occupied recovery slots until a
+workbook heartbeat, release, reclaim, or terminal-status update has actually merged.
 
 ## Workflow observation ledger
 
@@ -89,10 +90,13 @@ free disk space, existing run/worktree usage, and running heavy jobs so the cont
 but do not impose a fixed RAM cap or rewrite build parallelism solely by workflow policy. Dispatch work whenever issue
 eligibility, live worker status, and repository safety allow it. Use standby subagents only when fewer than eight
 implementation issues are safe for non-source reasons; they may do lightweight status, eligibility, or review-prep tasks,
-but must not claim issues, edit files, or run heavy validation. Each controller instance must keep exactly four non-stale
-implementation claims under its own `controller/<controller-id>` owner prefix whenever at least four status-and-dependency
-eligible issues are available for that controller. Stale owned claims do not count toward this target, and a controller
-must not claim a fifth live implementation issue. Before filling each free worker slot, fetch the latest `origin/main`,
+but must not claim issues, edit files, or run heavy validation. Each controller instance must keep exactly four owned
+implementation claim slots under its own `controller/<controller-id>` owner prefix whenever status-and-dependency
+eligible issues are available for that controller. Healthy claims are rows whose heartbeat is not overdue and whose lease
+has not expired. Heartbeat-overdue, lease-expired, suspect, and reclaimable rows do not count as healthy work, but they
+still occupy capacity until the controller durably heartbeats, releases, reclaims, blocks, fails, completes, or otherwise
+reconciles the row. A controller must not claim a fifth implementation issue or refill through unresolved recovery work.
+Before filling each free worker slot, fetch the latest `origin/main`,
 recalculate the full eligible set from the merged workbook, and exclude:
 
 - rows whose status is not `NOT_STARTED`;
@@ -112,16 +116,19 @@ back to spreadsheet order, do not include status/dependency-ineligible rows in t
 a lower priority tier merely to avoid source overlap. Use
 `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
 as the read-only mechanical selector before each claim; it reports eligible highest-priority story groups, stale claims,
-`activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, `activeClaims.leaseExpired`,
-`activeClaims.inactive`, `controllerCapacity`, target-file overlap advisories, rejection summaries, and a seeded
-recommendation without mutating the workbook. `activeClaims.unexpired` means live/pollable rows that are neither
-reclaimable-stale nor lease-expired. Use the unexpired count, not raw
+`activeClaims.total`, `activeClaims.unexpired`, `activeClaims.healthy`, `activeClaims.stale`,
+`activeClaims.leaseExpired`, `activeClaims.suspect`, `activeClaims.reclaimable`, `activeClaims.inactive`,
+`controllerCapacity`, target-file overlap advisories, rejection summaries, and a seeded recommendation without mutating
+the workbook. `activeClaims.unexpired` is retained as the healthy live-claim count: heartbeat not overdue and lease not
+expired. Use the unexpired/healthy count, not raw
 `activeCount`, when deciding whether the global active-worker floor is genuinely satisfied. Use
-`controllerCapacity.activeNonStale`, `controllerCapacity.leaseExpiredOwned`,
+`controllerCapacity.healthyOwned`, `controllerCapacity.suspectOwned`, `controllerCapacity.reclaimableOwned`,
+`controllerCapacity.recoveryRequired`, `controllerCapacity.refillBlockedByRecovery`,
 `controllerCapacity.deficitToFloor`, `controllerCapacity.fillableDeficit`, `controllerCapacity.activeLimit`,
 `controllerCapacity.availableSlots`, `controllerCapacity.overLimitBy`, and `controllerCapacity.overCapacity` to decide
-whether this controller must refill to four, stop at four, or report over-capacity. The controller and project manager
-must still inspect and record target-file/source-overlap advisories, then claim the final exact issue with
+whether this controller must refill to four, reconcile recovery work first, stop at four, or report over-capacity. The
+controller and project manager must still inspect and record target-file/source-overlap advisories, then claim the final
+exact issue with
 `claim --issue` so status and dependency eligibility is rechecked under the workbook lock.
 
 Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
@@ -293,15 +300,17 @@ python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step cover
 Run heavy local Linux validation only when the PR workflow cannot cover the required evidence, a focused local
 reproduction is necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the PR
 `build / linux` check, polled with `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux`, is sufficient PR
-delivery evidence for Linux compilation, native tests, native performance guards, Python suites, and conditional
-coverage. Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step somewhere in the
-selected build workflow run, currently in the conditional `linux-coverage` job; the poller auto-adds this step for
-coverage-relevant PR paths. Additional Windows, release, MCP gameplay, manual, or platform-specific validation is needed
-only when the task explicitly targets that surface or the user requests it. Report local commands, skipped or blocked
-local commands, and CI job names/conclusions separately; never imply a skipped local command passed. When CI polling
-supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge. If GitHub
-merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and continue
-from the merged state.
+delivery evidence for the validation class selected by `scripts/ci_change_classifier.py`: native/source/content changes
+run Linux compilation, native tests, native performance guards, Python suites, and conditional coverage, while
+workflow-only docs/prompts/tooling changes keep a terminal `linux` check but skip unrelated native-heavy steps after
+focused workflow validation. Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step
+somewhere in the selected build workflow run, currently in the conditional `linux-coverage` job; the poller auto-adds
+this step for coverage-relevant PR paths. Additional Windows, release, MCP gameplay, manual, or platform-specific
+validation is needed only when the task explicitly targets that surface or the user requests it. Report local commands,
+skipped or blocked local commands, and CI job names/conclusions separately; never imply a skipped local command passed.
+When CI polling supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge.
+If GitHub merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and
+continue from the merged state.
 
 Windows Release equivalent:
 

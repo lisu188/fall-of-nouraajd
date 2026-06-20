@@ -84,15 +84,16 @@ python3 scripts/issue_queue.py shortlist \
 
 The shortlist command does not mutate the workbook. It filters queue status, dependencies, and optional CLI filters,
 keeps only the highest currently eligible priority tier for `storyGroups`, and emits a seeded recommended
-`selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`,
-`activeClaims.leaseExpired`, `activeClaims.inactive`, `staleClaimCount`, `staleClaims`,
-`advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps` so stale claims,
-expired leases, and exact target-file overlaps can inform dispatch decisions without becoming automatic blockers.
-`activeClaims.unexpired` means live/pollable rows that are neither reclaimable-stale nor lease-expired. When
-`--controller-id` is provided, it also reports `controllerCapacity`: the current controller's live active issues,
-stale owned issues, lease-expired owned issues, deficit to the four-issue controller target, active limit, available
-slots, over-limit count, over-capacity flag, and fillable deficit from the current eligible set. Treat that output as
-mechanical evidence for the controller and project-manager brief, not as
+`selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.healthy`,
+`activeClaims.stale`, `activeClaims.leaseExpired`, `activeClaims.suspect`, `activeClaims.reclaimable`,
+`activeClaims.inactive`, `staleClaimCount`, `staleClaims`, `advisoryTargetFileOverlapCount`,
+`advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps` so heartbeat-overdue claims, expired leases, recovery
+rows, and exact target-file overlaps can inform dispatch decisions without becoming automatic blockers.
+`activeClaims.unexpired` is retained as the healthy live-claim count: heartbeat not overdue and lease not expired. When
+`--controller-id` is provided, it also reports `controllerCapacity`: the current controller's healthy owned issues,
+suspect owned issues, reclaimable owned issues, recovery-required state, deficit to the four-issue controller target,
+active limit, available slots, over-limit count, over-capacity flag, and fillable deficit from the current eligible set.
+Treat that output as mechanical evidence for the controller and project-manager brief, not as
 an automatic claim. The controller and PM must still inspect coordination advisories, including:
 
 - rows whose status is not `NOT_STARTED`;
@@ -140,8 +141,9 @@ merging any PR with missing classification signals.
 
 Controller-owned implementation PRs classified as `failing_ci`, `needs_update_rebase`, `human_review_required`, or
 `never_touch` require controller attention or explicit recovery assignment before the controller treats their issues as
-resolved. They do not reintroduce source-overlap as a hard claim exclusion: keep the exact four non-stale owned-claim
-target whenever status-and-dependency eligible work exists and no concrete non-source blocker prevents dispatch.
+resolved. They do not reintroduce source-overlap as a hard claim exclusion: keep the exact four owned implementation
+slots whenever status-and-dependency eligible work exists and no concrete non-source blocker prevents dispatch, but do
+not refill through unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable rows.
 
 ## Workflow observations
 
@@ -222,13 +224,14 @@ pressure without imposing a fixed RAM cap. If the controller cannot keep eight i
 status, dependency, live-worker-status, resource, disk, cleanup, authentication, queue-validation, workbook-PR, or
 repository-safety blocker.
 
-Each controller instance must keep exactly four of its own non-stale workbook claims active whenever four
-status-and-dependency eligible issues are available for that controller. Stale owned claims do not count toward that
-per-controller target, and a controller must not claim a fifth live implementation issue. Run
-`shortlist --controller-id "$CONTROLLER_ID"` before every refill and keep claiming until
-`controllerCapacity.deficitToFloor` is zero, `controllerCapacity.fillableDeficit` is zero, or a concrete non-source
-blocker is reported. If `controllerCapacity.overCapacity` is true, stop claiming and report
-`controllerCapacity.overLimitBy`.
+Each controller instance must keep exactly four of its own workbook claim slots active whenever status-and-dependency
+eligible issues are available for that controller. Healthy rows have a non-overdue heartbeat and a non-expired lease.
+Heartbeat-overdue, lease-expired, suspect, and reclaimable rows do not count as healthy work, but they still occupy the
+controller's capacity until a heartbeat, release, reclaim, or terminal-status workbook update actually merges. Run
+`shortlist --controller-id "$CONTROLLER_ID"` before every refill and keep claiming only when
+`controllerCapacity.fillableDeficit` is greater than zero. If `controllerCapacity.refillBlockedByRecovery` is true,
+inspect and reconcile `controllerCapacity.recoveryIssues` before claiming more work. If
+`controllerCapacity.overCapacity` is true, stop claiming and report `controllerCapacity.overLimitBy`.
 
 Standby subagents may help with lightweight status polling, eligibility summaries, or review preparation only when fewer
 than eight implementation issues are safe for non-source reasons. They must not claim issues, edit files, touch the
@@ -290,7 +293,13 @@ A worker should report meaningful milestones to the controller after source insp
 implementation, focused validation, and full validation. Workers must not update the workbook directly during queue
 controller runs.
 
-When the controller needs to persist a heartbeat, it does so from a fresh workbook-only branch:
+The queue reports `heartbeatDueAtUtc`, `heartbeatDueInMinutes`, and `heartbeatOverdue` in read-only task payloads. The
+normal persisted heartbeat deadline is derived by the queue script and is shorter than the stale/reclaim-age threshold
+(currently half of the 240-minute default). The controller should poll and confirm the worker is alive, persist a
+heartbeat after meaningful milestones, and also persist one before the derived heartbeat deadline when the task remains
+active. Never fabricate a heartbeat for an unreachable worker.
+
+When the controller persists a heartbeat, it does so from a fresh workbook-only branch:
 
 ```bash
 python3 scripts/issue_queue.py heartbeat \
@@ -304,6 +313,11 @@ python3 scripts/issue_queue.py heartbeat \
 
 Every heartbeat preserves an existing later lease and extends the lease only when the requested renewal would move it
 farther into the future. Recommended checkpoints are 5%, 20%, 70%, and 90%.
+
+A single serialized heartbeat-only PR may update multiple claims owned by the same controller only when every worker was
+individually polled, every issue, owner, and claim ID was validated, every edit is heartbeat-only, validation is
+all-or-nothing, the PR lists every affected issue, and no claim, terminal-state, priority, dependency, or unrelated
+workbook edit is mixed into the PR. Merge the workbook-only heartbeat PR before treating the heartbeat as durable.
 
 Complete only after the implementation pull request has actually merged and validation results have been reviewed:
 
@@ -343,12 +357,14 @@ python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step cover
 
 Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
 necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Report focused local checks
-separately from CI-polled validation. Passing `build / linux` is sufficient PR delivery evidence for Linux compilation,
-native tests, native performance guards, Python suites, and conditional coverage. It proves coverage only when the
-workflow's changed-path rule runs its `coverage` step somewhere in the selected build workflow run, currently in the
-conditional `linux-coverage` job; the poller auto-adds this step for coverage-relevant PR paths. Additional platform,
-release, MCP gameplay, manual, or issue-specific validation is needed only when the task targets that surface or the
-user requests it.
+separately from CI-polled validation. Passing `build / linux` is sufficient PR delivery evidence for the validation class
+selected by `scripts/ci_change_classifier.py`: native/source/content changes run Linux compilation, native tests, native
+performance guards, Python suites, and conditional coverage, while workflow-only docs/prompts/tooling changes keep a
+terminal `linux` check but skip unrelated native-heavy steps after focused workflow validation. It proves coverage only
+when the workflow's changed-path rule runs its `coverage` step somewhere in the selected build workflow run, currently in
+the conditional `linux-coverage` job; the poller auto-adds this step for coverage-relevant PR paths. Additional platform,
+release, MCP gameplay, manual, or issue-specific validation is needed only when the task targets that surface or the user
+requests it.
 Do not enable auto-merge until CI-polled validation passes when it is the only full-validation evidence.
 
 Workbook-only queue-state PRs that update only `planning/fall_of_nouraajd_issue_proposals.xlsx` are different from
@@ -397,7 +413,11 @@ python3 scripts/issue_queue.py release ... --note 'Returned before editing'
 
 ## Crash recovery
 
-An `IN_PROGRESS` row has `Updated At UTC` and `Lease Until UTC` fields. The controller can reclaim stale work:
+An `IN_PROGRESS` row has separate heartbeat and lease signals. `Updated At UTC` is the persisted heartbeat source, with
+`Claimed At UTC` used only as compatibility fallback. `Lease Until UTC` protects ownership. A heartbeat-overdue claim
+with a future lease is suspect but not timing-eligible for reclaim; an expired lease with a recent heartbeat is also
+suspect but not timing-eligible for reclaim. Reclaim timing requires both an expired or missing lease and a missing or
+overdue heartbeat. The effective boundary is the later of the lease expiry and the heartbeat-age threshold.
 
 ```bash
 python3 scripts/issue_queue.py reclaim-stale --dry-run
@@ -405,19 +425,19 @@ python3 scripts/issue_queue.py reclaim-stale
 ```
 
 The dry run lists stale rows without modifying the workbook and reports `activeClaims`, `staleCount`,
-`reclaimableStaleCount`, and `reclaimSafety`. `staleCount` and `reclaimableStaleCount` are the rows returned by the
-current `--older-than-minutes` threshold. The default threshold is 240 minutes; pass `--older-than-minutes` only when the
-controller has an explicit reason to use a different age. Dry-run rows are queue-timing candidates only and include
-`reclaimReady: false`; inspect the worker worktree, branch, pull request, and any recoverable changes before running the
-mutating command. Run the mutating command only from a fresh workbook-only branch and publish it through the same
-serialized queue-state PR process as claims and terminal statuses. Reclaimed rows are not eligible for dispatch until
-that reclaim PR actually merges. The mutating command reclaims rows whose last update is at least the threshold age,
-even if their lease is still in the future. Reclaimed rows return to `NOT_STARTED`, retain the incremented `Attempt`,
-and receive an audit note describing the previous owner and claim.
+`reclaimableStaleCount`, and `reclaimSafety`. `staleCount` is heartbeat-overdue rows; `reclaimableStaleCount` is the
+subset whose lease condition is also expired or missing. The default threshold is 240 minutes; pass
+`--older-than-minutes` only when the controller has an explicit reason to use a different age. Dry-run rows include
+heartbeat status, lease status, `reclaimableAtUtc`, `reclaimReason`, `timingEligible`, and `reclaimReady: false`.
+Inspect the worker worktree, branch, pull request, and any recoverable changes before running the mutating command.
+Run the mutating command only from a fresh workbook-only branch and publish it through the same serialized queue-state
+PR process as claims and terminal statuses. The mutating command reclaims only timing-eligible rows, and reclaimed rows
+are not eligible for dispatch until that reclaim PR actually merges. Reclaimed rows return to `NOT_STARTED`, retain the
+incremented `Attempt`, and receive an audit note describing the previous owner and claim.
 
-`validate` warns about expired `IN_PROGRESS` leases before they meet the reclaim age threshold, and warns about stale
-claims after they meet the threshold, without failing the workbook. `list --status IN_PROGRESS --json` includes derived
-lease-expiration fields for read-only controller status checks.
+`validate` warns about heartbeat-overdue claims, expired leases, and timing-eligible reclaim candidates without failing
+the workbook. `list --status IN_PROGRESS --json` includes derived heartbeat deadline, heartbeat overdue, lease expiry,
+reclaim boundary, and claim-health fields for read-only controller status checks.
 
 ## Inspection commands
 
@@ -438,6 +458,8 @@ python3 scripts/issue_queue.py show --issue "$ISSUE_NAME"
 - Queue completion records validation; it does not prove the code has been integrated into another subagent's uncommitted work.
 - Worker implementation branches must not modify `planning/fall_of_nouraajd_issue_proposals.xlsx`.
 - Serialize workbook claim, heartbeat, and terminal-status pull requests; do not keep multiple binary workbook PRs open for merge.
+- Refill only after unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable owned rows have been
+  reconciled by a merged workbook heartbeat, release, reclaim, or terminal-status update.
 - Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
   reproduction is necessary or GitHub Actions cannot provide the needed evidence.
 - Prefer CI polling for Linux full validation instead of duplicating heavy local build, test, and coverage work.

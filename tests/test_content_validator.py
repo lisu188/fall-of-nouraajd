@@ -317,6 +317,87 @@ class ContentValidatorTest(unittest.TestCase):
             'class "CDeclaredOnly" is declared in metadata but is not registered as constructible content',
         )
 
+    def test_cpp_property_schema_accepts_known_and_inherited_properties(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaKnown"] = {
+            "class": "CPropertyDerived",
+            "properties": {
+                "count": 2,
+                "loot": [{"ref": "LifePotion"}],
+                "name": "Known Schema Object",
+            },
+        }
+        write_json(config_path, config)
+
+        validator = ContentValidator(root)
+        validator._collect_engine_classes()
+        property_schema = validator._metadata_property_schema("CPropertyDerived")
+
+        self.assertIsNotNone(property_schema)
+        if property_schema is not None:
+            self.assertEqual("int", property_schema["count"].type_token)
+            self.assertEqual("CPropertyDerived", property_schema["count"].owner_class)
+            self.assertEqual("std::set<std::shared_ptr<CItem>>", property_schema["loot"].type_token)
+            self.assertEqual("CPropertyBase", property_schema["loot"].owner_class)
+            self.assertEqual("std::string", property_schema["name"].type_token)
+            self.assertEqual("CGameObject", property_schema["name"].owner_class)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_cpp_property_schema_reports_unknown_property(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaUnknown"] = {
+            "class": "CPropertyDerived",
+            "properties": {"count": 2, "bogus": True},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "schemaUnknown.properties.bogus",
+            'unknown property "bogus" for class "CPropertyDerived"',
+        )
+
+    def test_cpp_property_schema_resolves_ref_override_class(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaBase"] = {
+            "class": "CPropertyDerived",
+            "properties": {"count": 2},
+        }
+        config["schemaOverride"] = {
+            "ref": "schemaBase",
+            "properties": {
+                "loot": [{"ref": "LifePotion"}],
+                "bogusOverride": False,
+            },
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "schemaOverride.properties.bogusOverride",
+            'unknown property "bogusOverride" for class "CPropertyDerived"',
+        )
+        issue_text = "\n".join(str(issue) for issue in issues)
+        self.assertNotIn("schemaOverride.properties.loot", issue_text)
+
     def test_reviewed_registration_exclusion_reports_reason_and_owner(self):
         root = self.make_fixture()
         self.write_declared_cpp_class(root, "CReviewedMetadataOnly")
@@ -511,6 +592,39 @@ class ContentValidatorTest(unittest.TestCase):
             textwrap.dedent("""
                 extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v1(const NativePluginHostV1 *host) {
                     return native_plugin::register_optional(host);
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def write_property_schema_fixture(self, root):
+        header = root / "src/object/CPropertySchemaFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                           V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CPropertyBase {
+                    V_META(CPropertyBase, CGameObject,
+                           V_PROPERTY(CPropertyBase, std::set<std::shared_ptr<CItem>>, loot, getLoot, setLoot))
+                };
+
+                class CPropertyDerived {
+                    V_META(CPropertyDerived, CPropertyBase,
+                           V_PROPERTY(CPropertyDerived, int, count, getCount, setCount))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerObjectTypes() {
+                    CTypes::register_type<CPropertyBase, CGameObject>();
+                    CTypes::register_type<CPropertyDerived, CPropertyBase, CGameObject>();
                 }
             """).lstrip(),
             encoding="utf-8",
