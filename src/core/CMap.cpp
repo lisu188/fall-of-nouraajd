@@ -645,15 +645,7 @@ void CMap::dumpPaths(std::string path) {
     }
     CPathFinder::saveMap(
         currentPlayer->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
-        [this](auto coords) -> std::optional<Coords> {
-            for (auto ob : getObjectsAtCoords(coords)) {
-                if (ob->getBoolProperty("waypoint")) {
-                    return Coords(ob->getNumericProperty("x"), ob->getNumericProperty("y"),
-                                  ob->getNumericProperty("z"));
-                }
-            }
-            return std::nullopt;
-        },
+        [](auto) -> std::optional<Coords> { return std::nullopt; },
         [this](auto coords) { return this->getNavigationNeighbors(coords); },
         [this](auto from, auto to) { return this->getDistance(from, to); });
 }
