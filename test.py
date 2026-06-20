@@ -2396,7 +2396,7 @@ class McpScenarioHarness:
         self.refresh()
 
     @classmethod
-    def start(cls, map_name="nouraajd", player_name=DEFAULT_PLAYER, pump_iterations=5):
+    def start(cls, map_name="nouraajd", player_name=DEFAULT_PLAYER, pump_iterations=5, enter_start_event=True):
         for name in (
             "CGameLoader.loadGame",
             "CGameLoader.startGameWithPlayer",
@@ -2413,7 +2413,10 @@ class McpScenarioHarness:
         game_instance = game_module.CGameLoader.loadGame()
         game_module.CGameLoader.startGameWithPlayer(game_instance, map_name, player_name)
         scenario = cls(game_instance, map_name)
-        scenario.pump(pump_iterations)
+        if enter_start_event:
+            scenario.enterStartEvent(pump_iterations=pump_iterations)
+        else:
+            scenario.pump(pump_iterations)
         return scenario
 
     def refresh(self):
@@ -2429,6 +2432,27 @@ class McpScenarioHarness:
         for _ in range(max(int(iterations), 0)):
             loop.run()
         return self.refresh()
+
+    def enterStartEvent(self, *, pump_iterations=5):
+        for class_name, method_name in (
+            ("CMap", "getObjects"),
+            ("CGameObject", "getType"),
+            ("CGameObject", "getTypeId"),
+            ("CMapObject", "getCoords"),
+            ("CMapObject", "moveTo"),
+        ):
+            assert_mcp_handle_method(class_name, method_name)
+
+        start_events = [
+            obj for obj in self.gameMap.getObjects() if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
+        ]
+        if not start_events:
+            return False
+
+        start_coords = start_events[0].getCoords()
+        self.player.moveTo(start_coords.x, start_coords.y, start_coords.z)
+        self.pump(pump_iterations)
+        return True
 
     def runtimeObject(self, object_name):
         assert_mcp_handle_method("CMap", "getObjectByName")
