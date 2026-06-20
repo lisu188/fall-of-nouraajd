@@ -24,6 +24,14 @@ SCRIPT_ITEM_CALLS = {"addItem"}
 SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_grant_quest", "grant_quest"}
 SCRIPT_MAP_CALLS = {"changeMap"}
 SCRIPT_OBJECT_NAME_CALLS = {"getObjectByName", "removeObjectByName"}
+SCRIPT_PROPERTY_READ_CALLS = {"getBoolProperty", "getNumericProperty", "getStringProperty"}
+SCRIPT_PROPERTY_WRITE_CALLS = {"setBoolProperty", "setNumericProperty", "setStringProperty", "incProperty"}
+SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS = {
+    "_set_bool_property_default": "setBoolProperty",
+    "_set_numeric_property_default": "setNumericProperty",
+    "set_bool_property_default": "setBoolProperty",
+    "set_numeric_property_default": "setNumericProperty",
+}
 KNOWN_EVENT_NAMES = {
     "onCreate",
     "onDestroy",
@@ -73,24 +81,13 @@ BUILTIN_CLASSES = {
     "CTrigger",
     "CWeapon",
 }
-PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
-REVIEWED_ABSTRACT_INTERNAL_CLASSES = {
-    "CConfigResource",
-    "CConfigResourceLoader",
-    "CEventHandler",
-    "CGame",
-    "CGameEvent",
-    "CGameEventCaused",
-    "CGuiHandler",
-    "CMap",
-    "CNativeContentPlugin",
-    "CObjectHandler",
-    "CPlugin",
-    "CResource",
-    "CResourceLoader",
-    "CRngHandler",
-    "CTextResource",
+REVIEWED_DYNAMIC_PROPERTIES = {
+    "CCreature": {"class"},
+    "CDialogState": {"condition"},
+    "CScroll": {"singleUse"},
 }
+PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
+TYPE_REGISTRATION_EXCLUSIONS_PATH = Path("scripts/type_registration_exclusions.json")
 
 
 @dataclass(frozen=True)
@@ -110,6 +107,28 @@ class ConfigEntry:
     path: Path
 
 
+@dataclass(frozen=True)
+class RegistrationExclusionUse:
+    path: str
+    location: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class RegistrationExclusion:
+    class_name: str
+    reason: str
+    owner_module: str
+    allowed_uses: tuple[RegistrationExclusionUse, ...] = ()
+
+
+@dataclass(frozen=True)
+class CppMetadataProperty:
+    owner_class: str
+    name: str
+    type_token: str
+
+
 @dataclass
 class ScriptCall:
     name: str
@@ -124,12 +143,51 @@ class ScriptCall:
 
 
 @dataclass
+class ScriptQuestStateUsage:
+    storage_key: str | None = None
+    default_state: str | None = None
+    read_states: set[str] = field(default_factory=set)
+    written_states: set[str] = field(default_factory=set)
+    terminal_check_states: set[str] = field(default_factory=set)
+
+
+@dataclass(frozen=True)
+class ScriptLegacyBoolFlag:
+    name: str
+    quest: str
+    states: tuple[str, ...]
+    excluded_states: tuple[str, ...]
+    lineno: int
+    context: str
+
+
+@dataclass(frozen=True)
+class ScriptPropertyAccess:
+    owner: str
+    access: str
+    name: str
+    method: str
+    lineno: int
+    context: str
+
+    @property
+    def location(self) -> str:
+        call = f'{self.method}("{self.name}")'
+        return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
+
+
+@dataclass
 class ScriptInfo:
     path: Path
     classes: set[str] = field(default_factory=set)
     registered_classes: set[str] = field(default_factory=set)
     methods_by_class: dict[str, set[str]] = field(default_factory=dict)
     calls: list[ScriptCall] = field(default_factory=list)
+    quest_grants: list[ScriptCall] = field(default_factory=list)
+    quest_states: dict[str, ScriptQuestStateUsage] = field(default_factory=dict)
+    legacy_bool_flags: list[ScriptLegacyBoolFlag] = field(default_factory=list)
+    property_reads: list[ScriptPropertyAccess] = field(default_factory=list)
+    property_writes: list[ScriptPropertyAccess] = field(default_factory=list)
     trigger_targets: list[ScriptCall] = field(default_factory=list)
     named_objects: set[str] = field(default_factory=set)
 
@@ -151,6 +209,8 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self.info = ScriptInfo(path=path)
         self._class_stack: list[str] = []
         self._function_stack: list[str] = []
+        self._state_alias_stack: list[dict[str, str]] = []
+        self._string_values_stack: list[dict[str, set[str]]] = []
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
@@ -166,18 +226,44 @@ class ScriptAnalyzer(ast.NodeVisitor):
         if self._class_stack:
             self.info.methods_by_class.setdefault(self._class_stack[-1], set()).add(node.name)
         self._function_stack.append(node.name)
+        self._state_alias_stack.append({})
+        self._string_values_stack.append({})
         for child in node.body:
             self.visit(child)
+        self._string_values_stack.pop()
+        self._state_alias_stack.pop()
         self._function_stack.pop()
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> Any:
         self.visit_FunctionDef(node)
+
+    def visit_Assign(self, node: ast.Assign) -> Any:
+        self._record_class_constant_assignment(node)
+        self._record_local_assignment(node.targets, node.value)
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> Any:
+        if node.value is not None:
+            self._record_class_constant_assignment(node)
+            self._record_local_assignment([node.target], node.value)
+        self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> Any:
         name = call_name(node.func)
         if name:
             self._record_script_call(name, node)
             self._record_named_object(name, node)
+            self._record_quest_state_call(name, node)
+            self._record_property_access(name, node)
+        self.generic_visit(node)
+
+    def visit_Compare(self, node: ast.Compare) -> Any:
+        self._record_quest_state_comparison(node, terminal=False)
+        self.generic_visit(node)
+
+    def visit_Return(self, node: ast.Return) -> Any:
+        if node.value is not None and self._is_terminal_state_context():
+            self._record_terminal_state_checks(node.value)
         self.generic_visit(node)
 
     def _record_script_call(self, name: str, node: ast.Call) -> None:
@@ -189,7 +275,10 @@ class ScriptAnalyzer(ast.NodeVisitor):
             name
             in SCRIPT_REF_CALLS | SCRIPT_ITEM_CALLS | SCRIPT_QUEST_CALLS | SCRIPT_MAP_CALLS | SCRIPT_OBJECT_NAME_CALLS
         ):
-            self.info.calls.append(ScriptCall(name=name, value=literal, lineno=node.lineno, context=context))
+            call = ScriptCall(name=name, value=literal, lineno=node.lineno, context=context)
+            self.info.calls.append(call)
+            if name in SCRIPT_QUEST_CALLS:
+                self.info.quest_grants.append(call)
 
     def _record_named_object(self, name: str, node: ast.Call) -> None:
         if name == "setStringProperty" and len(node.args) >= 2:
@@ -197,6 +286,231 @@ class ScriptAnalyzer(ast.NodeVisitor):
             value = string_literal(node.args[1])
             if key == "name" and value:
                 self.info.named_objects.add(value)
+
+    def _record_class_constant_assignment(self, node: ast.Assign | ast.AnnAssign) -> None:
+        if not self._class_stack:
+            return
+        value = node.value
+        if value is None:
+            return
+        for target in assignment_targets(node):
+            name = assigned_name(target)
+            if name == "QUEST_KEYS":
+                self._record_quest_keys(value)
+            elif name == "QUEST_DEFAULTS":
+                self._record_quest_defaults(value)
+            elif name == "LEGACY_BOOL_FLAGS":
+                self._record_legacy_bool_flags(value, getattr(node, "lineno", 0))
+
+    def _record_local_assignment(self, targets: list[ast.expr], value: ast.AST) -> None:
+        if not self._state_alias_stack or not self._string_values_stack:
+            return
+        state_aliases = self._state_alias_stack[-1]
+        string_values = self._string_values_stack[-1]
+        quest_key = get_state_key(value)
+        literal_values = self._literal_string_values(value)
+        for target in targets:
+            target_name = assigned_name(target)
+            if target_name is None:
+                continue
+            if quest_key:
+                state_aliases[target_name] = quest_key
+            else:
+                state_aliases.pop(target_name, None)
+            if literal_values:
+                string_values[target_name] = set(literal_values)
+            else:
+                string_values.pop(target_name, None)
+
+    def _record_quest_keys(self, value: ast.AST) -> None:
+        for quest_key, storage_key in literal_string_dict(value).items():
+            self._quest_state_usage(quest_key).storage_key = storage_key
+
+    def _record_quest_defaults(self, value: ast.AST) -> None:
+        for quest_key, state in literal_string_dict(value).items():
+            self._quest_state_usage(quest_key).default_state = state
+
+    def _record_legacy_bool_flags(self, value: ast.AST, lineno: int) -> None:
+        for call in iter_calls(value):
+            if call_name(call.func) != "LegacyBoolFlag" or len(call.args) < 2:
+                continue
+            flag_name = string_literal(call.args[0])
+            quest_key = string_literal(call.args[1])
+            if not flag_name or not quest_key:
+                continue
+            self.info.legacy_bool_flags.append(
+                ScriptLegacyBoolFlag(
+                    name=flag_name,
+                    quest=quest_key,
+                    states=tuple(sorted(self._keyword_string_values(call, "states"))),
+                    excluded_states=tuple(sorted(self._keyword_string_values(call, "excluded_states"))),
+                    lineno=getattr(call, "lineno", lineno),
+                    context=self._context,
+                )
+            )
+
+    def _record_quest_state_call(self, name: str, node: ast.Call) -> None:
+        if name in {"_set_state", "set_state"} and len(node.args) >= 2:
+            quest_key = string_literal(node.args[0])
+            if quest_key:
+                for state in self._literal_string_values(node.args[1]):
+                    self._quest_state_usage(quest_key).written_states.add(state)
+        elif name == "state_in" and len(node.args) >= 2:
+            quest_key = string_literal(node.args[0])
+            if quest_key:
+                for state in self._literal_string_values(node.args[1]):
+                    self._quest_state_usage(quest_key).read_states.add(state)
+
+    def _record_quest_state_comparison(self, node: ast.Compare, terminal: bool) -> None:
+        operands = [node.left, *node.comparators]
+        for index, operator in enumerate(node.ops):
+            left = operands[index]
+            right = operands[index + 1]
+            if isinstance(operator, (ast.Eq, ast.NotEq, ast.In, ast.NotIn)):
+                self._record_comparison_pair(left, right, terminal)
+                self._record_comparison_pair(right, left, terminal)
+
+    def _record_comparison_pair(self, state_expr: ast.AST, value_expr: ast.AST, terminal: bool) -> None:
+        quest_key = self._state_key_from_expr(state_expr)
+        if not quest_key:
+            return
+        states = self._literal_string_values(value_expr)
+        if not states:
+            return
+        usage = self._quest_state_usage(quest_key)
+        usage.read_states.update(states)
+        if terminal:
+            usage.terminal_check_states.update(states)
+
+    def _record_terminal_state_checks(self, node: ast.AST) -> None:
+        if isinstance(node, ast.Compare):
+            self._record_quest_state_comparison(node, terminal=True)
+            return
+        if isinstance(node, ast.BoolOp):
+            for value in node.values:
+                self._record_terminal_state_checks(value)
+            return
+        if isinstance(node, ast.UnaryOp):
+            self._record_terminal_state_checks(node.operand)
+            return
+        if isinstance(node, ast.Call) and call_name(node.func) == "state_in" and len(node.args) >= 2:
+            quest_key = string_literal(node.args[0])
+            if not quest_key:
+                return
+            states = self._literal_string_values(node.args[1])
+            usage = self._quest_state_usage(quest_key)
+            usage.read_states.update(states)
+            usage.terminal_check_states.update(states)
+
+    def _record_property_access(self, name: str, node: ast.Call) -> None:
+        if name in SCRIPT_PROPERTY_READ_CALLS and node.args:
+            self._record_property_accesses("read", name, self._property_receiver(node), node.args[0], node)
+        elif name in SCRIPT_PROPERTY_WRITE_CALLS and node.args:
+            self._record_property_accesses("write", name, self._property_receiver(node), node.args[0], node)
+        elif name in SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS and len(node.args) >= 2:
+            self._record_property_accesses(
+                "write",
+                SCRIPT_PROPERTY_DEFAULT_WRITE_CALLS[name],
+                self._receiver_kind(node.args[0]),
+                node.args[1],
+                node,
+            )
+
+    def _record_property_accesses(
+        self, access: str, method: str, owner: str, property_expr: ast.AST, node: ast.Call
+    ) -> None:
+        target = self.info.property_reads if access == "read" else self.info.property_writes
+        for property_name in self._literal_string_values(property_expr):
+            target.append(
+                ScriptPropertyAccess(
+                    owner=owner,
+                    access=access,
+                    name=property_name,
+                    method=method,
+                    lineno=node.lineno,
+                    context=self._context,
+                )
+            )
+
+    def _property_receiver(self, node: ast.Call) -> str:
+        if isinstance(node.func, ast.Attribute):
+            return self._receiver_kind(node.func.value)
+        return "unknown"
+
+    def _receiver_kind(self, node: ast.AST) -> str:
+        if isinstance(node, ast.Name):
+            if node.id == "player" or node.id.endswith("_player"):
+                return "player"
+            if node.id in {"game_map", "map"} or node.id.endswith("_map"):
+                return "map"
+            return "unknown"
+        if isinstance(node, ast.Attribute):
+            if isinstance(node.value, ast.Name) and node.value.id == "self" and node.attr == "map":
+                return "map"
+            return self._receiver_kind(node.value)
+        if isinstance(node, ast.Call):
+            name = call_name(node.func)
+            if name == "getPlayer":
+                return "player"
+            if name == "getMap":
+                return "map"
+            if name in {"getObjectByName", "createObject", "getCause"}:
+                return "object"
+            if isinstance(node.func, ast.Attribute):
+                return self._receiver_kind(node.func.value)
+        return "unknown"
+
+    def _literal_string_values(self, node: ast.AST) -> set[str]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return {node.value}
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            values: set[str] = set()
+            for element in node.elts:
+                values.update(self._literal_string_values(element))
+            return values
+        if isinstance(node, ast.IfExp):
+            return self._literal_string_values(node.body) | self._literal_string_values(node.orelse)
+        if isinstance(node, ast.Name) and self._string_values_stack:
+            for string_values in reversed(self._string_values_stack):
+                if node.id in string_values:
+                    return set(string_values[node.id])
+        return set()
+
+    def _keyword_string_values(self, node: ast.Call, keyword_name: str) -> set[str]:
+        for keyword in node.keywords:
+            if keyword.arg == keyword_name:
+                return self._literal_string_values(keyword.value)
+        return set()
+
+    def _state_key_from_expr(self, node: ast.AST) -> str | None:
+        quest_key = get_state_key(node)
+        if quest_key:
+            return quest_key
+        if isinstance(node, ast.Name) and self._state_alias_stack:
+            for state_aliases in reversed(self._state_alias_stack):
+                if node.id in state_aliases:
+                    return state_aliases[node.id]
+        return None
+
+    def _quest_state_usage(self, quest_key: str) -> ScriptQuestStateUsage:
+        return self.info.quest_states.setdefault(quest_key, ScriptQuestStateUsage())
+
+    def _is_terminal_state_context(self) -> bool:
+        if not self._function_stack:
+            return False
+        function_name = self._function_stack[-1]
+        return (
+            function_name == "isCompleted"
+            or function_name == "victor_has_ended"
+            or function_name.startswith("is_")
+            or function_name.endswith(
+                ("_completed", "_delivered", "_returned", "_ended", "_done", "_purged", "_good_end", "_bad_end")
+            )
+        )
+
+    @property
+    def _context(self) -> str:
+        return ".".join([*self._class_stack, *self._function_stack])
 
 
 def call_name(func: ast.AST) -> str | None:
@@ -219,6 +533,42 @@ def first_string_arg(node: ast.Call) -> str | None:
         if literal is not None:
             return literal
     return None
+
+
+def assignment_targets(node: ast.Assign | ast.AnnAssign) -> list[ast.expr]:
+    if isinstance(node, ast.Assign):
+        return node.targets
+    return [node.target]
+
+
+def assigned_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def get_state_key(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Call) and call_name(node.func) == "get_state" and node.args:
+        return string_literal(node.args[0])
+    return None
+
+
+def literal_string_dict(node: ast.AST) -> dict[str, str]:
+    if not isinstance(node, ast.Dict):
+        return {}
+    values: dict[str, str] = {}
+    for key_node, value_node in zip(node.keys, node.values):
+        key = string_literal(key_node) if key_node is not None else None
+        value = string_literal(value_node)
+        if key is not None and value is not None:
+            values[key] = value
+    return values
+
+
+def iter_calls(node: ast.AST) -> list[ast.Call]:
+    return [child for child in ast.walk(node) if isinstance(child, ast.Call)]
 
 
 def is_python_registration_decorator(decorator: ast.AST) -> bool:
@@ -266,15 +616,19 @@ class ContentValidator:
         self.plugin_info: list[ScriptInfo] = []
         self.fallback_registered_classes: set[str] = set(BUILTIN_CLASSES)
         self.metadata_declared_classes: set[str] = set()
+        self.metadata_class_bases: dict[str, str | None] = {}
+        self.metadata_properties: dict[str, dict[str, CppMetadataProperty]] = {}
+        self._metadata_property_schema_cache: dict[str, dict[str, CppMetadataProperty] | None] = {}
         self.static_registered_classes: set[str] = set()
         self.native_plugin_registered_classes: set[str] = set()
         self.native_plugin_declared_class_sources: dict[str, set[str]] = {}
         self.python_registered_classes: set[str] = set()
-        self.reviewed_abstract_internal_classes: set[str] = set(REVIEWED_ABSTRACT_INTERNAL_CLASSES)
+        self.registration_exclusions: dict[str, RegistrationExclusion] = {}
 
     def validate(self) -> list[ValidationIssue]:
         self._collect_engine_classes()
         self._collect_plugin_classes()
+        self._load_type_registration_exclusions()
         self._load_global_configs()
         self._load_maps()
         self._validate_global_configs()
@@ -301,10 +655,14 @@ class ContentValidator:
                         continue
                     if path.name.endswith("TypeRegistration.cpp"):
                         self.static_registered_classes.add(class_name)
-                for match in re.finditer(r"V_META\(\s*([A-Za-z_]\w*)", text):
-                    class_name = match.group(1)
-                    if is_concrete_cpp_class_name(class_name):
-                        self.metadata_declared_classes.add(class_name)
+                for class_name, base_class, properties in iter_cpp_metadata_declarations(text):
+                    self.metadata_declared_classes.add(class_name)
+                    self.metadata_class_bases.setdefault(class_name, base_class)
+                    if base_class is not None:
+                        self.metadata_class_bases[class_name] = base_class
+                    class_properties = self.metadata_properties.setdefault(class_name, {})
+                    for cpp_property in properties:
+                        class_properties[cpp_property.name] = cpp_property
         self._collect_native_plugin_classes()
 
     def _collect_native_plugin_classes(self) -> None:
@@ -437,6 +795,105 @@ class ContentValidator:
             self._issue(path, f"line {exc.lineno} column {exc.colno}", exc.msg)
             return None
 
+    def _load_type_registration_exclusions(self) -> None:
+        path = self.repo_root / TYPE_REGISTRATION_EXCLUSIONS_PATH
+        if not path.exists():
+            return
+        data = self._load_json(path)
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        exclusions = data.get("exclusions")
+        if not isinstance(exclusions, list):
+            self._issue(path, "exclusions", "expected array")
+            return
+        for index, raw_entry in enumerate(exclusions):
+            location = f"exclusions[{index}]"
+            exclusion = self._parse_registration_exclusion(path, location, raw_entry)
+            if not exclusion:
+                continue
+            if exclusion.class_name in self.registration_exclusions:
+                self._issue(path, f"{location}.className", f'duplicate exclusion for "{exclusion.class_name}"')
+                continue
+            if exclusion.class_name not in self._known_registration_exclusion_classes():
+                self._issue(
+                    path,
+                    f"{location}.className",
+                    f'excluded class "{exclusion.class_name}" is not metadata-declared or registered',
+                )
+                continue
+            self.registration_exclusions[exclusion.class_name] = exclusion
+
+    def _parse_registration_exclusion(self, path: Path, location: str, raw_entry: Any) -> RegistrationExclusion | None:
+        if not isinstance(raw_entry, dict):
+            self._issue(path, location, "expected exclusion object")
+            return None
+        class_name = raw_entry.get("className")
+        reason = raw_entry.get("reason")
+        owner_module = raw_entry.get("ownerModule")
+        valid = True
+        if not isinstance(class_name, str) or not class_name:
+            self._issue(path, f"{location}.className", "expected non-empty class name")
+            valid = False
+        if not isinstance(reason, str) or not reason:
+            self._issue(path, f"{location}.reason", "expected non-empty reason")
+            valid = False
+        if not isinstance(owner_module, str) or not owner_module:
+            self._issue(path, f"{location}.ownerModule", "expected non-empty owner/module")
+            valid = False
+        allowed_uses = self._parse_registration_exclusion_allowed_uses(
+            path, f"{location}.allowedUses", raw_entry.get("allowedUses", [])
+        )
+        if not valid or allowed_uses is None:
+            return None
+        return RegistrationExclusion(
+            class_name=class_name,
+            reason=reason,
+            owner_module=owner_module,
+            allowed_uses=tuple(allowed_uses),
+        )
+
+    def _parse_registration_exclusion_allowed_uses(
+        self, path: Path, location: str, raw_uses: Any
+    ) -> list[RegistrationExclusionUse] | None:
+        if not isinstance(raw_uses, list):
+            self._issue(path, location, "expected array")
+            return None
+        allowed_uses: list[RegistrationExclusionUse] = []
+        for index, raw_use in enumerate(raw_uses):
+            use_location = f"{location}[{index}]"
+            if not isinstance(raw_use, dict):
+                self._issue(path, use_location, "expected allowed use object")
+                return None
+            use_path = raw_use.get("path")
+            use_config_location = raw_use.get("location")
+            reason = raw_use.get("reason")
+            valid = True
+            if not isinstance(use_path, str) or not use_path:
+                self._issue(path, f"{use_location}.path", "expected non-empty path")
+                valid = False
+            if not isinstance(use_config_location, str) or not use_config_location:
+                self._issue(path, f"{use_location}.location", "expected non-empty location")
+                valid = False
+            if not isinstance(reason, str) or not reason:
+                self._issue(path, f"{use_location}.reason", "expected non-empty reason")
+                valid = False
+            if not valid:
+                return None
+            allowed_uses.append(RegistrationExclusionUse(path=use_path, location=use_config_location, reason=reason))
+        return allowed_uses
+
+    def _known_registration_exclusion_classes(self) -> set[str]:
+        return (
+            self.fallback_registered_classes
+            | self.metadata_declared_classes
+            | self.static_registered_classes
+            | self.native_plugin_registered_classes
+            | self.python_registered_classes
+        )
+
     def _parse_script(self, path: Path) -> ScriptInfo | None:
         if not path.exists():
             return None
@@ -483,7 +940,7 @@ class ContentValidator:
             | self.python_registered_classes
             | set(extra_registered_classes or set())
         )
-        return classes - self.reviewed_abstract_internal_classes
+        return classes - set(self.registration_exclusions)
 
     def _validate_config_entry(
         self, entry: ConfigEntry, visible: dict[str, ConfigEntry], known_classes: set[str]
@@ -491,6 +948,7 @@ class ContentValidator:
         self._validate_object_shape(entry.path, entry.key, entry.data)
         self._validate_refs(entry.path, entry.key, entry.data, visible)
         self._validate_object_classes(entry.path, entry.key, entry.data, known_classes)
+        self._validate_object_properties(entry.path, entry.key, entry.data, visible)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -519,10 +977,15 @@ class ContentValidator:
             is_object_node = self._is_object_node(value)
             class_name = value.get("class")
             if is_object_node or in_object_node:
-                if isinstance(class_name, str) and class_name not in known_classes:
-                    self._issue(path, f"{location}.class", self._class_reference_message(class_name, "class"))
+                class_location = f"{location}.class"
+                if (
+                    isinstance(class_name, str)
+                    and class_name not in known_classes
+                    and not self._excluded_use_is_allowed(path, class_location, class_name)
+                ):
+                    self._issue(path, class_location, self._class_reference_message(class_name, "class"))
                 elif class_name is not None and not isinstance(class_name, str):
-                    self._issue(path, f"{location}.class", "expected string class name")
+                    self._issue(path, class_location, "expected string class name")
             for key, child in value.items():
                 self._validate_object_classes(path, append_field(location, key), child, known_classes, is_object_node)
         elif isinstance(value, list):
@@ -543,6 +1006,82 @@ class ContentValidator:
         elif isinstance(value, list):
             for index, child in enumerate(value):
                 self._validate_refs(path, append_index(location, index), child, visible)
+
+    def _validate_object_properties(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        if isinstance(value, dict):
+            if self._is_object_node(value):
+                self._validate_object_node_properties(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_object_properties(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_object_properties(path, append_index(location, index), child, visible)
+
+    def _validate_object_node_properties(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict):
+            return
+        class_name = self._effective_object_class(value, visible)
+        if not class_name or class_name in self.python_registered_classes:
+            return
+        property_schema = self._metadata_property_schema(class_name)
+        if property_schema is None:
+            return
+        dynamic_properties = REVIEWED_DYNAMIC_PROPERTIES.get(class_name, set())
+        properties_location = append_field(location, "properties")
+        for property_name in properties:
+            if property_name not in property_schema and property_name not in dynamic_properties:
+                self._issue(
+                    path,
+                    append_field(properties_location, property_name),
+                    f'unknown property "{property_name}" for class "{class_name}"',
+                )
+
+    def _effective_object_class(
+        self, value: dict[str, Any], visible: dict[str, ConfigEntry], seen_refs: set[str] | None = None
+    ) -> str | None:
+        class_name = value.get("class")
+        if isinstance(class_name, str):
+            return class_name
+        ref = value.get("ref")
+        if not isinstance(ref, str):
+            return None
+        seen = set(seen_refs or set())
+        if ref in seen:
+            return None
+        seen.add(ref)
+        ref_entry = visible.get(ref)
+        if ref_entry is None or not isinstance(ref_entry.data, dict):
+            return None
+        return self._effective_object_class(ref_entry.data, visible, seen)
+
+    def _metadata_property_schema(
+        self, class_name: str, seen_classes: set[str] | None = None
+    ) -> dict[str, CppMetadataProperty] | None:
+        if seen_classes is None and class_name in self._metadata_property_schema_cache:
+            return self._metadata_property_schema_cache[class_name]
+        if class_name not in self.metadata_class_bases and class_name not in self.metadata_properties:
+            if seen_classes is None:
+                self._metadata_property_schema_cache[class_name] = None
+            return None
+        seen = set(seen_classes or set())
+        if class_name in seen:
+            return {}
+        seen.add(class_name)
+        properties: dict[str, CppMetadataProperty] = {}
+        base_class = self.metadata_class_bases.get(class_name)
+        if base_class:
+            base_properties = self._metadata_property_schema(base_class, seen)
+            if base_properties:
+                properties.update(base_properties)
+        properties.update(self.metadata_properties.get(class_name, {}))
+        if seen_classes is None:
+            self._metadata_property_schema_cache[class_name] = properties
+        return properties
 
     def _validate_top_level_ref_cycles(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
         for entry in list(context.config_entries.values()) + list(self.global_entries.values()):
@@ -619,7 +1158,11 @@ class ContentValidator:
                     f"{location}.data[{index}]",
                     f"tile id {tile_id} has no tilesets[0].tileproperties[{tile_id - 1}].type",
                 )
-            elif tile_type not in visible and tile_type not in known_classes:
+            elif (
+                tile_type not in visible
+                and tile_type not in known_classes
+                and not self._excluded_use_is_allowed(context.map_path, f"{location}.data[{index}]", tile_type)
+            ):
                 self._issue(
                     context.map_path,
                     f"{location}.data[{index}]",
@@ -659,7 +1202,11 @@ class ContentValidator:
             object_type = obj.get("type")
             if not isinstance(object_type, str) or not object_type:
                 self._issue(context.map_path, f"{object_location}.type", "expected non-empty object type")
-            elif object_type not in visible and object_type not in known_classes:
+            elif (
+                object_type not in visible
+                and object_type not in known_classes
+                and not self._excluded_use_is_allowed(context.map_path, f"{object_location}.type", object_type)
+            ):
                 self._issue(
                     context.map_path,
                     f"{object_location}.type",
@@ -831,7 +1378,11 @@ class ContentValidator:
         object_names = context.placed_names | context.script_info.named_objects | {"player"}
         for call in context.script_info.calls:
             if call.name in SCRIPT_REF_CALLS:
-                if call.value not in visible and call.value not in known_classes:
+                if (
+                    call.value not in visible
+                    and call.value not in known_classes
+                    and not self._excluded_use_is_allowed(context.script_info.path, call.location, call.value)
+                ):
                     self._issue(
                         context.script_info.path,
                         call.location,
@@ -935,14 +1486,28 @@ class ContentValidator:
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
 
     def _class_reference_message(self, class_name: str, label: str) -> str:
-        if class_name in self.reviewed_abstract_internal_classes:
-            return f'{label} "{class_name}" is reviewed as abstract/internal and cannot be used as content'
+        exclusion = self.registration_exclusions.get(class_name)
+        if exclusion:
+            return (
+                f'{label} "{class_name}" is excluded from content instantiation: '
+                f"{exclusion.reason} (owner/module: {exclusion.owner_module})"
+            )
         if class_name in self.native_plugin_declared_class_sources:
             owners = ", ".join(sorted(self.native_plugin_declared_class_sources[class_name]))
             return f'{label} "{class_name}" is registered by native plugin code but no manifest entry loads {owners}'
         if class_name in self.metadata_declared_classes:
             return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
         return f'unknown {label} "{class_name}"'
+
+    def _excluded_use_is_allowed(self, path: Path, location: str, class_name: str) -> bool:
+        exclusion = self.registration_exclusions.get(class_name)
+        if not exclusion:
+            return False
+        relative_path = self._rel(path)
+        return any(
+            allowed_use.path == relative_path and allowed_use.location == location
+            for allowed_use in exclusion.allowed_uses
+        )
 
 
 def iter_map_objects(map_data: Any) -> list[dict[str, Any]]:
@@ -1025,6 +1590,135 @@ def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
         if is_concrete_cpp_class_name(name):
             names.add(name)
     return names
+
+
+def iter_cpp_metadata_declarations(text: str) -> list[tuple[str, str | None, list[CppMetadataProperty]]]:
+    declarations: list[tuple[str, str | None, list[CppMetadataProperty]]] = []
+    text = strip_cpp_comments(text)
+    for body in iter_cpp_macro_bodies(text, "V_META"):
+        args = split_cpp_args(body)
+        if len(args) < 2:
+            continue
+        class_name = normalize_cpp_class_token(args[0])
+        if not is_concrete_cpp_class_name(class_name):
+            continue
+        base_class = normalize_cpp_class_token(args[1])
+        if not is_concrete_cpp_class_name(base_class):
+            base_class = None
+        properties: list[CppMetadataProperty] = []
+        for property_body in iter_cpp_macro_bodies(body, "V_PROPERTY"):
+            property_args = split_cpp_args(property_body)
+            if len(property_args) < 3:
+                continue
+            owner_class = normalize_cpp_class_token(property_args[0])
+            property_name = property_args[2].strip()
+            if not is_concrete_cpp_class_name(owner_class) or not re.match(r"^[A-Za-z_]\w*$", property_name):
+                continue
+            properties.append(
+                CppMetadataProperty(
+                    owner_class=owner_class,
+                    name=property_name,
+                    type_token=normalize_cpp_type_token(property_args[1]),
+                )
+            )
+        declarations.append((class_name, base_class, properties))
+    return declarations
+
+
+def strip_cpp_comments(text: str) -> str:
+    return re.sub(r"/\*.*?\*/|//[^\n\r]*", "", text, flags=re.DOTALL)
+
+
+def iter_cpp_macro_bodies(text: str, macro_name: str) -> list[str]:
+    bodies: list[str] = []
+    pattern = re.compile(rf"\b{re.escape(macro_name)}\s*\(")
+    for match in pattern.finditer(text):
+        open_index = text.find("(", match.start(), match.end())
+        close_index = find_matching_parenthesis(text, open_index)
+        if close_index is not None:
+            bodies.append(text[open_index + 1 : close_index])
+    return bodies
+
+
+def find_matching_parenthesis(text: str, open_index: int) -> int | None:
+    if open_index < 0 or open_index >= len(text) or text[open_index] != "(":
+        return None
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(open_index, len(text)):
+        char = text[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def split_cpp_args(text: str) -> list[str]:
+    args: list[str] = []
+    start = 0
+    paren_depth = 0
+    angle_depth = 0
+    square_depth = 0
+    brace_depth = 0
+    quote: str | None = None
+    escaped = False
+    for index, char in enumerate(text):
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+        elif char == "(":
+            paren_depth += 1
+        elif char == ")":
+            paren_depth = max(0, paren_depth - 1)
+        elif char == "<":
+            angle_depth += 1
+        elif char == ">":
+            angle_depth = max(0, angle_depth - 1)
+        elif char == "[":
+            square_depth += 1
+        elif char == "]":
+            square_depth = max(0, square_depth - 1)
+        elif char == "{":
+            brace_depth += 1
+        elif char == "}":
+            brace_depth = max(0, brace_depth - 1)
+        elif char == "," and paren_depth == 0 and angle_depth == 0 and square_depth == 0 and brace_depth == 0:
+            args.append(text[start:index].strip())
+            start = index + 1
+    tail = text[start:].strip()
+    if tail:
+        args.append(tail)
+    return args
+
+
+def normalize_cpp_class_token(raw: str) -> str:
+    return re.sub(r"\s+", "", raw.strip())
+
+
+def normalize_cpp_type_token(raw: str) -> str:
+    token = re.sub(r"\s+", " ", raw.strip())
+    return re.sub(r"\s*([<>,:&*])\s*", r"\1", token)
 
 
 def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:

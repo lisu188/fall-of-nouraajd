@@ -38,9 +38,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <SDL.h>
 #include <pybind11/embed.h>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -66,11 +71,49 @@ class KillingFightController : public NoProgressFightController {
     }
 };
 
+class SelfDefeatFightController : public NoProgressFightController {
+  public:
+    bool control(std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature>) override {
+        if (actor) {
+            actor->setHp(0);
+        }
+        return true;
+    }
+};
+
 class CancellingFightController : public NoProgressFightController {
   public:
     bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return false; }
 
     bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+};
+
+void set_environment_variable(const std::string &name, const std::optional<std::string> &value) {
+#ifdef _WIN32
+    _putenv_s(name.c_str(), value ? value->c_str() : "");
+#else
+    if (value) {
+        setenv(name.c_str(), value->c_str(), 1);
+    } else {
+        unsetenv(name.c_str());
+    }
+#endif
+}
+
+class ScopedEnvironmentVariable {
+  public:
+    ScopedEnvironmentVariable(std::string name, std::optional<std::string> value) : name(std::move(name)) {
+        if (const char *existing = std::getenv(this->name.c_str())) {
+            previous = std::string(existing);
+        }
+        set_environment_variable(this->name, value);
+    }
+
+    ~ScopedEnvironmentVariable() { set_environment_variable(name, previous); }
+
+  private:
+    std::string name;
+    std::optional<std::string> previous;
 };
 
 class LethalEffect : public CEffect {
@@ -142,6 +185,11 @@ std::shared_ptr<LethalEffect> attach_lethal_effect(const std::shared_ptr<CCreatu
     effect->setVictim(victim);
     victim->addEffect(effect);
     return effect;
+}
+
+void expect_controller_lifecycle(const std::shared_ptr<NoProgressFightController> &controller, int starts, int ends,
+                                 const char *message) {
+    expect_true(controller && controller->start_count == starts && controller->end_count == ends, message);
 }
 
 void test_script_handler_executes_commands_and_wraps_functions() {
@@ -323,6 +371,7 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     victor->setFightController(std::make_shared<KillingFightController>());
     auto defeated = add_test_creature(victory_game, "unitOutcomeDefeated", 1, 0);
     auto victory_controller = std::dynamic_pointer_cast<KillingFightController>(victor->getFightController());
+    auto defeated_controller = std::dynamic_pointer_cast<NoProgressFightController>(defeated->getFightController());
     const CFightResult cancelled_result{CFightOutcome::Cancelled, 3, victor, defeated};
     expect_true(cancelled_result.outcome == CFightOutcome::Cancelled && cancelled_result.rounds == 3,
                 "fight results should construct with explicit cancelled outcome data");
@@ -336,19 +385,23 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
                 "direct attacker victory should report survivor and opponent metadata");
     expect_true(victory.resolved() && victory.attackerSucceeded(),
                 "result helpers should identify successful resolved combat");
-    expect_true(CFightHandler::fightManyOutcome(victor, {defeated}) == CFightOutcome::Invalid,
-                "enum compatibility wrapper should still be constructible for invalid post-victory input");
-    expect_true(victory_controller->start_count == 1 && victory_controller->end_count == 1,
-                "attacker controller should start and end exactly once on victory");
+    expect_controller_lifecycle(victory_controller, 1, 1,
+                                "attacker controller should start and end exactly once on victory");
+    expect_controller_lifecycle(defeated_controller, 1, 1,
+                                "opponent controller should start and end exactly once on victory");
     expect_true(victory_game->getMap()->getStringProperty("combatStatus").find("survives the encounter") !=
                     std::string::npos,
                 "attacker victory should preserve the survivor status text");
+    expect_true(CFightHandler::fightManyOutcome(victor, {defeated}) == CFightOutcome::Invalid,
+                "enum compatibility wrapper should still be constructible for invalid post-victory input");
 
     auto stalemate_game = load_empty_game();
     auto stalled_attacker = add_test_creature(stalemate_game, "unitStalledAttacker");
     auto stalled_defender = add_test_creature(stalemate_game, "unitStalledDefender", 1, 0);
     const auto stalemate_controller =
         std::dynamic_pointer_cast<NoProgressFightController>(stalled_attacker->getFightController());
+    const auto stalemate_defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(stalled_defender->getFightController());
 
     const auto stalemate = CFightHandler::fightManyResult(stalled_attacker, {stalled_defender});
 
@@ -360,8 +413,13 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
                 "result helpers should keep stalled combat separate from resolved combat");
     expect_true(!CFightHandler::fightMany(stalled_attacker, {stalled_defender}),
                 "legacy fightMany should still return false for unresolved combat");
-    expect_true(stalemate_controller->start_count == 2 && stalemate_controller->end_count == 2,
-                "controller cleanup should also run for the legacy stalemate call");
+    expect_controller_lifecycle(stalemate_controller, 2, 2,
+                                "attacker cleanup should also run for the legacy stalemate call");
+    expect_controller_lifecycle(stalemate_defender_controller, 2, 2,
+                                "opponent cleanup should also run for the legacy stalemate call");
+    expect_true(stalemate_game->getMap()->getStringProperty("combatStatus").find("stalled after 20 rounds") !=
+                    std::string::npos,
+                "stale-loop termination should publish a diagnostic stalled status");
 
     auto legacy_victory_game = load_empty_game();
     auto legacy_victor = add_test_creature(legacy_victory_game, "unitLegacyOutcomeVictor");
@@ -376,18 +434,49 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     auto player = player_map->getPlayer();
     player->setHp(1);
     player->setFightController(std::make_shared<NoProgressFightController>());
+    const auto player_controller = std::dynamic_pointer_cast<NoProgressFightController>(player->getFightController());
     auto killer = add_test_creature(player_game, "unitPlayerDefeatKiller", 1, 0);
     killer->setFightController(std::make_shared<KillingFightController>());
+    const auto killer_controller = std::dynamic_pointer_cast<KillingFightController>(killer->getFightController());
 
     const auto defeat = CFightHandler::fightManyOutcome(player, {killer});
     const auto status = player_map->getStringProperty("combatStatus");
 
     expect_true(defeat == CFightOutcome::AttackerDefeat, "player defeat should remain visible after respawn");
+    expect_controller_lifecycle(player_controller, 1, 1,
+                                "attacker controller should start and end exactly once on defeat");
+    expect_controller_lifecycle(killer_controller, 1, 1,
+                                "opponent controller should start and end exactly once on defeat");
     expect_true(player_map->getObjectByName("player") == player && player->isAlive() && player->getHp() == 1,
                 "player defeat should keep the existing respawn behavior");
     expect_true(status.find("survives the encounter") == std::string::npos,
                 "defeated respawned players must not be reported as surviving");
     expect_true(status.find("defeated") != std::string::npos, "final defeat status should be explicit");
+
+    auto self_defeat_game = load_empty_game();
+    auto self_defeating_attacker = add_test_creature(self_defeat_game, "unitSelfDefeatingAttacker");
+    self_defeating_attacker->setFightController(std::make_shared<SelfDefeatFightController>());
+    add_unit_loot(self_defeat_game, self_defeating_attacker, "unitSelfDefeatLoot");
+    auto surviving_defender = add_test_creature(self_defeat_game, "unitSelfDefeatDefender", 1, 0);
+    const auto self_defeat_controller =
+        std::dynamic_pointer_cast<SelfDefeatFightController>(self_defeating_attacker->getFightController());
+    const auto surviving_defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(surviving_defender->getFightController());
+
+    const auto self_defeat = CFightHandler::fightManyResult(self_defeating_attacker, {surviving_defender});
+
+    expect_true(self_defeat.outcome == CFightOutcome::AttackerDefeat,
+                "attackers defeated during their own action should report AttackerDefeat");
+    expect_true(self_defeat.survivor == surviving_defender && self_defeat.opponent == self_defeating_attacker,
+                "self-defeat should attribute the surviving opponent in result metadata");
+    expect_controller_lifecycle(self_defeat_controller, 1, 1,
+                                "self-defeat should still end the attacker controller exactly once");
+    expect_controller_lifecycle(surviving_defender_controller, 1, 1,
+                                "self-defeat should still end the defender controller exactly once");
+    expect_true(surviving_defender->countItems("unitSelfDefeatLoot") == 1,
+                "self-defeat should grant transferable loot to the surviving opponent");
+    expect_true(self_defeat_game->getMap()->getObjectByName(self_defeating_attacker->getName()) == nullptr,
+                "self-defeat should remove the defeated attacker from the map");
 }
 
 void test_fight_handler_reports_invalid_result_metadata() {
@@ -400,22 +489,36 @@ void test_fight_handler_reports_invalid_result_metadata() {
     auto detached = std::make_shared<CCreature>();
     detached->setName("unitDetachedAttacker");
     detached->setFightController(std::make_shared<NoProgressFightController>());
+    const auto detached_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(detached->getFightController());
     const auto detached_result = CFightHandler::fightManyResult(detached, {});
     expect_true(detached_result.outcome == CFightOutcome::Invalid,
                 "attackers without an active map registration should return invalid");
+    expect_controller_lifecycle(detached_controller, 0, 0,
+                                "invalid detached combat should not start or end controllers");
 
     auto game = load_empty_game();
     auto attacker = add_test_creature(game, "unitInvalidMetadataAttacker");
+    const auto attacker_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(attacker->getFightController());
+    game->getMap()->setStringProperty("combatStatus", "previous encounter status");
     const auto empty_opponents = CFightHandler::fightManyResult(attacker, {});
     expect_true(empty_opponents.outcome == CFightOutcome::Invalid,
                 "combat without active opponents should return invalid");
+    expect_controller_lifecycle(attacker_controller, 0, 0,
+                                "invalid empty-opponent combat should not start or end controllers");
+    expect_true(game->getMap()->getStringProperty("combatStatus").empty(),
+                "invalid combat without active opponents should clear previous combat status");
 
     auto controllerless = add_test_creature(game, "unitControllerlessAttacker", 2, 0);
     auto defender = add_test_creature(game, "unitControllerlessDefender", 3, 0);
     controllerless->setFightController(nullptr);
+    game->getMap()->setStringProperty("combatStatus", "previous encounter status");
     const auto controllerless_result = CFightHandler::fightManyResult(controllerless, {defender});
     expect_true(controllerless_result.outcome == CFightOutcome::Invalid,
                 "attackers without fight controllers should return invalid");
+    expect_true(game->getMap()->getStringProperty("combatStatus").empty(),
+                "invalid combat without a fight controller should clear previous combat status");
     expect_true(game->getMap()->getObjectByName(defender->getName()) == defender,
                 "invalid controller checks should not mutate active opponents");
 }
@@ -429,6 +532,8 @@ void test_fight_handler_reports_cancelled_quit_event() {
     auto defender = add_test_creature(game, "unitCancelledDefender", 1, 0);
     const auto attacker_controller =
         std::dynamic_pointer_cast<NoProgressFightController>(attacker->getFightController());
+    const auto defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
 
     SDL_Event quit_event{};
     quit_event.type = SDL_QUIT;
@@ -443,10 +548,10 @@ void test_fight_handler_reports_cancelled_quit_event() {
                 "cancelled combat should keep participant metadata");
     expect_true(!result.resolved() && !result.attackerSucceeded(),
                 "cancelled combat should stay distinct from resolved bool outcomes");
-    expect_true(attacker_controller->start_count == 1 && attacker_controller->end_count == 1,
-                "controller cleanup should run when combat is cancelled");
-    expect_true(game->getMap()->getStringProperty("combatStatus").find("interrupted") != std::string::npos,
-                "cancelled combat should publish the interrupted status text");
+    expect_controller_lifecycle(attacker_controller, 1, 1, "attacker cleanup should run when combat is cancelled");
+    expect_controller_lifecycle(defender_controller, 1, 1, "opponent cleanup should run when combat is cancelled");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "cancelled combat should publish the cancelled status text");
 }
 
 void test_fight_handler_reports_cancelled_closed_fight_panel() {
@@ -469,6 +574,8 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
     auto controller = std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController());
     expect_true(controller != nullptr, "player should use a player fight controller");
     controller->start(player, defender);
+    const auto defender_controller =
+        std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
 
     auto panel = vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel"));
     expect_true(panel != nullptr, "fight panel should exist after player fight controller starts");
@@ -487,10 +594,58 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
     expect_true(result.rounds == 1, "panel cancellation during the first action should report the active round");
     expect_true(result.survivor == player && result.opponent == defender,
                 "panel cancellation should keep participant metadata");
-    expect_true(handler_controller->start_count == 1 && handler_controller->end_count == 1,
-                "controller cleanup should run when combat is cancelled");
-    expect_true(game->getMap()->getStringProperty("combatStatus").find("interrupted") != std::string::npos,
-                "panel cancellation should publish the interrupted status text");
+    expect_controller_lifecycle(handler_controller, 1, 1, "attacker cleanup should run when combat is cancelled");
+    expect_controller_lifecycle(defender_controller, 1, 1, "opponent cleanup should run when combat is cancelled");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "panel cancellation should publish the cancelled status text");
+}
+
+void test_fight_panel_resets_status_between_sequential_encounters() {
+    auto game = load_empty_game();
+    auto encounterMap = game->getMap();
+
+    auto first_victor = add_test_creature(game, "unitFirstStatusVictor");
+    first_victor->setLabel("First status victor");
+    first_victor->setFightController(std::make_shared<KillingFightController>());
+    auto first_defeated = add_test_creature(game, "unitFirstStatusDefeated", 1, 0);
+
+    const auto first = CFightHandler::fightManyResult(first_victor, {first_defeated});
+    const auto first_status = encounterMap->getStringProperty("combatStatus");
+    expect_true(first.outcome == CFightOutcome::AttackerVictory, "first status-isolation fight should resolve");
+    expect_true(first_status.find("First status victor survives the encounter") != std::string::npos,
+                "first fight should publish an intentional final status");
+
+    auto second_victor = add_test_creature(game, "unitSecondStatusVictor", 2, 0);
+    second_victor->setLabel("Second status victor");
+    second_victor->setFightController(std::make_shared<KillingFightController>());
+    auto second_defeated = add_test_creature(game, "unitSecondStatusDefeated", 3, 0);
+    auto reopened_panel = game->createObject<CGameFightPanel>("CGameFightPanel");
+    expect_true(reopened_panel != nullptr, "headless fight panel should be constructible for status isolation");
+    if (!reopened_panel) {
+        return;
+    }
+
+    reopened_panel->setEnemies({second_defeated});
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "opening a fight panel for a later encounter should not display previous final status");
+
+    encounterMap->setStringProperty("combatStatus", "Previous victor survives the encounter.");
+    reopened_panel->setEnemy(second_defeated);
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "setting a fight panel enemy directly should also clear previous combat status");
+
+    encounterMap->setStringProperty("combatStatus", "Combat round 99 begins.");
+    reopened_panel->close();
+    expect_true(encounterMap->getStringProperty("combatStatus").empty(),
+                "closing a fight panel should clear previous round status");
+
+    const auto second = CFightHandler::fightManyResult(second_victor, {second_defeated});
+    const auto second_status = encounterMap->getStringProperty("combatStatus");
+    expect_true(second.outcome == CFightOutcome::AttackerVictory, "second status-isolation fight should resolve");
+    expect_true(second_status.find("Second status victor survives the encounter") != std::string::npos,
+                "second fight should publish its own final status");
+    expect_true(second_status.find("First status victor") == std::string::npos,
+                "second fight status should not include the previous encounter");
 }
 
 void test_fight_handler_counts_effect_duration_as_progress() {
@@ -568,6 +723,63 @@ void test_playtest_trace_records_native_limits_and_quest_completion() {
     CPlaytestTrace::configure(false);
 }
 
+void test_playtest_trace_environment_targets_and_fallback_ids() {
+#ifdef _WIN32
+    return;
+#else
+    {
+        ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "OFF");
+        ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
+        CPlaytestTrace::configureFromEnvironment();
+        expect_true(!CPlaytestTrace::enabled(), "disabled trace environment values should disable tracing");
+        CPlaytestTrace::record("disabled_trace_should_not_record");
+        expect_true(CPlaytestTrace::records().empty(), "disabled tracing should ignore records");
+    }
+
+    {
+        ScopedEnvironmentVariable traceEnabled("GAME_PLAYTEST_TRACE", "stdout");
+        ScopedEnvironmentVariable traceFile("GAME_PLAYTEST_TRACE_FILE", std::nullopt);
+        CPlaytestTrace::configureFromEnvironment();
+        CPlaytestTrace::record("stdout_target");
+        expect_true(!CPlaytestTrace::drain().empty(), "stdout trace environment target should enable tracing");
+    }
+
+    CPlaytestTrace::configure(true, "stderr");
+    CPlaytestTrace::record("stderr_target");
+    expect_true(!CPlaytestTrace::drain().empty(), "stderr trace target should still keep buffered records");
+
+    const auto tracePath =
+        std::filesystem::temp_directory_path() / ("playtest-trace-unit-" + std::to_string(SDL_GetTicks64()) + ".jsonl");
+    CPlaytestTrace::configure(true, tracePath.generic_string());
+    CPlaytestTrace::record("file_target");
+    std::ifstream stream(tracePath);
+    std::string line;
+    std::getline(stream, line);
+    expect_true(line.find("file_target") != std::string::npos, "file trace target should append JSON lines");
+    std::filesystem::remove(tracePath);
+
+    auto namedObject = std::make_shared<CGameObject>();
+    const auto longName = std::string(200, 'n');
+    namedObject->setName(longName);
+    const auto namedRef = CPlaytestTrace::objectRef(namedObject);
+    expect_true(namedRef.value("id", std::string()).size() == 160,
+                "trace object refs should truncate long fallback names");
+    expect_true(namedRef.value("name", std::string()).size() == 160,
+                "trace object refs should truncate long object names");
+
+    auto typedObject = std::make_shared<CGameObject>();
+    typedObject->setName("");
+    typedObject->setType("UnitTraceType");
+    const auto typedRef = CPlaytestTrace::objectRef(typedObject);
+    expect_true(typedRef.value("id", std::string()) == "UnitTraceType",
+                "trace object refs should fall back to object type when id and name are empty");
+    expect_true(typedRef.value("type", std::string()) == "UnitTraceType",
+                "trace object refs should include the runtime object type");
+
+    CPlaytestTrace::configure(false);
+#endif
+}
+
 void test_fight_handler_records_outcome_trace_metadata() {
     CPlaytestTrace::configure(true);
     try {
@@ -638,8 +850,10 @@ int main() {
     test_fight_handler_reports_invalid_result_metadata();
     test_fight_handler_reports_cancelled_quit_event();
     test_fight_handler_reports_cancelled_closed_fight_panel();
+    test_fight_panel_resets_status_between_sequential_encounters();
     test_fight_handler_counts_effect_duration_as_progress();
     test_playtest_trace_records_native_limits_and_quest_completion();
+    test_playtest_trace_environment_targets_and_fallback_ids();
     test_fight_handler_records_outcome_trace_metadata();
     test_player_respawn_normalizes_wrapped_entry_coords();
 

@@ -1,0 +1,84 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "nouraajd",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "VICTOR_COURTYARD_FOUND": true,
+      "VICTOR_COURTYARD_TURN": 100,
+      "VICTOR_CULTISTS_SPAWNED": true,
+      "description": "immutable Nouraajd runtime quest actor fixture",
+      "mapName": "nouraajd",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "posx": 45,
+            "posy": 100,
+            "posz": 0,
+            "quests": [
+              {
+                "class": "AmuletQuest",
+                "properties": {
+                  "name": "amuletQuest",
+                  "typeId": "amuletQuest"
+                }
+              },
+              {
+                "class": "VictorQuest",
+                "properties": {
+                  "name": "victorQuest",
+                  "typeId": "victorQuest"
+                }
+              }
+            ],
+            "typeId": "Warrior"
+          }
+        },
+        {
+          "class": "CCreature",
+          "properties": {
+            "name": "cultLeaderQuest",
+            "posx": 44,
+            "posy": 100,
+            "posz": 0,
+            "typeId": "CultLeader"
+          }
+        },
+        {
+          "class": "CCreature",
+          "properties": {
+            "name": "victorCultist1",
+            "posx": 46,
+            "posy": 100,
+            "posz": 0,
+            "typeId": "Cultist"
+          }
+        },
+        {
+          "class": "CCreature",
+          "properties": {
+            "name": "amuletGoblin",
+            "posx": 195,
+            "posy": 8,
+            "posz": 0,
+            "typeId": "goblinThief"
+          }
+        }
+      ],
+      "quest_state_amulet": "active",
+      "quest_state_beren_chain": "letter_pending",
+      "quest_state_main": "locked",
+      "quest_state_octobogz_contract": "not_started",
+      "quest_state_rolf": "awaiting_skull",
+      "quest_state_victor": "encounter_active",
+      "tiles": [],
+      "triggers": [],
+      "turn": 104
+    }
+  }
+}

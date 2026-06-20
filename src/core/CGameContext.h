@@ -17,9 +17,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include <atomic>
+#include <cstdint>
 #include <memory>
 
 class CGame;
+class CGuiHandler;
 class CObjectHandler;
 class CConfigurationProvider;
 class CRngHandler;
@@ -28,9 +31,13 @@ class CScriptHandler;
 
 class CGameContext {
   public:
+    using TransitionGeneration = std::uint64_t;
+
     explicit CGameContext(std::shared_ptr<CGame> game);
 
     std::shared_ptr<CObjectHandler> getObjectHandler();
+
+    std::shared_ptr<CGuiHandler> getGuiHandler();
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
@@ -40,13 +47,23 @@ class CGameContext {
 
     std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
 
+    TransitionGeneration getTransitionGeneration() const;
+
+    TransitionGeneration captureTransitionGeneration() const;
+
+    bool isTransitionGenerationCurrent(TransitionGeneration expectedGeneration) const;
+
+    TransitionGeneration advanceTransitionGeneration();
+
   private:
     static void deleteConfigurationProvider(CConfigurationProvider *provider);
 
     std::weak_ptr<CGame> game;
+    std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
     std::shared_ptr<CRngHandler> rngHandler;
     std::shared_ptr<CResourcesProvider> resourcesProvider;
     std::shared_ptr<CConfigurationProvider> configurationProvider;
+    std::atomic<TransitionGeneration> transitionGeneration = 0;
 };

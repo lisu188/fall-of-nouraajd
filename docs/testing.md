@@ -120,9 +120,11 @@ Recommended required status checks:
 - `windows` (shown in some GitHub branch-protection UI as `build / windows`)
 
 These jobs cover the current PR build, native C++ tests, native performance guards, Python regression suite, dependency
-cache validation, and packaging on Linux and Windows. The Linux job also runs `./scripts/run_coverage.sh` when the
-changed paths match the workflow coverage rule, so coverage is conditional inside `linux` rather than a separate
-always-present check.
+cache validation, and packaging on Linux and Windows when `scripts/ci_change_classifier.py` marks native validation
+necessary. Workflow-only docs/prompts/tooling PRs still produce terminal `linux` check evidence, but native-heavy Linux
+steps and Windows jobs are skipped after focused workflow validation. The workflow also has a conditional
+`linux-coverage` job that runs `./scripts/run_coverage.sh` when changed paths match the coverage rule; because it is
+path-gated, do not configure it as an always-present branch-protection check.
 
 ## CI-Polled Validation
 For local agents, prefer the PR `linux` job as the default delivery path for heavy Linux validation. Run focused local
@@ -139,19 +141,23 @@ Use `--check` more than once only when the task explicitly needs additional plat
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --check windows-deps --check windows
 ```
 
-For coverage-relevant changes, require the conditional coverage step explicitly:
+For coverage-relevant changes, the poller auto-requires the conditional coverage step when changed paths match the
+workflow coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that
+check:
 
 ```bash
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
 ```
 
 Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
-necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is sufficient PR
-delivery evidence for the Release build, native tests, performance guard, gameplay suite, UI suite, and conditional
-coverage. It proves coverage only when the workflow's changed-path rule runs the `coverage` step; use
-`--require-step coverage` for coverage-relevant changes. Record the polled job name, conclusion, and URL separately from
-local commands. Do not report skipped local commands as passed, and do not enable auto-merge until the selected
-CI-polled validation has passed when it is the only full-validation evidence.
+necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is
+sufficient PR delivery evidence for the classifier-selected validation class: native/source/content changes run the
+Release build, native tests, performance guard, gameplay suite, and UI suite, while workflow-only changes keep a terminal
+Linux check and skip unrelated native-heavy steps. It proves coverage only when the workflow's changed-path rule runs the
+`coverage` step somewhere in the selected build workflow run, currently in `linux-coverage`; the poller auto-adds that
+step for coverage-relevant PR paths. Record the polled job name, conclusion, and URL separately from local commands. Do
+not report skipped local commands as passed, and do not enable auto-merge until the selected CI-polled validation has
+passed when it is the only full-validation evidence.
 
 Manual repository settings for `main`:
 - require a pull request before merging
@@ -164,9 +170,10 @@ If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR
 protection only after they finish deterministically in CI.
 
 ## Coverage Workflow
-For PR delivery, satisfy coverage through the PR `linux` job when its coverage step runs and passes. Run local coverage
-only when CI cannot cover the required evidence, polling is unavailable, or a focused local coverage reproduction is
-necessary. Coverage is required when a change touches tests (for example
+For PR delivery, satisfy coverage by polling the selected build workflow run; the `coverage` step currently runs in the
+conditional `linux-coverage` job. Run local coverage only when CI cannot cover the required evidence, polling is
+unavailable, or a focused local coverage reproduction is necessary. Coverage is required when a change touches tests,
+for example
 `test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`,
 `src/object/**`, `native_plugins/**`, or the coverage tooling:
 
@@ -182,8 +189,8 @@ The script:
 - runs `python3 test.py --suite coverage-safe` against the coverage build with a finite outer timeout
 - generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
 - uses the repo-local Python reporter by default; set `COVERAGE_REPORTER=gcovr` only for diagnostic comparison
-- applies line exclusions from `scripts/coverage_exclusions.json` unless `COVERAGE_LINE_EXCLUSIONS` is overridden
-- fails if eligible line coverage is below the default `MIN_COVERAGE=95` gate
+- rejects line-exclusion controls; every instrumented line in scope is part of the gate
+- fails if eligible line coverage is below the default `MIN_COVERAGE=90` gate
 
 Optional coverage speed controls:
 - `COVERAGE_CXX_COMPILER_LAUNCHER=<launcher>` overrides the compiler launcher for the coverage build
@@ -200,5 +207,5 @@ The canonical coverage report is scoped to production/native plugin code by defa
 COVERAGE_INCLUDE_PREFIXES="src native_plugins" ./scripts/run_coverage.sh
 ```
 
-`scripts/run_coverage.sh` uses that scope unless `COVERAGE_INCLUDE_PREFIXES` is overridden. The reviewed line exclusion
-manifest is `scripts/coverage_exclusions.json`; entries outside the active coverage scope are not part of the line gate.
+`scripts/run_coverage.sh` uses that scope unless `COVERAGE_INCLUDE_PREFIXES` is overridden. Coverage line exclusions are
+not supported; every instrumented line under the active scope is part of the line gate.

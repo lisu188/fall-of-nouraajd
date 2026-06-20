@@ -71,6 +71,53 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         self.assertRegex(requirements_text, re.compile(r"^black==[0-9]+(?:\.[0-9]+)*$", re.MULTILINE))
         self.assertNotRegex(requirements_text, re.compile(r"^pybind11\b", re.IGNORECASE | re.MULTILINE))
 
+    def test_linux_coverage_job_uploads_failure_report_artifact(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+        match = re.search(r"(?ms)^  linux-coverage:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)", workflow_text)
+        self.assertIsNotNone(match)
+        job_body = match.group("body")
+
+        self.assertIn("- name: coverage", job_body)
+        self.assertIn("- name: Upload coverage report", job_body)
+        self.assertLess(job_body.index("- name: coverage"), job_body.index("- name: Upload coverage report"))
+        self.assertRegex(
+            job_body,
+            re.compile(
+                r"(?ms)- name: Upload coverage report\n"
+                r"\s+if: always\(\)\n"
+                r"\s+uses: actions/upload-artifact@[0-9a-f]{40}\n"
+                r"\s+with:\n"
+                r"\s+name: linux-coverage-report\n"
+                r"\s+path: \|\n"
+                r"\s+coverage/\n"
+                r"\s+test/test-timings-linux-coverage\.json\n"
+                r"\s+if-no-files-found: warn"
+            ),
+        )
+
+    def test_linux_coverage_path_filter_matches_required_policy(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+        classifier_text = (REPO_ROOT / "scripts" / "ci_change_classifier.py").read_text()
+
+        self.assertIn("- name: classify changed paths", workflow_text)
+        self.assertIn("python3 scripts/ci_change_classifier.py", workflow_text)
+        self.assertIn('"test.py"', classifier_text)
+        self.assertIn('"tests/unit/*"', classifier_text)
+        self.assertIn('"scripts/run_coverage.sh"', classifier_text)
+        self.assertIn('"scripts/coverage_report.py"', classifier_text)
+        self.assertIn('"native_plugins/*"', classifier_text)
+        self.assertIn('"src/core/*"', classifier_text)
+        self.assertIn('"src/gui/*"', classifier_text)
+        self.assertIn('"src/handler/*"', classifier_text)
+        self.assertIn('"src/object/*"', classifier_text)
+        self.assertNotIn('"tests/*"', classifier_text)
+
+    def test_run_coverage_default_line_gate_is_90_percent(self):
+        run_coverage = (REPO_ROOT / "scripts" / "run_coverage.sh").read_text()
+
+        self.assertIn('MIN_COVERAGE="${MIN_COVERAGE:-90}"', run_coverage)
+        self.assertNotIn('MIN_COVERAGE="${MIN_COVERAGE:-95}"', run_coverage)
+
 
 if __name__ == "__main__":
     unittest.main()

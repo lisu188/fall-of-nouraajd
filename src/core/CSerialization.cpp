@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
+#include "core/CList.h"
 #include "core/CTypes.h"
 
 #include <stdexcept>
@@ -45,6 +46,87 @@ class CScopedArrayDeserializeContext {
 bool shouldSkipInvalidArrayEntryInStrictMode() {
     return array_deserialize_context.find("property 'quests'") != std::string::npos ||
            array_deserialize_context.find("property 'completedQuests'") != std::string::npos;
+}
+
+std::shared_ptr<json> primitiveValuesConfig(const std::shared_ptr<CGameObject> &object) {
+    if (!object || !CTypes::isPrimitiveType(std::type_index(typeid(*object))) ||
+        !object->meta()->has_property("values", object)) {
+        return nullptr;
+    }
+
+    auto values = std::make_shared<json>();
+    CSerialization::setProperty(values, "values", object->getProperty<std::any>("values"));
+    if (!values->contains("values")) {
+        return nullptr;
+    }
+    return CJsonUtil::clone(&(*values)["values"]);
+}
+
+template <typename T> bool isPrimitiveMapWrapper() {
+    const auto type = std::type_index(typeid(T));
+    return type == std::type_index(typeid(CMapStringString)) || type == std::type_index(typeid(CMapStringInt)) ||
+           type == std::type_index(typeid(CMapIntString)) || type == std::type_index(typeid(CMapIntInt));
+}
+
+template <typename T>
+bool isCompatiblePrimitiveObjectConfig(const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &value) {
+    std::string class_name;
+    if (CJsonUtil::isRef(value)) {
+        if (!game || !game->getObjectHandler()) {
+            return false;
+        }
+        class_name = game->getObjectHandler()->getClass((*value)["ref"].get<std::string>());
+    } else if (CJsonUtil::isType(value)) {
+        class_name = (*value)["class"].get<std::string>();
+    }
+    if (class_name.empty()) {
+        return false;
+    }
+    auto type = game && game->getObjectHandler() ? game->getObjectHandler()->getType(class_name) : nullptr;
+    return type && type->meta()->inherits(T::static_meta()->name());
+}
+
+template <typename T>
+bool shouldKeepPrimitiveObjectConfig(const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &value) {
+    if (!CJsonUtil::isObject(value)) {
+        return false;
+    }
+    return !isPrimitiveMapWrapper<T>() || value->contains("properties") ||
+           isCompatiblePrimitiveObjectConfig<T>(game, value);
+}
+
+template <typename T>
+std::shared_ptr<json> primitiveObjectConfig(const std::shared_ptr<CGame> &game, std::type_index property,
+                                            const std::shared_ptr<json> &value) {
+    if (property != std::type_index(typeid(std::shared_ptr<T>)) || !CTypes::isPrimitiveType<T>() ||
+        shouldKeepPrimitiveObjectConfig<T>(game, value)) {
+        return nullptr;
+    }
+
+    auto config = std::make_shared<json>();
+    (*config)["class"] = T::static_meta()->name();
+    (*config)["properties"]["values"] = *value;
+    return config;
+}
+
+std::shared_ptr<json> primitiveObjectConfig(const std::shared_ptr<CGame> &game, std::type_index property,
+                                            const std::shared_ptr<json> &value) {
+    if (auto config = primitiveObjectConfig<CListString>(game, property, value)) {
+        return config;
+    }
+    if (auto config = primitiveObjectConfig<CListInt>(game, property, value)) {
+        return config;
+    }
+    if (auto config = primitiveObjectConfig<CMapStringString>(game, property, value)) {
+        return config;
+    }
+    if (auto config = primitiveObjectConfig<CMapStringInt>(game, property, value)) {
+        return config;
+    }
+    if (auto config = primitiveObjectConfig<CMapIntString>(game, property, value)) {
+        return config;
+    }
+    return primitiveObjectConfig<CMapIntInt>(game, property, value);
 }
 
 class CGameObjectPointerSerializer : public CSerializerBase {
@@ -124,6 +206,10 @@ std::type_index CSerialization::getProperty(const std::shared_ptr<CGameObject> &
 
 void CSerialization::setArrayProperty(const std::shared_ptr<CGameObject> &object, std::type_index property,
                                       const std::string &key, std::shared_ptr<json> value) {
+    if (auto config = primitiveObjectConfig(object->getGame(), property, value)) {
+        setOtherProperty(std::type_index(typeid(std::shared_ptr<json>)), property, object, key, std::any(config));
+        return;
+    }
     setOtherProperty(std::type_index(typeid(std::shared_ptr<json>)),
                      property != V_VOID ? property : std::type_index(typeid(std::set<std::shared_ptr<CGameObject>>)),
                      object, key, std::any(value));
@@ -131,6 +217,10 @@ void CSerialization::setArrayProperty(const std::shared_ptr<CGameObject> &object
 
 void CSerialization::setObjectProperty(const std::shared_ptr<CGameObject> &object, std::type_index property,
                                        const std::string &key, std::shared_ptr<json> value) {
+    if (auto config = primitiveObjectConfig(object->getGame(), property, value)) {
+        setOtherProperty(std::type_index(typeid(std::shared_ptr<json>)), property, object, key, std::any(config));
+        return;
+    }
     setOtherProperty(std::type_index(typeid(std::shared_ptr<json>)),
                      property != V_VOID ? property : getGenericPropertyType(value), object, key, std::any(value));
 }
@@ -242,6 +332,13 @@ void CSerialization::setProperty(const std::shared_ptr<json> &conf, const std::s
     } else if (propertyType == std::type_index(typeid(bool))) {
         add_member(conf, propertyName, vstd::any_cast<bool>(propertyValue));
     } else {
+        if (CTypes::is_pointer_type(propertyType)) {
+            auto primitiveValues = primitiveValuesConfig(vstd::any_cast<std::shared_ptr<CGameObject>>(propertyValue));
+            if (primitiveValues) {
+                add_member(conf, propertyName, primitiveValues);
+                return;
+            }
+        }
         std::shared_ptr<CSerializerBase> serializer;
         for (const auto &entry : *CTypes::serializers()) {
             auto types = entry.first;
@@ -306,6 +403,7 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     }
     if (object && config->is_object() && config->count("properties")) {
         auto properties = &(*config)["properties"];
+        CGameObject::PropertyNotificationBatch notificationBatch(*object);
         for (auto &[key, value] : properties->items()) {
             try {
                 CSerialization::setProperty(object, key, CJsonUtil::alias(config, value));

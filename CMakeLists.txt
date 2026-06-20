@@ -590,6 +590,7 @@ endfunction()
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
 add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
+add_game_unit_test(gui_drag_proxy_unit_tests tests/unit/test_gui_drag_proxy.cpp)
 set(GAME_HANDLER_UNIT_TEST_SRC tests/unit/test_handler.cpp)
 if (NOT WIN32)
     list(APPEND GAME_HANDLER_UNIT_TEST_SRC src/handler/CScriptHandler.cpp)
@@ -601,6 +602,7 @@ add_executable(performance_guard_tests
     tests/unit/test_performance.cpp
     tests/unit/test_pathfinder_performance.cpp
     tests/unit/test_engine_hotspot_performance.cpp
+    tests/unit/test_serialization_performance.cpp
 )
 if (WIN32)
     target_sources(performance_guard_tests PRIVATE $<TARGET_OBJECTS:game_core_objects>)

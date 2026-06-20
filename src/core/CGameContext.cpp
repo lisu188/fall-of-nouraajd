@@ -18,10 +18,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CGame.h"
 #include "core/CProvider.h"
+#include "handler/CGuiHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
 
+#include <atomic>
 #include <stdexcept>
 #include <utility>
 
@@ -32,6 +34,17 @@ std::shared_ptr<CObjectHandler> CGameContext::getObjectHandler() {
         objectHandler = std::make_shared<CObjectHandler>();
     }
     return objectHandler;
+}
+
+std::shared_ptr<CGuiHandler> CGameContext::getGuiHandler() {
+    if (!guiHandler) {
+        auto owner = game.lock();
+        if (!owner) {
+            throw std::runtime_error("Cannot create CGuiHandler without an active CGame.");
+        }
+        guiHandler = std::make_shared<CGuiHandler>(owner);
+    }
+    return guiHandler;
 }
 
 std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {
@@ -68,3 +81,19 @@ std::shared_ptr<CConfigurationProvider> CGameContext::getConfigurationProvider()
 }
 
 void CGameContext::deleteConfigurationProvider(CConfigurationProvider *provider) { delete provider; }
+
+CGameContext::TransitionGeneration CGameContext::getTransitionGeneration() const {
+    return transitionGeneration.load(std::memory_order_acquire);
+}
+
+CGameContext::TransitionGeneration CGameContext::captureTransitionGeneration() const {
+    return getTransitionGeneration();
+}
+
+bool CGameContext::isTransitionGenerationCurrent(TransitionGeneration expectedGeneration) const {
+    return getTransitionGeneration() == expectedGeneration;
+}
+
+CGameContext::TransitionGeneration CGameContext::advanceTransitionGeneration() {
+    return transitionGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+}

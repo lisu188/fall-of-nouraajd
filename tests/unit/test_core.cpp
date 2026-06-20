@@ -18,7 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CJsonUtil.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CList.h"
+#include "core/CMap.h"
 #include "core/CPathFinder.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CScript.h"
@@ -26,7 +30,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
+#include "object/CCreature.h"
 #include "object/CGameObject.h"
+#include "object/CItem.h"
 #include "test_harness.h"
 #include "vutil.h"
 
@@ -34,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -84,19 +91,53 @@ struct ConceptStepCost {
 
 class PropertyChangeProbe : public CGameObject {
     V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
+           V_METHOD(PropertyChangeProbe, onPropertiesChanged, void, std::set<std::string>),
            V_METHOD(PropertyChangeProbe, onLabelChanged), V_METHOD(PropertyChangeProbe, onThreatChanged))
 
   public:
     void onPropertyChanged(std::string property_name) { changed_properties.push_back(property_name); }
+
+    void onPropertiesChanged(std::set<std::string> property_names) {
+        changed_property_batches.push_back(property_names);
+    }
 
     void onLabelChanged() { ++label_changed_calls; }
 
     void onThreatChanged() { ++threat_changed_calls; }
 
     std::vector<std::string> changed_properties;
+    std::vector<std::set<std::string>> changed_property_batches;
     int label_changed_calls = 0;
     int threat_changed_calls = 0;
 };
+
+class PrimitiveSerializationHolder : public CGameObject {
+    V_META(PrimitiveSerializationHolder, CGameObject,
+           V_PROPERTY(PrimitiveSerializationHolder, std::shared_ptr<CListString>, listValues, getListValues,
+                      setListValues),
+           V_PROPERTY(PrimitiveSerializationHolder, std::shared_ptr<CMapStringString>, mapValues, getMapValues,
+                      setMapValues))
+
+  public:
+    std::shared_ptr<CListString> getListValues() { return listValues; }
+
+    void setListValues(std::shared_ptr<CListString> value) { listValues = value; }
+
+    std::shared_ptr<CMapStringString> getMapValues() { return mapValues; }
+
+    void setMapValues(std::shared_ptr<CMapStringString> value) { mapValues = value; }
+
+  private:
+    std::shared_ptr<CListString> listValues;
+    std::shared_ptr<CMapStringString> mapValues;
+};
+
+void drain_event_loop() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+}
 
 static_assert(fn::PathPassability<ConceptCanStep>);
 static_assert(fn::PathWaypoint<ConceptWaypoint>);
@@ -435,6 +476,73 @@ void test_json_parse_expected_success_and_failure() {
                 "from_string should keep the public nullptr behavior on parse failure");
 }
 
+void test_json_parse_dump_and_type_helpers() {
+    const auto parsed = json::parse(
+        R"({"array":["line\nnext",18446744073709551615,1.5,true,false,null],"empty":{},"name":"nouraajd"})");
+    expect_true(parsed.is_object(), "parsed JSON document should be an object");
+    expect_true(parsed.size() == 3, "object size should count parsed keys");
+    expect_true(parsed.count("array") == 1, "count should report existing object keys");
+    expect_true(parsed.count("missing") == 0, "count should reject missing object keys");
+    expect_true(parsed["array"].is_array(), "parsed array should keep array type");
+    expect_true(parsed["array"].size() == 6, "parsed array should keep every entry");
+    expect_true(parsed["array"][0].get<std::string>() == "line\nnext", "parsed string should preserve escapes");
+    expect_true(parsed["array"][1].get<unsigned long long>() == 18446744073709551615ull,
+                "parsed unsigned integer should keep full uint64 range");
+    expect_true(parsed["array"][2].get<double>() == 1.5, "parsed floating point value should keep precision");
+    expect_true(parsed["array"][3].get<bool>(), "parsed true value should keep boolean type");
+    expect_true(!parsed["array"][4].get<bool>(), "parsed false value should keep boolean type");
+    expect_true(parsed["array"][5].is_null(), "parsed null should keep null type");
+    expect_true(parsed["missing"].is_null(), "missing object lookup should return null value");
+    expect_true(parsed["array"][99].is_null(), "missing array lookup should return null value");
+    expect_true(parsed.value("name", std::string("fallback")) == "nouraajd",
+                "value should return typed object members");
+    expect_true(parsed.value("missing", std::string("fallback")) == "fallback",
+                "value should use fallback for missing members");
+    expect_true(parsed.value("array", std::string("fallback")) == "fallback",
+                "value should use fallback for type mismatches");
+
+    json constructed;
+    constructed["quote"] = "a\"b\\c\b\f\n\r\t";
+    constructed["number"] = -7;
+    constructed["unsigned"] = 7u;
+    constructed["double"] = 2.25;
+    constructed["nan"] = std::numeric_limits<double>::quiet_NaN();
+    constructed["items"] = json::array({nullptr, "tail"});
+    constructed["items"][4] = "expanded";
+    constructed.erase("missing");
+
+    const auto compact = constructed.dump();
+    expect_true(compact.find(R"("quote":"a\"b\\c\b\f\n\r\t")") != std::string::npos,
+                "compact dump should escape strings");
+    expect_true(compact.find(R"("nan":null)") != std::string::npos,
+                "compact dump should serialize non-finite numbers as null");
+    expect_true(compact.find(R"("items":[null,"tail",null,null,"expanded"])") != std::string::npos,
+                "compact dump should serialize expanded arrays");
+
+    const auto pretty = constructed.dump(2);
+    expect_true(pretty.find("\n  \"items\": [") != std::string::npos, "pretty dump should indent objects");
+    expect_true(pretty.find("\n    \"expanded\"") != std::string::npos, "pretty dump should indent arrays");
+
+    expect_true(json(nullptr).dump() == "null", "null JSON should dump as null");
+    expect_true(json("text").size() == 4, "string size should report character count");
+    bool missing_key_threw = false;
+    try {
+        parsed.at("missing");
+    } catch (const std::out_of_range &) {
+        missing_key_threw = true;
+    }
+    expect_true(missing_key_threw, "object at() should reject missing keys");
+
+    bool non_array_threw = false;
+    try {
+        parsed["name"].at(std::size_t{0});
+    } catch (const std::out_of_range &) {
+        non_array_threw = true;
+    }
+    expect_true(non_array_threw, "array at() should reject non-array values");
+    expect_runtime_error([&]() { parsed["name"].get<int>(); }, "integer get should reject string values");
+}
+
 void test_sdl_raii_alias_owns_surface() {
     auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32));
     expect_true(surface != nullptr, "SurfacePtr should own SDL surfaces created by SDL");
@@ -518,15 +626,397 @@ void test_property_setters_emit_change_signals() {
     object->setStringProperty("label", "Alert");
     object->setNumericProperty("threat", 7);
 
-    auto loop = vstd::event_loop<>::instance();
-    for (int i = 0; i < 5; ++i) {
-        loop->run();
-    }
+    drain_event_loop();
 
     expect_true((probe->changed_properties == std::vector<std::string>{"label", "threat"}),
                 "propertyChanged should include string and numeric property names");
+    expect_true(probe->changed_property_batches.empty(), "ordinary property setters should not emit batch signals");
     expect_true(probe->label_changed_calls == 1, "setStringProperty should emit the property-specific signal");
     expect_true(probe->threat_changed_calls == 1, "setNumericProperty should emit the property-specific signal");
+}
+
+template <typename T, typename ValueType> bool has_primitive_value_type() {
+    auto value_type = CTypes::primitiveValueType<T>();
+    return CTypes::isPrimitiveType<T>() && value_type.has_value() &&
+           value_type.value() == std::type_index(typeid(ValueType));
+}
+
+void test_reviewed_value_wrappers_have_explicit_primitive_metadata() {
+    expect_true(has_primitive_value_type<CListString, std::set<std::string>>(),
+                "CListString should be an explicitly registered string-set primitive wrapper");
+    expect_true(has_primitive_value_type<CListInt, std::set<int>>(),
+                "CListInt should be an explicitly registered integer-set primitive wrapper");
+    expect_true(has_primitive_value_type<CMapStringString, std::map<std::string, std::string>>(),
+                "CMapStringString should be an explicitly registered string-string map primitive wrapper");
+    expect_true(has_primitive_value_type<CMapStringInt, std::map<std::string, int>>(),
+                "CMapStringInt should be an explicitly registered string-integer map primitive wrapper");
+    expect_true(has_primitive_value_type<CMapIntString, std::map<int, std::string>>(),
+                "CMapIntString should be an explicitly registered integer-string map primitive wrapper");
+    expect_true(has_primitive_value_type<CMapIntInt, std::map<int, int>>(),
+                "CMapIntInt should be an explicitly registered integer-integer map primitive wrapper");
+
+    expect_true(CTypes::primitiveTypes()->size() == 6, "only reviewed value wrappers should be primitive types");
+    expect_true(!CTypes::isPrimitiveType<CScript>(), "single-property CScript should not be primitive by shape");
+    expect_true(!CTypes::primitiveValueType<CScript>().has_value(), "CScript should not have primitive value metadata");
+    expect_true(!CTypes::isPrimitiveType<CStats>(), "multi-property value-like objects should not be primitive");
+}
+
+void test_nested_primitive_wrappers_serialize_direct_values_and_round_trip() {
+    CTypes::register_type_metadata<PrimitiveSerializationHolder, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(PrimitiveSerializationHolder::static_meta()->name(),
+                                           []() { return std::make_shared<PrimitiveSerializationHolder>(); });
+    game->getObjectHandler()->registerType(CListString::static_meta()->name(),
+                                           []() { return std::make_shared<CListString>(); });
+    game->getObjectHandler()->registerType(CListInt::static_meta()->name(),
+                                           []() { return std::make_shared<CListInt>(); });
+    game->getObjectHandler()->registerType(CMapStringString::static_meta()->name(),
+                                           []() { return std::make_shared<CMapStringString>(); });
+    game->getObjectHandler()->registerType(CMapStringInt::static_meta()->name(),
+                                           []() { return std::make_shared<CMapStringInt>(); });
+    game->getObjectHandler()->registerType(CMapIntString::static_meta()->name(),
+                                           []() { return std::make_shared<CMapIntString>(); });
+    game->getObjectHandler()->registerType(CMapIntInt::static_meta()->name(),
+                                           []() { return std::make_shared<CMapIntInt>(); });
+
+    auto list_values = std::make_shared<CListString>();
+    list_values->setValues({"north", "south"});
+    auto map_values = std::make_shared<CMapStringString>();
+    map_values->setValues({{"confirm", "enter"}, {"inventory", "i"}});
+    auto int_list_values = std::make_shared<CListInt>();
+    int_list_values->setValues({2, 3, 5});
+    auto int_string_map_values = std::make_shared<CMapIntString>();
+    int_string_map_values->setValues({{7, "seven"}, {11, "eleven"}});
+    auto int_int_map_values = std::make_shared<CMapIntInt>();
+    int_int_map_values->setValues({{13, 169}, {17, 289}});
+
+    auto holder = std::make_shared<PrimitiveSerializationHolder>();
+    holder->setGame(game);
+    holder->setListValues(list_values);
+    holder->setMapValues(map_values);
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(holder);
+    auto properties = &(*serialized)["properties"];
+    auto serialized_list =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(list_values);
+
+    expect_true((*properties)["listValues"].is_array(),
+                "nested CListString properties should serialize as their direct JSON array values");
+    expect_true((*properties)["listValues"].size() == 2,
+                "nested CListString direct values should preserve all entries");
+    expect_true((*properties)["mapValues"].is_object() && !CJsonUtil::isObject(&(*properties)["mapValues"]),
+                "nested CMapStringString properties should serialize as their direct JSON object values");
+    expect_true((*properties)["mapValues"]["inventory"].get<std::string>() == "i",
+                "nested CMapStringString direct values should preserve key-value entries");
+    expect_true((*serialized_list)["class"].get<std::string>() == CListString::static_meta()->name() &&
+                    (*serialized_list)["properties"].contains("values"),
+                "top-level primitive wrappers should keep their object identity");
+
+    auto round_trip = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+
+    expect_true(round_trip && round_trip->getListValues(),
+                "direct CListString JSON values should deserialize back into the primitive wrapper property");
+    expect_true(round_trip && round_trip->getMapValues(),
+                "direct CMapStringString JSON values should deserialize back into the primitive wrapper property");
+    expect_true(round_trip->getListValues()->getValues() == std::set<std::string>({"north", "south"}),
+                "CListString primitive wrapper values should round-trip through direct nested JSON");
+    expect_true(round_trip->getMapValues()->getValues() ==
+                    std::map<std::string, std::string>({{"confirm", "enter"}, {"inventory", "i"}}),
+                "CMapStringString primitive wrapper values should round-trip through direct nested JSON");
+
+    auto reserved_key_map_values = std::make_shared<CMapStringString>();
+    reserved_key_map_values->setValues({{"ref", "north"}});
+    holder->setMapValues(reserved_key_map_values);
+
+    auto serialized_reserved_map =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(holder);
+    auto reserved_map_properties = &(*serialized_reserved_map)["properties"];
+
+    expect_true(CJsonUtil::isObject(&(*reserved_map_properties)["mapValues"]),
+                "single-entry flattened maps can have object-config-shaped keys");
+
+    auto reserved_map_round_trip = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              serialized_reserved_map));
+
+    expect_true(reserved_map_round_trip && reserved_map_round_trip->getMapValues() &&
+                    reserved_map_round_trip->getMapValues()->getValues() ==
+                        std::map<std::string, std::string>({{"ref", "north"}}),
+                "CMapStringString flattened values named ref should deserialize as primitive map entries");
+
+    auto panel_keys_config = std::make_shared<json>();
+    (*panel_keys_config)["class"] = CMapStringString::static_meta()->name();
+    (*panel_keys_config)["properties"]["values"] = {{"i", "inventoryPanel"}, {"j", "questPanel"}};
+    game->getObjectHandler()->registerConfig("panelKeys", panel_keys_config);
+
+    auto holder_with_ref_config = std::make_shared<json>();
+    (*holder_with_ref_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*holder_with_ref_config)["properties"]["mapValues"]["ref"] = "panelKeys";
+
+    auto ref_round_trip = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              holder_with_ref_config));
+
+    expect_true(ref_round_trip && ref_round_trip->getMapValues() &&
+                    ref_round_trip->getMapValues()->getValues() ==
+                        std::map<std::string, std::string>({{"i", "inventoryPanel"}, {"j", "questPanel"}}),
+                "CMapStringString object refs should resolve to the referenced primitive wrapper");
+
+    auto serialized_int_list =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(int_list_values);
+    auto int_list_round_trip = std::dynamic_pointer_cast<CListInt>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              serialized_int_list));
+    expect_true(int_list_round_trip && int_list_round_trip->getValues() == std::set<int>({2, 3, 5}),
+                "CListInt should round-trip integer sets through primitive JSON arrays");
+
+    auto serialized_int_string_map =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(int_string_map_values);
+    auto int_string_map_round_trip = std::dynamic_pointer_cast<CMapIntString>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+            game, serialized_int_string_map));
+    expect_true(int_string_map_round_trip && int_string_map_round_trip->getValues() ==
+                                                 std::map<int, std::string>({{7, "seven"}, {11, "eleven"}}),
+                "CMapIntString should round-trip integer keys through string-keyed JSON objects");
+
+    auto serialized_int_int_map =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(int_int_map_values);
+    auto int_int_map_round_trip = std::dynamic_pointer_cast<CMapIntInt>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              serialized_int_int_map));
+    expect_true(int_int_map_round_trip &&
+                    int_int_map_round_trip->getValues() == std::map<int, int>({{13, 169}, {17, 289}}),
+                "CMapIntInt should round-trip integer keys and values through string-keyed JSON objects");
+
+    auto string_int_map_values = std::make_shared<CMapStringInt>();
+    string_int_map_values->setValues({{"one", 1}, {"two", 2}});
+    auto serialized_string_int_map =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(string_int_map_values);
+    auto string_int_map_round_trip = std::dynamic_pointer_cast<CMapStringInt>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(
+            game, serialized_string_int_map));
+    expect_true(string_int_map_round_trip &&
+                    string_int_map_round_trip->getValues() == std::map<std::string, int>({{"one", 1}, {"two", 2}}),
+                "CMapStringInt should round-trip string keys and integer values");
+
+    auto invalid_int_key_config = std::make_shared<json>();
+    (*invalid_int_key_config)["class"] = CMapIntString::static_meta()->name();
+    (*invalid_int_key_config)["properties"]["values"] = {{"", "empty"}, {"bad", "ignored"}, {"23", "kept"}};
+    auto invalid_int_key_round_trip = std::dynamic_pointer_cast<CMapIntString>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              invalid_int_key_config));
+    expect_true(invalid_int_key_round_trip &&
+                    invalid_int_key_round_trip->getValues() == std::map<int, std::string>({{23, "kept"}}),
+                "integer-key maps should skip empty and unparsable JSON object keys");
+}
+
+void test_nested_property_notification_batches_emit_one_deterministic_signal() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+    object->connect("propertiesChanged", probe, "onPropertiesChanged");
+    object->connect("labelChanged", probe, "onLabelChanged");
+    object->connect("threatChanged", probe, "onThreatChanged");
+
+    {
+        CGameObject::PropertyNotificationBatch outerBatch(*object);
+        object->setStringProperty("label", "Alert");
+        {
+            CGameObject::PropertyNotificationBatch innerBatch(*object);
+            object->setNumericProperty("threat", 7);
+            object->setStringProperty("label", "Updated");
+        }
+    }
+
+    drain_event_loop();
+
+    const std::vector<std::set<std::string>> expected_batches{{"label", "threat"}};
+    expect_true(probe->changed_properties.empty(), "batched property changes should suppress per-field notifications");
+    expect_true(probe->changed_property_batches == expected_batches,
+                "nested property batches should emit one sorted unique-name batch");
+    expect_true(probe->label_changed_calls == 0, "batched string changes should suppress property-specific signals");
+    expect_true(probe->threat_changed_calls == 0, "batched numeric changes should suppress property-specific signals");
+}
+
+void test_object_deserialization_batches_property_notifications() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+    object->connect("propertiesChanged", probe, "onPropertiesChanged");
+    object->connect("labelChanged", probe, "onLabelChanged");
+    object->connect("threatChanged", probe, "onThreatChanged");
+    game->getObjectHandler()->registerType("ObservedObject", [object]() { return object; });
+
+    auto config = std::make_shared<json>();
+    (*config)["class"] = "ObservedObject";
+    (*config)["properties"]["description"] = "deserialized";
+    (*config)["properties"]["label"] = "Alert";
+    (*config)["properties"]["threat"] = 7;
+
+    auto deserialized =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, config);
+    drain_event_loop();
+
+    const std::vector<std::set<std::string>> expected_batches{{"description", "label", "threat"}};
+    expect_true(deserialized == object, "test setup should deserialize the pre-connected observed object");
+    expect_true(probe->changed_properties.empty(),
+                "deserialization should not emit one propertyChanged signal per configured field");
+    expect_true(probe->changed_property_batches == expected_batches,
+                "deserialization should emit one consolidated property batch with all changed fields");
+    expect_true(probe->label_changed_calls == 0, "deserialization batches should suppress field-specific signals");
+    expect_true(probe->threat_changed_calls == 0, "deserialization batches should suppress dynamic field signals");
+}
+
+void test_object_clone_batches_property_notifications() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto source = std::make_shared<CGameObject>();
+    source->setGame(game);
+    source->setType("ObservedCloneObject");
+    source->setStringProperty("description", "source");
+    source->setStringProperty("label", "Alert");
+    source->setNumericProperty("threat", 7);
+
+    auto clone_target = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    clone_target->connect("propertyChanged", probe, "onPropertyChanged");
+    clone_target->connect("propertiesChanged", probe, "onPropertiesChanged");
+    clone_target->connect("labelChanged", probe, "onLabelChanged");
+    clone_target->connect("threatChanged", probe, "onThreatChanged");
+    game->getObjectHandler()->registerType("ObservedCloneObject", [clone_target]() { return clone_target; });
+
+    auto clone = source->clone<CGameObject>();
+    drain_event_loop();
+
+    expect_true(clone == clone_target, "clone should use the registered pre-connected clone target");
+    expect_true(probe->changed_properties.empty(), "clone should not emit one propertyChanged signal per cloned field");
+    expect_true(probe->changed_property_batches.size() == 1,
+                "clone should emit one consolidated property batch through deserialization");
+    expect_true(probe->changed_property_batches.front().contains("description") &&
+                    probe->changed_property_batches.front().contains("label") &&
+                    probe->changed_property_batches.front().contains("threat"),
+                "clone property batch should include all cloned fields changed by the test");
+    expect_true(probe->label_changed_calls == 0, "clone batches should suppress field-specific signals");
+    expect_true(probe->threat_changed_calls == 0, "clone batches should suppress dynamic field signals");
+}
+
+void test_game_context_owns_distinct_gui_handlers_per_game() {
+    auto first_game = std::make_shared<CGame>();
+    auto second_game = std::make_shared<CGame>();
+
+    auto first_context_handler = first_game->getContext()->getGuiHandler();
+    auto first_game_handler = first_game->getGuiHandler();
+    auto second_game_handler = second_game->getGuiHandler();
+
+    expect_true(first_context_handler == first_game_handler,
+                "CGame::getGuiHandler should return the handler owned by CGameContext");
+    expect_true(first_game_handler != second_game_handler,
+                "separate CGame instances should receive distinct GUI handlers");
+}
+
+void test_game_context_rejects_services_without_owner_game() {
+    auto context = std::make_shared<CGameContext>(std::shared_ptr<CGame>());
+
+    expect_runtime_error([&]() { context->getGuiHandler(); },
+                         "CGuiHandler creation should require an active owning game");
+    expect_runtime_error([&]() { context->getRngHandler(); },
+                         "CRngHandler creation should require an active owning game");
+}
+
+void test_game_context_transition_generation_helpers_and_shutdown() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+
+    auto initial_generation = context->getTransitionGeneration();
+    auto captured_generation = context->captureTransitionGeneration();
+    expect_true(captured_generation == initial_generation,
+                "capturing transition generation should return the current generation");
+    expect_true(context->isTransitionGenerationCurrent(captured_generation),
+                "freshly captured transition generation should be current");
+
+    auto advanced_generation = context->advanceTransitionGeneration();
+    expect_true(advanced_generation == initial_generation + 1,
+                "advancing transition generation should increment monotonically");
+    expect_true(context->getTransitionGeneration() == advanced_generation,
+                "reading transition generation should return the advanced value");
+    expect_true(!context->isTransitionGenerationCurrent(captured_generation),
+                "captured transition generation should become stale after an advance");
+
+    auto shutdown_generation = context->captureTransitionGeneration();
+    game.reset();
+    expect_true(context->getTransitionGeneration() == shutdown_generation + 1,
+                "destroying the owning game should advance transition generation");
+    expect_true(!context->isTransitionGenerationCurrent(shutdown_generation),
+                "shutdown should make previously captured transition generation stale");
+}
+
+void test_playtest_trace_records_and_helper_payloads() {
+    CPlaytestTrace::configure(false);
+    CPlaytestTrace::record("ignored");
+    expect_true(CPlaytestTrace::records().empty(), "disabled playtest trace should ignore records");
+
+    CPlaytestTrace::configure(true, "", 1);
+    CPlaytestTrace::recordJson("trace_payload", R"({"value": 7})");
+    CPlaytestTrace::recordJson("trace_non_object_payload", R"([1, 2])");
+    CPlaytestTrace::recordJson("trace_after_truncation", "");
+
+    auto records = CPlaytestTrace::records();
+    expect_true(records.size() == 2, "trace should retain one record plus one truncation marker");
+    auto first = json::parse(records.front());
+    auto second = json::parse(records.back());
+    expect_true(first["event"].get<std::string>() == "trace_payload" && first["value"].get<int>() == 7,
+                "recordJson should preserve object payload fields");
+    expect_true(second["event"].get<std::string>() == "trace_truncated" && second["truncated"].get<bool>(),
+                "trace should add a single truncation marker after maxRecords");
+
+    auto drained = CPlaytestTrace::drain();
+    expect_true(drained.size() == 2 && CPlaytestTrace::records().empty(),
+                "drain should return and clear buffered trace records");
+
+    CPlaytestTrace::configure(true);
+    CPlaytestTrace::clear();
+    expect_true(CPlaytestTrace::records().empty(), "clear should reset trace records");
+
+    auto object = std::make_shared<CGameObject>();
+    object->setName("traceObject");
+    object->setType("CGameObject");
+    auto ref = CPlaytestTrace::objectRef(object);
+    expect_true(ref["name"].get<std::string>() == "traceObject" && ref["type"].get<std::string>() == "CGameObject",
+                "objectRef should serialize stable object identity");
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setName("traceCreature");
+    auto creature_ref = CPlaytestTrace::objectRef(creature);
+    expect_true(!creature_ref["isPlayer"].get<bool>(), "creature trace refs should include player classification");
+    expect_true(CPlaytestTrace::objectRefs({creature}).size() == 1, "objectRefs should serialize creature lists");
+
+    auto item = std::make_shared<CItem>();
+    item->setName("traceItem");
+    expect_true(CPlaytestTrace::itemRefs({item}).size() == 1, "itemRefs should serialize item sets");
+    expect_true(CPlaytestTrace::objectRef(nullptr).is_null(), "objectRef should preserve null objects");
+
+    json fields = json::object();
+    CPlaytestTrace::addMapContext(fields, nullptr);
+    expect_true(fields.empty(), "addMapContext should ignore null maps");
+
+    auto map = std::make_shared<CMap>();
+    map->setName("traceMapObject");
+    map->setTurn(42);
+    CPlaytestTrace::addMapContext(fields, map);
+    expect_true(fields["map"].get<std::string>() == "traceMapObject" && fields["turn"].get<int>() == 42,
+                "addMapContext should serialize map identity and turn");
+
+    CPlaytestTrace::configure(false);
 }
 
 void test_delayed_future_handlers_run_through_event_loop() {
@@ -753,6 +1243,7 @@ int main() {
     test_toroidal_pathfinder_prefers_wrapped_route();
     test_toroidal_pathfinder_wraps_on_both_axes();
     test_json_parse_expected_success_and_failure();
+    test_json_parse_dump_and_type_helpers();
     test_sdl_raii_alias_owns_surface();
     test_direction_mapping();
     test_rect_bounds_inclusion();
@@ -760,6 +1251,15 @@ int main() {
     test_unknown_tag_rejection();
     test_tag_mutation_iteration_and_range_helpers();
     test_property_setters_emit_change_signals();
+    test_reviewed_value_wrappers_have_explicit_primitive_metadata();
+    test_nested_primitive_wrappers_serialize_direct_values_and_round_trip();
+    test_nested_property_notification_batches_emit_one_deterministic_signal();
+    test_object_deserialization_batches_property_notifications();
+    test_object_clone_batches_property_notifications();
+    test_game_context_owns_distinct_gui_handlers_per_game();
+    test_game_context_rejects_services_without_owner_game();
+    test_game_context_transition_generation_helpers_and_shutdown();
+    test_playtest_trace_records_and_helper_payloads();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();

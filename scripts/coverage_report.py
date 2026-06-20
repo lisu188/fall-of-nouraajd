@@ -24,17 +24,11 @@ def parse_args():
         type=positive_float,
         help="Seconds allowed for each gcov JSON extraction command.",
     )
-    parser.add_argument("--line-exclusions", type=Path, help="Reviewed root-relative line exclusion manifest.")
     parser.add_argument(
         "--include-prefix",
         action="append",
         default=[],
         help="Root-relative source path prefix to include. May be repeated. Defaults to the full repository.",
-    )
-    parser.add_argument(
-        "--audit-exclusions",
-        action="store_true",
-        help="Write exclusion audit reports with raw hit counts and source snippets.",
     )
     return parser.parse_args()
 
@@ -137,115 +131,6 @@ def is_included(root: Path, source_path: Path, include_prefixes=()) -> bool:
     return False
 
 
-def validate_exclusion_path(root: Path, rel_path_str: str) -> Path:
-    root = root.resolve()
-    if not isinstance(rel_path_str, str) or not rel_path_str:
-        raise ValueError("coverage exclusion paths must be non-empty strings")
-    rel_path = Path(rel_path_str)
-    if rel_path.is_absolute():
-        raise ValueError(f"coverage exclusion path must be root-relative: {rel_path_str}")
-    if any(part in {"", ".", ".."} for part in rel_path.parts):
-        raise ValueError(f"coverage exclusion path must be normalized: {rel_path_str}")
-    if any(char in rel_path_str for char in "*?[]"):
-        raise ValueError(f"coverage exclusion path cannot use glob syntax: {rel_path_str}")
-
-    source_path = (root / rel_path).resolve()
-    try:
-        filesystem_relative_path(root, source_path)
-    except ValueError as exc:
-        raise ValueError(f"coverage exclusion path escapes repository root: {rel_path_str}") from exc
-    if not source_path.exists():
-        raise ValueError(f"coverage exclusion path does not exist: {rel_path_str}")
-    return source_path
-
-
-def load_line_exclusions(root: Path, manifest_path: Path | None):
-    if manifest_path is None:
-        return {}
-
-    data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or data.get("version") != 1:
-        raise ValueError("coverage exclusion manifest must be an object with version 1")
-    entries = data.get("exclusions")
-    if not isinstance(entries, list):
-        raise ValueError("coverage exclusion manifest must contain an exclusions list")
-
-    exclusions = {}
-    for index, entry in enumerate(entries):
-        if not isinstance(entry, dict):
-            raise ValueError(f"coverage exclusion entry {index} must be an object")
-        source_path = validate_exclusion_path(root, entry.get("path"))
-
-        reason = entry.get("reason")
-        if not isinstance(reason, str) or not reason.strip():
-            raise ValueError(f"coverage exclusion for {entry.get('path')} must include a reason")
-
-        ranges = entry.get("ranges")
-        if not isinstance(ranges, list) or not ranges:
-            raise ValueError(f"coverage exclusion for {entry.get('path')} must include non-empty ranges")
-
-        line_reasons = exclusions.setdefault(source_path, {})
-        for range_index, line_range in enumerate(ranges):
-            if isinstance(line_range, str):
-                parts = line_range.split("-", maxsplit=1)
-                if not parts[0] or len(parts) > 2 or (len(parts) == 2 and not parts[1]):
-                    raise ValueError(f"coverage exclusion range {range_index} for {entry.get('path')} is invalid")
-                try:
-                    start = int(parts[0])
-                    end = int(parts[1]) if len(parts) == 2 else start
-                except ValueError as exc:
-                    raise ValueError(
-                        f"coverage exclusion range {range_index} for {entry.get('path')} is invalid"
-                    ) from exc
-            elif (
-                isinstance(line_range, list)
-                and len(line_range) == 2
-                and all(isinstance(value, int) for value in line_range)
-            ):
-                start, end = line_range
-            else:
-                raise ValueError(
-                    f"coverage exclusion range {range_index} for {entry.get('path')} must be [start, end] "
-                    "or 'start-end'"
-                )
-            if start < 1 or end < start:
-                raise ValueError(f"coverage exclusion range {range_index} for {entry.get('path')} is invalid")
-            for line_number in range(start, end + 1):
-                line_reasons.setdefault(line_number, reason.strip())
-
-    return exclusions
-
-
-def validate_line_exclusions(root: Path, merged, exclusions):
-    root = root.resolve()
-    for source_path, line_reasons in exclusions.items():
-        source_path = source_path.resolve()
-        rel_path = filesystem_relative_path(root, source_path)
-        if source_path not in merged:
-            raise ValueError(f"coverage exclusion path is stale or was not instrumented: {rel_path}")
-
-        instrumented_lines = {line_number for line_number in merged[source_path] if line_number > 0}
-        stale_lines = sorted(set(line_reasons) - instrumented_lines)
-        if stale_lines:
-            preview = ", ".join(str(line) for line in stale_lines[:10])
-            if len(stale_lines) > 10:
-                preview += ", ..."
-            raise ValueError(f"coverage exclusion for {rel_path} references non-instrumented line(s): {preview}")
-
-        if instrumented_lines and instrumented_lines.issubset(line_reasons):
-            raise ValueError(f"coverage exclusion for {rel_path} would exclude the entire instrumented file")
-
-
-def scope_line_exclusions(root: Path, exclusions, include_prefixes=()):
-    if not include_prefixes:
-        return exclusions
-    return {
-        source_path: dict(line_reasons)
-        for source_path, line_reasons in exclusions.items()
-        if is_included(root, source_path, include_prefixes)
-    }
-
-
 def collect_reports_for_gcda(gcda: Path, output_dir: Path, timeout_seconds: float):
     output_dir.mkdir()
     try:
@@ -310,46 +195,33 @@ def merge_line_counts(root: Path, reports, include_prefixes=()):
     return merged
 
 
-def summarize(root: Path, merged, exclusions=None):
+def summarize(root: Path, merged):
     root = root.resolve()
-    exclusions = exclusions or {}
     summary = []
     total_lines = 0
     covered_lines = 0
-    excluded_lines = 0
 
     for source_path in sorted(merged):
         line_counts = merged[source_path]
-        excluded = sorted(line for line in exclusions.get(source_path, {}) if line in line_counts and line > 0)
-        excluded_set = set(excluded)
-        instrumented = sum(1 for line_number in line_counts if line_number > 0 and line_number not in excluded_set)
-        covered = sum(
-            1
-            for line_number, count in line_counts.items()
-            if line_number > 0 and line_number not in excluded_set and count > 0
-        )
+        instrumented = sum(1 for line_number in line_counts if line_number > 0)
+        covered = sum(1 for line_number, count in line_counts.items() if line_number > 0 and count > 0)
         percentage = 100.0 if instrumented == 0 else (covered * 100.0 / instrumented)
-        missing = [
-            line for line, count in sorted(line_counts.items()) if line > 0 and line not in excluded_set and count == 0
-        ]
+        missing = [line for line, count in sorted(line_counts.items()) if line > 0 and count == 0]
         rel_path = filesystem_relative_path(root, source_path)
         summary.append(
             {
                 "path": rel_path,
                 "lines": instrumented,
                 "covered": covered,
-                "excluded": excluded,
-                "exclusion_reasons": exclusions.get(source_path, {}),
                 "missing": missing,
                 "percentage": percentage,
             }
         )
         total_lines += instrumented
         covered_lines += covered
-        excluded_lines += len(excluded)
 
     total_percentage = 100.0 if total_lines == 0 else (covered_lines * 100.0 / total_lines)
-    return summary, covered_lines, total_lines, total_percentage, excluded_lines
+    return summary, covered_lines, total_lines, total_percentage
 
 
 def preview_lines(lines):
@@ -359,26 +231,20 @@ def preview_lines(lines):
     return preview or "-"
 
 
-def write_text_report(
-    report_path: Path, summary, covered_lines: int, total_lines: int, total_percentage: float, excluded_lines: int
-):
+def write_text_report(report_path: Path, summary, covered_lines: int, total_lines: int, total_percentage: float):
     lines = [
-        f"TOTAL {covered_lines}/{total_lines} eligible lines covered ({total_percentage:.2f}%), "
-        f"{excluded_lines} excluded",
+        f"TOTAL {covered_lines}/{total_lines} eligible lines covered ({total_percentage:.2f}%)",
         "",
     ]
     for item in summary:
         lines.append(
             f"{item['path']}: {item['covered']}/{item['lines']} "
-            f"({item['percentage']:.2f}%) excluded {len(item['excluded'])} "
-            f"missing [{preview_lines(item['missing'])}] excluded_lines [{preview_lines(item['excluded'])}]"
+            f"({item['percentage']:.2f}%) missing [{preview_lines(item['missing'])}]"
         )
     report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def write_html_report(
-    report_path: Path, summary, covered_lines: int, total_lines: int, total_percentage: float, excluded_lines: int
-):
+def write_html_report(report_path: Path, summary, covered_lines: int, total_lines: int, total_percentage: float):
     rows = []
     for item in summary:
         rows.append(
@@ -386,9 +252,7 @@ def write_html_report(
             f"<td>{html.escape(str(item['path']))}</td>"
             f"<td>{item['covered']}/{item['lines']}</td>"
             f"<td>{item['percentage']:.2f}%</td>"
-            f"<td>{len(item['excluded'])}</td>"
             f"<td>{html.escape(preview_lines(item['missing']))}</td>"
-            f"<td>{html.escape(preview_lines(item['excluded']))}</td>"
             "</tr>"
         )
 
@@ -401,9 +265,9 @@ def write_html_report(
                 "th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f5f5f5}"
                 "</style></head><body>",
                 f"<h1>Coverage Report</h1><p><strong>Total:</strong> {covered_lines}/{total_lines} "
-                f"eligible lines covered ({total_percentage:.2f}%), {excluded_lines} excluded</p>",
-                "<table><thead><tr><th>File</th><th>Covered</th><th>Percent</th><th>Excluded</th>"
-                "<th>Missing lines</th><th>Excluded lines</th></tr></thead><tbody>",
+                f"eligible lines covered ({total_percentage:.2f}%)</p>",
+                "<table><thead><tr><th>File</th><th>Covered</th><th>Percent</th>"
+                "<th>Missing lines</th></tr></thead><tbody>",
                 *rows,
                 "</tbody></table></body></html>",
             ]
@@ -411,59 +275,6 @@ def write_html_report(
         + "\n",
         encoding="utf-8",
     )
-
-
-def build_exclusion_audit(root: Path, merged, exclusions):
-    root = root.resolve()
-    lines = []
-    for source_path in sorted(exclusions):
-        source_path = source_path.resolve()
-        line_counts = merged.get(source_path, {})
-        try:
-            source_lines = source_path.read_text(encoding="utf-8", errors="replace").splitlines()
-        except OSError:
-            source_lines = []
-        for line_number, reason in sorted(exclusions[source_path].items()):
-            if line_number <= 0 or line_number not in line_counts:
-                continue
-            count = line_counts[line_number]
-            snippet = source_lines[line_number - 1].strip() if line_number <= len(source_lines) else ""
-            lines.append(
-                {
-                    "path": filesystem_relative_path(root, source_path).as_posix(),
-                    "line": line_number,
-                    "count": count,
-                    "covered": count > 0,
-                    "reason": reason,
-                    "source": snippet,
-                }
-            )
-
-    covered = sum(1 for line in lines if line["covered"])
-    return {
-        "total": len(lines),
-        "covered": covered,
-        "uncovered": len(lines) - covered,
-        "lines": lines,
-    }
-
-
-def write_exclusion_audit_text(report_path: Path, audit):
-    lines = [
-        f"EXCLUDED LINES {audit['total']} total, {audit['covered']} covered, {audit['uncovered']} uncovered",
-        "",
-    ]
-    for item in audit["lines"]:
-        status = "covered" if item["covered"] else "uncovered"
-        lines.append(
-            f"{item['path']}:{item['line']} count={item['count']} {status} "
-            f"reason={json.dumps(item['reason'])} source={json.dumps(item['source'])}"
-        )
-    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-def write_exclusion_audit_json(report_path: Path, audit):
-    report_path.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def main():
@@ -474,26 +285,14 @@ def main():
     report_dir.mkdir(parents=True, exist_ok=True)
 
     include_prefixes = load_include_prefixes(root, args.include_prefix)
-    exclusions = load_line_exclusions(root, args.line_exclusions)
     reports = collect_gcov_reports(build_dir, args.jobs, args.gcov_timeout)
     merged = merge_line_counts(root, reports, include_prefixes)
-    exclusions = scope_line_exclusions(root, exclusions, include_prefixes)
-    validate_line_exclusions(root, merged, exclusions)
-    summary, covered_lines, total_lines, total_percentage, excluded_lines = summarize(root, merged, exclusions)
+    summary, covered_lines, total_lines, total_percentage = summarize(root, merged)
 
-    write_text_report(
-        report_dir / "coverage.txt", summary, covered_lines, total_lines, total_percentage, excluded_lines
-    )
-    write_html_report(
-        report_dir / "coverage.html", summary, covered_lines, total_lines, total_percentage, excluded_lines
-    )
-    if args.audit_exclusions:
-        audit = build_exclusion_audit(root, merged, exclusions)
-        write_exclusion_audit_text(report_dir / "exclusion_audit.txt", audit)
-        write_exclusion_audit_json(report_dir / "exclusion_audit.json", audit)
-        print("exclusions: " f"{audit['total']} total ({audit['covered']} covered, {audit['uncovered']} uncovered)")
+    write_text_report(report_dir / "coverage.txt", summary, covered_lines, total_lines, total_percentage)
+    write_html_report(report_dir / "coverage.html", summary, covered_lines, total_lines, total_percentage)
 
-    print(f"lines: {total_percentage:.2f}% ({covered_lines} out of {total_lines}, {excluded_lines} excluded)")
+    print(f"lines: {total_percentage:.2f}% ({covered_lines} out of {total_lines})")
     if total_percentage < args.min_line:
         print(f"ERROR: line coverage {total_percentage:.2f}% is below required {args.min_line:.2f}%")
         return 2

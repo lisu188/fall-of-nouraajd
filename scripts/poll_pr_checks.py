@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import subprocess
 import sys
@@ -11,11 +12,17 @@ import time
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+try:
+    from ci_change_classifier import COVERAGE_PATH_PATTERNS
+except ImportError:  # pragma: no cover - used when imported as scripts.poll_pr_checks
+    from scripts.ci_change_classifier import COVERAGE_PATH_PATTERNS
+
 DEFAULT_JOBS = ("linux",)
 DEFAULT_WORKFLOW = "build.yml"
 DEFAULT_INTERVAL_SECONDS = 30
 DEFAULT_TIMEOUT_SECONDS = 7200
 SUCCESS_CONCLUSION = "SUCCESS"
+COVERAGE_STEP = "coverage"
 
 
 @dataclass(frozen=True)
@@ -84,11 +91,35 @@ def jobsFromRunPayload(payload: dict[str, Any]) -> list[JobRun]:
     return [jobFromPayload(item) for item in payload.get("jobs") or [] if isinstance(item, dict) and item.get("name")]
 
 
+def runStatus(runPayload: dict[str, Any]) -> str:
+    return normalizeStatus(runPayload.get("status"))
+
+
 def selectRunForHead(runs: Sequence[dict[str, Any]], headSha: str) -> dict[str, Any] | None:
     for run in runs:
         if str(run.get("headSha") or "") == headSha:
             return run
     return None
+
+
+def appendUniqueJob(jobs: list[JobRun], job: JobRun) -> None:
+    if not any(existing.name == job.name for existing in jobs):
+        jobs.append(job)
+
+
+def changedPathRequiresCoverage(path: str) -> bool:
+    return any(fnmatch.fnmatchcase(path, pattern) for pattern in COVERAGE_PATH_PATTERNS)
+
+
+def changedFilesRequireCoverage(paths: Sequence[str]) -> bool:
+    return any(changedPathRequiresCoverage(path) for path in paths)
+
+
+def appendUniqueStep(steps: Sequence[str], step: str) -> tuple[str, ...]:
+    normalized = tuple(steps)
+    if step in normalized:
+        return normalized
+    return (*normalized, step)
 
 
 def evaluateRun(
@@ -105,7 +136,8 @@ def evaluateRun(
             message="no matching pull_request workflow run found yet",
         )
 
-    jobs_by_name = {job.name: job for job in jobsFromRunPayload(runPayload)}
+    all_jobs = jobsFromRunPayload(runPayload)
+    jobs_by_name = {job.name: job for job in all_jobs}
     selected_jobs: list[JobRun] = []
     missing_jobs: list[str] = []
     missing_steps: list[str] = []
@@ -148,33 +180,59 @@ def evaluateRun(
             message=f"pending job(s): {names}",
         )
 
+    display_jobs = list(selected_jobs)
     for step_name in requiredSteps:
-        for job in selected_jobs:
-            steps_by_name = {step.name: step for step in job.steps}
-            step = steps_by_name.get(step_name)
-            if step is None:
-                missing_steps.append(f"{job.name}/{step_name}")
-            elif step.status != "COMPLETED":
+        matches = [(job, step) for job in all_jobs for step in job.steps if step.name == step_name]
+        if not matches:
+            missing_steps.append(step_name)
+            continue
+        for job, step in matches:
+            appendUniqueJob(display_jobs, job)
+            if step.status != "COMPLETED":
                 return CheckEvaluation(
                     state="pending",
-                    jobs=tuple(selected_jobs),
+                    jobs=tuple(display_jobs),
                     missingJobs=(),
                     missingSteps=(),
-                    message=f"pending step: {job.name}/{step_name}={step.status or 'UNKNOWN'}",
+                    message=f"pending step: {job.name}/{step.name}={step.status or 'UNKNOWN'}",
                 )
-            elif step.conclusion != SUCCESS_CONCLUSION:
+            if step.conclusion != SUCCESS_CONCLUSION:
                 return CheckEvaluation(
                     state="failure",
-                    jobs=tuple(selected_jobs),
+                    jobs=tuple(display_jobs),
                     missingJobs=(),
                     missingSteps=(),
-                    message=f"failed step: {job.name}/{step_name}={step.conclusion or 'UNKNOWN'}",
+                    message=f"failed step: {job.name}/{step.name}={step.conclusion or 'UNKNOWN'}",
+                )
+            if job.status != "COMPLETED":
+                return CheckEvaluation(
+                    state="pending",
+                    jobs=tuple(display_jobs),
+                    missingJobs=(),
+                    missingSteps=(),
+                    message=f"pending job with required step: {job.name}={job.status or 'UNKNOWN'}",
+                )
+            if job.conclusion != SUCCESS_CONCLUSION:
+                return CheckEvaluation(
+                    state="failure",
+                    jobs=tuple(display_jobs),
+                    missingJobs=(),
+                    missingSteps=(),
+                    message=f"failed job with required step: {job.name}={job.conclusion or 'UNKNOWN'}",
                 )
 
     if missing_steps:
+        if runStatus(runPayload) != "COMPLETED":
+            return CheckEvaluation(
+                state="pending",
+                jobs=tuple(display_jobs),
+                missingJobs=(),
+                missingSteps=tuple(missing_steps),
+                message=f"missing required step(s) so far: {', '.join(missing_steps)}",
+            )
         return CheckEvaluation(
             state="failure",
-            jobs=tuple(selected_jobs),
+            jobs=tuple(display_jobs),
             missingJobs=(),
             missingSteps=tuple(missing_steps),
             message=f"missing required step(s): {', '.join(missing_steps)}",
@@ -182,7 +240,7 @@ def evaluateRun(
 
     return CheckEvaluation(
         state="success",
-        jobs=tuple(selected_jobs),
+        jobs=tuple(display_jobs),
         missingJobs=(),
         missingSteps=(),
         message=f"successful job(s): {', '.join(requiredJobs)}",
@@ -249,6 +307,20 @@ def runGhPrView(pr: str, repo: str | None) -> dict[str, Any]:
     return payload
 
 
+def runGhPrFiles(pr: str, repo: str | None) -> tuple[str, ...]:
+    command = ghCommandWithRepo(["gh", "pr", "diff", pr, "--name-only"], repo)
+    result = subprocess.run(
+        command,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise PollError(result.stderr.strip() or result.stdout.strip() or f"{' '.join(command)} failed")
+    return tuple(line.strip() for line in result.stdout.splitlines() if line.strip())
+
+
 def runGhRunList(headSha: str, workflow: str, repo: str | None) -> list[dict[str, Any]]:
     command = ghCommandWithRepo(
         [
@@ -293,9 +365,7 @@ def formatJob(job: JobRun, requiredSteps: Sequence[str]) -> list[str]:
         steps_by_name = {step.name: step for step in job.steps}
         for step_name in requiredSteps:
             step = steps_by_name.get(step_name)
-            if step is None:
-                lines.append(f"  {step_name}: missing")
-            else:
+            if step is not None:
                 step_conclusion = f"/{step.conclusion}" if step.conclusion else ""
                 lines.append(f"  {step.name}: {step.status}{step_conclusion}")
     return lines
@@ -332,6 +402,7 @@ def pollChecks(
     requiredSteps: Sequence[str],
     intervalSeconds: int,
     timeoutSeconds: int,
+    autoRequireCoverage: bool = True,
 ) -> CheckEvaluation:
     started = time.monotonic()
     pr_payload = runGhPrView(pr, repo)
@@ -340,13 +411,18 @@ def pollChecks(
         printEvaluation(pr_payload, None, pr_state_evaluation, requiredSteps)
         return pr_state_evaluation
     head_sha = str(pr_payload["headRefOid"])
+    effective_steps = tuple(requiredSteps)
+    if autoRequireCoverage and COVERAGE_STEP not in effective_steps:
+        changed_files = runGhPrFiles(pr, repo)
+        if changedFilesRequireCoverage(changed_files):
+            effective_steps = appendUniqueStep(effective_steps, COVERAGE_STEP)
 
     while True:
         runs = runGhRunList(head_sha, workflow, repo)
         run_summary = selectRunForHead(runs, head_sha)
         run_payload = runGhRunView(run_summary["databaseId"], repo) if run_summary else None
-        evaluation = evaluateRun(run_payload, requiredJobs, requiredSteps)
-        printEvaluation(pr_payload, run_payload, evaluation, requiredSteps)
+        evaluation = evaluateRun(run_payload, requiredJobs, effective_steps)
+        printEvaluation(pr_payload, run_payload, evaluation, effective_steps)
         if evaluation.succeeded or evaluation.failed:
             return evaluation
         if time.monotonic() - started >= timeoutSeconds:
@@ -361,7 +437,7 @@ def pollChecks(
         latest_pr_payload = runGhPrView(pr, repo)
         pr_state_evaluation = evaluatePrState(latest_pr_payload)
         if pr_state_evaluation is not None:
-            printEvaluation(latest_pr_payload, None, pr_state_evaluation, requiredSteps)
+            printEvaluation(latest_pr_payload, None, pr_state_evaluation, effective_steps)
             return pr_state_evaluation
 
 
@@ -392,7 +468,15 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
         action="append",
         dest="steps",
         default=[],
-        help="Required step name inside every selected job, such as coverage. May be repeated.",
+        help=(
+            "Required step name that must pass somewhere in the selected workflow run. May be repeated. "
+            "Coverage is auto-required when PR paths match the build workflow coverage rule."
+        ),
+    )
+    parser.add_argument(
+        "--no-auto-require-coverage",
+        action="store_true",
+        help="Do not auto-require the coverage step when PR paths match the workflow coverage rule.",
     )
     parser.add_argument(
         "--interval-seconds",
@@ -422,6 +506,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             requiredSteps=steps,
             intervalSeconds=args.interval_seconds,
             timeoutSeconds=args.timeout_seconds,
+            autoRequireCoverage=not args.no_auto_require_coverage,
         )
     except PollError as exc:
         print(f"poll_pr_checks: {exc}", file=sys.stderr)

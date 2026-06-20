@@ -18,6 +18,19 @@ def load(self, context):
                 self.getNumericProperty("targetZ"),
             )
 
+        def clearNavigationEdge(self):
+            game_map = self.getMap()
+            if game_map:
+                game_map.unregisterNavigationEdgesForObject(self.getName())
+
+        def publishNavigationEdge(self, target):
+            game_map = self.getMap()
+            if game_map:
+                if game_map.hasNavigationEdge(self.getCoords(), target, self.getName()):
+                    return
+                game_map.unregisterNavigationEdgesForObject(self.getName())
+                game_map.registerNavigationEdge(self.getCoords(), target, True, False, 1, self.getName())
+
         def publishWaypoint(self):
             game_map = self.getMap()
             target = self.target()
@@ -26,11 +39,16 @@ def load(self, context):
                 self.setNumericProperty("x", target.x)
                 self.setNumericProperty("y", target.y)
                 self.setNumericProperty("z", target.z)
+                self.publishNavigationEdge(target)
             else:
                 self.setBoolProperty("waypoint", False)
+                self.clearNavigationEdge()
 
         def onCreate(self, event):
             self.publishWaypoint()
+
+        def onDestroy(self, event):
+            self.clearNavigationEdge()
 
         def onTurn(self, event):
             self.publishWaypoint()

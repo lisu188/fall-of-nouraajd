@@ -3,10 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-cmake-build-coverage}"
-MIN_COVERAGE="${MIN_COVERAGE:-95}"
+MIN_COVERAGE="${MIN_COVERAGE:-90}"
 REPORT_DIR="${ROOT_DIR}/coverage"
-COVERAGE_LINE_EXCLUSIONS="${COVERAGE_LINE_EXCLUSIONS:-${ROOT_DIR}/scripts/coverage_exclusions.json}"
-COVERAGE_AUDIT_EXCLUSIONS="${COVERAGE_AUDIT_EXCLUSIONS:-0}"
 COVERAGE_INCLUDE_PREFIXES="${COVERAGE_INCLUDE_PREFIXES:-src native_plugins}"
 COVERAGE_JOBS="${COVERAGE_JOBS:-$(nproc)}"
 COVERAGE_REPORTER="${COVERAGE_REPORTER:-python}"
@@ -37,6 +35,14 @@ if [[ ! "${COVERAGE_PYTHON_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if [[ ! "${COVERAGE_GCOV_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
     echo "COVERAGE_GCOV_TIMEOUT_SECONDS must be a positive integer, got: ${COVERAGE_GCOV_TIMEOUT_SECONDS}" >&2
+    exit 2
+fi
+if [[ -v COVERAGE_LINE_EXCLUSIONS && -n "${COVERAGE_LINE_EXCLUSIONS}" ]]; then
+    echo "COVERAGE_LINE_EXCLUSIONS is no longer supported; line coverage exclusions are disallowed." >&2
+    exit 2
+fi
+if [[ -v COVERAGE_AUDIT_EXCLUSIONS && "${COVERAGE_AUDIT_EXCLUSIONS}" != "0" ]]; then
+    echo "COVERAGE_AUDIT_EXCLUSIONS is no longer supported; line coverage exclusions are disallowed." >&2
     exit 2
 fi
 
@@ -160,12 +166,6 @@ generate_report() {
             --jobs "${COVERAGE_JOBS}"
             --gcov-timeout "${COVERAGE_GCOV_TIMEOUT_SECONDS}"
         )
-        if [[ -n "${COVERAGE_LINE_EXCLUSIONS}" ]]; then
-            coverage_report_args+=(--line-exclusions "${COVERAGE_LINE_EXCLUSIONS}")
-        fi
-        if [[ "${COVERAGE_AUDIT_EXCLUSIONS}" == "1" ]]; then
-            coverage_report_args+=(--audit-exclusions)
-        fi
         if [[ -n "${COVERAGE_INCLUDE_PREFIXES}" ]]; then
             read -r -a coverage_include_prefixes <<<"${COVERAGE_INCLUDE_PREFIXES}"
             for include_prefix in "${coverage_include_prefixes[@]}"; do

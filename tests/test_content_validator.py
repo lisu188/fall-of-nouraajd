@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.validate_content import validate_repo
+from scripts.validate_content import ContentValidator, validate_repo
 
 
 class ContentValidatorTest(unittest.TestCase):
@@ -154,6 +154,115 @@ class ContentValidatorTest(unittest.TestCase):
             'unknown quest id "missingQuest"',
         )
 
+    def test_script_analyzer_collects_quest_state_and_property_usage(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            textwrap.dedent("""
+                def load(self, context):
+                    from game import CQuest
+                    from game import LegacyBoolFlag
+                    from game import QuestStateStore
+                    from game import register
+
+                    TRANSITION_GUARD = "transition_guard"
+
+                    def _grant_quest(player, quest_name):
+                        player.addQuest(quest_name)
+
+                    def _set_bool_property_default(obj, name, value):
+                        if not hasattr(obj, name):
+                            obj.setBoolProperty(name, value)
+
+                    def _quest_system_from(obj):
+                        return QuestSystem(obj.getGame().getMap())
+
+                    class QuestSystem(QuestStateStore):
+                        QUEST_KEYS = {
+                            "main": "quest_state_main",
+                            "side": "quest_state_side",
+                        }
+
+                        QUEST_DEFAULTS = {
+                            "main": "locked",
+                            "side": "not_started",
+                        }
+
+                        LEGACY_BOOL_FLAGS = (
+                            LegacyBoolFlag("MAIN_DONE", "main", states=("done",)),
+                            LegacyBoolFlag("SIDE_OPEN", "side", excluded_states=("locked",)),
+                        )
+
+                        def advance(self, player):
+                            if self.get_state("main") == "locked":
+                                self._set_state("main", "active")
+                                _grant_quest(player, "goodQuest")
+                                player.addQuest("bonusQuest")
+                            side_state = self.get_state("side")
+                            if side_state in ("not_started", "active"):
+                                self._set_state("side", "done")
+                            self.set_state("side", "public_done")
+                            next_state = "done" if player.getBoolProperty("has_relic") else "failed"
+                            self._set_state("main", next_state)
+                            if player.getBoolProperty(TRANSITION_GUARD):
+                                player.setBoolProperty(TRANSITION_GUARD, False)
+                            self.map.setBoolProperty("MAIN_DONE", True)
+                            self.map.setNumericProperty("MAIN_TURN", self.map.getTurn())
+                            self.map.getNumericProperty("MAIN_TURN")
+                            _set_bool_property_default(player, "skill_flag", False)
+
+                        def main_done(self):
+                            return self.get_state("main") in ("done", "failed")
+
+                        def side_done(self):
+                            return self.state_in("side", ("done",))
+
+                    @register(context)
+                    class GoodQuest(CQuest):
+                        def isCompleted(self):
+                            return _quest_system_from(self).get_state("main") == "done"
+                """).lstrip(),
+            encoding="utf-8",
+        )
+        info = ContentValidator(root)._parse_script(script_path)
+        self.assertIsNotNone(info)
+        if info is None:
+            return
+
+        main_state = info.quest_states["main"]
+        self.assertEqual("quest_state_main", main_state.storage_key)
+        self.assertEqual("locked", main_state.default_state)
+        self.assertEqual({"locked", "done", "failed"}, main_state.read_states)
+        self.assertEqual({"active", "done", "failed"}, main_state.written_states)
+        self.assertEqual({"done", "failed"}, main_state.terminal_check_states)
+
+        side_state = info.quest_states["side"]
+        self.assertEqual("quest_state_side", side_state.storage_key)
+        self.assertEqual("not_started", side_state.default_state)
+        self.assertEqual({"not_started", "active", "done"}, side_state.read_states)
+        self.assertEqual({"done", "public_done"}, side_state.written_states)
+        self.assertEqual({"done"}, side_state.terminal_check_states)
+
+        legacy_flags = {flag.name: flag for flag in info.legacy_bool_flags}
+        self.assertEqual("main", legacy_flags["MAIN_DONE"].quest)
+        self.assertEqual(("done",), legacy_flags["MAIN_DONE"].states)
+        self.assertEqual("side", legacy_flags["SIDE_OPEN"].quest)
+        self.assertEqual(("locked",), legacy_flags["SIDE_OPEN"].excluded_states)
+
+        quest_grants = {(call.name, call.value) for call in info.quest_grants}
+        self.assertIn(("_grant_quest", "goodQuest"), quest_grants)
+        self.assertIn(("addQuest", "bonusQuest"), quest_grants)
+
+        property_reads = {(access.owner, access.name, access.method) for access in info.property_reads}
+        property_writes = {(access.owner, access.name, access.method) for access in info.property_writes}
+        self.assertIn(("player", "has_relic", "getBoolProperty"), property_reads)
+        self.assertIn(("player", "transition_guard", "getBoolProperty"), property_reads)
+        self.assertIn(("map", "MAIN_TURN", "getNumericProperty"), property_reads)
+        self.assertIn(("player", "transition_guard", "setBoolProperty"), property_writes)
+        self.assertIn(("map", "MAIN_DONE", "setBoolProperty"), property_writes)
+        self.assertIn(("map", "MAIN_TURN", "setNumericProperty"), property_writes)
+        self.assertIn(("player", "skill_flag", "setBoolProperty"), property_writes)
+
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
 
@@ -206,6 +315,184 @@ class ContentValidatorTest(unittest.TestCase):
             "res/maps/broken/config.json",
             "declaredOnly.class",
             'class "CDeclaredOnly" is declared in metadata but is not registered as constructible content',
+        )
+
+    def test_cpp_property_schema_accepts_known_and_inherited_properties(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaKnown"] = {
+            "class": "CPropertyDerived",
+            "properties": {
+                "count": 2,
+                "loot": [{"ref": "LifePotion"}],
+                "name": "Known Schema Object",
+            },
+        }
+        write_json(config_path, config)
+
+        validator = ContentValidator(root)
+        validator._collect_engine_classes()
+        property_schema = validator._metadata_property_schema("CPropertyDerived")
+
+        self.assertIsNotNone(property_schema)
+        if property_schema is not None:
+            self.assertEqual("int", property_schema["count"].type_token)
+            self.assertEqual("CPropertyDerived", property_schema["count"].owner_class)
+            self.assertEqual("std::set<std::shared_ptr<CItem>>", property_schema["loot"].type_token)
+            self.assertEqual("CPropertyBase", property_schema["loot"].owner_class)
+            self.assertEqual("std::string", property_schema["name"].type_token)
+            self.assertEqual("CGameObject", property_schema["name"].owner_class)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_cpp_property_schema_reports_unknown_property(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaUnknown"] = {
+            "class": "CPropertyDerived",
+            "properties": {"count": 2, "bogus": True},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "schemaUnknown.properties.bogus",
+            'unknown property "bogus" for class "CPropertyDerived"',
+        )
+
+    def test_cpp_property_schema_resolves_ref_override_class(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaBase"] = {
+            "class": "CPropertyDerived",
+            "properties": {"count": 2},
+        }
+        config["schemaOverride"] = {
+            "ref": "schemaBase",
+            "properties": {
+                "loot": [{"ref": "LifePotion"}],
+                "bogusOverride": False,
+            },
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "schemaOverride.properties.bogusOverride",
+            'unknown property "bogusOverride" for class "CPropertyDerived"',
+        )
+        issue_text = "\n".join(str(issue) for issue in issues)
+        self.assertNotIn("schemaOverride.properties.loot", issue_text)
+
+    def test_reviewed_registration_exclusion_reports_reason_and_owner(self):
+        root = self.make_fixture()
+        self.write_declared_cpp_class(root, "CReviewedMetadataOnly")
+        self.write_registration_exclusions(
+            root,
+            [
+                {
+                    "className": "CReviewedMetadataOnly",
+                    "reason": "Fixture-only metadata carrier.",
+                    "ownerModule": "tests/content-validator",
+                }
+            ],
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["reviewedMetadataOnly"] = {"class": "CReviewedMetadataOnly"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "reviewedMetadataOnly.class",
+            'class "CReviewedMetadataOnly" is excluded from content instantiation',
+            "Fixture-only metadata carrier.",
+            "owner/module: tests/content-validator",
+        )
+
+    def test_reviewed_registration_exclusion_can_allow_exact_config_use(self):
+        root = self.make_fixture()
+        self.write_declared_cpp_class(root, "CReviewedAllowed")
+        self.write_registration_exclusions(
+            root,
+            [
+                {
+                    "className": "CReviewedAllowed",
+                    "reason": "Fixture-only metadata carrier.",
+                    "ownerModule": "tests/content-validator",
+                    "allowedUses": [
+                        {
+                            "path": "res/maps/broken/config.json",
+                            "location": "reviewedAllowed.class",
+                            "reason": "Regression fixture for exact reviewed allowance.",
+                        }
+                    ],
+                }
+            ],
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["reviewedAllowed"] = {"class": "CReviewedAllowed"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_reviewed_registration_exclusion_rejects_unknown_allowlisted_class(self):
+        root = self.make_fixture()
+        self.write_registration_exclusions(
+            root,
+            [
+                {
+                    "className": "CReviewedTypo",
+                    "reason": "Fixture typo should not be trusted.",
+                    "ownerModule": "tests/content-validator",
+                    "allowedUses": [
+                        {
+                            "path": "res/maps/broken/config.json",
+                            "location": "reviewedTypo.class",
+                            "reason": "This exact allowance must not hide an unknown class.",
+                        }
+                    ],
+                }
+            ],
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["reviewedTypo"] = {"class": "CReviewedTypo"}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "scripts/type_registration_exclusions.json",
+            "exclusions[0].className",
+            'excluded class "CReviewedTypo" is not metadata-declared or registered',
+        )
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "reviewedTypo.class",
+            'unknown class "CReviewedTypo"',
         )
 
     def test_static_type_registration_makes_class_constructible(self):
@@ -309,6 +596,44 @@ class ContentValidatorTest(unittest.TestCase):
             """).lstrip(),
             encoding="utf-8",
         )
+
+    def write_property_schema_fixture(self, root):
+        header = root / "src/object/CPropertySchemaFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                           V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CPropertyBase {
+                    V_META(CPropertyBase, CGameObject,
+                           V_PROPERTY(CPropertyBase, std::set<std::shared_ptr<CItem>>, loot, getLoot, setLoot))
+                };
+
+                class CPropertyDerived {
+                    V_META(CPropertyDerived, CPropertyBase,
+                           V_PROPERTY(CPropertyDerived, int, count, getCount, setCount))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerObjectTypes() {
+                    CTypes::register_type<CPropertyBase, CGameObject>();
+                    CTypes::register_type<CPropertyDerived, CPropertyBase, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def write_registration_exclusions(self, root, exclusions):
+        manifest = root / "scripts/type_registration_exclusions.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        write_json(manifest, {"exclusions": exclusions})
 
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)

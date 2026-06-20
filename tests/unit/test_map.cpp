@@ -18,12 +18,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
 #include "core/CSerialization.h"
 #include "core/CStats.h"
+#include "core/CTypes.h"
 #include "object/CCreature.h"
 #include "object/CGameObject.h"
 #include "object/CMapObject.h"
@@ -39,6 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 
@@ -57,6 +61,51 @@ Coords first_adjacent_walkable(const std::shared_ptr<CMap> &map, Coords origin) 
         }
     }
     return origin;
+}
+
+bool contains_coords(const std::vector<Coords> &coords, Coords target) {
+    return std::ranges::find(coords, target) != coords.end();
+}
+
+struct TraceReset {
+    ~TraceReset() { CPlaytestTrace::configure(false); }
+};
+
+std::vector<json> drain_trace_json() {
+    std::vector<json> records;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        records.push_back(json::parse(line));
+    }
+    return records;
+}
+
+bool has_trace_event(const std::vector<json> &records, const std::string &event) {
+    for (const auto &record : records) {
+        if (record.contains("event") && record["event"].get<std::string>() == event) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int count_trace_event(const std::vector<json> &records, const std::string &event) {
+    int count = 0;
+    for (const auto &record : records) {
+        if (record.contains("event") && record["event"].get<std::string>() == event) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+bool has_trace_event_reason(const std::vector<json> &records, const std::string &event, const std::string &reason) {
+    for (const auto &record : records) {
+        if (record.contains("event") && record["event"].get<std::string>() == event && record.contains("reason") &&
+            record["reason"].get<std::string>() == reason) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void test_scene_manager_state_duplicate_and_player_transfer() {
@@ -92,6 +141,136 @@ void test_scene_manager_state_duplicate_and_player_transfer() {
                 "scene manager should return to idle after transition completion");
     expect_true(!manager->isTransitionPending(), "completed scene transition should clear pending state");
     expect_true(manager->getPendingMapName().empty(), "completed scene transition should clear pending map name");
+}
+
+void test_game_change_map_duplicate_requests_commit_once() {
+    TraceReset reset;
+    CPlaytestTrace::configure(true);
+
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto old_map = game->getMap();
+    auto player = old_map->getPlayer();
+    old_map->setTurn(23);
+    auto manager = game->getSceneManager();
+
+    game->changeMap("ritual");
+    game->changeMap("siege");
+
+    expect_true(manager->getPendingMapName() == "ritual",
+                "CGame::changeMap duplicate request should keep the first pending target");
+    expect_true(game->getMap() == old_map, "CGame::changeMap should defer the map swap until the event loop runs");
+
+    pump_event_loop_iterations();
+
+    auto new_map = game->getMap();
+    int player_object_count = 0;
+    for (const auto &object : new_map->getObjects()) {
+        if (object.get() == player.get()) {
+            ++player_object_count;
+        }
+    }
+
+    auto records = drain_trace_json();
+    expect_true(new_map != old_map, "one queued CGame::changeMap request should commit after the event loop runs");
+    expect_true(new_map->getMapName() == "ritual", "first CGame::changeMap request should determine the destination");
+    expect_true(new_map->getMapName() != "siege", "duplicate CGame::changeMap request should not commit later");
+    expect_true(new_map->getTurn() == 23, "single committed transition should preserve the old map turn");
+    expect_true(new_map->getPlayer() == player, "single committed transition should transfer the same player object");
+    expect_true(player_object_count == 1, "single committed transition should attach the player exactly once");
+    expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "single committed transition should return the scene manager to idle");
+    expect_true(count_trace_event(records, "map_transition_requested") == 1,
+                "duplicate CGame::changeMap calls should queue exactly one transition request");
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "transition_pending"),
+                "duplicate CGame::changeMap call should be rejected as pending");
+    expect_true(count_trace_event(records, "map_transition_completed") == 1,
+                "duplicate CGame::changeMap calls should commit exactly one transition");
+}
+
+void test_scene_manager_transition_generation_start_and_commit() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+
+    auto context = game->getContext();
+    auto initial_generation = context->captureTransitionGeneration();
+    auto manager = game->getSceneManager();
+
+    expect_true(manager->requestMapChange(game, "ritual"), "scene manager should accept a transition request");
+    auto started_generation = context->getTransitionGeneration();
+    expect_true(started_generation == initial_generation + 1,
+                "accepted scene transition should advance generation when it starts");
+    expect_true(!context->isTransitionGenerationCurrent(initial_generation),
+                "pre-transition generation should be stale after transition start");
+    expect_true(context->isTransitionGenerationCurrent(started_generation),
+                "transition-start generation should remain current before commit");
+
+    pump_event_loop_iterations();
+
+    auto committed_generation = context->getTransitionGeneration();
+    expect_true(committed_generation == started_generation + 1,
+                "completed scene transition should advance generation when it commits");
+    expect_true(!context->isTransitionGenerationCurrent(started_generation),
+                "transition-start generation should be stale after commit");
+    expect_true(context->isTransitionGenerationCurrent(committed_generation),
+                "committed transition generation should be current");
+}
+
+void test_scene_manager_stale_transition_generation_clears_pending_state() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+
+    auto old_map = game->getMap();
+    auto manager = game->getSceneManager();
+    auto context = game->getContext();
+
+    expect_true(manager->requestMapChange(game, "ritual"), "scene manager should accept a transition request");
+    auto started_generation = context->captureTransitionGeneration();
+    context->advanceTransitionGeneration();
+
+    pump_event_loop_iterations();
+
+    expect_true(game->getMap() == old_map, "stale transition generation should not replace the active map");
+    expect_true(!context->isTransitionGenerationCurrent(started_generation),
+                "manually advanced transition generation should make the request stale");
+    expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
+                "stale transition callback should clear pending state");
+    expect_true(!manager->isTransitionPending(), "stale transition callback should not leave a pending transition");
+    expect_true(manager->getPendingMapName().empty(), "stale transition callback should clear pending map name");
+}
+
+void test_scene_manager_trace_rejections_and_completion() {
+    TraceReset reset;
+    CPlaytestTrace::configure(true);
+
+    auto standalone_manager = std::make_shared<CSceneManager>();
+    expect_true(!standalone_manager->requestMapChange(nullptr, "ritual"),
+                "trace-enabled scene manager should reject null-game requests");
+
+    auto first_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(first_game, "test", "Warrior");
+    auto second_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(second_game, "test", "Warrior");
+    auto first_manager = first_game->getSceneManager();
+
+    expect_true(!first_manager->requestMapChange(second_game, "ritual"),
+                "trace-enabled scene manager should reject mismatched game requests");
+    expect_true(first_manager->requestMapChange(first_game, "ritual"),
+                "trace-enabled scene manager should accept a valid transition");
+    expect_true(!first_manager->requestMapChange(first_game, "siege"),
+                "trace-enabled scene manager should reject duplicate pending transitions");
+
+    pump_event_loop_iterations();
+
+    auto records = drain_trace_json();
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "missing_game"),
+                "trace should record missing-game rejection");
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "mismatched_scene_manager"),
+                "trace should record mismatched-manager rejection");
+    expect_true(has_trace_event_reason(records, "map_transition_rejected", "transition_pending"),
+                "trace should record duplicate pending transition rejection");
+    expect_true(has_trace_event(records, "map_transition_requested"), "trace should record accepted transitions");
+    expect_true(has_trace_event(records, "map_transition_completed"), "trace should record completed transitions");
 }
 
 void test_scene_manager_repeated_transitions_and_controller_usability() {
@@ -230,6 +409,31 @@ class MovementOriginProbeCreature : public CCreature {
 
     std::optional<Coords> observedOriginDuringAfterMove;
     bool originClearedAfterBaseAfterMove = false;
+};
+
+class MoveHookCounterCreature : public CCreature {
+  public:
+    void beforeMove() override {
+        beforeMoveCalls++;
+        CCreature::beforeMove();
+    }
+
+    void afterMove() override {
+        afterMoveCalls++;
+        CCreature::afterMove();
+    }
+
+    int beforeMoveCalls = 0;
+    int afterMoveCalls = 0;
+};
+
+class ObjectChangedProbe : public CGameObject {
+    V_META(ObjectChangedProbe, CGameObject, V_METHOD(ObjectChangedProbe, onObjectChanged, void, Coords))
+
+  public:
+    void onObjectChanged(Coords coords) { objectChangedCoords.push_back(coords); }
+
+    std::vector<Coords> objectChangedCoords;
 };
 
 std::shared_ptr<CStats> creature_stats() {
@@ -442,6 +646,68 @@ void test_map_navigation_edges_update_revision() {
                 "removing an existing navigation edge should bump navigation revision");
 }
 
+void test_map_navigation_neighbors_include_registered_edges() {
+    auto map = std::make_shared<CMap>();
+    const Coords origin(2, 2, 0);
+
+    auto base_neighbors = map->getNavigationNeighbors(origin);
+    expect_true(contains_coords(base_neighbors, origin + EAST), "navigation neighbors should include east cardinal");
+    expect_true(contains_coords(base_neighbors, origin + WEST), "navigation neighbors should include west cardinal");
+    expect_true(contains_coords(base_neighbors, origin + SOUTH), "navigation neighbors should include south cardinal");
+    expect_true(contains_coords(base_neighbors, origin + NORTH), "navigation neighbors should include north cardinal");
+    expect_true(!contains_coords(base_neighbors, origin),
+                "navigation neighbors should not include self unless requested");
+    expect_true(contains_coords(map->getNavigationNeighbors(origin, true), origin),
+                "navigation neighbors should include self when requested");
+
+    CNavigationEdge portal;
+    portal.source = origin;
+    portal.target = Coords(9, 9, 0);
+    portal.enabled = true;
+    portal.sourceObjectName = "portal";
+    map->registerNavigationEdge(portal);
+
+    CNavigationEdge closed_portal;
+    closed_portal.source = origin;
+    closed_portal.target = Coords(8, 8, 0);
+    closed_portal.enabled = false;
+    closed_portal.sourceObjectName = "portal";
+    map->registerNavigationEdge(closed_portal);
+
+    CNavigationEdge bridge;
+    bridge.source = Coords(6, 2, 0);
+    bridge.target = origin;
+    bridge.enabled = true;
+    bridge.bidirectional = true;
+    bridge.sourceObjectName = "bridge";
+    map->registerNavigationEdge(bridge);
+
+    auto edge_neighbors = map->getNavigationNeighbors(origin);
+    expect_true(contains_coords(edge_neighbors, portal.target),
+                "navigation neighbors should include enabled edge targets");
+    expect_true(!contains_coords(edge_neighbors, closed_portal.target),
+                "navigation neighbors should exclude disabled edge targets");
+    expect_true(contains_coords(edge_neighbors, bridge.source),
+                "navigation neighbors should include reverse targets for bidirectional edges");
+
+    const auto revision_after_edges = map->getNavigationRevision();
+    expect_true(map->unregisterNavigationEdgesForObject("portal") == 2,
+                "unregistering by object name should remove all matching navigation edges");
+    auto remaining_neighbors = map->getNavigationNeighbors(origin);
+    expect_true(!contains_coords(remaining_neighbors, portal.target),
+                "unregistered navigation edges should no longer be returned");
+    expect_true(contains_coords(remaining_neighbors, bridge.source),
+                "unregistering one object should leave other object edges active");
+    expect_true(map->getNavigationRevision() > revision_after_edges,
+                "unregistering matching navigation edges should bump navigation revision");
+
+    const auto revision_after_missing = map->getNavigationRevision();
+    expect_true(map->unregisterNavigationEdgesForObject("missing") == 0,
+                "unregistering a missing object name should remove no edges");
+    expect_true(map->getNavigationRevision() == revision_after_missing,
+                "unregistering a missing object name should not bump navigation revision");
+}
+
 void test_map_defensive_branches_and_strict_validation() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, -1}});
@@ -613,6 +879,54 @@ void test_creature_tracks_pending_move_origin_only_during_after_move() {
                 "pending move origin should be empty after movement finishes");
 }
 
+void test_map_object_relocate_without_move_hooks_updates_spatial_state_once() {
+    CTypes::register_type_metadata<ObjectChangedProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 4}});
+    map->setYBounds({{0, 3}});
+    map->setWrapX({{0, 1}});
+    map->setWrapY({{0, 1}});
+
+    auto creature = std::make_shared<MoveHookCounterCreature>();
+    creature->setName("relocationProbe");
+    creature->setGame(game);
+    creature->setBaseStats(creature_stats());
+    creature->setLevel(1);
+    creature->setHp(creature->getHpMax());
+    creature->setCanStep(false);
+    map->addObject(creature);
+
+    auto probe = std::make_shared<ObjectChangedProbe>();
+    map->connect("objectChanged", probe, "onObjectChanged");
+
+    const auto revision_before_relocation = map->getNavigationRevision();
+    const auto cache_entries_before_relocation = map->getObjectCacheEntryCountForTesting();
+
+    creature->relocateWithoutMoveHooks(Coords(-1, 4, 0));
+    pump_event_loop_iterations();
+
+    expect_true(creature->getCoords() == Coords(4, 0, 0),
+                "relocateWithoutMoveHooks should normalize and store the destination coordinates");
+    expect_true(map->getObjectsAtCoords(Coords(0, 0, 0)).empty(),
+                "relocateWithoutMoveHooks should remove stale object cache entries");
+    expect_true(map->getObjectsAtCoords(Coords(4, 0, 0)).contains(creature),
+                "relocateWithoutMoveHooks should index the object at its normalized destination");
+    expect_true(map->getObjectCacheEntryCountForTesting() == cache_entries_before_relocation,
+                "relocateWithoutMoveHooks should keep one cache entry for the relocated object");
+    expect_true(map->getNavigationRevision() > revision_before_relocation,
+                "relocateWithoutMoveHooks should bump navigation revision through objectMoved");
+    expect_true(creature->beforeMoveCalls == 0 && creature->afterMoveCalls == 0,
+                "relocateWithoutMoveHooks should not invoke movement hooks");
+    expect_true(!creature->getPendingMoveOrigin().has_value(),
+                "relocateWithoutMoveHooks should not create pending movement origin state");
+    expect_true((probe->objectChangedCoords == std::vector<Coords>{Coords(0, 0, 0), Coords(4, 0, 0)}),
+                "relocateWithoutMoveHooks should emit one old-coordinate and one new-coordinate signal");
+}
+
 void test_map_player_trigger_registration_is_idempotent() {
     auto game = CGameLoader::loadGame();
     auto map = std::make_shared<CMap>();
@@ -725,14 +1039,20 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_scene_manager_state_duplicate_and_player_transfer();
+    test_game_change_map_duplicate_requests_commit_once();
+    test_scene_manager_transition_generation_start_and_commit();
+    test_scene_manager_stale_transition_generation_clears_pending_state();
+    test_scene_manager_trace_rejections_and_completion();
     test_scene_manager_repeated_transitions_and_controller_usability();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_map_navigation_edges_update_revision();
+    test_map_navigation_neighbors_include_registered_edges();
     test_map_defensive_branches_and_strict_validation();
     test_map_move_interrupts_invalid_planned_steps();
     test_creature_tracks_pending_move_origin_only_during_after_move();
+    test_map_object_relocate_without_move_hooks_updates_spatial_state_once();
     test_map_player_trigger_registration_is_idempotent();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();

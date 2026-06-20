@@ -23,7 +23,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 CGame::CGame() {}
 
-CGame::~CGame() {}
+CGame::~CGame() {
+    if (context) {
+        context->advanceTransitionGeneration();
+    }
+}
 
 void CGame::changeMap(std::string file) { CGameLoader::changeMap(this->ptr<CGame>(), std::move(file)); }
 
@@ -38,9 +42,7 @@ std::shared_ptr<CGameContext> CGame::getContext() {
     return context;
 }
 
-std::shared_ptr<CGuiHandler> CGame::getGuiHandler() {
-    return guiHandler.get([this]() { return std::make_shared<CGuiHandler>(this->ptr<CGame>()); });
-}
+std::shared_ptr<CGuiHandler> CGame::getGuiHandler() { return getContext()->getGuiHandler(); }
 
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() { return getContext()->getScriptHandler(); }
 

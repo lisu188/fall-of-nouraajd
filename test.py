@@ -18,6 +18,7 @@ import builtins
 import concurrent.futures
 import contextlib
 import http.client
+import io
 import importlib
 import importlib.util
 import json
@@ -126,6 +127,7 @@ FAST_TEST_PREFIXES = (
     "CoverageReportTest.",
     "PlayBootstrapTest.",
     "QuestStateHelperTest.",
+    "SaveFixtureTest.",
     "TestRunnerSuiteTest.",
 )
 FAST_TEST_NAMES = {
@@ -227,6 +229,7 @@ def unique_save_name(prefix):
 
 SAVE_FORMAT = "fall-of-nouraajd-save"
 SAVE_SCHEMA_VERSION = 1
+SAVE_FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "save_compatibility"
 
 
 def save_primary_path(slot_name):
@@ -272,6 +275,316 @@ def assert_save_envelope(test_case, saved_document, map_name):
     test_case.assertEqual("CMap", snapshot.get("class"))
     test_case.assertEqual(map_name, snapshot.get("properties", {}).get("mapName"))
     return snapshot
+
+
+IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS = {
+    "legacy_unversioned_test_map": {
+        "primary": "legacy_unversioned_test_map.json",
+        "summary": {
+            "encoding": "legacy",
+            "map": "test",
+            "turn": 11,
+            "description": "immutable legacy unversioned fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [1, 2, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "schema_v1_test_map": {
+        "primary": "schema_v1_test_map.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "test",
+            "turn": 12,
+            "description": "immutable schema v1 fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [2, 3, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "invalid_primary_valid_backup": {
+        "primary": "invalid_primary_valid_backup.json",
+        "backup": "invalid_primary_valid_backup.json.bak",
+        "primaryInvalidJson": True,
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "test",
+            "turn": 13,
+            "description": "immutable backup recovery fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [3, 4, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "nouraajd_active_quests_v1": {
+        "primary": "nouraajd_active_quests_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "nouraajd",
+            "turn": 77,
+            "description": "immutable Nouraajd active quest fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [43, 99, 0],
+                "activeQuests": ["rolfQuest", "victorQuest"],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {
+                "amulet": "not_started",
+                "beren_chain": "letter_pending",
+                "main": "locked",
+                "octobogz_contract": "not_started",
+                "rolf": "awaiting_skull",
+                "victor": "met_victor",
+            },
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "nouraajd_runtime_spawned_quest_actors_v1": {
+        "primary": "nouraajd_runtime_spawned_quest_actors_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "nouraajd",
+            "turn": 104,
+            "description": "immutable Nouraajd runtime quest actor fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [45, 100, 0],
+                "activeQuests": ["amuletQuest", "victorQuest"],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {
+                "amulet": "active",
+                "beren_chain": "letter_pending",
+                "main": "locked",
+                "octobogz_contract": "not_started",
+                "rolf": "awaiting_skull",
+                "victor": "encounter_active",
+            },
+            "trueFlags": ["VICTOR_COURTYARD_FOUND", "VICTOR_CULTISTS_SPAWNED"],
+            "numericProperties": {"VICTOR_COURTYARD_TURN": 100},
+            "objects": [
+                {"name": "amuletGoblin", "typeId": "goblinThief"},
+                {"name": "cultLeaderQuest", "typeId": "CultLeader"},
+                {"name": "victorCultist1", "typeId": "Cultist"},
+            ],
+        },
+    },
+    "ritual_progression_v1": {
+        "primary": "ritual_progression_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "ritual",
+            "turn": 39,
+            "description": "immutable ritual progression fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [3, 22, 0],
+                "activeQuests": [
+                    "destroyAnchorsQuest",
+                    "finalResolutionQuest",
+                    "rescueCaptiveQuest",
+                    "ritualQuest",
+                ],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": ["anchors_destroyed", "leader_spawned", "ritual_initialized", "ritual_started"],
+            "numericProperties": {"anchors_destroyed_count": 3, "ritual_countdown": 62},
+            "objects": [{"name": "ritualLeader", "typeId": "ritualLeaderTemplate"}],
+        },
+    },
+    "siege_progression_v1": {
+        "primary": "siege_progression_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "siege",
+            "turn": 51,
+            "description": "immutable siege progression fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [12, 8, 0],
+                "activeQuests": ["defendSiegeQuest"],
+                "completedQuests": [],
+                "items": ["magicWand"],
+            },
+            "questStates": {},
+            "trueFlags": ["siege_initialized"],
+            "numericProperties": {},
+            "objects": [{"name": "spawnPoint1", "typeId": "SiegeSpawnPoint"}],
+        },
+    },
+}
+
+
+def fixture_document_snapshot(document):
+    if document.get("format") == SAVE_FORMAT:
+        return "versioned", document.get("snapshot", {})
+    return "legacy", document
+
+
+def fixture_object_type_id(obj):
+    properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+    return properties.get("typeId") or obj.get("ref") or obj.get("class")
+
+
+def fixture_named_objects(snapshot):
+    objects = []
+    for obj in snapshot.get("properties", {}).get("objects", []):
+        properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        name = properties.get("name")
+        if name and name != "player":
+            objects.append({"name": name, "typeId": fixture_object_type_id(obj)})
+    return sorted(objects, key=lambda item: item["name"])
+
+
+def fixture_player_summary(snapshot):
+    for obj in snapshot.get("properties", {}).get("objects", []):
+        properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        if obj.get("class") == "CPlayer" or properties.get("name") == "player":
+            return {
+                "class": obj.get("class") or obj.get("ref"),
+                "name": properties.get("name"),
+                "typeId": properties.get("typeId"),
+                "coords": [properties.get("posx", 0), properties.get("posy", 0), properties.get("posz", 0)],
+                "activeQuests": fixture_quest_ids(properties.get("quests", [])),
+                "completedQuests": fixture_quest_ids(properties.get("completedQuests", [])),
+                "items": fixture_item_ids(properties.get("items", [])),
+            }
+    raise AssertionError("Save fixture snapshot does not contain a canonical player object.")
+
+
+def fixture_quest_ids(quests):
+    quest_ids = []
+    for quest in quests:
+        if not isinstance(quest, dict):
+            continue
+        properties = quest.get("properties", {})
+        quest_ids.append(properties.get("typeId") or properties.get("name") or quest.get("ref") or quest.get("class"))
+    return sorted(quest_id for quest_id in quest_ids if quest_id)
+
+
+def fixture_item_ids(items):
+    item_ids = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        properties = item.get("properties", {})
+        item_ids.append(properties.get("typeId") or properties.get("name") or item.get("ref") or item.get("class"))
+    return sorted(item_id for item_id in item_ids if item_id)
+
+
+def save_fixture_summary(document):
+    encoding, snapshot = fixture_document_snapshot(document)
+    properties = snapshot.get("properties", {})
+    summary = {
+        "encoding": encoding,
+        "map": properties.get("mapName"),
+        "turn": properties.get("turn", 0),
+        "description": properties.get("description", ""),
+        "player": fixture_player_summary(snapshot),
+        "questStates": {
+            key.removeprefix("quest_state_"): value
+            for key, value in sorted(properties.items())
+            if key.startswith("quest_state_")
+        },
+        "trueFlags": sorted(
+            key for key, value in properties.items() if isinstance(value, bool) and value and key != "canStep"
+        ),
+        "numericProperties": {
+            key: value
+            for key, value in sorted(properties.items())
+            if key
+            in {
+                "VICTOR_COURTYARD_TURN",
+                "anchors_destroyed_count",
+                "ritual_countdown",
+            }
+        },
+        "objects": fixture_named_objects(snapshot),
+    }
+    if encoding == "versioned":
+        summary["schemaVersion"] = document.get("schemaVersion")
+    return summary
+
+
+class SaveFixtureTest(unittest.TestCase):
+    maxDiff = None
+
+    def test_immutable_save_fixture_summaries_match_expected(self):
+        self.assertTrue(SAVE_FIXTURE_DIR.is_dir(), f"Missing fixture directory: {SAVE_FIXTURE_DIR}")
+        expected_files = set()
+        for expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.values():
+            expected_files.add(expected["primary"])
+            if expected.get("backup"):
+                expected_files.add(expected["backup"])
+
+        actual_files = {path.name for path in SAVE_FIXTURE_DIR.iterdir() if path.is_file()}
+        self.assertEqual(expected_files, actual_files)
+
+        for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
+            primary = SAVE_FIXTURE_DIR / expected["primary"]
+            self.assertTrue(primary.is_file(), fixture_name)
+            if expected.get("primaryInvalidJson"):
+                with self.assertRaises(json.JSONDecodeError, msg=fixture_name):
+                    json.loads(primary.read_text(encoding="utf-8"))
+                document_path = SAVE_FIXTURE_DIR / expected["backup"]
+            else:
+                document_path = primary
+
+            document = json.loads(document_path.read_text(encoding="utf-8"))
+            if document.get("format") == SAVE_FORMAT:
+                assert_save_envelope(self, document, expected["summary"]["map"])
+            self.assertEqual(expected["summary"], save_fixture_summary(document), fixture_name)
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
@@ -447,6 +760,9 @@ def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1):
 
 SDL_KEYDOWN = 0x300
 SDL_KEYUP = 0x301
+SDL_QUIT = 0x100
+SDL_INIT_EVENTS = 0x00004000
+SDL_MOUSEMOTION = 0x400
 SDL_MOUSEBUTTONDOWN = 0x401
 SDL_MOUSEBUTTONUP = 0x402
 SDL_PRESSED = 1
@@ -566,6 +882,8 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_screenshot_inventory_equipped_selection_has_rendered_pixels",
     "test_screenshot_inventory_item_selection_has_rendered_pixels",
     "test_screenshot_inventory_panel_has_rendered_pixels",
+    "test_inventory_drag_release_outside_source_equips_item",
+    "test_inventory_preselected_drag_release_equips_item",
     "test_inventory_equipped_selection_resets_inventory_selection",
     "test_inventory_quest_item_selection_is_ignored",
     "test_fight_quest_item_selection_is_ignored",
@@ -614,6 +932,8 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_screenshot_minimap_has_rendered_pixels": 6,
     "test_screenshot_inventory_equipped_selection_has_rendered_pixels": 6,
     "test_screenshot_inventory_item_selection_has_rendered_pixels": 6,
+    "test_inventory_drag_release_outside_source_equips_item": 6,
+    "test_inventory_preselected_drag_release_equips_item": 6,
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
     "test_inventory_quest_item_selection_is_ignored": 6,
     "test_fight_quest_item_selection_is_ignored": 6,
@@ -850,9 +1170,82 @@ def push_sdl_mouse_button_event(x, y, button=SDL_BUTTON_LEFT, event_type=SDL_MOU
         raise AssertionError(f"SDL_PushEvent returned {pushed}.")
 
 
+def push_sdl_mouse_motion_event(x, y, xrel=0, yrel=0):
+    import ctypes
+
+    class SDL_MouseMotionEvent(ctypes.Structure):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("timestamp", ctypes.c_uint32),
+            ("windowID", ctypes.c_uint32),
+            ("which", ctypes.c_uint32),
+            ("state", ctypes.c_uint32),
+            ("x", ctypes.c_int32),
+            ("y", ctypes.c_int32),
+            ("xrel", ctypes.c_int32),
+            ("yrel", ctypes.c_int32),
+        ]
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("motion", SDL_MouseMotionEvent),
+            ("padding", ctypes.c_uint8 * 56),
+        ]
+
+    sdl = load_sdl_library()
+    event = SDL_Event()
+    event.type = SDL_MOUSEMOTION
+    event.motion.type = SDL_MOUSEMOTION
+    event.motion.state = 1 << (SDL_BUTTON_LEFT - 1)
+    event.motion.x = x
+    event.motion.y = y
+    event.motion.xrel = xrel
+    event.motion.yrel = yrel
+
+    sdl.SDL_GetWindowID.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetWindowID.restype = ctypes.c_uint32
+    focused_window = focused_sdl_window()
+    if focused_window:
+        event.motion.windowID = sdl.SDL_GetWindowID(focused_window)
+
+    sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PushEvent.restype = ctypes.c_int
+    pushed = sdl.SDL_PushEvent(ctypes.byref(event))
+    if pushed != 1:
+        raise AssertionError(f"SDL_PushEvent returned {pushed}.")
+
+
 def push_sdl_mouse_click(x, y, button=SDL_BUTTON_LEFT):
     push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONDOWN)
     push_sdl_mouse_button_event(x, y, button, SDL_MOUSEBUTTONUP)
+
+
+def push_sdl_quit_event():
+    import ctypes
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("padding", ctypes.c_uint8 * 56),
+        ]
+
+    sdl = load_sdl_library()
+    sdl.SDL_InitSubSystem.argtypes = [ctypes.c_uint32]
+    sdl.SDL_InitSubSystem.restype = ctypes.c_int
+    if sdl.SDL_InitSubSystem(SDL_INIT_EVENTS) != 0:
+        sdl.SDL_GetError.restype = ctypes.c_char_p
+        error = sdl.SDL_GetError()
+        message = error.decode("utf-8", errors="replace") if error else "SDL_InitSubSystem failed."
+        raise AssertionError(message)
+
+    event = SDL_Event()
+    event.type = SDL_QUIT
+    sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PushEvent.restype = ctypes.c_int
+    pushed = sdl.SDL_PushEvent(ctypes.byref(event))
+    if pushed != 1:
+        raise AssertionError(f"SDL_PushEvent returned {pushed}.")
 
 
 def drain_sdl_events():
@@ -3426,18 +3819,22 @@ class GameTest(unittest.TestCase):
         self.assertIs(context, g.getContext())
 
         object_handler = context.getObjectHandler()
+        gui_handler = context.getGuiHandler()
         script_handler = context.getScriptHandler()
         rng_handler = context.getRngHandler()
 
         self.assertIs(object_handler, context.getObjectHandler())
+        self.assertIs(gui_handler, context.getGuiHandler())
         self.assertIs(script_handler, context.getScriptHandler())
         self.assertIs(rng_handler, context.getRngHandler())
         self.assertIs(object_handler, g.getObjectHandler())
+        self.assertIs(gui_handler, g.getGuiHandler())
         self.assertIs(rng_handler, g.getRngHandler())
 
         other_game = game.CGameLoader.loadGame()
         self.assertIsNot(context, other_game.getContext())
         self.assertIsNot(object_handler, other_game.getObjectHandler())
+        self.assertIsNot(gui_handler, other_game.getGuiHandler())
 
         object_handler.registerConfigJson(
             "contextOwnedProbe",
@@ -4112,10 +4509,18 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_disabled_teleporter_does_not_publish_waypoint(self):
+        game = load_game_module()
         _g, game_map, _player = load_game_map_with_player("test", "Warrior")
         active_teleporter = find_runtime_object(game_map, "teleporter1")
         teleporter = find_runtime_object(game_map, "teleporter2")
+        ground_hole = find_runtime_object(game_map, "groundHole")
+        active_teleporter_coords = active_teleporter.getCoords()
         teleporter_coords = teleporter.getCoords()
+        ground_hole_coords = ground_hole.getCoords()
+        ground_hole_target = game.Coords(ground_hole_coords.x, ground_hole_coords.y, ground_hole_coords.z - 1)
+
+        def navigation_neighbors(obj):
+            return sorted(coords_tuple(coord) for coord in game_map.getNavigationNeighbors(obj.getCoords()))
 
         self.assertFalse(teleporter.getBoolProperty("waypoint"))
 
@@ -4125,8 +4530,28 @@ class GameTest(unittest.TestCase):
         self.assertEqual(teleporter_coords.x, active_teleporter.getNumericProperty("x"))
         self.assertEqual(teleporter_coords.y, active_teleporter.getNumericProperty("y"))
         self.assertEqual(teleporter_coords.z, active_teleporter.getNumericProperty("z"))
+        self.assertIn(coords_tuple(teleporter_coords), navigation_neighbors(active_teleporter))
         self.assertFalse(teleporter.getBoolProperty("enabled"))
         self.assertFalse(teleporter.getBoolProperty("waypoint"))
+        self.assertNotIn(coords_tuple(active_teleporter_coords), navigation_neighbors(teleporter))
+        self.assertTrue(ground_hole.getBoolProperty("waypoint"))
+        self.assertEqual(ground_hole_target.x, ground_hole.getNumericProperty("x"))
+        self.assertEqual(ground_hole_target.y, ground_hole.getNumericProperty("y"))
+        self.assertEqual(ground_hole_target.z, ground_hole.getNumericProperty("z"))
+        self.assertIn(coords_tuple(ground_hole_target), navigation_neighbors(ground_hole))
+
+        stable_revision = game_map.getNavigationRevision()
+        active_teleporter.onTurn(None)
+        ground_hole.onTurn(None)
+
+        self.assertEqual(stable_revision, game_map.getNavigationRevision())
+
+        active_teleporter.setBoolProperty("enabled", False)
+        active_teleporter.onTurn(None)
+
+        self.assertGreater(game_map.getNavigationRevision(), stable_revision)
+        self.assertFalse(active_teleporter.getBoolProperty("waypoint"))
+        self.assertNotIn(coords_tuple(teleporter_coords), navigation_neighbors(active_teleporter))
 
         return True, json.dumps(
             {
@@ -4135,6 +4560,8 @@ class GameTest(unittest.TestCase):
                 "disabled_name": teleporter.getName(),
                 "disabled_enabled": teleporter.getBoolProperty("enabled"),
                 "disabled_waypoint": teleporter.getBoolProperty("waypoint"),
+                "revision_after_publish": stable_revision,
+                "revision_after_disable": game_map.getNavigationRevision(),
             },
             sort_keys=True,
         )
@@ -5208,11 +5635,6 @@ class GameTest(unittest.TestCase):
         game_map.addObject(waypoint)
         waypoint.moveTo(24, 12, 0)
 
-        dump_path = TEST_OUTPUT_DIR / "dynamic_controller_paths.txt"
-        game_map.dumpPaths(str(dump_path))
-        self.assertTrue(dump_path.exists())
-        self.assertGreater(dump_path.stat().st_size, 0)
-
         game_map.move()
         player_coords = player.getCoords()
         ground_coords = ground_walker.getCoords()
@@ -5544,11 +5966,25 @@ class GameTest(unittest.TestCase):
         stairs_up = find_runtime_object(game_map, "stairsUp")
         stairs_down = find_runtime_object(game_map, "stairsDown")
         upper_goal = find_runtime_object(game_map, "multilevelUpperGoal")
+        stairs_up_neighbors = sorted(
+            coords_tuple(coord) for coord in game_map.getNavigationNeighbors(stairs_up.getCoords())
+        )
+        stairs_down_neighbors = sorted(
+            coords_tuple(coord) for coord in game_map.getNavigationNeighbors(stairs_down.getCoords())
+        )
         self.assertTrue(stairs_up.getBoolProperty("waypoint"))
         self.assertEqual((4, 1, 1), (stairs_up.x, stairs_up.y, stairs_up.z))
+        self.assertIn((4, 1, 1), stairs_up_neighbors)
         self.assertTrue(stairs_down.getBoolProperty("waypoint"))
         self.assertEqual((4, 1, 0), (stairs_down.x, stairs_down.y, stairs_down.z))
+        self.assertIn((4, 1, 0), stairs_down_neighbors)
         self.assertEqual("images/buildings/catacombs", upper_goal.getStringProperty("animation"))
+
+        stable_revision = game_map.getNavigationRevision()
+        stairs_up.onTurn(None)
+        stairs_down.onTurn(None)
+
+        self.assertEqual(stable_revision, game_map.getNavigationRevision())
 
         return True, json.dumps(
             {
@@ -5557,6 +5993,7 @@ class GameTest(unittest.TestCase):
                     name: coords_tuple(find_runtime_object(game_map, name).getCoords()) for name in object_levels
                 },
                 "player": coords_tuple(player.getCoords()),
+                "navigation_revision": stable_revision,
             },
             sort_keys=True,
         )
@@ -5771,6 +6208,27 @@ class GameTest(unittest.TestCase):
         event.moveTo(coords.x, coords.y, coords.z)
         return event
 
+    def add_counting_tile(self, game, g, game_map, type_name, coords, hits):
+        class CountingTile(game.CTile):
+            def onStep(self, creature):
+                hits.append((type_name, creature.getName()))
+
+        g.getObjectHandler().registerType(type_name, CountingTile)
+        g.getObjectHandler().registerConfigJson(
+            type_name,
+            json.dumps(
+                {
+                    "class": type_name,
+                    "properties": {
+                        "canStep": True,
+                        "label": type_name,
+                        "tileType": type_name,
+                    },
+                }
+            ),
+        )
+        game_map.replaceTile(type_name, coords)
+
     @game_test
     def test_combat_invariants(self):
         game = load_game_module()
@@ -5910,6 +6368,102 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_fight_bool_wrappers_preserve_outcome_compatibility(self):
+        game = load_game_module()
+
+        def new_session():
+            session = game.CGameLoader.loadGame()
+            game.CGameLoader.startGame(session, "empty")
+            return session, session.getMap()
+
+        def add_creature(session, game_map, type_name, name, x, hp=10):
+            creature = session.createObject(type_name)
+            creature.name = name
+            creature.moveTo(x, 0, 0)
+            game_map.addObject(creature)
+            creature.setHp(hp)
+            return creature
+
+        def configure_passive(creature):
+            creature.baseStats.agility = 10
+            creature.baseStats.hit = 0
+            creature.baseStats.dmgMin = 0
+            creature.baseStats.dmgMax = 0
+            creature.baseStats.crit = 0
+            creature.setFightController(creature.getGame().createObject("CFightController"))
+
+        invalid_session, invalid_map = new_session()
+        invalid_attacker = add_creature(invalid_session, invalid_map, "CCreature", "unitBoolInvalidAttacker", 0)
+        configure_passive(invalid_attacker)
+        invalid_result = game.CFightHandler.fightMany(invalid_attacker, [])
+
+        victory_session, victory_map = new_session()
+        victor = add_creature(victory_session, victory_map, "GoblinThief", "unitBoolVictoryAttacker", 0)
+        defeated = add_creature(victory_session, victory_map, "GoblinThief", "unitBoolVictoryDefender", 1, hp=1)
+        victor.baseStats.agility = 100
+        victor.baseStats.hit = 100
+        victor.baseStats.dmgMin = 500
+        victor.baseStats.dmgMax = 500
+        victor.baseStats.crit = 0
+        defeated.baseStats.hit = 0
+        defeated.baseStats.dmgMin = 0
+        defeated.baseStats.dmgMax = 0
+        defeated.baseStats.crit = 0
+        victory_result = game.CFightHandler.fight(victor, defeated)
+
+        defeat_session, defeat_map = new_session()
+        defeated_attacker = add_creature(defeat_session, defeat_map, "CCreature", "unitBoolDefeatedAttacker", 0, hp=1)
+        killer = add_creature(defeat_session, defeat_map, "GoblinThief", "unitBoolDefeatKiller", 1)
+        configure_passive(defeated_attacker)
+        defeated_attacker.baseStats.agility = 1
+        killer.baseStats.agility = 100
+        killer.baseStats.hit = 100
+        killer.baseStats.dmgMin = 500
+        killer.baseStats.dmgMax = 500
+        killer.baseStats.crit = 0
+        defeat_result = game.CFightHandler.fightMany(defeated_attacker, [killer])
+
+        stalled_session, stalled_map = new_session()
+        stalled_attacker = add_creature(stalled_session, stalled_map, "CCreature", "unitBoolStalledAttacker", 0)
+        stalled_defender = add_creature(stalled_session, stalled_map, "CCreature", "unitBoolStalledDefender", 1)
+        configure_passive(stalled_attacker)
+        configure_passive(stalled_defender)
+        started = time.monotonic()
+        stalled_result = game.CFightHandler.fightMany(stalled_attacker, [stalled_defender])
+        stalled_elapsed = time.monotonic() - started
+
+        cancelled_session, cancelled_map = new_session()
+        cancelled_attacker = add_creature(cancelled_session, cancelled_map, "CCreature", "unitBoolCancelledAttacker", 0)
+        cancelled_defender = add_creature(cancelled_session, cancelled_map, "CCreature", "unitBoolCancelledDefender", 1)
+        configure_passive(cancelled_attacker)
+        configure_passive(cancelled_defender)
+        drain_sdl_events()
+        push_sdl_quit_event()
+        try:
+            cancelled_result = game.CFightHandler.fightMany(cancelled_attacker, [cancelled_defender])
+        finally:
+            drain_sdl_events()
+
+        self.assertFalse(invalid_result)
+        self.assertTrue(victory_result)
+        self.assertTrue(defeat_result)
+        self.assertFalse(stalled_result)
+        self.assertFalse(cancelled_result)
+        self.assertLess(stalled_elapsed, COMBAT_STALE_LOOP_TIMEOUT_SECONDS)
+
+        return True, json.dumps(
+            {
+                "cancelled": cancelled_result,
+                "defeat": defeat_result,
+                "invalid": invalid_result,
+                "stalled": stalled_result,
+                "stalled_elapsed": stalled_elapsed,
+                "victory": victory_result,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_shadow_bolt_can_configure_its_effect(self):
         game = load_game_module()
         original_randint = game.randint
@@ -6040,6 +6594,15 @@ class GameTest(unittest.TestCase):
         no_combat_map.addObject(no_combat_mover)
         no_combat_mover.setHp(10)
         no_combat_target = game.Coords(1, 0, 0)
+        no_combat_tile_hits = []
+        self.add_counting_tile(
+            game,
+            no_combat_game,
+            no_combat_map,
+            "UnitNoCombatTile",
+            no_combat_target,
+            no_combat_tile_hits,
+        )
         self.add_counting_event(
             game,
             no_combat_game,
@@ -6050,17 +6613,134 @@ class GameTest(unittest.TestCase):
             no_combat_hits,
         )
         no_combat_mover.moveTo(no_combat_target.x, no_combat_target.y, no_combat_target.z)
+        self.assertEqual([("UnitNoCombatTile", "unitNoCombatMover")], no_combat_tile_hits)
         self.assertEqual([("unitNoCombatCounter", "unitNoCombatMover")], no_combat_hits)
 
-        # Tile effects can move the creature again; the old destination must not start stale combat afterward.
+        # Stalemated combat leaves the destination visitable untouched.
+        stalemate_game = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(stalemate_game, "empty")
+        stalemate_map = stalemate_game.getMap()
+        stalemate_hits = []
+        stalemate_tile_hits = []
+        stalemate_mover = stalemate_game.createObject("CCreature")
+        stalemate_mover.name = "unitStalemateMover"
+        stalemate_mover.setFightController(stalemate_game.createObject("CFightController"))
+        stalemate_map.addObject(stalemate_mover)
+        stalemate_mover.setHp(10)
+        stalemate_target = game.Coords(1, 0, 0)
+        stale_defender = stalemate_game.createObject("CCreature")
+        stale_defender.name = "unitStalemateDefender"
+        stale_defender.setFightController(stalemate_game.createObject("CFightController"))
+        stale_defender.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
+        stalemate_map.addObject(stale_defender)
+        stale_defender.setHp(10)
+        self.add_counting_tile(
+            game,
+            stalemate_game,
+            stalemate_map,
+            "UnitStalemateTile",
+            stalemate_target,
+            stalemate_tile_hits,
+        )
+        self.add_counting_event(
+            game,
+            stalemate_game,
+            stalemate_map,
+            "UnitStalemateCounter",
+            "unitStalemateCounter",
+            stalemate_target,
+            stalemate_hits,
+        )
+        stalemate_mover.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
+        self.assertEqual([], stalemate_tile_hits)
+        self.assertEqual([], stalemate_hits)
+        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateMover"))
+        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateDefender"))
+
+        # Cancelled combat leaves the hostile destination tile and visitable untouched.
+        cancel_game = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(cancel_game, "empty")
+        cancel_map = cancel_game.getMap()
+        cancel_tile_hits = []
+        cancel_hits = []
+        cancel_mover = cancel_game.createObject("CCreature")
+        cancel_mover.name = "unitCancelMover"
+        cancel_mover.setFightController(cancel_game.createObject("CFightController"))
+        cancel_map.addObject(cancel_mover)
+        cancel_mover.setHp(10)
+        cancel_target = game.Coords(1, 0, 0)
+        cancel_defender = cancel_game.createObject("CCreature")
+        cancel_defender.name = "unitCancelDefender"
+        cancel_defender.setFightController(cancel_game.createObject("CFightController"))
+        cancel_defender.moveTo(cancel_target.x, cancel_target.y, cancel_target.z)
+        cancel_map.addObject(cancel_defender)
+        cancel_defender.setHp(10)
+        self.add_counting_tile(
+            game,
+            cancel_game,
+            cancel_map,
+            "UnitCancelTile",
+            cancel_target,
+            cancel_tile_hits,
+        )
+        self.add_counting_event(
+            game,
+            cancel_game,
+            cancel_map,
+            "UnitCancelCounter",
+            "unitCancelCounter",
+            cancel_target,
+            cancel_hits,
+        )
+        push_sdl_quit_event()
+        try:
+            cancel_mover.moveTo(cancel_target.x, cancel_target.y, cancel_target.z)
+        finally:
+            drain_sdl_events()
+        self.assertEqual([], cancel_tile_hits)
+        self.assertEqual([], cancel_hits)
+        self.assertIsNotNone(cancel_map.getObjectByName("unitCancelMover"))
+        self.assertIsNotNone(cancel_map.getObjectByName("unitCancelDefender"))
+
+        # Attacker victory allows the original destination tile and visitable to run once.
+        victory_game, victory_session, victory_attacker, victory_defenders = self.make_multi_enemy_combat_fixture()
+        victory_map = victory_session.getMap()
+        victory_hits = []
+        victory_tile_hits = []
+        victory_target = victory_defenders[0].getCoords()
+        self.add_counting_tile(
+            victory_game,
+            victory_session,
+            victory_map,
+            "UnitVictoryTile",
+            victory_target,
+            victory_tile_hits,
+        )
+        self.add_counting_event(
+            victory_game,
+            victory_session,
+            victory_map,
+            "UnitVictoryCounter",
+            "unitVictoryCounter",
+            victory_target,
+            victory_hits,
+        )
+        victory_attacker.moveTo(victory_target.x, victory_target.y, victory_target.z)
+        self.assertEqual([("UnitVictoryTile", victory_attacker.getName())], victory_tile_hits)
+        self.assertEqual([("unitVictoryCounter", victory_attacker.getName())], victory_hits)
+
+        # After victorious combat, tile effects can move the creature again and suppress stale destination onEnter.
         relocation_game = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(relocation_game, "empty")
         relocation_map = relocation_game.getMap()
         relocation_target = game.Coords(1, 0, 0)
         relocated_target = find_adjacent_walkable_tile(relocation_map, relocation_target)
+        relocation_tile_hits = []
+        relocation_enter_hits = []
 
         class UnitRelocatingTile(game.CTile):
             def onStep(self, creature):
+                relocation_tile_hits.append(("UnitRelocatingTile", creature.getName()))
                 creature.moveTo(relocated_target.x, relocated_target.y, relocated_target.z)
 
         relocation_game.getObjectHandler().registerType("UnitRelocatingTile", UnitRelocatingTile)
@@ -6094,64 +6774,27 @@ class GameTest(unittest.TestCase):
         relocation_defender.hp = 1
         relocation_defender.moveTo(relocation_target.x, relocation_target.y, relocation_target.z)
         relocation_map.addObject(relocation_defender)
+        self.add_counting_event(
+            game,
+            relocation_game,
+            relocation_map,
+            "UnitRelocationCounter",
+            "unitRelocationCounter",
+            relocation_target,
+            relocation_enter_hits,
+        )
         relocation_map.replaceTile("UnitRelocatingTile", relocation_target)
         relocation_mover.moveTo(relocation_target.x, relocation_target.y, relocation_target.z)
 
-        self.assertIsNotNone(relocation_map.getObjectByName("unitRelocationDefender"))
+        self.assertIsNone(relocation_map.getObjectByName("unitRelocationDefender"))
+        self.assertEqual([("UnitRelocatingTile", "unitRelocationMover")], relocation_tile_hits)
+        self.assertEqual([], relocation_enter_hits)
         self.assertEqual(
             (relocated_target.x, relocated_target.y, relocated_target.z),
             (relocation_mover.getCoords().x, relocation_mover.getCoords().y, relocation_mover.getCoords().z),
         )
 
-        # Stalemated combat leaves the destination visitable untouched.
-        stalemate_game = game.CGameLoader.loadGame()
-        game.CGameLoader.startGame(stalemate_game, "empty")
-        stalemate_map = stalemate_game.getMap()
-        stalemate_hits = []
-        stalemate_mover = stalemate_game.createObject("CCreature")
-        stalemate_mover.name = "unitStalemateMover"
-        stalemate_mover.setFightController(stalemate_game.createObject("CFightController"))
-        stalemate_map.addObject(stalemate_mover)
-        stalemate_mover.setHp(10)
-        stalemate_target = game.Coords(1, 0, 0)
-        stale_defender = stalemate_game.createObject("CCreature")
-        stale_defender.name = "unitStalemateDefender"
-        stale_defender.setFightController(stalemate_game.createObject("CFightController"))
-        stale_defender.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
-        stalemate_map.addObject(stale_defender)
-        stale_defender.setHp(10)
-        self.add_counting_event(
-            game,
-            stalemate_game,
-            stalemate_map,
-            "UnitStalemateCounter",
-            "unitStalemateCounter",
-            stalemate_target,
-            stalemate_hits,
-        )
-        stalemate_mover.moveTo(stalemate_target.x, stalemate_target.y, stalemate_target.z)
-        self.assertEqual([], stalemate_hits)
-        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateMover"))
-        self.assertIsNotNone(stalemate_map.getObjectByName("unitStalemateDefender"))
-
-        # Attacker victory allows the original destination visitable to run once.
-        victory_game, victory_session, victory_attacker, victory_defenders = self.make_multi_enemy_combat_fixture()
-        victory_map = victory_session.getMap()
-        victory_hits = []
-        victory_target = victory_defenders[0].getCoords()
-        self.add_counting_event(
-            victory_game,
-            victory_session,
-            victory_map,
-            "UnitVictoryCounter",
-            "unitVictoryCounter",
-            victory_target,
-            victory_hits,
-        )
-        victory_attacker.moveTo(victory_target.x, victory_target.y, victory_target.z)
-        self.assertEqual([("unitVictoryCounter", victory_attacker.getName())], victory_hits)
-
-        # Player defeat respawns silently and does not leak destination or entry onEnter from the old move.
+        # Player defeat respawns silently and does not leak destination tile, destination onEnter, or entry onEnter.
         defeat_game = game.CGameLoader.loadGame()
         game.CGameLoader.startGameWithPlayer(defeat_game, "empty", "Warrior")
         defeat_map = defeat_game.getMap()
@@ -6160,14 +6803,9 @@ class GameTest(unittest.TestCase):
         player.unequipArmor()
         player.setHp(1)
         defeat_hits = []
+        defeat_tile_hits = []
         entry = player.getCoords()
         defeat_target = find_adjacent_walkable_tile(defeat_map, entry)
-        self.add_counting_event(
-            game, defeat_game, defeat_map, "UnitEntryCounter", "unitEntryCounter", entry, defeat_hits
-        )
-        self.add_counting_event(
-            game, defeat_game, defeat_map, "UnitDefeatCounter", "unitDefeatCounter", defeat_target, defeat_hits
-        )
         killer = defeat_game.createObject("GoblinThief")
         killer.name = "unitDefeatKiller"
         killer.baseStats.agility = 100
@@ -6177,8 +6815,23 @@ class GameTest(unittest.TestCase):
         killer.baseStats.crit = 0
         killer.moveTo(defeat_target.x, defeat_target.y, defeat_target.z)
         defeat_map.addObject(killer)
+        self.add_counting_tile(
+            game,
+            defeat_game,
+            defeat_map,
+            "UnitDefeatTile",
+            defeat_target,
+            defeat_tile_hits,
+        )
+        self.add_counting_event(
+            game, defeat_game, defeat_map, "UnitEntryCounter", "unitEntryCounter", entry, defeat_hits
+        )
+        self.add_counting_event(
+            game, defeat_game, defeat_map, "UnitDefeatCounter", "unitDefeatCounter", defeat_target, defeat_hits
+        )
         player.moveTo(defeat_target.x, defeat_target.y, defeat_target.z)
 
+        self.assertEqual([], defeat_tile_hits)
         self.assertEqual([], defeat_hits)
         self.assertEqual(
             (entry.x, entry.y, entry.z), (player.getCoords().x, player.getCoords().y, player.getCoords().z)
@@ -6187,10 +6840,18 @@ class GameTest(unittest.TestCase):
 
         return True, json.dumps(
             {
+                "cancel_hits": cancel_hits,
+                "cancel_tile_hits": cancel_tile_hits,
+                "defeat_tile_hits": defeat_tile_hits,
                 "no_combat_hits": no_combat_hits,
+                "no_combat_tile_hits": no_combat_tile_hits,
                 "relocation_defender_present": relocation_map.getObjectByName("unitRelocationDefender") is not None,
+                "relocation_enter_hits": relocation_enter_hits,
+                "relocation_tile_hits": relocation_tile_hits,
                 "stalemate_hits": stalemate_hits,
+                "stalemate_tile_hits": stalemate_tile_hits,
                 "victory_hits": victory_hits,
+                "victory_tile_hits": victory_tile_hits,
                 "defeat_hits": defeat_hits,
             },
             sort_keys=True,
@@ -8998,6 +9659,58 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_map_navigation_edge_bindings(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        game_map = g.getMap()
+
+        origin = game.Coords(2, 2, 0)
+        portal_target = game.Coords(9, 9, 0)
+        disabled_target = game.Coords(8, 8, 0)
+        bridge_source = game.Coords(6, 2, 0)
+
+        def coord_values(coords):
+            return sorted((coord.x, coord.y, coord.z) for coord in coords)
+
+        base_neighbors = coord_values(game_map.getNavigationNeighbors(origin))
+        self_neighbors = coord_values(game_map.getNavigationNeighbors(origin, True))
+
+        game_map.registerNavigationEdge(origin, portal_target, True, False, 1, "portal")
+        game_map.registerNavigationEdge(origin, disabled_target, False, False, 1, "portal")
+        game_map.registerNavigationEdge(bridge_source, origin, True, True, 1, "bridge")
+
+        edge_neighbors = coord_values(game_map.getNavigationNeighbors(origin))
+        removed = game_map.unregisterNavigationEdgesForObject("portal")
+        remaining_neighbors = coord_values(game_map.getNavigationNeighbors(origin))
+        missing_removed = game_map.unregisterNavigationEdgesForObject("missing")
+
+        expected_cardinal = {(3, 2, 0), (1, 2, 0), (2, 3, 0), (2, 1, 0)}
+        success = (
+            expected_cardinal.issubset(set(base_neighbors))
+            and (2, 2, 0) not in base_neighbors
+            and (2, 2, 0) in self_neighbors
+            and (9, 9, 0) in edge_neighbors
+            and (8, 8, 0) not in edge_neighbors
+            and (6, 2, 0) in edge_neighbors
+            and removed == 2
+            and (9, 9, 0) not in remaining_neighbors
+            and (6, 2, 0) in remaining_neighbors
+            and missing_removed == 0
+        )
+        return success, json.dumps(
+            {
+                "baseNeighbors": base_neighbors,
+                "edgeNeighbors": edge_neighbors,
+                "missingRemoved": missing_removed,
+                "remainingNeighbors": remaining_neighbors,
+                "removed": removed,
+                "selfNeighbors": self_neighbors,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_pathfinder(self):
         game = load_game_module()
 
@@ -10467,6 +11180,83 @@ class GameTest(unittest.TestCase):
             }
 
         return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_start_event_preserves_existing_class_progression(self):
+        game = load_game_module()
+        cases = [
+            {
+                "player_type": "Wayfarer",
+                "counter": "wayfarer_routes",
+                "counter_value": 3,
+                "flag": "charted_smuggler_route",
+                "default_counter": "inquisitor_clues",
+                "default_flag": "inspected_stained_glass",
+            },
+            {
+                "player_type": "Inquisitor",
+                "counter": "inquisitor_clues",
+                "counter_value": 2,
+                "flag": "inspected_stained_glass",
+                "default_counter": "wayfarer_routes",
+                "default_flag": "charted_smuggler_route",
+            },
+        ]
+        results = {}
+        save_names = []
+
+        try:
+            for case in cases:
+                save_name = unique_save_name(f"nouraajd_{case['player_type'].lower()}_class_progression")
+                save_names.append(save_name)
+                cleanup_save_slot(save_name)
+                _g, game_map, player = load_game_map_with_player("nouraajd", case["player_type"])
+                start_events = [
+                    obj
+                    for obj in game_map.getObjects()
+                    if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
+                ]
+
+                self.assertTrue(start_events, "The Nouraajd map should author StartEvent tiles.")
+                self.assertFalse(hasattr(player, case["default_counter"]))
+                self.assertFalse(hasattr(player, case["default_flag"]))
+
+                player.setNumericProperty(case["counter"], case["counter_value"])
+                player.setBoolProperty(case["flag"], True)
+                game_map.setBoolProperty("ASKED_ABOUT_GIRL", True)
+
+                start_coords = start_events[0].getCoords()
+                player.moveTo(start_coords.x, start_coords.y, start_coords.z)
+                pump_event_loop(5)
+
+                self.assertEqual(case["counter_value"], player.getNumericProperty(case["counter"]))
+                self.assertTrue(player.getBoolProperty(case["flag"]))
+                self.assertTrue(hasattr(player, case["default_counter"]))
+                self.assertTrue(hasattr(player, case["default_flag"]))
+                self.assertEqual(0, player.getNumericProperty(case["default_counter"]))
+                self.assertFalse(player.getBoolProperty(case["default_flag"]))
+                self.assertFalse(game_map.getBoolProperty("ASKED_ABOUT_GIRL"))
+
+                game.CMapLoader.save(game_map, save_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_player = loaded_game.getMap().getPlayer()
+
+                self.assertEqual(case["counter_value"], loaded_player.getNumericProperty(case["counter"]))
+                self.assertTrue(loaded_player.getBoolProperty(case["flag"]))
+
+                results[case["player_type"]] = {
+                    "counter": loaded_player.getNumericProperty(case["counter"]),
+                    "flag": loaded_player.getBoolProperty(case["flag"]),
+                    "default_counter": loaded_player.getNumericProperty(case["default_counter"]),
+                    "default_flag": loaded_player.getBoolProperty(case["default_flag"]),
+                    "asked_about_girl": loaded_game.getMap().getBoolProperty("ASKED_ABOUT_GIRL"),
+                }
+
+            return True, json.dumps(results, sort_keys=True)
+        finally:
+            for save_name in save_names:
+                cleanup_save_slot(save_name)
 
     @game_test
     def test_nouraajd_main_quest_remains_completable_by_every_class(self):
@@ -12594,6 +13384,84 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual(0, selected_after_equipped_click.get("inventoryCollection", 0))
         self.assertEqual(1, selected_after_equipped_click.get("equippedCollection", 0))
 
+    def test_inventory_drag_release_outside_source_equips_item(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("ChaosSword")
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        list_views = collect_gui_children(panel, "CListView")
+        inventory_list = next(
+            list_view for list_view in list_views if list_view.getCollection() == "inventoryCollection"
+        )
+        equipped_list = next(list_view for list_view in list_views if list_view.getCollection() == "equippedCollection")
+        inventory_rect = inventory_list.getResolvedRect()
+        equipped_rect = equipped_list.getResolvedRect()
+        start_x = inventory_rect[0] + 25
+        start_y = inventory_rect[1] + 25
+        outside_source_x = inventory_rect[0] + inventory_rect[2] + 20
+        outside_source_y = start_y
+        target_x = equipped_rect[0] + 25
+        target_y = equipped_rect[1] + 25
+        inventory_before = player.countItems("ChaosSword")
+
+        push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_motion_event(outside_source_x, outside_source_y, outside_source_x - start_x, 0)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(inventory_before - 1, player.countItems("ChaosSword"))
+        self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
+
+    def test_inventory_preselected_drag_release_equips_item(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("ChaosSword")
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        list_views = collect_gui_children(panel, "CListView")
+        inventory_list = next(
+            list_view for list_view in list_views if list_view.getCollection() == "inventoryCollection"
+        )
+        equipped_list = next(list_view for list_view in list_views if list_view.getCollection() == "equippedCollection")
+        inventory_rect = inventory_list.getResolvedRect()
+        equipped_rect = equipped_list.getResolvedRect()
+        start_x = inventory_rect[0] + 25
+        start_y = inventory_rect[1] + 25
+        outside_source_x = inventory_rect[0] + inventory_rect[2] + 20
+        outside_source_y = start_y
+        target_x = equipped_rect[0] + 25
+        target_y = equipped_rect[1] + 25
+
+        push_sdl_mouse_click(start_x, start_y)
+        pump_event_loop(5)
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
+
+        inventory_before = player.countItems("ChaosSword")
+        push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_motion_event(outside_source_x, outside_source_y, outside_source_x - start_x, 0)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(inventory_before - 1, player.countItems("ChaosSword"))
+        self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
+
     def test_inventory_quest_item_selection_is_ignored(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
         quest_item = g.createObject("letterToBeren")
@@ -13925,12 +14793,7 @@ class CoverageReportTest(unittest.TestCase):
         spec.loader.exec_module(module)
         return module
 
-    def _write_manifest(self, root, exclusions):
-        manifest_path = root / "coverage_exclusions.json"
-        manifest_path.write_text(json.dumps({"version": 1, "exclusions": exclusions}), encoding="utf-8")
-        return manifest_path
-
-    def test_coverage_line_exclusions_remove_only_reviewed_lines(self):
+    def test_coverage_report_counts_all_instrumented_lines(self):
         coverage_report = self._load_coverage_report_module()
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -13938,25 +14801,38 @@ class CoverageReportTest(unittest.TestCase):
             source = root / "src" / "sample.cpp"
             source.parent.mkdir()
             source.write_text("one\ntwo\nthree\nfour\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "synthetic unreachable branch",
-                        "ranges": ["2"],
-                    }
-                ],
-            )
 
             merged = {source.resolve(): {1: 1, 2: 0, 3: 0, 4: 1}}
-            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
-            coverage_report.validate_line_exclusions(root, merged, exclusions)
-            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged, exclusions)
+            summary, covered, total, percentage = coverage_report.summarize(root, merged)
 
-            self.assertEqual((covered, total, percentage, excluded), (2, 3, 100.0 * 2 / 3, 1))
-            self.assertEqual(summary[0]["missing"], [3])
-            self.assertEqual(summary[0]["excluded"], [2])
+            self.assertEqual((covered, total, percentage), (2, 4, 50.0))
+            self.assertEqual(summary[0]["missing"], [2, 3])
+            self.assertNotIn("excluded", summary[0])
+            self.assertFalse(hasattr(coverage_report, "load_line_exclusions"))
+
+    def test_coverage_report_rejects_line_exclusion_flags(self):
+        coverage_report = self._load_coverage_report_module()
+
+        base_argv = [
+            "coverage_report.py",
+            "--root",
+            ".",
+            "--build-dir",
+            "cmake-build-coverage",
+            "--report-dir",
+            "coverage",
+            "--min-line",
+            "90",
+        ]
+        original_argv = sys.argv[:]
+        try:
+            for flag, extra in (("--line-exclusions", ["old_manifest.json"]), ("--audit-exclusions", [])):
+                sys.argv = [*base_argv, flag, *extra]
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                    coverage_report.parse_args()
+                self.assertEqual(2, raised.exception.code)
+        finally:
+            sys.argv = original_argv
 
     def test_coverage_include_prefixes_scope_reported_files(self):
         coverage_report = self._load_coverage_report_module()
@@ -13995,47 +14871,9 @@ class CoverageReportTest(unittest.TestCase):
             merged = coverage_report.merge_line_counts(root, reports, include_prefixes)
 
             self.assertEqual(set(merged), {source.resolve()})
-            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged)
-            self.assertEqual((covered, total, percentage, excluded), (1, 2, 50.0, 0))
+            summary, covered, total, percentage = coverage_report.summarize(root, merged)
+            self.assertEqual((covered, total, percentage), (1, 2, 50.0))
             self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
-
-    def test_coverage_include_prefixes_scope_exclusions(self):
-        coverage_report = self._load_coverage_report_module()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            source = root / "src" / "sample.cpp"
-            test_source = root / "tests" / "sample_test.cpp"
-            source.parent.mkdir()
-            test_source.parent.mkdir()
-            source.write_text("one\ntwo\n", encoding="utf-8")
-            test_source.write_text("one\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "in-scope exclusion",
-                        "ranges": ["2"],
-                    },
-                    {
-                        "path": "tests/sample_test.cpp",
-                        "reason": "out-of-scope exclusion",
-                        "ranges": ["9"],
-                    },
-                ],
-            )
-
-            include_prefixes = coverage_report.load_include_prefixes(root, ["src"])
-            merged = {source.resolve(): {1: 1, 2: 0}}
-            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
-            scoped_exclusions = coverage_report.scope_line_exclusions(root, exclusions, include_prefixes)
-            coverage_report.validate_line_exclusions(root, merged, scoped_exclusions)
-
-            self.assertEqual(set(scoped_exclusions), {source.resolve()})
-            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged, scoped_exclusions)
-            self.assertEqual((covered, total, percentage, excluded), (1, 1, 100.0, 1))
-            self.assertEqual(summary[0]["excluded"], [2])
 
     def test_coverage_paths_accept_noncanonical_root(self):
         coverage_report = self._load_coverage_report_module()
@@ -14052,16 +14890,6 @@ class CoverageReportTest(unittest.TestCase):
             source = alias_root / "src" / "sample.cpp"
             source.parent.mkdir()
             source.write_text("one\ntwo\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                alias_root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "synthetic unreachable branch",
-                        "ranges": ["2"],
-                    }
-                ],
-            )
             reports = [
                 {
                     "current_working_directory": str(alias_root),
@@ -14079,49 +14907,20 @@ class CoverageReportTest(unittest.TestCase):
 
             include_prefixes = coverage_report.load_include_prefixes(alias_root, ["src"])
             merged = coverage_report.merge_line_counts(alias_root, reports, include_prefixes)
-            exclusions = coverage_report.load_line_exclusions(alias_root, manifest_path)
-            coverage_report.validate_line_exclusions(alias_root, merged, exclusions)
-            summary, covered, total, percentage, excluded = coverage_report.summarize(alias_root, merged, exclusions)
-            audit = coverage_report.build_exclusion_audit(alias_root, merged, exclusions)
+            summary, covered, total, percentage = coverage_report.summarize(alias_root, merged)
 
             self.assertEqual(set(merged), {source.resolve()})
-            self.assertEqual((covered, total, percentage, excluded), (1, 1, 100.0, 1))
+            self.assertEqual((covered, total, percentage), (1, 2, 50.0))
             self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
-            self.assertEqual(["src/sample.cpp"], [line["path"] for line in audit["lines"]])
 
-    def test_coverage_line_exclusions_fail_closed(self):
+            with self.assertRaisesRegex(ValueError, "glob"):
+                coverage_report.load_include_prefixes(alias_root, ["src/*.cpp"])
+
+    def test_coverage_include_prefixes_reject_globs(self):
         coverage_report = self._load_coverage_report_module()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            source = root / "src" / "sample.cpp"
-            source.parent.mkdir()
-            source.write_text("one\ntwo\n", encoding="utf-8")
-            merged = {source.resolve(): {1: 0, 2: 0}}
-
-            stale_manifest = self._write_manifest(
-                root,
-                [{"path": "src/sample.cpp", "reason": "stale line", "ranges": ["3"]}],
-            )
-            exclusions = coverage_report.load_line_exclusions(root, stale_manifest)
-            with self.assertRaisesRegex(ValueError, "non-instrumented"):
-                coverage_report.validate_line_exclusions(root, merged, exclusions)
-
-            whole_file_manifest = self._write_manifest(
-                root,
-                [{"path": "src/sample.cpp", "reason": "too broad", "ranges": ["1-2"]}],
-            )
-            exclusions = coverage_report.load_line_exclusions(root, whole_file_manifest)
-            with self.assertRaisesRegex(ValueError, "entire instrumented file"):
-                coverage_report.validate_line_exclusions(root, merged, exclusions)
-
-            glob_manifest = self._write_manifest(
-                root,
-                [{"path": "src/*.cpp", "reason": "glob", "ranges": ["1"]}],
-            )
-            with self.assertRaisesRegex(ValueError, "glob"):
-                coverage_report.load_line_exclusions(root, glob_manifest)
-
             with self.assertRaisesRegex(ValueError, "glob"):
                 coverage_report.load_include_prefixes(root, ["src/*.cpp"])
 
@@ -14145,62 +14944,6 @@ class CoverageReportTest(unittest.TestCase):
                     coverage_report.collect_reports_for_gcda(gcda, root / "gcov-output", 7.5)
             finally:
                 coverage_report.subprocess.run = original_run
-
-    def test_coverage_exclusion_audit_reports_raw_counts_and_snippets(self):
-        coverage_report = self._load_coverage_report_module()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            source = root / "src" / "sample.cpp"
-            source.parent.mkdir()
-            source.write_text("one\ntwo\nthree\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "synthetic exclusion",
-                        "ranges": ["2-3"],
-                    }
-                ],
-            )
-
-            merged = {source.resolve(): {1: 1, 2: 0, 3: 7}}
-            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
-            coverage_report.validate_line_exclusions(root, merged, exclusions)
-
-            audit = coverage_report.build_exclusion_audit(root, merged, exclusions)
-            self.assertEqual(2, audit["total"])
-            self.assertEqual(1, audit["covered"])
-            self.assertEqual(1, audit["uncovered"])
-            self.assertEqual(
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "line": 2,
-                        "count": 0,
-                        "covered": False,
-                        "reason": "synthetic exclusion",
-                        "source": "two",
-                    },
-                    {
-                        "path": "src/sample.cpp",
-                        "line": 3,
-                        "count": 7,
-                        "covered": True,
-                        "reason": "synthetic exclusion",
-                        "source": "three",
-                    },
-                ],
-                audit["lines"],
-            )
-
-            text_report = root / "exclusion_audit.txt"
-            json_report = root / "exclusion_audit.json"
-            coverage_report.write_exclusion_audit_text(text_report, audit)
-            coverage_report.write_exclusion_audit_json(json_report, audit)
-            self.assertIn("src/sample.cpp:3 count=7 covered", text_report.read_text(encoding="utf-8"))
-            self.assertEqual(audit, json.loads(json_report.read_text(encoding="utf-8")))
 
 
 class QuestStateHelperTest(unittest.TestCase):

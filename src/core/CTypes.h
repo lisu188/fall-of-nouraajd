@@ -37,6 +37,8 @@ class CTypes {
 
     static std::unordered_set<std::type_index> *map_types();
 
+    static std::unordered_map<std::type_index, std::type_index> *primitiveTypes();
+
     static std::unordered_map<std::type_index,
                               std::function<void(std::shared_ptr<CGameObject>, std::string, std::any)>> *
     setters();
@@ -47,11 +49,21 @@ class CTypes {
 
     static bool is_array_type(std::type_index index);
 
+    static bool isPrimitiveType(std::type_index index);
+
+    static std::optional<std::type_index> primitiveValueType(std::type_index index);
+
     template <typename T> static bool is_map_type() { return is_map_type(std::type_index(typeid(T))); }
 
     template <typename T> static bool is_pointer_type() { return is_pointer_type(std::type_index(typeid(T))); }
 
     template <typename T> static bool is_array_type() { return is_array_type(std::type_index(typeid(T))); }
+
+    template <typename T> static bool isPrimitiveType() { return isPrimitiveType(std::type_index(typeid(T))); }
+
+    template <typename T> static std::optional<std::type_index> primitiveValueType() {
+        return primitiveValueType(std::type_index(typeid(T)));
+    }
 
     template <typename Serialized, typename Deserialized> static void register_serializer() {
         (*serializers())[vstd::type_pair<Serialized, Deserialized>()] =
@@ -122,6 +134,10 @@ class CTypes {
     template <fn::MetaRegisteredGameObject T> static void register_type() {
         register_builder<T>();
         register_type_metadata<T>();
+    }
+
+    template <fn::MetaRegisteredGameObject T, typename ValueType> static void registerPrimitiveType() {
+        primitiveTypes()->insert_or_assign(std::type_index(typeid(T)), std::type_index(typeid(ValueType)));
     }
 
     template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived U, fn::GameObjectDerived... Args>

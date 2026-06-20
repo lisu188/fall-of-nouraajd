@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
+#include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
@@ -26,11 +28,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CWidget.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
+#include "gui/panel/CListView.h"
+#include "handler/CObjectHandler.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
+
+#include <utility>
 
 namespace {
 
@@ -55,6 +61,15 @@ class CountingRenderObject : public CGameGraphicsObject {
 
 class MouseEventRecorder : public CGameGraphicsObject {
   public:
+    bool mouseEvent(std::shared_ptr<CGui>, SDL_EventType type, int button, int x, int y) override {
+        ++button_count;
+        last_type = type;
+        last_button = button;
+        last_x = x;
+        last_y = y;
+        return true;
+    }
+
     bool mouseMotionEvent(std::shared_ptr<CGui>, SDL_EventType type, int x, int y, int xrel, int yrel) override {
         ++motion_count;
         last_type = type;
@@ -81,10 +96,12 @@ class MouseEventRecorder : public CGameGraphicsObject {
         return true;
     }
 
+    int button_count = 0;
     int motion_count = 0;
     int wheel_count = 0;
     int cancel_count = 0;
     SDL_EventType last_type = SDL_FIRSTEVENT;
+    int last_button = 0;
     int last_x = 0;
     int last_y = 0;
     int last_xrel = 0;
@@ -92,6 +109,39 @@ class MouseEventRecorder : public CGameGraphicsObject {
     int last_wheel_x = 0;
     int last_wheel_y = 0;
 };
+
+class RefreshCountingListView : public CListView {
+    V_META(RefreshCountingListView, CListView, vstd::meta::empty())
+
+  public:
+    int getSizeX(std::shared_ptr<CGui>) override { return 1; }
+
+    int getSizeY(std::shared_ptr<CGui>) override { return 1; }
+
+    std::list<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui>, int, int) override {
+        ++refresh_count;
+        return {};
+    }
+
+    void setResolvedRefreshTarget(std::shared_ptr<CGameObject> refresh_target) {
+        resolvedRefreshTarget = std::move(refresh_target);
+    }
+
+    int refresh_count = 0;
+
+  protected:
+    std::shared_ptr<CGameObject> resolveRefreshTarget() override { return resolvedRefreshTarget; }
+
+  private:
+    std::shared_ptr<CGameObject> resolvedRefreshTarget;
+};
+
+void drain_event_loop() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+}
 
 std::shared_ptr<MouseEventRecorder> attach_mouse_recorder(const std::shared_ptr<CGui> &gui) {
     auto recorder = std::make_shared<MouseEventRecorder>();
@@ -102,11 +152,146 @@ std::shared_ptr<MouseEventRecorder> attach_mouse_recorder(const std::shared_ptr<
     return recorder;
 }
 
+class DropTargetRecorder : public MouseEventRecorder {
+  public:
+    bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override {
+        MouseEventRecorder::mouseEvent(gui, type, button, x, y);
+        if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT && gui && gui->hasDragSession()) {
+            gui->acceptDragSession(this->ptr<CGameGraphicsObject>());
+        }
+        return true;
+    }
+};
+
+std::shared_ptr<DropTargetRecorder> attach_drop_target_recorder(const std::shared_ptr<CGui> &gui) {
+    auto recorder = std::make_shared<DropTargetRecorder>();
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(200, 20, 100, 80);
+    recorder->setLayout(layout);
+    gui->pushChild(recorder);
+    return recorder;
+}
+
+std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
+    type_registration::registerGuiTypes();
+    type_registration::registerGuiPanelTypes();
+    CTypes::register_type_metadata<RefreshCountingListView, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
+                                   CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+    game->getObjectHandler()->registerType(CProxyGraphicsLayout::static_meta()->name(),
+                                           []() { return std::make_shared<CProxyGraphicsLayout>(); });
+    return game;
+}
+
 void test_widget_ignores_unarmed_non_left_clicks() {
     auto widget = std::make_shared<CWidget>();
 
     expect_true(!widget->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0),
                 "plain widget should ignore right clicks when no click callback is armed");
+}
+
+void test_list_view_refreshes_from_generic_property_notifications() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
+    list->setResolvedRefreshTarget(refresh_target);
+    list->setRefreshOnPropertyChanged(true);
+
+    list->refresh();
+    const int after_initial_refresh = list->refresh_count;
+
+    refresh_target->setNumericProperty("threat", 1);
+    drain_event_loop();
+
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "generic propertyChanged subscription should refresh the list for any changed property");
+}
+
+void test_list_view_refresh_event_compatibility() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
+    list->setResolvedRefreshTarget(refresh_target);
+    list->setRefreshEvent("legacyRefresh");
+
+    list->refresh();
+    const int after_initial_refresh = list->refresh_count;
+
+    refresh_target->signal("legacyRefresh");
+    drain_event_loop();
+
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "legacy no-argument refreshEvent subscription should still refresh the list");
+}
+
+void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    create_gui_game(gui);
+    auto first_target = std::make_shared<CGameObject>();
+    auto second_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
+    list->setResolvedRefreshTarget(first_target);
+    list->setRefreshProperties({"label"});
+
+    list->refresh();
+    const int after_initial_refresh = list->refresh_count;
+
+    first_target->setStringProperty("label", "first");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "property-specific subscription should refresh for the selected property");
+
+    first_target->setNumericProperty("threat", 1);
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "property-specific subscription should ignore unrelated property notifications");
+
+    list->setResolvedRefreshTarget(second_target);
+    first_target->setStringProperty("label", "handoff");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 2,
+                "subscription refresh should reconnect when the resolved refresh target changes");
+
+    first_target->setStringProperty("label", "stale");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 2,
+                "old refresh target should be disconnected after reconnecting to a new target");
+
+    second_target->setStringProperty("label", "second");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 3,
+                "new refresh target should drive later property-specific refreshes");
+
+    list->setResolvedRefreshTarget(nullptr);
+    second_target->setStringProperty("label", "to-null");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 4,
+                "subscription refresh should handle the refresh script resolving to null");
+
+    second_target->setStringProperty("label", "after-null");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 4,
+                "previous refresh target should be disconnected when the refresh script resolves to null");
 }
 
 std::shared_ptr<CStats> player_stats() {
@@ -211,6 +396,27 @@ void test_gui_routes_mouse_motion_to_target_child() {
                 "mouse motion relative deltas should be preserved");
 }
 
+void test_gui_routes_mouse_button_up_without_drag_to_target_child() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto recorder = attach_mouse_recorder(gui);
+
+    SDL_Event event{};
+    event.type = SDL_MOUSEBUTTONUP;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = 35;
+    event.button.y = 55;
+
+    expect_true(gui->event(&event), "mouse button up without a drag should use normal hit testing");
+    expect_true(recorder->button_count == 1, "mouse button up should be routed to the target child");
+    expect_true(recorder->last_type == SDL_MOUSEBUTTONUP, "mouse button handler should receive the SDL event type");
+    expect_true(recorder->last_button == SDL_BUTTON_LEFT, "mouse button handler should receive the SDL button");
+    expect_true(recorder->last_x == 25 && recorder->last_y == 35,
+                "mouse button coordinates should be relative to the child layout");
+}
+
 void test_gui_routes_mouse_wheel_to_target_child() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -255,6 +461,90 @@ void test_gui_routes_window_leave_as_mouse_cancel() {
     expect_true(recorder->last_type == SDL_WINDOWEVENT, "mouse cancel handler should receive the SDL event type");
 }
 
+void test_gui_pointer_capture_routes_drag_release_and_clears_session() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto source = attach_mouse_recorder(gui);
+    auto target = attach_drop_target_recorder(gui);
+    auto payload = std::make_shared<CGameObject>();
+
+    gui->startDragSession(source, payload, 7, 20, 30);
+    gui->capturePointer(source);
+
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 220;
+    motion.motion.y = 55;
+    motion.motion.xrel = 200;
+    motion.motion.yrel = 25;
+
+    expect_true(gui->event(&motion), "captured mouse motion outside the source should be consumed");
+    expect_true(source->motion_count == 1, "captured source should receive motion outside its rectangle");
+    expect_true(target->motion_count == 0, "motion should not be rerouted to the hovered target during capture");
+    expect_true(gui->hasDragSession(), "drag session should remain active during captured motion");
+    expect_true(gui->hasPointerCapture(), "pointer capture should remain active during captured motion");
+
+    SDL_Event button_up{};
+    button_up.type = SDL_MOUSEBUTTONUP;
+    button_up.button.button = SDL_BUTTON_LEFT;
+    button_up.button.x = 220;
+    button_up.button.y = 55;
+
+    expect_true(gui->event(&button_up), "drop over target should be consumed");
+    expect_true(target->button_count == 1, "drop target should receive the release under the pointer");
+    expect_true(source->button_count == 1, "captured source should also receive the release");
+    expect_true(!gui->hasDragSession(), "drop should clear the drag session");
+    expect_true(!gui->hasPointerCapture(), "drop should clear pointer capture");
+}
+
+void test_gui_pointer_capture_does_not_duplicate_same_source_release() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto source = attach_mouse_recorder(gui);
+
+    gui->startDragSession(source, std::make_shared<CGameObject>(), 7, 20, 30);
+    gui->capturePointer(source);
+
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 36;
+    motion.motion.y = 56;
+    motion.motion.xrel = 1;
+    motion.motion.yrel = 1;
+
+    expect_true(gui->event(&motion), "same-source jitter motion should be captured");
+
+    SDL_Event button_up{};
+    button_up.type = SDL_MOUSEBUTTONUP;
+    button_up.button.button = SDL_BUTTON_LEFT;
+    button_up.button.x = 36;
+    button_up.button.y = 56;
+
+    expect_true(gui->event(&button_up), "same-source release should be handled");
+    expect_true(source->button_count == 1, "same-source release should not be dispatched twice");
+    expect_true(!gui->hasDragSession(), "same-source release should clear the drag session");
+    expect_true(!gui->hasPointerCapture(), "same-source release should clear pointer capture");
+}
+
+void test_gui_pointer_capture_clears_when_captured_widget_is_removed() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto source = attach_mouse_recorder(gui);
+
+    gui->startDragSession(source, std::make_shared<CGameObject>(), 3, 20, 30);
+    gui->capturePointer(source);
+    gui->removeChild(source);
+
+    expect_true(!gui->hasDragSession(), "removing the captured widget should clear the drag session");
+    expect_true(!gui->hasPointerCapture(), "removing the captured widget should clear pointer capture");
+}
+
 void test_render_traversal_stops_after_detach() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -283,11 +573,18 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_widget_ignores_unarmed_non_left_clicks();
+    test_list_view_refreshes_from_generic_property_notifications();
+    test_list_view_refresh_event_compatibility();
+    test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
+    test_gui_routes_mouse_button_up_without_drag_to_target_child();
     test_gui_routes_mouse_wheel_to_target_child();
     test_gui_routes_window_leave_as_mouse_cancel();
+    test_gui_pointer_capture_routes_drag_release_and_clears_session();
+    test_gui_pointer_capture_does_not_duplicate_same_source_release();
+    test_gui_pointer_capture_clears_when_captured_widget_is_removed();
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
 

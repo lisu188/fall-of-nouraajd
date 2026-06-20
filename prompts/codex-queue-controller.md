@@ -17,23 +17,31 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 7. Never use `git reset --hard`, `git clean`, force-push, or destructive checkout operations against a worktree containing unreviewed user changes.
 8. Use a separate Git worktree and branch for every claim publication, implementation task, and terminal queue update.
 9. Keep at least eight live subagents attached to the controller whenever the subagent interface is available.
-10. Keep at least eight implementation issues active whenever eight safe, eligible, non-conflicting issues exist. Treat
-   eight active issues as the minimum operating target, not a best-effort aspiration.
-11. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
-12. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
-13. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
-14. Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
+10. Keep at least eight implementation issues active whenever eight status-and-dependency eligible implementation issues
+   exist. Treat eight active issues as the minimum operating target, not a best-effort aspiration.
+11. Keep exactly four implementation claim slots active under this controller's own owner prefix whenever
+   status-and-dependency eligible issues are available for this controller. Healthy claims have a non-overdue heartbeat
+   and non-expired lease. Unresolved suspect or reclaimable rows still occupy capacity until durable workbook
+   reconciliation, and a controller must not claim a fifth implementation issue.
+12. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
+13. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
+14. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
+15. Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
    reproduction is necessary or GitHub Actions cannot provide the needed evidence. Outsource heavy validation to GitHub
    Actions polling.
-15. If fewer than eight issue workers are active, document the concrete eligibility, conflict, status, resource, or
-   repository safety blocker that prevents filling the slot.
-16. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
+16. If fewer than eight issue workers are active, this controller has fewer than four healthy owned claims with no
+   unresolved recovery rows, this controller has more than four owned implementation claims, or recovery rows block
+   refill, document the concrete status, dependency, live-worker-status, recovery, resource, authentication,
+   queue-validation, workbook-PR, repository-safety, or over-capacity blocker.
+17. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
    loop, and after merged-checkpoint cleanup. Treat low free disk or stale run/worktree pressure as blockers to new work
    until safely reported or cleaned.
-17. Keep issue prioritization explicit. A project-manager role may recommend sequencing and priority changes, but those
+18. Keep issue prioritization explicit. A project-manager role may recommend sequencing and priority changes, but those
    recommendations are advisory until the controller or user approves a serialized workbook-only queue update.
-18. Every controller instance must have a unique controller ID. Use it in every worker owner string so multiple
+19. Every controller instance must have a unique controller ID. Use it in every worker owner string so multiple
    controllers can run without owner collisions.
+20. Record significant workflow problems in the immutable workflow-observation ledger after evidence and secret review.
+   Observations are not implementation queue rows and never replace XLSX claim, heartbeat, or terminal status updates.
 
 ## Startup
 
@@ -122,14 +130,24 @@ Use lowercase ASCII, hyphens, and repository-approved naming. Do not reuse a bra
 
 ## Live status reporting
 
-Maintain at least eight live subagents and keep at least eight implementation issues active whenever safe. If fewer than eight
-implementation issues can safely run, assign the excess subagents only lightweight standby roles such as status polling,
-eligibility summaries, or review preparation, and print the exact blocker preventing eight active issues. Standby
-subagents must not claim issues, edit files, start builds, run tests, or touch the workbook.
+Maintain at least eight live subagents and keep at least eight implementation issues active whenever status-and-dependency
+eligible issues exist. If fewer than eight implementation issues can safely run for non-source reasons, assign the excess
+subagents only lightweight standby roles such as status polling, eligibility summaries, or review preparation, and print
+the exact blocker preventing eight active issues. Standby subagents must not claim issues, edit files, start builds, run
+tests, or touch the workbook.
+Each controller must also keep exactly four of its own workbook claim slots active when status-and-dependency eligible
+issues are available. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the current
+controller's capacity. `healthyOwned` rows count as live work. `suspectOwned` and `reclaimableOwned` rows require
+recovery and still occupy capacity until a heartbeat, release, reclaim, or terminal-status workbook update actually
+merges. Continue claim/refill iterations only while `controllerCapacity.fillableDeficit` is greater than zero. If
+`controllerCapacity.refillBlockedByRecovery` is true, inspect and reconcile `controllerCapacity.recoveryIssues` before
+claiming more work. If `controllerCapacity.overCapacity` is true, stop claiming and report
+`controllerCapacity.overLimitBy`.
 
 When subagent capacity permits, keep one read-only project manager attached to the controller. The project manager may
 be an extra subagent beyond active implementation workers, or a standby role when fewer than eight implementation issues
-are safe. It must not reduce the floor of eight active implementation issues when eight safe issues exist.
+are safe for non-source reasons. It must not reduce the floor of eight active implementation issues when eight
+status-and-dependency eligible issues exist.
 
 When subagent capacity permits, keep one read-only QA subagent attached to the controller. QA reviews selected issue
 risk, diffs, tests, CI evidence, and merge readiness. QA must not claim issues, edit files, touch the workbook, or run
@@ -153,6 +171,7 @@ work, print a concise live status table. Include at minimum:
 - pull request number or pending PR state;
 - current resource and disk state;
 - cleanup state, including prunable worktree registrations and accumulated run/worktree size when known;
+- pending workflow observation IDs and whether an observation-only or resolution-only PR is needed;
 - project-manager brief state or the reason no project-manager subagent is available;
 - QA review state or the reason no QA subagent is available;
 - blockers;
@@ -169,11 +188,11 @@ subagent is available, the controller must perform this checklist directly and s
 
 The project manager produces a concise prioritization brief containing:
 
-- the highest available priority tier after dependency, status, conflict, resource, and disk review;
+- the highest available priority tier after dependency, status, resource, and disk review;
 - candidate `(Epic #, Story #)` groups in that tier;
 - work likely to unblock dependent issues;
 - stale, blocked, failed, or repeatedly deferred work that needs controller attention;
-- scope conflicts, validation cost, resource risk, and sequencing risk;
+- scope-overlap advisories, validation cost, resource risk, and sequencing risk;
 - recommended priority changes, issue splits, deferrals, or blocker publications with source-backed evidence.
 
 Project-manager recommendations do not bypass the queue rules. The controller must still keep only the highest
@@ -192,20 +211,31 @@ python3 scripts/controller_resource_audit.py --json
 
 Use the audit plus current available memory, active worker status, disk pressure, accumulated run/worktree usage,
 prunable worktree metadata, and running heavy build/test/coverage/Xvfb/MCP jobs as scheduling context. These checks
-inform dispatch, but they do not impose a fixed RAM cap. If actual resource pressure, missing worker status, or
-repository state prevents safe implementation work, keep the extra subagents in standby and record the blocker rather
-than assigning unsafe implementation issues.
+inform dispatch, but they do not impose a fixed RAM cap. If actual resource pressure, missing worker status,
+authentication, queue validation, an unmerged workbook-state PR, or repository state prevents safe implementation work,
+keep the extra subagents in standby and record the blocker rather than assigning unsafe implementation issues.
 
 For each free slot, fetch the latest merged queue state from `origin/main` and calculate the complete
 eligible set yourself. The `claim` command is deterministic by workbook order, so use it only after selecting the exact
 issue. Refresh the project-manager prioritization brief before selecting, and use it to decide whether to proceed,
 pause for a priority/status update, or report a blocker. Do not use the brief as an ad hoc priority override.
 
-Use `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --include-rejected --json` as the
-read-only mechanical selector before each claim. The command reports eligible highest-priority story groups, stale
-claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`, rejection summaries, and a seeded
-recommended issue without mutating the workbook. Use the unexpired count, not raw `activeCount`, when deciding whether
-the active-worker floor is genuinely satisfied. It also reports target-file overlap advisories through
+Use
+`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
+as the read-only mechanical selector before each claim. The command reports eligible highest-priority story groups,
+stale claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.healthy`, `activeClaims.stale`,
+`activeClaims.leaseExpired`, `activeClaims.suspect`, `activeClaims.reclaimable`, `activeClaims.inactive`, rejection
+summaries, and a seeded recommended issue without mutating the workbook. `activeClaims.unexpired` is retained as the
+healthy live-claim count: heartbeat not overdue and lease not expired. Use the unexpired/healthy count, not raw
+`activeCount`, when deciding whether the global active-worker floor is genuinely satisfied. Use
+`controllerCapacity.healthyOwned`, `controllerCapacity.suspectOwned`, `controllerCapacity.reclaimableOwned`,
+`controllerCapacity.recoveryRequired`, `controllerCapacity.refillBlockedByRecovery`,
+`controllerCapacity.deficitToFloor`, `controllerCapacity.fillableDeficit`, `controllerCapacity.activeLimit`,
+`controllerCapacity.availableSlots`, `controllerCapacity.overLimitBy`, and `controllerCapacity.overCapacity` to enforce
+this controller's exactly-four owned-claim target before stopping a refill loop. A controller must refill below four
+healthy owned implementation claims only when recovery does not block refill, and must not claim a fifth implementation
+issue. It also reports target-file
+overlap advisories through
 `advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps`. Treat the
 recommendation and overlap advisories as evidence for the project-manager brief and final controller review; do not
 exclude a task solely because its exact `Target Files / Modules` overlap active work.
@@ -214,13 +244,13 @@ Claim only after final review with `claim --issue`, which revalidates under the 
 Exclude every row that has:
 
 - a status other than `NOT_STARTED`;
-- any dependency that is not `DONE`;
-- a source-backed active-scope conflict;
-- an indirect conflict through shared headers, bindings, tests, CMake, map scripts, dialog/config files, serialization,
-  generated resources, or shared runtime systems.
+- any dependency that is not `DONE`.
 
-Use exact target-file overlap with active work as an advisory guide for source inspection and sequencing decisions. If
-inspection confirms that the overlap is a real active-scope conflict, exclude or defer it on that basis.
+Use exact target-file overlap, open implementation PRs, and indirect shared scope through headers, bindings, tests, CMake,
+map scripts, dialog/config files, serialization, generated resources, or runtime systems as advisory coordination
+signals. They should shape worker prompts, review order, expected rebase/merge risk, and validation focus. Do not
+exclude, defer, or stop solely because a status-and-dependency eligible issue overlaps active work; claim it and manage
+the overlap unless a non-source blocker prevents safe dispatch.
 
 After exclusions:
 
@@ -229,7 +259,8 @@ After exclusions:
 3. Randomly select one story with equal probability.
 4. Randomly select one eligible substory within the chosen story.
 
-Never default to spreadsheet order, and never randomize an ineligible issue into consideration.
+Never default to spreadsheet order, never randomize a status/dependency-ineligible issue into consideration, and never
+fall back to a lower priority tier merely to avoid source overlap.
 
 ## Dispatch loop
 
@@ -248,9 +279,10 @@ For each free subagent slot:
 
 Do not bypass dependencies to keep workers occupied.
 
-Do not start additional workers when live worker status is missing, when the next candidate conflicts with active work,
-or when actual resource or disk pressure requires waiting for validation or cleanup to finish. Keep at least eight
-subagents alive by assigning standby-only work when fewer than eight implementation slots are safe.
+Do not start additional workers when live worker status is missing or when actual resource, disk, authentication,
+queue-validation, repository-state, or workbook-PR pressure requires waiting for validation or cleanup to finish. Source
+overlap with active work is not, by itself, a reason to leave a worker slot empty. Keep at least eight subagents alive by
+assigning standby-only work when fewer than eight implementation slots are safe for non-source reasons.
 
 If a dispatch/refill loop does not publish a new claim, still fetch and inspect `origin/main` before deciding the next
 action. Another claim, implementation, terminal-status, or reclaim PR may have merged while the controller was polling
@@ -373,7 +405,9 @@ on XLSX-only controller coordination PRs.
    - a requirement to report progress to the controller rather than directly mutating queue state.
    - a resource-awareness instruction to prefer GitHub Actions polling for heavy Linux validation and report exact local commands.
 
-6. Do not dispatch tasks concurrently when source inspection shows their scopes overlap directly or indirectly through shared headers, tests, bindings, registration units, CMake, shared JSON, map scripts, dialogs, serialization, or generated resources.
+6. Treat source overlap as a scheduling and review risk, not an automatic empty-slot reason. If status-and-dependency
+   eligible work overlaps active source scope, claim it when no concrete non-source blocker prevents dispatch, then
+   manage the risk through worker prompts, sequencing, review order, and validation focus.
 
 ## Worker contract
 
@@ -411,8 +445,14 @@ The controller owns workbook updates.
 
 - Workers send milestone reports to the controller after source inspection, root-cause verification, implementation, focused validation, and full validation.
 - The controller may keep intermediate heartbeat information locally.
-- When the lease is near expiry, publish a workbook-only heartbeat PR from a fresh branch based on the latest `origin/main`, merge it, and then continue work.
+- Poll and confirm the worker is alive before publishing a heartbeat. Persist a workbook heartbeat after meaningful
+  milestones and before the read-only payload's `heartbeatDueAtUtc` when the task remains active. The heartbeat deadline
+  is separate from lease duration and is derived by `scripts/issue_queue.py`, currently before the stale/reclaim-age
+  threshold.
+- Publish heartbeat changes only from a fresh workbook-only branch based on the latest `origin/main`, merge that PR, and
+  then treat the heartbeat as durable.
 - Never publish a heartbeat from an implementation branch.
+- Never fabricate a heartbeat for an unreachable worker.
 - Never allow two workbook-state PRs to be open for merge simultaneously.
 
 For a persisted heartbeat:
@@ -423,28 +463,39 @@ python3 scripts/issue_queue.py heartbeat \
   --claim-id "$CLAIM_ID" \
   --owner "$OWNER" \
   --progress "$PROGRESS" \
-  --note "$NOTE"
+  --note "$NOTE" \
+  --lease-minutes 1440
 ```
 
-Commit and merge that workbook-only change using the same status-PR process as claim publication.
+Commit and merge that workbook-only change using the same status-PR process as claim publication. A heartbeat preserves
+an existing later lease and extends the lease only when the requested renewal would move it farther into the future.
+A single serialized heartbeat-only PR may update multiple claims owned by this controller only when every worker was
+individually polled, every issue/owner/claim ID was validated, every edit is heartbeat-only, validation is all-or-nothing,
+and the PR clearly lists every affected issue.
 
-If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, wait for lease expiry, and
-run `python3 scripts/issue_queue.py reclaim-stale --dry-run --older-than-minutes <minutes>` to list stale
-`IN_PROGRESS` claims without mutating the workbook. The dry-run output includes `activeClaims`, `staleCount`, and
-`reclaimableStaleCount`; use those fields to distinguish all expired active leases from rows eligible under the current
-age threshold. Dry-run rows are lease-timing candidates only and include `reclaimReady: false`; use mutating
-`reclaim-stale` only when the claim is genuinely stale and no recoverable work remains. Treat `validate` warnings about
-expired `IN_PROGRESS` leases and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only
-recovery signals, not permission to reclaim without inspection.
+If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, then run
+`python3 scripts/issue_queue.py reclaim-stale --dry-run` to list stale `IN_PROGRESS` claims without mutating the
+workbook. The default reclaim age threshold is 240 minutes; pass `--older-than-minutes <minutes>` only when the
+controller has an explicit reason to override it. The dry-run output includes `activeClaims`, `staleCount`, and
+`reclaimableStaleCount`. `staleCount` is heartbeat-overdue rows. `reclaimableStaleCount` is the subset whose lease is
+also expired or missing. Future-lease rows with overdue heartbeats and expired-lease rows with recent heartbeats are
+suspect recovery rows, not ordinary reclaim rows. Dry-run rows are queue-timing candidates only and include
+`reclaimReady: false`; use mutating `reclaim-stale` only when the row is timing-eligible, worker/worktree/branch/PR
+inspection finds no recoverable work, and the reclaim workbook-only PR can be serialized and merged. Treat `validate`
+warnings and derived `list --status IN_PROGRESS --json` heartbeat, lease, claim-health, and reclaim-boundary fields as
+read-only recovery signals, not permission to reclaim without inspection.
 
 ## Resource-aware validation
 
 The controller keeps resource pressure in mind without enforcing a fixed RAM gate or mandatory serial builds. For PR
 delivery, do not run local native builds, `ctest`, full Python suites, or coverage unless a focused local reproduction is
 necessary or GitHub Actions cannot provide the needed evidence. Before any necessary local heavy command, note current
-available RAM, disk pressure, running heavy jobs, and worker status. Treat eight active issue workers as the minimum
-target whenever safe eligible work exists; record the concrete blocker if actual resource pressure prevents eight active
-issues.
+available RAM, disk pressure, running heavy jobs, and worker status. Treat eight live issue workers as the minimum
+target whenever status-and-dependency eligible work exists; record the concrete blocker if actual resource pressure
+prevents eight live issues. Also treat four owned claim slots as this controller's exact active target: refill whenever
+`controllerCapacity.fillableDeficit` is greater than zero, do not claim when `controllerCapacity.availableSlots` is zero
+or `controllerCapacity.refillBlockedByRecovery` is true, and report `controllerCapacity.overLimitBy` when the controller
+is over capacity.
 
 Repository instructions may show local build examples such as `-j$(nproc)`. Treat them as local equivalents, not the
 default PR delivery path. Record the reason and exact command in worker reports and PR bodies whenever local heavy
@@ -467,26 +518,31 @@ the implementation PR and polling GitHub Actions instead of duplicating those he
 python3 scripts/poll_pr_checks.py "$PR_NUMBER" --check linux
 ```
 
-For coverage-relevant changes, require the conditional coverage step explicitly:
+For coverage-relevant changes, the poller auto-requires the conditional coverage step when changed paths match the
+workflow coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that
+check:
 
 ```bash
 python3 scripts/poll_pr_checks.py "$PR_NUMBER" --check linux --require-step coverage
 ```
 
 Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
-necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is sufficient PR
-delivery evidence for Linux compilation, native tests, native performance guards, Python suites, and conditional
-coverage. It proves coverage only when the workflow's changed-path rule runs its `coverage` step; use
-`--require-step coverage` for coverage-relevant changes. Additional platform, release, MCP gameplay, manual, or
-issue-specific validation is needed only when the task targets that surface or the user requests it. Record focused local
-checks, skipped local heavy commands, CI job names, conclusions, URLs, and the exact PR head separately. If CI polling
-supplies the full validation evidence, do not enable auto-merge until the selected check(s) have passed.
+necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is
+sufficient PR delivery evidence for Linux compilation, native tests, native performance guards, Python suites, and
+conditional coverage. It proves coverage only when the workflow's changed-path rule runs its `coverage` step somewhere
+in the selected build workflow run, currently in the conditional `linux-coverage` job; the poller auto-adds this step
+for coverage-relevant PR paths. Additional platform, release, MCP gameplay, manual, or issue-specific validation is
+needed only when the task targets that surface or the user requests it. Record focused local checks, skipped local heavy
+commands, CI job names, conclusions, URLs, and the exact PR head separately. If CI polling supplies the full validation
+evidence, do not enable auto-merge until the selected check(s) have passed.
 
 Workers and standby subagents may perform lightweight source inspection and prepare summaries while heavy validation runs.
 Do not dispatch additional implementation work when doing so would leave active workers unpollable. Empty implementation
-slots should be filled until at least eight issues are active unless the eligibility set, conflicts, missing status,
-actual resource pressure, or repository safety prevents it. The subagent floor is satisfied by standby subagents only
-when eight active implementation issues are not safe.
+slots should be filled until at least eight issues are active unless status/dependency eligibility, missing worker
+status, actual resource pressure, queue validation, workbook-PR serialization, authentication, or repository safety
+prevents it. Source overlap and open implementation PR overlap are scheduling risks, not empty-slot reasons. The
+subagent floor is satisfied by standby subagents only when eight active implementation issues are not safe for those
+non-source reasons.
 
 ## Phase 3: review and publish implementation
 
@@ -505,8 +561,8 @@ Before committing:
    tests, full Python suites, and coverage evidence when the PR workflow covers those checks.
 6. For gameplay changes, confirm required MCP validation; for GUI changes, confirm required Xvfb validation; for
    performance-sensitive changes, confirm deterministic performance guards and evidence from CI or local runs; for
-   coverage-relevant changes, verify that the CI-polled `linux` job ran coverage successfully or record why local
-   coverage was required instead.
+   coverage-relevant changes, verify that the selected build workflow run included a successful `coverage` step,
+   currently in `linux-coverage`, or record why local coverage was required instead.
 
 Then commit and push only intended implementation files:
 
@@ -602,9 +658,13 @@ Do not merge partial implementation code merely to publish a queue status. If co
 - Authentication or permission failure: stop Git publication and report the exact command and error.
 - Dirty user worktree: do not clean or reset it; operate only in new worktrees.
 - Stale worktree: inspect commits and uncommitted files before removal.
-- Stale `IN_PROGRESS` claim: run `reclaim-stale --dry-run`, inspect the worker branch/worktree/PR state, and only then
-  publish a workbook-only reclaim change when no recoverable work remains.
+- Stale or suspect `IN_PROGRESS` claim: run `reclaim-stale --dry-run`, inspect the worker branch/worktree/PR state, and
+  heartbeat live work or publish a workbook-only release/reclaim/terminal change only after the row's recovery path is
+  verified.
 - Queue workbook conflict: close or resolve the older queue PR first; never attempt a binary merge by combining workbook copies.
+- Significant workflow problem: have workers, QA, or PM report it to the controller, then record it with
+  `python3 scripts/workflow_observations.py record` after evidence and secret review. Publish the new record through an
+  observation-only PR. Do not mix observation records with XLSX or implementation changes.
 
 Never convert `BLOCKED`, `FAILED`, or `CANCELLED` to `DONE` merely to unlock dependencies.
 
@@ -638,7 +698,6 @@ Stop dispatching new tasks when:
 - GitHub authentication or repository identity cannot be verified;
 - no eligible `NOT_STARTED` task remains;
 - all remaining work is blocked by dependencies;
-- every safe task conflicts with active work;
 - available subagent capacity is exhausted;
 - live worker status cannot be polled or recovered safely;
 - actual resource pressure requires waiting before more work can start;
