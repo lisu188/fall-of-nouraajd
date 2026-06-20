@@ -16,7 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <utility>
+#include <algorithm>
 #include <cctype>
+#include <optional>
 #include <stdexcept>
 
 #include "CGlobal.h"
@@ -188,6 +190,19 @@ void map_register_navigation_edge(const std::shared_ptr<CMap> &map, Coords sourc
         edge.sourceObjectName = sourceObjectName.cast<std::string>();
     }
     map->registerNavigationEdge(std::move(edge));
+}
+
+bool map_has_navigation_edge(const std::shared_ptr<CMap> &map, Coords source, Coords target,
+                             py::object sourceObjectName = py::none()) {
+    source = map->normalizeCoords(source);
+    target = map->normalizeCoords(target);
+    std::optional<std::string> expectedSourceObjectName;
+    if (!sourceObjectName.is_none()) {
+        expectedSourceObjectName = sourceObjectName.cast<std::string>();
+    }
+    return std::ranges::any_of(map->getNavigationEdges(), [&](const CNavigationEdge &edge) {
+        return edge.source == source && edge.target == target && edge.sourceObjectName == expectedSourceObjectName;
+    });
 }
 
 void game_object_setattr(CGameObject &self, const std::string &name, const py::handle &value) {
@@ -592,6 +607,8 @@ void init_game_module(py::module_ &m) {
              "Return movement cost at coordinates. One-step turns treat every tile as cost 1.")
         .def("getTile", getTile, "Return the tile at coordinates, creating the layer default when missing.")
         .def("dumpPaths", &CMap::dumpPaths, "Write pathfinding diagnostics to a file path.")
+        .def("getNavigationRevision", &CMap::getNavigationRevision,
+             "Return the revision counter for registered navigation edges.")
         .def("getEntryX", &CMap::getEntryX, "Return map entry X coordinate.")
         .def("getEntryY", &CMap::getEntryY, "Return map entry Y coordinate.")
         .def("getEntryZ", &CMap::getEntryZ, "Return map entry Z coordinate.")
@@ -603,6 +620,8 @@ void init_game_module(py::module_ &m) {
         .def("registerNavigationEdge", &map_register_navigation_edge, py::arg("source"), py::arg("target"),
              py::arg("enabled") = true, py::arg("bidirectional") = false, py::arg("movementCost") = 1,
              py::arg("sourceObjectName") = py::none(), "Register a navigation edge for map pathing.")
+        .def("hasNavigationEdge", &map_has_navigation_edge, py::arg("source"), py::arg("target"),
+             py::arg("sourceObjectName") = py::none(), "Return whether a matching navigation edge exists.")
         .def("unregisterNavigationEdgesForObject", &CMap::unregisterNavigationEdgesForObject,
              py::arg("sourceObjectName"), "Remove all navigation edges registered by an object name.")
         .def("getTurn", &CMap::getTurn, "Return the current turn counter.");

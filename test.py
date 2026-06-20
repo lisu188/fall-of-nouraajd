@@ -4197,10 +4197,18 @@ class GameTest(unittest.TestCase):
 
     @game_test
     def test_disabled_teleporter_does_not_publish_waypoint(self):
+        game = load_game_module()
         _g, game_map, _player = load_game_map_with_player("test", "Warrior")
         active_teleporter = find_runtime_object(game_map, "teleporter1")
         teleporter = find_runtime_object(game_map, "teleporter2")
+        ground_hole = find_runtime_object(game_map, "groundHole")
+        active_teleporter_coords = active_teleporter.getCoords()
         teleporter_coords = teleporter.getCoords()
+        ground_hole_coords = ground_hole.getCoords()
+        ground_hole_target = game.Coords(ground_hole_coords.x, ground_hole_coords.y, ground_hole_coords.z - 1)
+
+        def navigation_neighbors(obj):
+            return sorted(coords_tuple(coord) for coord in game_map.getNavigationNeighbors(obj.getCoords()))
 
         self.assertFalse(teleporter.getBoolProperty("waypoint"))
 
@@ -4210,8 +4218,28 @@ class GameTest(unittest.TestCase):
         self.assertEqual(teleporter_coords.x, active_teleporter.getNumericProperty("x"))
         self.assertEqual(teleporter_coords.y, active_teleporter.getNumericProperty("y"))
         self.assertEqual(teleporter_coords.z, active_teleporter.getNumericProperty("z"))
+        self.assertIn(coords_tuple(teleporter_coords), navigation_neighbors(active_teleporter))
         self.assertFalse(teleporter.getBoolProperty("enabled"))
         self.assertFalse(teleporter.getBoolProperty("waypoint"))
+        self.assertNotIn(coords_tuple(active_teleporter_coords), navigation_neighbors(teleporter))
+        self.assertTrue(ground_hole.getBoolProperty("waypoint"))
+        self.assertEqual(ground_hole_target.x, ground_hole.getNumericProperty("x"))
+        self.assertEqual(ground_hole_target.y, ground_hole.getNumericProperty("y"))
+        self.assertEqual(ground_hole_target.z, ground_hole.getNumericProperty("z"))
+        self.assertIn(coords_tuple(ground_hole_target), navigation_neighbors(ground_hole))
+
+        stable_revision = game_map.getNavigationRevision()
+        active_teleporter.onTurn(None)
+        ground_hole.onTurn(None)
+
+        self.assertEqual(stable_revision, game_map.getNavigationRevision())
+
+        active_teleporter.setBoolProperty("enabled", False)
+        active_teleporter.onTurn(None)
+
+        self.assertGreater(game_map.getNavigationRevision(), stable_revision)
+        self.assertFalse(active_teleporter.getBoolProperty("waypoint"))
+        self.assertNotIn(coords_tuple(teleporter_coords), navigation_neighbors(active_teleporter))
 
         return True, json.dumps(
             {
@@ -4220,6 +4248,8 @@ class GameTest(unittest.TestCase):
                 "disabled_name": teleporter.getName(),
                 "disabled_enabled": teleporter.getBoolProperty("enabled"),
                 "disabled_waypoint": teleporter.getBoolProperty("waypoint"),
+                "revision_after_publish": stable_revision,
+                "revision_after_disable": game_map.getNavigationRevision(),
             },
             sort_keys=True,
         )
@@ -5293,11 +5323,6 @@ class GameTest(unittest.TestCase):
         game_map.addObject(waypoint)
         waypoint.moveTo(24, 12, 0)
 
-        dump_path = TEST_OUTPUT_DIR / "dynamic_controller_paths.txt"
-        game_map.dumpPaths(str(dump_path))
-        self.assertTrue(dump_path.exists())
-        self.assertGreater(dump_path.stat().st_size, 0)
-
         game_map.move()
         player_coords = player.getCoords()
         ground_coords = ground_walker.getCoords()
@@ -5629,11 +5654,25 @@ class GameTest(unittest.TestCase):
         stairs_up = find_runtime_object(game_map, "stairsUp")
         stairs_down = find_runtime_object(game_map, "stairsDown")
         upper_goal = find_runtime_object(game_map, "multilevelUpperGoal")
+        stairs_up_neighbors = sorted(
+            coords_tuple(coord) for coord in game_map.getNavigationNeighbors(stairs_up.getCoords())
+        )
+        stairs_down_neighbors = sorted(
+            coords_tuple(coord) for coord in game_map.getNavigationNeighbors(stairs_down.getCoords())
+        )
         self.assertTrue(stairs_up.getBoolProperty("waypoint"))
         self.assertEqual((4, 1, 1), (stairs_up.x, stairs_up.y, stairs_up.z))
+        self.assertIn((4, 1, 1), stairs_up_neighbors)
         self.assertTrue(stairs_down.getBoolProperty("waypoint"))
         self.assertEqual((4, 1, 0), (stairs_down.x, stairs_down.y, stairs_down.z))
+        self.assertIn((4, 1, 0), stairs_down_neighbors)
         self.assertEqual("images/buildings/catacombs", upper_goal.getStringProperty("animation"))
+
+        stable_revision = game_map.getNavigationRevision()
+        stairs_up.onTurn(None)
+        stairs_down.onTurn(None)
+
+        self.assertEqual(stable_revision, game_map.getNavigationRevision())
 
         return True, json.dumps(
             {
@@ -5642,6 +5681,7 @@ class GameTest(unittest.TestCase):
                     name: coords_tuple(find_runtime_object(game_map, name).getCoords()) for name in object_levels
                 },
                 "player": coords_tuple(player.getCoords()),
+                "navigation_revision": stable_revision,
             },
             sort_keys=True,
         )

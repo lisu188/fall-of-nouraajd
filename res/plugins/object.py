@@ -33,14 +33,38 @@ def load(self, context):
 
         # merge with onEnter logic
         def onTurn(self, event):
+            self.publishWaypoint()
+
+        def onCreate(self, event):
+            self.publishWaypoint()
+
+        def onDestroy(self, event):
+            self.clearNavigationEdge()
+
+        def clearNavigationEdge(self):
+            game_map = self.getMap()
+            if game_map:
+                game_map.unregisterNavigationEdgesForObject(self.getName())
+
+        def publishNavigationEdge(self, exit_coords):
+            game_map = self.getMap()
+            if game_map:
+                if game_map.hasNavigationEdge(self.getCoords(), exit_coords, self.getName()):
+                    return
+                game_map.unregisterNavigationEdgesForObject(self.getName())
+                game_map.registerNavigationEdge(self.getCoords(), exit_coords, True, False, 1, self.getName())
+
+        def publishWaypoint(self):
             exit_coords = self.getExit()
             if not exit_coords:
                 self.setBoolProperty("waypoint", False)
+                self.clearNavigationEdge()
                 return
             self.setBoolProperty("waypoint", True)
             self.setNumericProperty("x", exit_coords.x)
             self.setNumericProperty("y", exit_coords.y)
             self.setNumericProperty("z", exit_coords.z)
+            self.publishNavigationEdge(exit_coords)
 
         def getExit(self):
             pass
