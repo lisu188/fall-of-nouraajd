@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/object/CGameGraphicsObject.h"
@@ -62,6 +63,12 @@ std::shared_ptr<DropTargetRecorder> attach_drop_target_recorder(const std::share
     recorder->setLayout(layout);
     gui->pushChild(recorder);
     return recorder;
+}
+
+void register_object_builders(const std::shared_ptr<CGame> &game) {
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
 }
 
 std::vector<std::shared_ptr<CGameGraphicsObject>> drag_proxy_children(const std::shared_ptr<CGui> &gui) {
@@ -110,6 +117,7 @@ void test_gui_drag_session_attaches_proxy_child_and_removes_it_after_drop_or_can
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = std::make_shared<CGame>();
+    register_object_builders(game);
     auto gui = std::make_shared<CGui>();
     game->setGui(gui);
     gui->setGame(game);

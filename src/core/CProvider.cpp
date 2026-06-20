@@ -526,6 +526,10 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
         // manager
         vstd::logger::warning("Loading empty animation");
     }
+    if (!animation) {
+        vstd::logger::warning("Failed to create animation object:", animationPath);
+        return nullptr;
+    }
     animation->setObject(object);
     return animation;
 }
