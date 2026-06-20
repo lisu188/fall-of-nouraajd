@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
 
+#include <atomic>
 #include <stdexcept>
 #include <utility>
 
@@ -61,4 +62,20 @@ std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
         rngHandler = std::make_shared<CRngHandler>(owner);
     }
     return rngHandler;
+}
+
+CGameContext::TransitionGeneration CGameContext::getTransitionGeneration() const {
+    return transitionGeneration.load(std::memory_order_acquire);
+}
+
+CGameContext::TransitionGeneration CGameContext::captureTransitionGeneration() const {
+    return getTransitionGeneration();
+}
+
+bool CGameContext::isTransitionGenerationCurrent(TransitionGeneration expectedGeneration) const {
+    return getTransitionGeneration() == expectedGeneration;
+}
+
+CGameContext::TransitionGeneration CGameContext::advanceTransitionGeneration() {
+    return transitionGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
 }
