@@ -18,6 +18,7 @@ import builtins
 import concurrent.futures
 import contextlib
 import http.client
+import io
 import importlib
 import importlib.util
 import json
@@ -14159,12 +14160,7 @@ class CoverageReportTest(unittest.TestCase):
         spec.loader.exec_module(module)
         return module
 
-    def _write_manifest(self, root, exclusions):
-        manifest_path = root / "coverage_exclusions.json"
-        manifest_path.write_text(json.dumps({"version": 1, "exclusions": exclusions}), encoding="utf-8")
-        return manifest_path
-
-    def test_coverage_line_exclusions_remove_only_reviewed_lines(self):
+    def test_coverage_report_counts_all_instrumented_lines(self):
         coverage_report = self._load_coverage_report_module()
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -14172,25 +14168,38 @@ class CoverageReportTest(unittest.TestCase):
             source = root / "src" / "sample.cpp"
             source.parent.mkdir()
             source.write_text("one\ntwo\nthree\nfour\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "synthetic unreachable branch",
-                        "ranges": ["2"],
-                    }
-                ],
-            )
 
             merged = {source.resolve(): {1: 1, 2: 0, 3: 0, 4: 1}}
-            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
-            coverage_report.validate_line_exclusions(root, merged, exclusions)
-            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged, exclusions)
+            summary, covered, total, percentage = coverage_report.summarize(root, merged)
 
-            self.assertEqual((covered, total, percentage, excluded), (2, 3, 100.0 * 2 / 3, 1))
-            self.assertEqual(summary[0]["missing"], [3])
-            self.assertEqual(summary[0]["excluded"], [2])
+            self.assertEqual((covered, total, percentage), (2, 4, 50.0))
+            self.assertEqual(summary[0]["missing"], [2, 3])
+            self.assertNotIn("excluded", summary[0])
+            self.assertFalse(hasattr(coverage_report, "load_line_exclusions"))
+
+    def test_coverage_report_rejects_line_exclusion_flags(self):
+        coverage_report = self._load_coverage_report_module()
+
+        base_argv = [
+            "coverage_report.py",
+            "--root",
+            ".",
+            "--build-dir",
+            "cmake-build-coverage",
+            "--report-dir",
+            "coverage",
+            "--min-line",
+            "95",
+        ]
+        original_argv = sys.argv[:]
+        try:
+            for flag, extra in (("--line-exclusions", ["old_manifest.json"]), ("--audit-exclusions", [])):
+                sys.argv = [*base_argv, flag, *extra]
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                    coverage_report.parse_args()
+                self.assertEqual(2, raised.exception.code)
+        finally:
+            sys.argv = original_argv
 
     def test_coverage_include_prefixes_scope_reported_files(self):
         coverage_report = self._load_coverage_report_module()
@@ -14229,47 +14238,9 @@ class CoverageReportTest(unittest.TestCase):
             merged = coverage_report.merge_line_counts(root, reports, include_prefixes)
 
             self.assertEqual(set(merged), {source.resolve()})
-            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged)
-            self.assertEqual((covered, total, percentage, excluded), (1, 2, 50.0, 0))
+            summary, covered, total, percentage = coverage_report.summarize(root, merged)
+            self.assertEqual((covered, total, percentage), (1, 2, 50.0))
             self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
-
-    def test_coverage_include_prefixes_scope_exclusions(self):
-        coverage_report = self._load_coverage_report_module()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            source = root / "src" / "sample.cpp"
-            test_source = root / "tests" / "sample_test.cpp"
-            source.parent.mkdir()
-            test_source.parent.mkdir()
-            source.write_text("one\ntwo\n", encoding="utf-8")
-            test_source.write_text("one\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "in-scope exclusion",
-                        "ranges": ["2"],
-                    },
-                    {
-                        "path": "tests/sample_test.cpp",
-                        "reason": "out-of-scope exclusion",
-                        "ranges": ["9"],
-                    },
-                ],
-            )
-
-            include_prefixes = coverage_report.load_include_prefixes(root, ["src"])
-            merged = {source.resolve(): {1: 1, 2: 0}}
-            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
-            scoped_exclusions = coverage_report.scope_line_exclusions(root, exclusions, include_prefixes)
-            coverage_report.validate_line_exclusions(root, merged, scoped_exclusions)
-
-            self.assertEqual(set(scoped_exclusions), {source.resolve()})
-            summary, covered, total, percentage, excluded = coverage_report.summarize(root, merged, scoped_exclusions)
-            self.assertEqual((covered, total, percentage, excluded), (1, 1, 100.0, 1))
-            self.assertEqual(summary[0]["excluded"], [2])
 
     def test_coverage_paths_accept_noncanonical_root(self):
         coverage_report = self._load_coverage_report_module()
@@ -14286,16 +14257,6 @@ class CoverageReportTest(unittest.TestCase):
             source = alias_root / "src" / "sample.cpp"
             source.parent.mkdir()
             source.write_text("one\ntwo\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                alias_root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "synthetic unreachable branch",
-                        "ranges": ["2"],
-                    }
-                ],
-            )
             reports = [
                 {
                     "current_working_directory": str(alias_root),
@@ -14313,49 +14274,20 @@ class CoverageReportTest(unittest.TestCase):
 
             include_prefixes = coverage_report.load_include_prefixes(alias_root, ["src"])
             merged = coverage_report.merge_line_counts(alias_root, reports, include_prefixes)
-            exclusions = coverage_report.load_line_exclusions(alias_root, manifest_path)
-            coverage_report.validate_line_exclusions(alias_root, merged, exclusions)
-            summary, covered, total, percentage, excluded = coverage_report.summarize(alias_root, merged, exclusions)
-            audit = coverage_report.build_exclusion_audit(alias_root, merged, exclusions)
+            summary, covered, total, percentage = coverage_report.summarize(alias_root, merged)
 
             self.assertEqual(set(merged), {source.resolve()})
-            self.assertEqual((covered, total, percentage, excluded), (1, 1, 100.0, 1))
+            self.assertEqual((covered, total, percentage), (1, 2, 50.0))
             self.assertEqual(summary[0]["path"], Path("src/sample.cpp"))
-            self.assertEqual(["src/sample.cpp"], [line["path"] for line in audit["lines"]])
 
-    def test_coverage_line_exclusions_fail_closed(self):
+            with self.assertRaisesRegex(ValueError, "glob"):
+                coverage_report.load_include_prefixes(alias_root, ["src/*.cpp"])
+
+    def test_coverage_include_prefixes_reject_globs(self):
         coverage_report = self._load_coverage_report_module()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            source = root / "src" / "sample.cpp"
-            source.parent.mkdir()
-            source.write_text("one\ntwo\n", encoding="utf-8")
-            merged = {source.resolve(): {1: 0, 2: 0}}
-
-            stale_manifest = self._write_manifest(
-                root,
-                [{"path": "src/sample.cpp", "reason": "stale line", "ranges": ["3"]}],
-            )
-            exclusions = coverage_report.load_line_exclusions(root, stale_manifest)
-            with self.assertRaisesRegex(ValueError, "non-instrumented"):
-                coverage_report.validate_line_exclusions(root, merged, exclusions)
-
-            whole_file_manifest = self._write_manifest(
-                root,
-                [{"path": "src/sample.cpp", "reason": "too broad", "ranges": ["1-2"]}],
-            )
-            exclusions = coverage_report.load_line_exclusions(root, whole_file_manifest)
-            with self.assertRaisesRegex(ValueError, "entire instrumented file"):
-                coverage_report.validate_line_exclusions(root, merged, exclusions)
-
-            glob_manifest = self._write_manifest(
-                root,
-                [{"path": "src/*.cpp", "reason": "glob", "ranges": ["1"]}],
-            )
-            with self.assertRaisesRegex(ValueError, "glob"):
-                coverage_report.load_line_exclusions(root, glob_manifest)
-
             with self.assertRaisesRegex(ValueError, "glob"):
                 coverage_report.load_include_prefixes(root, ["src/*.cpp"])
 
@@ -14379,62 +14311,6 @@ class CoverageReportTest(unittest.TestCase):
                     coverage_report.collect_reports_for_gcda(gcda, root / "gcov-output", 7.5)
             finally:
                 coverage_report.subprocess.run = original_run
-
-    def test_coverage_exclusion_audit_reports_raw_counts_and_snippets(self):
-        coverage_report = self._load_coverage_report_module()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            source = root / "src" / "sample.cpp"
-            source.parent.mkdir()
-            source.write_text("one\ntwo\nthree\n", encoding="utf-8")
-            manifest_path = self._write_manifest(
-                root,
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "reason": "synthetic exclusion",
-                        "ranges": ["2-3"],
-                    }
-                ],
-            )
-
-            merged = {source.resolve(): {1: 1, 2: 0, 3: 7}}
-            exclusions = coverage_report.load_line_exclusions(root, manifest_path)
-            coverage_report.validate_line_exclusions(root, merged, exclusions)
-
-            audit = coverage_report.build_exclusion_audit(root, merged, exclusions)
-            self.assertEqual(2, audit["total"])
-            self.assertEqual(1, audit["covered"])
-            self.assertEqual(1, audit["uncovered"])
-            self.assertEqual(
-                [
-                    {
-                        "path": "src/sample.cpp",
-                        "line": 2,
-                        "count": 0,
-                        "covered": False,
-                        "reason": "synthetic exclusion",
-                        "source": "two",
-                    },
-                    {
-                        "path": "src/sample.cpp",
-                        "line": 3,
-                        "count": 7,
-                        "covered": True,
-                        "reason": "synthetic exclusion",
-                        "source": "three",
-                    },
-                ],
-                audit["lines"],
-            )
-
-            text_report = root / "exclusion_audit.txt"
-            json_report = root / "exclusion_audit.json"
-            coverage_report.write_exclusion_audit_text(text_report, audit)
-            coverage_report.write_exclusion_audit_json(json_report, audit)
-            self.assertIn("src/sample.cpp:3 count=7 covered", text_report.read_text(encoding="utf-8"))
-            self.assertEqual(audit, json.loads(json_report.read_text(encoding="utf-8")))
 
 
 class QuestStateHelperTest(unittest.TestCase):

@@ -103,7 +103,6 @@ class ConfigureSupplyChainTest(unittest.TestCase):
 
         self.assertIn("test.py|tests/unit/*|scripts/run_coverage.sh", detection_body)
         self.assertIn("scripts/coverage_report.py", detection_body)
-        self.assertIn("scripts/coverage_exclusions.json", detection_body)
         self.assertIn("native_plugins/*|src/core/*|src/handler/*|src/object/*", detection_body)
         self.assertNotIn("test.py|tests/*|", detection_body)
 
