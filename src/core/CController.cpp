@@ -584,12 +584,14 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_
     // TODO: what about mana cost?
     auto target = fightPanel && fightPanel->getEnemy() ? fightPanel->getEnemy() : opponent;
     if (fightPanel && target) {
-        if (auto action = fightPanel->selectInteraction()) {
-            me->useAction(action, target);
-            used = true;
-        }
+        auto action = fightPanel->selectInteraction();
         if (fightPanel->isCancelled() || hasCancelledContext(me)) {
             cancelled = true;
+            return false;
+        }
+        if (action) {
+            me->useAction(action, target);
+            used = true;
         }
     } else {
         cancelled = true;

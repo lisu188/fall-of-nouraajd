@@ -62,6 +62,15 @@ bool is_stale_combat_status(const std::string &status) {
            status.find(" is defeated.") != std::string::npos || status.find("cancelled") != std::string::npos;
 }
 
+std::shared_ptr<CPlayer> active_player(const std::shared_ptr<CGui> &gui) {
+    if (!gui || !gui->getGame() || !gui->getGame()->getMap()) {
+        return nullptr;
+    }
+    return gui->getGame()->getMap()->getPlayer();
+}
+
+CListView::collection_pointer empty_collection() { return std::make_shared<CListView::collection_type>(); }
+
 void clear_combat_status(const std::shared_ptr<CGui> &gui, const std::vector<std::shared_ptr<CCreature>> &enemies,
                          const std::shared_ptr<CCreature> &enemy) {
     if (auto map = combat_status_map(gui, enemies, enemy)) {
@@ -80,18 +89,23 @@ void clear_stale_combat_status(const std::shared_ptr<CGui> &gui, const std::vect
 } // namespace
 
 CListView::collection_pointer CGameFightPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
+    auto player = active_player(gui);
+    if (!player) {
+        return empty_collection();
+    }
     return std::make_shared<CListView::collection_type>(
-        vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getInteractions()));
+        vstd::cast<CListView::collection_type>(player->getInteractions()));
 }
 
 void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
                                            std::shared_ptr<CGameObject> _newSelection) {
     auto newSelection = vstd::cast<CInteraction>(_newSelection);
-    if (selected.lock() != newSelection &&
-        newSelection->getManaCost() <= gui->getGame()->getMap()->getPlayer()->getMana()) {
+    auto player = active_player(gui);
+    if (!player || !newSelection) {
+        selected.reset();
+    } else if (selected.lock() != newSelection && newSelection->getManaCost() <= player->getMana()) {
         selected = newSelection;
-    } else if (newSelection && selected.lock() == newSelection &&
-               newSelection->getManaCost() <= gui->getGame()->getMap()->getPlayer()->getMana()) {
+    } else if (newSelection && selected.lock() == newSelection && newSelection->getManaCost() <= player->getMana()) {
         finalSelected = newSelection;
     } else {
         // TODO: rethink moving selection to CListView
@@ -105,19 +119,28 @@ bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index, s
 }
 
 CListView::collection_pointer CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
-    return std::make_shared<CListView::collection_type>(
-        vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getItems()));
+    auto player = active_player(gui);
+    if (!player) {
+        return empty_collection();
+    }
+    return std::make_shared<CListView::collection_type>(vstd::cast<CListView::collection_type>(player->getItems()));
 }
 
 void CGameFightPanel::itemsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection) {
     auto newSelection = vstd::cast<CItem>(_newSelection);
+    auto player = active_player(gui);
+    if (!player) {
+        selectedItem.reset();
+        refreshEncounterViews();
+        return;
+    }
     if (newSelection && newSelection->hasTag(CTag::Quest)) {
         return;
     }
     if (selectedItem.lock() != newSelection) {
         selectedItem = newSelection;
     } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
-        gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+        player->useItem(newSelection);
         selectedItem.reset();
     }
     refreshEncounterViews();
@@ -126,10 +149,14 @@ void CGameFightPanel::itemsCallback(std::shared_ptr<CGui> gui, int index, std::s
 bool CGameFightPanel::itemsRightClickCallback(std::shared_ptr<CGui> gui, int index,
                                               std::shared_ptr<CGameObject> _newSelection) {
     auto newSelection = vstd::cast<CItem>(_newSelection);
+    auto player = active_player(gui);
     if (!newSelection || newSelection->hasTag(CTag::Quest)) {
         return false;
     }
-    gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
+    if (!player) {
+        return false;
+    }
+    player->useItem(newSelection);
     selectedItem.reset();
     refreshEncounterViews();
     return true;
@@ -160,6 +187,9 @@ std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
     auto self = this->ptr<CGameFightPanel>();
     vstd::call_later_block([self]() {
         while (self->finalSelected.lock() == nullptr) {
+            if (self->isCancelled()) {
+                return;
+            }
             auto gui = self->getGui();
             if (!gui || gui->findChild(self) == nullptr) {
                 self->cancel();
