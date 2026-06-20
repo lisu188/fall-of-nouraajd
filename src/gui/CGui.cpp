@@ -16,11 +16,71 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGui.h"
+#include "core/CProvider.h"
 #include "core/CUtil.h"
+#include "gui/CAnimation.h"
+#include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 
 #include <algorithm>
+#include <limits>
+
+namespace {
+constexpr int DRAG_PROXY_FALLBACK_SIZE = 50;
+constexpr int DRAG_PROXY_PRIORITY = std::numeric_limits<int>::max();
+
+std::shared_ptr<CLayout> createDragProxyLayout(const std::shared_ptr<CGui> &gui, const SDL_Point &current) {
+    const int size = gui ? std::clamp(gui->getTileSize(), 1, 512) : DRAG_PROXY_FALLBACK_SIZE;
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(current.x - size / 2, current.y - size / 2, size, size);
+    return layout;
+}
+
+std::shared_ptr<CGameGraphicsObject> createDragProxyWidget(const std::shared_ptr<CGui> &gui,
+                                                           const std::shared_ptr<CGameObject> &payload) {
+    if (!gui || !gui->getGame() || !payload) {
+        return nullptr;
+    }
+    auto animation = CAnimationProvider::getAnimation(gui->getGame(), payload);
+    if (!animation) {
+        return nullptr;
+    }
+    animation->withCallback([](std::shared_ptr<CGui>, SDL_EventType, int, int, int) { return false; });
+    animation->setPriority(DRAG_PROXY_PRIORITY);
+    return animation;
+}
+
+void removeDragProxyWidget(const std::shared_ptr<CGui> &gui, CGui::DragSession &session) {
+    auto proxyWidget = session.proxyWidget;
+    if (!proxyWidget) {
+        return;
+    }
+    session.proxyWidget.reset();
+    if (gui && gui->findChild(proxyWidget)) {
+        gui->removeChild(proxyWidget);
+        return;
+    }
+    proxyWidget->removeParent();
+}
+
+void syncDragProxyWidget(const std::shared_ptr<CGui> &gui, CGui::DragSession &session) {
+    if (!gui || !session.payload || session.canceled || session.acceptedTarget.lock()) {
+        removeDragProxyWidget(gui, session);
+        return;
+    }
+    if (!session.proxyWidget) {
+        session.proxyWidget = createDragProxyWidget(gui, session.payload);
+    }
+    if (!session.proxyWidget) {
+        return;
+    }
+    session.proxyWidget->setLayout(createDragProxyLayout(gui, session.current));
+    if (!session.proxyWidget->isAttachedToGui(gui)) {
+        gui->addChild(session.proxyWidget);
+    }
+}
+} // namespace
 
 CGui::CGui() {
     SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
@@ -129,6 +189,7 @@ void CGui::startDragSession(std::shared_ptr<CGameGraphicsObject> sourceWidget, s
     if (!sourceWidget || !sourceWidget->isAttachedToGui(this->ptr<CGui>())) {
         return;
     }
+    clearDragSession();
     DragSession session;
     session.sourceWidget = sourceWidget;
     session.payload = std::move(payload);
@@ -137,11 +198,13 @@ void CGui::startDragSession(std::shared_ptr<CGameGraphicsObject> sourceWidget, s
     session.current = {startX, startY};
     session.sourceCallbackDeferred = sourceCallbackDeferred;
     dragSession = std::move(session);
+    syncDragProxyWidget(this->ptr<CGui>(), *dragSession);
 }
 
 void CGui::updateDragSession(int currentX, int currentY) {
     if (dragSession) {
         dragSession->current = {currentX, currentY};
+        syncDragProxyWidget(this->ptr<CGui>(), *dragSession);
     }
 }
 
@@ -149,6 +212,7 @@ void CGui::acceptDragSession(std::shared_ptr<CGameGraphicsObject> target) {
     if (dragSession && target && target->isAttachedToGui(this->ptr<CGui>())) {
         dragSession->acceptedTarget = target;
         dragSession->canceled = false;
+        removeDragProxyWidget(this->ptr<CGui>(), *dragSession);
     }
 }
 
@@ -156,6 +220,7 @@ void CGui::cancelDragSession() {
     if (dragSession) {
         dragSession->acceptedTarget.reset();
         dragSession->canceled = true;
+        removeDragProxyWidget(this->ptr<CGui>(), *dragSession);
     }
 }
 
@@ -170,7 +235,12 @@ void CGui::cancelDragSessionFor(const std::shared_ptr<CGameGraphicsObject> &root
     }
 }
 
-void CGui::clearDragSession() { dragSession.reset(); }
+void CGui::clearDragSession() {
+    if (dragSession) {
+        removeDragProxyWidget(this->ptr<CGui>(), *dragSession);
+    }
+    dragSession.reset();
+}
 
 bool CGui::hasDragSession() const { return dragSession.has_value(); }
 

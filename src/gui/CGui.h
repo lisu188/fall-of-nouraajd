@@ -43,6 +43,7 @@ class CGui : public CGameGraphicsObject {
         SDL_Point start{0, 0};
         SDL_Point current{0, 0};
         std::weak_ptr<CGameGraphicsObject> acceptedTarget;
+        std::shared_ptr<CGameGraphicsObject> proxyWidget;
         bool canceled = false;
         bool sourceCallbackDeferred = false;
     };
