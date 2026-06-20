@@ -228,10 +228,11 @@ loop, and after merged-checkpoint cleanup:
 python3 scripts/controller_resource_audit.py --json
 ```
 
-The audit reports disk usage, active and prunable worktree registrations, and matching controller run/worktrees such as
-`/tmp/nouraajd-*` and `/tmp/fall-of-nouraajd-codex`. It is report-only by default. Treat audit errors as blockers to new
-heavy work, and treat warnings about prunable worktree metadata or large accumulated run/worktrees as cleanup prompts
-before refilling worker slots.
+The audit reports Git repository health, disk usage, active and prunable worktree registrations, and matching controller
+run/worktrees such as `/tmp/nouraajd-*` and `/tmp/fall-of-nouraajd-codex`. It is report-only by default. Treat audit
+errors such as unreadable Git state, unresolved `HEAD` or `origin/main`, zero-byte loose Git objects, zero-byte Git ref
+files, or disk pressure as blockers to new heavy work, and treat warnings about prunable worktree metadata or large
+accumulated run/worktrees as cleanup prompts before refilling worker slots.
 
 ## Subagent progress protocol
 

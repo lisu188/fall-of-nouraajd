@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only disk and worktree resource audit for controller workflows."""
+"""Read-only repository, disk, and worktree resource audit for controller workflows."""
 
 from __future__ import annotations
 
@@ -46,6 +46,18 @@ class WorktreeRecord:
 class RunTreeRecord:
     path: str
     sizeBytes: int
+
+
+@dataclass(frozen=True)
+class GitHealthReport:
+    statusExitCode: int
+    statusStdout: str
+    statusStderr: str
+    head: str | None
+    originMain: str | None
+    gitCommonDir: str | None
+    emptyLooseObjects: tuple[str, ...]
+    emptyRefs: tuple[str, ...]
 
 
 def bytesToGib(value: int) -> float:
@@ -164,6 +176,102 @@ def runGitWorktreeList(repoRoot: Path) -> list[WorktreeRecord]:
     return parseWorktreePorcelain(result.stdout)
 
 
+def runGit(
+    repoRoot: Path,
+    args: Sequence[str],
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "--no-optional-locks", *args],
+        cwd=repoRoot,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
+def resolveGitPath(repoRoot: Path, pathText: str | None) -> Path | None:
+    if not pathText:
+        return None
+    path = Path(pathText.strip())
+    if not path.is_absolute():
+        path = repoRoot / path
+    return path.resolve()
+
+
+def findEmptyLooseObjects(gitCommonDir: Path | None) -> tuple[str, ...]:
+    if gitCommonDir is None:
+        return ()
+    objectsDir = gitCommonDir / "objects"
+    if not objectsDir.is_dir():
+        return ()
+
+    emptyObjects: list[str] = []
+    for prefixDir in objectsDir.iterdir():
+        if not prefixDir.is_dir() or len(prefixDir.name) != 2:
+            continue
+        for objectPath in prefixDir.iterdir():
+            try:
+                if objectPath.is_file() and objectPath.stat().st_size == 0:
+                    emptyObjects.append(str(objectPath.relative_to(objectsDir)))
+            except OSError:
+                continue
+    return tuple(sorted(emptyObjects))
+
+
+def findEmptyRefs(gitCommonDir: Path | None) -> tuple[str, ...]:
+    if gitCommonDir is None:
+        return ()
+    refsDir = gitCommonDir / "refs"
+    if not refsDir.is_dir():
+        return ()
+
+    emptyRefs: list[str] = []
+    for refPath in refsDir.rglob("*"):
+        try:
+            if refPath.is_file() and refPath.stat().st_size == 0:
+                emptyRefs.append(str(refPath.relative_to(gitCommonDir)))
+        except OSError:
+            continue
+    return tuple(sorted(emptyRefs))
+
+
+def runGitHealth(repoRoot: Path) -> GitHealthReport:
+    status = runGit(repoRoot, ["status", "--short", "--branch"])
+    head = runGit(repoRoot, ["rev-parse", "--verify", "HEAD"])
+    originMain = runGit(repoRoot, ["rev-parse", "--verify", "refs/remotes/origin/main"])
+    commonDir = runGit(repoRoot, ["rev-parse", "--git-common-dir"])
+    gitCommonDir = resolveGitPath(repoRoot, commonDir.stdout.strip()) if commonDir.returncode == 0 else None
+
+    return GitHealthReport(
+        statusExitCode=status.returncode,
+        statusStdout=status.stdout.strip(),
+        statusStderr=status.stderr.strip(),
+        head=head.stdout.strip() if head.returncode == 0 else None,
+        originMain=originMain.stdout.strip() if originMain.returncode == 0 else None,
+        gitCommonDir=str(gitCommonDir) if gitCommonDir is not None else None,
+        emptyLooseObjects=findEmptyLooseObjects(gitCommonDir),
+        emptyRefs=findEmptyRefs(gitCommonDir),
+    )
+
+
+def evaluateGitHealth(report: GitHealthReport) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if report.statusExitCode != 0:
+        detail = report.statusStderr or report.statusStdout or "no git status output"
+        errors.append(f"git status failed with exit code {report.statusExitCode}: {detail}")
+    if not report.head:
+        errors.append("HEAD could not be resolved")
+    if not report.originMain:
+        errors.append("refs/remotes/origin/main could not be resolved")
+    if report.emptyLooseObjects:
+        errors.append(f"{len(report.emptyLooseObjects)} zero-byte loose git object(s) found")
+    if report.emptyRefs:
+        errors.append(f"{len(report.emptyRefs)} zero-byte git ref file(s) found")
+    return errors, warnings
+
+
 def directorySize(path: Path) -> int:
     total = 0
     for root, dirs, files in os.walk(path, topdown=True):
@@ -208,6 +316,7 @@ def discoverRunTrees(
 
 def payload(
     repoRoot: Path,
+    gitHealth: GitHealthReport,
     diskReports: Sequence[DiskReport],
     worktrees: Sequence[WorktreeRecord],
     runTrees: Sequence[RunTreeRecord],
@@ -216,6 +325,22 @@ def payload(
 ) -> dict[str, Any]:
     return {
         "repoRoot": str(repoRoot),
+        "git": {
+            "statusExitCode": gitHealth.statusExitCode,
+            "statusStdout": gitHealth.statusStdout,
+            "statusStderr": gitHealth.statusStderr,
+            "head": gitHealth.head,
+            "originMain": gitHealth.originMain,
+            "gitCommonDir": gitHealth.gitCommonDir,
+            "emptyLooseObjects": {
+                "total": len(gitHealth.emptyLooseObjects),
+                "records": list(gitHealth.emptyLooseObjects),
+            },
+            "emptyRefs": {
+                "total": len(gitHealth.emptyRefs),
+                "records": list(gitHealth.emptyRefs),
+            },
+        },
         "disk": [
             {
                 "path": report.path,
@@ -243,6 +368,13 @@ def payload(
 
 def printHuman(report: dict[str, Any]) -> None:
     print(f"Repository: {report['repoRoot']}")
+    git = report["git"]
+    print("Git:")
+    print(f"  status exit code: {git['statusExitCode']}")
+    print(f"  HEAD: {git['head'] or 'unresolved'}")
+    print(f"  origin/main: {git['originMain'] or 'unresolved'}")
+    print(f"  zero-byte loose objects: {git['emptyLooseObjects']['total']}")
+    print(f"  zero-byte refs: {git['emptyRefs']['total']}")
     print("Disk:")
     for item in report["disk"]:
         print(f"  {item['path']}: {item['freeHuman']} free, " f"{item['usedPercent']:.1f}% used")
@@ -300,6 +432,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     runTreePatterns = args.run_tree_pattern or list(DEFAULT_RUN_TREE_PATTERNS)
 
     try:
+        gitHealth = runGitHealth(repoRoot)
         diskReports = [diskReport(path) for path in uniqueDiskPaths]
         worktrees = runGitWorktreeList(repoRoot)
         runTrees = discoverRunTrees(runTreeRoots, runTreePatterns, includeSizes=not args.skip_run_tree_sizes)
@@ -309,10 +442,13 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     minFreeBytes = int(args.min_free_gib * 1024 * 1024 * 1024)
     errors, warnings = evaluateDiskReports(diskReports, minFreeBytes, args.max_used_percent)
+    gitErrors, gitWarnings = evaluateGitHealth(gitHealth)
+    errors.extend(gitErrors)
+    warnings.extend(gitWarnings)
     summary = worktreeSummary(worktrees)
     if summary["prunable"]:
         warnings.append(f"{summary['prunable']} prunable worktree registration(s); review and run git worktree prune")
-    report = payload(repoRoot, diskReports, worktrees, runTrees, errors, warnings)
+    report = payload(repoRoot, gitHealth, diskReports, worktrees, runTrees, errors, warnings)
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
