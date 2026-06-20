@@ -57,8 +57,9 @@ Do not consume or modify normal gameplay backlog items merely to create optimiza
 
 Maintain enough live subagents to support the active workflow target; queue-controller operation uses at least eight
 active implementation issues whenever eight status-and-dependency eligible issues exist and no concrete non-source
-blocker prevents safe dispatch. Each controller must keep exactly four non-stale owned implementation claims when four
-status-and-dependency eligible issues are available for that controller, and must not claim a fifth.
+blocker prevents safe dispatch. Each controller must keep exactly four owned implementation claim slots when
+status-and-dependency eligible issues are available for that controller, must not claim a fifth, and must reconcile
+unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable rows before refilling through them.
 
 Use these roles, rotating them when useful:
 
@@ -82,7 +83,7 @@ Use these roles, rotating them when useful:
 5. Project manager and prioritization scout
    - Read-only.
    - Review the issue queue, active work, dependencies, blockers, user impact, validation cost, resource state, disk cleanup, and
-     stale claims.
+     stale, suspect, or reclaimable claims.
    - Produce a prioritization brief that identifies the highest-value safe work, sequencing risks, dependency unlocks,
      and priority-change recommendations.
    - Must not edit the workbook, claim work, dispatch workers, or bypass the queue controller's dependency, conflict,

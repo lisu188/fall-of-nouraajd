@@ -19,18 +19,20 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
 9. Keep at least eight live subagents attached to the controller whenever the subagent interface is available.
 10. Keep at least eight implementation issues active whenever eight status-and-dependency eligible implementation issues
    exist. Treat eight active issues as the minimum operating target, not a best-effort aspiration.
-11. Keep exactly four non-stale implementation issues active under this controller's own owner prefix whenever four
-   status-and-dependency eligible issues are available for this controller. Stale owned claims and lease-expired claims
-   do not count toward that target, and a controller must not claim a fifth live implementation issue.
+11. Keep exactly four implementation claim slots active under this controller's own owner prefix whenever
+   status-and-dependency eligible issues are available for this controller. Healthy claims have a non-overdue heartbeat
+   and non-expired lease. Unresolved suspect or reclaimable rows still occupy capacity until durable workbook
+   reconciliation, and a controller must not claim a fifth implementation issue.
 12. Serialize all workbook pull requests. The XLSX file is binary and must never be modified concurrently on multiple branches intended to merge.
 13. Claim and terminal-status pull requests normally update exactly one issue. Do not batch workbook edits unless this workflow explicitly permits it and all selected issues are proven independent.
 14. Preserve public identifiers and backward compatibility unless source evidence proves they are broken.
 15. Do not run local native builds, `ctest`, full Python suites, or coverage for PR delivery unless a focused local
    reproduction is necessary or GitHub Actions cannot provide the needed evidence. Outsource heavy validation to GitHub
    Actions polling.
-16. If fewer than eight issue workers are active, this controller has fewer than four non-stale owned claims, or this
-   controller has more than four non-stale owned claims, document the concrete status, dependency, live-worker-status,
-   resource, authentication, queue-validation, workbook-PR, repository-safety, or over-capacity blocker.
+16. If fewer than eight issue workers are active, this controller has fewer than four healthy owned claims with no
+   unresolved recovery rows, this controller has more than four owned implementation claims, or recovery rows block
+   refill, document the concrete status, dependency, live-worker-status, recovery, resource, authentication,
+   queue-validation, workbook-PR, repository-safety, or over-capacity blocker.
 17. Run the controller resource audit before dispatch/refill decisions, before heavy validation, after each controller
    loop, and after merged-checkpoint cleanup. Treat low free disk or stale run/worktree pressure as blockers to new work
    until safely reported or cleaned.
@@ -133,12 +135,14 @@ eligible issues exist. If fewer than eight implementation issues can safely run 
 subagents only lightweight standby roles such as status polling, eligibility summaries, or review preparation, and print
 the exact blocker preventing eight active issues. Standby subagents must not claim issues, edit files, start builds, run
 tests, or touch the workbook.
-Each controller must also keep exactly four of its own live workbook claims active when four status-and-dependency
-eligible issues are available. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the
-current controller's capacity; stale owned claims and lease-expired owned claims do not count. Continue claim/refill
-iterations until `controllerCapacity.deficitToFloor` is zero, `controllerCapacity.fillableDeficit` is zero, or a concrete
-status, dependency, resource, repository-safety, queue-validation, workbook-PR, authentication, or worker-status blocker
-is printed. If `controllerCapacity.overCapacity` is true, stop claiming and report `controllerCapacity.overLimitBy`.
+Each controller must also keep exactly four of its own workbook claim slots active when status-and-dependency eligible
+issues are available. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the current
+controller's capacity. `healthyOwned` rows count as live work. `suspectOwned` and `reclaimableOwned` rows require
+recovery and still occupy capacity until a heartbeat, release, reclaim, or terminal-status workbook update actually
+merges. Continue claim/refill iterations only while `controllerCapacity.fillableDeficit` is greater than zero. If
+`controllerCapacity.refillBlockedByRecovery` is true, inspect and reconcile `controllerCapacity.recoveryIssues` before
+claiming more work. If `controllerCapacity.overCapacity` is true, stop claiming and report
+`controllerCapacity.overLimitBy`.
 
 When subagent capacity permits, keep one read-only project manager attached to the controller. The project manager may
 be an extra subagent beyond active implementation workers, or a standby role when fewer than eight implementation issues
@@ -219,15 +223,18 @@ pause for a priority/status update, or report a blocker. Do not use the brief as
 Use
 `python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
 as the read-only mechanical selector before each claim. The command reports eligible highest-priority story groups,
-stale claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.stale`,
-`activeClaims.leaseExpired`, `activeClaims.inactive`, rejection summaries, and a seeded recommended issue without
-mutating the workbook. `activeClaims.unexpired` means live/pollable rows that are neither reclaimable-stale nor
-lease-expired. Use the unexpired count, not raw `activeCount`, when deciding whether the global active-worker floor is
-genuinely satisfied. Use `controllerCapacity.activeNonStale`, `controllerCapacity.leaseExpiredOwned`,
+stale claims, `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.healthy`, `activeClaims.stale`,
+`activeClaims.leaseExpired`, `activeClaims.suspect`, `activeClaims.reclaimable`, `activeClaims.inactive`, rejection
+summaries, and a seeded recommended issue without mutating the workbook. `activeClaims.unexpired` is retained as the
+healthy live-claim count: heartbeat not overdue and lease not expired. Use the unexpired/healthy count, not raw
+`activeCount`, when deciding whether the global active-worker floor is genuinely satisfied. Use
+`controllerCapacity.healthyOwned`, `controllerCapacity.suspectOwned`, `controllerCapacity.reclaimableOwned`,
+`controllerCapacity.recoveryRequired`, `controllerCapacity.refillBlockedByRecovery`,
 `controllerCapacity.deficitToFloor`, `controllerCapacity.fillableDeficit`, `controllerCapacity.activeLimit`,
 `controllerCapacity.availableSlots`, `controllerCapacity.overLimitBy`, and `controllerCapacity.overCapacity` to enforce
 this controller's exactly-four owned-claim target before stopping a refill loop. A controller must refill below four
-non-stale owned implementation claims and must not claim a fifth live implementation issue. It also reports target-file
+healthy owned implementation claims only when recovery does not block refill, and must not claim a fifth implementation
+issue. It also reports target-file
 overlap advisories through
 `advisoryTargetFileOverlapCount`, `advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps`. Treat the
 recommendation and overlap advisories as evidence for the project-manager brief and final controller review; do not
@@ -438,8 +445,14 @@ The controller owns workbook updates.
 
 - Workers send milestone reports to the controller after source inspection, root-cause verification, implementation, focused validation, and full validation.
 - The controller may keep intermediate heartbeat information locally.
-- When the lease is near expiry, publish a workbook-only heartbeat PR from a fresh branch based on the latest `origin/main`, merge it, and then continue work.
+- Poll and confirm the worker is alive before publishing a heartbeat. Persist a workbook heartbeat after meaningful
+  milestones and before the read-only payload's `heartbeatDueAtUtc` when the task remains active. The heartbeat deadline
+  is separate from lease duration and is derived by `scripts/issue_queue.py`, currently before the stale/reclaim-age
+  threshold.
+- Publish heartbeat changes only from a fresh workbook-only branch based on the latest `origin/main`, merge that PR, and
+  then treat the heartbeat as durable.
 - Never publish a heartbeat from an implementation branch.
+- Never fabricate a heartbeat for an unreachable worker.
 - Never allow two workbook-state PRs to be open for merge simultaneously.
 
 For a persisted heartbeat:
@@ -456,16 +469,21 @@ python3 scripts/issue_queue.py heartbeat \
 
 Commit and merge that workbook-only change using the same status-PR process as claim publication. A heartbeat preserves
 an existing later lease and extends the lease only when the requested renewal would move it farther into the future.
+A single serialized heartbeat-only PR may update multiple claims owned by this controller only when every worker was
+individually polled, every issue/owner/claim ID was validated, every edit is heartbeat-only, validation is all-or-nothing,
+and the PR clearly lists every affected issue.
 
 If a worker disappears, do not overwrite the active claim. Inspect its worktree and branch, then run
 `python3 scripts/issue_queue.py reclaim-stale --dry-run` to list stale `IN_PROGRESS` claims without mutating the
 workbook. The default reclaim age threshold is 240 minutes; pass `--older-than-minutes <minutes>` only when the
 controller has an explicit reason to override it. The dry-run output includes `activeClaims`, `staleCount`, and
-`reclaimableStaleCount`; use those fields to distinguish live claims from inactive rows eligible under the current
-heartbeat-age threshold. Dry-run rows are queue-timing candidates only and include `reclaimReady: false`; use mutating
-`reclaim-stale` only when the claim is genuinely stale and no recoverable work remains. Treat `validate` stale-claim
-warnings, expired-lease warnings, and derived `list --status IN_PROGRESS --json` lease-expiration fields as read-only
-recovery signals, not permission to reclaim without inspection.
+`reclaimableStaleCount`. `staleCount` is heartbeat-overdue rows. `reclaimableStaleCount` is the subset whose lease is
+also expired or missing. Future-lease rows with overdue heartbeats and expired-lease rows with recent heartbeats are
+suspect recovery rows, not ordinary reclaim rows. Dry-run rows are queue-timing candidates only and include
+`reclaimReady: false`; use mutating `reclaim-stale` only when the row is timing-eligible, worker/worktree/branch/PR
+inspection finds no recoverable work, and the reclaim workbook-only PR can be serialized and merged. Treat `validate`
+warnings and derived `list --status IN_PROGRESS --json` heartbeat, lease, claim-health, and reclaim-boundary fields as
+read-only recovery signals, not permission to reclaim without inspection.
 
 ## Resource-aware validation
 
@@ -474,9 +492,10 @@ delivery, do not run local native builds, `ctest`, full Python suites, or covera
 necessary or GitHub Actions cannot provide the needed evidence. Before any necessary local heavy command, note current
 available RAM, disk pressure, running heavy jobs, and worker status. Treat eight live issue workers as the minimum
 target whenever status-and-dependency eligible work exists; record the concrete blocker if actual resource pressure
-prevents eight live issues. Also treat four live owned claims as this controller's exact active target: refill whenever
-`controllerCapacity.fillableDeficit` is greater than zero, do not claim when `controllerCapacity.availableSlots` is zero,
-and report `controllerCapacity.overLimitBy` when the controller is over capacity.
+prevents eight live issues. Also treat four owned claim slots as this controller's exact active target: refill whenever
+`controllerCapacity.fillableDeficit` is greater than zero, do not claim when `controllerCapacity.availableSlots` is zero
+or `controllerCapacity.refillBlockedByRecovery` is true, and report `controllerCapacity.overLimitBy` when the controller
+is over capacity.
 
 Repository instructions may show local build examples such as `-j$(nproc)`. Treat them as local equivalents, not the
 default PR delivery path. Record the reason and exact command in worker reports and PR bodies whenever local heavy
@@ -639,8 +658,9 @@ Do not merge partial implementation code merely to publish a queue status. If co
 - Authentication or permission failure: stop Git publication and report the exact command and error.
 - Dirty user worktree: do not clean or reset it; operate only in new worktrees.
 - Stale worktree: inspect commits and uncommitted files before removal.
-- Stale `IN_PROGRESS` claim: run `reclaim-stale --dry-run`, inspect the worker branch/worktree/PR state, and only then
-  publish a workbook-only reclaim change when no recoverable work remains.
+- Stale or suspect `IN_PROGRESS` claim: run `reclaim-stale --dry-run`, inspect the worker branch/worktree/PR state, and
+  heartbeat live work or publish a workbook-only release/reclaim/terminal change only after the row's recovery path is
+  verified.
 - Queue workbook conflict: close or resolve the older queue PR first; never attempt a binary merge by combining workbook copies.
 - Significant workflow problem: have workers, QA, or PM report it to the controller, then record it with
   `python3 scripts/workflow_observations.py record` after evidence and secret review. Publish the new record through an

@@ -6,6 +6,14 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROMPTS_DIR = REPO_ROOT / "prompts"
+WORKFLOW_TEXT_PATHS = (
+    REPO_ROOT / "AGENTS.md",
+    REPO_ROOT / "docs" / "codex-agent-queue.md",
+    PROMPTS_DIR / "codex-queue-controller.md",
+    PROMPTS_DIR / "codex-queue-goal.txt",
+    PROMPTS_DIR / "codex-workflow-optimizer.md",
+    PROMPTS_DIR / "codex-workflow-optimizer-goal.txt",
+)
 
 
 class PromptInventoryTest(unittest.TestCase):
@@ -21,6 +29,19 @@ class PromptInventoryTest(unittest.TestCase):
             self.assertTrue(referenced_prompts, f"{prompt_path} should reference an authoritative markdown prompt")
             for referenced_prompt in referenced_prompts:
                 self.assertTrue((REPO_ROOT / referenced_prompt).exists(), f"{referenced_prompt} should exist")
+
+    def test_queue_prompts_do_not_reintroduce_stale_lease_reclaim_drift(self) -> None:
+        banned_patterns = {
+            r"when\s+the\s+lease\s+is\s+near\s+expiry": "heartbeats must use the derived heartbeat deadline",
+            r"even\s+if\s+(?:their|the)\s+lease\s+is\s+still\s+in\s+the\s+future": (
+                "future leases must protect ownership from ordinary reclaim"
+            ),
+        }
+        for path in WORKFLOW_TEXT_PATHS:
+            text = path.read_text(encoding="utf-8").lower()
+            for pattern, reason in banned_patterns.items():
+                with self.subTest(path=path.relative_to(REPO_ROOT), pattern=pattern):
+                    self.assertIsNone(re.search(pattern, text), reason)
 
 
 if __name__ == "__main__":

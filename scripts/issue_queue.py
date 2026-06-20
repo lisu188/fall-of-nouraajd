@@ -100,6 +100,7 @@ ALL_HEADERS = REQUIRED_HEADERS + WORKFLOW_HEADERS
 ISSUE_NAME_PATTERN = re.compile(r"^\[EPIC_\d{2}\]\[STORY_\d{2}\]\[SUBSTORY_\d{2}\].+")
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
 DEFAULT_RECLAIM_AGE_MINUTES = 240
+DEFAULT_HEARTBEAT_INTERVAL_MINUTES = DEFAULT_RECLAIM_AGE_MINUTES // 2
 DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR = 4
 DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT = 4
 
@@ -132,6 +133,58 @@ class TaskRecord:
     @property
     def targetFiles(self) -> set[str]:
         return parseTargetFiles(self.values.get("Target Files / Modules"))
+
+
+@dataclass(frozen=True)
+class ClaimTimingHealth:
+    lastHeartbeatAtUtc: datetime | None
+    heartbeatAgeMinutes: int | None
+    heartbeatDueAtUtc: datetime | None
+    heartbeatDueInMinutes: int | None
+    heartbeatOverdueAtUtc: datetime | None
+    heartbeatOverdue: bool
+    leaseUntilUtc: datetime | None
+    leaseExpired: bool
+    leaseRemainingMinutes: int | None
+    leaseExpiredMinutes: int | None
+    reclaimableAtUtc: datetime
+    reclaimable: bool
+    claimHealth: str
+    reclaimReason: str | None
+    staleThresholdMinutes: int
+    heartbeatIntervalMinutes: int
+
+    @property
+    def healthy(self) -> bool:
+        return self.claimHealth == "healthy"
+
+    @property
+    def suspect(self) -> bool:
+        return not self.healthy and not self.reclaimable
+
+    def payload(self) -> dict[str, Any]:
+        return {
+            "lastHeartbeatAtUtc": formatUtc(self.lastHeartbeatAtUtc) if self.lastHeartbeatAtUtc else None,
+            "heartbeatAgeMinutes": self.heartbeatAgeMinutes,
+            "heartbeatDueAtUtc": formatUtc(self.heartbeatDueAtUtc) if self.heartbeatDueAtUtc else None,
+            "heartbeatDueInMinutes": self.heartbeatDueInMinutes,
+            "heartbeatOverdueAtUtc": formatUtc(self.heartbeatOverdueAtUtc) if self.heartbeatOverdueAtUtc else None,
+            "heartbeatOverdue": self.heartbeatOverdue,
+            "heartbeatIntervalMinutes": self.heartbeatIntervalMinutes,
+            "leaseUntilUtc": formatUtc(self.leaseUntilUtc) if self.leaseUntilUtc else None,
+            "leaseExpired": self.leaseExpired,
+            "leaseRemainingMinutes": self.leaseRemainingMinutes,
+            "leaseExpiredMinutes": self.leaseExpiredMinutes,
+            "reclaimableAtUtc": formatUtc(self.reclaimableAtUtc),
+            "reclaimable": self.reclaimable,
+            "claimHealth": self.claimHealth,
+            "reclaimReason": self.reclaimReason,
+            "staleThresholdMinutes": self.staleThresholdMinutes,
+            # Backward-compatible aliases for older controller payload readers.
+            "updatedAtUtc": formatUtc(self.lastHeartbeatAtUtc) if self.lastHeartbeatAtUtc else None,
+            "updatedAgeMinutes": self.heartbeatAgeMinutes,
+            "staleReason": self.reclaimReason,
+        }
 
 
 @dataclass(frozen=True)
@@ -419,6 +472,8 @@ class WorkbookLock:
     """
 
     def __init__(self, workbookPath: Path, timeoutSeconds: float = 30.0) -> None:
+        if timeoutSeconds < 0:
+            raise QueueError("--lock-timeout-seconds must be non-negative")
         self.workbookPath = workbookPath
         self.timeoutSeconds = timeoutSeconds
         self.lockPath = workbookPath.with_name(workbookPath.name + ".lock")
@@ -708,13 +763,11 @@ def inactiveClaimIssueNames(
     now: datetime | None = None,
 ) -> set[str]:
     now = now or utcNow()
-    staleIssues = {record["issueName"] for record in (stale if stale is not None else staleClaims(state, now=now))}
-    leaseExpiredIssues = {
+    return {
         task.issueName
         for task in state.tasks
-        if task.status == STATUS_IN_PROGRESS and bool(taskLeasePayload(task, now).get("leaseExpired"))
+        if task.status == STATUS_IN_PROGRESS and not claimTimingHealth(task, now).healthy
     }
-    return staleIssues | leaseExpiredIssues
 
 
 def activeTargetFiles(
@@ -724,12 +777,11 @@ def activeTargetFiles(
     now: datetime | None = None,
     includeInactive: bool = False,
 ) -> set[str]:
-    inactiveIssues = set() if includeInactive else inactiveClaimIssueNames(state, stale=stale, now=now)
     files: set[str] = set()
     for task in state.tasks:
         if excludeIssueName is not None and task.issueName == excludeIssueName:
             continue
-        if task.status == STATUS_IN_PROGRESS and (includeInactive or task.issueName not in inactiveIssues):
+        if task.status == STATUS_IN_PROGRESS:
             files.update(task.targetFiles)
     return files
 
@@ -826,21 +878,27 @@ def activeClaimSummary(
     state: QueueState,
     stale: Sequence[dict[str, Any]],
     now: datetime | None = None,
+    olderThanMinutes: int = DEFAULT_RECLAIM_AGE_MINUTES,
 ) -> dict[str, int]:
     now = now or utcNow()
     activeTasks = [task for task in state.tasks if task.status == STATUS_IN_PROGRESS]
-    staleIssues = {record["issueName"] for record in stale}
-    leaseExpiredIssues = {
-        task.issueName for task in activeTasks if bool(taskLeasePayload(task, now).get("leaseExpired"))
+    healthByIssue = {
+        task.issueName: claimTimingHealth(task, now, olderThanMinutes=olderThanMinutes) for task in activeTasks
     }
-    inactiveIssues = staleIssues | leaseExpiredIssues
-    liveCount = sum(1 for task in activeTasks if task.issueName not in inactiveIssues)
+    staleIssues = {issueName for issueName, health in healthByIssue.items() if health.heartbeatOverdue}
+    leaseExpiredIssues = {issueName for issueName, health in healthByIssue.items() if health.leaseExpired}
+    reclaimableIssues = {issueName for issueName, health in healthByIssue.items() if health.reclaimable}
+    healthyCount = sum(1 for health in healthByIssue.values() if health.healthy)
+    inactiveCount = len(activeTasks) - healthyCount
     return {
         "total": len(activeTasks),
-        "unexpired": liveCount,
-        "stale": len(stale),
+        "unexpired": healthyCount,
+        "healthy": healthyCount,
+        "stale": len(staleIssues),
         "leaseExpired": len(leaseExpiredIssues),
-        "inactive": len(activeTasks) - liveCount,
+        "reclaimable": len(reclaimableIssues),
+        "suspect": inactiveCount - len(reclaimableIssues),
+        "inactive": inactiveCount,
     }
 
 
@@ -867,29 +925,28 @@ def controllerCapacityPayload(
         raise QueueError("--controller-id must be non-empty")
     now = now or utcNow()
     ownerPrefix = controllerOwnerPrefix(controllerId)
-    stale = staleClaims(state, now=now)
-    staleIssues = {record["issueName"] for record in stale}
-    leaseExpiredIssues = {
-        task.issueName
-        for task in state.tasks
-        if task.status == STATUS_IN_PROGRESS and bool(taskLeasePayload(task, now).get("leaseExpired"))
-    }
     activeTasks = [
         task
         for task in state.tasks
         if task.status == STATUS_IN_PROGRESS
         and ownerMatchesPrefix(str(task.values.get("Owner") or "").strip(), ownerPrefix)
     ]
-    staleTasks = [task for task in activeTasks if task.issueName in staleIssues]
-    leaseExpiredTasks = [task for task in activeTasks if task.issueName in leaseExpiredIssues]
-    liveTasks = [
-        task for task in activeTasks if task.issueName not in staleIssues and task.issueName not in leaseExpiredIssues
-    ]
-    activeNonStale = len(liveTasks)
+    healthByIssue = {task.issueName: claimTimingHealth(task, now) for task in activeTasks}
+    healthyTasks = [task for task in activeTasks if healthByIssue[task.issueName].healthy]
+    staleTasks = [task for task in activeTasks if healthByIssue[task.issueName].heartbeatOverdue]
+    leaseExpiredTasks = [task for task in activeTasks if healthByIssue[task.issueName].leaseExpired]
+    reclaimableTasks = [task for task in activeTasks if healthByIssue[task.issueName].reclaimable]
+    suspectTasks = [task for task in activeTasks if healthByIssue[task.issueName].suspect]
+    recoveryTasks = [task for task in activeTasks if not healthByIssue[task.issueName].healthy]
+    activeNonStale = len(healthyTasks)
     deficit = max(0, activeFloor - activeNonStale)
-    availableSlots = max(0, activeLimit - activeNonStale)
-    overLimitBy = max(0, activeNonStale - activeLimit)
-    fillable = min(deficit, availableSlots, eligibleCount) if eligibleCount is not None else min(deficit, availableSlots)
+    availableSlots = max(0, activeLimit - len(activeTasks))
+    overLimitBy = max(0, len(activeTasks) - activeLimit)
+    recoveryRequired = bool(recoveryTasks)
+    fillableCandidate = (
+        min(deficit, availableSlots, eligibleCount) if eligibleCount is not None else min(deficit, availableSlots)
+    )
+    fillable = 0 if recoveryRequired else fillableCandidate
     return {
         "controllerId": controllerId,
         "ownerPrefix": ownerPrefix,
@@ -897,8 +954,11 @@ def controllerCapacityPayload(
         "activeLimit": activeLimit,
         "activeTotal": len(activeTasks),
         "activeNonStale": activeNonStale,
+        "healthyOwned": len(healthyTasks),
         "staleOwned": len(staleTasks),
         "leaseExpiredOwned": len(leaseExpiredTasks),
+        "suspectOwned": len(suspectTasks),
+        "reclaimableOwned": len(reclaimableTasks),
         "inactiveOwned": len(activeTasks) - activeNonStale,
         "deficitToFloor": deficit,
         "availableSlots": availableSlots,
@@ -907,9 +967,23 @@ def controllerCapacityPayload(
         "eligibleCount": eligibleCount,
         "fillableDeficit": fillable,
         "needsRefill": fillable > 0,
-        "activeIssues": [task.issueName for task in sorted(liveTasks, key=taskSortKey)],
+        "recoveryRequired": recoveryRequired,
+        "recoveryIssues": [
+            {
+                "issueName": task.issueName,
+                "claimHealth": healthByIssue[task.issueName].claimHealth,
+                "reclaimable": healthByIssue[task.issueName].reclaimable,
+                "reclaimableAtUtc": formatUtc(healthByIssue[task.issueName].reclaimableAtUtc),
+                "reclaimReason": healthByIssue[task.issueName].reclaimReason,
+            }
+            for task in sorted(recoveryTasks, key=taskSortKey)
+        ],
+        "refillBlockedByRecovery": recoveryRequired and deficit > 0,
+        "activeIssues": [task.issueName for task in sorted(healthyTasks, key=taskSortKey)],
         "staleIssues": [task.issueName for task in sorted(staleTasks, key=taskSortKey)],
         "leaseExpiredIssues": [task.issueName for task in sorted(leaseExpiredTasks, key=taskSortKey)],
+        "suspectIssues": [task.issueName for task in sorted(suspectTasks, key=taskSortKey)],
+        "reclaimableIssues": [task.issueName for task in sorted(reclaimableTasks, key=taskSortKey)],
     }
 
 
@@ -1072,10 +1146,10 @@ def shortlistTasks(
     return payload
 
 
-def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
+def validateQueueState(state: QueueState, now: datetime | None = None) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
-    now = utcNow()
+    now = now or utcNow()
 
     missing = [header for header in ALL_HEADERS if header not in state.headers]
     if missing:
@@ -1127,17 +1201,25 @@ def validateQueueState(state: QueueState) -> tuple[list[str], list[str]]:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires valid Updated At UTC")
             if leaseUntil is None:
                 errors.append(f"Row {task.row}: IN_PROGRESS requires valid Lease Until UTC")
-            if stale := staleClaimPayload(task, now):
+            health = claimTimingHealth(task, now)
+            if health.reclaimable:
                 warnings.append(
-                    f"Row {task.row}: IN_PROGRESS stale claim ({stale['staleReason']}; "
-                    f"last update {stale['updatedAtUtc'] or 'missing'} meets "
-                    f"{stale['staleThresholdMinutes']}-minute reclaim threshold); "
-                    "inspect the worker and run reclaim-stale --dry-run before reclaiming"
+                    f"Row {task.row}: IN_PROGRESS reclaimable claim ({health.reclaimReason}; "
+                    f"last heartbeat {formatUtc(health.lastHeartbeatAtUtc) if health.lastHeartbeatAtUtc else 'missing'}, "
+                    f"lease {formatUtc(health.leaseUntilUtc) if health.leaseUntilUtc else 'missing'}, "
+                    f"reclaimable at {formatUtc(health.reclaimableAtUtc)}); inspect worker/worktree/PR state "
+                    "and run reclaim-stale --dry-run before reclaiming"
                 )
-            elif leaseUntil is not None and bool(taskLeasePayload(task, now).get("leaseExpired")):
+            elif health.heartbeatOverdue:
                 warnings.append(
-                    f"Row {task.row}: IN_PROGRESS lease expired but last update "
-                    f"{formatUtc(updatedAt) if updatedAt else 'missing'} has not met "
+                    f"Row {task.row}: IN_PROGRESS heartbeat overdue but lease remains valid until "
+                    f"{formatUtc(health.leaseUntilUtc) if health.leaseUntilUtc else 'missing'}; inspect worker status "
+                    "and publish a verified heartbeat or recovery update before refilling this slot"
+                )
+            elif health.leaseExpired:
+                warnings.append(
+                    f"Row {task.row}: IN_PROGRESS lease expired but heartbeat "
+                    f"{formatUtc(health.lastHeartbeatAtUtc) if health.lastHeartbeatAtUtc else 'missing'} has not met "
                     f"{DEFAULT_RECLAIM_AGE_MINUTES}-minute reclaim threshold; inspect worker status before refresh "
                     "or later reclaim-stale --dry-run"
                 )
@@ -1218,18 +1300,82 @@ def ageMinutes(now: datetime, then: datetime | None) -> int | None:
     return max(0, int((now - then).total_seconds() // 60))
 
 
+def minutesUntil(now: datetime, then: datetime | None) -> int | None:
+    if then is None:
+        return None
+    return max(0, int((then - now).total_seconds() // 60))
+
+
+def claimTimingHealth(
+    task: TaskRecord,
+    now: datetime,
+    olderThanMinutes: int = DEFAULT_RECLAIM_AGE_MINUTES,
+    heartbeatIntervalMinutes: int = DEFAULT_HEARTBEAT_INTERVAL_MINUTES,
+) -> ClaimTimingHealth:
+    if olderThanMinutes < 0:
+        raise QueueError("--older-than-minutes must be non-negative")
+    if heartbeatIntervalMinutes < 1:
+        raise QueueError("heartbeat interval must be positive")
+
+    leaseUntil = parseUtc(task.values.get("Lease Until UTC"))
+    lastHeartbeat = parseUtc(task.values.get("Updated At UTC")) or parseUtc(task.values.get("Claimed At UTC"))
+    heartbeatDueAt = lastHeartbeat + timedelta(minutes=heartbeatIntervalMinutes) if lastHeartbeat else None
+    heartbeatOverdueAt = lastHeartbeat + timedelta(minutes=olderThanMinutes) if lastHeartbeat else None
+    heartbeatOverdue = lastHeartbeat is None or lastHeartbeat <= now - timedelta(minutes=olderThanMinutes)
+    leaseExpired = leaseUntil is None or leaseUntil <= now
+
+    reclaimableBoundaries: list[datetime] = []
+    if leaseUntil is not None:
+        reclaimableBoundaries.append(leaseUntil)
+    if lastHeartbeat is not None:
+        reclaimableBoundaries.append(lastHeartbeat + timedelta(minutes=olderThanMinutes))
+    reclaimableAt = max(reclaimableBoundaries) if reclaimableBoundaries else now
+    reclaimable = leaseExpired and heartbeatOverdue and reclaimableAt <= now
+
+    if not heartbeatOverdue and not leaseExpired:
+        claimHealth = "healthy"
+        reclaimReason = None
+    elif reclaimable:
+        claimHealth = "reclaimable"
+        if leaseUntil is None and lastHeartbeat is None:
+            reclaimReason = "missing lease and missing heartbeat"
+        elif leaseUntil is None:
+            reclaimReason = "missing lease and heartbeat overdue"
+        elif lastHeartbeat is None:
+            reclaimReason = "lease expired and missing heartbeat"
+        else:
+            reclaimReason = "lease expired and heartbeat overdue"
+    elif heartbeatOverdue:
+        claimHealth = "heartbeat_overdue_lease_valid"
+        reclaimReason = "heartbeat overdue but lease still valid"
+    else:
+        claimHealth = "lease_expired_heartbeat_recent"
+        reclaimReason = "lease expired but heartbeat recent"
+
+    return ClaimTimingHealth(
+        lastHeartbeatAtUtc=lastHeartbeat,
+        heartbeatAgeMinutes=ageMinutes(now, lastHeartbeat),
+        heartbeatDueAtUtc=heartbeatDueAt,
+        heartbeatDueInMinutes=minutesUntil(now, heartbeatDueAt),
+        heartbeatOverdueAtUtc=heartbeatOverdueAt,
+        heartbeatOverdue=heartbeatOverdue,
+        leaseUntilUtc=leaseUntil,
+        leaseExpired=leaseExpired,
+        leaseRemainingMinutes=minutesUntil(now, leaseUntil) if not leaseExpired else None,
+        leaseExpiredMinutes=ageMinutes(now, leaseUntil) if leaseExpired else None,
+        reclaimableAtUtc=reclaimableAt,
+        reclaimable=reclaimable,
+        claimHealth=claimHealth,
+        reclaimReason=reclaimReason,
+        staleThresholdMinutes=olderThanMinutes,
+        heartbeatIntervalMinutes=heartbeatIntervalMinutes,
+    )
+
+
 def taskLeasePayload(task: TaskRecord, now: datetime) -> dict[str, Any]:
     if task.status != STATUS_IN_PROGRESS:
         return {}
-    lease = parseUtc(task.values.get("Lease Until UTC"))
-    updated = parseUtc(task.values.get("Updated At UTC")) or parseUtc(task.values.get("Claimed At UTC"))
-    expired = lease is None or lease <= now
-    return {
-        "leaseExpired": expired,
-        "leaseExpiredMinutes": ageMinutes(now, lease) if expired else None,
-        "updatedAgeMinutes": ageMinutes(now, updated),
-        "staleReason": "missing lease" if lease is None else "lease expired" if expired else None,
-    }
+    return claimTimingHealth(task, now).payload()
 
 
 def staleClaimPayload(
@@ -1239,29 +1385,16 @@ def staleClaimPayload(
 ) -> dict[str, Any] | None:
     if task.status != STATUS_IN_PROGRESS:
         return None
-    lease = parseUtc(task.values.get("Lease Until UTC"))
-    updated = parseUtc(task.values.get("Updated At UTC")) or parseUtc(task.values.get("Claimed At UTC"))
-    leasePayload = taskLeasePayload(task, now)
-    oldEnough = updated is None or updated <= now - timedelta(minutes=olderThanMinutes)
-    if not oldEnough:
+    health = claimTimingHealth(task, now, olderThanMinutes=olderThanMinutes)
+    if not health.heartbeatOverdue:
         return None
-    if lease is None:
-        staleReason = "missing lease"
-    elif bool(leasePayload.get("leaseExpired")):
-        staleReason = "lease expired"
-    else:
-        staleReason = f"no heartbeat for {olderThanMinutes} minutes"
 
     return {
         "issueName": task.issueName,
         "row": task.row,
         "owner": str(task.values.get("Owner") or ""),
         "claimId": str(task.values.get("Claim ID") or ""),
-        "updatedAtUtc": formatUtc(updated) if updated else None,
-        "leaseUntilUtc": formatUtc(lease) if lease else None,
-        **leasePayload,
-        "staleReason": staleReason,
-        "staleThresholdMinutes": olderThanMinutes,
+        **health.payload(),
     }
 
 
@@ -1281,11 +1414,25 @@ def staleClaims(
     return records
 
 
+def reclaimableClaims(
+    state: QueueState,
+    olderThanMinutes: int = DEFAULT_RECLAIM_AGE_MINUTES,
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
+    if olderThanMinutes < 0:
+        raise QueueError("--older-than-minutes must be non-negative")
+    now = now or utcNow()
+    return [
+        record for record in staleClaims(state, olderThanMinutes=olderThanMinutes, now=now) if record["reclaimable"]
+    ]
+
+
 def markStaleClaimsForInspection(stale: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {
             **record,
             "reclaimReady": False,
+            "timingEligible": bool(record.get("reclaimable")),
             "requiredInspection": "worker worktree, branch, pull request, and recoverable changes",
         }
         for record in stale
@@ -1314,7 +1461,8 @@ def claimTask(
         try:
             ensureWorkflowSchema(state)
             state = refreshTasks(state)
-            errors, _ = validateQueueState(state)
+            now = utcNow()
+            errors, _ = validateQueueState(state, now=now)
             if errors:
                 raise QueueError("Queue validation failed before claim:\n- " + "\n- ".join(errors))
 
@@ -1342,7 +1490,6 @@ def claimTask(
                     return {"claimed": False, "reason": "No eligible task"}
                 task = eligible[0]
 
-            now = utcNow()
             claimId = str(uuid.uuid4())
             setValue(state, task.row, "Status", STATUS_IN_PROGRESS)
             setValue(state, task.row, "Owner", owner)
@@ -1360,7 +1507,7 @@ def claimTask(
 
             state = refreshTasks(state)
             claimed = taskByName(state, task.issueName)
-            payload = taskPayload(claimed, state=state)
+            payload = taskPayload(claimed, state=state, now=now)
             payload.update({"claimed": True, "claimId": claimId, "owner": owner})
             return payload
         finally:
@@ -1401,6 +1548,7 @@ def heartbeatTask(
             if task.status != STATUS_IN_PROGRESS:
                 raise QueueError(f"heartbeat requires IN_PROGRESS, got {task.status}")
             now = utcNow()
+            previousTiming = claimTimingHealth(task, now)
             if progress is not None:
                 setValue(state, task.row, "Progress %", progress)
             if note.strip():
@@ -1412,7 +1560,11 @@ def heartbeatTask(
             setValue(state, task.row, "Lease Until UTC", formatUtc(leaseUntil))
             atomicSave(state, workbookPath)
             state = refreshTasks(state)
-            return taskPayload(taskByName(state, issueName), state=state)
+            updatedTask = taskByName(state, issueName)
+            payload = taskPayload(updatedTask, state=state, now=now)
+            payload["previousTiming"] = previousTiming.payload()
+            payload["resultingTiming"] = claimTimingHealth(updatedTask, now).payload()
+            return payload
         finally:
             state.workbook.close()
 
@@ -1514,7 +1666,7 @@ def reclaimStaleTasks(
             ensureWorkflowSchema(state)
             state = refreshTasks(state)
             now = utcNow()
-            for stale in staleClaims(state, olderThanMinutes=olderThanMinutes, now=now):
+            for stale in reclaimableClaims(state, olderThanMinutes=olderThanMinutes, now=now):
                 task = taskByName(state, stale["issueName"])
                 priorOwner = str(task.values.get("Owner") or "unknown")
                 priorClaim = str(task.values.get("Claim ID") or "unknown")
@@ -1729,7 +1881,7 @@ def buildParser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR,
         help=(
-            "Minimum non-stale active issues this controller should keep when eligible work exists "
+            "Minimum healthy active issues this controller should keep when eligible work exists "
             f"(default: {DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR})"
         ),
     )
@@ -1738,7 +1890,7 @@ def buildParser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT,
         help=(
-            "Maximum non-stale active issues this controller should own at once "
+            "Maximum unresolved implementation claims this controller should own at once "
             f"(default: {DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT})"
         ),
     )
@@ -1858,16 +2010,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command in {"list", "show", "next", "shortlist", "prompt"}:
             state = loadQueue(workbookPath, writable=False)
             try:
+                now = utcNow()
                 if args.command == "list":
                     statuses = {normalizeStatus(item) for item in args.status} if args.status else None
                     tasks = listTasks(state, statuses, args.owner, args.epic)
                     if args.json:
-                        printJson([taskPayload(task, state=state) for task in tasks])
+                        printJson([taskPayload(task, state=state, now=now) for task in tasks])
                     else:
                         printTable(tasks)
                     return 0
                 if args.command == "show":
-                    printJson(taskPayload(taskByName(state, args.issue), state=state))
+                    printJson(taskPayload(taskByName(state, args.issue), state=state, now=now))
                     return 0
                 if args.command == "next":
                     priorities = {item.upper() for item in args.priority} or None
@@ -1881,7 +2034,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if not eligible:
                         printJson({"eligible": False, "reason": "No eligible task", "rejected": rejected})
                         return 3
-                    printJson({"eligible": True, "task": taskPayload(eligible[0], state=state)})
+                    printJson({"eligible": True, "task": taskPayload(eligible[0], state=state, now=now)})
                     return 0
                 if args.command == "shortlist":
                     priorities = {item.upper() for item in args.priority} or None
@@ -2002,19 +2155,30 @@ def main(argv: Sequence[str] | None = None) -> int:
                 try:
                     now = utcNow()
                     stale = staleClaims(state, olderThanMinutes=args.older_than_minutes, now=now)
+                    reclaimable = [record for record in stale if record["reclaimable"]]
                     printJson(
                         {
                             "workbook": str(workbookPath),
                             "olderThanMinutes": args.older_than_minutes,
+                            "heartbeatIntervalMinutes": DEFAULT_HEARTBEAT_INTERVAL_MINUTES,
                             "reclaimSafety": {
                                 "timingOnly": True,
                                 "requiresInspection": True,
-                                "message": "Dry-run rows satisfy queue timing only; inspect worker state and PRs before mutating.",
+                                "message": (
+                                    "Dry-run reclaimable rows satisfy queue timing only; inspect worker state and PRs "
+                                    "before mutating."
+                                ),
                             },
-                            "reclaimableStaleCount": len(stale),
                             "staleCount": len(stale),
-                            "activeClaims": activeClaimSummary(state, stale, now=now),
+                            "reclaimableStaleCount": len(reclaimable),
+                            "activeClaims": activeClaimSummary(
+                                state,
+                                stale,
+                                now=now,
+                                olderThanMinutes=args.older_than_minutes,
+                            ),
                             "stale": markStaleClaimsForInspection(stale),
+                            "reclaimable": markStaleClaimsForInspection(reclaimable),
                         }
                     )
                 finally:

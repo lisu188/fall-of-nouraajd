@@ -33,6 +33,10 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             python3 scripts/workflow_observations.py validate --base "${{ github.event.pull_request.base.sha }}"
           fi
+      - name: Validate queue workflow tooling
+        run: |
+          python3 -m unittest tests.test_issue_queue
+          python3 -m unittest tests.test_prompt_inventory
       - name: Install Python deps
         run: python3 -m pip install --upgrade -r requirements-dev.txt
       - name: Smoke test Python deps
