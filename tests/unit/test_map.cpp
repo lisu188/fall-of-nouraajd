@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
+#include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CGameObject.h"
 #include "object/CMapObject.h"
@@ -533,6 +534,7 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
     auto floor = std::make_shared<CTile>();
     floor->setTileType("floor");
     floor->setCanStep(true);
+    expect_true(floor->getMovementCost() == 1, "tile movement cost should default to one");
     expect_true(!map->addTile(nullptr, 0, 0, 0), "addTile should reject null tiles");
     expect_true(map->addTile(floor, 1, 1, 0), "addTile should store a new tile");
     expect_true(floor->getCoords() == Coords(1, 1, 0), "addTile should synchronize tile coordinates");
@@ -547,6 +549,10 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
     expect_true(!map->contains(1, 1, 0) && map->contains(2, 1, 0), "moveTile should relocate the tile index");
     expect_true(map->getTile(2, 1, 0) == floor, "moved tiles should be indexed at their new coordinate");
     expect_true(map->getMovementCost(2, 1, 0) == 1, "movement cost should be available for existing tiles");
+    floor->setMovementCost(4);
+    expect_true(map->getMovementCost(2, 1, 0) == 4, "map movement cost should read the stored tile value");
+    floor->setMovementCost(0);
+    expect_true(map->getMovementCost(2, 1, 0) == 1, "map movement cost should clamp invalid tile values");
 
     auto wall = std::make_shared<CTile>();
     wall->setCanStep(false);
@@ -618,6 +624,33 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
     expect_true(map->getObjectByName("markerObject") == nullptr, "removeObjectByName should erase existing objects");
     map->removeObjects([](std::shared_ptr<CMapObject> object) { return object->getName() == "blockingObject"; });
     expect_true(map->getObjects().empty(), "removeObjects should erase matching objects from a cloned iteration");
+}
+
+void test_tile_movement_cost_deserialization() {
+    auto game = CGameLoader::loadGame();
+
+    auto omitted = game->createObject<CTile>("GrassTile");
+    expect_true(omitted && omitted->getMovementCost() == 1,
+                "configured tiles without movementCost should keep the default");
+
+    auto weighted_config = std::make_shared<json>();
+    (*weighted_config)["class"] = "CTile";
+    (*weighted_config)["properties"]["canStep"] = true;
+    (*weighted_config)["properties"]["movementCost"] = 6;
+    (*weighted_config)["properties"]["tileType"] = "weighted";
+    game->getObjectHandler()->registerConfig("WeightedTile", weighted_config);
+
+    auto weighted = game->createObject<CTile>("WeightedTile");
+    expect_true(weighted && weighted->getMovementCost() == 6, "configured movementCost should deserialize onto CTile");
+
+    auto invalid_config = std::make_shared<json>();
+    (*invalid_config)["class"] = "CTile";
+    (*invalid_config)["properties"]["movementCost"] = -3;
+    game->getObjectHandler()->registerConfig("InvalidCostTile", invalid_config);
+
+    auto invalid = game->createObject<CTile>("InvalidCostTile");
+    expect_true(invalid && invalid->getMovementCost() == 1,
+                "invalid configured movementCost should clamp to one during deserialization");
 }
 
 void test_map_navigation_edges_update_revision() {
@@ -1181,6 +1214,7 @@ int main() {
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
     test_map_tiles_bounds_wrapping_and_object_cache();
+    test_tile_movement_cost_deserialization();
     test_map_navigation_edges_update_revision();
     test_map_navigation_neighbors_include_registered_edges();
     test_map_dump_paths_uses_navigation_neighbors();

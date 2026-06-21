@@ -20,6 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CPythonOverrides.h"
+
+#include <algorithm>
+
 CTile::CTile() {}
 
 CTile::~CTile() {}
@@ -58,6 +61,10 @@ void CTile::setPosy(int value) { posy = value; }
 int CTile::getPosz() const { return posz; }
 
 void CTile::setPosz(int value) { posz = value; }
+
+int CTile::getMovementCost() const { return std::max(1, movementCost); }
+
+void CTile::setMovementCost(int value) { movementCost = std::max(1, value); }
 
 void CTile::setXYZ(int x, int y, int z) {
     posx = x;
