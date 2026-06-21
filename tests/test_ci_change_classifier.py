@@ -40,6 +40,17 @@ class CiChangeClassifierTest(unittest.TestCase):
         self.assertFalse(classification.coverageNeeded)
         self.assertEqual((), classification.nativeReasons)
 
+    def test_temporary_multi_workbook_transport_paths_do_not_need_native_validation(self) -> None:
+        classification = self.classify(
+            ".github/multi-workbook-inspection.txt",
+            ".github/multi-workbook-payload/patch.xz.b64",
+            ".github/workflows/apply-multi-workbook-workflow.yml",
+        )
+
+        self.assertFalse(classification.nativeNeeded)
+        self.assertFalse(classification.coverageNeeded)
+        self.assertEqual((), classification.nativeReasons)
+
     def test_gui_cpp_requires_native_and_coverage_validation(self) -> None:
         classification = self.classify("src/gui/panel/CListView.cpp")
 

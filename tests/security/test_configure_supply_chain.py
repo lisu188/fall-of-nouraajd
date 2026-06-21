@@ -71,6 +71,11 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         self.assertRegex(requirements_text, re.compile(r"^black==[0-9]+(?:\.[0-9]+)*$", re.MULTILINE))
         self.assertNotRegex(requirements_text, re.compile(r"^pybind11\b", re.IGNORECASE | re.MULTILINE))
 
+    def test_temporary_multi_workbook_apply_artifacts_are_removed(self):
+        self.assertFalse((REPO_ROOT / ".github" / "workflows" / "apply-multi-workbook-workflow.yml").exists())
+        self.assertFalse((REPO_ROOT / ".github" / "multi-workbook-payload").exists())
+        self.assertFalse((REPO_ROOT / ".github" / "multi-workbook-inspection.txt").exists())
+
     def test_windows_job_installs_vcpkg_when_installed_cache_is_missing(self):
         workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
         match = re.search(r"(?ms)^  windows:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)", workflow_text)
