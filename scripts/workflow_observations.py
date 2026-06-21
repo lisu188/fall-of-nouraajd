@@ -498,7 +498,7 @@ def validatePrChanges(root: Path, baseRef: str) -> list[str]:
 
     rootPath = gitPathForRoot(root)
     result = subprocess.run(
-        ["git", "diff", "--name-status", "--no-renames", baseRef, "--", rootPath],
+        ["git", "diff", "--name-status", "--no-renames", baseRef],
         check=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -510,6 +510,8 @@ def validatePrChanges(root: Path, baseRef: str) -> list[str]:
 
     errors: list[str] = []
     rootParts = tuple(PurePosixPath(rootPath).parts)
+    ledgerChanges: list[tuple[str, str]] = []
+    nonLedgerChanges: list[str] = []
     for line in result.stdout.splitlines():
         columns = line.split("\t")
         if len(columns) < 2:
@@ -520,8 +522,19 @@ def validatePrChanges(root: Path, baseRef: str) -> list[str]:
         path = PurePosixPath(changedPath)
         parts = path.parts
         if rootParts and parts[: len(rootParts)] != rootParts:
-            errors.append(f"{changedPath}: changed path is outside ledger root {rootPath}")
+            nonLedgerChanges.append(changedPath)
             continue
+        ledgerChanges.append((status, changedPath))
+
+    if not ledgerChanges:
+        return errors
+
+    for changedPath in nonLedgerChanges:
+        errors.append(f"{changedPath}: ledger PR changes must not be mixed with non-ledger changes")
+
+    for status, changedPath in ledgerChanges:
+        path = PurePosixPath(changedPath)
+        parts = path.parts
         relativeParts = parts[len(rootParts) :]
         if len(relativeParts) != 2 or relativeParts[0] not in LEDGER_FILE_DIRS:
             errors.append(
@@ -812,7 +825,10 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
 
     validate = subparsers.add_parser("validate", help="validate the ledger")
     addCommonRoot(validate)
-    validate.add_argument("--base", help="reject PR diffs that modify or delete existing ledger files")
+    validate.add_argument(
+        "--base",
+        help="reject PR diffs that mix ledger and non-ledger changes or modify/delete existing ledger files",
+    )
 
     listCommand = subparsers.add_parser("list", help="list observations")
     addCommonRoot(listCommand)
