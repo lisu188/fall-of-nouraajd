@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGameContext.h"
 #include "core/CGame.h"
+#include "core/CSlotConfig.h"
 #include "handler/CGuiHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
@@ -62,6 +63,16 @@ std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
         rngHandler = std::make_shared<CRngHandler>(owner);
     }
     return rngHandler;
+}
+
+std::shared_ptr<CSlotConfig> CGameContext::getSlotConfiguration() {
+    return slotConfiguration.get([this]() {
+        auto owner = game.lock();
+        if (!owner) {
+            throw std::runtime_error("Cannot create CSlotConfig without an active CGame.");
+        }
+        return owner->createObject<CSlotConfig>("slotConfiguration");
+    });
 }
 
 CGameContext::TransitionGeneration CGameContext::getTransitionGeneration() const {

@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CSlotConfig.h"
 
 #include <utility>
 
