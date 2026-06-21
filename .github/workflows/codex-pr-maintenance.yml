@@ -4,292 +4,32 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  actions: read
+  contents: read
 
 jobs:
-  resolve-and-validate-pr-731:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 75
-    env:
-      GAME_CONFIGURE_SKIP_APT: "1"
-      GAME_CONFIGURE_SKIP_SUBMODULES: "1"
+  diagnose-pr-731:
+    runs-on: ubuntu-latest
     steps:
-      - name: Check out clean PR 731 repair branch
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-        with:
-          ref: codex/clean-repair-pr-731
-          submodules: recursive
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
-        with:
-          python-version: "3.12"
-      - name: Install validation dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
-            python3-dev pybind11-dev libboost-dev \
-            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev xvfb xauth
-          python3 -m pip install --upgrade -r requirements-dev.txt
-      - name: Merge main and resolve verified shared-file conflicts
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          set +e
-          git merge --no-commit --no-ff origin/main
-          merge_status=$?
-          set -e
-          if [[ $merge_status -ne 0 ]]; then
-            echo "Merge reported expected shared-file conflicts."
-          fi
-
-          git checkout HEAD -- src/gui/panel/CGameInventoryPanel.cpp
-          git checkout origin/main -- test.py
-
-          python3 - <<'PY'
-          from pathlib import Path
-
-          inventory_path = Path("src/gui/panel/CGameInventoryPanel.cpp")
-          inventory_source = inventory_path.read_text(encoding="utf-8")
-          slot_include = '#include "core/CSlotConfig.h"\n'
-          if slot_include not in inventory_source:
-              anchor = '#include "core/CMap.h"\n'
-              if anchor not in inventory_source:
-                  raise RuntimeError("CGameInventoryPanel.cpp include anchor was not found.")
-              inventory_path.write_text(inventory_source.replace(anchor, anchor + slot_include, 1), encoding="utf-8")
-
-          path = Path("test.py")
-          text = path.read_text(encoding="utf-8")
-
-          def add_to_section(section_marker: str, section_end: str, anchor: str, addition: str, sentinel: str) -> None:
-              global text
-              start = text.index(section_marker)
-              end = text.index(section_end, start)
-              section = text[start:end]
-              if sentinel in section:
-                  return
-              anchor_pos = text.index(anchor, start, end) + len(anchor)
-              text = text[:anchor_pos] + addition + text[anchor_pos:]
-
-          add_to_section(
-              "XVFB_GAMEPLAY_CHILD_TESTS = (",
-              "\n)",
-              '    "test_inventory_preselected_drag_release_equips_item",\n',
-              '    "test_inventory_drag_rejects_invalid_equipment_slot",\n'
-              '    "test_inventory_drag_unequips_to_inventory",\n'
-              '    "test_inventory_drag_quest_item_rejection",\n',
-              '"test_inventory_drag_rejects_invalid_equipment_slot"',
-          )
-          add_to_section(
-              "XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {",
-              "\n}",
-              '    "test_inventory_preselected_drag_release_equips_item": 6,\n',
-              '    "test_inventory_drag_rejects_invalid_equipment_slot": 6,\n'
-              '    "test_inventory_drag_unequips_to_inventory": 6,\n'
-              '    "test_inventory_drag_quest_item_rejection": 6,\n',
-              '"test_inventory_drag_rejects_invalid_equipment_slot"',
-          )
-
-          old_activate = '''def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
-              tile = list_view.getTileSize()
-              list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, column * tile + tile // 2, row * tile + tile // 2)
-
-
-          '''
-          new_activate = '''def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
-              tile = list_view.getTileSize()
-              x = column * tile + tile // 2
-              y = row * tile + tile // 2
-              list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, x, y)
-              list_view.mouseEvent(gui, SDL_MOUSEBUTTONUP, button, x, y)
-
-
-          def drag_list_cell_to_cell(test_case, g, source_list, source_column, source_row, target_list, target_column, target_row):
-              start_x, start_y = rect_center(list_cell_rect(source_list, source_column, source_row))
-              target_x, target_y = rect_center(list_cell_rect(target_list, target_column, target_row))
-
-              push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
-              pump_event_loop(3)
-              test_case.assertTrue(g.getGui().hasDragSession())
-              test_case.assertTrue(g.getGui().hasPointerCapture())
-
-              push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
-              pump_event_loop(3)
-              test_case.assertTrue(g.getGui().hasDragSession())
-              test_case.assertTrue(g.getGui().hasPointerCapture())
-
-              push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
-              pump_event_loop(5)
-              test_case.assertFalse(g.getGui().hasDragSession())
-              test_case.assertFalse(g.getGui().hasPointerCapture())
-
-
-          '''
-          if "def drag_list_cell_to_cell(" not in text:
-              if old_activate not in text:
-                  raise RuntimeError("activate_list_cell anchor did not match current main.")
-              text = text.replace(old_activate, new_activate, 1)
-
-          old_click = '''                if predicate is None or predicate(obj):
-                              graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1)
-                              return obj
-          '''
-          new_click = '''                if predicate is None or predicate(obj):
-                              if graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1):
-                                  tile = list_view.getTileSize()
-                                  list_view.mouseEvent(
-                                      gui, SDL_MOUSEBUTTONUP, button, column * tile + tile // 2, row * tile + tile // 2
-                                  )
-                              return obj
-          '''
-          if old_click in text:
-              text = text.replace(old_click, new_click, 1)
-          elif "if graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1):" not in text:
-              raise RuntimeError("click_first_list_object anchor did not match current main.")
-
-          function_start = text.index("    def test_inventory_double_select_uses_selected_item(self):")
-          function_end = text.index("\n    @game_test\n", function_start + 1)
-          segment = text[function_start:function_end]
-          old_double = "        inventory_list.setYPrefferedSize(2)\n        inventory_list.refresh()\n"
-          new_double = (
-              "        inventory_list.setYPrefferedSize(2)\n"
-              '        inventory_list.setDragStart("")\n'
-              "        inventory_list.refresh()\n"
-          )
-          if 'inventory_list.setDragStart("")' not in segment:
-              if segment.count(old_double) != 1:
-                  raise RuntimeError("Inventory double-select drag anchor was not unique.")
-              segment = segment.replace(old_double, new_double, 1)
-              text = text[:function_start] + segment + text[function_end:]
-
-          function_start = text.index("    def test_fight_panel_callbacks_and_list_views(self):")
-          function_end = text.index("\n    @game_test\n", function_start + 1)
-          segment = text[function_start:function_end]
-          old_layout = (
-              "        for list_view in (inventory_list, equipped_list):\n"
-              "            list_view.setTileSize(50)\n"
-              "            list_view.setXPrefferedSize(2)\n"
-              "            list_view.setYPrefferedSize(2)\n"
-              "            list_view.setAllowOversize(True)\n"
-              "            list_view.refresh()\n"
-          )
-          new_layout = (
-              "        for list_view in (inventory_list, equipped_list):\n"
-              "            list_view.setTileSize(50)\n"
-              "            list_view.setXPrefferedSize(2)\n"
-              "            list_view.setYPrefferedSize(2)\n"
-              "            list_view.setAllowOversize(True)\n"
-              '            list_view.setDragStart("")\n'
-              '            list_view.setDragValidate("")\n'
-              '            list_view.setDrop("")\n'
-              "            list_view.refresh()\n"
-          )
-          if 'list_view.setDragValidate("")' not in segment:
-              if segment.count(old_layout) != 1:
-                  raise RuntimeError("Inventory/equipment list drag callback anchor was not unique.")
-              segment = segment.replace(old_layout, new_layout, 1)
-              text = text[:function_start] + segment + text[function_end:]
-
-          methods = '''    def test_inventory_drag_rejects_invalid_equipment_slot(self):
-              _, g, _, player = create_xvfb_gameplay_session(self)
-              player.addItem("ChaosSword")
-              panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-              inventory_list = find_list_view(panel, "inventoryCollection")
-              equipped_list = find_list_view(panel, "equippedCollection")
-              inventory_before = player.countItems("ChaosSword")
-              weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
-
-              drag_list_cell_to_cell(self, g, inventory_list, 0, 0, equipped_list, 3, 0)
-
-              weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
-              self.assertEqual(inventory_before, player.countItems("ChaosSword"))
-              self.assertEqual(weapon_before, weapon_after)
-
-              def test_inventory_drag_unequips_to_inventory(self):
-              _, g, _, player = create_xvfb_gameplay_session(self)
-              player.addItem("ChaosSword")
-              panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-              inventory_list = find_list_view(panel, "inventoryCollection")
-              equipped_list = find_list_view(panel, "equippedCollection")
-
-              drag_list_cell_to_cell(self, g, inventory_list, 0, 0, equipped_list, 0, 0)
-              self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
-              self.assertEqual(0, player.countItems("ChaosSword"))
-
-              drag_list_cell_to_cell(self, g, equipped_list, 0, 0, inventory_list, 1, 0)
-
-              self.assertIsNone(player.getWeapon())
-              self.assertEqual(1, player.countItems("ChaosSword"))
-
-              def test_inventory_drag_quest_item_rejection(self):
-              game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
-              quest_item = g.createObject("letterToBeren")
-              self.assertTrue(quest_item.hasTag(game.CTag.QUEST))
-              player.addItem(quest_item)
-              panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-              inventory_list = find_list_view(panel, "inventoryCollection")
-              equipped_list = find_list_view(panel, "equippedCollection")
-              weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
-              start_x, start_y = rect_center(list_cell_rect(inventory_list, 0, 0))
-              target_x, target_y = rect_center(list_cell_rect(equipped_list, 0, 0))
-
-              push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
-              pump_event_loop(3)
-              self.assertFalse(g.getGui().hasDragSession())
-              self.assertFalse(g.getGui().hasPointerCapture())
-
-              push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
-              push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
-              pump_event_loop(5)
-
-              self.assertEqual(1, player.countItems("letterToBeren"))
-              weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
-              self.assertEqual(weapon_before, weapon_after)
-
-          '''
-          methods = methods.replace("\n              ", "\n        ").replace("\n              def", "\n    def")
-          if "    def test_inventory_drag_rejects_invalid_equipment_slot(self):" not in text:
-              anchor = "    def test_inventory_quest_item_selection_is_ignored(self):\n"
-              if anchor not in text:
-                  raise RuntimeError("Inventory quest-item test insertion anchor was not found.")
-              text = text.replace(anchor, methods + anchor, 1)
-
-          path.write_text(text, encoding="utf-8")
-          PY
-
-          python3 -m black -l 120 test.py
-          clang-format -i src/gui/panel/CGameInventoryPanel.cpp src/gui/panel/CGameInventoryPanel.h \
-            src/gui/panel/CListView.cpp src/gui/panel/CListView.h
-          git add res/config/panels.json src/gui/panel/CGameInventoryPanel.cpp src/gui/panel/CGameInventoryPanel.h \
-            src/gui/panel/CListView.cpp src/gui/panel/CListView.h test.py
-          unresolved=$(git diff --name-only --diff-filter=U)
-          if [[ -n "$unresolved" ]]; then
-            echo "Unresolved conflicts remain:"
-            echo "$unresolved"
-            exit 1
-          fi
-          git diff --cached --check
-      - name: Run static validation
-        run: |
-          python3 -m py_compile test.py
-          python3 -m black --check -l 120 test.py
-          python3 -m json.tool res/config/panels.json >/dev/null
-          python3 scripts/issue_queue.py validate
-      - name: Configure and build
-        run: |
-          GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
-          cmake --build cmake-build-release --target _game -j"$(nproc)"
-      - name: Run focused inventory drag regressions
+      - name: Download resolver log
         env:
-          GAME_XVFB_JOBS: "1"
-          GAME_XVFB_ONLY_CHILD_TESTS: test_inventory_drag_release_outside_source_equips_item,test_inventory_preselected_drag_release_equips_item,test_inventory_drag_valid_equip_unequip_and_refresh_counts,test_inventory_drag_invalid_slot_and_cancel_keep_state,test_inventory_drag_rejects_invalid_equipment_slot,test_inventory_drag_unequips_to_inventory,test_inventory_drag_quest_item_rejection
-        run: python3 test.py XvfbGameplayTest.test_keyboard_gameplay_under_xvfb
-      - name: Commit verified merge
-        shell: bash
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          git commit -m "Merge main into PR 731 and preserve inventory drop rules"
-          git push origin HEAD:codex/clean-repair-pr-731
+          curl --fail --location \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/jobs/82554527036/logs" \
+            --output resolver.log
+          grep -n -E -C 24 '(Traceback|RuntimeError|SyntaxError|IndentationError|AssertionError|ValueError|error:|FAILED:|CONFLICT|unresolved|cannot|did not match|not found|not unique|Process completed with exit code)' \
+            resolver.log > failure-summary.txt || true
+          tail -n 250 resolver.log > resolver-tail.txt
+          test -s failure-summary.txt
+      - name: Upload diagnostic summary
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr-731-latest-resolver-diagnostic
+          path: |
+            failure-summary.txt
+            resolver-tail.txt
+          retention-days: 1
