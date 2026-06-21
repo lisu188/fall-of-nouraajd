@@ -1,0 +1,30 @@
+{
+  "affectedPaths": [
+    ".github/workflows/build.yml"
+  ],
+  "category": "ci",
+  "controllerId": "ctrl-lis-2-b175230b",
+  "createdAtUtc": "2026-06-21T13:30:18Z",
+  "details": "PR #802 Windows validation failed twice before compile or tests because the required restored vcpkg installed cache was absent and the job requires fast cached dependencies.",
+  "evidence": [
+    {
+      "cacheKey": "Windows-x64-windows-release-vcpkg-installed-v3-7a447d81dca11580d99640dce7f9f10e20cb6d152421fdf516db149c866b425c-27832965710-1",
+      "failedStep": "Validate vcpkg installed cache",
+      "pr": 802,
+      "rerunJob": 82574115261,
+      "restoreCacheHit": "none",
+      "validationReason": "vcpkg installed cache is missing expected files: include\\SDL2\\SDL.h, include\\SDL2\\SDL_image.h, include\\SDL2\\SDL_ttf.h, lib\\SDL2.lib, lib\\SDL2_image.lib, lib\\SDL2_ttf.lib, bin\\SDL2.dll, bin\\SDL2_image.dll, bin\\SDL2_ttf.dll",
+      "workflowRun": 27903644556
+    }
+  ],
+  "fingerprint": "windows-vcpkg-installed-cache-missing-sdl",
+  "id": "20260621T133018Z-ctrl-lis-2-b175230b-e328ca33",
+  "impact": "Implementation PR validation is blocked by infrastructure state rather than code, and reruns consume CI while reproducing the same setup failure.",
+  "phase": "validation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "medium",
+  "sourceCommit": "cde103343a258a3d8f6a2ae3c831f98def4dd8f2",
+  "suggestedImprovement": "When the required Windows installed-cache key is missing, run the dependency install/build fallback or make the cache producer and consumer keys align before requiring the fast Windows job.",
+  "summary": "Windows build fails on missing vcpkg installed cache"
+}
