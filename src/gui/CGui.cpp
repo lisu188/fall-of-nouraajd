@@ -113,6 +113,10 @@ CGui::CGui() {
 CGui::~CGui() = default;
 
 void CGui::shutdown() {
+    if (!active.exchange(false, std::memory_order_acq_rel)) {
+        return;
+    }
+
     clearDragSession();
     releasePointerCapture();
 
@@ -132,7 +136,13 @@ void CGui::shutdown() {
     _textManager.clear();
 }
 
+bool CGui::isActive() const { return active.load(std::memory_order_acquire); }
+
 void CGui::render(int i1) {
+    if (!isActive()) {
+        return;
+    }
+
     CUtil::setRenderDrawColor(renderer.get(), CColors::Black);
     SDL_SAFE(SDL_RenderClear(renderer.get()));
     CGameGraphicsObject::render(this->ptr<CGui>(), i1);
@@ -190,7 +200,7 @@ int CGui::getTileCountX() { return width / tileSize + 1; }
 int CGui::getTileCountY() { return height / tileSize + 1; }
 
 bool CGui::event(SDL_Event *event) {
-    if (!event) {
+    if (!isActive() || !event) {
         return false;
     }
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
