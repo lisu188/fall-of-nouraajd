@@ -9,6 +9,7 @@ PROMPTS_DIR = REPO_ROOT / "prompts"
 WORKFLOW_TEXT_PATHS = (
     REPO_ROOT / "AGENTS.md",
     REPO_ROOT / "docs" / "codex-agent-queue.md",
+    REPO_ROOT / "docs" / "testing.md",
     PROMPTS_DIR / "codex-queue-controller.md",
     PROMPTS_DIR / "codex-queue-goal.txt",
     PROMPTS_DIR / "codex-workflow-optimizer.md",
@@ -42,6 +43,19 @@ class PromptInventoryTest(unittest.TestCase):
             for pattern, reason in banned_patterns.items():
                 with self.subTest(path=path.relative_to(REPO_ROOT), pattern=pattern):
                     self.assertIsNone(re.search(pattern, text), reason)
+
+    def test_workflow_prompts_do_not_default_to_linux_only_pr_polling(self) -> None:
+        for path in WORKFLOW_TEXT_PATHS:
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for line_number, line in enumerate(lines, start=1):
+                if "poll_pr_checks.py" not in line or "--check linux" not in line:
+                    continue
+                explicit_all_platforms = "--check windows-deps" in line and "--check windows" in line
+                with self.subTest(path=path.relative_to(REPO_ROOT), line=line_number):
+                    self.assertTrue(
+                        explicit_all_platforms,
+                        "ordinary PR polling should use the path-selected default, not a Linux-only command",
+                    )
 
 
 if __name__ == "__main__":
