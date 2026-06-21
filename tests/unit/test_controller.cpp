@@ -95,6 +95,28 @@ std::shared_ptr<CMap> open_tile_map(const std::shared_ptr<CGame> &game, int widt
     return map;
 }
 
+void set_tile_movement_cost(const std::shared_ptr<CMap> &map, Coords coords, int movement_cost) {
+    auto tile = map->getTile(coords);
+    expect_true(tile != nullptr, "weighted path fixture tile should exist");
+    if (tile) {
+        tile->setMovementCost(movement_cost);
+    }
+}
+
+std::shared_ptr<CMap> weighted_detour_map(const std::shared_ptr<CGame> &game) {
+    auto map = open_tile_map(game, 5, 2);
+    for (int x = 1; x <= 3; ++x) {
+        set_tile_movement_cost(map, Coords(x, 0, 0), 30);
+    }
+    return map;
+}
+
+std::vector<Coords> expected_weighted_detour_path() {
+    return {
+        Coords(0, 1, 0), Coords(1, 1, 0), Coords(2, 1, 0), Coords(3, 1, 0), Coords(4, 1, 0), Coords(4, 0, 0),
+    };
+}
+
 std::shared_ptr<CPlayer> player_at(const std::shared_ptr<CGame> &game, Coords coords) {
     auto player = std::make_shared<CPlayer>();
     player->setGame(game);
@@ -244,6 +266,72 @@ void test_ground_controller_ignores_stale_transition_generation() {
 
     expect_true(resolve_coords(pending) == Coords(0, 0, 0),
                 "ground controller should ignore deferred steps from stale transition generations");
+}
+
+void test_player_controller_prefers_longer_lower_cost_route() {
+    auto game = std::make_shared<CGame>();
+    weighted_detour_map(game);
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+    controller->setTarget(player, Coords(4, 0, 0));
+
+    for (const auto &expected_step : expected_weighted_detour_path()) {
+        auto actual_step = resolve_coords(controller->control(player));
+        expect_true(actual_step == expected_step, "player controller should follow the cheaper weighted detour");
+        player->moveTo(actual_step);
+        controller->onStepCommitted(player, actual_step);
+    }
+
+    expect_true(player->getCoords() == Coords(4, 0, 0), "player weighted detour should reach the target");
+    expect_true(controller->isCompleted(player), "player weighted detour should complete after the target step");
+}
+
+void test_npc_random_controller_prefers_longer_lower_cost_route() {
+    vstd::rng().seed(4);
+    auto game = std::make_shared<CGame>();
+    weighted_detour_map(game);
+    auto creature = creature_at(0, 0, 0);
+    creature->setGame(game);
+
+    auto controller = std::make_shared<CNpcRandomController>();
+    auto first = resolve_coords(controller->control(creature));
+    expect_true(first == Coords(0, 1, 0), "NPC random controller should start on the cheaper weighted detour");
+    creature->moveTo(first);
+    controller->onStepCommitted(creature, first);
+
+    auto second = resolve_coords(controller->control(creature));
+    expect_true(second == Coords(1, 1, 0), "NPC random controller should keep following the weighted detour path");
+}
+
+void test_target_controller_flow_field_prefers_longer_lower_cost_route() {
+    auto game = std::make_shared<CGame>();
+    auto map = weighted_detour_map(game);
+
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("weightedTarget");
+    target->setCanStep(true);
+    target->setCoords(Coords(4, 0, 0));
+    map->addObject(target);
+
+    auto chaser = creature_at(0, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("weightedChaser");
+    chaser->setHp(1);
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget("weightedTarget");
+    chaser->setController(controller);
+    map->addObject(chaser);
+
+    performance_guard::clearTargetFlowCache();
+    for (const auto &expected_step : expected_weighted_detour_path()) {
+        auto actual_step = resolve_coords(controller->control(chaser));
+        expect_true(actual_step == expected_step, "target flow field should follow the cheaper weighted detour");
+        chaser->moveTo(actual_step);
+    }
+
+    expect_true(chaser->getCoords() == target->getCoords(), "target weighted detour should reach the target");
 }
 
 void test_player_controller_uses_navigation_neighbors_for_cross_level_route() {
@@ -640,6 +728,9 @@ int main() {
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();
     test_ground_controller_ignores_stale_transition_generation();
+    test_player_controller_prefers_longer_lower_cost_route();
+    test_npc_random_controller_prefers_longer_lower_cost_route();
+    test_target_controller_flow_field_prefers_longer_lower_cost_route();
     test_player_controller_uses_navigation_neighbors_for_cross_level_route();
     test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();
     test_player_controller_respects_disabled_and_one_way_cross_level_edges();
