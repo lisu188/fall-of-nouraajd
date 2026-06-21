@@ -504,6 +504,8 @@ def fixture_player_summary(snapshot):
 
 
 def fixture_quest_ids(quests):
+    if not isinstance(quests, list):
+        return []
     quest_ids = []
     for quest in quests:
         if not isinstance(quest, dict):
@@ -514,6 +516,8 @@ def fixture_quest_ids(quests):
 
 
 def fixture_item_ids(items):
+    if not isinstance(items, list):
+        return []
     item_ids = []
     for item in items:
         if not isinstance(item, dict):
@@ -557,6 +561,36 @@ def save_fixture_summary(document):
     return summary
 
 
+def normalize_save_snapshot(value):
+    if isinstance(value, dict):
+        return {key: normalize_save_snapshot(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        normalized = [normalize_save_snapshot(item) for item in value]
+        if all(isinstance(item, dict) for item in normalized):
+            return sorted(normalized, key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")))
+        return normalized
+    return value
+
+
+def comparable_save_state(summary):
+    comparable = dict(summary)
+    comparable.pop("encoding", None)
+    comparable.pop("schemaVersion", None)
+    return comparable
+
+
+def runtime_save_state_summary(snapshot):
+    return comparable_save_state(save_fixture_summary(snapshot))
+
+
+def install_save_fixture_slot(slot_name, expected):
+    cleanup_save_slot(slot_name)
+    save_primary_path(slot_name).parent.mkdir(exist_ok=True)
+    shutil.copyfile(SAVE_FIXTURE_DIR / expected["primary"], save_primary_path(slot_name))
+    if expected.get("backup"):
+        shutil.copyfile(SAVE_FIXTURE_DIR / expected["backup"], save_backup_path(slot_name))
+
+
 class SaveFixtureTest(unittest.TestCase):
     maxDiff = None
 
@@ -585,6 +619,38 @@ class SaveFixtureTest(unittest.TestCase):
             if document.get("format") == SAVE_FORMAT:
                 assert_save_envelope(self, document, expected["summary"]["map"])
             self.assertEqual(expected["summary"], save_fixture_summary(document), fixture_name)
+
+    def test_save_fixture_summary_treats_null_player_collections_as_empty(self):
+        document = {
+            "format": SAVE_FORMAT,
+            "schemaVersion": SAVE_SCHEMA_VERSION,
+            "mapName": "test",
+            "snapshot": {
+                "class": "CMap",
+                "properties": {
+                    "description": "runtime-null-collections",
+                    "mapName": "test",
+                    "objects": [
+                        {
+                            "class": "CPlayer",
+                            "properties": {
+                                "completedQuests": None,
+                                "items": None,
+                                "name": "player",
+                                "quests": None,
+                                "typeId": "Warrior",
+                            },
+                        }
+                    ],
+                },
+            },
+        }
+
+        summary = save_fixture_summary(document)
+
+        self.assertEqual([], summary["player"]["activeQuests"])
+        self.assertEqual([], summary["player"]["completedQuests"])
+        self.assertEqual([], summary["player"]["items"])
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
@@ -7737,6 +7803,127 @@ class GameTest(unittest.TestCase):
         self.assertIn("Saved game was not loaded; keeping the active map unchanged", log_text)
 
         return True, json.dumps({"log": log_text.strip(), "map_description": g.getMap().description})
+
+    def load_migration_fixture_once(self, game, fixture_name, expected, label):
+        save_name = unique_save_name(f"migration_fixture_{fixture_name}_{label}")
+        install_save_fixture_slot(save_name, expected)
+        try:
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            self.assertIsNotNone(loaded_map, fixture_name)
+            loaded_snapshot = normalize_save_snapshot(json.loads(game.jsonify(loaded_map)))
+            loaded_state = runtime_save_state_summary(loaded_snapshot)
+            self.assertEqual(comparable_save_state(expected["summary"]), loaded_state, fixture_name)
+
+            game.CMapLoader.save(loaded_map, save_name)
+            saved_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            saved_snapshot = normalize_save_snapshot(assert_save_envelope(self, saved_json, expected["summary"]["map"]))
+            saved_state = runtime_save_state_summary(saved_snapshot)
+            self.assertEqual(loaded_state, saved_state, fixture_name)
+
+            reloaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(reloaded_game, save_name)
+            reloaded_snapshot = normalize_save_snapshot(json.loads(game.jsonify(reloaded_game.getMap())))
+            reloaded_state = runtime_save_state_summary(reloaded_snapshot)
+            self.assertEqual(loaded_state, reloaded_state, fixture_name)
+
+            return {
+                "state": loaded_state,
+                "resavedFormat": saved_json.get("format"),
+                "resavedSchemaVersion": saved_json.get("schemaVersion"),
+            }
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_save_migration_fixtures_are_idempotent_and_round_trip_current_format(self):
+        game = load_game_module()
+
+        fixture_results = {}
+        for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
+            first = self.load_migration_fixture_once(game, fixture_name, expected, "first")
+            second = self.load_migration_fixture_once(game, fixture_name, expected, "second")
+            self.assertEqual(first["state"], second["state"], fixture_name)
+            self.assertEqual(SAVE_FORMAT, first["resavedFormat"], fixture_name)
+            self.assertEqual(SAVE_SCHEMA_VERSION, first["resavedSchemaVersion"], fixture_name)
+            fixture_results[fixture_name] = first["state"]
+
+        return True, json.dumps({"fixtures": sorted(fixture_results)}, sort_keys=True)
+
+    @game_test
+    def test_malformed_save_envelopes_do_not_activate(self):
+        game = load_game_module()
+
+        base_envelope = json.loads((SAVE_FIXTURE_DIR / "schema_v1_test_map.json").read_text(encoding="utf-8"))
+
+        def unsupported_format(document):
+            document["format"] = "another-save-format"
+
+        def missing_integer_schema(document):
+            document["schemaVersion"] = "1"
+
+        def unsupported_schema(document):
+            document["schemaVersion"] = -1
+
+        def missing_map_name(document):
+            document.pop("mapName", None)
+
+        def invalid_map_name(document):
+            document["mapName"] = "../test"
+
+        def missing_object_snapshot(document):
+            document["snapshot"] = []
+
+        def mismatched_snapshot_map(document):
+            document["mapName"] = "nouraajd"
+
+        cases = [
+            ("root_not_object", lambda _document: [], "save root is not a JSON object"),
+            ("unsupported_format", unsupported_format, "unsupported save format"),
+            ("missing_integer_schema", missing_integer_schema, "save envelope is missing integer schemaVersion"),
+            ("unsupported_schema", unsupported_schema, "unsupported save schema version"),
+            ("missing_map_name", missing_map_name, "save envelope is missing string mapName"),
+            ("invalid_map_name", invalid_map_name, "save envelope contains invalid mapName"),
+            ("missing_object_snapshot", missing_object_snapshot, "save envelope is missing object snapshot"),
+            (
+                "mismatched_snapshot_map",
+                mismatched_snapshot_map,
+                "save envelope mapName does not match snapshot mapName",
+            ),
+        ]
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        active_map = g.getMap()
+        rejected = []
+        for case_name, mutate, expected_reason in cases:
+            save_name = unique_save_name(f"malformed_envelope_{case_name}")
+            cleanup_save_slot(save_name)
+            save_primary_path(save_name).parent.mkdir(exist_ok=True)
+            document = json.loads(json.dumps(base_envelope))
+            mutated = mutate(document)
+            save_primary_path(save_name).write_text(
+                json.dumps(document if mutated is None else mutated), encoding="utf-8"
+            )
+            active_description = f"active-before-{case_name}"
+            active_map.description = active_description
+            log_path = make_temp_log_path()
+            try:
+                game.set_logger_sink("file", str(log_path))
+                game.CGameLoader.loadSavedGame(g, save_name)
+            finally:
+                game.set_logger_sink("disabled", None)
+                cleanup_save_slot(save_name)
+
+            log_text = log_path.read_text()
+            log_path.unlink(missing_ok=True)
+            self.assertTrue(g.getMap() == active_map, case_name)
+            self.assertEqual(active_description, g.getMap().description, case_name)
+            self.assertIn(expected_reason, log_text, case_name)
+            rejected.append(case_name)
+
+        return True, json.dumps({"rejected": rejected}, sort_keys=True)
 
     @game_test
     def test_legacy_save_loads_and_resaves_as_versioned_format(self):
