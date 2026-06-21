@@ -611,6 +611,7 @@ class WorkflowObservationsTest(unittest.TestCase):
                 os.chdir(repo)
                 added = self.observation_payload("20260620T150200Z-ctrl-test-33333333")
                 self.write_record(Path("planning/workflow_observations"), added)
+                self.run_git(repo, ["add", f"planning/workflow_observations/records/{added['id']}.json"])
                 exitCode, stdout, stderr = self.run_cli(
                     ["validate", "--root", "planning/workflow_observations", "--base", "HEAD"]
                 )
@@ -639,6 +640,72 @@ class WorkflowObservationsTest(unittest.TestCase):
         errors = "\n".join(json.loads(stdout)["errors"])
         self.assertIn("may only be added", errors)
         self.assertIn("ledger PR changes must be JSON files", errors)
+
+    def test_validate_base_rejects_mixed_ledger_and_non_ledger_pr_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            repo.mkdir()
+            self.run_git(repo, ["init"])
+            self.run_git(repo, ["config", "user.email", "test@example.invalid"])
+            self.run_git(repo, ["config", "user.name", "Workflow Test"])
+            (repo / "scripts").mkdir()
+            (repo / "scripts" / "placeholder.py").write_text("print('base')\n", encoding="utf-8")
+            self.run_git(repo, ["add", "scripts/placeholder.py"])
+            self.run_git(repo, ["commit", "-m", "base non-ledger file"])
+
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(repo)
+                added = self.observation_payload("20260620T150200Z-ctrl-test-33333333")
+                self.write_record(Path("planning/workflow_observations"), added)
+                Path("scripts/placeholder.py").write_text("print('changed')\n", encoding="utf-8")
+                self.run_git(
+                    repo,
+                    [
+                        "add",
+                        f"planning/workflow_observations/records/{added['id']}.json",
+                        "scripts/placeholder.py",
+                    ],
+                )
+
+                exitCode, stdout, stderr = self.run_cli(
+                    ["validate", "--root", "planning/workflow_observations", "--base", "HEAD"]
+                )
+            finally:
+                os.chdir(old_cwd)
+
+        self.assertEqual(1, exitCode)
+        self.assertEqual("", stderr)
+        self.assertIn(
+            "scripts/placeholder.py: ledger PR changes must not be mixed with non-ledger changes",
+            "\n".join(json.loads(stdout)["errors"]),
+        )
+
+    def test_validate_base_allows_non_ledger_pr_without_ledger_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            repo.mkdir()
+            self.run_git(repo, ["init"])
+            self.run_git(repo, ["config", "user.email", "test@example.invalid"])
+            self.run_git(repo, ["config", "user.name", "Workflow Test"])
+            (repo / "scripts").mkdir()
+            (repo / "scripts" / "placeholder.py").write_text("print('base')\n", encoding="utf-8")
+            self.run_git(repo, ["add", "scripts/placeholder.py"])
+            self.run_git(repo, ["commit", "-m", "base non-ledger file"])
+
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(repo)
+                Path("scripts/placeholder.py").write_text("print('changed')\n", encoding="utf-8")
+
+                exitCode, stdout, stderr = self.run_cli(
+                    ["validate", "--root", "planning/workflow_observations", "--base", "HEAD"]
+                )
+            finally:
+                os.chdir(old_cwd)
+
+        self.assertEqual(0, exitCode, stderr)
+        self.assertEqual([], json.loads(stdout)["errors"])
 
     def test_workflow_ledger_operations_preserve_xlsx_bytes_and_queue_compatibility(self) -> None:
         workbook = REPO_ROOT / issue_queue.DEFAULT_WORKBOOK
