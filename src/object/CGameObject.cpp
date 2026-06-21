@@ -23,22 +23,164 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPythonOverrides.h"
 #include "gui/CAnimation.h"
 
+#include <any>
+#include <map>
+#include <typeindex>
 #include <utility>
+
+namespace {
+
+using ObjectPair = std::pair<const CGameObject *, const CGameObject *>;
+
+bool isEquivalentValueType(std::type_index type) {
+    return type == std::type_index(typeid(bool)) || type == std::type_index(typeid(int)) ||
+           type == std::type_index(typeid(std::string)) || type == std::type_index(typeid(CTags)) ||
+           type == std::type_index(typeid(std::set<int>)) || type == std::type_index(typeid(std::set<std::string>)) ||
+           type == std::type_index(typeid(std::map<int, int>)) ||
+           type == std::type_index(typeid(std::map<int, std::string>)) ||
+           type == std::type_index(typeid(std::map<std::string, int>)) ||
+           type == std::type_index(typeid(std::map<std::string, std::string>));
+}
+
+template <typename T> bool sameAnyValue(const std::any &a, const std::any &b) {
+    return std::any_cast<T>(a) == std::any_cast<T>(b);
+}
+
+bool sameEquivalentValue(const std::any &a, const std::any &b, std::type_index type) {
+    try {
+        if (type == std::type_index(typeid(bool))) {
+            return sameAnyValue<bool>(a, b);
+        }
+        if (type == std::type_index(typeid(int))) {
+            return sameAnyValue<int>(a, b);
+        }
+        if (type == std::type_index(typeid(std::string))) {
+            return sameAnyValue<std::string>(a, b);
+        }
+        if (type == std::type_index(typeid(CTags))) {
+            return sameAnyValue<CTags>(a, b);
+        }
+        if (type == std::type_index(typeid(std::set<int>))) {
+            return sameAnyValue<std::set<int>>(a, b);
+        }
+        if (type == std::type_index(typeid(std::set<std::string>))) {
+            return sameAnyValue<std::set<std::string>>(a, b);
+        }
+        if (type == std::type_index(typeid(std::map<int, int>))) {
+            return sameAnyValue<std::map<int, int>>(a, b);
+        }
+        if (type == std::type_index(typeid(std::map<int, std::string>))) {
+            return sameAnyValue<std::map<int, std::string>>(a, b);
+        }
+        if (type == std::type_index(typeid(std::map<std::string, int>))) {
+            return sameAnyValue<std::map<std::string, int>>(a, b);
+        }
+        if (type == std::type_index(typeid(std::map<std::string, std::string>))) {
+            return sameAnyValue<std::map<std::string, std::string>>(a, b);
+        }
+    } catch (const std::bad_any_cast &) {
+        return false;
+    }
+    return false;
+}
+
+bool collectEquivalentValueProperties(const std::shared_ptr<CGameObject> &object,
+                                      std::map<std::string, std::type_index> &properties) {
+    bool supported = true;
+    object->meta()->for_all_properties(object, [&](auto property) {
+        const auto type = property->value_type();
+        if (!isEquivalentValueType(type)) {
+            supported = false;
+            return;
+        }
+        properties.emplace(property->name(), type);
+    });
+    return supported;
+}
+
+bool equivalentValueInternal(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b,
+                             std::set<ObjectPair> &visited) {
+    if (CGameObject::sameInstance(a, b)) {
+        return true;
+    }
+    if (!a || !b) {
+        return false;
+    }
+    if (!visited.insert({a.get(), b.get()}).second) {
+        return true;
+    }
+    if (a->meta()->name() != b->meta()->name()) {
+        return false;
+    }
+
+    std::map<std::string, std::type_index> aProperties;
+    std::map<std::string, std::type_index> bProperties;
+    if (!collectEquivalentValueProperties(a, aProperties) || !collectEquivalentValueProperties(b, bProperties) ||
+        aProperties != bProperties) {
+        return false;
+    }
+
+    for (const auto &[name, type] : aProperties) {
+        bool sameValue = false;
+        try {
+            sameValue = sameEquivalentValue(a->getProperty<std::any>(name), b->getProperty<std::any>(name), type);
+        } catch (const std::exception &) {
+            return false;
+        }
+        if (!sameValue) {
+            return false;
+        }
+    }
+    return true;
+}
+
+} // namespace
 
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator =
     [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
-        if (!a || !b) {
-            return a == b;
-        }
-        if (!a->getTypeId().empty() || !b->getTypeId().empty()) {
-            return a->getTypeId() == b->getTypeId();
-        }
-        return a->getType() == b->getType() && a->getName() == b->getName();
+        return CGameObject::sameConfiguredType(a, b);
     };
 
 CGameObject::~CGameObject() { CPythonOverrides::release(this); }
 
 CGameObject::CGameObject() {}
+
+bool CGameObject::sameInstance(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b) {
+    return a == b;
+}
+
+bool CGameObject::sameRuntimeIdentity(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b) {
+    if (sameInstance(a, b)) {
+        return true;
+    }
+    if (!a || !b) {
+        return false;
+    }
+    auto aMap = a->owningMap.lock();
+    auto bMap = b->owningMap.lock();
+    if (!aMap || !bMap || aMap != bMap) {
+        return false;
+    }
+    return !a->getName().empty() && a->getName() == b->getName();
+}
+
+bool CGameObject::sameConfiguredType(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b) {
+    if (sameInstance(a, b)) {
+        return true;
+    }
+    if (!a || !b) {
+        return false;
+    }
+    if (!a->getTypeId().empty() || !b->getTypeId().empty()) {
+        return a->getTypeId() == b->getTypeId();
+    }
+    return a->getType() == b->getType() && a->getName() == b->getName();
+}
+
+bool CGameObject::equivalentValue(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b) {
+    std::set<ObjectPair> visited;
+    return equivalentValueInternal(a, b, visited);
+}
 
 CGameObject::PropertyNotificationBatch::PropertyNotificationBatch(CGameObject &object) : object(object) {
     this->object.beginPropertyNotificationBatch();

@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CGame.h"
 #include "core/CStats.h"
 #include "core/CMap.h"
 #include "core/CTypes.h"
@@ -400,6 +401,101 @@ void test_game_object_comparator_and_identity_sets_document_current_semantics() 
                 "creature addEffect should de-duplicate current effects by configured comparator semantics");
 }
 
+void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
+    std::shared_ptr<CGameObject> null_object;
+    auto first_item = std::make_shared<CItem>();
+    first_item->setType("CItem");
+    first_item->setName("potion-one");
+    first_item->setTypeId("LifePotion");
+
+    auto second_item = std::make_shared<CItem>();
+    second_item->setType("CItem");
+    second_item->setName("potion-two");
+    second_item->setTypeId("LifePotion");
+
+    expect_true(CGameObject::sameInstance(null_object, null_object),
+                "sameInstance should treat two null pointers as the same instance");
+    expect_true(CGameObject::sameInstance(first_item, first_item),
+                "sameInstance should recognize the exact same item pointer");
+    expect_true(!CGameObject::sameInstance(first_item, second_item),
+                "sameInstance should distinguish two item instances with the same configured type");
+    expect_true(CGameObject::sameConfiguredType(first_item, second_item),
+                "sameConfiguredType should match two item instances with the same non-empty typeId");
+    expect_true(CGameObject::name_comparator(first_item, second_item) ==
+                    CGameObject::sameConfiguredType(first_item, second_item),
+                "name_comparator should preserve the configured-type helper semantics");
+    expect_true(!CGameObject::equivalentValue(first_item, second_item),
+                "equivalentValue should not claim unsupported item object graphs are equivalent");
+
+    auto named_a = std::make_shared<CGameObject>();
+    named_a->setType("CEffect");
+    named_a->setName("haste");
+
+    auto named_b = std::make_shared<CGameObject>();
+    named_b->setType("CEffect");
+    named_b->setName("haste");
+
+    auto named_c = std::make_shared<CGameObject>();
+    named_c->setType("CEffect");
+    named_c->setName("slow");
+
+    expect_true(CGameObject::sameConfiguredType(named_a, named_b),
+                "sameConfiguredType should fall back to type/name when both typeIds are empty");
+    expect_true(!CGameObject::sameConfiguredType(named_a, named_c),
+                "sameConfiguredType should not collapse all objects with empty typeIds");
+
+    auto first_map = std::make_shared<CMap>();
+    auto second_map = std::make_shared<CMap>();
+    auto first_map_object = std::make_shared<CMapObject>();
+    first_map_object->setName("sharedName");
+    auto second_map_object = std::make_shared<CMapObject>();
+    second_map_object->setName("sharedName");
+    first_map->setObjects({first_map_object});
+    second_map->setObjects({second_map_object});
+
+    expect_true(!CGameObject::sameRuntimeIdentity(first_map_object, second_map_object),
+                "sameRuntimeIdentity should distinguish the same object name on different owning maps");
+
+    CTypes::register_type<CGameObject>();
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CGameObject", []() { return std::make_shared<CGameObject>(); });
+
+    auto source = std::make_shared<CGameObject>();
+    source->setGame(game);
+    source->setType("CGameObject");
+    source->setTypeId("ConfiguredClone");
+    source->setName("cloneSource");
+    source->setLabel("Source Label");
+    source->setDescription("source description");
+
+    auto clone = source->clone<CGameObject>();
+    expect_true(!CGameObject::sameInstance(source, clone), "clones should be distinct live instances");
+    expect_true(CGameObject::sameConfiguredType(source, clone), "clones should retain the same configured typeId");
+    expect_true(!CGameObject::sameRuntimeIdentity(source, clone),
+                "detached clones should not be treated as the same runtime map/name identity");
+
+    clone->setName(source->getName());
+    expect_true(CGameObject::equivalentValue(source, clone),
+                "equivalentValue should match clones after reviewed primitive values match");
+    clone->setDescription("changed description");
+    expect_true(!CGameObject::equivalentValue(source, clone),
+                "equivalentValue should distinguish reviewed primitive value changes");
+
+    auto cycle_a = std::make_shared<CGameObject>();
+    cycle_a->setType("CGameObject");
+    cycle_a->setName("cycle");
+    cycle_a->setProperty("self", cycle_a);
+    auto cycle_b = std::make_shared<CGameObject>();
+    cycle_b->setType("CGameObject");
+    cycle_b->setName("cycle");
+    cycle_b->setProperty("self", cycle_b);
+
+    expect_true(CGameObject::equivalentValue(cycle_a, cycle_a),
+                "equivalentValue should handle a self-referential instance without recursion");
+    expect_true(!CGameObject::equivalentValue(cycle_a, cycle_b),
+                "equivalentValue should reject unsupported cyclic object-reference graphs safely");
+}
+
 } // namespace
 
 int main() {
@@ -411,6 +507,7 @@ int main() {
     test_map_direct_state_setters_notify_property_observers();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
+    test_game_object_named_comparison_helpers_cover_explicit_semantics();
 
     return finish_tests();
 }

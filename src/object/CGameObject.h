@@ -47,6 +47,14 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
   public:
     static std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
 
+    static bool sameInstance(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
+    static bool sameRuntimeIdentity(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
+    static bool sameConfiguredType(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
+    static bool equivalentValue(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
     class PropertyNotificationBatch {
       public:
         explicit PropertyNotificationBatch(CGameObject &object);
