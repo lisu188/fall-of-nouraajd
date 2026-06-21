@@ -322,14 +322,7 @@ std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
     std::shared_ptr<CTile> tile;
     auto it = this->tiles.find(coords);
     if (it == this->tiles.end()) {
-        if (hasBounds(z) && (coords.x < 0 || coords.y < 0 || coords.x > xBounds.at(z) || coords.y > yBounds.at(z))) {
-            tile = getGame()->createObject<CTile>(vstd::ctn(outOfBoundsTiles, z) && !outOfBoundsTiles.at(z).empty()
-                                                      ? outOfBoundsTiles.at(z)
-                                                      : "MountainTile");
-        } else {
-            tile = getGame()->createObject<CTile>(
-                vstd::ctn(defaultTiles, z) && !defaultTiles.at(z).empty() ? defaultTiles.at(z) : "GrassTile");
-        }
+        tile = getGame()->createObject<CTile>(fallbackTileType(coords));
         if (tile) {
             this->addTile(tile, coords.x, coords.y, coords.z);
         }
@@ -348,22 +341,16 @@ bool CMap::canStep(int x, int y, int z) {
             return false;
         }
     }
-    auto it = this->tiles.find(coords);
-    if (it != this->tiles.end()) {
-        return (*it).second->canStep();
+    auto tile = resolveTileForLookup(coords);
+    if (tile) {
+        return tile->canStep();
     }
-    if (!getGame()) {
-        const int x_bound = vstd::ctn(xBounds, z) ? xBounds.at(z) : 0;
-        const int y_bound = vstd::ctn(yBounds, z) ? yBounds.at(z) : 0;
-        return !(coords.x < 0 || coords.y < 0 || coords.x > x_bound || coords.y > y_bound);
+    if (getGame()) {
+        return false;
     }
-    const auto tile_type =
-        hasBounds(z) && (coords.x < 0 || coords.y < 0 || coords.x > xBounds.at(z) || coords.y > yBounds.at(z))
-            ? (vstd::ctn(outOfBoundsTiles, z) && !outOfBoundsTiles.at(z).empty() ? outOfBoundsTiles.at(z)
-                                                                                 : "MountainTile")
-            : (vstd::ctn(defaultTiles, z) && !defaultTiles.at(z).empty() ? defaultTiles.at(z) : "GrassTile");
-    auto tile = getGame()->createObject<CTile>(tile_type);
-    return tile && tile->canStep();
+    const int x_bound = vstd::ctn(xBounds, z) ? xBounds.at(z) : 0;
+    const int y_bound = vstd::ctn(yBounds, z) ? yBounds.at(z) : 0;
+    return !(coords.x < 0 || coords.y < 0 || coords.x > x_bound || coords.y > y_bound);
 }
 
 bool CMap::canStep(Coords coords) { return canStep(coords.x, coords.y, coords.z); }
@@ -376,6 +363,16 @@ int CMap::getMovementCost(int x, int y, int z) {
 int CMap::getMovementCost(Coords coords) {
     coords = normalizeCoords(coords);
     return getMovementCost(coords.x, coords.y, coords.z);
+}
+
+int CMap::lookupMovementCost(int x, int y, int z) {
+    auto tile = resolveTileForLookup(Coords(x, y, z));
+    return tile ? std::max(1, tile->getMovementCost()) : 1;
+}
+
+int CMap::lookupMovementCost(Coords coords) {
+    coords = normalizeCoords(coords);
+    return lookupMovementCost(coords.x, coords.y, coords.z);
 }
 
 bool CMap::contains(int x, int y, int z) {
@@ -776,6 +773,31 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords
 Coords CMap::getEntry() { return Coords(getEntryX(), getEntryY(), getEntryZ()); }
 
 bool CMap::hasBounds(int z) const { return vstd::ctn(xBounds, z) && vstd::ctn(yBounds, z); }
+
+bool CMap::isOutOfBounds(Coords coords) const {
+    return hasBounds(coords.z) &&
+           (coords.x < 0 || coords.y < 0 || coords.x > xBounds.at(coords.z) || coords.y > yBounds.at(coords.z));
+}
+
+std::string CMap::fallbackTileType(Coords coords) const {
+    if (isOutOfBounds(coords)) {
+        return vstd::ctn(outOfBoundsTiles, coords.z) && !outOfBoundsTiles.at(coords.z).empty()
+                   ? outOfBoundsTiles.at(coords.z)
+                   : "MountainTile";
+    }
+    return vstd::ctn(defaultTiles, coords.z) && !defaultTiles.at(coords.z).empty() ? defaultTiles.at(coords.z)
+                                                                                   : "GrassTile";
+}
+
+std::shared_ptr<CTile> CMap::resolveTileForLookup(Coords coords) {
+    coords = normalizeCoords(coords);
+    auto it = tiles.find(coords);
+    if (it != tiles.end()) {
+        return it->second;
+    }
+    auto game = getGame();
+    return game ? game->createObject<CTile>(fallbackTileType(coords)) : nullptr;
+}
 
 int CMap::normalizeAxis(int value, int z, bool wrapAxis, const std::map<int, int> &bounds) const {
     if (!wrapAxis || !vstd::ctn(bounds, z)) {

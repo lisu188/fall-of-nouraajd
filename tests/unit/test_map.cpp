@@ -653,6 +653,46 @@ void test_tile_movement_cost_deserialization() {
                 "invalid configured movementCost should clamp to one during deserialization");
 }
 
+void test_map_movement_cost_default_lookup_without_materializing() {
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 3}});
+    map->setYBounds({{0, 3}});
+
+    auto default_config = std::make_shared<json>();
+    (*default_config)["class"] = "CTile";
+    (*default_config)["properties"]["canStep"] = true;
+    (*default_config)["properties"]["movementCost"] = 7;
+    (*default_config)["properties"]["tileType"] = "weightedDefault";
+    game->getObjectHandler()->registerConfig("WeightedDefaultTile", default_config);
+
+    auto edge_config = std::make_shared<json>();
+    (*edge_config)["class"] = "CTile";
+    (*edge_config)["properties"]["canStep"] = false;
+    (*edge_config)["properties"]["movementCost"] = 9;
+    (*edge_config)["properties"]["tileType"] = "weightedEdge";
+    game->getObjectHandler()->registerConfig("WeightedEdgeTile", edge_config);
+
+    map->setDefaultTiles({{0, "WeightedDefaultTile"}});
+    map->setOutOfBoundsTiles({{0, "WeightedEdgeTile"}});
+
+    const auto initial_tile_count = map->getTiles().size();
+    const auto initial_navigation_revision = map->getNavigationRevision();
+
+    expect_true(map->lookupMovementCost(1, 1, 0) == 7,
+                "movement cost should read configured default tile cost without an explicit tile");
+    expect_true(map->lookupMovementCost(4, 1, 0) == 9,
+                "movement cost should read configured out-of-bounds tile cost without an explicit tile");
+    expect_true(map->getTiles().size() == initial_tile_count,
+                "movement cost lookup should not materialize default or out-of-bounds tiles");
+    expect_true(!map->contains(1, 1, 0), "default cost lookup should leave the sparse coordinate empty");
+    expect_true(!map->contains(4, 1, 0), "out-of-bounds cost lookup should leave the sparse coordinate empty");
+    expect_true(map->getNavigationRevision() == initial_navigation_revision,
+                "non-materializing movement cost lookup should not bump navigation revision");
+}
+
 void test_map_navigation_edges_update_revision() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, 4}});
@@ -1215,6 +1255,7 @@ int main() {
     test_scene_manager_rejects_cross_game_requests();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_tile_movement_cost_deserialization();
+    test_map_movement_cost_default_lookup_without_materializing();
     test_map_navigation_edges_update_revision();
     test_map_navigation_neighbors_include_registered_edges();
     test_map_dump_paths_uses_navigation_neighbors();

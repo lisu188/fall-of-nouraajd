@@ -17,10 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CPathFinder.h"
+#include "core/CGame.h"
+#include "core/CLoader.h"
+#include "core/CMap.h"
 #include "test_harness.h"
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <map>
 #include <optional>
 #include <set>
@@ -500,6 +504,40 @@ void testMultiSizeScaling() {
                        small.distance * 3 + large.size);
 }
 
+void testMapMovementCostLookupDoesNotMaterializeSparseDefaultTiles() {
+    constexpr int size = 64;
+    constexpr int expected_steps = (size - 1) * 2;
+    auto game = CGameLoader::loadGame();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, size - 1}});
+    map->setYBounds({{0, size - 1}});
+    map->setDefaultTiles({{0, "GrassTile"}});
+    map->setOutOfBoundsTiles({{0, "MountainTile"}});
+
+    const auto initial_tile_count = map->getTiles().size();
+    const auto initial_navigation_revision = map->getNavigationRevision();
+    const Coords start(0, 0, 0);
+    const Coords goal(size - 1, size - 1, 0);
+
+    auto can_step = [map](const Coords &coords) { return map->canStep(coords); };
+    auto waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
+    auto neighbors = [map](const Coords &coords) { return map->getNavigationNeighbors(coords); };
+    auto distance = [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); };
+    auto step_cost = [map](const Coords &, const Coords &to) { return map->lookupMovementCost(to); };
+
+    const auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, step_cost);
+
+    expectMetricEquals("sparse-map path length", static_cast<long long>(path.size()), expected_steps);
+    expect_true(!path.empty() && path.front() != start, "sparse-map path should advance from the start");
+    expect_true(!path.empty() && path.back() == goal, "sparse-map path should reach the goal");
+    expectMetricEquals("sparse-map materialized tile count", static_cast<long long>(map->getTiles().size()),
+                       static_cast<long long>(initial_tile_count));
+    expectMetricEquals("sparse-map navigation revision", static_cast<long long>(map->getNavigationRevision()),
+                       static_cast<long long>(initial_navigation_revision));
+}
+
 } // namespace
 
 void run_pathfinder_performance_tests() {
@@ -512,4 +550,5 @@ void run_pathfinder_performance_tests() {
     testToroidalNeighborDistanceBehavior();
     testRepeatedAsyncFindNextStep();
     testMultiSizeScaling();
+    testMapMovementCostLookupDoesNotMaterializeSparseDefaultTiles();
 }

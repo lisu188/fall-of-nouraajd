@@ -156,6 +156,10 @@ class CMap : public CGameObject {
 
     int getMovementCost(Coords coords);
 
+    int lookupMovementCost(int x, int y, int z);
+
+    int lookupMovementCost(Coords coords);
+
     Coords normalizeCoords(Coords coords) const;
 
     std::vector<Coords> getAdjacentCoords(Coords coords, bool includeSelf = false) const;
@@ -260,6 +264,12 @@ class CMap : public CGameObject {
     std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
 
     bool hasBounds(int z) const;
+
+    bool isOutOfBounds(Coords coords) const;
+
+    std::string fallbackTileType(Coords coords) const;
+
+    std::shared_ptr<CTile> resolveTileForLookup(Coords coords);
 
     int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
 
