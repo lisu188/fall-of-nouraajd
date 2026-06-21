@@ -122,6 +122,10 @@ class CGui : public CGameGraphicsObject {
   private:
     bool dispatchPointerCaptureEvent(SDL_Event *event);
 
+    void handleWindowSizeChanged(const SDL_WindowEvent &windowEvent);
+
+    void refreshLayout();
+
     bool isPointerInside(const std::shared_ptr<CGameGraphicsObject> &object, int x, int y);
 
     bool ownsGraphicsObject(const std::shared_ptr<CGameGraphicsObject> &root,
