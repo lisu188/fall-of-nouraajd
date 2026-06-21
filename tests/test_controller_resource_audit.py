@@ -318,6 +318,97 @@ detached
         self.assertEqual(0, report.headAheadOriginMainCount)
         self.assertEqual(1, report.headBehindOriginMainCount)
 
+    def test_run_git_health_warns_when_local_origin_main_is_stale_without_fetching(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            origin = root / "origin.git"
+            seed = root / "seed"
+            local = root / "local"
+            subprocess.run(
+                ["git", "init", "--bare", "-b", "main", str(origin)],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            subprocess.run(
+                ["git", "init", "-b", "main", str(seed)],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=seed, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=seed, check=True)
+            (seed / "file.txt").write_text("base\n", encoding="utf-8")
+            subprocess.run(["git", "add", "file.txt"], cwd=seed, check=True)
+            subprocess.run(["git", "commit", "-m", "base"], cwd=seed, check=True, stdout=subprocess.PIPE)
+            subprocess.run(["git", "remote", "add", "origin", str(origin)], cwd=seed, check=True)
+            subprocess.run(
+                ["git", "push", "-u", "origin", "main"],
+                cwd=seed,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            base_sha = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=seed,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+
+            subprocess.run(
+                ["git", "clone", str(origin), str(local)],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            (seed / "file.txt").write_text("base\nnext\n", encoding="utf-8")
+            subprocess.run(["git", "commit", "-am", "next"], cwd=seed, check=True, stdout=subprocess.PIPE)
+            subprocess.run(
+                ["git", "push", "origin", "main"],
+                cwd=seed,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            next_sha = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=seed,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+            local_origin_before = subprocess.run(
+                ["git", "rev-parse", "refs/remotes/origin/main"],
+                cwd=local,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+
+            report = controller_resource_audit.runGitHealth(local)
+            errors, warnings = controller_resource_audit.evaluateGitHealth(report)
+            local_origin_after = subprocess.run(
+                ["git", "rev-parse", "refs/remotes/origin/main"],
+                cwd=local,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+
+        self.assertEqual(base_sha, local_origin_before)
+        self.assertEqual(base_sha, report.head)
+        self.assertEqual(base_sha, report.originMain)
+        self.assertEqual(next_sha, report.liveOriginMain)
+        self.assertFalse(report.originMainMatchesLive)
+        self.assertEqual(base_sha, local_origin_after)
+        self.assertEqual([], errors)
+        self.assertTrue(
+            any("refs/remotes/origin/main differs from live origin/main" in warning for warning in warnings),
+            warnings,
+        )
+
     def test_required_checks_support_contexts_and_rich_check_payloads(self) -> None:
         checks = controller_resource_audit.requiredChecksFromProtectionPayload(
             {
@@ -396,6 +487,8 @@ detached
             headAheadOriginMainCount=0,
             headBehindOriginMainCount=0,
             headBehindOriginMain=False,
+            liveOriginMain="abc123",
+            originMainMatchesLive=True,
         )
         branch = controller_resource_audit.BranchProtectionReport(
             repo="owner/repo",
@@ -423,6 +516,8 @@ detached
         self.assertEqual(False, payload["git"]["headBehindOriginMain"])
         self.assertEqual(0, payload["git"]["headAheadOriginMainCount"])
         self.assertEqual(0, payload["git"]["headBehindOriginMainCount"])
+        self.assertEqual("abc123", payload["git"]["liveOriginMain"])
+        self.assertTrue(payload["git"]["originMainMatchesLive"])
 
     def test_payload_marks_unmeasured_run_tree_sizes(self) -> None:
         git = controller_resource_audit.GitHealthReport(
