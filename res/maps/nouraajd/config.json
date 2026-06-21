@@ -387,6 +387,7 @@
   "catacombs": {
     "ref": "Cave",
     "properties": {
+      "animation": "images/buildings/catacombs",
       "message": "Dust-choked catacombs crumble as you wrench the sacred relic free.",
       "chance": "10",
       "monster": {
