@@ -2738,6 +2738,108 @@ NOURAAJD_INVENTORY_ITEMS = (
     "ShadowBlade",
 )
 
+BEREN_CHAIN_LEGACY_FLAGS = (
+    "DELIVERED_LETTER",
+    "RELIC_RETURNED",
+    "OCTOBOGZ_SLAIN",
+    "OCTOBOGZ_CLEARED",
+    "CAVE_PURGED",
+)
+
+BEREN_CHAIN_LEGACY_FLAGS_BY_STATE = {
+    "letter_pending": {
+        "DELIVERED_LETTER": False,
+        "RELIC_RETURNED": False,
+        "OCTOBOGZ_SLAIN": False,
+        "OCTOBOGZ_CLEARED": False,
+        "CAVE_PURGED": False,
+    },
+    "letter_in_hand": {
+        "DELIVERED_LETTER": False,
+        "RELIC_RETURNED": False,
+        "OCTOBOGZ_SLAIN": False,
+        "OCTOBOGZ_CLEARED": False,
+        "CAVE_PURGED": False,
+    },
+    "letter_delivered": {
+        "DELIVERED_LETTER": True,
+        "RELIC_RETURNED": False,
+        "OCTOBOGZ_SLAIN": False,
+        "OCTOBOGZ_CLEARED": False,
+        "CAVE_PURGED": False,
+    },
+    "relic_obtained": {
+        "DELIVERED_LETTER": True,
+        "RELIC_RETURNED": False,
+        "OCTOBOGZ_SLAIN": False,
+        "OCTOBOGZ_CLEARED": False,
+        "CAVE_PURGED": False,
+    },
+    "relic_returned_waiting_kill": {
+        "DELIVERED_LETTER": True,
+        "RELIC_RETURNED": True,
+        "OCTOBOGZ_SLAIN": False,
+        "OCTOBOGZ_CLEARED": False,
+        "CAVE_PURGED": False,
+    },
+    "octobogz_slain_pending_letter": {
+        "DELIVERED_LETTER": False,
+        "RELIC_RETURNED": False,
+        "OCTOBOGZ_SLAIN": True,
+        "OCTOBOGZ_CLEARED": False,
+        "CAVE_PURGED": False,
+    },
+    "octobogz_slain_no_relic": {
+        "DELIVERED_LETTER": True,
+        "RELIC_RETURNED": False,
+        "OCTOBOGZ_SLAIN": True,
+        "OCTOBOGZ_CLEARED": False,
+        "CAVE_PURGED": False,
+    },
+    "ready_to_report": {
+        "DELIVERED_LETTER": True,
+        "RELIC_RETURNED": True,
+        "OCTOBOGZ_SLAIN": True,
+        "OCTOBOGZ_CLEARED": True,
+        "CAVE_PURGED": False,
+    },
+    "purged": {
+        "DELIVERED_LETTER": True,
+        "RELIC_RETURNED": True,
+        "OCTOBOGZ_SLAIN": True,
+        "OCTOBOGZ_CLEARED": True,
+        "CAVE_PURGED": True,
+    },
+}
+
+
+def assert_beren_chain_state(test_case, game_instance, game_map, expected_state):
+    test_case.assertEqual(expected_state, game_map.getStringProperty("quest_state_beren_chain"))
+    expected_flags = BEREN_CHAIN_LEGACY_FLAGS_BY_STATE[expected_state]
+    actual_flags = {flag: game_map.getBoolProperty(flag) for flag in BEREN_CHAIN_LEGACY_FLAGS}
+    test_case.assertEqual(expected_flags, actual_flags, expected_state)
+    if expected_state != "purged":
+        beren = game_instance.createObject("berenDialog")
+        test_case.assertEqual(
+            expected_state == "ready_to_report",
+            beren.can_finish_cleanse(),
+            f"finish_cleanse gate should match ready_to_report for {expected_state}",
+        )
+
+
+def assert_finish_cleanse_blocked(test_case, game_instance, game_map, expected_state):
+    beren = game_instance.createObject("berenDialog")
+    test_case.assertFalse(beren.can_finish_cleanse(), expected_state)
+    before_map_name = game_instance.getMap().mapName
+    before_state = game_map.getStringProperty("quest_state_beren_chain")
+
+    beren.finish_cleanse()
+    pump_event_loop(1)
+
+    test_case.assertEqual(before_map_name, game_instance.getMap().mapName, expected_state)
+    test_case.assertEqual(before_state, game_map.getStringProperty("quest_state_beren_chain"), expected_state)
+    test_case.assertFalse(game_map.getBoolProperty("CAVE_PURGED"), expected_state)
+
 
 def completed_quest_names(player):
     if not hasattr(player, "getCompletedQuests"):
@@ -11631,6 +11733,178 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_nouraajd_beren_order_permutations_survive_reload(self):
+        game = load_game_module()
+        save_paths = []
+        watched_objects = ("catacombs", "cave2")
+
+        def settle(player):
+            player.checkQuests()
+            pump_event_loop(2)
+
+        def take_letter(g, game_map, player):
+            town_hall = g.createObject("townHallDialog")
+            self.assertTrue(town_hall.can_offer_letter_work())
+            town_hall.give_letter()
+            settle(player)
+
+        def deliver_letter(g, game_map, player):
+            beren = g.createObject("berenDialog")
+            self.assertTrue(beren.can_deliver_letter())
+            beren.deliver_letter()
+            settle(player)
+
+        def obtain_relic(g, game_map, player):
+            self.assertIsNotNone(game_map.getObjectByName("catacombs"))
+            game_map.removeObjectByName("catacombs")
+            settle(player)
+
+        def return_relic(g, game_map, player):
+            beren = g.createObject("berenDialog")
+            self.assertTrue(beren.can_return_relic())
+            beren.return_relic()
+            settle(player)
+
+        def return_relic_blocked(g, game_map, player):
+            beren = g.createObject("berenDialog")
+            self.assertFalse(beren.can_return_relic())
+            before_state = game_map.getStringProperty("quest_state_beren_chain")
+            before_relics = player.countItems("holyRelic")
+            beren.return_relic()
+            settle(player)
+            self.assertEqual(before_state, game_map.getStringProperty("quest_state_beren_chain"))
+            self.assertEqual(before_relics, player.countItems("holyRelic"))
+
+        def slay_octobogz(g, game_map, player):
+            self.assertIsNotNone(game_map.getObjectByName("cave2"))
+            game_map.removeObjectByName("cave2")
+            settle(player)
+
+        actions = {
+            "take_letter": take_letter,
+            "deliver_letter": deliver_letter,
+            "obtain_relic": obtain_relic,
+            "return_relic": return_relic,
+            "return_relic_blocked": return_relic_blocked,
+            "slay_octobogz": slay_octobogz,
+        }
+        scenarios = (
+            {
+                "name": "letter_relic_returned_before_octobogz",
+                "steps": (
+                    ("take_letter", "take_letter", "letter_in_hand", {"letterToBeren": 1}, False),
+                    ("deliver_letter", "deliver_letter", "letter_delivered", {"letterToBeren": 0}, False),
+                    ("return_relic_without_relic_blocked", "return_relic_blocked", "letter_delivered", {}, True),
+                    ("obtain_relic", "obtain_relic", "relic_obtained", {"holyRelic": 1}, False),
+                    ("return_relic", "return_relic", "relic_returned_waiting_kill", {"holyRelic": 0}, False),
+                    ("slay_octobogz", "slay_octobogz", "ready_to_report", {}, False),
+                ),
+            },
+            {
+                "name": "letter_before_octobogz_relic_returned_after_octobogz",
+                "steps": (
+                    ("take_letter", "take_letter", "letter_in_hand", {"letterToBeren": 1}, False),
+                    ("deliver_letter", "deliver_letter", "letter_delivered", {"letterToBeren": 0}, False),
+                    ("slay_octobogz", "slay_octobogz", "octobogz_slain_no_relic", {}, False),
+                    ("return_relic_without_relic_blocked", "return_relic_blocked", "octobogz_slain_no_relic", {}, True),
+                    ("obtain_relic_after_octobogz", "obtain_relic", "octobogz_slain_no_relic", {"holyRelic": 1}, False),
+                    ("return_relic", "return_relic", "ready_to_report", {"holyRelic": 0}, False),
+                ),
+            },
+            {
+                "name": "octobogz_before_letter_and_relic",
+                "steps": (
+                    ("slay_octobogz", "slay_octobogz", "octobogz_slain_pending_letter", {}, False),
+                    ("take_letter", "take_letter", "octobogz_slain_pending_letter", {"letterToBeren": 1}, False),
+                    ("deliver_letter", "deliver_letter", "octobogz_slain_no_relic", {"letterToBeren": 0}, False),
+                    ("obtain_relic", "obtain_relic", "octobogz_slain_no_relic", {"holyRelic": 1}, False),
+                    ("return_relic", "return_relic", "ready_to_report", {"holyRelic": 0}, False),
+                ),
+            },
+            {
+                "name": "relic_obtained_before_delivery",
+                "steps": (
+                    ("return_relic_before_letter_blocked", "return_relic_blocked", "letter_pending", {}, True),
+                    ("obtain_relic_before_letter", "obtain_relic", "letter_pending", {"holyRelic": 1}, False),
+                    (
+                        "return_relic_before_delivery_blocked",
+                        "return_relic_blocked",
+                        "letter_pending",
+                        {"holyRelic": 1},
+                        True,
+                    ),
+                    ("take_letter", "take_letter", "letter_in_hand", {"letterToBeren": 1, "holyRelic": 1}, False),
+                    ("deliver_letter_with_relic", "deliver_letter", "relic_obtained", {"letterToBeren": 0}, False),
+                    ("return_relic", "return_relic", "relic_returned_waiting_kill", {"holyRelic": 0}, False),
+                    ("slay_octobogz", "slay_octobogz", "ready_to_report", {}, False),
+                ),
+            },
+        )
+        scenario_log = {}
+
+        try:
+            for scenario in scenarios:
+                g, game_map, player = load_game_map_with_player("nouraajd")
+                assert_beren_chain_state(self, g, game_map, "letter_pending")
+                assert_finish_cleanse_blocked(self, g, game_map, "letter_pending")
+
+                states = ["letter_pending"]
+                blocked = ["finish_cleanse:letter_pending"]
+                for step_name, action_name, expected_state, expected_items, is_blocked in scenario["steps"]:
+                    with self.subTest(scenario=scenario["name"], step=step_name):
+                        actions[action_name](g, game_map, player)
+                        assert_beren_chain_state(self, g, game_map, expected_state)
+                        for item_id, expected_count in expected_items.items():
+                            self.assertEqual(expected_count, player.countItems(item_id), item_id)
+
+                        g, game_map, player, snapshot = assert_nouraajd_save_load_roundtrip(
+                            self,
+                            game,
+                            game_map,
+                            f"nouraajd_order_{scenario['name']}_{step_name}",
+                            save_paths,
+                            object_names=watched_objects,
+                        )
+                        self.assertEqual(expected_state, snapshot["quest_states"]["beren_chain"])
+                        assert_beren_chain_state(self, g, game_map, expected_state)
+                        for item_id, expected_count in expected_items.items():
+                            self.assertEqual(expected_count, player.countItems(item_id), item_id)
+
+                        states.append(expected_state)
+                        if is_blocked:
+                            blocked.append(f"{action_name}:{expected_state}")
+                        if expected_state != "ready_to_report":
+                            assert_finish_cleanse_blocked(self, g, game_map, expected_state)
+                            blocked.append(f"finish_cleanse:{expected_state}")
+
+                self.assertEqual("ready_to_report", game_map.getStringProperty("quest_state_beren_chain"))
+                beren = g.createObject("berenDialog")
+                self.assertTrue(beren.can_finish_cleanse())
+                beren.finish_cleanse()
+                pump_event_loop(10)
+
+                assert_beren_chain_state(self, g, game_map, "purged")
+                self.assertEqual("ritual", g.getMap().mapName)
+                states.append("purged")
+                scenario_log[scenario["name"]] = {
+                    "states": states,
+                    "blocked": blocked,
+                    "final_map": g.getMap().mapName,
+                    "flags": {flag: game_map.getBoolProperty(flag) for flag in BEREN_CHAIN_LEGACY_FLAGS},
+                }
+
+            return True, json.dumps(
+                {
+                    "scenarios": scenario_log,
+                    "save_count": len(save_paths),
+                },
+                sort_keys=True,
+            )
+        finally:
+            for save_path in save_paths:
+                cleanup_save_slot(save_path.stem)
 
     @game_test
     def test_nouraajd_tavern_beer_vendor(self):
