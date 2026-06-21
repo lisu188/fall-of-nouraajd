@@ -704,6 +704,87 @@ class ContentValidatorTest(unittest.TestCase):
         issue_text = "\n".join(str(issue) for issue in issues)
         self.assertNotIn("schemaOverride.properties.loot", issue_text)
 
+    def test_cpp_property_schema_reports_wrong_controller_ref_type(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["badController"] = {
+            "class": "CCreature",
+            "properties": {"controller": {"ref": "LifePotion"}},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "badController.properties.controller",
+            'property "controller" for class "CCreature" expected object inheriting from "CController"; got "CPotion"',
+        )
+
+    def test_cpp_property_schema_reports_wrong_item_ref_type(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["validMarket"]["properties"]["items"][0]["ref"] = "HitEffect"
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "validMarket.properties.items[0]",
+            'property "items" for class "CMarket" expected object inheriting from "CItem"; got "CEffect"',
+        )
+
+    def test_cpp_property_schema_reports_wrong_dialog_state_ref_type(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["badDialog"] = {
+            "class": "CDialog",
+            "properties": {"states": [{"ref": "exitOption"}]},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "badDialog.properties.states[0]",
+            (
+                'property "states" for class "CDialog" expected object inheriting from "CDialogState"; '
+                'got "CDialogOption"'
+            ),
+        )
+
+    def test_cpp_property_schema_accepts_valid_inherited_object_types(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["validCreature"] = {
+            "class": "CCreature",
+            "properties": {
+                "controller": {"class": "CPlayerController"},
+                "fightController": {"class": "CMonsterFightController"},
+                "items": [{"ref": "LifePotion"}],
+                "actions": [{"ref": "Attack"}],
+                "effects": [{"ref": "HitEffect"}],
+            },
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
     def test_reviewed_registration_exclusion_reports_reason_and_owner(self):
         root = self.make_fixture()
         self.write_declared_cpp_class(root, "CReviewedMetadataOnly")
@@ -911,6 +992,78 @@ class ContentValidatorTest(unittest.TestCase):
                 class CGameObject {
                     V_META(CGameObject, vstd::meta::empty,
                         V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CController {
+                    V_META(CController, CGameObject, vstd::meta::empty())
+                };
+
+                class CPlayerController {
+                    V_META(CPlayerController, CController, vstd::meta::empty())
+                };
+
+                class CFightController {
+                    V_META(CFightController, CGameObject, vstd::meta::empty())
+                };
+
+                class CMonsterFightController {
+                    V_META(CMonsterFightController, CFightController, vstd::meta::empty())
+                };
+
+                class CEffect {
+                    V_META(CEffect, CGameObject, vstd::meta::empty())
+                };
+
+                class CInteraction {
+                    V_META(CInteraction, CGameObject,
+                        V_PROPERTY(CInteraction, std::shared_ptr<CEffect>, effect, getEffect, setEffect))
+                };
+
+                class CItem {
+                    V_META(CItem, CGameObject,
+                        V_PROPERTY(CItem, std::shared_ptr<CInteraction>, interaction, getInteraction, setInteraction))
+                };
+
+                class CPotion {
+                    V_META(CPotion, CItem, vstd::meta::empty())
+                };
+
+                class CCreature {
+                    V_META(CCreature, CGameObject,
+                        V_PROPERTY(CCreature, std::set<std::shared_ptr<CInteraction>>, actions, getActions,
+                            setActions),
+                        V_PROPERTY(CCreature, std::set<std::shared_ptr<CItem>>, items, getItems, setItems),
+                        V_PROPERTY(CCreature, std::set<std::shared_ptr<CEffect>>, effects, getEffects, setEffects),
+                        V_PROPERTY(CCreature, std::shared_ptr<CController>, controller, getController, setController),
+                        V_PROPERTY(CCreature, std::shared_ptr<CFightController>, fightController, getFightController,
+                            setFightController))
+                };
+
+                class CMarket {
+                    V_META(CMarket, CGameObject,
+                        V_PROPERTY(CMarket, std::set<std::shared_ptr<CItem>>, items, getItems, setItems))
+                };
+
+                class CDialogOption {
+                    V_META(CDialogOption, CGameObject,
+                        V_PROPERTY(CDialogOption, int, number, getNumber, setNumber),
+                        V_PROPERTY(CDialogOption, std::string, nextStateId, getNextStateId, setNextStateId),
+                        V_PROPERTY(CDialogOption, std::string, text, getText, setText),
+                        V_PROPERTY(CDialogOption, std::string, condition, getCondition, setCondition),
+                        V_PROPERTY(CDialogOption, std::string, action, getAction, setAction))
+                };
+
+                class CDialogState {
+                    V_META(CDialogState, CGameObject,
+                        V_PROPERTY(CDialogState, std::set<std::shared_ptr<CDialogOption>>, options, getOptions,
+                            setOptions),
+                        V_PROPERTY(CDialogState, std::string, stateId, getStateId, setStateId),
+                        V_PROPERTY(CDialogState, std::string, text, getText, setText))
+                };
+
+                class CDialog {
+                    V_META(CDialog, CGameObject,
+                        V_PROPERTY(CDialog, std::set<std::shared_ptr<CDialogState>>, states, getStates, setStates))
                 };
 
                 class CPropertyBase {
