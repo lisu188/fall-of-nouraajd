@@ -284,18 +284,18 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     return game;
 }
 
-struct DragListHarness {
-    std::shared_ptr<CGame> create_loader_gui_game() {
-        auto game = std::make_shared<CGame>();
-        for (const auto &[name, builder] : *CTypes::builders()) {
-            game->getObjectHandler()->registerType(name, builder);
-        }
-        auto guiConfig = std::make_shared<json>();
-        (*guiConfig)["class"] = "CGui";
-        game->getObjectHandler()->registerConfig("gui", guiConfig);
-        return game;
+std::shared_ptr<CGame> create_loader_gui_game() {
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
     }
+    auto guiConfig = std::make_shared<json>();
+    (*guiConfig)["class"] = "CGui";
+    game->getObjectHandler()->registerConfig("gui", guiConfig);
+    return game;
+}
 
+struct DragListHarness {
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CGame> game;
     std::shared_ptr<DragCallbackPanel> panel;
