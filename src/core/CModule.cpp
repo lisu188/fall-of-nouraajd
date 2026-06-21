@@ -607,8 +607,7 @@ void init_game_module(py::module_ &m) {
         .def("getObjectByName", &CMap::getObjectByName, "Return a map object by name or None.")
         .def("forObjects", &CMap::forObjects, "Apply a callback for objects matching an optional predicate.")
         .def("canStep", canStep, "Return whether coordinates are walkable.")
-        .def("getMovementCost", getMovementCost,
-             "Return movement cost at coordinates. One-step turns treat every tile as cost 1.")
+        .def("getMovementCost", getMovementCost, "Return the pathfinding movement cost at coordinates.")
         .def("getTile", getTile, "Return the tile at coordinates, creating the layer default when missing.")
         .def("dumpPaths", &CMap::dumpPaths, "Write pathfinding diagnostics to a file path.")
         .def("getNavigationRevision", &CMap::getNavigationRevision,
@@ -775,6 +774,8 @@ void init_game_module(py::module_ &m) {
         py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
     ctile.def(py::init_alias<>())
         .def("onStep", &CTile::onStep, "Handle a creature stepping on this tile.")
+        .def("getMovementCost", &CTile::getMovementCost, "Return this tile's pathfinding movement cost.")
+        .def("setMovementCost", &CTile::setMovementCost, "Set this tile's pathfinding movement cost.")
         .def("getTileType", &CTile::getTileType, "Return this tile's terrain type.");
     m.attr("CTileBase") = ctile;
 
