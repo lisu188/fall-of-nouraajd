@@ -29,6 +29,10 @@ class CListView : public CProxyTargetGraphicsObject {
            V_PROPERTY(CListView, std::string, select, getSelect, setSelect),
            V_PROPERTY(CListView, std::string, callback, getCallback, setCallback),
            V_PROPERTY(CListView, std::string, rightClickCallback, getRightClickCallback, setRightClickCallback),
+           V_PROPERTY(CListView, std::string, dragStart, getDragStart, setDragStart),
+           V_PROPERTY(CListView, std::string, dragValidate, getDragValidate, setDragValidate),
+           V_PROPERTY(CListView, std::string, drop, getDrop, setDrop),
+           V_PROPERTY(CListView, std::string, dragCancel, getDragCancel, setDragCancel),
            V_PROPERTY(CListView, std::shared_ptr<CScript>, refreshObject, getRefreshObject, setRefreshObject),
            V_PROPERTY(CListView, std::string, refreshEvent, getRefreshEvent, setRefreshEvent),
            V_PROPERTY(CListView, bool, refreshOnPropertyChanged, getRefreshOnPropertyChanged,
@@ -52,6 +56,14 @@ class CListView : public CProxyTargetGraphicsObject {
     std::string rightClickCallback;
 
     std::string select;
+
+    std::string dragStart;
+
+    std::string dragValidate;
+
+    std::string drop;
+
+    std::string dragCancel;
 
     std::shared_ptr<CScript> refreshObject;
 
@@ -164,6 +176,22 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void setSelect(std::string select);
 
+    std::string getDragStart();
+
+    void setDragStart(std::string dragStart);
+
+    std::string getDragValidate();
+
+    void setDragValidate(std::string dragValidate);
+
+    std::string getDrop();
+
+    void setDrop(std::string drop);
+
+    std::string getDragCancel();
+
+    void setDragCancel(std::string dragCancel);
+
     int getXPrefferedSize() const;
 
     void setXPrefferedSize(int xPrefferedSize);
@@ -181,9 +209,27 @@ class CListView : public CProxyTargetGraphicsObject {
 
     bool invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
 
+    bool invokeDragStart(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
+
+    bool invokeDragValidate(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
+
+    void invokeDrop(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
+
+    void invokeDragCancel(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);
+
     bool canInvokeParentCallback(const std::shared_ptr<CGui> &gui, const std::shared_ptr<CGameGraphicsObject> &parent);
 
     bool tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index, std::shared_ptr<CGameObject> &object);
+
+    bool hasSourceDragCallbacks() const;
+
+    bool hasTargetDragCallbacks() const;
+
+    bool runDropCallbacks(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object,
+                          const std::shared_ptr<CListView> &sourceList, int sourceIndex,
+                          std::shared_ptr<CGameObject> sourceObject);
+
+    void notifySourceDragCancel(std::shared_ptr<CGui> gui, int sourceIndex, std::shared_ptr<CGameObject> sourceObject);
 
     std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
 

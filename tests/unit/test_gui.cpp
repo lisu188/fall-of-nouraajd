@@ -136,6 +136,98 @@ class RefreshCountingListView : public CListView {
     std::shared_ptr<CGameObject> resolvedRefreshTarget;
 };
 
+class DragCallbackPanel : public CGamePanel {
+    V_META(DragCallbackPanel, CGamePanel,
+           V_METHOD(DragCallbackPanel, sourceCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(DragCallbackPanel, targetCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(DragCallbackPanel, sourceClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(DragCallbackPanel, targetClick, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(DragCallbackPanel, sourceDragStart, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(DragCallbackPanel, targetDragValidate, bool, std::shared_ptr<CGui>, int,
+                    std::shared_ptr<CGameObject>),
+           V_METHOD(DragCallbackPanel, targetDrop, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(DragCallbackPanel, sourceDragCancel, void, std::shared_ptr<CGui>, int,
+                    std::shared_ptr<CGameObject>))
+
+  public:
+    CListView::collection_pointer sourceCollection(std::shared_ptr<CGui>) {
+        auto collection = std::make_shared<CListView::collection_type>();
+        collection->insert(sourceItem);
+        return collection;
+    }
+
+    CListView::collection_pointer targetCollection(std::shared_ptr<CGui>) {
+        auto collection = std::make_shared<CListView::collection_type>();
+        collection->insert(targetItem);
+        return collection;
+    }
+
+    void sourceClick(std::shared_ptr<CGui>, int index, std::shared_ptr<CGameObject> object) {
+        ++source_clicks;
+        last_source_click_index = index;
+        last_source_click = object;
+    }
+
+    void targetClick(std::shared_ptr<CGui>, int index, std::shared_ptr<CGameObject> object) {
+        ++target_clicks;
+        last_target_index = index;
+        last_target_object = object;
+    }
+
+    bool sourceDragStart(std::shared_ptr<CGui>, int index, std::shared_ptr<CGameObject> object) {
+        ++drag_starts;
+        last_source_index = index;
+        last_source_object = object;
+        return allow_drag_start;
+    }
+
+    bool targetDragValidate(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+        ++drag_validations;
+        last_target_index = index;
+        last_target_object = object;
+        if (gui && gui->hasDragSession()) {
+            const auto *session = gui->getDragSession();
+            last_source_index = session->sourceIndex;
+            last_source_object = session->payload;
+        }
+        return allow_drop;
+    }
+
+    void targetDrop(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+        ++drops;
+        last_target_index = index;
+        last_target_object = object;
+        if (gui && gui->hasDragSession()) {
+            const auto *session = gui->getDragSession();
+            last_source_index = session->sourceIndex;
+            last_source_object = session->payload;
+        }
+    }
+
+    void sourceDragCancel(std::shared_ptr<CGui>, int index, std::shared_ptr<CGameObject> object) {
+        ++drag_cancels;
+        last_source_index = index;
+        last_source_object = object;
+    }
+
+    std::shared_ptr<CGameObject> sourceItem = std::make_shared<CGameObject>();
+    std::shared_ptr<CGameObject> targetItem = std::make_shared<CGameObject>();
+    std::shared_ptr<CGameObject> last_source_object;
+    std::shared_ptr<CGameObject> last_source_click;
+    std::shared_ptr<CGameObject> last_target_object;
+    int last_source_index = -1;
+    int last_source_click_index = -1;
+    int last_target_index = -1;
+    int source_clicks = 0;
+    int target_clicks = 0;
+    int drag_starts = 0;
+    int drag_validations = 0;
+    int drops = 0;
+    int drag_cancels = 0;
+    bool allow_drag_start = true;
+    bool allow_drop = true;
+};
+
 void drain_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     for (int i = 0; i < 5; ++i) {
@@ -177,6 +269,7 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     type_registration::registerGuiPanelTypes();
     CTypes::register_type_metadata<RefreshCountingListView, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
                                    CGameObject>();
+    CTypes::register_type_metadata<DragCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
 
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
@@ -187,6 +280,57 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     game->getObjectHandler()->registerType(CProxyGraphicsLayout::static_meta()->name(),
                                            []() { return std::make_shared<CProxyGraphicsLayout>(); });
     return game;
+}
+
+struct DragListHarness {
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<DragCallbackPanel> panel;
+    std::shared_ptr<CListView> source;
+    std::shared_ptr<CListView> target;
+};
+
+std::shared_ptr<CLayout> fixed_layout(int x, int y, int w, int h) {
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(x, y, w, h);
+    return layout;
+}
+
+DragListHarness create_drag_list_harness() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    DragListHarness harness;
+    harness.gui = std::make_shared<CGui>();
+    harness.game = create_gui_game(harness.gui);
+    harness.panel = std::make_shared<DragCallbackPanel>();
+    harness.source = std::make_shared<CListView>();
+    harness.target = std::make_shared<CListView>();
+
+    harness.panel->sourceItem->setGame(harness.game);
+    harness.panel->sourceItem->setName("sourceItem");
+    harness.panel->targetItem->setGame(harness.game);
+    harness.panel->targetItem->setName("targetItem");
+
+    harness.panel->setLayout(fixed_layout(0, 0, 200, 100));
+    harness.source->setLayout(fixed_layout(0, 0, 50, 50));
+    harness.source->setCollection("sourceCollection");
+    harness.source->setCallback("sourceClick");
+    harness.source->setTileSize(50);
+    harness.source->setXPrefferedSize(1);
+    harness.source->setYPrefferedSize(1);
+
+    harness.target->setLayout(fixed_layout(100, 0, 50, 50));
+    harness.target->setCollection("targetCollection");
+    harness.target->setCallback("targetClick");
+    harness.target->setTileSize(50);
+    harness.target->setXPrefferedSize(1);
+    harness.target->setYPrefferedSize(1);
+
+    harness.panel->addChild(harness.source);
+    harness.panel->addChild(harness.target);
+    harness.gui->pushChild(harness.panel);
+    return harness;
 }
 
 void test_widget_ignores_unarmed_non_left_clicks() {
@@ -335,6 +479,72 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     expect_true(player->getItems().size() == inventory_size,
                 "full-health potion double-select should call useItem without consuming the item");
     expect_true(!panel->inventorySelect(gui, 0, potion), "second inventory click should clear the used selection");
+}
+
+void test_list_view_drag_callbacks_validate_and_drop_without_click_fallback() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+    harness.target->setDragValidate("targetDragValidate");
+    harness.target->setDrop("targetDrop");
+
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "source drag start should consume the click");
+    expect_true(harness.gui->hasDragSession(), "source drag start should create a GUI drag session");
+    expect_true(harness.panel->drag_starts == 1, "source drag-start callback should run once");
+    expect_true(harness.panel->source_clicks == 0, "drag-start should defer normal click fallback");
+    expect_true(harness.panel->last_source_index == 0, "drag-start callback should receive the source index");
+    expect_true(harness.panel->last_source_object == harness.panel->sourceItem,
+                "drag-start callback should receive the source object");
+
+    harness.gui->updateDragSession(125, 25);
+    expect_true(harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                "target drop should consume the release");
+    expect_true(harness.panel->drag_validations == 1, "target drag-validate callback should run once");
+    expect_true(harness.panel->drops == 1, "target drop callback should run once");
+    expect_true(harness.panel->target_clicks == 0, "target drop should not fall back to the click callback");
+    expect_true(harness.panel->drag_cancels == 0, "accepted drop should not cancel the source drag");
+    expect_true(harness.panel->last_source_index == 0, "target callbacks should receive the source index");
+    expect_true(harness.panel->last_source_object == harness.panel->sourceItem,
+                "target callbacks should receive the source object");
+    expect_true(harness.panel->last_target_index == 0, "target callbacks should receive the target index");
+    expect_true(harness.panel->last_target_object == harness.panel->targetItem,
+                "target callbacks should receive the target object");
+}
+
+void test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasDragSession(), "drag-start callback should create a drag session");
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.panel->source_clicks == 1, "unmoved source release should preserve normal click behavior");
+    expect_true(harness.panel->drag_cancels == 0, "unmoved click should not be reported as drag cancel");
+    harness.gui->clearDragSession();
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    harness.gui->updateDragSession(180, 25);
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 180, 25);
+    expect_true(harness.panel->drag_cancels == 1, "moved release without a target should call drag-cancel");
+    expect_true(harness.panel->source_clicks == 1, "canceled drag should not add another click callback");
+    expect_true(harness.panel->last_source_index == 0, "drag-cancel should receive the source index");
+    expect_true(harness.panel->last_source_object == harness.panel->sourceItem,
+                "drag-cancel should receive the source object");
+}
+
+void test_list_view_legacy_click_callback_still_fires_without_drag_callbacks() {
+    auto harness = create_drag_list_harness();
+
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "legacy source click should be consumed");
+    expect_true(harness.panel->source_clicks == 1, "legacy source click should still call the click callback");
+    expect_true(harness.panel->drag_starts == 0, "legacy source click should not call drag-start");
+    expect_true(harness.gui->hasDragSession(), "legacy source click should still create the existing drag session");
+    expect_true(harness.panel->last_source_click_index == 0, "legacy click should keep the clicked item index");
+    expect_true(harness.panel->last_source_click == harness.panel->sourceItem,
+                "legacy click should keep the clicked item object");
 }
 
 void test_panel_event_callbacks_stop_after_close() {
@@ -577,6 +787,9 @@ int main() {
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
+    test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
+    test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
+    test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
     test_gui_routes_mouse_button_up_without_drag_to_target_child();
