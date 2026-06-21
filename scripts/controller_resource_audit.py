@@ -60,6 +60,9 @@ class GitHealthReport:
     gitCommonDir: str | None
     emptyLooseObjects: tuple[str, ...]
     emptyRefs: tuple[str, ...]
+    headAheadOriginMainCount: int | None = None
+    headBehindOriginMainCount: int | None = None
+    headBehindOriginMain: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -255,17 +258,49 @@ def runGitHealth(repoRoot: Path) -> GitHealthReport:
     originMain = runGit(repoRoot, ["rev-parse", "--verify", "refs/remotes/origin/main"])
     commonDir = runGit(repoRoot, ["rev-parse", "--git-common-dir"])
     gitCommonDir = resolveGitPath(repoRoot, commonDir.stdout.strip()) if commonDir.returncode == 0 else None
+    headText = head.stdout.strip() if head.returncode == 0 else None
+    originMainText = originMain.stdout.strip() if originMain.returncode == 0 else None
+    headAheadOriginMainCount: int | None = None
+    headBehindOriginMainCount: int | None = None
+    headBehindOriginMain: bool | None = None
+    if headText and originMainText:
+        if headText == originMainText:
+            headAheadOriginMainCount = 0
+            headBehindOriginMainCount = 0
+            headBehindOriginMain = False
+        else:
+            revList = runGit(repoRoot, ["rev-list", "--left-right", "--count", "HEAD...refs/remotes/origin/main"])
+            if revList.returncode == 0:
+                parts = revList.stdout.strip().split()
+                if len(parts) == 2:
+                    try:
+                        headAheadOriginMainCount = int(parts[0])
+                        headBehindOriginMainCount = int(parts[1])
+                        headBehindOriginMain = headBehindOriginMainCount > 0
+                    except ValueError:
+                        pass
 
     return GitHealthReport(
         statusExitCode=status.returncode,
         statusStdout=status.stdout.strip(),
         statusStderr=status.stderr.strip(),
-        head=head.stdout.strip() if head.returncode == 0 else None,
-        originMain=originMain.stdout.strip() if originMain.returncode == 0 else None,
+        head=headText,
+        originMain=originMainText,
         gitCommonDir=str(gitCommonDir) if gitCommonDir is not None else None,
         emptyLooseObjects=findEmptyLooseObjects(gitCommonDir),
         emptyRefs=findEmptyRefs(gitCommonDir),
+        headAheadOriginMainCount=headAheadOriginMainCount,
+        headBehindOriginMainCount=headBehindOriginMainCount,
+        headBehindOriginMain=headBehindOriginMain,
     )
+
+
+def statusReportsBehindOriginMain(statusStdout: str) -> bool:
+    _, marker, remainder = statusStdout.partition("[")
+    if not marker:
+        return False
+    details, _, _ = remainder.partition("]")
+    return any(part.strip().startswith("behind ") for part in details.split(","))
 
 
 def evaluateGitHealth(report: GitHealthReport) -> tuple[list[str], list[str]]:
@@ -282,6 +317,20 @@ def evaluateGitHealth(report: GitHealthReport) -> tuple[list[str], list[str]]:
         errors.append(f"{len(report.emptyLooseObjects)} zero-byte loose git object(s) found")
     if report.emptyRefs:
         errors.append(f"{len(report.emptyRefs)} zero-byte git ref file(s) found")
+    if report.headBehindOriginMain or (
+        report.headBehindOriginMain is None
+        and report.head
+        and report.originMain
+        and report.head != report.originMain
+        and statusReportsBehindOriginMain(report.statusStdout)
+    ):
+        detail = ""
+        if report.headBehindOriginMainCount is not None:
+            detail = f" by {report.headBehindOriginMainCount} commit(s)"
+        warnings.append(
+            f"HEAD is missing refs/remotes/origin/main commit(s){detail}; "
+            "fetch/rebase or recreate the controller checkout from latest origin/main before continuing"
+        )
     return errors, warnings
 
 
@@ -471,6 +520,9 @@ def payload(
             "statusStderr": gitHealth.statusStderr,
             "head": gitHealth.head,
             "originMain": gitHealth.originMain,
+            "headAheadOriginMainCount": gitHealth.headAheadOriginMainCount,
+            "headBehindOriginMainCount": gitHealth.headBehindOriginMainCount,
+            "headBehindOriginMain": gitHealth.headBehindOriginMain,
             "gitCommonDir": gitHealth.gitCommonDir,
             "emptyLooseObjects": {
                 "total": len(gitHealth.emptyLooseObjects),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -145,6 +146,144 @@ detached
         self.assertIn("1 zero-byte loose git object(s) found", errors)
         self.assertIn("1 zero-byte git ref file(s) found", errors)
 
+    def test_evaluate_git_health_warns_when_head_is_behind_origin_main(self) -> None:
+        report = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="## main...origin/main [behind 1]",
+            statusStderr="",
+            head="old",
+            originMain="new",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+            headAheadOriginMainCount=0,
+            headBehindOriginMainCount=1,
+            headBehindOriginMain=True,
+        )
+
+        errors, warnings = controller_resource_audit.evaluateGitHealth(report)
+
+        self.assertEqual([], errors)
+        self.assertTrue(
+            any("HEAD is missing refs/remotes/origin/main commit(s) by 1" in warning for warning in warnings),
+            warnings,
+        )
+
+    def test_evaluate_git_health_falls_back_to_status_behind_marker(self) -> None:
+        report = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="## main...origin/main [behind 2]",
+            statusStderr="",
+            head="old",
+            originMain="new",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+            headBehindOriginMain=None,
+        )
+
+        errors, warnings = controller_resource_audit.evaluateGitHealth(report)
+
+        self.assertEqual([], errors)
+        self.assertTrue(
+            any("HEAD is missing refs/remotes/origin/main commit(s)" in warning for warning in warnings),
+            warnings,
+        )
+
+    def test_evaluate_git_health_fallback_handles_diverged_status(self) -> None:
+        report = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="## feature...origin/main [ahead 1, behind 2]",
+            statusStderr="",
+            head="feature",
+            originMain="main",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+            headBehindOriginMain=None,
+        )
+
+        errors, warnings = controller_resource_audit.evaluateGitHealth(report)
+
+        self.assertEqual([], errors)
+        self.assertTrue(
+            any("HEAD is missing refs/remotes/origin/main commit(s)" in warning for warning in warnings),
+            warnings,
+        )
+
+    def test_evaluate_git_health_does_not_warn_for_ahead_only_head(self) -> None:
+        report = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="## feature...origin/main [ahead 1]",
+            statusStderr="",
+            head="feature",
+            originMain="main",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+            headAheadOriginMainCount=1,
+            headBehindOriginMainCount=0,
+            headBehindOriginMain=False,
+        )
+
+        errors, warnings = controller_resource_audit.evaluateGitHealth(report)
+
+        self.assertEqual([], errors)
+        self.assertEqual([], warnings)
+
+    def test_evaluate_git_health_warns_for_diverged_head_missing_origin_commits(self) -> None:
+        report = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="## feature...origin/main [ahead 1, behind 2]",
+            statusStderr="",
+            head="feature",
+            originMain="main",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+            headAheadOriginMainCount=1,
+            headBehindOriginMainCount=2,
+            headBehindOriginMain=True,
+        )
+
+        errors, warnings = controller_resource_audit.evaluateGitHealth(report)
+
+        self.assertEqual([], errors)
+        self.assertTrue(any("by 2 commit(s)" in warning for warning in warnings), warnings)
+
+    def test_run_git_health_detects_head_behind_origin_main(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, stdout=subprocess.PIPE)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo, check=True)
+            (repo / "file.txt").write_text("base\n", encoding="utf-8")
+            subprocess.run(["git", "add", "file.txt"], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "base"], cwd=repo, check=True, stdout=subprocess.PIPE)
+            base_sha = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo,
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
+            ).stdout.strip()
+            (repo / "file.txt").write_text("base\nnext\n", encoding="utf-8")
+            subprocess.run(["git", "commit", "-am", "next"], cwd=repo, check=True, stdout=subprocess.PIPE)
+            subprocess.run(["git", "update-ref", "refs/remotes/origin/main", "HEAD"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "checkout", "--detach", base_sha],
+                cwd=repo,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            report = controller_resource_audit.runGitHealth(repo)
+
+        self.assertTrue(report.headBehindOriginMain)
+        self.assertEqual(0, report.headAheadOriginMainCount)
+        self.assertEqual(1, report.headBehindOriginMainCount)
+
     def test_required_checks_support_contexts_and_rich_check_payloads(self) -> None:
         checks = controller_resource_audit.requiredChecksFromProtectionPayload(
             {
@@ -220,6 +359,9 @@ detached
             gitCommonDir="/repo/.git",
             emptyLooseObjects=(),
             emptyRefs=(),
+            headAheadOriginMainCount=0,
+            headBehindOriginMainCount=0,
+            headBehindOriginMain=False,
         )
         branch = controller_resource_audit.BranchProtectionReport(
             repo="owner/repo",
@@ -243,6 +385,9 @@ detached
 
         self.assertEqual(False, payload["branchProtection"]["protected"])
         self.assertEqual(["linux"], payload["branchProtection"]["missingRequiredChecks"])
+        self.assertEqual(False, payload["git"]["headBehindOriginMain"])
+        self.assertEqual(0, payload["git"]["headAheadOriginMainCount"])
+        self.assertEqual(0, payload["git"]["headBehindOriginMainCount"])
 
 
 if __name__ == "__main__":
