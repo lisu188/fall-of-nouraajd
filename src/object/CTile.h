@@ -29,6 +29,7 @@ class CTile : public CGameObject {
     V_META(CTile, CGameObject, V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
            V_PROPERTY(CTile, int, posx, getPosx, setPosx), V_PROPERTY(CTile, int, posy, getPosy, setPosy),
            V_PROPERTY(CTile, int, posz, getPosz, setPosz),
+           V_PROPERTY(CTile, int, movementCost, getMovementCost, setMovementCost),
            V_PROPERTY(CTile, std::string, tileType, getTileType, setTileType))
 
   public:
@@ -60,6 +61,10 @@ class CTile : public CGameObject {
 
     void setPosz(int value);
 
+    int getMovementCost() const;
+
+    void setMovementCost(int value);
+
     const std::string &getTileType() const;
 
     void setTileType(const std::string &tileType);
@@ -67,6 +72,7 @@ class CTile : public CGameObject {
   private:
     std::string tileType;
     bool step = false;
+    int movementCost = 1;
     int posx = 0, posy = 0, posz = 0;
 
     void setXYZ(int x, int y, int z);
