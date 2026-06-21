@@ -17,6 +17,8 @@ from typing import Any, Sequence
 DEFAULT_RUN_TREE_PATTERNS = ("nouraajd-*", "fall-of-nouraajd-codex")
 DEFAULT_MIN_FREE_GIB = 5.0
 DEFAULT_MAX_USED_PERCENT = 95.0
+DEFAULT_PROTECTED_BRANCH = "main"
+DEFAULT_REQUIRED_STATUS_CHECKS = ("linux", "windows-deps", "windows")
 
 
 @dataclass(frozen=True)
@@ -58,6 +60,17 @@ class GitHealthReport:
     gitCommonDir: str | None
     emptyLooseObjects: tuple[str, ...]
     emptyRefs: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class BranchProtectionReport:
+    repo: str
+    branch: str
+    protected: bool | None
+    requiredChecks: tuple[str, ...]
+    expectedChecks: tuple[str, ...]
+    missingRequiredChecks: tuple[str, ...]
+    error: str | None = None
 
 
 def bytesToGib(value: int) -> float:
@@ -272,6 +285,132 @@ def evaluateGitHealth(report: GitHealthReport) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def runGhApiJson(path: str) -> dict[str, Any]:
+    result = subprocess.run(
+        ["gh", "api", path],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "gh api failed"
+        raise RuntimeError(detail)
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"gh api {path} returned invalid JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"gh api {path} returned unexpected JSON")
+    return payload
+
+
+def requiredChecksFromProtectionPayload(payload: dict[str, Any] | None) -> tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return ()
+    statusChecks = payload.get("required_status_checks")
+    if not isinstance(statusChecks, dict):
+        return ()
+
+    checks: list[str] = []
+    contexts = statusChecks.get("contexts")
+    if isinstance(contexts, list):
+        checks.extend(str(item) for item in contexts if item)
+
+    richChecks = statusChecks.get("checks")
+    if isinstance(richChecks, list):
+        for item in richChecks:
+            if isinstance(item, dict) and item.get("context"):
+                checks.append(str(item["context"]))
+    return tuple(sorted(dict.fromkeys(checks)))
+
+
+def branchProtectionReportFromPayloads(
+    repo: str,
+    branch: str,
+    expectedChecks: Sequence[str],
+    branchPayload: dict[str, Any],
+    protectionPayload: dict[str, Any] | None,
+) -> BranchProtectionReport:
+    protected = bool(branchPayload.get("protected"))
+    requiredChecks = requiredChecksFromProtectionPayload(protectionPayload) if protected else ()
+    missingChecks = tuple(check for check in expectedChecks if check not in requiredChecks)
+    return BranchProtectionReport(
+        repo=repo,
+        branch=branch,
+        protected=protected,
+        requiredChecks=requiredChecks,
+        expectedChecks=tuple(expectedChecks),
+        missingRequiredChecks=missingChecks,
+    )
+
+
+def auditBranchProtection(repo: str, branch: str, expectedChecks: Sequence[str]) -> BranchProtectionReport:
+    try:
+        branchPayload = runGhApiJson(f"repos/{repo}/branches/{branch}")
+    except RuntimeError as exc:
+        return BranchProtectionReport(
+            repo=repo,
+            branch=branch,
+            protected=None,
+            requiredChecks=(),
+            expectedChecks=tuple(expectedChecks),
+            missingRequiredChecks=tuple(expectedChecks),
+            error=str(exc),
+        )
+
+    protectionPayload: dict[str, Any] | None = None
+    if branchPayload.get("protected"):
+        try:
+            protectionPayload = runGhApiJson(f"repos/{repo}/branches/{branch}/protection")
+        except RuntimeError as exc:
+            return BranchProtectionReport(
+                repo=repo,
+                branch=branch,
+                protected=True,
+                requiredChecks=(),
+                expectedChecks=tuple(expectedChecks),
+                missingRequiredChecks=tuple(expectedChecks),
+                error=str(exc),
+            )
+    return branchProtectionReportFromPayloads(repo, branch, expectedChecks, branchPayload, protectionPayload)
+
+
+def evaluateBranchProtection(report: BranchProtectionReport | None) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if report is None:
+        return errors, warnings
+    if report.error:
+        warnings.append(f"{report.repo}:{report.branch}: branch protection could not be inspected: {report.error}")
+        return errors, warnings
+    if report.protected is False:
+        warnings.append(
+            f"{report.repo}:{report.branch}: branch is not protected; expected required checks "
+            f"{', '.join(report.expectedChecks)}"
+        )
+    elif report.missingRequiredChecks:
+        warnings.append(
+            f"{report.repo}:{report.branch}: branch protection missing required check(s): "
+            f"{', '.join(report.missingRequiredChecks)}"
+        )
+    return errors, warnings
+
+
+def branchProtectionPayload(report: BranchProtectionReport | None) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    return {
+        "repo": report.repo,
+        "branch": report.branch,
+        "protected": report.protected,
+        "requiredChecks": list(report.requiredChecks),
+        "expectedChecks": list(report.expectedChecks),
+        "missingRequiredChecks": list(report.missingRequiredChecks),
+        "error": report.error,
+    }
+
+
 def directorySize(path: Path) -> int:
     total = 0
     for root, dirs, files in os.walk(path, topdown=True):
@@ -320,6 +459,7 @@ def payload(
     diskReports: Sequence[DiskReport],
     worktrees: Sequence[WorktreeRecord],
     runTrees: Sequence[RunTreeRecord],
+    branchProtection: BranchProtectionReport | None,
     errors: Sequence[str],
     warnings: Sequence[str],
 ) -> dict[str, Any]:
@@ -361,6 +501,7 @@ def payload(
                 for record in runTrees
             ],
         },
+        "branchProtection": branchProtectionPayload(branchProtection),
         "errors": list(errors),
         "warnings": list(warnings),
     }
@@ -382,6 +523,14 @@ def printHuman(report: dict[str, Any]) -> None:
     print(f"Worktrees: {worktrees['active']} active, " f"{worktrees['prunable']} prunable, {worktrees['total']} total")
     runTrees = report["runTrees"]
     print(f"Run trees: {runTrees['total']} matching, " f"{formatBytes(runTrees['totalBytes'])} total")
+    branchProtection = report.get("branchProtection")
+    if branchProtection:
+        protected = branchProtection["protected"]
+        protectedText = "unknown" if protected is None else str(protected).lower()
+        print(
+            f"Branch protection: {branchProtection['repo']}:{branchProtection['branch']} "
+            f"protected={protectedText}, missing checks={branchProtection['missingRequiredChecks']}"
+        )
     for warning in report["warnings"]:
         print(f"WARNING: {warning}")
     for error in report["errors"]:
@@ -420,6 +569,24 @@ def buildParser() -> argparse.ArgumentParser:
         action="store_true",
         help="List matching run/worktrees without recursively sizing them.",
     )
+    parser.add_argument(
+        "--github-repo",
+        help="Optional OWNER/REPO repository whose branch protection should be audited with gh api.",
+    )
+    parser.add_argument(
+        "--protected-branch",
+        default=DEFAULT_PROTECTED_BRANCH,
+        help=f"Branch to inspect with --github-repo. Defaults to {DEFAULT_PROTECTED_BRANCH}.",
+    )
+    parser.add_argument(
+        "--required-status-check",
+        action="append",
+        default=None,
+        help=(
+            "Expected required status check for --github-repo. May be repeated. Defaults to "
+            f"{', '.join(DEFAULT_REQUIRED_STATUS_CHECKS)}."
+        ),
+    )
     return parser
 
 
@@ -440,15 +607,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"controller_resource_audit: {exc}", file=sys.stderr)
         return 2
 
+    branchProtection = None
+    if args.github_repo:
+        expectedChecks = tuple(args.required_status_check or DEFAULT_REQUIRED_STATUS_CHECKS)
+        branchProtection = auditBranchProtection(args.github_repo, args.protected_branch, expectedChecks)
+
     minFreeBytes = int(args.min_free_gib * 1024 * 1024 * 1024)
     errors, warnings = evaluateDiskReports(diskReports, minFreeBytes, args.max_used_percent)
     gitErrors, gitWarnings = evaluateGitHealth(gitHealth)
     errors.extend(gitErrors)
     warnings.extend(gitWarnings)
+    branchErrors, branchWarnings = evaluateBranchProtection(branchProtection)
+    errors.extend(branchErrors)
+    warnings.extend(branchWarnings)
     summary = worktreeSummary(worktrees)
     if summary["prunable"]:
         warnings.append(f"{summary['prunable']} prunable worktree registration(s); review and run git worktree prune")
-    report = payload(repoRoot, gitHealth, diskReports, worktrees, runTrees, errors, warnings)
+    report = payload(repoRoot, gitHealth, diskReports, worktrees, runTrees, branchProtection, errors, warnings)
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:

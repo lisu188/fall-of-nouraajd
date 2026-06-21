@@ -173,6 +173,8 @@ checkpoint cleanup. Treat unreadable Git state, unresolved `HEAD` or `origin/mai
 zero-byte Git ref files, low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree
 metadata as blockers to new work until reported or cleaned safely. Remove only completed clean worktrees, use
 `git worktree prune` only for prunable metadata after review, and do not delete branches unless explicitly asked.
+For merge-policy or cleanup-readiness audits, add `--github-repo lisu188/fall-of-nouraajd` to include live branch
+protection and required-check drift in the report.
 
 ## Project overview
 

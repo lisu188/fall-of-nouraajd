@@ -145,6 +145,105 @@ detached
         self.assertIn("1 zero-byte loose git object(s) found", errors)
         self.assertIn("1 zero-byte git ref file(s) found", errors)
 
+    def test_required_checks_support_contexts_and_rich_check_payloads(self) -> None:
+        checks = controller_resource_audit.requiredChecksFromProtectionPayload(
+            {
+                "required_status_checks": {
+                    "contexts": ["linux", "windows-deps"],
+                    "checks": [{"context": "windows"}, {"context": "linux"}],
+                }
+            }
+        )
+
+        self.assertEqual(("linux", "windows", "windows-deps"), checks)
+
+    def test_branch_protection_report_flags_unprotected_branch(self) -> None:
+        report = controller_resource_audit.branchProtectionReportFromPayloads(
+            "owner/repo",
+            "main",
+            ("linux", "windows-deps", "windows"),
+            {"protected": False},
+            None,
+        )
+
+        errors, warnings = controller_resource_audit.evaluateBranchProtection(report)
+
+        self.assertEqual([], errors)
+        self.assertEqual(("linux", "windows-deps", "windows"), report.missingRequiredChecks)
+        self.assertTrue(any("branch is not protected" in warning for warning in warnings), warnings)
+
+    def test_branch_protection_report_flags_missing_required_checks(self) -> None:
+        report = controller_resource_audit.branchProtectionReportFromPayloads(
+            "owner/repo",
+            "main",
+            ("linux", "windows-deps", "windows"),
+            {"protected": True},
+            {"required_status_checks": {"contexts": ["linux"], "checks": [{"context": "windows"}]}},
+        )
+
+        errors, warnings = controller_resource_audit.evaluateBranchProtection(report)
+
+        self.assertEqual([], errors)
+        self.assertEqual(("windows-deps",), report.missingRequiredChecks)
+        self.assertTrue(any("missing required check(s): windows-deps" in warning for warning in warnings), warnings)
+
+    def test_branch_protection_report_accepts_expected_checks(self) -> None:
+        report = controller_resource_audit.branchProtectionReportFromPayloads(
+            "owner/repo",
+            "main",
+            ("linux", "windows-deps", "windows"),
+            {"protected": True},
+            {
+                "required_status_checks": {
+                    "checks": [
+                        {"context": "linux"},
+                        {"context": "windows-deps"},
+                        {"context": "windows"},
+                    ]
+                }
+            },
+        )
+
+        errors, warnings = controller_resource_audit.evaluateBranchProtection(report)
+
+        self.assertEqual([], errors)
+        self.assertEqual([], warnings)
+        self.assertEqual((), report.missingRequiredChecks)
+
+    def test_payload_includes_optional_branch_protection_report(self) -> None:
+        git = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="",
+            statusStderr="",
+            head="abc123",
+            originMain="abc123",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+        )
+        branch = controller_resource_audit.BranchProtectionReport(
+            repo="owner/repo",
+            branch="main",
+            protected=False,
+            requiredChecks=(),
+            expectedChecks=("linux",),
+            missingRequiredChecks=("linux",),
+        )
+
+        payload = controller_resource_audit.payload(
+            Path("/repo"),
+            git,
+            [],
+            [],
+            [],
+            branch,
+            [],
+            ["owner/repo:main: branch is not protected"],
+        )
+
+        self.assertEqual(False, payload["branchProtection"]["protected"])
+        self.assertEqual(["linux"], payload["branchProtection"]["missingRequiredChecks"])
+
 
 if __name__ == "__main__":
     unittest.main()
