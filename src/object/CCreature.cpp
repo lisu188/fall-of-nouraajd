@@ -130,6 +130,7 @@ void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
                 CPlaytestTrace::addMapContext(fields, getMap());
                 CPlaytestTrace::record("inventory_removed", fields);
             }
+            recordDirectPropertyChanged("items");
             signal("inventoryChanged");
         }
     }
@@ -152,6 +153,7 @@ CItemMap CCreature::getEquipped() { return equipped; }
 
 void CCreature::setEquipped(CItemMap value) {
     equipped = value; // TODO: rethink equipped changed here
+    recordDirectPropertyChanged("equipped");
 }
 
 void CCreature::addItems(std::set<std::shared_ptr<CItem>> items) {
@@ -169,6 +171,7 @@ void CCreature::addItems(std::set<std::shared_ptr<CItem>> items) {
             CPlaytestTrace::addMapContext(fields, getMap());
             CPlaytestTrace::record("inventory_added", fields);
         }
+        recordDirectPropertyChanged("items");
         signal("inventoryChanged");
     }
 }
@@ -178,6 +181,7 @@ void CCreature::addItem(std::string item) { addItem(getGame()->createObject<CIte
 void CCreature::heal(int i) {
     vstd::fail_if(i < 0, "Tried to heal negative value!");
     auto hpMax = getHpMax();
+    const int before = hp;
     if (hp > hpMax) {
         return;
     }
@@ -188,6 +192,9 @@ void CCreature::heal(int i) {
     }
     if (hp > hpMax) {
         hp = hpMax;
+    }
+    if (hp != before) {
+        recordDirectPropertyChanged("hp");
     }
 }
 
@@ -222,7 +229,11 @@ void CCreature::takeDamage(int rawDamage) {
     int blockDice = rand() % 100;
     if (blockDice >= stats->getBlock()) {
         vstd::logger::debug(to_string(), "armor saved from", rawDamage - damageAfterArmor, "damage");
+        const int before = hp;
         hp -= damageAfterArmor;
+        if (hp != before) {
+            recordDirectPropertyChanged("hp");
+        }
     } else {
         vstd::logger::debug(getName(), "blocked", rawDamage, "damage");
     }
@@ -233,7 +244,9 @@ CInteractionMap CCreature::getLevelling() { return levelling; }
 void CCreature::setLevelling(CInteractionMap value) { levelling = value; }
 
 void CCreature::setItems(std::set<std::shared_ptr<CItem>> value) {
+    CGameObject::PropertyNotificationBatch notificationBatch(*this);
     items.clear(); // TODO: rethink inventory changed here
+    recordDirectPropertyChanged("items");
     addItems(value);
 }
 
@@ -293,17 +306,22 @@ void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
     } else {
         vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
         effects.insert(effect);
+        recordDirectPropertyChanged("effects");
         signal("effectsChanged");
     }
 }
 
 int CCreature::getMana() { return mana; }
 
-void CCreature::setMana(int mana) { this->mana = mana; }
+void CCreature::setMana(int mana) {
+    this->mana = mana;
+    recordDirectPropertyChanged("mana");
+}
 
 void CCreature::addMana(int i) {
     vstd::fail_if(i < 0, "Tried to add negative mana!");
     auto manaMax = getManaMax();
+    const int before = mana;
     if (mana > manaMax) {
         return;
     }
@@ -315,6 +333,9 @@ void CCreature::addMana(int i) {
     if (mana > manaMax) {
         mana = manaMax;
     }
+    if (mana != before) {
+        recordDirectPropertyChanged("mana");
+    }
 }
 
 void CCreature::addManaProc(float i) {
@@ -325,7 +346,11 @@ void CCreature::addManaProc(float i) {
 
 void CCreature::takeMana(int i) {
     vstd::fail_if(i < 0, "Tried to take negative mana value!");
+    const int before = mana;
     mana = std::max(0, mana - i);
+    if (mana != before) {
+        recordDirectPropertyChanged("mana");
+    }
 }
 
 bool CCreature::isPlayer() {
@@ -395,15 +420,25 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
             newItem, std::make_shared<CGameEventCaused>(CGameEvent::CType::onEquip, this->ptr<CCreature>()));
         removeItem(newItem);
         equipped[i] = newItem;
+        recordDirectPropertyChanged("equipped");
         signal("equippedChanged");
     } else {
         if (equipped.erase(i)) {
+            recordDirectPropertyChanged("equipped");
             signal("equippedChanged");
         }
     }
 
+    const int previousHp = hp;
+    const int previousMana = mana;
     hp = std::min(hp, getHpMax());
     mana = std::min(mana, getManaMax());
+    if (hp != previousHp) {
+        recordDirectPropertyChanged("hp");
+    }
+    if (mana != previousMana) {
+        recordDirectPropertyChanged("mana");
+    }
 }
 
 bool CCreature::hasInInventory(std::shared_ptr<CItem> item) { return vstd::ctn(items, item); }
@@ -497,7 +532,10 @@ std::string CCreature::getSlotWithItem(std::shared_ptr<CItem> item) {
     return "-1";
 }
 
-void CCreature::setHp(int value) { hp = value; }
+void CCreature::setHp(int value) {
+    hp = value;
+    recordDirectPropertyChanged("hp");
+}
 
 int CCreature::getManaRegRate() { return getStats()->getMainValue() / 10 + 1; }
 
@@ -516,6 +554,7 @@ void CCreature::setGold(int value) {
         CPlaytestTrace::addMapContext(fields, getMap());
         CPlaytestTrace::record("gold_changed", fields);
     }
+    recordDirectPropertyChanged("gold");
 }
 
 void CCreature::beforeMove() {
@@ -597,10 +636,17 @@ void CCreature::onEnter(std::shared_ptr<CGameEvent>) {}
 
 void CCreature::onLeave(std::shared_ptr<CGameEvent>) {}
 
-void CCreature::onDestroy(std::shared_ptr<CGameEvent>) { effects.clear(); }
+void CCreature::onDestroy(std::shared_ptr<CGameEvent>) {
+    if (!effects.empty()) {
+        effects.clear();
+        recordDirectPropertyChanged("effects");
+    }
+}
 
 void CCreature::setEffects(const std::set<std::shared_ptr<CEffect>> &value) {
+    CGameObject::PropertyNotificationBatch notificationBatch(*this);
     effects.clear();
+    recordDirectPropertyChanged("effects");
     for (const auto &effect : value) {
         addEffect(effect);
     }
@@ -640,7 +686,9 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
 }
 
 void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
-    effects.erase(effect);
+    if (effects.erase(effect)) {
+        recordDirectPropertyChanged("effects");
+    }
     signal("effectsChanged");
 }
 

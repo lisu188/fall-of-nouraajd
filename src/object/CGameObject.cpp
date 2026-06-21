@@ -128,6 +128,7 @@ void CGameObject::setAnimation(std::string animation) {
     // TODO: implement this in AOP way
     graphicsObject.clear();
     this->animation = animation;
+    recordDirectPropertyChanged("animation");
 }
 
 std::string CGameObject::getLabel() { return label; }
@@ -211,6 +212,15 @@ void CGameObject::recordPropertyChanged(const std::string &name) {
         return;
     }
     notifyPropertyChanged(name);
+}
+
+void CGameObject::recordDirectPropertyChanged(const std::string &name) {
+    for (const auto &suppressedName : directPropertyNotificationSuppressedNames) {
+        if (suppressedName == name) {
+            return;
+        }
+    }
+    recordPropertyChanged(name);
 }
 
 bool CGameObject::hasProperty(std::string name) { return this->meta()->has_property<CGameObject>(name, this->ptr()); }

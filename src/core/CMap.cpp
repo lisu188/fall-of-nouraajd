@@ -263,7 +263,10 @@ void performance_guard::disableMapCoordinateLookupProbe() {
     mapCoordinateLookupProbeEnabled.store(false, std::memory_order_relaxed);
 }
 
-void CMap::bumpNavigationRevision() { navigationRevision++; }
+void CMap::bumpNavigationRevision() {
+    navigationRevision++;
+    recordDirectPropertyChanged("navigationRevision");
+}
 
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     Coords coords = normalizeCoords(tile->getCoords());
@@ -274,6 +277,7 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     }
     tiles.insert(std::make_pair(target, tile));
     bumpNavigationRevision();
+    recordDirectPropertyChanged("tiles");
     signal("tileChanged", target);
 }
 
@@ -290,6 +294,7 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     tile->setPosz(coords.z);
     tiles.insert(std::make_pair(coords, tile));
     bumpNavigationRevision();
+    recordDirectPropertyChanged("tiles");
     signal("tileChanged", coords);
     return true;
 }
@@ -301,6 +306,7 @@ void CMap::removeTile(int x, int y, int z) {
         this->tiles.erase(it);
     }
     bumpNavigationRevision();
+    recordDirectPropertyChanged("tiles");
     signal("tileChanged", coords);
 }
 
@@ -392,6 +398,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
     bumpNavigationRevision();
+    recordDirectPropertyChanged("objects");
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onCreate));
     signal("objectChanged", mapObject->getCoords());
 }
@@ -409,6 +416,7 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
     mapObjects.erase(map_object_it);
     vstd::erase_if(mapObjectsCache, [mapObject](auto it) { return it.second == mapObject->getName(); });
     bumpNavigationRevision();
+    recordDirectPropertyChanged("objects");
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onDestroy));
     signal("objectChanged", mapObject->getCoords());
 }
@@ -575,12 +583,16 @@ void CMap::move() {
 
     map->moving = false;
     map->turn++;
+    map->recordDirectPropertyChanged("turn");
     map->signal("turnPassed");
 }
 
 int CMap::getTurn() { return turn; }
 
-void CMap::setTurn(int turn) { this->turn = turn; }
+void CMap::setTurn(int turn) {
+    this->turn = turn;
+    recordDirectPropertyChanged("turn");
+}
 
 void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
     tiles.clear();
@@ -591,6 +603,7 @@ void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
         tiles[normalizeCoords(ob->getCoords())] = ob;
     }
     bumpNavigationRevision();
+    recordDirectPropertyChanged("tiles");
 }
 
 std::set<std::shared_ptr<CTile>> CMap::getTiles() {
@@ -627,6 +640,7 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
         mapObjectsCache.insert(std::make_pair(normalizeCoords(ob->getCoords()), ob->getName()));
     }
     bumpNavigationRevision();
+    recordDirectPropertyChanged("objects");
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getObjects() {
@@ -694,6 +708,7 @@ void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, C
 
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));
     bumpNavigationRevision();
+    recordDirectPropertyChanged("objects");
 
     // TODO: check if it`s correct
     signal("objectChanged", _old);
