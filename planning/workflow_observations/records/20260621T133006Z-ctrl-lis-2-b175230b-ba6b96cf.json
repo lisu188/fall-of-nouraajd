@@ -1,0 +1,44 @@
+{
+  "affectedPaths": [
+    ".github"
+  ],
+  "category": "prs",
+  "controllerId": "ctrl-lis-2-b175230b",
+  "createdAtUtc": "2026-06-21T13:30:06Z",
+  "details": "Validated implementation PRs cannot complete through the documented controller path because gh pr merge --auto --squash returns a repository setting error. Rows remain IN_PROGRESS and continue occupying controller slots even after required validation passes.",
+  "evidence": [
+    {
+      "command": "gh pr merge <PR> --auto --squash --delete-branch=false",
+      "prs": [
+        {
+          "autoMergeError": "GraphQL: Auto merge is not allowed for this repository (enablePullRequestAutoMerge)",
+          "checks": "all_success",
+          "number": 786,
+          "state": "OPEN"
+        },
+        {
+          "autoMergeError": "GraphQL: Auto merge is not allowed for this repository (enablePullRequestAutoMerge)",
+          "checks": "all_success",
+          "number": 788,
+          "state": "OPEN"
+        },
+        {
+          "autoMergeError": "GraphQL: Auto merge is not allowed for this repository (enablePullRequestAutoMerge)",
+          "checks": "all_success",
+          "number": 808,
+          "state": "OPEN"
+        }
+      ]
+    }
+  ],
+  "fingerprint": "implementation-auto-merge-disabled",
+  "id": "20260621T133006Z-ctrl-lis-2-b175230b-ba6b96cf",
+  "impact": "Controllers cannot mark completed implementation work DONE after validation because implementation PRs stay open until a human changes repository settings or authorizes a different merge path.",
+  "phase": "merge",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "cde103343a258a3d8f6a2ae3c831f98def4dd8f2",
+  "suggestedImprovement": "Enable repository auto-merge for protected PRs or update the controller policy to allow a direct squash merge after required checks pass.",
+  "summary": "Repository auto-merge disabled blocks validated implementation PRs"
+}
