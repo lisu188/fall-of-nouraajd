@@ -4833,6 +4833,117 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"before": before_items, "after": after_items}, sort_keys=True)
 
     @game_test
+    def test_python_plugin_contract_runtime_suite_exercises_representative_methods(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test", "Warrior")
+
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        def place_object(type_id, name, coords):
+            obj = g.createObject(type_id)
+            self.assertIsNotNone(obj, f"Expected plugin object '{type_id}' to be constructible.")
+            obj.name = name
+            game_map.addObject(obj)
+            obj.moveTo(coords.x, coords.y, coords.z)
+            return obj
+
+        def count_type(type_id):
+            return sum(1 for obj in game_map.getObjects() if obj.getTypeId() == type_id)
+
+        entry = game.Coords(game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+        event = FakeEvent(player)
+
+        chest = place_object("chest", "pluginContractChest", find_adjacent_walkable_tile(game_map, player.getCoords()))
+        chest.setNumericProperty("value", 20)
+        before_items = len(player.getItems())
+        chest.onEnter(event)
+        self.assertGreater(len(player.getItems()), before_items)
+
+        captured_trades = []
+        original_show_trade = game.CGuiHandler.showTrade
+        try:
+
+            def capture_trade(self, market):
+                captured_trades.append(market)
+
+            game.CGuiHandler.showTrade = capture_trade
+            g.getObjectHandler().registerConfigJson(
+                "PluginContractMarket",
+                json.dumps(
+                    {
+                        "class": "Market",
+                        "properties": {
+                            "market": {
+                                "class": "CMarket",
+                                "properties": {"items": [{"ref": "LifePotion"}]},
+                            }
+                        },
+                    }
+                ),
+            )
+            market = place_object(
+                "PluginContractMarket",
+                "pluginContractMarket",
+                find_adjacent_walkable_tile(game_map, chest.getCoords()),
+            )
+            market.onEnter(event)
+        finally:
+            game.CGuiHandler.showTrade = original_show_trade
+
+        self.assertEqual(1, len(captured_trades))
+        self.assertEqual("CMarket", captured_trades[0].getType())
+
+        teleporter = place_object(
+            "Teleporter", "pluginContractTeleporter", find_adjacent_walkable_tile(game_map, player.getCoords())
+        )
+        exit_marker = place_object(
+            "Event", "pluginContractTeleporterExit", find_adjacent_walkable_tile(game_map, teleporter.getCoords())
+        )
+        teleporter.setBoolProperty("enabled", True)
+        teleporter.setStringProperty("exit", exit_marker.getName())
+        teleporter.onTurn(None)
+        self.assertTrue(teleporter.getBoolProperty("waypoint"))
+        teleporter.onEnter(event)
+        self.assertEqual(coords_tuple(exit_marker.getCoords()), coords_tuple(player.getCoords()))
+
+        away_from_entry = find_adjacent_walkable_tile(game_map, entry)
+        player.moveTo(away_from_entry.x, away_from_entry.y, away_from_entry.z)
+        self.assertNotEqual(coords_tuple(entry), coords_tuple(player.getCoords()))
+        town_portal = g.createObject("TownPortalScroll")
+        self.assertTrue(town_portal.isDisposable())
+        town_portal.onUse(event)
+        self.assertEqual(coords_tuple(entry), coords_tuple(player.getCoords()))
+
+        cave = place_object("Cave", "pluginContractCave", find_adjacent_walkable_tile(game_map, player.getCoords()))
+        before_pritz = count_type("Pritz")
+        cave.onEnter(event)
+        self.assertFalse(cave.getBoolProperty("enabled"))
+        self.assertIsNone(game_map.getObjectByName("pluginContractCave"))
+        self.assertGreater(count_type("Pritz"), before_pritz)
+
+        armor_of_endless_winter = g.createObject("ArmorOfEndlessWinter")
+        armor_effect = g.createObject("ArmorOfEndlessWinterEffect")
+        self.assertFalse(armor_of_endless_winter.configureEffect(armor_effect))
+        barrier_effect = g.createObject("BarrierEffect")
+        barrier_effect.onEffect()
+
+        return True, json.dumps(
+            {
+                "chest_items": len(player.getItems()) - before_items,
+                "cave_spawned": count_type("Pritz") - before_pritz,
+                "market_trade_type": captured_trades[0].getType(),
+                "teleporter_exit": coords_tuple(exit_marker.getCoords()),
+                "town_portal_entry": coords_tuple(player.getCoords()),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_array_deserialize_skips_bad_entries_and_consumers_are_safe(self):
         game = load_game_module()
 
