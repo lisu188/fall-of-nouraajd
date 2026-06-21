@@ -646,11 +646,18 @@ jobs:
           path: ${{ env.VCPKG_INSTALLED_DIR }}
           key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
       - *validate-vcpkg-installed
-      - name: Require vcpkg installed cache
+      - name: Install vcpkg deps when installed cache is missing
+        id: install-missing-vcpkg-installed
         if: steps.restore-vcpkg-installed.outputs.cache-hit != 'true'
         shell: pwsh
+        timeout-minutes: 20
         run: |
-          throw "windows-deps did not seed a valid vcpkg installed cache for key '${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}'."
+          "Cache key '${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}' was not restored; running vcpkg install with x-gha binary cache."
+          & "$env:VCPKG_ROOT\vcpkg.exe" install `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
+            "--x-install-root=$env:VCPKG_INSTALLED_DIR"
+          "installed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
       - name: Repair vcpkg installed tree
         id: repair-vcpkg-installed
         if: steps.restore-vcpkg-installed.outputs.cache-hit == 'true' && steps.validate-vcpkg-installed.outputs.valid != 'true'
@@ -663,6 +670,13 @@ jobs:
             --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
             "--x-install-root=$env:VCPKG_INSTALLED_DIR"
           "repaired=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Save missing vcpkg installed tree
+        if: steps.install-missing-vcpkg-installed.outputs.installed == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
       - name: Save repaired vcpkg installed tree
         if: steps.repair-vcpkg-installed.outputs.repaired == 'true'
         continue-on-error: true
@@ -686,10 +700,13 @@ jobs:
           $cacheHit = Format-Value "${{ steps.restore-vcpkg-installed.outputs.cache-hit }}"
           $valid = Format-Value "${{ steps.validate-vcpkg-installed.outputs.valid }}"
           $reason = Format-Value "${{ steps.validate-vcpkg-installed.outputs.reason }}"
+          $installed = Format-Value "${{ steps.install-missing-vcpkg-installed.outputs.installed }}"
           $repaired = Format-Value "${{ steps.repair-vcpkg-installed.outputs.repaired }}"
 
-          if ($cacheHit -ne "true") {
-            $cacheAction = "required cache missing"
+          if ($cacheHit -ne "true" -and $installed -eq "true") {
+            $cacheAction = "cache missing; installed with x-gha"
+          } elseif ($cacheHit -ne "true") {
+            $cacheAction = "cache missing and install not completed"
           } elseif ($repaired -eq "true") {
             $cacheAction = "repaired"
           } elseif ($valid -eq "true") {
@@ -710,7 +727,9 @@ jobs:
             "- Selected key: ``$selected``",
             "- Cache hit: $cacheHit",
             "- Validation: $valid",
-            "- Reason: $reason"
+            "- Reason: $reason",
+            "- Installed on miss: $installed",
+            "- Repaired: $repaired"
           ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
       - name: Detect sccache metadata
         id: windows-sccache
