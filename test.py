@@ -1144,6 +1144,22 @@ def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1):
         time.sleep(0.001)
 
 
+def count_player_objects(game_map):
+    return sum(1 for obj in game_map.getObjects() if hasattr(obj, "isPlayer") and obj.isPlayer())
+
+
+def transition_source_map_snapshot(game_map):
+    return {
+        "object_count": len(game_map.getObjects()),
+        "origin": game_map.getStringProperty("transitionOrigin"),
+        "turn": game_map.getTurn(),
+    }
+
+
+def assert_transition_source_map_unchanged(test_case, game_map, snapshot):
+    test_case.assertEqual(snapshot, transition_source_map_snapshot(game_map))
+
+
 SDL_KEYDOWN = 0x300
 SDL_KEYUP = 0x301
 SDL_QUIT = 0x100
@@ -5886,6 +5902,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g, game_map, player = load_game_map_with_player("test")
+        game_map.setStringProperty("transitionOrigin", "movement")
         origin = player.getCoords()
         target = find_adjacent_walkable_tile(game_map, origin)
         controller = get_player_controller(player)
@@ -5927,12 +5944,15 @@ class GameTest(unittest.TestCase):
             lifecycle,
             "onEnter should run during the move, before the deferred map swap is processed.",
         )
+        source_snapshot = transition_source_map_snapshot(game_map)
 
         pump_event_loop(3)
 
         self.assertEqual("ritual", g.getMap().mapName)
         self.assertEqual(1, g.getMap().getTurn())
         self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual(1, count_player_objects(g.getMap()))
+        assert_transition_source_map_unchanged(self, game_map, source_snapshot)
         self.assertEqual("Idle", scene_manager.getTransitionStateName())
         self.assertFalse(scene_manager.isTransitionPending())
         self.assertEqual("", scene_manager.getPendingMapName())
@@ -5954,6 +5974,8 @@ class GameTest(unittest.TestCase):
                     ],
                 },
                 "lifecycle": lifecycle,
+                "player_count": count_player_objects(g.getMap()),
+                "source_map": transition_source_map_snapshot(game_map),
             },
             sort_keys=True,
         )
@@ -5965,6 +5987,7 @@ class GameTest(unittest.TestCase):
         g, game_map, player = load_game_map_with_player("test")
         scene_manager = g.getSceneManager()
         game_map.setNumericProperty("turn", 12)
+        game_map.setStringProperty("transitionOrigin", "duplicate")
 
         self.assertTrue(scene_manager.requestMapChange(g, "ritual"))
         self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
@@ -5972,6 +5995,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(scene_manager.requestMapChange(g, "siege"))
         self.assertEqual("ritual", scene_manager.getPendingMapName())
         self.assertEqual("test", g.getMap().mapName)
+        source_snapshot = transition_source_map_snapshot(game_map)
 
         self.assertTrue(
             pump_event_loop_until(
@@ -5984,6 +6008,8 @@ class GameTest(unittest.TestCase):
         self.assertEqual("ritual", g.getMap().mapName)
         self.assertEqual(12, g.getMap().getTurn())
         self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual(1, count_player_objects(g.getMap()))
+        assert_transition_source_map_unchanged(self, game_map, source_snapshot)
         self.assertEqual("Idle", scene_manager.getTransitionStateName())
         self.assertEqual("", scene_manager.getPendingMapName())
 
@@ -5992,6 +6018,215 @@ class GameTest(unittest.TestCase):
                 "destination": g.getMap().mapName,
                 "pending": scene_manager.getPendingMapName(),
                 "player": player.getName(),
+                "player_count": count_player_objects(g.getMap()),
+                "source_map": transition_source_map_snapshot(game_map),
+                "turn": g.getMap().getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_scene_manager_two_transition_requests_in_one_event_loop_cycle_keep_first_request(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        game_map.setNumericProperty("turn", 19)
+        game_map.setStringProperty("transitionOrigin", "eventLoopDuplicate")
+        responses = []
+        states = []
+        source_snapshot = {}
+
+        def request_both_transitions():
+            responses.append(scene_manager.requestMapChange(g, "ritual"))
+            states.append(
+                (g.getMap().mapName, scene_manager.getPendingMapName(), scene_manager.getTransitionStateName())
+            )
+            responses.append(scene_manager.requestMapChange(g, "siege"))
+            states.append(
+                (g.getMap().mapName, scene_manager.getPendingMapName(), scene_manager.getTransitionStateName())
+            )
+            source_snapshot.update(transition_source_map_snapshot(game_map))
+
+        game.event_loop.instance().invoke(request_both_transitions)
+        game.event_loop.instance().run()
+
+        self.assertEqual([True, False], responses)
+        self.assertEqual(
+            [
+                ("test", "ritual", "TransitionPending"),
+                ("test", "ritual", "TransitionPending"),
+            ],
+            states,
+        )
+
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=1,
+            )
+        )
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertEqual(19, g.getMap().getTurn())
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual(1, count_player_objects(g.getMap()))
+        assert_transition_source_map_unchanged(self, game_map, source_snapshot)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+        self.assertEqual("", scene_manager.getPendingMapName())
+
+        return True, json.dumps(
+            {
+                "destination": g.getMap().mapName,
+                "player_count": count_player_objects(g.getMap()),
+                "responses": responses,
+                "source_map": transition_source_map_snapshot(game_map),
+                "states": states,
+                "turn": g.getMap().getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_scene_manager_transition_from_dialog_action_preserves_source_map(self):
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        game_map.setNumericProperty("turn", 27)
+        game_map.setStringProperty("transitionOrigin", "dialog")
+        actions = []
+
+        class TransitionDialog(game.CDialog):
+            def invokeAction(self, action):
+                actions.append(action)
+                if action == "travel":
+                    g.changeMap("ritual")
+
+        dialog = TransitionDialog()
+        game.CDialogBase2.invokeAction(dialog, "travel")
+
+        self.assertEqual(["travel"], actions)
+        self.assertEqual("test", g.getMap().mapName)
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        source_snapshot = transition_source_map_snapshot(game_map)
+
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertEqual(27, g.getMap().getTurn())
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual(1, count_player_objects(g.getMap()))
+        assert_transition_source_map_unchanged(self, game_map, source_snapshot)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+        self.assertEqual("", scene_manager.getPendingMapName())
+
+        return True, json.dumps(
+            {
+                "actions": actions,
+                "destination": g.getMap().mapName,
+                "player_count": count_player_objects(g.getMap()),
+                "source_map": transition_source_map_snapshot(game_map),
+                "turn": g.getMap().getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_scene_manager_transition_requested_during_combat_preserves_source_map(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "empty", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        scene_manager = g.getSceneManager()
+        game_map.setNumericProperty("turn", 34)
+        game_map.setStringProperty("transitionOrigin", "combat")
+        combat_actions = []
+
+        class TransitionStrike(game.CInteraction):
+            def performAction(self, first, second):
+                combat_actions.append((first.getName(), second.getName()))
+                g.changeMap("ritual")
+                second.hurt(5000)
+
+        handler = g.getObjectHandler()
+        handler.registerType("TransitionStrike", TransitionStrike)
+        handler.registerConfigJson("CombatTransitionStrike", json.dumps({"class": "TransitionStrike"}))
+        handler.registerConfigJson(
+            "TransitionCombatAttacker",
+            json.dumps(
+                {
+                    "class": "CCreature",
+                    "properties": {
+                        "actions": [{"ref": "CombatTransitionStrike"}],
+                        "fightController": {"class": "CMonsterFightController"},
+                    },
+                }
+            ),
+        )
+
+        attacker = g.createObject("TransitionCombatAttacker")
+        attacker.name = "unitTransitionAttacker"
+        attacker.baseStats.agility = 50
+        attacker.baseStats.hit = 100
+        attacker.baseStats.dmgMin = 0
+        attacker.baseStats.dmgMax = 0
+        attacker.setHp(10)
+        attacker.moveTo(2, 0, 0)
+        game_map.addObject(attacker)
+
+        defender = g.createObject("CCreature")
+        defender.name = "unitTransitionDefender"
+        defender.setFightController(g.createObject("CFightController"))
+        defender.baseStats.agility = 1
+        defender.baseStats.hit = 0
+        defender.baseStats.dmgMin = 0
+        defender.baseStats.dmgMax = 0
+        defender.setHp(10)
+        defender.moveTo(3, 0, 0)
+        game_map.addObject(defender)
+
+        combat_result = game.CFightHandler.fightMany(attacker, [defender])
+
+        self.assertEqual([("unitTransitionAttacker", "unitTransitionDefender")], combat_actions)
+        self.assertIs(g.getMap(), game_map)
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        source_snapshot = transition_source_map_snapshot(game_map)
+
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertEqual(34, g.getMap().getTurn())
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual(1, count_player_objects(g.getMap()))
+        assert_transition_source_map_unchanged(self, game_map, source_snapshot)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+        self.assertEqual("", scene_manager.getPendingMapName())
+
+        return True, json.dumps(
+            {
+                "combat_actions": combat_actions,
+                "combat_result": combat_result,
+                "destination": g.getMap().mapName,
+                "player_count": count_player_objects(g.getMap()),
+                "source_map": transition_source_map_snapshot(game_map),
                 "turn": g.getMap().getTurn(),
             },
             sort_keys=True,
