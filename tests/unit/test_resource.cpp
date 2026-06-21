@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 
@@ -46,6 +47,22 @@ class ScopedCurrentPath {
     std::filesystem::path originalPath;
     std::filesystem::path replacementPath;
 };
+
+std::string json_string_value(const std::shared_ptr<json> &node, const std::string &key) {
+    if (!node || !node->contains(key) || !node->at(key).is_string()) {
+        return {};
+    }
+    return node->at(key).get<std::string>();
+}
+
+bool write_text_file(const std::filesystem::path &path, const std::string &text) {
+    std::ofstream stream(path, std::ios::binary | std::ios::trunc);
+    if (!stream) {
+        return false;
+    }
+    stream << text;
+    return static_cast<bool>(stream);
+}
 
 void test_resource_provider_paths_and_config_loader() {
     auto provider = CResourcesProvider::getInstance();
@@ -125,6 +142,47 @@ void test_resource_provider_save_uses_provider_root_when_cwd_changes() {
     std::filesystem::remove_all(tempRoot);
 }
 
+void test_configuration_provider_instances_do_not_share_config_cache() {
+    auto resources = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(resources->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before configuration provider isolation test");
+    if (itemsPath.empty()) {
+        return;
+    }
+
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto logicalConfigName = "unit_provider_isolation_" + std::to_string(nonce) + ".json";
+    const auto tempConfigPath = itemsPath.parent_path() / logicalConfigName;
+    std::filesystem::remove(tempConfigPath);
+
+    expect_true(write_text_file(tempConfigPath, R"({"marker":"first"})"),
+                "configuration provider isolation fixture should be written");
+    if (!std::filesystem::exists(tempConfigPath)) {
+        return;
+    }
+
+    CConfigurationProvider firstProvider(resources);
+    CConfigurationProvider secondProvider(resources);
+
+    auto firstConfig = firstProvider.getConfiguration(logicalConfigName);
+    expect_true(json_string_value(firstConfig, "marker") == "first",
+                "first configuration provider should load initial temp config content");
+
+    expect_true(write_text_file(tempConfigPath, R"({"marker":"second"})"),
+                "configuration provider isolation fixture should be rewritable");
+
+    auto firstConfigAgain = firstProvider.getConfiguration(logicalConfigName);
+    auto secondConfig = secondProvider.getConfiguration(logicalConfigName);
+    expect_true(firstConfigAgain == firstConfig, "one provider instance should cache its own parsed config");
+    expect_true(json_string_value(firstConfigAgain, "marker") == "first",
+                "one provider instance should keep its cached config after the file changes");
+    expect_true(json_string_value(secondConfig, "marker") == "second",
+                "a separate provider instance should load fresh config content from the temp file");
+    expect_true(secondConfig != firstConfig, "separate configuration providers should not share cache entries");
+
+    std::filesystem::remove(tempConfigPath);
+}
+
 void test_load_game_creates_context_owned_providers() {
     auto first_game = CGameLoader::loadGame();
     auto second_game = CGameLoader::loadGame();
@@ -165,6 +223,7 @@ int main() {
 
     test_resource_provider_paths_and_config_loader();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
+    test_configuration_provider_instances_do_not_share_config_cache();
     test_load_game_creates_context_owned_providers();
 
     return finish_tests();
