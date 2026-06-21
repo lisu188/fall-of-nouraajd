@@ -19,6 +19,7 @@ DEFAULT_MIN_FREE_GIB = 5.0
 DEFAULT_MAX_USED_PERCENT = 95.0
 DEFAULT_PROTECTED_BRANCH = "main"
 DEFAULT_REQUIRED_STATUS_CHECKS = ("linux", "windows-deps", "windows")
+DEFAULT_LIVE_REMOTE_TIMEOUT_SECONDS = 10.0
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,9 @@ class GitHealthReport:
     headAheadOriginMainCount: int | None = None
     headBehindOriginMainCount: int | None = None
     headBehindOriginMain: bool | None = None
+    liveOriginMain: str | None = None
+    liveOriginMainError: str | None = None
+    originMainMatchesLive: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -196,6 +200,8 @@ def runGitWorktreeList(repoRoot: Path) -> list[WorktreeRecord]:
 def runGit(
     repoRoot: Path,
     args: Sequence[str],
+    *,
+    timeout: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["git", "--no-optional-locks", *args],
@@ -204,7 +210,32 @@ def runGit(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        timeout=timeout,
     )
+
+
+def runGitLiveOriginMain(
+    repoRoot: Path, timeoutSeconds: float = DEFAULT_LIVE_REMOTE_TIMEOUT_SECONDS
+) -> tuple[str | None, str | None]:
+    remote = runGit(repoRoot, ["remote", "get-url", "origin"])
+    if remote.returncode != 0:
+        return None, None
+    try:
+        result = runGit(
+            repoRoot,
+            ["ls-remote", "--exit-code", "origin", "refs/heads/main"],
+            timeout=timeoutSeconds,
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"git ls-remote origin refs/heads/main timed out after {timeoutSeconds:.1f}s"
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "git ls-remote failed"
+        return None, detail
+
+    parts = result.stdout.strip().split()
+    if len(parts) < 2 or parts[1] != "refs/heads/main":
+        return None, "git ls-remote origin refs/heads/main returned unexpected output"
+    return parts[0], None
 
 
 def resolveGitPath(repoRoot: Path, pathText: str | None) -> Path | None:
@@ -264,6 +295,10 @@ def runGitHealth(repoRoot: Path) -> GitHealthReport:
     headAheadOriginMainCount: int | None = None
     headBehindOriginMainCount: int | None = None
     headBehindOriginMain: bool | None = None
+    liveOriginMainText, liveOriginMainError = runGitLiveOriginMain(repoRoot)
+    originMainMatchesLive: bool | None = None
+    if liveOriginMainText and originMainText:
+        originMainMatchesLive = originMainText == liveOriginMainText
     if headText and originMainText:
         if headText == originMainText:
             headAheadOriginMainCount = 0
@@ -287,6 +322,9 @@ def runGitHealth(repoRoot: Path) -> GitHealthReport:
         statusStderr=status.stderr.strip(),
         head=headText,
         originMain=originMainText,
+        liveOriginMain=liveOriginMainText,
+        liveOriginMainError=liveOriginMainError,
+        originMainMatchesLive=originMainMatchesLive,
         gitCommonDir=str(gitCommonDir) if gitCommonDir is not None else None,
         emptyLooseObjects=findEmptyLooseObjects(gitCommonDir),
         emptyRefs=findEmptyRefs(gitCommonDir),
@@ -318,6 +356,13 @@ def evaluateGitHealth(report: GitHealthReport) -> tuple[list[str], list[str]]:
         errors.append(f"{len(report.emptyLooseObjects)} zero-byte loose git object(s) found")
     if report.emptyRefs:
         errors.append(f"{len(report.emptyRefs)} zero-byte git ref file(s) found")
+    if report.liveOriginMainError:
+        warnings.append(f"live origin/main could not be inspected: {report.liveOriginMainError}")
+    if report.originMainMatchesLive is False:
+        warnings.append(
+            "refs/remotes/origin/main differs from live origin/main; fetch before continuing because local "
+            "remote-tracking refs may be stale"
+        )
     if report.headBehindOriginMain or (
         report.headBehindOriginMain is None
         and report.head
@@ -524,6 +569,9 @@ def payload(
             "statusStderr": gitHealth.statusStderr,
             "head": gitHealth.head,
             "originMain": gitHealth.originMain,
+            "liveOriginMain": gitHealth.liveOriginMain,
+            "liveOriginMainError": gitHealth.liveOriginMainError,
+            "originMainMatchesLive": gitHealth.originMainMatchesLive,
             "headAheadOriginMainCount": gitHealth.headAheadOriginMainCount,
             "headBehindOriginMainCount": gitHealth.headBehindOriginMainCount,
             "headBehindOriginMain": gitHealth.headBehindOriginMain,
@@ -576,6 +624,7 @@ def printHuman(report: dict[str, Any]) -> None:
     print(f"  status exit code: {git['statusExitCode']}")
     print(f"  HEAD: {git['head'] or 'unresolved'}")
     print(f"  origin/main: {git['originMain'] or 'unresolved'}")
+    print(f"  live origin/main: {git['liveOriginMain'] or 'unavailable'}")
     print(f"  zero-byte loose objects: {git['emptyLooseObjects']['total']}")
     print(f"  zero-byte refs: {git['emptyRefs']['total']}")
     print("Disk:")
