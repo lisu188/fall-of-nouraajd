@@ -322,25 +322,26 @@ std::shared_ptr<json> CConfigurationProvider::getConfig(const std::string &path)
     return instance.getConfiguration(path);
 }
 
-CConfigurationProvider::~CConfigurationProvider() { clear(); }
+CConfigurationProvider::~CConfigurationProvider() = default;
 
 std::shared_ptr<json> CConfigurationProvider::getConfiguration(const std::string &path) {
-    if (this->find(path) != this->end()) {
-        return this->at(path);
+    auto config = configurations.find(path);
+    if (config != configurations.end()) {
+        return config->second;
     }
     loadConfig(path);
-    return getConfiguration(path);
+    config = configurations.find(path);
+    return config != configurations.end() ? config->second : nullptr;
 }
 
 void CConfigurationProvider::loadConfig(const std::string &path) {
     if (isConfigResourcePath(path)) {
         auto config = CConfigResourceLoader().load(path);
-        this->insert(
-            std::make_pair(path, CJsonUtil::from_string(resourcesProvider->load(config->getFilePath()), path)));
+        configurations.emplace(path, CJsonUtil::from_string(resourcesProvider->load(config->getFilePath()), path));
         return;
     }
 
-    this->insert(std::make_pair(path, resourcesProvider->loadJson(path)));
+    configurations.emplace(path, resourcesProvider->loadJson(path));
 }
 
 std::list<std::string> CResourcesProvider::searchPath = buildResourceSearchPath();
