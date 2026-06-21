@@ -97,6 +97,40 @@ detached
         self.assertTrue(records[0].path.endswith("fall-of-nouraajd-codex"))
         self.assertEqual(23, records[0].sizeBytes)
 
+    def test_discover_run_trees_includes_workflow_optimizer_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            run_tree = root / "fon-workflow-optimizer-demo"
+            run_tree.mkdir()
+            (run_tree / "artifact.txt").write_text("x" * 19, encoding="utf-8")
+
+            records = controller_resource_audit.discoverRunTrees(
+                [root],
+                controller_resource_audit.DEFAULT_RUN_TREE_PATTERNS,
+            )
+
+        self.assertEqual(1, len(records))
+        self.assertTrue(records[0].path.endswith("fon-workflow-optimizer-demo"))
+        self.assertEqual(19, records[0].sizeBytes)
+        self.assertTrue(records[0].sizeMeasured)
+
+    def test_discover_run_trees_marks_skipped_size_measurements(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            run_tree = root / "fon-workflow-optimizer-demo"
+            run_tree.mkdir()
+            (run_tree / "artifact.txt").write_text("x" * 19, encoding="utf-8")
+
+            records = controller_resource_audit.discoverRunTrees(
+                [root],
+                controller_resource_audit.DEFAULT_RUN_TREE_PATTERNS,
+                includeSizes=False,
+            )
+
+        self.assertEqual(1, len(records))
+        self.assertEqual(0, records[0].sizeBytes)
+        self.assertFalse(records[0].sizeMeasured)
+
     def test_find_empty_loose_objects_reports_relative_object_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             git_common_dir = Path(temp_dir)
@@ -378,6 +412,7 @@ detached
             [],
             [],
             [],
+            True,
             branch,
             [],
             ["owner/repo:main: branch is not protected"],
@@ -388,6 +423,63 @@ detached
         self.assertEqual(False, payload["git"]["headBehindOriginMain"])
         self.assertEqual(0, payload["git"]["headAheadOriginMainCount"])
         self.assertEqual(0, payload["git"]["headBehindOriginMainCount"])
+
+    def test_payload_marks_unmeasured_run_tree_sizes(self) -> None:
+        git = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="",
+            statusStderr="",
+            head="abc123",
+            originMain="abc123",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+        )
+
+        payload = controller_resource_audit.payload(
+            Path("/repo"),
+            git,
+            [],
+            [],
+            [controller_resource_audit.RunTreeRecord("/tmp/fon-workflow-optimizer-demo", 0, sizeMeasured=False)],
+            False,
+            None,
+            [],
+            [],
+        )
+
+        self.assertEqual(0, payload["runTrees"]["totalBytes"])
+        self.assertFalse(payload["runTrees"]["sizesMeasured"])
+        self.assertFalse(payload["runTrees"]["records"][0]["sizeMeasured"])
+        self.assertEqual("0.0 MiB", payload["runTrees"]["records"][0]["sizeHuman"])
+
+    def test_payload_preserves_skipped_size_mode_with_no_run_tree_records(self) -> None:
+        git = controller_resource_audit.GitHealthReport(
+            statusExitCode=0,
+            statusStdout="",
+            statusStderr="",
+            head="abc123",
+            originMain="abc123",
+            gitCommonDir="/repo/.git",
+            emptyLooseObjects=(),
+            emptyRefs=(),
+        )
+
+        payload = controller_resource_audit.payload(
+            Path("/repo"),
+            git,
+            [],
+            [],
+            [],
+            False,
+            None,
+            [],
+            [],
+        )
+
+        self.assertEqual(0, payload["runTrees"]["total"])
+        self.assertEqual(0, payload["runTrees"]["totalBytes"])
+        self.assertFalse(payload["runTrees"]["sizesMeasured"])
 
 
 if __name__ == "__main__":

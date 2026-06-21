@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
-DEFAULT_RUN_TREE_PATTERNS = ("nouraajd-*", "fall-of-nouraajd-codex")
+DEFAULT_RUN_TREE_PATTERNS = ("nouraajd-*", "fall-of-nouraajd-codex", "fon-workflow-optimizer-*")
 DEFAULT_MIN_FREE_GIB = 5.0
 DEFAULT_MAX_USED_PERCENT = 95.0
 DEFAULT_PROTECTED_BRANCH = "main"
@@ -48,6 +48,7 @@ class WorktreeRecord:
 class RunTreeRecord:
     path: str
     sizeBytes: int
+    sizeMeasured: bool = True
 
 
 @dataclass(frozen=True)
@@ -497,8 +498,10 @@ def discoverRunTrees(
                 continue
             if matchesRunTreePattern(entry.name, patterns):
                 seen.add(resolved)
-                size = directorySize(entry) if includeSizes else 0
-                records.append(RunTreeRecord(path=str(entry), sizeBytes=size))
+                if includeSizes:
+                    records.append(RunTreeRecord(path=str(entry), sizeBytes=directorySize(entry)))
+                else:
+                    records.append(RunTreeRecord(path=str(entry), sizeBytes=0, sizeMeasured=False))
     return sorted(records, key=lambda record: record.path)
 
 
@@ -508,6 +511,7 @@ def payload(
     diskReports: Sequence[DiskReport],
     worktrees: Sequence[WorktreeRecord],
     runTrees: Sequence[RunTreeRecord],
+    runTreeSizesMeasured: bool,
     branchProtection: BranchProtectionReport | None,
     errors: Sequence[str],
     warnings: Sequence[str],
@@ -548,8 +552,14 @@ def payload(
         "runTrees": {
             "total": len(runTrees),
             "totalBytes": sum(record.sizeBytes for record in runTrees),
+            "sizesMeasured": runTreeSizesMeasured,
             "records": [
-                {"path": record.path, "sizeBytes": record.sizeBytes, "sizeHuman": formatBytes(record.sizeBytes)}
+                {
+                    "path": record.path,
+                    "sizeBytes": record.sizeBytes,
+                    "sizeHuman": formatBytes(record.sizeBytes),
+                    "sizeMeasured": record.sizeMeasured,
+                }
                 for record in runTrees
             ],
         },
@@ -574,7 +584,10 @@ def printHuman(report: dict[str, Any]) -> None:
     worktrees = report["worktrees"]
     print(f"Worktrees: {worktrees['active']} active, " f"{worktrees['prunable']} prunable, {worktrees['total']} total")
     runTrees = report["runTrees"]
-    print(f"Run trees: {runTrees['total']} matching, " f"{formatBytes(runTrees['totalBytes'])} total")
+    if runTrees["sizesMeasured"]:
+        print(f"Run trees: {runTrees['total']} matching, " f"{formatBytes(runTrees['totalBytes'])} total")
+    else:
+        print(f"Run trees: {runTrees['total']} matching, sizes not measured")
     branchProtection = report.get("branchProtection")
     if branchProtection:
         protected = branchProtection["protected"]
@@ -610,7 +623,7 @@ def buildParser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Glob for controller run/worktree directory names. May be repeated. Defaults to "
-            "nouraajd-* and fall-of-nouraajd-codex."
+            f"{', '.join(DEFAULT_RUN_TREE_PATTERNS)}."
         ),
     )
     parser.add_argument("--min-free-gib", type=float, default=DEFAULT_MIN_FREE_GIB)
@@ -675,7 +688,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     summary = worktreeSummary(worktrees)
     if summary["prunable"]:
         warnings.append(f"{summary['prunable']} prunable worktree registration(s); review and run git worktree prune")
-    report = payload(repoRoot, gitHealth, diskReports, worktrees, runTrees, branchProtection, errors, warnings)
+    report = payload(
+        repoRoot,
+        gitHealth,
+        diskReports,
+        worktrees,
+        runTrees,
+        not args.skip_run_tree_sizes,
+        branchProtection,
+        errors,
+        warnings,
+    )
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
