@@ -4,31 +4,74 @@ on:
   pull_request:
 
 permissions:
-  actions: read
-  contents: read
+  contents: write
 
 jobs:
-  diagnose-pr-729:
-    runs-on: ubuntu-latest
+  fix-and-validate-pr-729:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GAME_CONFIGURE_SKIP_APT: "1"
+      GAME_CONFIGURE_SKIP_SUBMODULES: "1"
     steps:
-      - name: Download focused validation log
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          curl --fail --location \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/jobs/82552537382/logs" \
-            --output validation.log
-          grep -n -E -C 12 '(^|[^[:alpha:]])(fatal error:|error:|undefined reference|FAILED:|ninja: build stopped|CMake Error)' \
-            validation.log > failure-summary.txt || true
-          test -s failure-summary.txt
-      - name: Upload diagnostic summary
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+      - name: Check out repaired PR 729 branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
-          name: pr-729-focused-build-diagnostic
-          path: |
-            validation.log
-            failure-summary.txt
-          retention-days: 1
+          ref: codex/e02-s02-ss03-session-shutdown-1601d574
+          submodules: recursive
+          fetch-depth: 0
+      - name: Move loader helper to namespace scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          path = Path("tests/unit/test_gui.cpp")
+          text = path.read_text(encoding="utf-8")
+          struct_marker = "struct DragListHarness {\n"
+          nested_marker = "    std::shared_ptr<CGame> create_loader_gui_game() {\n"
+          fields_marker = "    std::shared_ptr<CGui> gui;\n"
+          start = text.find(struct_marker + nested_marker)
+          if start < 0:
+              raise RuntimeError("Expected nested create_loader_gui_game marker was not found.")
+          function_start = start + len(struct_marker)
+          fields_start = text.find(fields_marker, function_start)
+          if fields_start < 0:
+              raise RuntimeError("DragListHarness fields marker was not found.")
+          function_block = textwrap.dedent(text[function_start:fields_start])
+          replacement = function_block + struct_marker
+          path.write_text(text[:start] + replacement + text[fields_start:], encoding="utf-8")
+          PY
+          clang-format -i tests/unit/test_gui.cpp
+          git diff --check
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format \
+            python3-dev pybind11-dev libboost-dev \
+            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
+      - name: Configure
+        run: GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
+      - name: Build affected native targets
+        run: cmake --build cmake-build-release --target _game core_unit_tests gui_unit_tests -j"$(nproc)"
+      - name: Run affected native tests
+        run: ctest --test-dir cmake-build-release --output-on-failure -R 'for_unit_tests\.(core|gui)_unit_tests'
+      - name: Run static integrity checks
+        run: |
+          python3 -m py_compile test.py
+          python3 -m unittest tests.test_slot_context_ownership
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/unit/test_gui.cpp
+          git commit -m "Fix shutdown GUI helper placement"
+          git push origin HEAD:codex/e02-s02-ss03-session-shutdown-1601d574
