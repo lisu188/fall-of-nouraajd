@@ -45,6 +45,7 @@ LIGHTWEIGHT_PATH_PATTERNS = (
     ".github/workflows/*",
     "AGENTS.md",
     "docs/*",
+    "planning/*.xlsx",
     "prompts/*",
     "scripts/ci_change_classifier.py",
     "scripts/controller_resource_audit.py",
@@ -52,6 +53,7 @@ LIGHTWEIGHT_PATH_PATTERNS = (
     "scripts/poll_pr_checks.py",
     "scripts/pr_review_audit.py",
     "scripts/validate_content.py",
+    "scripts/workbook_queue.py",
     "scripts/workflow_observations.py",
     "tests/security/test_configure_supply_chain.py",
     "tests/test_ci_change_classifier.py",
@@ -61,6 +63,7 @@ LIGHTWEIGHT_PATH_PATTERNS = (
     "tests/test_poll_pr_checks.py",
     "tests/test_pr_review_audit.py",
     "tests/test_prompt_inventory.py",
+    "tests/test_workbook_queue.py",
     "tests/test_workflow_observations.py",
 )
 

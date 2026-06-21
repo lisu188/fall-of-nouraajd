@@ -152,11 +152,14 @@ evidence files for workflow problems such as queue/lease faults, missing live wo
 failures, CI waste, prompt drift, resource or recovery failures, unsafe ambiguity, and repeated manual intervention.
 They are not gameplay defects, routine progress updates, or implementation queue rows.
 
-Workers, QA, and project-manager agents report observations to the controller. They do not publish ledger files. The
-controller reviews evidence for secrets and relevance, runs `python3 scripts/workflow_observations.py validate`, and
-publishes observation-only PRs that add only `planning/workflow_observations/records/<id>.json`. After a workflow fix
-merges and post-merge verification passes, publish a separate resolution-only PR that adds only
-`planning/workflow_observations/resolutions/<id>.json`.
+Each queue controller may publish controller-discovered workflow observations directly after evidence and secret review.
+Workers, QA, and project-manager agents report observations to their controller. They do not publish ledger files.
+Observation updates are append-only: add a new record under `planning/workflow_observations/records/` or a new
+resolution receipt under `planning/workflow_observations/resolutions/`. Do not edit or delete existing records or
+receipts. The controller reviews evidence for secrets and relevance, runs
+`python3 scripts/workflow_observations.py validate`, and publishes observation-only PRs that add only
+`planning/workflow_observations/records/<id>.json`. After a workflow fix merges and post-merge verification passes,
+publish a separate resolution-only PR that adds only `planning/workflow_observations/resolutions/<id>.json`.
 
 Observation-only and resolution-only PRs are not CI-exempt under the current repository policy. They do not need the
 global XLSX serialization lane because each record or receipt is a unique immutable path, but same-ID publication must
@@ -282,16 +285,19 @@ python3 scripts/controller_resource_audit.py --json
 ```
 
 The audit reports Git repository health, disk usage, active and prunable worktree registrations, and matching controller
-run/worktrees such as `/tmp/nouraajd-*` and `/tmp/fall-of-nouraajd-codex`. It is report-only by default. Treat audit
-errors such as unreadable Git state, unresolved `HEAD` or `origin/main`, zero-byte loose Git objects, zero-byte Git ref
-files, or disk pressure as blockers to new heavy work, and treat warnings about prunable worktree metadata or large
-accumulated run/worktrees as cleanup prompts before refilling worker slots.
+run/worktrees such as `/tmp/nouraajd-*`, `/tmp/fall-of-nouraajd-codex`, and `/tmp/fon-workflow-optimizer-*`. It is
+report-only by default. Treat audit errors such as unreadable Git state, unresolved `HEAD` or `origin/main`, zero-byte
+loose Git objects, zero-byte Git ref files, or disk pressure as blockers to new heavy work, and treat warnings about
+prunable worktree metadata or large accumulated run/worktrees as cleanup prompts before refilling worker slots.
 
 When auditing merge-policy drift or cleanup readiness, include the live GitHub branch-protection check:
 
 ```bash
 python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes --github-repo lisu188/fall-of-nouraajd
 ```
+
+`--skip-run-tree-sizes` is discovery-only. Its JSON output marks `runTrees.sizesMeasured` and each record's
+`sizeMeasured` as `false`; run it without that flag before relying on run-tree byte totals for cleanup priority.
 
 ## Subagent progress protocol
 

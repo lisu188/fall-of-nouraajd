@@ -282,7 +282,7 @@ void CGameGraphicsObject::renderBackground(std::shared_ptr<CGui> gui, std::share
             vstd::logger::error("CGameGraphicsObject: missing background", background);
             return;
         }
-        SDL_SAFE(SDL_RenderCopy(gui->getRenderer(), texture, nullptr, rect.get()));
+        gui->getRenderContext().copy(texture, nullptr, rect.get());
     }
 }
 

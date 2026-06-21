@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
+#include "gui/CRenderContext.h"
+#include "gui/CSdlResources.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CWidget.h"
@@ -929,6 +931,44 @@ void test_texture_cache_without_gui_fails_closed() {
     expect_true(cache->getTexture("images/panel") == nullptr, "texture cache without GUI should return null");
 }
 
+void test_render_context_rejects_null_texture_and_copies_valid_texture() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto &renderContext = gui->getRenderContext();
+    renderContext.resetStats();
+
+    SDL_Rect target = {2, 3, 4, 5};
+    expect_true(!renderContext.copy(nullptr, nullptr, &target), "render context should reject null textures");
+
+    const auto normalized = CRenderContext::normalizeTargetRect(SDL_Rect{10, 12, -3, -4});
+    expect_true(normalized.x == 7 && normalized.y == 8 && normalized.w == 3 && normalized.h == 4,
+                "render context should normalize negative target extents");
+
+    auto surface = fn::sdl::SurfacePtr(SDL_SAFE(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32)));
+    expect_true(surface != nullptr, "render context smoke test should create an SDL surface");
+    if (!surface) {
+        return;
+    }
+    SDL_SAFE(SDL_FillRect(surface.get(), nullptr, SDL_MapRGBA(surface->format, 255, 0, 0, 255)));
+    auto texture = fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get())));
+    expect_true(texture != nullptr, "render context smoke test should create an SDL texture");
+    if (!texture) {
+        return;
+    }
+
+    SDL_Rect source = {0, 0, 2, 2};
+    SDL_Rect clip = {0, 0, 8, 8};
+    expect_true(renderContext.copy(texture.get(), &source, target, &clip), "render context should copy valid textures");
+
+    const auto &stats = renderContext.getStats();
+    expect_true(stats.attemptedCopies == 2, "render context should count attempted copies");
+    expect_true(stats.successfulCopies == 1, "render context should count successful copies");
+    expect_true(stats.skippedCopies == 1, "render context should count skipped copies");
+    expect_true(stats.failedCopies == 0, "render context should not count failed copies for valid smoke path");
+}
+
 } // namespace
 
 int main() {
@@ -954,6 +994,7 @@ int main() {
     test_gui_pointer_capture_clears_when_captured_widget_is_removed();
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
+    test_render_context_rejects_null_texture_and_copies_valid_texture();
 
     return finish_tests();
 }

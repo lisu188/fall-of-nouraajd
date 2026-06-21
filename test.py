@@ -120,6 +120,7 @@ MCP_PROTOCOL_VERSION = "2025-11-25"
 MCP_STDIO_TOOL_TIMEOUT_SECONDS = 10
 MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
+MCP_STDIO_TAIL_LIMIT_BYTES = 8192
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
@@ -137,6 +138,8 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_http_notification_response_declares_empty_body",
     "McpServerTest.test_initialize_response_preserves_request_id",
     "McpServerTest.test_map_design_brief_rejects_path_traversal",
+    "McpServerTest.test_stdio_process_drains_stderr_while_waiting_for_stdout",
+    "McpServerTest.test_stdio_timeout_diagnostics_include_request_context_and_stream_tails",
     "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
     "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
@@ -5379,6 +5382,40 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_teleporter_clears_navigation_edge_when_target_is_removed(self):
+        _g, game_map, _player = load_game_map_with_player("test", "Warrior")
+        active_teleporter = find_runtime_object(game_map, "teleporter1")
+        teleporter = find_runtime_object(game_map, "teleporter2")
+        teleporter_coords = coords_tuple(teleporter.getCoords())
+
+        def navigation_neighbors(obj):
+            return sorted(coords_tuple(coord) for coord in game_map.getNavigationNeighbors(obj.getCoords()))
+
+        advance_map_only(game_map, 1)
+
+        self.assertTrue(active_teleporter.getBoolProperty("waypoint"))
+        self.assertIn(teleporter_coords, navigation_neighbors(active_teleporter))
+        revision_with_edge = game_map.getNavigationRevision()
+
+        game_map.removeObject(teleporter)
+        active_teleporter.onTurn(None)
+
+        self.assertFalse(active_teleporter.getBoolProperty("waypoint"))
+        self.assertNotIn(teleporter_coords, navigation_neighbors(active_teleporter))
+        self.assertGreater(game_map.getNavigationRevision(), revision_with_edge)
+
+        return True, json.dumps(
+            {
+                "active_name": active_teleporter.getName(),
+                "active_waypoint": active_teleporter.getBoolProperty("waypoint"),
+                "removed_target": teleporter.getName(),
+                "revision_after_remove": game_map.getNavigationRevision(),
+                "revision_with_edge": revision_with_edge,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_take_mana_clamps_at_zero(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
@@ -6812,8 +6849,56 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_multilevel_map_disables_stairs_when_target_is_blocked(self):
+        game = load_game_module()
+        g, game_map, _player = load_game_map_with_player("multilevel")
+        stairs_up = find_runtime_object(game_map, "stairsUp")
+        upper_landing = game.Coords(4, 1, 1)
+
+        def navigation_neighbors(obj):
+            return sorted(coords_tuple(coord) for coord in game_map.getNavigationNeighbors(obj.getCoords()))
+
+        advance_map_only(game_map, 1)
+
+        self.assertTrue(stairs_up.getBoolProperty("waypoint"))
+        self.assertIn(coords_tuple(upper_landing), navigation_neighbors(stairs_up))
+        revision_with_edge = game_map.getNavigationRevision()
+
+        blocker = g.createObject("CEvent")
+        blocker.setStringProperty("name", "unitBlockedUpperStairsLanding")
+        blocker.setBoolProperty("canStep", False)
+        game_map.addObject(blocker)
+        try:
+            blocker.moveTo(upper_landing.x, upper_landing.y, upper_landing.z)
+            self.assertFalse(game_map.canStep(upper_landing))
+
+            stairs_up.onTurn(None)
+            self.assertFalse(stairs_up.getBoolProperty("waypoint"))
+            self.assertNotIn(coords_tuple(upper_landing), navigation_neighbors(stairs_up))
+            revision_blocked = game_map.getNavigationRevision()
+            self.assertGreater(revision_blocked, revision_with_edge)
+
+            game_map.removeObject(blocker)
+            stairs_up.onTurn(None)
+            self.assertTrue(stairs_up.getBoolProperty("waypoint"))
+            self.assertIn(coords_tuple(upper_landing), navigation_neighbors(stairs_up))
+            self.assertGreater(game_map.getNavigationRevision(), revision_blocked)
+
+            return True, json.dumps(
+                {
+                    "landing": coords_tuple(upper_landing),
+                    "revision_blocked": revision_blocked,
+                    "revision_restored": game_map.getNavigationRevision(),
+                    "revision_with_edge": revision_with_edge,
+                    "stairs_waypoint": stairs_up.getBoolProperty("waypoint"),
+                },
+                sort_keys=True,
+            )
+        finally:
+            game_map.removeObject(blocker)
+
+    @game_test
     def test_multilevel_map_player_uses_stairs_both_directions(self):
-        _game_module = load_game_module()
         _g, game_map, player = load_game_map_with_player("multilevel")
         player_name = player.getName()
         player_hp_max = player.getHpMax()
@@ -6822,6 +6907,11 @@ class GameTest(unittest.TestCase):
 
         route = drive_multilevel_route(game_map, player)
         controller = get_player_controller(player)
+        deterministic_route = [
+            tuple(int(value) for value in step.split(","))
+            for step in game_map.getStringProperty("deterministicRoute").split(";")
+            if step
+        ]
 
         self.assertEqual((6, 5, 0), coords_tuple(player.getCoords()))
         self.assertTrue(controller.isCompleted(player))
@@ -6834,9 +6924,15 @@ class GameTest(unittest.TestCase):
         self.assertTrue(game_map.getBoolProperty("visited_upper_goal"))
         self.assertTrue(game_map.getBoolProperty("visited_lower_goal"))
         self.assertGreater(route["turns"], 0)
+        self.assertEqual((1, 1, 0), deterministic_route[0])
+        self.assertIn(route["upper_landing"], deterministic_route)
+        self.assertIn(route["upper_goal"], deterministic_route)
+        self.assertIn(route["lower_landing"], deterministic_route)
+        self.assertEqual(route["lower_goal"], deterministic_route[-1])
 
         return True, json.dumps(
             {
+                "deterministic_route": deterministic_route,
                 "final_player": coords_tuple(player.getCoords()),
                 "potion_count": player.countItems("LesserLifePotion"),
                 "route": route,
@@ -6844,6 +6940,43 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_multilevel_map_monster_pursues_player_across_levels(self):
+        g, game_map, player = load_game_map_with_player("multilevel")
+        upper_goal = find_runtime_object(game_map, "multilevelUpperGoal")
+
+        chaser = g.createObject("Cultist")
+        chaser.setStringProperty("name", "unitMultilevelPursuer")
+        controller = g.createObject("CTargetController")
+        controller.setTarget(player.getName())
+        chaser.setController(controller)
+        chaser.setBoolProperty("npc", True)
+        game_map.addObject(chaser)
+        try:
+            chaser.moveTo(upper_goal.getCoords().x, upper_goal.getCoords().y, upper_goal.getCoords().z)
+            trail = [coords_tuple(chaser.getCoords())]
+
+            for _ in range(10):
+                game_map.move()
+                pump_event_loop(2)
+                trail.append(coords_tuple(chaser.getCoords()))
+                if chaser.getCoords().z == player.getCoords().z:
+                    break
+
+            self.assertIn((4, 1, 0), trail)
+            self.assertEqual(player.getCoords().z, chaser.getCoords().z)
+
+            return True, json.dumps(
+                {
+                    "chaser": chaser.getName(),
+                    "player": coords_tuple(player.getCoords()),
+                    "trail": trail,
+                },
+                sort_keys=True,
+            )
+        finally:
+            game_map.removeObject(chaser)
 
     @game_test
     def test_multilevel_map_z_state_persists_after_save_load(self):
@@ -12756,8 +12889,10 @@ class GameTest(unittest.TestCase):
 
             exit_coords = find_adjacent_walkable_tile(game_map, spawn_coords)
             player.moveTo(exit_coords.x, exit_coords.y, exit_coords.z)
-            spawn_point.onTurn(None)
+            turn_before_finalize = game_map.getTurn()
+            advance_map_only(game_map, 1)
 
+            self.assertEqual(turn_before_finalize + 1, game_map.getTurn())
             self.assertTrue(spawn_point.getBoolProperty("destroyed"))
             self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
             self.assertFalse(spawn_point.getBoolProperty("canStep"))
@@ -12822,6 +12957,113 @@ class GameTest(unittest.TestCase):
                 "defeated_creature_alive": defeated_creature.isAlive(),
                 "destroyed": spawn_point.getBoolProperty("destroyed"),
                 "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_siege_gate_mcp_scenario_seals_enabled_spawn_point(self):
+        game = load_game_module()
+        original_randint = game.randint
+        original_show_question = game.CGuiHandler.showQuestion
+        question_calls = []
+        spawn_names = ["spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"]
+
+        def confirm_seal(_self, message):
+            question_calls.append(message)
+            return True
+
+        def deterministic_randint(lower, _upper):
+            return next(randint_values, lower)
+
+        randint_values = iter([25])
+
+        try:
+            game.randint = deterministic_randint
+            game.CGuiHandler.showQuestion = confirm_seal
+            _g, game_map, player = load_game_map_with_player("siege")
+            spawn_points = [find_runtime_object(game_map, name) for name in spawn_names]
+
+            if not game_map.getBoolProperty("siege_initialized"):
+                start_event = find_runtime_object(game_map, "siegeStart")
+                start_coords = start_event.getCoords()
+                player.moveTo(start_coords.x, start_coords.y, start_coords.z)
+                pump_event_loop(3)
+
+            if player.countItems("magicWand") == 0:
+                player.addItem("magicWand")
+            starting_wands = player.countItems("magicWand")
+
+            def destroyed_gate_count():
+                return sum(
+                    1 for name in spawn_names if find_runtime_object(game_map, name).getBoolProperty("destroyed")
+                )
+
+            def siege_creature_names():
+                creatures = []
+                game_map.forObjects(
+                    lambda obj: creatures.append(obj.getName()),
+                    lambda obj: obj.getStringProperty("affiliation") == "siege",
+                )
+                return sorted(creatures)
+
+            self.assertEqual([], [gate.getName() for gate in spawn_points if gate.getBoolProperty("enabled")])
+            advance_map_only(game_map, 1)
+            pump_event_loop(3)
+            enabled_spawn_points = [gate for gate in spawn_points if gate.getBoolProperty("enabled")]
+            self.assertEqual(1, len(enabled_spawn_points))
+            spawn_point = enabled_spawn_points[0]
+            spawn_coords = spawn_point.getCoords()
+            self.assertTrue(spawn_point.getBoolProperty("enabled"))
+            self.assertTrue(game_map.canStep(spawn_coords))
+            self.assertEqual([], siege_creature_names())
+
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+            after_seal_wands = player.countItems("magicWand")
+
+            self.assertEqual(1, len(question_calls))
+            self.assertEqual(starting_wands - 1, after_seal_wands)
+            self.assertEqual(1, destroyed_gate_count())
+            self.assertFalse(spawn_point.getBoolProperty("enabled"))
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertTrue(spawn_point.getBoolProperty("canStep"))
+            self.assertEqual([], siege_creature_names())
+
+            exit_coords = find_adjacent_walkable_tile(game_map, spawn_coords)
+            player.moveTo(exit_coords.x, exit_coords.y, exit_coords.z)
+            self.assertEqual((exit_coords.x, exit_coords.y, exit_coords.z), coords_tuple(player.getCoords()))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+
+            turn_before_finalize = game_map.getTurn()
+            advance_map_only(game_map, 1)
+            pump_event_loop(3)
+
+            self.assertEqual(turn_before_finalize + 1, game_map.getTurn())
+            self.assertEqual(1, destroyed_gate_count())
+            self.assertEqual(after_seal_wands, player.countItems("magicWand"))
+            self.assertEqual([], siege_creature_names())
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertFalse(spawn_point.getBoolProperty("canStep"))
+            self.assertFalse(game_map.canStep(spawn_coords))
+
+            before_blocked_step = coords_tuple(player.getCoords())
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+            self.assertEqual(before_blocked_step, coords_tuple(player.getCoords()))
+        finally:
+            game.randint = original_randint
+            game.CGuiHandler.showQuestion = original_show_question
+
+        return True, json.dumps(
+            {
+                "blocked_step": list(before_blocked_step),
+                "destroyed_count": destroyed_gate_count(),
+                "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+                "question_calls": len(question_calls),
+                "sealed_gate": spawn_point.getName(),
+                "siege_creatures": siege_creature_names(),
+                "wands": player.countItems("magicWand"),
             },
             sort_keys=True,
         )
@@ -16876,6 +17118,74 @@ class McpServerTest(unittest.TestCase):
         tool_names = {tool.get("name") for tool in tools}
         self.assertTrue({"engine_list", "engine_call", "engine_handle_call", "simulation_run"}.issubset(tool_names))
 
+    def test_stdio_process_drains_stderr_while_waiting_for_stdout(self):
+        script = (
+            "import json, sys, time\n"
+            "sys.stderr.buffer.write((b'synthetic-stderr-drain\\n') * 65536)\n"
+            "sys.stderr.flush()\n"
+            "sys.stdin.readline()\n"
+            "time.sleep(0.05)\n"
+            "sys.stdout.write(json.dumps({'jsonrpc': '2.0', 'id': 42, 'result': {'ok': True}}) + '\\n')\n"
+            "sys.stdout.flush()\n"
+        )
+        proc = self._start_stdio_process([sys.executable, "-c", script], map_name="synthetic")
+        try:
+            self._send_rpc(proc, {"jsonrpc": "2.0", "id": 42, "method": "tools/list"})
+            response = self._read_rpc(proc, timeout=3.0)
+
+            self.assertEqual(42, response.get("id"))
+            self.assertEqual({"ok": True}, response.get("result"))
+            self.assertIn("synthetic-stderr-drain", self._mcp_process_tail_text(proc, "stderr"))
+        finally:
+            self._shutdown_process(proc)
+
+    def test_stdio_timeout_diagnostics_include_request_context_and_stream_tails(self):
+        script = (
+            "import json, sys\n"
+            "sys.stderr.write('stderr-timeout-marker\\n')\n"
+            "sys.stderr.flush()\n"
+            "sys.stdout.write(json.dumps({"
+            "'jsonrpc': '2.0', "
+            "'method': 'notifications/progress', "
+            "'params': {'message': 'stdout-timeout-marker'}"
+            "}) + '\\n')\n"
+            "sys.stdout.flush()\n"
+            "for _line in sys.stdin:\n"
+            "    pass\n"
+        )
+        proc = self._start_stdio_process([sys.executable, "-c", script], map_name="diagnosticMap")
+        try:
+            self._send_rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 77,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "engine_handle_call",
+                        "arguments": {"handle": 1, "method": "move", "args": []},
+                    },
+                },
+            )
+
+            with self.assertRaises(AssertionError) as raised:
+                self._read_rpc(proc, timeout=0.1)
+
+            message = str(raised.exception)
+            for expected in (
+                "request_id=77",
+                "method=move",
+                "map=diagnosticMap",
+                "elapsed_seconds=",
+                "stderr_tail=",
+                "stderr-timeout-marker",
+                "stdout_tail=",
+                "stdout-timeout-marker",
+            ):
+                self.assertIn(expected, message)
+        finally:
+            self._shutdown_process(proc)
+
     def test_map_design_brief_summarizes_selected_map_hooks(self):
         server = self.make_stub_server()
 
@@ -17011,24 +17321,7 @@ class McpServerTest(unittest.TestCase):
             httpd.server_close()
 
     def test_stdio_handshake_and_tool_listing(self):
-        script = REPO_ROOT / "mcp.py"
-        self.assertTrue(script.exists(), "MCP entry point is missing")
-        proc = subprocess.Popen(
-            [
-                sys.executable,
-                str(script),
-                "--stdio",
-                "--repo-root",
-                str(REPO_ROOT),
-                "--build-dir",
-                str(build_dir),
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0,
-            cwd=str(REPO_ROOT),
-        )
+        proc = self._start_stdio_mcp_process()
         try:
             self._send_rpc(
                 proc,
@@ -17244,6 +17537,11 @@ class McpServerTest(unittest.TestCase):
         ]
         if build_config:
             command.extend(["--build-config", build_config])
+        proc = self._start_stdio_process(command, env=env, map_name=map_name)
+        proc._playtest_trace_path = trace_path
+        return proc
+
+    def _start_stdio_process(self, command, *, env=None, map_name=None):
         proc = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
@@ -17253,18 +17551,120 @@ class McpServerTest(unittest.TestCase):
             cwd=str(REPO_ROOT),
             env=env,
         )
-        proc._playtest_trace_path = trace_path
-        proc._mcp_stderr_chunks = []
+        proc._mcp_map_name = map_name
+        proc._mcp_stdout_tail = bytearray()
+        proc._mcp_stderr_tail = bytearray()
+        proc._mcp_tail_lock = threading.Lock()
+        proc._mcp_last_request = None
+        proc._mcp_last_request_started_at = None
 
         def drain_stderr():
             if proc.stderr is None:
                 return
             for chunk in iter(lambda: proc.stderr.read(4096), b""):
-                proc._mcp_stderr_chunks.append(chunk)
+                self._append_mcp_process_tail(proc, "stderr", chunk)
 
         proc._mcp_stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
         proc._mcp_stderr_thread.start()
         return proc
+
+    def _append_mcp_process_tail(self, proc, stream_name, chunk):
+        if not chunk:
+            return
+        attr = f"_mcp_{stream_name}_tail"
+        lock = getattr(proc, "_mcp_tail_lock", None)
+
+        def append():
+            tail = getattr(proc, attr, bytearray())
+            tail.extend(chunk)
+            overflow = len(tail) - MCP_STDIO_TAIL_LIMIT_BYTES
+            if overflow > 0:
+                del tail[:overflow]
+            setattr(proc, attr, tail)
+
+        if lock is None:
+            append()
+        else:
+            with lock:
+                append()
+
+    def _mcp_process_tail_text(self, proc, stream_name):
+        attr = f"_mcp_{stream_name}_tail"
+        lock = getattr(proc, "_mcp_tail_lock", None)
+        if lock is None:
+            data = bytes(getattr(proc, attr, b""))
+        else:
+            with lock:
+                data = bytes(getattr(proc, attr, b""))
+        return data.decode("utf-8", errors="replace")
+
+    def _record_mcp_request(self, proc, payload):
+        request = self._describe_mcp_request(proc, payload)
+        proc._mcp_last_request = request
+        proc._mcp_last_request_started_at = time.monotonic()
+        if request.get("map"):
+            proc._mcp_map_name = request["map"]
+
+    def _describe_mcp_request(self, proc, payload):
+        if not isinstance(payload, dict):
+            return {}
+        rpc_method = payload.get("method")
+        params = payload.get("params") if isinstance(payload.get("params"), dict) else {}
+        tool_name = params.get("name") if rpc_method == "tools/call" else None
+        arguments = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
+        method = rpc_method
+        if tool_name == "engine_call":
+            method = arguments.get("name") or tool_name
+        elif tool_name == "engine_handle_call":
+            method = arguments.get("method") or tool_name
+        elif tool_name:
+            method = tool_name
+
+        map_name = getattr(proc, "_mcp_map_name", None)
+        if not map_name and tool_name == "simulation_run":
+            map_name = arguments.get("map") or arguments.get("map_name")
+        if not map_name and tool_name == "map_design_brief":
+            map_name = arguments.get("map_name")
+        if not map_name and tool_name == "engine_call":
+            engine_name = arguments.get("name")
+            engine_args = arguments.get("args") if isinstance(arguments.get("args"), list) else []
+            if engine_name in {"CGameLoader.startGame", "CGameLoader.startGameWithPlayer"} and len(engine_args) >= 2:
+                map_name = engine_args[1]
+
+        return {
+            "id": payload.get("id"),
+            "rpc_method": rpc_method,
+            "tool": tool_name,
+            "method": method,
+            "map": map_name,
+        }
+
+    def _mcp_process_diagnostic_message(self, proc, reason, *, timeout, read_started_at):
+        request = getattr(proc, "_mcp_last_request", None) or {}
+        request_started_at = getattr(proc, "_mcp_last_request_started_at", None) or read_started_at
+        elapsed = time.monotonic() - request_started_at
+        fields = [
+            f"{reason}.",
+            f"elapsed_seconds={elapsed:.3f}",
+            f"timeout_seconds={timeout:.3f}",
+            f"request_id={request.get('id')}",
+            f"method={request.get('method')}",
+        ]
+        if request.get("rpc_method"):
+            fields.append(f"rpc_method={request.get('rpc_method')}")
+        if request.get("tool"):
+            fields.append(f"tool={request.get('tool')}")
+        map_name = getattr(proc, "_mcp_map_name", None) or request.get("map")
+        if map_name:
+            fields.append(f"map={map_name}")
+        fields.extend(
+            [
+                f"returncode={proc.poll()}",
+                f"stderr_tail={self._mcp_process_tail_text(proc, 'stderr').strip()!r}",
+                f"stdout_tail={self._mcp_process_tail_text(proc, 'stdout').strip()!r}",
+            ]
+        )
+        return "\n".join(fields)
 
     def _initialize_stdio_mcp(self, proc):
         self._send_rpc(
@@ -17404,16 +17804,24 @@ class McpServerTest(unittest.TestCase):
         controller = self._mcp_handle_call(session, player_handle, "getController")
         target_coords = self._mcp_handle_call(session, target_handle, "getCoords")
         self._mcp_handle_call(session, controller, "setTarget", [player_handle, target_coords])
+        last_state = {"target_coords": target_coords, "turn": None, "player_coords": None}
         for _ in range(max_turns):
             player_coords = self._mcp_serialized_player_coords(session, map_handle)
+            last_state["player_coords"] = player_coords
+            last_state["turn"] = self._mcp_handle_call(session, map_handle, "getTurn")
             if until(player_coords):
                 return player_coords
             self._mcp_handle_call(session, map_handle, "move")
             self._mcp_pump_event_loop(session)
             player_coords = self._mcp_serialized_player_coords(session, map_handle)
+            last_state["player_coords"] = player_coords
+            last_state["turn"] = self._mcp_handle_call(session, map_handle, "getTurn")
             if until(player_coords):
                 return player_coords
-        raise AssertionError(f"Player did not satisfy MCP movement predicate after {max_turns} turns.")
+        raise AssertionError(
+            f"Player did not satisfy MCP movement predicate after {max_turns} turns: "
+            f"{json.dumps(last_state, sort_keys=True)}"
+        )
 
     def _mcp_walkthrough_test(self, session):
         _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "test")
@@ -17625,6 +18033,7 @@ class McpServerTest(unittest.TestCase):
     def _send_rpc(self, proc, payload):
         if proc.stdin is None:
             self.fail("Process stdin not available")
+        self._record_mcp_request(proc, payload)
         line = json.dumps(payload, separators=(",", ":")) + "\n"
         proc.stdin.write(line.encode("utf-8"))
         proc.stdin.flush()
@@ -17648,9 +18057,10 @@ class McpServerTest(unittest.TestCase):
     def _read_rpc(self, proc, timeout: float = 10.0):
         if proc.stdout is None:
             self.fail("Process stdout not available")
+        read_started_at = time.monotonic()
         deadline = time.monotonic() + timeout
         while True:
-            line = self._readline(proc.stdout, deadline)
+            line = self._readline(proc, deadline, timeout=timeout, read_started_at=read_started_at)
             if line in (b"", b"\r\n", b"\n"):
                 continue
             payload = json.loads(line.decode("utf-8"))
@@ -17658,11 +18068,21 @@ class McpServerTest(unittest.TestCase):
                 continue
             return payload
 
-    def _readline(self, stream, deadline: float) -> bytes:
+    def _readline(self, proc, deadline: float, *, timeout: float, read_started_at: float) -> bytes:
+        stream = proc.stdout
+        if stream is None:
+            self.fail("Process stdout not available")
         if os.name == "nt":
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                self.fail("Timed out waiting for MCP response header")
+                self.fail(
+                    self._mcp_process_diagnostic_message(
+                        proc,
+                        "Timed out waiting for MCP response header",
+                        timeout=timeout,
+                        read_started_at=read_started_at,
+                    )
+                )
             result_queue = queue.Queue(maxsize=1)
 
             def read_line():
@@ -17670,35 +18090,70 @@ class McpServerTest(unittest.TestCase):
 
             threading.Thread(target=read_line, daemon=True).start()
             try:
-                return result_queue.get(timeout=remaining)
+                line = result_queue.get(timeout=remaining)
+                self._append_mcp_process_tail(proc, "stdout", line)
+                if not line:
+                    self.fail(
+                        self._mcp_process_diagnostic_message(
+                            proc,
+                            "MCP process closed stdout before a response",
+                            timeout=timeout,
+                            read_started_at=read_started_at,
+                        )
+                    )
+                return line
             except queue.Empty:
-                self.fail("Timed out waiting for MCP response header")
+                self.fail(
+                    self._mcp_process_diagnostic_message(
+                        proc,
+                        "Timed out waiting for MCP response header",
+                        timeout=timeout,
+                        read_started_at=read_started_at,
+                    )
+                )
 
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                self.fail("Timed out waiting for MCP response header")
+                self.fail(
+                    self._mcp_process_diagnostic_message(
+                        proc,
+                        "Timed out waiting for MCP response header",
+                        timeout=timeout,
+                        read_started_at=read_started_at,
+                    )
+                )
             readable, _, _ = select.select([stream], [], [], remaining)
             if readable:
                 line = stream.readline()
                 if not line:
-                    return b""
+                    self.fail(
+                        self._mcp_process_diagnostic_message(
+                            proc,
+                            "MCP process closed stdout before a response",
+                            timeout=timeout,
+                            read_started_at=read_started_at,
+                        )
+                    )
+                self._append_mcp_process_tail(proc, "stdout", line)
                 return line
 
     def _shutdown_process(self, proc):
         if proc.stdin:
-            proc.stdin.close()
+            try:
+                proc.stdin.close()
+            except OSError:
+                pass
         try:
             # Coverage-instrumented native teardown can finish several seconds after stdio closes.
             proc.wait(timeout=MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-        stderr_chunks = getattr(proc, "_mcp_stderr_chunks", None)
         stderr_thread = getattr(proc, "_mcp_stderr_thread", None)
         if stderr_thread is not None:
             stderr_thread.join(timeout=1.0)
-            stderr_output = b"".join(stderr_chunks or []).decode("utf-8", errors="ignore")
+            stderr_output = self._mcp_process_tail_text(proc, "stderr")
         else:
             stderr_output = proc.stderr.read().decode("utf-8", errors="ignore") if proc.stderr else ""
         if proc.stdout:
@@ -17706,7 +18161,10 @@ class McpServerTest(unittest.TestCase):
         if proc.stderr:
             proc.stderr.close()
         if proc.returncode not in (0, None):
-            self.fail(f"MCP server exited with {proc.returncode}: {stderr_output}")
+            stdout_output = self._mcp_process_tail_text(proc, "stdout")
+            self.fail(
+                f"MCP server exited with {proc.returncode}: stderr_tail={stderr_output!r} stdout_tail={stdout_output!r}"
+            )
 
 
 def parse_runner_args(argv):
