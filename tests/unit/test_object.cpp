@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CTypes.h"
 #include "object/CCreature.h"
+#include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
 #include "object/CItem.h"
@@ -33,9 +34,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "vutil.h"
 
 #include <limits>
+#include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -52,6 +56,12 @@ class PropertyChangeProbe : public CGameObject {
 
     std::set<std::string> changedProperties;
 };
+
+using IntIntProbeMap = std::map<int, int>;
+using IntStringProbeMap = std::map<int, std::string>;
+using StringIntProbeMap = std::map<std::string, int>;
+using StringStringProbeMap = std::map<std::string, std::string>;
+using IntVectorProbe = std::vector<int>;
 
 void drain_event_loop() {
     auto loop = vstd::event_loop<>::instance();
@@ -277,6 +287,153 @@ void test_map_direct_state_setters_notify_property_observers() {
     expect_true(probe->changedProperties.contains("objects"), "direct object setter should notify property observers");
     expect_true(probe->changedProperties.contains("navigationRevision"),
                 "map navigation revision changes should notify property observers");
+}
+
+void test_game_object_get_map_prefers_owner_and_falls_back_to_active_map() {
+    auto game = std::make_shared<CGame>();
+    auto owning_map = std::make_shared<CMap>();
+    auto fallback_map = std::make_shared<CMap>();
+    owning_map->setGame(game);
+    fallback_map->setGame(game);
+    game->setMap(owning_map);
+
+    auto map_object = std::make_shared<CMapObject>();
+    map_object->setGame(game);
+    map_object->setName("ownedObject");
+    owning_map->setObjects({map_object});
+
+    auto tile = std::make_shared<CTile>();
+    tile->setGame(game);
+    tile->setPosx(1);
+    tile->setPosy(1);
+    tile->setPosz(0);
+    owning_map->setTiles({tile});
+
+    auto dialog = std::make_shared<CDialog>();
+    auto quest = std::make_shared<CQuest>();
+    dialog->setGame(game);
+    quest->setGame(game);
+
+    expect_true(map_object->getMap() == owning_map, "map objects should resolve their owning map");
+    expect_true(tile->getMap() == owning_map, "tiles should resolve their owning map");
+    expect_true(dialog->getMap() == owning_map, "dialogs without an owning map should fall back to the active map");
+    expect_true(quest->getMap() == owning_map, "quests without an owning map should fall back to the active map");
+
+    game->setMap(fallback_map);
+
+    expect_true(map_object->getMap() == owning_map, "map objects should keep their owner when the active map changes");
+    expect_true(tile->getMap() == owning_map, "tiles should keep their owner when the active map changes");
+    expect_true(dialog->getMap() == fallback_map, "dialogs should follow the active map fallback after map changes");
+    expect_true(quest->getMap() == fallback_map, "quests should follow the active map fallback after map changes");
+
+    owning_map->setObjects({});
+    owning_map->setTiles({});
+
+    expect_true(map_object->getMap() == fallback_map,
+                "removed map objects should fall back to the active map after ownership clears");
+    expect_true(tile->getMap() == fallback_map,
+                "removed tiles should fall back to the active map after ownership clears");
+}
+
+void populate_equivalent_value_object(const std::shared_ptr<CGameObject> &object) {
+    object->setType("CGameObject");
+    object->setName("equivalent");
+    object->setProperty("flag", true);
+    object->setProperty("count", 7);
+    object->setProperty("text", std::string("stable"));
+    object->setProperty("probeTags", CTags({CTag::Buff, CTag::Quest}));
+    object->setProperty("intSet", std::set<int>({1, 2}));
+    object->setProperty("stringSet", std::set<std::string>({"alpha", "beta"}));
+    object->setProperty("intToInt", IntIntProbeMap({{1, 10}, {2, 20}}));
+    object->setProperty("intToString", IntStringProbeMap({{1, "one"}, {2, "two"}}));
+    object->setProperty("stringToInt", StringIntProbeMap({{"one", 1}, {"two", 2}}));
+    object->setProperty("stringToString", StringStringProbeMap({{"first", "one"}, {"second", "two"}}));
+}
+
+void test_game_object_equivalent_value_covers_supported_property_types() {
+    auto left = std::make_shared<CGameObject>();
+    auto right = std::make_shared<CGameObject>();
+    populate_equivalent_value_object(left);
+    populate_equivalent_value_object(right);
+
+    expect_true(CGameObject::equivalentValue(left, right),
+                "equivalentValue should compare all supported dynamic primitive property types");
+
+    right->setProperty("stringToString", StringStringProbeMap({{"first", "one"}, {"second", "changed"}}));
+    expect_true(!CGameObject::equivalentValue(left, right),
+                "equivalentValue should detect supported primitive property changes");
+
+    auto unsupported_left = std::make_shared<CGameObject>();
+    auto unsupported_right = std::make_shared<CGameObject>();
+    unsupported_left->setProperty("values", IntVectorProbe({1, 2, 3}));
+    unsupported_right->setProperty("values", IntVectorProbe({1, 2, 3}));
+    expect_true(!CGameObject::equivalentValue(unsupported_left, unsupported_right),
+                "equivalentValue should reject unsupported property types");
+}
+
+void test_game_object_property_helpers_and_owned_tile_movement() {
+    auto object = std::make_shared<CGameObject>();
+    expect_true(object->getStringProperty("missing").empty(), "missing string properties should default empty");
+    expect_true(!object->getBoolProperty("missing"), "missing bool properties should default false");
+    expect_true(object->getNumericProperty("missing") == 0, "missing numeric properties should default zero");
+
+    object->setType("HelperProbe");
+    object->setName("object");
+    object->setStringProperty("label", "visible");
+    object->setBoolProperty("enabled", true);
+    object->setNumericProperty("counter", 2);
+    object->incProperty("counter", 3);
+    object->addTag("quest");
+    object->addTag(CTag::Buff);
+    object->removeTag("quest");
+
+    expect_true(object->to_string() == "HelperProbe:object", "to_string should combine type and name");
+    expect_true(object->getStringProperty("label") == "visible", "string property helper should read static values");
+    expect_true(object->getBoolProperty("enabled"), "bool property helper should read dynamic values");
+    expect_true(object->getNumericProperty("counter") == 5, "numeric increment helper should update dynamic values");
+    expect_true(!object->hasTag("quest") && object->hasTag(CTag::Buff),
+                "string and enum tag helpers should update the tag set");
+    expect_true(!object->getGraphicsObject(), "objects without a game should not create graphics objects");
+
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+    object->connect("propertiesChanged", probe, "onPropertiesChanged");
+    object->notifyPropertyChanged("manual");
+    object->notifyPropertiesChanged({});
+    object->notifyPropertiesChanged({"bulk", "manual"});
+    object->disconnect("propertyChanged", probe, "onPropertyChanged");
+    object->notifyPropertyChanged("ignored");
+
+    drain_event_loop();
+
+    expect_true(probe->changedProperties.contains("manual") && probe->changedProperties.contains("bulk") &&
+                    !probe->changedProperties.contains("ignored"),
+                "manual notifications should emit non-empty property signals and honor disconnects");
+
+    auto map = std::make_shared<CMap>();
+    auto tile = std::make_shared<CTile>();
+    tile->setPosx(1);
+    tile->setPosy(1);
+    tile->setPosz(0);
+    map->setTiles({tile});
+
+    tile->move(2, 3, 0);
+    expect_true(tile->getCoords() == Coords(3, 4, 0), "owned tiles should move through their owning map");
+    expect_true(map->getTile(3, 4, 0) == tile, "tile movement should update the owning map coordinate index");
+
+    tile->moveTo(1, 1, 0);
+    expect_true(tile->getCoords() == Coords(1, 1, 0), "moveTo should target absolute tile coordinates");
+
+    auto standalone_tile = std::make_shared<CTile>();
+    standalone_tile->setMovementCost(0);
+    expect_true(standalone_tile->getMovementCost() == 1, "tile movement cost should clamp to at least one");
+    standalone_tile->setMovementCost(4);
+    expect_true(standalone_tile->getMovementCost() == 4, "tile movement cost should keep valid positive values");
+    standalone_tile->setPosx(5);
+    standalone_tile->setPosy(6);
+    standalone_tile->setPosz(7);
+    expect_true(standalone_tile->getCoords() == Coords(5, 6, 7),
+                "public tile coordinate setters should update all tile coordinates");
 }
 
 void test_creature_inventory_equipment_and_ratio_helpers() {
@@ -505,6 +662,9 @@ int main() {
     test_creature_direct_setters_notify_property_observers();
     test_player_quest_setters_notify_property_observers();
     test_map_direct_state_setters_notify_property_observers();
+    test_game_object_get_map_prefers_owner_and_falls_back_to_active_map();
+    test_game_object_equivalent_value_covers_supported_property_types();
+    test_game_object_property_helpers_and_owned_tile_movement();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
