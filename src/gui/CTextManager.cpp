@@ -34,36 +34,6 @@ std::string boundedText(std::string text) {
 }
 
 int boundedWidth(int width) { return std::clamp(width, 0, MAX_TEXT_WRAP_WIDTH); }
-
-class RenderClipGuard {
-  public:
-    RenderClipGuard(SDL_Renderer *renderer, const SDL_Rect &clip) : renderer(renderer) {
-        if (!renderer) {
-            return;
-        }
-        clipWasEnabled = SDL_RenderIsClipEnabled(renderer);
-        if (clipWasEnabled) {
-            SDL_RenderGetClipRect(renderer, &previousClip);
-        }
-        SDL_RenderSetClipRect(renderer, &clip);
-    }
-
-    ~RenderClipGuard() {
-        if (!renderer) {
-            return;
-        }
-        if (clipWasEnabled) {
-            SDL_RenderSetClipRect(renderer, &previousClip);
-        } else {
-            SDL_RenderSetClipRect(renderer, nullptr);
-        }
-    }
-
-  private:
-    SDL_Renderer *renderer;
-    SDL_bool clipWasEnabled = SDL_FALSE;
-    SDL_Rect previousClip = {0, 0, 0, 0};
-};
 } // namespace
 
 SDL_Texture *CTextManager::getTexture(const std::string &text, int width) {
@@ -145,7 +115,7 @@ void CTextManager::drawText(const std::string &text, int x, int y, int w) {
             return;
         }
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
-        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, &actual));
+        _gui.lock()->getRenderContext().copy(pTexture, nullptr, &actual);
     }
 }
 
@@ -159,8 +129,7 @@ void CTextManager::drawTextCentered(const std::string &text, int x, int y, int w
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
         auto centered = CUtil::boxInBox(CUtil::rect(x, y, w, h), CUtil::rect(0, 0, actual.w, actual.h));
         SDL_Rect clip = {x, y, std::max(0, w), std::max(0, h)};
-        RenderClipGuard clipGuard(_gui.lock()->getRenderer(), clip);
-        SDL_SAFE(SDL_RenderCopy(_gui.lock()->getRenderer(), pTexture, nullptr, centered.get()));
+        _gui.lock()->getRenderContext().copy(pTexture, nullptr, centered.get(), &clip);
     }
 }
 
@@ -173,8 +142,17 @@ void CTextManager::drawText(const std::string &text, const std::shared_ptr<SDL_R
         return;
     }
     SDL_Rect clip = {rect->x, rect->y, std::max(0, rect->w), std::max(0, rect->h)};
-    RenderClipGuard clipGuard(_gui.lock()->getRenderer(), clip);
-    drawText(text, rect->x, rect->y, rect->w);
+    if (text.length() != 0) {
+        SDL_Rect actual;
+        actual.x = rect->x;
+        actual.y = rect->y;
+        SDL_Texture *pTexture = getTexture(text, rect->w);
+        if (!pTexture) {
+            return;
+        }
+        SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
+        _gui.lock()->getRenderContext().copy(pTexture, nullptr, &actual, &clip);
+    }
 }
 
 std::pair<int, int> CTextManager::getTextureSize(std::string text) {
