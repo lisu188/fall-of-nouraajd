@@ -1,0 +1,69 @@
+name: apply multi-workbook queue changes
+
+on:
+  push:
+    branches:
+      - codex/multi-workbook-queue-workflow-delivery-7
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-multi-workbook-queue-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: codex/multi-workbook-queue-workflow-delivery-7
+          fetch-depth: 0
+
+      - name: Check payload readiness
+        id: gate
+        shell: bash
+        run: |
+          if [[ -f .github/multi-workbook-payload/READY ]]; then
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "run=false" >> "${GITHUB_OUTPUT}"
+            echo "Payload is not complete yet."
+          fi
+
+      - name: Apply verified source payload
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/multi-workbook-payload/part-*.b64 | base64 --decode > /tmp/multi-workbook.tar.xz
+          echo "2b3a2b937fe12a61b35b56f1d9977004d36df663f01a9729bcfcca5e5c769d33  /tmp/multi-workbook.tar.xz" | sha256sum --check --strict
+          tar -xJf /tmp/multi-workbook.tar.xz -C .
+          rm -f .github/workflows/export-planning-workbooks.yml
+
+      - name: Validate aggregate queue workflow
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/issue_queue.py scripts/workbook_queue.py scripts/ci_change_classifier.py scripts/pr_review_audit.py
+          python3 -m unittest tests.test_issue_queue tests.test_workbook_queue tests.test_ci_change_classifier tests.test_pr_review_audit tests.test_prompt_inventory tests.test_workflow_observations
+          python3 scripts/workbook_queue.py workbooks --json
+          python3 scripts/workbook_queue.py validate
+
+      - name: Commit final changes and remove delivery scaffolding
+        if: steps.gate.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/multi-workbook-payload
+          rm -f .github/workflows/apply-multi-workbook-queue.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "Support aggregate queue workbooks"
+          git push origin HEAD:codex/multi-workbook-queue-workflow-delivery-7
