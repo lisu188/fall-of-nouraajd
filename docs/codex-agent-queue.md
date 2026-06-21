@@ -282,16 +282,19 @@ python3 scripts/controller_resource_audit.py --json
 ```
 
 The audit reports Git repository health, disk usage, active and prunable worktree registrations, and matching controller
-run/worktrees such as `/tmp/nouraajd-*` and `/tmp/fall-of-nouraajd-codex`. It is report-only by default. Treat audit
-errors such as unreadable Git state, unresolved `HEAD` or `origin/main`, zero-byte loose Git objects, zero-byte Git ref
-files, or disk pressure as blockers to new heavy work, and treat warnings about prunable worktree metadata or large
-accumulated run/worktrees as cleanup prompts before refilling worker slots.
+run/worktrees such as `/tmp/nouraajd-*`, `/tmp/fall-of-nouraajd-codex`, and `/tmp/fon-workflow-optimizer-*`. It is
+report-only by default. Treat audit errors such as unreadable Git state, unresolved `HEAD` or `origin/main`, zero-byte
+loose Git objects, zero-byte Git ref files, or disk pressure as blockers to new heavy work, and treat warnings about
+prunable worktree metadata or large accumulated run/worktrees as cleanup prompts before refilling worker slots.
 
 When auditing merge-policy drift or cleanup readiness, include the live GitHub branch-protection check:
 
 ```bash
 python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes --github-repo lisu188/fall-of-nouraajd
 ```
+
+`--skip-run-tree-sizes` is discovery-only. Its JSON output marks `runTrees.sizesMeasured` and each record's
+`sizeMeasured` as `false`; run it without that flag before relying on run-tree byte totals for cleanup priority.
 
 ## Subagent progress protocol
 
