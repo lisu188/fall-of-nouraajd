@@ -12818,6 +12818,113 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_siege_gate_mcp_scenario_seals_enabled_spawn_point(self):
+        game = load_game_module()
+        original_randint = game.randint
+        original_show_question = game.CGuiHandler.showQuestion
+        question_calls = []
+        spawn_names = ["spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"]
+
+        def confirm_seal(_self, message):
+            question_calls.append(message)
+            return True
+
+        def deterministic_randint(lower, _upper):
+            return next(randint_values, lower)
+
+        randint_values = iter([25])
+
+        try:
+            game.randint = deterministic_randint
+            game.CGuiHandler.showQuestion = confirm_seal
+            _g, game_map, player = load_game_map_with_player("siege")
+            spawn_points = [find_runtime_object(game_map, name) for name in spawn_names]
+
+            if not game_map.getBoolProperty("siege_initialized"):
+                start_event = find_runtime_object(game_map, "siegeStart")
+                start_coords = start_event.getCoords()
+                player.moveTo(start_coords.x, start_coords.y, start_coords.z)
+                pump_event_loop(3)
+
+            if player.countItems("magicWand") == 0:
+                player.addItem("magicWand")
+            starting_wands = player.countItems("magicWand")
+
+            def destroyed_gate_count():
+                return sum(
+                    1 for name in spawn_names if find_runtime_object(game_map, name).getBoolProperty("destroyed")
+                )
+
+            def siege_creature_names():
+                creatures = []
+                game_map.forObjects(
+                    lambda obj: creatures.append(obj.getName()),
+                    lambda obj: obj.getStringProperty("affiliation") == "siege",
+                )
+                return sorted(creatures)
+
+            self.assertEqual([], [gate.getName() for gate in spawn_points if gate.getBoolProperty("enabled")])
+            advance_map_only(game_map, 1)
+            pump_event_loop(3)
+            enabled_spawn_points = [gate for gate in spawn_points if gate.getBoolProperty("enabled")]
+            self.assertEqual(1, len(enabled_spawn_points))
+            spawn_point = enabled_spawn_points[0]
+            spawn_coords = spawn_point.getCoords()
+            self.assertTrue(spawn_point.getBoolProperty("enabled"))
+            self.assertTrue(game_map.canStep(spawn_coords))
+            self.assertEqual([], siege_creature_names())
+
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+            after_seal_wands = player.countItems("magicWand")
+
+            self.assertEqual(1, len(question_calls))
+            self.assertEqual(starting_wands - 1, after_seal_wands)
+            self.assertEqual(1, destroyed_gate_count())
+            self.assertFalse(spawn_point.getBoolProperty("enabled"))
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertTrue(spawn_point.getBoolProperty("canStep"))
+            self.assertEqual([], siege_creature_names())
+
+            exit_coords = find_adjacent_walkable_tile(game_map, spawn_coords)
+            player.moveTo(exit_coords.x, exit_coords.y, exit_coords.z)
+            self.assertEqual((exit_coords.x, exit_coords.y, exit_coords.z), coords_tuple(player.getCoords()))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+
+            turn_before_finalize = game_map.getTurn()
+            advance_map_only(game_map, 1)
+            pump_event_loop(3)
+
+            self.assertEqual(turn_before_finalize + 1, game_map.getTurn())
+            self.assertEqual(1, destroyed_gate_count())
+            self.assertEqual(after_seal_wands, player.countItems("magicWand"))
+            self.assertEqual([], siege_creature_names())
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertFalse(spawn_point.getBoolProperty("canStep"))
+            self.assertFalse(game_map.canStep(spawn_coords))
+
+            before_blocked_step = coords_tuple(player.getCoords())
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+            self.assertEqual(before_blocked_step, coords_tuple(player.getCoords()))
+        finally:
+            game.randint = original_randint
+            game.CGuiHandler.showQuestion = original_show_question
+
+        return True, json.dumps(
+            {
+                "blocked_step": list(before_blocked_step),
+                "destroyed_count": destroyed_gate_count(),
+                "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+                "question_calls": len(question_calls),
+                "sealed_gate": spawn_point.getName(),
+                "siege_creatures": siege_creature_names(),
+                "wands": player.countItems("magicWand"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_siege_spawn_point_seal_consumes_one_wand_once_while_pending(self):
         class FakeEvent:
             def __init__(self, cause):
