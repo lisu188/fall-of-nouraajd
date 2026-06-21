@@ -26,7 +26,19 @@ jobs:
           ref: codex/support-multiple-workbook-queues
           fetch-depth: 0
 
+      - name: Check migration payload completeness
+        id: migration-gate
+        shell: bash
+        run: |
+          if [[ -f .github/workbook-migration-overlay/READY ]]; then
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "run=false" >> "${GITHUB_OUTPUT}"
+            echo "Migration payload is not marked ready; no repository write will be attempted."
+          fi
+
       - name: Reconstruct and apply the verified OOXML overlay
+        if: steps.migration-gate.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -66,6 +78,7 @@ jobs:
           PY
 
       - name: Make aggregate CLI executable directly
+        if: steps.migration-gate.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -87,6 +100,7 @@ jobs:
           PY
 
       - name: Validate the migrated workbook and aggregate workflow
+        if: steps.migration-gate.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -99,6 +113,7 @@ jobs:
           python3 -m unittest tests.test_ci_change_classifier
 
       - name: Commit the workbook and remove migration scaffolding
+        if: steps.migration-gate.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
