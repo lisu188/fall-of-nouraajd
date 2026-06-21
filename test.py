@@ -712,6 +712,117 @@ def make_temp_log_path():
     return Path(path)
 
 
+def load_type_registration_exclusions():
+    path = REPO_ROOT / "scripts" / "type_registration_exclusions.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    exclusions = {}
+    for entry in data.get("exclusions", []):
+        class_name = entry.get("className")
+        if not isinstance(class_name, str) or not class_name:
+            continue
+        exclusions[class_name] = {
+            "reason": entry.get("reason", ""),
+            "ownerModule": entry.get("ownerModule", ""),
+        }
+    return exclusions
+
+
+def iter_runtime_config_files():
+    config_root = REPO_ROOT / "res" / "config"
+    if config_root.exists():
+        yield from sorted(config_root.glob("*.json"))
+    maps_root = REPO_ROOT / "res" / "maps"
+    if maps_root.exists():
+        yield from sorted(maps_root.glob("*/config.json"))
+
+
+def load_runtime_config_type_metadata():
+    configs = {}
+    for path in iter_runtime_config_files():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            continue
+        for type_id, value in data.items():
+            if isinstance(value, dict) and ("class" in value or "ref" in value):
+                configs[type_id] = (value, path)
+
+    def resolve_class(type_id, seen=None):
+        seen = seen or set()
+        if type_id in seen:
+            return ""
+        entry = configs.get(type_id)
+        if not entry:
+            return type_id if type_id.startswith("C") else ""
+        value, _path = entry
+        class_name = value.get("class")
+        if isinstance(class_name, str):
+            return class_name
+        ref = value.get("ref")
+        if isinstance(ref, str):
+            return resolve_class(ref, seen | {type_id})
+        return ""
+
+    metadata = {}
+    for type_id, (_value, path) in configs.items():
+        if path.parent == REPO_ROOT / "res" / "config":
+            category = "global-config"
+        else:
+            category = f"map-config:{path.parent.name}"
+        metadata[type_id] = {
+            "category": category,
+            "owner": path.relative_to(REPO_ROOT).as_posix(),
+            "className": resolve_class(type_id),
+        }
+    return metadata
+
+
+def load_registered_class_categories():
+    sources = {
+        "core-registration": REPO_ROOT / "src" / "core" / "CCoreTypeRegistration.cpp",
+        "handler-registration": REPO_ROOT / "src" / "handler" / "CHandlerTypeRegistration.cpp",
+        "object-registration": REPO_ROOT / "src" / "object" / "CObjectTypeRegistration.cpp",
+        "gui-registration": REPO_ROOT / "src" / "gui" / "CGuiTypeRegistration.cpp",
+        "animation-registration": REPO_ROOT / "src" / "gui" / "CAnimationTypeRegistration.cpp",
+        "widget-registration": REPO_ROOT / "src" / "gui" / "object" / "CGuiWidgetTypeRegistration.cpp",
+        "panel-registration": REPO_ROOT / "src" / "gui" / "panel" / "CGuiPanelTypeRegistration.cpp",
+        "native-plugin-registration": REPO_ROOT / "src" / "plugin" / "NativePlugin.cpp",
+    }
+    categories = {}
+    pattern = re.compile(r"register_type(?:_metadata)?<([^>;]+?)>")
+    for category, path in sources.items():
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for match in pattern.finditer(text):
+            class_name = match.group(1).split(",", 1)[0].strip()
+            if class_name.startswith("CWrapper<") or not class_name:
+                continue
+            categories.setdefault(
+                class_name,
+                {
+                    "category": category,
+                    "owner": path.relative_to(REPO_ROOT).as_posix(),
+                    "className": class_name,
+                },
+            )
+    return categories
+
+
+def runtime_type_details(type_id, config_metadata, class_categories):
+    if type_id in config_metadata:
+        details = dict(config_metadata[type_id])
+    elif type_id in class_categories:
+        details = dict(class_categories[type_id])
+    else:
+        details = {
+            "category": "runtime-registration",
+            "owner": "CObjectHandler.registerType",
+            "className": type_id if type_id.startswith("C") else "",
+        }
+    details["typeId"] = type_id
+    return details
+
+
 def game_test(f):
     def wrapper(self):
         n = f.__name__.split("test_")[1]
@@ -8057,14 +8168,37 @@ class GameTest(unittest.TestCase):
     def test_objects(self):
         game = load_game_module()
 
+        exclusions = load_type_registration_exclusions()
+        config_metadata = load_runtime_config_type_metadata()
+        class_categories = load_registered_class_categories()
         failed = []
+        skipped = []
+        created = []
         g = game.CGameLoader.loadGame()
         game.CGameLoader.startGame(g, "empty")
-        for type in g.getObjectHandler().getAllTypes():
-            object = g.createObject(type)
-            if not object:
-                failed.append(type)
-        return failed == [], failed
+        for type_id in sorted(g.getObjectHandler().getAllTypes()):
+            details = runtime_type_details(type_id, config_metadata, class_categories)
+            exclusion = exclusions.get(type_id) or exclusions.get(details["className"])
+            if exclusion:
+                skipped.append({**details, "exclusion": exclusion})
+                continue
+            try:
+                obj = g.createObject(type_id)
+            except Exception as exc:
+                failed.append({**details, "error": f"{type(exc).__name__}: {exc}"})
+                continue
+            if not obj:
+                failed.append({**details, "error": "createObject returned None"})
+                continue
+            created.append({**details, "actualType": obj.getType(), "actualTypeId": obj.getTypeId()})
+        report = {
+            "created": len(created),
+            "failed": failed,
+            "skippedReviewedExclusions": skipped,
+            "totalTypes": len(created) + len(failed) + len(skipped),
+        }
+        self.assertEqual([], failed, json.dumps(report, sort_keys=True))
+        return True, json.dumps(report, sort_keys=True)
 
     @game_test
     def test_effect_apply_uses_full_duration(self):

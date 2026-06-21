@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CHandler.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
+
+#include <algorithm>
 
 CObjectHandler::CObjectHandler() {}
 
@@ -50,9 +52,15 @@ std::shared_ptr<json> CObjectHandler::getConfig(const std::string &type) {
 
 std::vector<std::string> CObjectHandler::getAllTypes() {
     std::vector<std::string> types;
+    for (auto val : constructors | std::views::keys) {
+        types.push_back(val);
+    }
     for (auto val : objectConfig | std::views::keys) {
         types.push_back(val);
     }
+    std::ranges::sort(types);
+    auto duplicates = std::ranges::unique(types);
+    types.erase(duplicates.begin(), duplicates.end());
     return types;
 }
 
