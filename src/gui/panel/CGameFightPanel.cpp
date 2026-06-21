@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 #include <unordered_set>
 
+#include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "gui/CAnimation.h"
 #include "gui/CTextManager.h"
@@ -185,12 +187,29 @@ void CGameFightPanel::refreshEncounterViews() {
 
 std::shared_ptr<CInteraction> CGameFightPanel::selectInteraction() {
     auto self = this->ptr<CGameFightPanel>();
-    vstd::call_later_block([self]() {
+    auto gui = self->getGui();
+    auto game = gui ? gui->getGame() : nullptr;
+    auto context = game ? game->getContext() : nullptr;
+    std::weak_ptr<CMap> weakExpectedMap;
+    if (game) {
+        weakExpectedMap = game->getMap();
+    }
+    const bool hadExpectedMap = game && game->getMap() != nullptr;
+    const auto expectedGeneration =
+        context ? context->captureTransitionGeneration() : CGameContext::TransitionGeneration{0};
+    vstd::call_later_block([self, weakExpectedMap, hadExpectedMap, context, expectedGeneration]() {
         while (self->finalSelected.lock() == nullptr) {
             if (self->isCancelled()) {
                 return;
             }
             auto gui = self->getGui();
+            auto game = gui ? gui->getGame() : nullptr;
+            auto expectedMap = weakExpectedMap.lock();
+            if ((context && !context->isTransitionGenerationCurrent(expectedGeneration)) ||
+                (hadExpectedMap && (!game || !expectedMap || game->getMap() != expectedMap))) {
+                self->cancel();
+                return;
+            }
             if (!gui || gui->findChild(self) == nullptr) {
                 self->cancel();
                 return;
