@@ -22,9 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
+#include "gui/object/CProxyTargetGraphicsObject.h"
 
 #include <algorithm>
 #include <limits>
+#include <string>
 
 namespace {
 constexpr int DRAG_PROXY_FALLBACK_SIZE = 50;
@@ -80,6 +82,19 @@ void syncDragProxyWidget(const std::shared_ptr<CGui> &gui, CGui::DragSession &se
         gui->addChild(session.proxyWidget);
     }
 }
+
+void refreshProxyTargets(const std::shared_ptr<CGameGraphicsObject> &root) {
+    if (!root) {
+        return;
+    }
+    if (auto proxyTarget = vstd::cast<CProxyTargetGraphicsObject>(root)) {
+        proxyTarget->refresh();
+    }
+    auto children = root->getChildren();
+    for (const auto &child : children) {
+        refreshProxyTargets(child);
+    }
+}
 } // namespace
 
 CGui::CGui() {
@@ -114,11 +129,31 @@ std::shared_ptr<CTextManager> CGui::getTextManager() {
 
 int CGui::getWidth() { return width; }
 
-void CGui::setWidth(int width) { CGui::width = std::clamp(width, 320, 7680); }
+void CGui::setWidth(int width) {
+    const int clampedWidth = std::clamp(width, 320, 7680);
+    const bool changed = CGui::width != clampedWidth;
+    CGui::width = clampedWidth;
+    if (auto layout = getLayout()) {
+        layout->setW(std::to_string(CGui::width));
+    }
+    if (changed) {
+        recordDirectPropertyChanged("width");
+    }
+}
 
 int CGui::getHeight() { return height; }
 
-void CGui::setHeight(int height) { CGui::height = std::clamp(height, 240, 4320); }
+void CGui::setHeight(int height) {
+    const int clampedHeight = std::clamp(height, 240, 4320);
+    const bool changed = CGui::height != clampedHeight;
+    CGui::height = clampedHeight;
+    if (auto layout = getLayout()) {
+        layout->setH(std::to_string(CGui::height));
+    }
+    if (changed) {
+        recordDirectPropertyChanged("height");
+    }
+}
 
 int CGui::getTileSize() { return tileSize; }
 
@@ -131,6 +166,9 @@ int CGui::getTileCountY() { return height / tileSize + 1; }
 bool CGui::event(SDL_Event *event) {
     if (!event) {
         return false;
+    }
+    if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+        handleWindowSizeChanged(event->window);
     }
     if (event->type == SDL_MOUSEMOTION) {
         updateDragSession(event->motion.x, event->motion.y);
@@ -266,6 +304,33 @@ bool CGui::dispatchPointerCaptureEvent(SDL_Event *event) {
     }
     return false;
 }
+
+void CGui::handleWindowSizeChanged(const SDL_WindowEvent &windowEvent) {
+    int windowWidth = 0;
+    int windowHeight = 0;
+    if (window) {
+        if (windowEvent.windowID != 0 && SDL_GetWindowID(window.get()) != windowEvent.windowID) {
+            return;
+        }
+        SDL_GetWindowSize(window.get(), &windowWidth, &windowHeight);
+    }
+    if (windowWidth <= 0 || windowHeight <= 0) {
+        windowWidth = windowEvent.data1;
+        windowHeight = windowEvent.data2;
+    }
+    if (windowWidth <= 0 || windowHeight <= 0) {
+        return;
+    }
+    const int previousWidth = width;
+    const int previousHeight = height;
+    setWidth(windowWidth);
+    setHeight(windowHeight);
+    if (width != previousWidth || height != previousHeight) {
+        refreshLayout();
+    }
+}
+
+void CGui::refreshLayout() { refreshProxyTargets(this->ptr<CGui>()); }
 
 bool CGui::isPointerInside(const std::shared_ptr<CGameGraphicsObject> &object, int x, int y) {
     if (!object || !object->isAttachedToGui(this->ptr<CGui>())) {

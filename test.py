@@ -872,6 +872,8 @@ def pump_event_loop_until(predicate, *, timeout=1.0, min_iterations=1):
 SDL_KEYDOWN = 0x300
 SDL_KEYUP = 0x301
 SDL_QUIT = 0x100
+SDL_WINDOWEVENT = 0x200
+SDL_WINDOWEVENT_SIZE_CHANGED = 0x06
 SDL_INIT_EVENTS = 0x00004000
 SDL_MOUSEMOTION = 0x400
 SDL_MOUSEBUTTONDOWN = 0x401
@@ -982,6 +984,7 @@ XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" 
 XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
+    "test_window_resize_event_updates_gui_dimensions",
     "test_screenshot_readback_has_rendered_pixels",
     "test_screenshot_minimap_has_rendered_pixels",
     "test_screenshot_after_keyboard_move_has_rendered_pixels",
@@ -1025,6 +1028,7 @@ XVFB_BATCHABLE_CHILD_TESTS = {
     "test_screenshot_character_panel_has_rendered_pixels",
     "test_screenshot_info_panel_has_rendered_pixels",
     "test_screenshot_inventory_panel_has_rendered_pixels",
+    "test_window_resize_event_updates_gui_dimensions",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
     "test_panel_harness_info_artifacts",
@@ -1325,6 +1329,63 @@ def push_sdl_mouse_motion_event(x, y, xrel=0, yrel=0):
     pushed = sdl.SDL_PushEvent(ctypes.byref(event))
     if pushed != 1:
         raise AssertionError(f"SDL_PushEvent returned {pushed}.")
+
+
+def push_sdl_window_size_changed_event(width, height):
+    import ctypes
+
+    class SDL_WindowEvent(ctypes.Structure):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("timestamp", ctypes.c_uint32),
+            ("windowID", ctypes.c_uint32),
+            ("event", ctypes.c_uint8),
+            ("padding1", ctypes.c_uint8),
+            ("padding2", ctypes.c_uint8),
+            ("padding3", ctypes.c_uint8),
+            ("data1", ctypes.c_int32),
+            ("data2", ctypes.c_int32),
+        ]
+
+    class SDL_Event(ctypes.Union):
+        _fields_ = [
+            ("type", ctypes.c_uint32),
+            ("window", SDL_WindowEvent),
+            ("padding", ctypes.c_uint8 * 56),
+        ]
+
+    sdl = load_sdl_library()
+    focused_window = focused_sdl_window()
+    if not focused_window:
+        raise AssertionError("Expected a focused SDL window for resize event injection.")
+
+    sdl.SDL_SetWindowSize.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+    sdl.SDL_SetWindowSize(focused_window, width, height)
+
+    actual_width = ctypes.c_int()
+    actual_height = ctypes.c_int()
+    sdl.SDL_GetWindowSize.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+    sdl.SDL_GetWindowSize(focused_window, ctypes.byref(actual_width), ctypes.byref(actual_height))
+    if actual_width.value <= 0 or actual_height.value <= 0:
+        raise AssertionError(f"SDL_GetWindowSize returned {actual_width.value}x{actual_height.value}.")
+
+    sdl.SDL_GetWindowID.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetWindowID.restype = ctypes.c_uint32
+
+    event = SDL_Event()
+    event.type = SDL_WINDOWEVENT
+    event.window.type = SDL_WINDOWEVENT
+    event.window.windowID = sdl.SDL_GetWindowID(focused_window)
+    event.window.event = SDL_WINDOWEVENT_SIZE_CHANGED
+    event.window.data1 = actual_width.value
+    event.window.data2 = actual_height.value
+
+    sdl.SDL_PushEvent.argtypes = [ctypes.POINTER(SDL_Event)]
+    sdl.SDL_PushEvent.restype = ctypes.c_int
+    pushed = sdl.SDL_PushEvent(ctypes.byref(event))
+    if pushed != 1:
+        raise AssertionError(f"SDL_PushEvent returned {pushed}.")
+    return actual_width.value, actual_height.value
 
 
 def push_sdl_mouse_click(x, y, button=SDL_BUTTON_LEFT):
@@ -13761,6 +13822,31 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         moved = player.getCoords()
         self.assertEqual((target.x, target.y, target.z), (moved.x, moved.y, moved.z))
         self.assertGreater(game_map.getTurn(), initial_turn)
+        assert_rendered_map_proxy_cells(self, g)
+
+    def test_window_resize_event_updates_gui_dimensions(self):
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        gui = g.getGui()
+        map_graph = next(child for child in collect_gui_children(gui, "CMapGraphicsObject"))
+
+        width, height = push_sdl_window_size_changed_event(800, 600)
+        tile_size = gui.getNumericProperty("tileSize")
+        expected_proxy_count = (width // tile_size + 1) * (height // tile_size + 1)
+
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: (
+                    gui.getNumericProperty("width") == width
+                    and gui.getNumericProperty("height") == height
+                    and len(map_graph.getChildren()) == expected_proxy_count
+                ),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+        self.assertEqual((0, 0, width, height), tuple(gui.getResolvedRect()))
+        self.assertEqual((0, 0, width, height), tuple(map_graph.getResolvedRect()))
+        self.assertEqual(expected_proxy_count, len(map_graph.getChildren()))
         assert_rendered_map_proxy_cells(self, g)
 
     def test_screenshot_readback_has_rendered_pixels(self):
