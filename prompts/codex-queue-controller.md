@@ -676,7 +676,8 @@ After every controller loop, PR status poll, and merged checkpoint, run the read
 python3 scripts/controller_resource_audit.py --json
 ```
 
-Use the audit to report free disk, accumulated run/worktrees, and prunable worktree metadata. If disk pressure is high
+Use the audit to report free disk, accumulated run/worktrees, and prunable worktree metadata. Add
+`--github-repo lisu188/fall-of-nouraajd` when auditing branch-protection or merge-policy drift. If disk pressure is high
 or many stale worktree registrations exist, stop refilling worker slots until cleanup is reviewed and completed safely.
 
 After both implementation and terminal-status PRs merge:

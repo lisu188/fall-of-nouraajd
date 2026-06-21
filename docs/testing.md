@@ -165,6 +165,12 @@ Manual repository settings for `main`:
 - require branches to be up to date before merging
 - select the `linux`, `windows-deps`, and `windows` checks from the `build` workflow
 
+Audit the live repository settings before merge-policy or cleanup decisions with:
+
+```bash
+python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes --github-repo lisu188/fall-of-nouraajd
+```
+
 Do not use `Release / build` as a required PR check; `.github/workflows/release.yml` runs only for version tags.
 If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR jobs, add those jobs to branch
 protection only after they finish deterministically in CI.

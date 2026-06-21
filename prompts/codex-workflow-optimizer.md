@@ -169,6 +169,7 @@ Repeat the following cycle:
    - Note current resource pressure before expensive local commands.
    - Run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill decisions, before heavy
      validation, after each controller loop, and after merged-checkpoint cleanup.
+   - Add `--github-repo lisu188/fall-of-nouraajd` when auditing branch-protection or merge-policy drift.
    - Treat low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree registrations as
      blockers to new heavy work until safely reported or cleaned.
    - Prefer GitHub Actions polling as the default path for heavy Linux compilation, native tests, full Python suites,
