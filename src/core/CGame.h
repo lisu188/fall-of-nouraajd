@@ -35,7 +35,11 @@ class CGameContext;
 
 class CGui;
 
+class CConfigurationProvider;
+
 class CSceneManager;
+
+class CResourcesProvider;
 
 class CRngHandler;
 
@@ -83,6 +87,10 @@ class CGame : public CGameObject {
     }
 
     std::shared_ptr<CSlotConfig> getSlotConfiguration();
+
+    std::shared_ptr<CResourcesProvider> getResourcesProvider();
+
+    std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
 
   private:
     std::shared_ptr<CGameContext> context;
