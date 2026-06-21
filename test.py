@@ -1253,6 +1253,8 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_inventory_equipped_selection_resets_inventory_selection",
     "test_inventory_quest_item_selection_is_ignored",
     "test_fight_quest_item_selection_is_ignored",
+    "test_cave_loss_does_not_reopen_fight_panel",
+    "test_fight_panel_select_interaction_cancels_on_sdl_quit",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
     "test_panel_harness_info_artifacts",
@@ -1304,6 +1306,8 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
     "test_inventory_quest_item_selection_is_ignored": 6,
     "test_fight_quest_item_selection_is_ignored": 6,
+    "test_cave_loss_does_not_reopen_fight_panel": 6,
+    "test_fight_panel_select_interaction_cancels_on_sdl_quit": 6,
 }
 NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS = {
     "xvfb_nouraajd_quest_log_rolf_initial",
@@ -14611,6 +14615,81 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         selected_after_quest_click = get_panel_selection_box_counts_by_collection(panel)
 
         self.assertEqual(0, selected_after_quest_click.get("itemsCollection", 0))
+
+    def test_cave_loss_does_not_reopen_fight_panel(self):
+        game, g, game_map, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        cave = find_runtime_object(game_map, "cave1")
+        cave.setBoolProperty("enabled", True)
+        cave_coords = cave.getCoords()
+        entry_coords = (game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+        staging = next(
+            game.Coords(cave_coords.x + dx, cave_coords.y + dy, cave_coords.z)
+            for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2), (3, 0), (-3, 0), (0, 3), (0, -3))
+            if game_map.canStep(game.Coords(cave_coords.x + dx, cave_coords.y + dy, cave_coords.z))
+        )
+        player.relocateWithoutMoveHooks(staging)
+
+        player.setStringProperty("affiliation", "gooby")
+        run_blocking_gui_action(
+            game, lambda: player.moveTo(cave_coords.x, cave_coords.y, cave_coords.z), push_space_key
+        )
+        pump_event_loop(5)
+        player.setStringProperty("affiliation", "")
+        self.assertIsNone(game_map.getObjectByName("cave1"))
+
+        spawned = []
+        for obj in game_map.getObjects():
+            if not hasattr(obj, "isPlayer") or obj.isPlayer() or not hasattr(obj, "getFightController"):
+                continue
+            coords = obj.getCoords()
+            if abs(coords.x - cave_coords.x) <= 1 and abs(coords.y - cave_coords.y) <= 1 and coords.z == cave_coords.z:
+                spawned.append(obj)
+        self.assertTrue(spawned, "Entering an enabled cave should spawn hostile cave monsters.")
+
+        killer = spawned[0]
+        killer.baseStats.agility = 100
+        killer.baseStats.hit = 100
+        killer.baseStats.dmgMin = 500
+        killer.baseStats.dmgMax = 500
+        killer.baseStats.crit = 0
+        player.unequipArmor()
+        player.baseStats.agility = 1
+        player.baseStats.hit = 0
+        player.baseStats.dmgMin = 0
+        player.baseStats.dmgMax = 0
+        player.baseStats.crit = 0
+        player.setHp(1)
+
+        target = killer.getCoords()
+        player.moveTo(target.x, target.y, target.z)
+        pump_event_loop(5)
+
+        self.assertIsNotNone(game_map.getObjectByName(player.getName()))
+        self.assertEqual(entry_coords, coords_tuple(player.getCoords()))
+        for _ in range(5):
+            self.assertFalse(gui_contains_class(g, "CGameFightPanel"))
+            pump_event_loop(2)
+
+    def test_fight_panel_select_interaction_cancels_on_sdl_quit(self):
+        game, g, _, _ = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        panel = g.createObject("CGameFightPanel")
+        enemy = g.createObject("GoblinThief")
+        enemy.name = "quitPanelGoblin"
+        enemy.setHp(enemy.getHpMax())
+        panel.setEnemy(enemy)
+        g.getGui().pushChild(panel)
+        wait_for_panel_class(self, g, "CGameFightPanel")
+
+        try:
+            game.event_loop.instance().invoke(push_sdl_quit_event)
+            self.assertIsNone(panel.selectInteraction())
+            self.assertTrue(panel.isCancelled())
+        finally:
+            drain_sdl_events()
+            panel.close()
+            pump_event_loop(5)
+
+        self.assertFalse(gui_contains_class(g, "CGameFightPanel"))
 
     def test_screenshot_question_panel_has_rendered_pixels(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
