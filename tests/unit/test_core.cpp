@@ -1063,6 +1063,13 @@ std::shared_ptr<json> make_save_snapshot(std::string map_name = "test") {
     return snapshot;
 }
 
+bool save_snapshot_has_map(const std::shared_ptr<json> &snapshot, const std::string &map_name) {
+    return snapshot && snapshot->is_object() && snapshot->contains("class") &&
+           (*snapshot)["class"].get<std::string>() == "CMap" && snapshot->contains("properties") &&
+           (*snapshot)["properties"].is_object() && (*snapshot)["properties"].contains("mapName") &&
+           (*snapshot)["properties"]["mapName"].get<std::string>() == map_name;
+}
+
 void test_save_format_codec_validation() {
     auto snapshot = make_save_snapshot();
     auto envelope = CSaveFormat::buildEnvelope(snapshot, "test");
@@ -1073,13 +1080,16 @@ void test_save_format_codec_validation() {
                 "save envelope should use the canonical schema version");
 
     auto decoded = CSaveFormat::decodeDocument(*envelope);
-    expect_true(decoded.has_value() && decoded->mapName == "test" &&
-                    decoded->encoding == CSaveFormat::Encoding::Versioned,
-                "save format should decode versioned envelopes");
+    expect_true(
+        decoded.has_value() && decoded->mapName == "test" && decoded->encoding == CSaveFormat::Encoding::Versioned &&
+            decoded->snapshot.get() == &(*envelope)->at("snapshot") && save_snapshot_has_map(decoded->snapshot, "test"),
+        "save migration registry should no-op current schema envelopes");
 
+    const auto legacy_before = snapshot->dump();
     auto legacy = CSaveFormat::decodeDocument(snapshot);
-    expect_true(legacy.has_value() && legacy->mapName == "test" && legacy->encoding == CSaveFormat::Encoding::Legacy,
-                "save format should decode legacy snapshots");
+    expect_true(legacy.has_value() && legacy->mapName == "test" && legacy->encoding == CSaveFormat::Encoding::Legacy &&
+                    save_snapshot_has_map(legacy->snapshot, "test") && snapshot->dump() == legacy_before,
+                "save migration registry should migrate legacy snapshots without mutating the source");
     expect_true(!CSaveFormat::decodeDocument(make_save_snapshot("../test")).has_value(),
                 "save format should reject legacy snapshots with invalid map names");
 
@@ -1094,12 +1104,20 @@ void test_save_format_codec_validation() {
 
     auto old_schema = std::make_shared<json>(**envelope);
     (*old_schema)["schemaVersion"] = 0;
-    expect_true(!CSaveFormat::decodeDocument(old_schema).has_value(), "save format should reject old schema versions");
+    const auto old_schema_before = old_schema->dump();
+    auto old_schema_decoded = CSaveFormat::decodeDocument(old_schema);
+    expect_true(old_schema_decoded.has_value() && old_schema_decoded->mapName == "test" &&
+                    old_schema_decoded->encoding == CSaveFormat::Encoding::Versioned &&
+                    save_snapshot_has_map(old_schema_decoded->snapshot, "test") &&
+                    old_schema->dump() == old_schema_before,
+                "save migration registry should migrate old schema envelopes without mutating the source");
 
     auto future_schema = std::make_shared<json>(**envelope);
     (*future_schema)["schemaVersion"] = CSaveFormat::SCHEMA_VERSION + 1;
-    expect_true(!CSaveFormat::decodeDocument(future_schema).has_value(),
-                "save format should reject future schema versions");
+    const auto future_schema_before = future_schema->dump();
+    expect_true(!CSaveFormat::decodeDocument(future_schema).has_value() &&
+                    future_schema->dump() == future_schema_before,
+                "save migration registry should reject future schema versions without mutating the source");
 
     auto invalid_map = std::make_shared<json>(**envelope);
     (*invalid_map)["mapName"] = "../test";
