@@ -1,0 +1,30 @@
+name: codex-export-source
+
+on:
+  push:
+    branches:
+      - codex/resolve-pr-729-against-main
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+      - name: Export exact source snapshots
+        run: |
+          git archive --format=tar.gz --output=repair-source.tar.gz HEAD
+          git archive --format=tar.gz --output=main-source.tar.gz origin/main
+      - name: Upload source snapshots
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: codex-source-snapshots
+          path: |
+            repair-source.tar.gz
+            main-source.tar.gz
+          retention-days: 1
