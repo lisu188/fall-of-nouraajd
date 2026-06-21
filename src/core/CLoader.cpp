@@ -779,6 +779,11 @@ bool load_plugin_entries(const std::shared_ptr<CGame> &game, const json &entries
     }
     return loadedAll;
 }
+
+bool isLiveGuiSession(const std::shared_ptr<CGame> &game, const std::shared_ptr<CGameContext> &context,
+                      const std::shared_ptr<CGui> &gui) {
+    return game && context && context->isActive() && gui && gui->isActive() && game->getGui() == gui;
+}
 } // namespace
 
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
@@ -1256,7 +1261,7 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
         auto game = weakGame.lock();
         auto context = weakContext.lock();
         auto gui = weakGui.lock();
-        if (game && context && context->isActive() && gui && game->getGui() == gui) {
+        if (isLiveGuiSession(game, context, gui)) {
             gui->render(time);
         }
     });
@@ -1264,7 +1269,7 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
         auto game = weakGame.lock();
         auto context = weakContext.lock();
         auto gui = weakGui.lock();
-        return game && context && context->isActive() && gui && game->getGui() == gui && gui->event(event);
+        return isLiveGuiSession(game, context, gui) && gui->event(event);
     });
 }
 

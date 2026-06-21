@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "object/CGameObject.h"
 
+#include <atomic>
 #include <optional>
 
 class CTextureCache;
@@ -86,6 +87,8 @@ class CGui : public CGameGraphicsObject {
 
     void shutdown();
 
+    bool isActive() const;
+
     void render(int i1);
 
     bool event(SDL_Event *event);
@@ -142,4 +145,6 @@ class CGui : public CGameGraphicsObject {
     std::optional<DragSession> dragSession;
 
     std::weak_ptr<CGameGraphicsObject> pointerCapture;
+
+    std::atomic<bool> active = true;
 };
