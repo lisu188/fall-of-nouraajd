@@ -244,6 +244,7 @@ class ScriptInfo:
     path: Path
     classes: set[str] = field(default_factory=set)
     registered_classes: set[str] = field(default_factory=set)
+    class_bases: dict[str, set[str]] = field(default_factory=dict)
     methods_by_class: dict[str, set[str]] = field(default_factory=dict)
     calls: list[ScriptCall] = field(default_factory=list)
     quest_grants: list[ScriptCall] = field(default_factory=list)
@@ -277,6 +278,9 @@ class ScriptAnalyzer(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
+        base_names = {base_name for base in node.bases if (base_name := python_base_class_name(base))}
+        if base_names:
+            self.info.class_bases.setdefault(node.name, set()).update(base_names)
         if any(is_python_registration_decorator(decorator) for decorator in node.decorator_list):
             self.info.registered_classes.add(node.name)
         self.info.methods_by_class.setdefault(node.name, set())
@@ -693,6 +697,7 @@ class ContentValidator:
         self.native_plugin_registered_classes: set[str] = set()
         self.native_plugin_declared_class_sources: dict[str, set[str]] = {}
         self.python_registered_classes: set[str] = set()
+        self.python_class_bases: dict[str, set[str]] = {}
         self.registration_exclusions: dict[str, RegistrationExclusion] = {}
         self.property_hygiene_allowlist = (
             SCRIPT_PROPERTY_HYGIENE_ALLOWLIST if property_hygiene_allowlist is None else property_hygiene_allowlist
@@ -810,6 +815,7 @@ class ContentValidator:
             if info:
                 self.plugin_info.append(info)
                 self.python_registered_classes.update(info.registered_classes)
+                self._merge_python_class_bases(info)
 
     def _load_global_configs(self) -> None:
         config_dir = self.repo_root / "res" / "config"
@@ -846,6 +852,8 @@ class ContentValidator:
                 else:
                     self._issue(path, "$", "expected top-level JSON object")
             script_info = self._parse_script(directory / "script.py")
+            if script_info:
+                self._merge_python_class_bases(script_info)
             self.map_contexts.append(
                 MapContext(
                     name=directory.name,
@@ -857,6 +865,10 @@ class ContentValidator:
                     script_info=script_info,
                 )
             )
+
+    def _merge_python_class_bases(self, info: ScriptInfo) -> None:
+        for class_name, base_names in info.class_bases.items():
+            self.python_class_bases.setdefault(class_name, set()).update(base_names)
 
     def _load_json(self, path: Path) -> Any:
         if not path.exists():
@@ -1022,7 +1034,7 @@ class ContentValidator:
         self._validate_object_shape(entry.path, entry.key, entry.data)
         self._validate_refs(entry.path, entry.key, entry.data, visible)
         self._validate_object_classes(entry.path, entry.key, entry.data, known_classes)
-        self._validate_object_properties(entry.path, entry.key, entry.data, visible)
+        self._validate_object_properties(entry.path, entry.key, entry.data, visible, known_classes)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -1082,19 +1094,24 @@ class ContentValidator:
                 self._validate_refs(path, append_index(location, index), child, visible)
 
     def _validate_object_properties(
-        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry], known_classes: set[str]
     ) -> None:
         if isinstance(value, dict):
             if self._is_object_node(value):
-                self._validate_object_node_properties(path, location, value, visible)
+                self._validate_object_node_properties(path, location, value, visible, known_classes)
             for key, child in value.items():
-                self._validate_object_properties(path, append_field(location, key), child, visible)
+                self._validate_object_properties(path, append_field(location, key), child, visible, known_classes)
         elif isinstance(value, list):
             for index, child in enumerate(value):
-                self._validate_object_properties(path, append_index(location, index), child, visible)
+                self._validate_object_properties(path, append_index(location, index), child, visible, known_classes)
 
     def _validate_object_node_properties(
-        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+        self,
+        path: Path,
+        location: str,
+        value: dict[str, Any],
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
     ) -> None:
         properties = value.get("properties")
         if not isinstance(properties, dict):
@@ -1115,6 +1132,8 @@ class ContentValidator:
                     class_name,
                     property_schema[property_name],
                     property_value,
+                    visible,
+                    known_classes,
                 )
                 continue
             if property_name not in dynamic_properties and not self._is_reviewed_dynamic_property(
@@ -1169,7 +1188,14 @@ class ContentValidator:
         return properties
 
     def _validate_property_value_type(
-        self, path: Path, location: str, class_name: str, cpp_property: CppMetadataProperty, value: Any
+        self,
+        path: Path,
+        location: str,
+        class_name: str,
+        cpp_property: CppMetadataProperty,
+        value: Any,
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
     ) -> None:
         expected_kind = expected_json_property_kind(cpp_property.type_token)
         if expected_kind is None:
@@ -1181,6 +1207,114 @@ class ContentValidator:
                 location,
                 f'property "{cpp_property.name}" for class "{class_name}" expected {expected_kind}; got {actual_kind}',
             )
+            return
+        expected_base_class = expected_cpp_object_base_class(cpp_property.type_token)
+        if expected_base_class is not None:
+            self._validate_property_object_compatibility(
+                path,
+                location,
+                class_name,
+                cpp_property,
+                value,
+                expected_base_class,
+                visible,
+                known_classes,
+            )
+
+    def _validate_property_object_compatibility(
+        self,
+        path: Path,
+        location: str,
+        class_name: str,
+        cpp_property: CppMetadataProperty,
+        value: Any,
+        expected_base_class: str,
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+    ) -> None:
+        if isinstance(value, list):
+            for index, item in enumerate(value):
+                self._validate_property_object_value_compatibility(
+                    path,
+                    append_index(location, index),
+                    class_name,
+                    cpp_property,
+                    item,
+                    expected_base_class,
+                    visible,
+                    known_classes,
+                )
+            return
+        self._validate_property_object_value_compatibility(
+            path,
+            location,
+            class_name,
+            cpp_property,
+            value,
+            expected_base_class,
+            visible,
+            known_classes,
+        )
+
+    def _validate_property_object_value_compatibility(
+        self,
+        path: Path,
+        location: str,
+        class_name: str,
+        cpp_property: CppMetadataProperty,
+        value: Any,
+        expected_base_class: str,
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+    ) -> None:
+        if not isinstance(value, dict):
+            self._issue(
+                path,
+                location,
+                (
+                    f'property "{cpp_property.name}" for class "{class_name}" expected object inheriting from '
+                    f'"{expected_base_class}"; got {json_value_kind(value)}'
+                ),
+            )
+            return
+        actual_class = self._effective_object_class(value, visible)
+        if actual_class is None:
+            self._issue(
+                path,
+                location,
+                (
+                    f'property "{cpp_property.name}" for class "{class_name}" expected object inheriting from '
+                    f'"{expected_base_class}"; got object without class/ref'
+                ),
+            )
+            return
+        if actual_class not in known_classes:
+            return
+        if not self._class_inherits_from(actual_class, expected_base_class):
+            self._issue(
+                path,
+                location,
+                (
+                    f'property "{cpp_property.name}" for class "{class_name}" expected object inheriting from '
+                    f'"{expected_base_class}"; got "{actual_class}"'
+                ),
+            )
+
+    def _class_inherits_from(self, class_name: str, expected_base_class: str) -> bool:
+        seen: set[str] = set()
+        stack = [class_name]
+        while stack:
+            current = stack.pop()
+            if current == expected_base_class:
+                return True
+            if current in seen:
+                continue
+            seen.add(current)
+            base_class = self.metadata_class_bases.get(current)
+            if base_class:
+                stack.append(base_class)
+            stack.extend(self.python_class_bases.get(current, set()))
+        return False
 
     def _is_reviewed_dynamic_property(self, class_name: str, property_name: str) -> bool:
         for lineage_class in self._metadata_class_lineage(class_name):
@@ -1785,6 +1919,13 @@ def expected_json_property_kind(type_token: str) -> str | None:
     return None
 
 
+def expected_cpp_object_base_class(type_token: str) -> str | None:
+    match = re.search(r"\bstd::shared_ptr<([A-Za-z_]\w*)>", type_token)
+    if match:
+        return match.group(1)
+    return None
+
+
 def json_value_kind(value: Any) -> str:
     if isinstance(value, bool):
         return "bool"
@@ -1976,6 +2117,14 @@ def normalize_cpp_class_token(raw: str) -> str:
 def normalize_cpp_type_token(raw: str) -> str:
     token = re.sub(r"\s+", " ", raw.strip())
     return re.sub(r"\s*([<>,:&*])\s*", r"\1", token)
+
+
+def python_base_class_name(base: ast.expr) -> str | None:
+    if isinstance(base, ast.Name):
+        return base.id
+    if isinstance(base, ast.Attribute):
+        return base.attr
+    return None
 
 
 def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
