@@ -73,6 +73,61 @@ python3 test.py --suite full
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
 `python3 test.py --suite gameplay --jobs "$(nproc)"`.
 
+## Campaign scenario gates
+Campaign, quest, dialog, trigger, and content-routing changes should report which scenario subset ran. A skipped
+scenario is not a pass; include the skip reason in the issue or PR final report.
+
+Fast content validation catches resource ids, dialog actions, quest grants, and script/config wiring before native
+builds:
+
+```bash
+python3 scripts/validate_content.py --repo-root .
+python3 -m unittest tests.test_content_validator
+```
+
+The fast Nouraajd smoke scenario checks the MCP-style scenario harness, the Rolf-to-Gooby quest path, door wiring,
+spawned objects, inventory, and quest-state snapshots after `_game` is built:
+
+```bash
+python3 test.py GameTest.test_mcp_scenario_harness_drives_nouraajd_rolf_gooby
+```
+
+The targeted quest-state and reward cleanup subset covers high-value Nouraajd state-machine, timeout cleanup, and
+single-claim reward regressions without running the full route:
+
+```bash
+python3 test.py \
+  GameTest.test_nouraajd_quest_state_machine \
+  GameTest.test_nouraajd_victor_timeout_cleanup_regression \
+  GameTest.test_nouraajd_octobogz_unique_reward_is_not_duplicated \
+  GameTest.test_nouraajd_octobogz_late_contract_claims_existing_clear_reward
+```
+
+The slower full-route campaign subset drives the authored Nouraajd route through direct game tests and MCP stdio, then
+checks campaign transition into the later maps:
+
+```bash
+python3 test.py \
+  GameTest.test_map_walkthrough_nouraajd \
+  McpServerTest.test_stdio_map_walkthrough_nouraajd \
+  GameTest.test_campaign_transitions_preserve_player_and_start_siege
+```
+
+Normal pull request CI runs content validation plus the fast Nouraajd smoke and targeted quest/reward gates whenever
+native validation is required. The existing `gameplay` and `ui` suites still run after those gates; the campaign gates
+are early, named checks, not a replacement for required gameplay validation.
+
+Full-route campaign scenarios run in the Linux job on the weekly schedule, when manually dispatched with
+`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. If the full-route subset is
+not selected, CI prints the skip reason and does not treat the skipped route as passed.
+
+For any quest, campaign, dialog-trigger, or content-routing issue final report, include:
+- which of the fast content validation, fast smoke, targeted quest/reward, and full-route subsets ran;
+- the exact command or CI job name for each subset;
+- why any full-route gate was skipped, for example "PR label not set and this was not a scheduled or manual campaign
+  run";
+- any blocked command and its blocker.
+
 ## Deterministic simulation helpers
 Use `game_simulation.py` for new Python gameplay walkthroughs that need stable setup, bounded movement, object
 interaction, map/inventory/quest inspection, GUI tree assertions, or screenshot capture callbacks. The helper raises
@@ -131,6 +186,10 @@ necessary. Workflow-only docs/prompts/tooling PRs still produce terminal `linux`
 steps and Windows jobs are skipped after focused workflow validation. The workflow also has a conditional
 `linux-coverage` job that runs `./scripts/run_coverage.sh` when changed paths match the coverage rule; because it is
 path-gated, do not configure it as an always-present branch-protection check.
+
+The campaign-specific PR gates run inside `linux` when native validation is required. Full-route campaign scenarios are
+scheduled, manual, or label-selected gates inside the same job, so they do not add a separate always-present branch
+protection check.
 
 ## CI-Polled Validation
 For local agents, prefer the PR build workflow as the default delivery path for heavy validation. Run focused local
