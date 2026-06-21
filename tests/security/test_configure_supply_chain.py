@@ -71,6 +71,21 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         self.assertRegex(requirements_text, re.compile(r"^black==[0-9]+(?:\.[0-9]+)*$", re.MULTILINE))
         self.assertNotRegex(requirements_text, re.compile(r"^pybind11\b", re.IGNORECASE | re.MULTILINE))
 
+    def test_windows_job_installs_vcpkg_when_installed_cache_is_missing(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+        match = re.search(r"(?ms)^  windows:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)", workflow_text)
+        self.assertIsNotNone(match)
+        job_body = match.group("body")
+
+        self.assertIn("- name: Install vcpkg deps when installed cache is missing", job_body)
+        self.assertIn("id: install-missing-vcpkg-installed", job_body)
+        self.assertIn("if: steps.restore-vcpkg-installed.outputs.cache-hit != 'true'", job_body)
+        self.assertIn('& "$env:VCPKG_ROOT\\vcpkg.exe" install `', job_body)
+        self.assertIn('"--x-install-root=$env:VCPKG_INSTALLED_DIR"', job_body)
+        self.assertIn("- name: Save missing vcpkg installed tree", job_body)
+        self.assertIn("key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}", job_body)
+        self.assertNotIn("windows-deps did not seed a valid vcpkg installed cache", job_body)
+
     def test_linux_coverage_job_uploads_failure_report_artifact(self):
         workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
         match = re.search(r"(?ms)^  linux-coverage:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)", workflow_text)
