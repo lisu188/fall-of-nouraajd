@@ -1250,6 +1250,9 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_screenshot_inventory_panel_has_rendered_pixels",
     "test_inventory_drag_release_outside_source_equips_item",
     "test_inventory_preselected_drag_release_equips_item",
+    "test_inventory_drag_valid_equip_unequip_and_refresh_counts",
+    "test_inventory_drag_invalid_slot_and_cancel_keep_state",
+    "test_inventory_drag_close_or_modal_panel_cancels_without_equip",
     "test_inventory_equipped_selection_resets_inventory_selection",
     "test_inventory_quest_item_selection_is_ignored",
     "test_fight_quest_item_selection_is_ignored",
@@ -1303,6 +1306,9 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_screenshot_inventory_item_selection_has_rendered_pixels": 6,
     "test_inventory_drag_release_outside_source_equips_item": 6,
     "test_inventory_preselected_drag_release_equips_item": 6,
+    "test_inventory_drag_valid_equip_unequip_and_refresh_counts": 6,
+    "test_inventory_drag_invalid_slot_and_cancel_keep_state": 6,
+    "test_inventory_drag_close_or_modal_panel_cancels_without_equip": 6,
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
     "test_inventory_quest_item_selection_is_ignored": 6,
     "test_fight_quest_item_selection_is_ignored": 6,
@@ -1976,6 +1982,10 @@ def list_cell_rect(list_view, column, row):
     return x + column * tile, y + row * tile, tile, tile
 
 
+def list_cell_center(list_view, column, row):
+    return rect_center(list_cell_rect(list_view, column, row))
+
+
 def click_rect_center(rect, button=SDL_BUTTON_LEFT):
     x, y = rect_center(rect)
     push_sdl_mouse_click(x, y, button)
@@ -2057,6 +2067,54 @@ def click_first_list_object(test_case, list_view, gui, predicate=None, button=SD
 
 def list_visible_object_names(list_view, gui):
     return [obj.getName() or obj.getTypeId() for _, _, obj in list_visible_object_cells(list_view, gui)]
+
+
+def find_visible_list_cell(list_view, gui, predicate):
+    for column, row, obj in list_visible_object_cells(list_view, gui):
+        if predicate(obj):
+            return column, row, obj
+    raise AssertionError(f"No matching visible object found in {list_view.getCollection()} list.")
+
+
+def find_visible_list_cell_by_type(list_view, gui, type_id):
+    return find_visible_list_cell(list_view, gui, lambda obj: obj.getTypeId() == type_id)
+
+
+def inventory_panel_lists(panel):
+    return find_list_view(panel, "inventoryCollection"), find_list_view(panel, "equippedCollection")
+
+
+def open_inventory_panel_with_items(test_case, g, player, *item_ids):
+    if hasattr(player, "unequipArmor"):
+        player.unequipArmor()
+    player.setItems(set())
+    for item_id in item_ids:
+        player.addItem(item_id)
+    pump_event_loop(5)
+    panel = open_panel_for_screenshot(test_case, g, "inventoryPanel", "CGameInventoryPanel")
+    inventory_list, equipped_list = inventory_panel_lists(panel)
+    return panel, inventory_list, equipped_list
+
+
+def drag_between_points(test_case, g, start, target, *, expect_started=True):
+    start_x, start_y = start
+    target_x, target_y = target
+    push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+    pump_event_loop(3)
+    if expect_started:
+        test_case.assertTrue(g.getGui().hasDragSession())
+        test_case.assertTrue(g.getGui().hasPointerCapture())
+
+    push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
+    pump_event_loop(3)
+    if expect_started:
+        test_case.assertTrue(g.getGui().hasDragSession())
+        test_case.assertTrue(g.getGui().hasPointerCapture())
+
+    push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+    pump_event_loop(5)
+    test_case.assertFalse(g.getGui().hasDragSession())
+    test_case.assertFalse(g.getGui().hasPointerCapture())
 
 
 def gui_object_record(obj):
@@ -14588,6 +14646,145 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertFalse(g.getGui().hasPointerCapture())
         self.assertEqual(inventory_before - 1, player.countItems("ChaosSword"))
         self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
+
+    def test_inventory_drag_valid_equip_unequip_and_refresh_counts(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player)
+        empty_totals = get_panel_proxy_child_totals_by_collection(panel)
+
+        player.addItem("LeatherArmor")
+        pump_event_loop(5)
+        armor_column, armor_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "LeatherArmor")
+        with_item_totals = get_panel_proxy_child_totals_by_collection(panel)
+
+        self.assertEqual(empty_totals["inventoryCollection"] + 1, with_item_totals["inventoryCollection"])
+        self.assertEqual(empty_totals["equippedCollection"], with_item_totals["equippedCollection"])
+
+        drag_between_points(
+            self,
+            g,
+            list_cell_center(inventory_list, armor_column, armor_row),
+            list_cell_center(equipped_list, 3, 0),
+        )
+
+        after_equip_totals = get_panel_proxy_child_totals_by_collection(panel)
+        self.assertEqual(0, player.countItems("LeatherArmor"))
+        self.assertEqual(empty_totals["inventoryCollection"], after_equip_totals["inventoryCollection"])
+        self.assertEqual(empty_totals["equippedCollection"] + 1, after_equip_totals["equippedCollection"])
+        self.assertTrue(
+            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+        self.assertEqual(0, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
+
+        equipped_x, equipped_y = list_cell_center(equipped_list, 3, 0)
+        push_sdl_mouse_click(equipped_x, equipped_y)
+        pump_event_loop(5)
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("equippedCollection", 0))
+
+        push_sdl_mouse_button_event(equipped_x, equipped_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+        push_sdl_mouse_button_event(equipped_x, equipped_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        after_unequip_totals = get_panel_proxy_child_totals_by_collection(panel)
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(1, player.countItems("LeatherArmor"))
+        self.assertEqual(empty_totals["inventoryCollection"] + 1, after_unequip_totals["inventoryCollection"])
+        self.assertEqual(empty_totals["equippedCollection"], after_unequip_totals["equippedCollection"])
+        self.assertFalse(
+            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+
+    def test_inventory_drag_invalid_slot_and_cancel_keep_state(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        original_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player, "ChaosSword")
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        before_invalid = get_panel_proxy_child_totals_by_collection(panel)
+
+        drag_between_points(
+            self,
+            g,
+            list_cell_center(inventory_list, weapon_column, weapon_row),
+            list_cell_center(equipped_list, 3, 0),
+        )
+
+        after_invalid = get_panel_proxy_child_totals_by_collection(panel)
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
+        self.assertEqual(before_invalid, after_invalid)
+        self.assertFalse(
+            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        inventory_rect = resolved_rect(inventory_list)
+        cancel_target = (inventory_rect[0] + inventory_rect[2] + 20, inventory_rect[1] + 25)
+
+        drag_between_points(self, g, list_cell_center(inventory_list, weapon_column, weapon_row), cancel_target)
+
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
+        self.assertTrue(
+            any(
+                obj.getTypeId() == "ChaosSword"
+                for obj in list_cell_objects(inventory_list, g.getGui(), weapon_column, weapon_row)
+            )
+        )
+        self.assertFalse(
+            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
+
+    def test_inventory_drag_close_or_modal_panel_cancels_without_equip(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        original_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player, "ChaosSword")
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        start = list_cell_center(inventory_list, weapon_column, weapon_row)
+
+        push_sdl_mouse_button_event(start[0], start[1], SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+        panel.close()
+        pump_event_loop(5)
+
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
+
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player, "ChaosSword")
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        start = list_cell_center(inventory_list, weapon_column, weapon_row)
+        target = list_cell_center(equipped_list, 0, 0)
+
+        push_sdl_mouse_button_event(start[0], start[1], SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        modal = g.getGuiHandler().openPanel("questionPanel")
+        modal.setStringProperty("question", "Cancel drag while modal is open?")
+        pump_event_loop(5)
+        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
+        push_sdl_mouse_motion_event(target[0], target[1], target[0] - start[0], target[1] - start[1])
+        pump_event_loop(3)
+        push_sdl_mouse_button_event(target[0], target[1], SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
 
     def test_inventory_quest_item_selection_is_ignored(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
