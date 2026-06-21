@@ -1175,6 +1175,9 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_screenshot_inventory_panel_has_rendered_pixels",
     "test_inventory_drag_release_outside_source_equips_item",
     "test_inventory_preselected_drag_release_equips_item",
+    "test_inventory_drag_rejects_invalid_equipment_slot",
+    "test_inventory_drag_unequips_to_inventory",
+    "test_inventory_drag_quest_item_rejection",
     "test_inventory_equipped_selection_resets_inventory_selection",
     "test_inventory_quest_item_selection_is_ignored",
     "test_fight_quest_item_selection_is_ignored",
@@ -1226,6 +1229,9 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_screenshot_inventory_item_selection_has_rendered_pixels": 6,
     "test_inventory_drag_release_outside_source_equips_item": 6,
     "test_inventory_preselected_drag_release_equips_item": 6,
+    "test_inventory_drag_rejects_invalid_equipment_slot": 6,
+    "test_inventory_drag_unequips_to_inventory": 6,
+    "test_inventory_drag_quest_item_rejection": 6,
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
     "test_inventory_quest_item_selection_is_ignored": 6,
     "test_fight_quest_item_selection_is_ignored": 6,
@@ -1882,7 +1888,30 @@ def click_list_cell(list_view, column, row, button=SDL_BUTTON_LEFT):
 
 def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
     tile = list_view.getTileSize()
-    list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, column * tile + tile // 2, row * tile + tile // 2)
+    x = column * tile + tile // 2
+    y = row * tile + tile // 2
+    list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, x, y)
+    list_view.mouseEvent(gui, SDL_MOUSEBUTTONUP, button, x, y)
+
+
+def drag_list_cell_to_cell(test_case, g, source_list, source_column, source_row, target_list, target_column, target_row):
+    start_x, start_y = rect_center(list_cell_rect(source_list, source_column, source_row))
+    target_x, target_y = rect_center(list_cell_rect(target_list, target_column, target_row))
+
+    push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+    pump_event_loop(3)
+    test_case.assertTrue(g.getGui().hasDragSession())
+    test_case.assertTrue(g.getGui().hasPointerCapture())
+
+    push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
+    pump_event_loop(3)
+    test_case.assertTrue(g.getGui().hasDragSession())
+    test_case.assertTrue(g.getGui().hasPointerCapture())
+
+    push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+    pump_event_loop(5)
+    test_case.assertFalse(g.getGui().hasDragSession())
+    test_case.assertFalse(g.getGui().hasPointerCapture())
 
 
 def activate_first_proxy_graphic(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
@@ -1945,7 +1974,11 @@ def click_first_list_object(test_case, list_view, gui, predicate=None, button=SD
                 if obj is None or obj.getType() == "CGameObject":
                     continue
                 if predicate is None or predicate(obj):
-                    graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1)
+                    if graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1):
+                        tile = list_view.getTileSize()
+                        list_view.mouseEvent(
+                            gui, SDL_MOUSEBUTTONUP, button, column * tile + tile // 2, row * tile + tile // 2
+                        )
                     return obj
     raise AssertionError(f"No matching object found in {list_view.getCollection()} list.")
 
@@ -9899,6 +9932,7 @@ class GameTest(unittest.TestCase):
         inventory_list.setTileSize(50)
         inventory_list.setXPrefferedSize(2)
         inventory_list.setYPrefferedSize(2)
+        inventory_list.setDragStart("")
         inventory_list.refresh()
 
         self.assertTrue(inventory_list.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1))
@@ -10063,6 +10097,9 @@ class GameTest(unittest.TestCase):
             list_view.setXPrefferedSize(2)
             list_view.setYPrefferedSize(2)
             list_view.setAllowOversize(True)
+            list_view.setDragStart("")
+            list_view.setDragValidate("")
+            list_view.setDrop("")
             list_view.refresh()
 
         def populated_cell(list_view):
@@ -14294,6 +14331,62 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertFalse(g.getGui().hasPointerCapture())
         self.assertEqual(inventory_before - 1, player.countItems("ChaosSword"))
         self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
+
+    def test_inventory_drag_rejects_invalid_equipment_slot(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("ChaosSword")
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        inventory_list = find_list_view(panel, "inventoryCollection")
+        equipped_list = find_list_view(panel, "equippedCollection")
+        inventory_before = player.countItems("ChaosSword")
+        weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
+
+        drag_list_cell_to_cell(self, g, inventory_list, 0, 0, equipped_list, 3, 0)
+
+        weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertEqual(inventory_before, player.countItems("ChaosSword"))
+        self.assertEqual(weapon_before, weapon_after)
+
+    def test_inventory_drag_unequips_to_inventory(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.addItem("ChaosSword")
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        inventory_list = find_list_view(panel, "inventoryCollection")
+        equipped_list = find_list_view(panel, "equippedCollection")
+
+        drag_list_cell_to_cell(self, g, inventory_list, 0, 0, equipped_list, 0, 0)
+        self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
+        self.assertEqual(0, player.countItems("ChaosSword"))
+
+        drag_list_cell_to_cell(self, g, equipped_list, 0, 0, inventory_list, 1, 0)
+
+        self.assertIsNone(player.getWeapon())
+        self.assertEqual(1, player.countItems("ChaosSword"))
+
+    def test_inventory_drag_quest_item_rejection(self):
+        game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        quest_item = g.createObject("letterToBeren")
+        self.assertTrue(quest_item.hasTag(game.CTag.QUEST))
+        player.addItem(quest_item)
+        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
+        inventory_list = find_list_view(panel, "inventoryCollection")
+        equipped_list = find_list_view(panel, "equippedCollection")
+        weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
+        start_x, start_y = rect_center(list_cell_rect(inventory_list, 0, 0))
+        target_x, target_y = rect_center(list_cell_rect(equipped_list, 0, 0))
+
+        push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
+        push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        self.assertEqual(1, player.countItems("letterToBeren"))
+        weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertEqual(weapon_before, weapon_after)
 
     def test_inventory_quest_item_selection_is_ignored(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")

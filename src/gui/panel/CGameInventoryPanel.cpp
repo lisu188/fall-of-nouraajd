@@ -21,6 +21,58 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
 
+namespace {
+constexpr const char *INVENTORY_COLLECTION = "inventoryCollection";
+constexpr const char *EQUIPPED_COLLECTION = "equippedCollection";
+
+std::shared_ptr<CPlayer> inventory_player(const std::shared_ptr<CGui> &gui) {
+    if (!gui || !gui->getGame() || !gui->getGame()->getMap()) {
+        return nullptr;
+    }
+    return gui->getGame()->getMap()->getPlayer();
+}
+
+std::shared_ptr<CItem> usable_item(std::shared_ptr<CGameObject> object) {
+    auto item = vstd::cast<CItem>(object);
+    if (!item || item->hasTag(CTag::Quest)) {
+        return nullptr;
+    }
+    return item;
+}
+
+std::shared_ptr<CListView> drag_source_list(const std::shared_ptr<CGui> &gui) {
+    if (!gui || !gui->hasDragSession()) {
+        return nullptr;
+    }
+    return vstd::cast<CListView>(gui->getDragSession()->sourceWidget.lock());
+}
+
+bool drag_source_collection_is(const std::shared_ptr<CGui> &gui, const std::string &collection) {
+    auto source = drag_source_list(gui);
+    return source && source->getCollection() == collection;
+}
+
+std::shared_ptr<CItem> drag_payload_item(const std::shared_ptr<CGui> &gui) {
+    if (!gui || !gui->hasDragSession()) {
+        return nullptr;
+    }
+    return usable_item(gui->getDragSession()->payload);
+}
+
+bool slot_exists(const std::shared_ptr<CGui> &gui, const std::string &slotName) {
+    if (!gui || !gui->getGame()) {
+        return false;
+    }
+    auto configuration = gui->getGame()->getSlotConfiguration()->getConfiguration();
+    return vstd::ctn(configuration, slotName);
+}
+
+bool target_allows_drop(std::shared_ptr<CGameObject> object) {
+    auto item = vstd::cast<CItem>(object);
+    return !item || !item->hasTag(CTag::Quest);
+}
+} // namespace
+
 CListView::collection_pointer CGameInventoryPanel::inventoryCollection(std::shared_ptr<CGui> gui) {
     return std::make_shared<CListView::collection_type>(
         vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getItems()));
@@ -62,6 +114,36 @@ bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, 
     return object && !object->hasTag(CTag::Quest) && selectedInventory.lock() && selectedInventory.lock() == object;
 }
 
+bool CGameInventoryPanel::inventoryDragStart(std::shared_ptr<CGui> gui, int index,
+                                             std::shared_ptr<CGameObject> object) {
+    auto item = usable_item(object);
+    auto player = inventory_player(gui);
+    return player && item && player->hasInInventory(item);
+}
+
+bool CGameInventoryPanel::inventoryDropValidate(std::shared_ptr<CGui> gui, int index,
+                                                std::shared_ptr<CGameObject> object) {
+    auto item = drag_payload_item(gui);
+    auto player = inventory_player(gui);
+    if (!player || !item || !target_allows_drop(object) || !drag_source_collection_is(gui, EQUIPPED_COLLECTION)) {
+        return false;
+    }
+    const std::string slotName = vstd::str(gui->getDragSession()->sourceIndex);
+    return slot_exists(gui, slotName) && player->getItemAtSlot(slotName) == item;
+}
+
+void CGameInventoryPanel::inventoryDrop(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    if (!inventoryDropValidate(gui, index, object)) {
+        return;
+    }
+    auto player = inventory_player(gui);
+    const std::string slotName = vstd::str(gui->getDragSession()->sourceIndex);
+    player->equipItem(slotName, nullptr);
+    selectedInventory.reset();
+    selectedEquipped.reset();
+    refreshViews();
+}
+
 CListView::collection_pointer CGameInventoryPanel::equippedCollection(std::shared_ptr<CGui> gui) {
     CListView::collection_pointer ret = std::make_shared<CListView::collection_type>();
     auto map = gui->getGame()->getMap()->getPlayer()->getEquipped();
@@ -93,6 +175,39 @@ void CGameInventoryPanel::equippedCallback(std::shared_ptr<CGui> gui, int index,
         selectedInventory.reset();
         selectedEquipped = newSelection;
     }
+    refreshViews();
+}
+
+bool CGameInventoryPanel::equippedDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    auto item = usable_item(object);
+    auto player = inventory_player(gui);
+    const std::string slotName = vstd::str(index);
+    return player && item && slot_exists(gui, slotName) && player->getItemAtSlot(slotName) == item;
+}
+
+bool CGameInventoryPanel::equippedDropValidate(std::shared_ptr<CGui> gui, int index,
+                                               std::shared_ptr<CGameObject> object) {
+    auto item = drag_payload_item(gui);
+    auto player = inventory_player(gui);
+    if (!player || !item || !target_allows_drop(object) || !drag_source_collection_is(gui, INVENTORY_COLLECTION)) {
+        return false;
+    }
+    const std::string slotName = vstd::str(index);
+    auto targetItem = vstd::cast<CItem>(object);
+    return slot_exists(gui, slotName) && player->hasInInventory(item) &&
+           player->getItemAtSlot(slotName) == targetItem &&
+           gui->getGame()->getSlotConfiguration()->canFit(slotName, item);
+}
+
+void CGameInventoryPanel::equippedDrop(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    if (!equippedDropValidate(gui, index, object)) {
+        return;
+    }
+    auto player = inventory_player(gui);
+    auto item = drag_payload_item(gui);
+    player->equipItem(vstd::str(index), item);
+    selectedInventory.reset();
+    selectedEquipped.reset();
     refreshViews();
 }
 

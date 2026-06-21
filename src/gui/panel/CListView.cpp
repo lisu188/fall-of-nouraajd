@@ -57,7 +57,7 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
         const bool sourceIsSelf = session->sourceWidget.lock() == self;
         int index = -1;
         std::shared_ptr<CGameObject> object;
-        const bool hitObject = tryGetClickedObject(gui, x, y, index, object);
+        const bool hitObject = tryGetClickedObject(gui, x, y, index, object, hasTargetDragCallbacks());
         if (sourceIsSelf) {
             if (!session->canceled && dragMoved(*session) && hitObject && hasTargetDragCallbacks()) {
                 return runDropCallbacks(gui, index, object, sourceList, session->sourceIndex, session->payload);
@@ -355,7 +355,7 @@ bool CListView::canInvokeParentCallback(const std::shared_ptr<CGui> &gui,
 }
 
 bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index,
-                                    std::shared_ptr<CGameObject> &object) {
+                                    std::shared_ptr<CGameObject> &object, bool allowEmptyCell) {
     const int itemTypeCount = getItemTypesCount(gui);
     clampShift(gui, itemTypeCount);
     const int safeTileSize = std::max(1, tileSize);
@@ -367,6 +367,10 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
     index = shiftIndex(gui, xIndex + (yIndex * getSizeX(gui)));
     auto indexedCollection = calculateIndices(gui);
     if (!vstd::ctn(indexedCollection, index)) {
+        if (allowEmptyCell && showEmpty && !isOversizedForCount(gui, itemTypeCount)) {
+            object = nullptr;
+            return true;
+        }
         return false;
     }
     object = indexedCollection.find(index)->second;
