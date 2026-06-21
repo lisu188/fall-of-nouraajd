@@ -727,13 +727,190 @@ def load_type_registration_exclusions():
     return exclusions
 
 
-def iter_runtime_config_files():
+def iter_global_runtime_config_files():
     config_root = REPO_ROOT / "res" / "config"
     if config_root.exists():
         yield from sorted(config_root.glob("*.json"))
+
+
+def iter_map_runtime_config_files():
     maps_root = REPO_ROOT / "res" / "maps"
     if maps_root.exists():
         yield from sorted(maps_root.glob("*/config.json"))
+
+
+def iter_runtime_config_files():
+    yield from iter_global_runtime_config_files()
+    yield from iter_map_runtime_config_files()
+
+
+def load_runtime_config_entry_records(path, category):
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return []
+    return [
+        {
+            "category": category,
+            "config": value,
+            "owner": path.relative_to(REPO_ROOT).as_posix(),
+            "typeId": type_id,
+        }
+        for type_id, value in sorted(data.items())
+        if isinstance(value, dict) and ("class" in value or "ref" in value)
+    ]
+
+
+def load_global_runtime_config_entry_records():
+    records = []
+    for path in iter_global_runtime_config_files():
+        records.extend(load_runtime_config_entry_records(path, "global-config"))
+    return records
+
+
+def load_map_runtime_config_entry_records(map_name):
+    path = REPO_ROOT / "res" / "maps" / map_name / "config.json"
+    return load_runtime_config_entry_records(path, f"map-config:{map_name}")
+
+
+def runtime_config_values(records):
+    return {record["typeId"]: record["config"] for record in records}
+
+
+def resolve_runtime_config_class(type_id, visible_configs, seen=None):
+    seen = seen or set()
+    if type_id in seen:
+        return ""
+    value = visible_configs.get(type_id)
+    if not isinstance(value, dict):
+        return type_id if type_id.startswith("C") else ""
+    class_name = value.get("class")
+    if isinstance(class_name, str):
+        return class_name
+    ref = value.get("ref")
+    if isinstance(ref, str):
+        return resolve_runtime_config_class(ref, visible_configs, seen | {type_id})
+    return ""
+
+
+def resolve_runtime_config_name(type_id, visible_configs, seen=None):
+    seen = seen or set()
+    if type_id in seen:
+        return None
+    value = visible_configs.get(type_id)
+    if not isinstance(value, dict):
+        return None
+    properties = value.get("properties")
+    if isinstance(properties, dict) and isinstance(properties.get("name"), str):
+        return properties["name"]
+    ref = value.get("ref")
+    if isinstance(ref, str):
+        return resolve_runtime_config_name(ref, visible_configs, seen | {type_id})
+    return None
+
+
+RUNTIME_CONFIG_INHERITANCE_BASES = (
+    "CGameObject",
+    "CMapObject",
+    "CBuilding",
+    "CEvent",
+    "CInteraction",
+    "CDamage",
+    "CStats",
+    "CTile",
+    "CItem",
+    "CWeapon",
+    "CSmallWeapon",
+    "CArmor",
+    "CPotion",
+    "CScroll",
+    "CMarket",
+    "CDialog",
+    "CDialogOption",
+    "CDialogState",
+    "CTrigger",
+    "CQuest",
+    "CController",
+    "CFightController",
+    "CCreature",
+    "CPlayer",
+    "CGameGraphicsObject",
+    "CGui",
+    "CAnimation",
+    "CGamePanel",
+    "CListView",
+)
+
+
+def runtime_config_inheritance_matches(handler, type_id, expected_class, subtype_cache):
+    bases = []
+    if expected_class:
+        bases.append(expected_class)
+    bases.extend(RUNTIME_CONFIG_INHERITANCE_BASES)
+    matches = []
+    for base in dict.fromkeys(bases):
+        if not base:
+            continue
+        if base not in subtype_cache:
+            try:
+                subtype_cache[base] = set(handler.getAllSubTypes(base))
+            except Exception:
+                subtype_cache[base] = set()
+        if type_id in subtype_cache[base]:
+            matches.append(base)
+    return matches
+
+
+def check_runtime_config_entry_creation(g, records, visible_configs):
+    handler = g.getObjectHandler()
+    subtype_cache = {}
+    created = []
+    failed = []
+    for record in records:
+        type_id = record["typeId"]
+        expected_class = resolve_runtime_config_class(type_id, visible_configs)
+        expected_name = resolve_runtime_config_name(type_id, visible_configs)
+        details = {
+            "category": record["category"],
+            "expectedClass": expected_class,
+            "expectedName": expected_name,
+            "owner": record["owner"],
+            "typeId": type_id,
+        }
+        try:
+            obj = g.createObject(type_id)
+        except Exception as exc:
+            failed.append({**details, "errors": [f"{type(exc).__name__}: {exc}"]})
+            continue
+        if obj is None:
+            failed.append({**details, "errors": ["createObject returned None"]})
+            continue
+
+        actual = {
+            "class": obj.getType(),
+            "inheritance": runtime_config_inheritance_matches(handler, type_id, expected_class, subtype_cache),
+            "name": obj.getName(),
+            "typeId": obj.getTypeId(),
+        }
+        errors = []
+        if not expected_class:
+            errors.append("expected class could not be resolved from class/ref chain")
+        elif actual["class"] != expected_class:
+            errors.append(f"created class {actual['class']!r} did not match expected {expected_class!r}")
+        if actual["typeId"] != type_id:
+            errors.append(f"created typeId {actual['typeId']!r} did not match requested {type_id!r}")
+        if not actual["name"]:
+            errors.append("created object name was empty")
+        if expected_name is not None and actual["name"] != expected_name:
+            errors.append(f"created name {actual['name']!r} did not match configured {expected_name!r}")
+        if not actual["inheritance"]:
+            errors.append(f"{type_id!r} was not reported as a subtype of any known runtime base")
+        if expected_class in RUNTIME_CONFIG_INHERITANCE_BASES and expected_class not in actual["inheritance"]:
+            errors.append(f"{type_id!r} was not reported as a subtype of expected class {expected_class!r}")
+
+        created.append({**details, "actual": actual})
+        if errors:
+            failed.append({**details, "actual": actual, "errors": errors})
+    return created, failed
 
 
 def load_runtime_config_type_metadata():
@@ -4233,6 +4410,46 @@ class GameTest(unittest.TestCase):
                 self.assertEqual(type_id, obj.getTypeId())
 
         return True, json.dumps({"registered": sorted(created), "json": json_defined_types}, sort_keys=True)
+
+    @game_test
+    def test_config_entries_create_in_global_and_map_contexts(self):
+        game = load_game_module()
+        global_records = load_global_runtime_config_entry_records()
+        global_visible_configs = runtime_config_values(global_records)
+        checked_contexts = []
+        all_created = []
+        all_failed = []
+
+        g = game.CGameLoader.loadGame()
+        created, failed = check_runtime_config_entry_creation(g, global_records, global_visible_configs)
+        checked_contexts.append(
+            {"created": len(created), "entries": len(global_records), "failed": len(failed), "name": "global"}
+        )
+        all_created.extend(created)
+        all_failed.extend(failed)
+
+        for path in iter_map_runtime_config_files():
+            map_name = path.parent.name
+            map_records = load_map_runtime_config_entry_records(map_name)
+            g = game.CGameLoader.loadGame()
+            game.CGameLoader.startGame(g, map_name)
+            visible_configs = dict(global_visible_configs)
+            visible_configs.update(runtime_config_values(map_records))
+            created, failed = check_runtime_config_entry_creation(g, map_records, visible_configs)
+            checked_contexts.append(
+                {"created": len(created), "entries": len(map_records), "failed": len(failed), "name": map_name}
+            )
+            all_created.extend(created)
+            all_failed.extend(failed)
+
+        report = {
+            "contexts": checked_contexts,
+            "created": len(all_created),
+            "failed": all_failed,
+            "totalEntries": sum(context["entries"] for context in checked_contexts),
+        }
+        self.assertEqual([], all_failed, json.dumps(report, sort_keys=True))
+        return True, json.dumps(report, sort_keys=True)
 
     @game_test
     def test_game_context_owns_runtime_services_and_preserves_creation(self):
@@ -8673,6 +8890,40 @@ class GameTest(unittest.TestCase):
         self.assertEqual("Direct objective", direct.getObjective())
         self.assertEqual("Direct reward", direct.getReward())
         self.assertEqual("Direct hint", direct.getHint())
+        self.assertTrue(game.CQuest.isCompleted(direct))
+        game.CQuest.onComplete(direct)
+        self.assertEqual(["complete", "complete"], direct_calls)
+        self.assertEqual("Direct objective", game.CQuest.getObjective(direct))
+        self.assertEqual("Direct reward", game.CQuest.getReward(direct))
+        self.assertEqual("Direct hint", game.CQuest.getHint(direct))
+
+        event_calls = []
+
+        class DirectEvent(game.CEvent):
+            def onEnter(self, event):
+                event_calls.append(("enter", event))
+
+            def onLeave(self, event):
+                event_calls.append(("leave", event))
+
+        direct_event = DirectEvent()
+        game.CEvent.onEnter(direct_event, None)
+        game.CEvent.onLeave(direct_event, None)
+        self.assertEqual([("enter", None), ("leave", None)], event_calls)
+
+        dialog_calls = []
+
+        class DirectDialog(game.CDialog):
+            def invokeAction(self, action):
+                dialog_calls.append(action)
+
+            def invokeCondition(self, condition):
+                return condition == "ready"
+
+        direct_dialog = DirectDialog()
+        game.CDialogBase2.invokeAction(direct_dialog, "open")
+        self.assertTrue(game.CDialogBase2.invokeCondition(direct_dialog, "ready"))
+        self.assertEqual(["open"], dialog_calls)
 
         class RaisingTextQuest(game.CQuest):
             def getObjective(self):
@@ -8845,6 +9096,8 @@ class GameTest(unittest.TestCase):
         weapon_slot = g.createObject("CSlot")
         weapon_slot.setSlotName("weapon")
         weapon_slot.setTypes({"CWeapon"})
+        self.assertEqual("weapon", weapon_slot.getSlotName())
+        self.assertEqual({"CWeapon"}, set(weapon_slot.getTypes()))
         slot_config = g.createObject("CSlotConfig")
         slot_config.setConfiguration({"weapon": weapon_slot})
         weapon = g.createObject("CWeapon")
