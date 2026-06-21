@@ -1184,6 +1184,8 @@ void CRandomMapGenerator::generateTiles(std::shared_ptr<CMap> &map, const rdg::D
 
 std::shared_ptr<CGame> CGameLoader::loadGame() {
     std::shared_ptr<CGame> game = std::make_shared<CGame>();
+    game->getResourcesProvider();
+    game->getConfigurationProvider();
     initObjectHandler(game->getObjectHandler());
     initConfigurations(game->getObjectHandler());
     initScriptHandler(game->getScriptHandler(), game);

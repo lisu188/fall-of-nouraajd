@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CProvider.h"
 #include "core/CSceneManager.h"
 #include "core/CSlotConfig.h"
 #include "gui/CGui.h"
@@ -83,6 +84,22 @@ std::shared_ptr<CSlotConfig> CGameContext::getSlotConfiguration() {
     });
 }
 
+std::shared_ptr<CResourcesProvider> CGameContext::getResourcesProvider() {
+    requireActiveService("CResourcesProvider");
+    if (!resourcesProvider) {
+        resourcesProvider = std::make_shared<CResourcesProvider>();
+    }
+    return resourcesProvider;
+}
+
+std::shared_ptr<CConfigurationProvider> CGameContext::getConfigurationProvider() {
+    requireActiveService("CConfigurationProvider");
+    if (!configurationProvider) {
+        configurationProvider = std::make_shared<CConfigurationProvider>(getResourcesProvider());
+    }
+    return configurationProvider;
+}
+
 bool CGameContext::isActive() const { return active.load(std::memory_order_acquire); }
 
 void CGameContext::shutdown() {
@@ -111,6 +128,8 @@ void CGameContext::shutdown(CGame *owner) {
         scriptHandler->releaseState();
     }
     slotConfiguration.clear();
+    configurationProvider.reset();
+    resourcesProvider.reset();
     scriptHandler.reset();
     guiHandler.reset();
     rngHandler.reset();

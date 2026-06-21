@@ -64,3 +64,9 @@ void CGame::setGui(std::shared_ptr<CGui> _gui) { CGame::_gui = _gui; }
 std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() { return getContext()->getSlotConfiguration(); }
 
 std::shared_ptr<CRngHandler> CGame::getRngHandler() { return getContext()->getRngHandler(); }
+
+std::shared_ptr<CResourcesProvider> CGame::getResourcesProvider() { return getContext()->getResourcesProvider(); }
+
+std::shared_ptr<CConfigurationProvider> CGame::getConfigurationProvider() {
+    return getContext()->getConfigurationProvider();
+}
