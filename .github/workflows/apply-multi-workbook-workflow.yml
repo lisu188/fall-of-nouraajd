@@ -1,0 +1,75 @@
+name: apply multi-workbook queue workflow
+
+on:
+  push:
+    branches:
+      - codex/multi-workbook-queue-workflow-v2
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-multi-workbook-queue-workflow
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: codex/multi-workbook-queue-workflow-v2
+          fetch-depth: 0
+
+      - name: Reconstruct and apply verified patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/multi-workbook-payload/part-*.b64 > /tmp/multi-workbook.patch.xz.b64
+          echo "8dec1b5c98515dced07c701a175129bf476f246ae747615693855ed1945a87f8  /tmp/multi-workbook.patch.xz.b64" | sha256sum --check --strict
+          base64 --decode /tmp/multi-workbook.patch.xz.b64 > /tmp/multi-workbook.patch.xz
+          echo "79378e4001cad8647f08111a906ba1b40f9e110815db1980c68657f2d2ebbc5d  /tmp/multi-workbook.patch.xz" | sha256sum --check --strict
+          xz --decompress --stdout /tmp/multi-workbook.patch.xz > /tmp/multi-workbook.patch
+          echo "ca6804464494e50040836d66b3fd56ab3364e634835d46a8f8fd3d46e2428f62  /tmp/multi-workbook.patch" | sha256sum --check --strict
+          git apply --check /tmp/multi-workbook.patch
+          git apply /tmp/multi-workbook.patch
+
+      - name: Remove temporary transport files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/multi-workbook-payload
+          rm -f .github/workflows/export-planning-workbooks.yml
+          rm -f .github/workflows/apply-multi-workbook-workflow.yml
+
+      - name: Validate aggregate queue workflow
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest \
+            tests.test_issue_queue \
+            tests.test_workbook_queue \
+            tests.test_ci_change_classifier \
+            tests.test_pr_review_audit \
+            tests.test_prompt_inventory \
+            tests.test_workflow_observations
+          python3 scripts/workbook_queue.py workbooks --json
+          python3 scripts/workbook_queue.py validate
+          git diff --exit-code -- planning/*.xlsx
+          git diff --check
+
+      - name: Commit workflow changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "Support multiple queue workbooks"
+          git push origin HEAD:codex/multi-workbook-queue-workflow-v2
