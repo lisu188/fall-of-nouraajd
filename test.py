@@ -140,6 +140,7 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
     "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+    "PanelLayoutManifestTest.test_gui_window_is_created_resizable_with_minimum_size",
 }
 GAMEPLAY_TEST_PREFIXES = (
     "ConsoleEventIsolationTest.",
@@ -874,6 +875,9 @@ SDL_KEYUP = 0x301
 SDL_QUIT = 0x100
 SDL_WINDOWEVENT = 0x200
 SDL_WINDOWEVENT_SIZE_CHANGED = 0x06
+SDL_WINDOW_RESIZABLE = 0x20
+SDL_WINDOW_MIN_WIDTH = 320
+SDL_WINDOW_MIN_HEIGHT = 240
 SDL_INIT_EVENTS = 0x00004000
 SDL_MOUSEMOTION = 0x400
 SDL_MOUSEBUTTONDOWN = 0x401
@@ -1184,6 +1188,32 @@ def focused_sdl_window():
     sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
     sdl.SDL_GetMouseFocus.restype = ctypes.c_void_p
     return sdl.SDL_GetKeyboardFocus() or sdl.SDL_GetMouseFocus()
+
+
+def assert_focused_sdl_window_resizable(test_case):
+    import ctypes
+
+    sdl = load_sdl_library()
+    focused_window = focused_sdl_window()
+    if not focused_window:
+        raise AssertionError("Expected a focused SDL window for resize flag inspection.")
+
+    sdl.SDL_GetWindowFlags.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetWindowFlags.restype = ctypes.c_uint32
+    flags = sdl.SDL_GetWindowFlags(focused_window)
+    test_case.assertTrue(
+        flags & SDL_WINDOW_RESIZABLE,
+        f"SDL window flags should include SDL_WINDOW_RESIZABLE, got 0x{flags:x}.",
+    )
+    min_width = ctypes.c_int()
+    min_height = ctypes.c_int()
+    sdl.SDL_GetWindowMinimumSize.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    sdl.SDL_GetWindowMinimumSize(focused_window, ctypes.byref(min_width), ctypes.byref(min_height))
+    test_case.assertEqual((SDL_WINDOW_MIN_WIDTH, SDL_WINDOW_MIN_HEIGHT), (min_width.value, min_height.value))
 
 
 def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
@@ -13777,6 +13807,17 @@ def make_unique_scroll_items(g, count, prefix):
 
 
 class PanelLayoutManifestTest(unittest.TestCase):
+    def test_gui_window_is_created_resizable_with_minimum_size(self):
+        gui_source = (REPO_ROOT / "src" / "gui" / "CGui.cpp").read_text(encoding="utf-8")
+        self.assertRegex(
+            gui_source,
+            r"SDL_CreateWindowAndRenderer\s*\(\s*width\s*,\s*height\s*,\s*SDL_WINDOW_RESIZABLE\s*,",
+        )
+        self.assertRegex(
+            gui_source,
+            r"SDL_SetWindowMinimumSize\s*\(\s*rawWindow\s*,\s*GUI_MIN_WIDTH\s*,\s*GUI_MIN_HEIGHT\s*\)",
+        )
+
     def test_panel_layout_manifest_matches_panels_json(self):
         panel_defs = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
         self.assertEqual(set(panel_defs), set(PANEL_LAYOUT_CASES))
@@ -13829,6 +13870,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         gui = g.getGui()
         map_graph = next(child for child in collect_gui_children(gui, "CMapGraphicsObject"))
 
+        assert_focused_sdl_window_resizable(self)
         width, height = push_sdl_window_size_changed_event(800, 600)
         tile_size = gui.getNumericProperty("tileSize")
         expected_proxy_count = (width // tile_size + 1) * (height // tile_size + 1)
