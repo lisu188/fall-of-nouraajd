@@ -656,7 +656,8 @@ void init_game_module(py::module_ &m) {
                 self.registerConfig(name, parsed);
             },
             "Register object configuration from a JSON string.")
-        .def("getAllTypes", &CObjectHandler::getAllTypes, "Return all configured object type ids.")
+        .def("getAllTypes", &CObjectHandler::getAllTypes,
+             "Return all registered class names and configured object type ids.")
         .def("getAllSubTypes", &CObjectHandler::getAllSubTypes,
              "Return configured type ids whose class inherits the given base class.");
 
