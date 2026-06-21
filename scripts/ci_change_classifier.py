@@ -42,6 +42,8 @@ NATIVE_PATH_PATTERNS = (
 )
 
 LIGHTWEIGHT_PATH_PATTERNS = (
+    ".github/multi-workbook-inspection.txt",
+    ".github/multi-workbook-payload/*",
     ".github/workflows/*",
     "AGENTS.md",
     "docs/*",
