@@ -16,13 +16,13 @@ Current queue-compatible workbooks are:
 
 - `planning/fall_of_nouraajd_issue_proposals.xlsx`
 - `planning/fall_of_nouraajd_creature_archetype_jira_plan.xlsx`
+- `planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx`
 
-`planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx` has a
-`GitHub Issues` implementation-reference layout rather than an `Issue
-Proposals` queue. Discovery reports it as reference/skipped and never mutates
-it. Do not invent a field mapping for that workbook; add an explicit,
-source-backed adapter in a separate change if it must become writable queue
-state later.
+The GitHub issues implementation workbook retains its original planning sheets
+(`Dashboard`, `GitHub Issues`, `Implementation Briefs`, `Source Evidence`, and
+`Validation & Close Log`) and adds a canonical `Issue Proposals` sheet. The
+queue rows preserve the source issue number and source-backed implementation
+notes while initializing workflow state as unclaimed `NOT_STARTED` work.
 
 Inspect discovery before dispatching:
 
