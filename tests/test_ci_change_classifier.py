@@ -30,6 +30,16 @@ class CiChangeClassifierTest(unittest.TestCase):
         self.assertEqual((), classification.nativeReasons)
         self.assertIn(".github/workflows/build.yml", classification.paths)
 
+    def test_workflow_observation_ledger_json_does_not_need_native_validation(self) -> None:
+        classification = self.classify(
+            "planning/workflow_observations/records/20260621T120000Z-controller-example-1234abcd.json",
+            "planning/workflow_observations/resolutions/20260621T120000Z-controller-example-1234abcd.json",
+        )
+
+        self.assertFalse(classification.nativeNeeded)
+        self.assertFalse(classification.coverageNeeded)
+        self.assertEqual((), classification.nativeReasons)
+
     def test_gui_cpp_requires_native_and_coverage_validation(self) -> None:
         classification = self.classify("src/gui/panel/CListView.cpp")
 

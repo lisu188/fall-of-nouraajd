@@ -96,9 +96,11 @@ Publish observation files through observation-only pull requests after evidence 
   deletions of immutable records and receipts;
 - same-ID publication fails because files are created with exclusive no-overwrite semantics.
 
-Observation-only and resolution-only PRs are not CI-exempt under the current repository policy. They do not need global
-serialization because each record or receipt has a distinct immutable path, but branch protection and the normal PR merge
-policy still apply unless the repository owner adds an explicit exemption later.
+Observation-only and resolution-only PRs are not CI-exempt under the current repository policy. They are workflow-only
+inputs to `scripts/ci_change_classifier.py`: they must run the fast ledger and queue validation path, but record/receipt
+JSON alone must not require native Linux/Windows validation. They do not need global serialization because each record or
+receipt has a distinct immutable path, but branch protection and the normal PR merge policy still apply unless the
+repository owner adds an explicit exemption later.
 
 At each optimizer cycle, validate the ledger and review open observations before selecting new workflow work. Use
 `next` as deterministic evidence, not as an automatic claim. The optimizer must still inspect current source, reproduce

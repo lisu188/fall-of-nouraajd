@@ -70,6 +70,12 @@ class PollPrChecksTest(unittest.TestCase):
     def test_default_jobs_follow_changed_path_validation_class(self) -> None:
         self.assertEqual(("linux",), poll_pr_checks.defaultJobsForChangedFiles(["docs/testing.md"]))
         self.assertEqual(
+            ("linux",),
+            poll_pr_checks.defaultJobsForChangedFiles(
+                ["planning/workflow_observations/resolutions/example-observation.json"]
+            ),
+        )
+        self.assertEqual(
             ("linux", "windows-deps", "windows"),
             poll_pr_checks.defaultJobsForChangedFiles(["src/handler/CFightHandler.cpp"]),
         )

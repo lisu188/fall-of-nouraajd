@@ -163,8 +163,9 @@ publish a separate resolution-only PR that adds only `planning/workflow_observat
 
 Observation-only and resolution-only PRs are not CI-exempt under the current repository policy. They do not need the
 global XLSX serialization lane because each record or receipt is a unique immutable path, but same-ID publication must
-fail and the normal PR merge policy still applies. Include pending observation IDs in live status when a record or
-resolution is awaiting publication.
+fail and the normal PR merge policy still applies. Record/receipt JSON-only PRs are workflow-only for
+`scripts/ci_change_classifier.py`: they run fast ledger and queue validation without native Linux/Windows validation.
+Include pending observation IDs in live status when a record or resolution is awaiting publication.
 
 Assign one read-only QA role when subagent capacity permits. QA reviews issue selection risk, diff scope, regression
 coverage, validation commands, GitHub Actions evidence, and merge readiness. QA must not claim issues, edit the
