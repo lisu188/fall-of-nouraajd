@@ -17,7 +17,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
-#include "CSlotConfig.h"
 #include "core/CConcepts.h"
 #include "core/CGlobal.h"
 #include "core/CPlugin.h"
@@ -43,6 +42,8 @@ class CRngHandler;
 class CGuiHandler;
 
 class CScriptHandler;
+
+class CSlotConfig;
 
 class CGame : public CGameObject {
     V_META(CGame, CGameObject, vstd::meta::empty())
@@ -84,8 +85,6 @@ class CGame : public CGameObject {
     std::shared_ptr<CSlotConfig> getSlotConfiguration();
 
   private:
-    vstd::lazy<CSlotConfig> slotConfiguration;
-
     std::shared_ptr<CGameContext> context;
     std::shared_ptr<CSceneManager> sceneManager;
     std::shared_ptr<CMap> map;
