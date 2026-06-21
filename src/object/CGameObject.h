@@ -227,6 +227,14 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     void recordPropertyChanged(const std::string &name);
 
+    void notifyPropertyChangedWithoutInvalidation(const std::string &name);
+
+    void notifyPropertiesChangedWithoutInvalidation(const std::set<std::string> &names);
+
+    void invalidateCachedPropertyState(const std::string &name);
+
+    void invalidateCachedPropertyState(const std::set<std::string> &names);
+
     vstd::lazy<CAnimation> graphicsObject;
 
     std::string type;

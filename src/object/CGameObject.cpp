@@ -280,9 +280,7 @@ void CGameObject::removeTag(const std::string &tag) { removeTag(CTags::fromStrin
 std::string CGameObject::getAnimation() { return animation; }
 
 void CGameObject::setAnimation(std::string animation) {
-    // TODO: implement this in AOP way
-    graphicsObject.clear();
-    this->animation = animation;
+    this->animation = std::move(animation);
     recordDirectPropertyChanged("animation");
 }
 
@@ -336,11 +334,21 @@ void CGameObject::disconnect(const std::string &signal, const std::shared_ptr<CG
 }
 
 void CGameObject::notifyPropertyChanged(const std::string &name) {
+    invalidateCachedPropertyState(name);
+    notifyPropertyChangedWithoutInvalidation(name);
+}
+
+void CGameObject::notifyPropertyChangedWithoutInvalidation(const std::string &name) {
     signal("propertyChanged", name);
     signal(name + "Changed");
 }
 
 void CGameObject::notifyPropertiesChanged(const std::set<std::string> &names) {
+    invalidateCachedPropertyState(names);
+    notifyPropertiesChangedWithoutInvalidation(names);
+}
+
+void CGameObject::notifyPropertiesChangedWithoutInvalidation(const std::set<std::string> &names) {
     if (!names.empty()) {
         signal("propertiesChanged", names);
     }
@@ -358,15 +366,16 @@ void CGameObject::endPropertyNotificationBatch() {
     }
     auto names = std::move(batchedPropertyNotifications);
     batchedPropertyNotifications.clear();
-    notifyPropertiesChanged(names);
+    notifyPropertiesChangedWithoutInvalidation(names);
 }
 
 void CGameObject::recordPropertyChanged(const std::string &name) {
+    invalidateCachedPropertyState(name);
     if (propertyNotificationBatchDepth > 0) {
         batchedPropertyNotifications.insert(name);
         return;
     }
-    notifyPropertyChanged(name);
+    notifyPropertyChangedWithoutInvalidation(name);
 }
 
 void CGameObject::recordDirectPropertyChanged(const std::string &name) {
@@ -376,6 +385,18 @@ void CGameObject::recordDirectPropertyChanged(const std::string &name) {
         }
     }
     recordPropertyChanged(name);
+}
+
+void CGameObject::invalidateCachedPropertyState(const std::string &name) {
+    if (name == "animation") {
+        graphicsObject.clear();
+    }
+}
+
+void CGameObject::invalidateCachedPropertyState(const std::set<std::string> &names) {
+    if (names.contains("animation")) {
+        graphicsObject.clear();
+    }
 }
 
 bool CGameObject::hasProperty(std::string name) { return this->meta()->has_property<CGameObject>(name, this->ptr()); }
