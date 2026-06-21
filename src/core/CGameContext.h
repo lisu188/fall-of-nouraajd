@@ -21,13 +21,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <memory>
 
+#include "core/CGlobal.h"
+
 class CGame;
 class CGuiHandler;
 class CObjectHandler;
 class CRngHandler;
 class CScriptHandler;
+class CSlotConfig;
 
 class CGameContext {
+    friend class CGame;
+
   public:
     using TransitionGeneration = std::uint64_t;
 
@@ -41,6 +46,12 @@ class CGameContext {
 
     std::shared_ptr<CRngHandler> getRngHandler();
 
+    std::shared_ptr<CSlotConfig> getSlotConfiguration();
+
+    bool isActive() const;
+
+    void shutdown();
+
     TransitionGeneration getTransitionGeneration() const;
 
     TransitionGeneration captureTransitionGeneration() const;
@@ -50,10 +61,16 @@ class CGameContext {
     TransitionGeneration advanceTransitionGeneration();
 
   private:
+    void shutdown(CGame *owner);
+
+    void requireActiveService(const char *serviceName) const;
+
     std::weak_ptr<CGame> game;
     std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
     std::shared_ptr<CRngHandler> rngHandler;
+    vstd::lazy<CSlotConfig> slotConfiguration;
+    std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;
 };

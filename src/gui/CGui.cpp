@@ -23,14 +23,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
+#include "gui/panel/CGamePanel.h"
 
 #include <algorithm>
-#include <limits>
 #include <string>
 
 namespace {
 constexpr int DRAG_PROXY_FALLBACK_SIZE = 50;
-constexpr int DRAG_PROXY_PRIORITY = std::numeric_limits<int>::max();
+constexpr int GUI_MIN_WIDTH = 320;
+constexpr int GUI_MIN_HEIGHT = 240;
 
 std::shared_ptr<CLayout> createDragProxyLayout(const std::shared_ptr<CGui> &gui, const SDL_Point &current) {
     const int size = gui ? std::clamp(gui->getTileSize(), 1, 512) : DRAG_PROXY_FALLBACK_SIZE;
@@ -49,7 +50,6 @@ std::shared_ptr<CGameGraphicsObject> createDragProxyWidget(const std::shared_ptr
         return nullptr;
     }
     animation->withCallback([](std::shared_ptr<CGui>, SDL_EventType, int, int, int) { return false; });
-    animation->setPriority(DRAG_PROXY_PRIORITY);
     return animation;
 }
 
@@ -79,7 +79,7 @@ void syncDragProxyWidget(const std::shared_ptr<CGui> &gui, CGui::DragSession &se
     }
     session.proxyWidget->setLayout(createDragProxyLayout(gui, session.current));
     if (!session.proxyWidget->isAttachedToGui(gui)) {
-        gui->addChild(session.proxyWidget);
+        gui->pushChild(session.proxyWidget);
     }
 }
 
@@ -101,7 +101,8 @@ CGui::CGui() {
     SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
     SDL_Window *rawWindow = nullptr;
     SDL_Renderer *rawRenderer = nullptr;
-    SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, 0, &rawWindow, &rawRenderer));
+    SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_RESIZABLE, &rawWindow, &rawRenderer));
+    SDL_SetWindowMinimumSize(rawWindow, GUI_MIN_WIDTH, GUI_MIN_HEIGHT);
     window.reset(rawWindow);
     renderer.reset(rawRenderer);
     // TODO: set icon
@@ -109,6 +110,26 @@ CGui::CGui() {
 }
 
 CGui::~CGui() = default;
+
+void CGui::shutdown() {
+    clearDragSession();
+    releasePointerCapture();
+
+    auto topLevelChildren = getChildren();
+    for (const auto &child : topLevelChildren) {
+        if (!child || !child->getModal() || !findChild(child)) {
+            continue;
+        }
+        if (auto panel = vstd::cast<CGamePanel>(child)) {
+            panel->close();
+        } else {
+            removeChild(child);
+        }
+    }
+    setChildren({});
+    _textureCache.clear();
+    _textManager.clear();
+}
 
 void CGui::render(int i1) {
     CUtil::setRenderDrawColor(renderer.get(), CColors::Black);
@@ -130,7 +151,7 @@ std::shared_ptr<CTextManager> CGui::getTextManager() {
 int CGui::getWidth() { return width; }
 
 void CGui::setWidth(int width) {
-    const int clampedWidth = std::clamp(width, 320, 7680);
+    const int clampedWidth = std::clamp(width, GUI_MIN_WIDTH, 7680);
     const bool changed = CGui::width != clampedWidth;
     CGui::width = clampedWidth;
     if (auto layout = getLayout()) {
@@ -144,7 +165,7 @@ void CGui::setWidth(int width) {
 int CGui::getHeight() { return height; }
 
 void CGui::setHeight(int height) {
-    const int clampedHeight = std::clamp(height, 240, 4320);
+    const int clampedHeight = std::clamp(height, GUI_MIN_HEIGHT, 4320);
     const bool changed = CGui::height != clampedHeight;
     CGui::height = clampedHeight;
     if (auto layout = getLayout()) {

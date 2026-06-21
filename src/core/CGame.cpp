@@ -25,7 +25,7 @@ CGame::CGame() {}
 
 CGame::~CGame() {
     if (context) {
-        context->advanceTransitionGeneration();
+        context->shutdown(this);
     }
 }
 
@@ -61,8 +61,6 @@ std::shared_ptr<CGui> CGame::getGui() const { return _gui; }
 
 void CGame::setGui(std::shared_ptr<CGui> _gui) { CGame::_gui = _gui; }
 
-std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() {
-    return slotConfiguration.get([this]() { return createObject<CSlotConfig>("slotConfiguration"); });
-}
+std::shared_ptr<CSlotConfig> CGame::getSlotConfiguration() { return getContext()->getSlotConfiguration(); }
 
 std::shared_ptr<CRngHandler> CGame::getRngHandler() { return getContext()->getRngHandler(); }

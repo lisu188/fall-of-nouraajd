@@ -369,6 +369,7 @@
             "callback": "inventoryCallback",
             "collection": "inventoryCollection",
             "dragStart": "inventoryDragStart",
+            "dragCancel": "inventoryDragCancel",
             "dragValidate": "inventoryDropValidate",
             "drop": "inventoryDrop",
             "layout": {
@@ -397,6 +398,7 @@
             "callback": "equippedCallback",
             "collection": "equippedCollection",
             "dragStart": "equippedDragStart",
+            "dragCancel": "equippedDragCancel",
             "dragValidate": "equippedDropValidate",
             "drop": "equippedDrop",
             "layout": {

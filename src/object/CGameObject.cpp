@@ -47,6 +47,9 @@ CGameObject::PropertyNotificationBatch::PropertyNotificationBatch(CGameObject &o
 CGameObject::PropertyNotificationBatch::~PropertyNotificationBatch() { object.endPropertyNotificationBatch(); }
 
 std::shared_ptr<CMap> CGameObject::getMap() {
+    if (auto map = owningMap.lock()) {
+        return map;
+    }
     auto currentGame = getGame();
     return currentGame ? currentGame->getMap() : nullptr;
 }
@@ -54,6 +57,16 @@ std::shared_ptr<CMap> CGameObject::getMap() {
 std::shared_ptr<CGame> CGameObject::getGame() { return game.lock(); }
 
 void CGameObject::setGame(std::shared_ptr<CGame> map) { this->game = map; }
+
+void CGameObject::setOwningMap(std::shared_ptr<CMap> map) { this->owningMap = std::move(map); }
+
+void CGameObject::clearOwningMap(const std::shared_ptr<CMap> &expectedMap) {
+    auto map = owningMap.lock();
+    if (!map || (expectedMap && map != expectedMap)) {
+        return;
+    }
+    owningMap.reset();
+}
 
 void CGameObject::setStringProperty(std::string name, std::string value) {
     std::string previous;

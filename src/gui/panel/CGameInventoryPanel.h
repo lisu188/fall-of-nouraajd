@@ -31,12 +31,16 @@ class CGameInventoryPanel : public CGamePanel {
         V_METHOD(CGameInventoryPanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
         V_METHOD(CGameInventoryPanel, inventoryDragStart, bool, std::shared_ptr<CGui>, int,
                  std::shared_ptr<CGameObject>),
+        V_METHOD(CGameInventoryPanel, inventoryDragCancel, void, std::shared_ptr<CGui>, int,
+                 std::shared_ptr<CGameObject>),
         V_METHOD(CGameInventoryPanel, inventoryDropValidate, bool, std::shared_ptr<CGui>, int,
                  std::shared_ptr<CGameObject>),
         V_METHOD(CGameInventoryPanel, inventoryDrop, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
         V_METHOD(CGameInventoryPanel, equippedCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
         V_METHOD(CGameInventoryPanel, equippedCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
         V_METHOD(CGameInventoryPanel, equippedDragStart, bool, std::shared_ptr<CGui>, int,
+                 std::shared_ptr<CGameObject>),
+        V_METHOD(CGameInventoryPanel, equippedDragCancel, void, std::shared_ptr<CGui>, int,
                  std::shared_ptr<CGameObject>),
         V_METHOD(CGameInventoryPanel, equippedDropValidate, bool, std::shared_ptr<CGui>, int,
                  std::shared_ptr<CGameObject>),
@@ -56,6 +60,8 @@ class CGameInventoryPanel : public CGamePanel {
 
     bool inventoryDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
+    void inventoryDragCancel(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
     bool inventoryDropValidate(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
     void inventoryDrop(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
@@ -65,6 +71,8 @@ class CGameInventoryPanel : public CGamePanel {
     void equippedCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
 
     bool equippedDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
+    void equippedDragCancel(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 
     bool equippedDropValidate(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
 

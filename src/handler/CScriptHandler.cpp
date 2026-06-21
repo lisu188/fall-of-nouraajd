@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include <memory>
 #include <pybind11/eval.h>
+#include <stdexcept>
 
 namespace {
 class CScriptHandlerState {
@@ -27,6 +28,9 @@ class CScriptHandlerState {
 };
 
 CScriptHandlerState &get_state(const std::shared_ptr<void> &pythonState) {
+    if (!pythonState) {
+        throw std::runtime_error("Python script handler state has been released.");
+    }
     return *std::static_pointer_cast<CScriptHandlerState>(pythonState);
 }
 } // namespace
@@ -39,6 +43,8 @@ CScriptHandler::CScriptHandler() {
 }
 
 CScriptHandler::~CScriptHandler() = default;
+
+void CScriptHandler::releaseState() { pythonState.reset(); }
 
 void CScriptHandler::execute_script(std::string script, pybind11::object name_space) {
     auto &state = get_state(pythonState);

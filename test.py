@@ -140,6 +140,7 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
     "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
+    "PanelLayoutManifestTest.test_gui_window_is_created_resizable_with_minimum_size",
 }
 GAMEPLAY_TEST_PREFIXES = (
     "ConsoleEventIsolationTest.",
@@ -163,6 +164,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
 SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
+    "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
     XVFB_GAMEPLAY_PARENT_TEST,
 }
 SERIAL_TEST_PREFIXES = ("McpServerTest.test_stdio_map_walkthrough_",)
@@ -225,6 +227,10 @@ def unique_save_name(prefix):
     shard = os.environ.get("GAME_TEST_SHARD")
     shard_part = f"-{shard}" if shard else ""
     return f"{prefix}{shard_part}-{os.getpid()}-{time.time_ns()}"
+
+
+def unique_map_name(prefix):
+    return unique_save_name(prefix)
 
 
 SAVE_FORMAT = "fall-of-nouraajd-save"
@@ -504,6 +510,8 @@ def fixture_player_summary(snapshot):
 
 
 def fixture_quest_ids(quests):
+    if not isinstance(quests, list):
+        return []
     quest_ids = []
     for quest in quests:
         if not isinstance(quest, dict):
@@ -514,6 +522,8 @@ def fixture_quest_ids(quests):
 
 
 def fixture_item_ids(items):
+    if not isinstance(items, list):
+        return []
     item_ids = []
     for item in items:
         if not isinstance(item, dict):
@@ -557,6 +567,36 @@ def save_fixture_summary(document):
     return summary
 
 
+def normalize_save_snapshot(value):
+    if isinstance(value, dict):
+        return {key: normalize_save_snapshot(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        normalized = [normalize_save_snapshot(item) for item in value]
+        if all(isinstance(item, dict) for item in normalized):
+            return sorted(normalized, key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")))
+        return normalized
+    return value
+
+
+def comparable_save_state(summary):
+    comparable = dict(summary)
+    comparable.pop("encoding", None)
+    comparable.pop("schemaVersion", None)
+    return comparable
+
+
+def runtime_save_state_summary(snapshot):
+    return comparable_save_state(save_fixture_summary(snapshot))
+
+
+def install_save_fixture_slot(slot_name, expected):
+    cleanup_save_slot(slot_name)
+    save_primary_path(slot_name).parent.mkdir(exist_ok=True)
+    shutil.copyfile(SAVE_FIXTURE_DIR / expected["primary"], save_primary_path(slot_name))
+    if expected.get("backup"):
+        shutil.copyfile(SAVE_FIXTURE_DIR / expected["backup"], save_backup_path(slot_name))
+
+
 class SaveFixtureTest(unittest.TestCase):
     maxDiff = None
 
@@ -585,6 +625,38 @@ class SaveFixtureTest(unittest.TestCase):
             if document.get("format") == SAVE_FORMAT:
                 assert_save_envelope(self, document, expected["summary"]["map"])
             self.assertEqual(expected["summary"], save_fixture_summary(document), fixture_name)
+
+    def test_save_fixture_summary_treats_null_player_collections_as_empty(self):
+        document = {
+            "format": SAVE_FORMAT,
+            "schemaVersion": SAVE_SCHEMA_VERSION,
+            "mapName": "test",
+            "snapshot": {
+                "class": "CMap",
+                "properties": {
+                    "description": "runtime-null-collections",
+                    "mapName": "test",
+                    "objects": [
+                        {
+                            "class": "CPlayer",
+                            "properties": {
+                                "completedQuests": None,
+                                "items": None,
+                                "name": "player",
+                                "quests": None,
+                                "typeId": "Warrior",
+                            },
+                        }
+                    ],
+                },
+            },
+        }
+
+        summary = save_fixture_summary(document)
+
+        self.assertEqual([], summary["player"]["activeQuests"])
+        self.assertEqual([], summary["player"]["completedQuests"])
+        self.assertEqual([], summary["player"]["items"])
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
@@ -1051,6 +1123,9 @@ SDL_KEYUP = 0x301
 SDL_QUIT = 0x100
 SDL_WINDOWEVENT = 0x200
 SDL_WINDOWEVENT_SIZE_CHANGED = 0x06
+SDL_WINDOW_RESIZABLE = 0x20
+SDL_WINDOW_MIN_WIDTH = 320
+SDL_WINDOW_MIN_HEIGHT = 240
 SDL_INIT_EVENTS = 0x00004000
 SDL_MOUSEMOTION = 0x400
 SDL_MOUSEBUTTONDOWN = 0x401
@@ -1175,12 +1250,14 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_screenshot_inventory_panel_has_rendered_pixels",
     "test_inventory_drag_release_outside_source_equips_item",
     "test_inventory_preselected_drag_release_equips_item",
-    "test_inventory_drag_rejects_invalid_equipment_slot",
-    "test_inventory_drag_unequips_to_inventory",
-    "test_inventory_drag_quest_item_rejection",
+    "test_inventory_drag_valid_equip_unequip_and_refresh_counts",
+    "test_inventory_drag_invalid_slot_and_cancel_keep_state",
+    "test_inventory_drag_close_or_modal_panel_cancels_without_equip",
     "test_inventory_equipped_selection_resets_inventory_selection",
     "test_inventory_quest_item_selection_is_ignored",
     "test_fight_quest_item_selection_is_ignored",
+    "test_cave_loss_does_not_reopen_fight_panel",
+    "test_fight_panel_select_interaction_cancels_on_sdl_quit",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
     "test_panel_harness_info_artifacts",
@@ -1229,12 +1306,14 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_screenshot_inventory_item_selection_has_rendered_pixels": 6,
     "test_inventory_drag_release_outside_source_equips_item": 6,
     "test_inventory_preselected_drag_release_equips_item": 6,
-    "test_inventory_drag_rejects_invalid_equipment_slot": 6,
-    "test_inventory_drag_unequips_to_inventory": 6,
-    "test_inventory_drag_quest_item_rejection": 6,
+    "test_inventory_drag_valid_equip_unequip_and_refresh_counts": 6,
+    "test_inventory_drag_invalid_slot_and_cancel_keep_state": 6,
+    "test_inventory_drag_close_or_modal_panel_cancels_without_equip": 6,
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
     "test_inventory_quest_item_selection_is_ignored": 6,
     "test_fight_quest_item_selection_is_ignored": 6,
+    "test_cave_loss_does_not_reopen_fight_panel": 6,
+    "test_fight_panel_select_interaction_cancels_on_sdl_quit": 6,
 }
 NOURAAJD_QUEST_LOG_SCREENSHOT_CHECKPOINTS = {
     "xvfb_nouraajd_quest_log_rolf_initial",
@@ -1367,6 +1446,32 @@ def focused_sdl_window():
     sdl.SDL_GetKeyboardFocus.restype = ctypes.c_void_p
     sdl.SDL_GetMouseFocus.restype = ctypes.c_void_p
     return sdl.SDL_GetKeyboardFocus() or sdl.SDL_GetMouseFocus()
+
+
+def assert_focused_sdl_window_resizable(test_case):
+    import ctypes
+
+    sdl = load_sdl_library()
+    focused_window = focused_sdl_window()
+    if not focused_window:
+        raise AssertionError("Expected a focused SDL window for resize flag inspection.")
+
+    sdl.SDL_GetWindowFlags.argtypes = [ctypes.c_void_p]
+    sdl.SDL_GetWindowFlags.restype = ctypes.c_uint32
+    flags = sdl.SDL_GetWindowFlags(focused_window)
+    test_case.assertTrue(
+        flags & SDL_WINDOW_RESIZABLE,
+        f"SDL window flags should include SDL_WINDOW_RESIZABLE, got 0x{flags:x}.",
+    )
+    min_width = ctypes.c_int()
+    min_height = ctypes.c_int()
+    sdl.SDL_GetWindowMinimumSize.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    sdl.SDL_GetWindowMinimumSize(focused_window, ctypes.byref(min_width), ctypes.byref(min_height))
+    test_case.assertEqual((SDL_WINDOW_MIN_WIDTH, SDL_WINDOW_MIN_HEIGHT), (min_width.value, min_height.value))
 
 
 def push_sdl_key_event(keycode, scancode, event_type=SDL_KEYDOWN):
@@ -1877,6 +1982,10 @@ def list_cell_rect(list_view, column, row):
     return x + column * tile, y + row * tile, tile, tile
 
 
+def list_cell_center(list_view, column, row):
+    return rect_center(list_cell_rect(list_view, column, row))
+
+
 def click_rect_center(rect, button=SDL_BUTTON_LEFT):
     x, y = rect_center(rect)
     push_sdl_mouse_click(x, y, button)
@@ -1892,26 +2001,6 @@ def activate_list_cell(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
     y = row * tile + tile // 2
     list_view.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, x, y)
     list_view.mouseEvent(gui, SDL_MOUSEBUTTONUP, button, x, y)
-
-
-def drag_list_cell_to_cell(test_case, g, source_list, source_column, source_row, target_list, target_column, target_row):
-    start_x, start_y = rect_center(list_cell_rect(source_list, source_column, source_row))
-    target_x, target_y = rect_center(list_cell_rect(target_list, target_column, target_row))
-
-    push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
-    pump_event_loop(3)
-    test_case.assertTrue(g.getGui().hasDragSession())
-    test_case.assertTrue(g.getGui().hasPointerCapture())
-
-    push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
-    pump_event_loop(3)
-    test_case.assertTrue(g.getGui().hasDragSession())
-    test_case.assertTrue(g.getGui().hasPointerCapture())
-
-    push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
-    pump_event_loop(5)
-    test_case.assertFalse(g.getGui().hasDragSession())
-    test_case.assertFalse(g.getGui().hasPointerCapture())
 
 
 def activate_first_proxy_graphic(list_view, gui, column, row, button=SDL_BUTTON_LEFT):
@@ -1985,6 +2074,54 @@ def click_first_list_object(test_case, list_view, gui, predicate=None, button=SD
 
 def list_visible_object_names(list_view, gui):
     return [obj.getName() or obj.getTypeId() for _, _, obj in list_visible_object_cells(list_view, gui)]
+
+
+def find_visible_list_cell(list_view, gui, predicate):
+    for column, row, obj in list_visible_object_cells(list_view, gui):
+        if predicate(obj):
+            return column, row, obj
+    raise AssertionError(f"No matching visible object found in {list_view.getCollection()} list.")
+
+
+def find_visible_list_cell_by_type(list_view, gui, type_id):
+    return find_visible_list_cell(list_view, gui, lambda obj: obj.getTypeId() == type_id)
+
+
+def inventory_panel_lists(panel):
+    return find_list_view(panel, "inventoryCollection"), find_list_view(panel, "equippedCollection")
+
+
+def open_inventory_panel_with_items(test_case, g, player, *item_ids):
+    if hasattr(player, "unequipArmor"):
+        player.unequipArmor()
+    player.setItems(set())
+    for item_id in item_ids:
+        player.addItem(item_id)
+    pump_event_loop(5)
+    panel = open_panel_for_screenshot(test_case, g, "inventoryPanel", "CGameInventoryPanel")
+    inventory_list, equipped_list = inventory_panel_lists(panel)
+    return panel, inventory_list, equipped_list
+
+
+def drag_between_points(test_case, g, start, target, *, expect_started=True):
+    start_x, start_y = start
+    target_x, target_y = target
+    push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+    pump_event_loop(3)
+    if expect_started:
+        test_case.assertTrue(g.getGui().hasDragSession())
+        test_case.assertTrue(g.getGui().hasPointerCapture())
+
+    push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
+    pump_event_loop(3)
+    if expect_started:
+        test_case.assertTrue(g.getGui().hasDragSession())
+        test_case.assertTrue(g.getGui().hasPointerCapture())
+
+    push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+    pump_event_loop(5)
+    test_case.assertFalse(g.getGui().hasDragSession())
+    test_case.assertFalse(g.getGui().hasPointerCapture())
 
 
 def gui_object_record(obj):
@@ -6463,12 +6600,13 @@ class GameTest(unittest.TestCase):
         map_root = Path.cwd() / "maps"
         save_name = unique_save_name("quest_dependency_loader")
         save_path = Path.cwd() / "save" / f"{save_name}.json"
+        map_prefix = unique_map_name("quest_dependency_loader_map")
         map_dirs = [
-            map_root / "unit_class_source",
-            map_root / "unit_type_source",
-            map_root / "unit_empty_config",
-            map_root / "unit_scalar_config",
-            map_root / "unit_bad@map",
+            map_root / f"{map_prefix}_class_source",
+            map_root / f"{map_prefix}_type_source",
+            map_root / f"{map_prefix}_empty_config",
+            map_root / f"{map_prefix}_scalar_config",
+            map_root / f"{map_prefix}_bad@map",
         ]
 
         try:
@@ -7770,6 +7908,127 @@ class GameTest(unittest.TestCase):
         self.assertIn("Saved game was not loaded; keeping the active map unchanged", log_text)
 
         return True, json.dumps({"log": log_text.strip(), "map_description": g.getMap().description})
+
+    def load_migration_fixture_once(self, game, fixture_name, expected, label):
+        save_name = unique_save_name(f"migration_fixture_{fixture_name}_{label}")
+        install_save_fixture_slot(save_name, expected)
+        try:
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            self.assertIsNotNone(loaded_map, fixture_name)
+            loaded_snapshot = normalize_save_snapshot(json.loads(game.jsonify(loaded_map)))
+            loaded_state = runtime_save_state_summary(loaded_snapshot)
+            self.assertEqual(comparable_save_state(expected["summary"]), loaded_state, fixture_name)
+
+            game.CMapLoader.save(loaded_map, save_name)
+            saved_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            saved_snapshot = normalize_save_snapshot(assert_save_envelope(self, saved_json, expected["summary"]["map"]))
+            saved_state = runtime_save_state_summary(saved_snapshot)
+            self.assertEqual(loaded_state, saved_state, fixture_name)
+
+            reloaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(reloaded_game, save_name)
+            reloaded_snapshot = normalize_save_snapshot(json.loads(game.jsonify(reloaded_game.getMap())))
+            reloaded_state = runtime_save_state_summary(reloaded_snapshot)
+            self.assertEqual(loaded_state, reloaded_state, fixture_name)
+
+            return {
+                "state": loaded_state,
+                "resavedFormat": saved_json.get("format"),
+                "resavedSchemaVersion": saved_json.get("schemaVersion"),
+            }
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_save_migration_fixtures_are_idempotent_and_round_trip_current_format(self):
+        game = load_game_module()
+
+        fixture_results = {}
+        for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
+            first = self.load_migration_fixture_once(game, fixture_name, expected, "first")
+            second = self.load_migration_fixture_once(game, fixture_name, expected, "second")
+            self.assertEqual(first["state"], second["state"], fixture_name)
+            self.assertEqual(SAVE_FORMAT, first["resavedFormat"], fixture_name)
+            self.assertEqual(SAVE_SCHEMA_VERSION, first["resavedSchemaVersion"], fixture_name)
+            fixture_results[fixture_name] = first["state"]
+
+        return True, json.dumps({"fixtures": sorted(fixture_results)}, sort_keys=True)
+
+    @game_test
+    def test_malformed_save_envelopes_do_not_activate(self):
+        game = load_game_module()
+
+        base_envelope = json.loads((SAVE_FIXTURE_DIR / "schema_v1_test_map.json").read_text(encoding="utf-8"))
+
+        def unsupported_format(document):
+            document["format"] = "another-save-format"
+
+        def missing_integer_schema(document):
+            document["schemaVersion"] = "1"
+
+        def unsupported_schema(document):
+            document["schemaVersion"] = -1
+
+        def missing_map_name(document):
+            document.pop("mapName", None)
+
+        def invalid_map_name(document):
+            document["mapName"] = "../test"
+
+        def missing_object_snapshot(document):
+            document["snapshot"] = []
+
+        def mismatched_snapshot_map(document):
+            document["mapName"] = "nouraajd"
+
+        cases = [
+            ("root_not_object", lambda _document: [], "save root is not a JSON object"),
+            ("unsupported_format", unsupported_format, "unsupported save format"),
+            ("missing_integer_schema", missing_integer_schema, "save envelope is missing integer schemaVersion"),
+            ("unsupported_schema", unsupported_schema, "unsupported save schema version"),
+            ("missing_map_name", missing_map_name, "save envelope is missing string mapName"),
+            ("invalid_map_name", invalid_map_name, "save envelope contains invalid mapName"),
+            ("missing_object_snapshot", missing_object_snapshot, "save envelope is missing object snapshot"),
+            (
+                "mismatched_snapshot_map",
+                mismatched_snapshot_map,
+                "save envelope mapName does not match snapshot mapName",
+            ),
+        ]
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        active_map = g.getMap()
+        rejected = []
+        for case_name, mutate, expected_reason in cases:
+            save_name = unique_save_name(f"malformed_envelope_{case_name}")
+            cleanup_save_slot(save_name)
+            save_primary_path(save_name).parent.mkdir(exist_ok=True)
+            document = json.loads(json.dumps(base_envelope))
+            mutated = mutate(document)
+            save_primary_path(save_name).write_text(
+                json.dumps(document if mutated is None else mutated), encoding="utf-8"
+            )
+            active_description = f"active-before-{case_name}"
+            active_map.description = active_description
+            log_path = make_temp_log_path()
+            try:
+                game.set_logger_sink("file", str(log_path))
+                game.CGameLoader.loadSavedGame(g, save_name)
+            finally:
+                game.set_logger_sink("disabled", None)
+                cleanup_save_slot(save_name)
+
+            log_text = log_path.read_text()
+            log_path.unlink(missing_ok=True)
+            self.assertTrue(g.getMap() == active_map, case_name)
+            self.assertEqual(active_description, g.getMap().description, case_name)
+            self.assertIn(expected_reason, log_text, case_name)
+            rejected.append(case_name)
+
+        return True, json.dumps({"rejected": rejected}, sort_keys=True)
 
     @game_test
     def test_legacy_save_loads_and_resaves_as_versioned_format(self):
@@ -10885,6 +11144,8 @@ class GameTest(unittest.TestCase):
                 and "already sacrificed" not in courtyard_state.get("properties", {}).get("text", "").lower()
                 and "Victor drinks a vial of poison" not in courtyard_state.get("properties", {}).get("text", "")
             ),
+            "catacombs_uses_catacombs_image": config["catacombs"]["properties"].get("animation")
+            == "images/buildings/catacombs",
         }
 
         failed = sorted([name for name, ok in checks.items() if not ok])
@@ -12513,6 +12774,59 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_siege_spawn_point_ignores_dead_gate_creatures_when_completing_seal(self):
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        game = load_game_module()
+        original_show_question = game.CGuiHandler.showQuestion
+
+        try:
+            game.CGuiHandler.showQuestion = lambda self, message: True
+            g, game_map, player = load_game_map_with_player("siege")
+            spawn_point = find_runtime_object(game_map, "spawnPoint1")
+            spawn_coords = spawn_point.getCoords()
+            player.moveTo(spawn_coords.x, spawn_coords.y, spawn_coords.z)
+
+            defeated_creature = g.createObject("siegePritz")
+            defeated_creature.name = "defeatedGateOccupant"
+            game_map.addObject(defeated_creature)
+            defeated_creature.relocateWithoutMoveHooks(spawn_coords)
+            defeated_creature.setHp(0)
+
+            player.addItem("magicWand")
+            spawn_point.setBoolProperty("enabled", True)
+            spawn_point.setBoolProperty("canStep", True)
+            spawn_point.onEnter(FakeEvent(player))
+
+            self.assertTrue(spawn_point.getBoolProperty("destroyed"))
+            self.assertTrue(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertFalse(defeated_creature.isAlive())
+
+            exit_coords = find_adjacent_walkable_tile(game_map, spawn_coords)
+            player.moveTo(exit_coords.x, exit_coords.y, exit_coords.z)
+            spawn_point.onTurn(None)
+
+            self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
+            self.assertFalse(spawn_point.getBoolProperty("canStep"))
+        finally:
+            game.CGuiHandler.showQuestion = original_show_question
+
+        return True, json.dumps(
+            {
+                "canStep": spawn_point.getBoolProperty("canStep"),
+                "defeated_creature_alive": defeated_creature.isAlive(),
+                "destroyed": spawn_point.getBoolProperty("destroyed"),
+                "pendingSeal": spawn_point.getBoolProperty("pendingSeal"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_siege_spawn_point_seal_consumes_one_wand_once_while_pending(self):
         class FakeEvent:
             def __init__(self, cause):
@@ -14067,6 +14381,17 @@ def make_unique_scroll_items(g, count, prefix):
 
 
 class PanelLayoutManifestTest(unittest.TestCase):
+    def test_gui_window_is_created_resizable_with_minimum_size(self):
+        gui_source = (REPO_ROOT / "src" / "gui" / "CGui.cpp").read_text(encoding="utf-8")
+        self.assertRegex(
+            gui_source,
+            r"SDL_CreateWindowAndRenderer\s*\(\s*width\s*,\s*height\s*,\s*SDL_WINDOW_RESIZABLE\s*,",
+        )
+        self.assertRegex(
+            gui_source,
+            r"SDL_SetWindowMinimumSize\s*\(\s*rawWindow\s*,\s*GUI_MIN_WIDTH\s*,\s*GUI_MIN_HEIGHT\s*\)",
+        )
+
     def test_panel_layout_manifest_matches_panels_json(self):
         panel_defs = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
         self.assertEqual(set(panel_defs), set(PANEL_LAYOUT_CASES))
@@ -14119,6 +14444,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         gui = g.getGui()
         map_graph = next(child for child in collect_gui_children(gui, "CMapGraphicsObject"))
 
+        assert_focused_sdl_window_resizable(self)
         width, height = push_sdl_window_size_changed_event(800, 600)
         tile_size = gui.getNumericProperty("tileSize")
         expected_proxy_count = (width // tile_size + 1) * (height // tile_size + 1)
@@ -14332,61 +14658,144 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual(inventory_before - 1, player.countItems("ChaosSword"))
         self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
 
-    def test_inventory_drag_rejects_invalid_equipment_slot(self):
+    def test_inventory_drag_valid_equip_unequip_and_refresh_counts(self):
         _, g, _, player = create_xvfb_gameplay_session(self)
-        player.addItem("ChaosSword")
-        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-        inventory_list = find_list_view(panel, "inventoryCollection")
-        equipped_list = find_list_view(panel, "equippedCollection")
-        inventory_before = player.countItems("ChaosSword")
-        weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player)
+        empty_totals = get_panel_proxy_child_totals_by_collection(panel)
 
-        drag_list_cell_to_cell(self, g, inventory_list, 0, 0, equipped_list, 3, 0)
+        player.addItem("LeatherArmor")
+        pump_event_loop(5)
+        armor_column, armor_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "LeatherArmor")
+        with_item_totals = get_panel_proxy_child_totals_by_collection(panel)
 
-        weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
-        self.assertEqual(inventory_before, player.countItems("ChaosSword"))
-        self.assertEqual(weapon_before, weapon_after)
+        self.assertEqual(empty_totals["inventoryCollection"] + 1, with_item_totals["inventoryCollection"])
+        self.assertEqual(empty_totals["equippedCollection"], with_item_totals["equippedCollection"])
 
-    def test_inventory_drag_unequips_to_inventory(self):
-        _, g, _, player = create_xvfb_gameplay_session(self)
-        player.addItem("ChaosSword")
-        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-        inventory_list = find_list_view(panel, "inventoryCollection")
-        equipped_list = find_list_view(panel, "equippedCollection")
+        drag_between_points(
+            self,
+            g,
+            list_cell_center(inventory_list, armor_column, armor_row),
+            list_cell_center(equipped_list, 3, 0),
+        )
 
-        drag_list_cell_to_cell(self, g, inventory_list, 0, 0, equipped_list, 0, 0)
-        self.assertEqual("ChaosSword", player.getWeapon().getTypeId())
-        self.assertEqual(0, player.countItems("ChaosSword"))
+        after_equip_totals = get_panel_proxy_child_totals_by_collection(panel)
+        self.assertEqual(0, player.countItems("LeatherArmor"))
+        self.assertEqual(empty_totals["inventoryCollection"], after_equip_totals["inventoryCollection"])
+        self.assertEqual(empty_totals["equippedCollection"] + 1, after_equip_totals["equippedCollection"])
+        self.assertTrue(
+            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+        self.assertEqual(0, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
 
-        drag_list_cell_to_cell(self, g, equipped_list, 0, 0, inventory_list, 1, 0)
+        equipped_x, equipped_y = list_cell_center(equipped_list, 3, 0)
+        push_sdl_mouse_click(equipped_x, equipped_y)
+        pump_event_loop(5)
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("equippedCollection", 0))
 
-        self.assertIsNone(player.getWeapon())
-        self.assertEqual(1, player.countItems("ChaosSword"))
-
-    def test_inventory_drag_quest_item_rejection(self):
-        game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
-        quest_item = g.createObject("letterToBeren")
-        self.assertTrue(quest_item.hasTag(game.CTag.QUEST))
-        player.addItem(quest_item)
-        panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
-        inventory_list = find_list_view(panel, "inventoryCollection")
-        equipped_list = find_list_view(panel, "equippedCollection")
-        weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
-        start_x, start_y = rect_center(list_cell_rect(inventory_list, 0, 0))
-        target_x, target_y = rect_center(list_cell_rect(equipped_list, 0, 0))
-
-        push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        push_sdl_mouse_button_event(equipped_x, equipped_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
         pump_event_loop(3)
-        self.assertFalse(g.getGui().hasDragSession())
-        self.assertFalse(g.getGui().hasPointerCapture())
-
-        push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
-        push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+        push_sdl_mouse_button_event(equipped_x, equipped_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
         pump_event_loop(5)
 
-        self.assertEqual(1, player.countItems("letterToBeren"))
-        weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
-        self.assertEqual(weapon_before, weapon_after)
+        after_unequip_totals = get_panel_proxy_child_totals_by_collection(panel)
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(1, player.countItems("LeatherArmor"))
+        self.assertEqual(empty_totals["inventoryCollection"] + 1, after_unequip_totals["inventoryCollection"])
+        self.assertEqual(empty_totals["equippedCollection"], after_unequip_totals["equippedCollection"])
+        self.assertFalse(
+            any(obj.getTypeId() == "LeatherArmor" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+
+    def test_inventory_drag_invalid_slot_and_cancel_keep_state(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        original_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player, "ChaosSword")
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        before_invalid = get_panel_proxy_child_totals_by_collection(panel)
+
+        drag_between_points(
+            self,
+            g,
+            list_cell_center(inventory_list, weapon_column, weapon_row),
+            list_cell_center(equipped_list, 3, 0),
+        )
+
+        after_invalid = get_panel_proxy_child_totals_by_collection(panel)
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
+        self.assertEqual(before_invalid, after_invalid)
+        self.assertFalse(
+            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        inventory_rect = resolved_rect(inventory_list)
+        cancel_target = (inventory_rect[0] + inventory_rect[2] + 20, inventory_rect[1] + 25)
+
+        drag_between_points(self, g, list_cell_center(inventory_list, weapon_column, weapon_row), cancel_target)
+
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
+        self.assertTrue(
+            any(
+                obj.getTypeId() == "ChaosSword"
+                for obj in list_cell_objects(inventory_list, g.getGui(), weapon_column, weapon_row)
+            )
+        )
+        self.assertFalse(
+            any(obj.getTypeId() == "ChaosSword" for obj in list_cell_objects(equipped_list, g.getGui(), 3, 0))
+        )
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
+
+    def test_inventory_drag_close_or_modal_panel_cancels_without_equip(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        original_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player, "ChaosSword")
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        start = list_cell_center(inventory_list, weapon_column, weapon_row)
+
+        push_sdl_mouse_button_event(start[0], start[1], SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        self.assertTrue(g.getGui().hasPointerCapture())
+        panel.close()
+        pump_event_loop(5)
+
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
+
+        panel, inventory_list, equipped_list = open_inventory_panel_with_items(self, g, player, "ChaosSword")
+        weapon_column, weapon_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "ChaosSword")
+        start = list_cell_center(inventory_list, weapon_column, weapon_row)
+        target = list_cell_center(equipped_list, 0, 0)
+
+        push_sdl_mouse_button_event(start[0], start[1], SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertTrue(g.getGui().hasDragSession())
+        modal = g.getGuiHandler().openPanel("questionPanel")
+        modal.setStringProperty("question", "Cancel drag while modal is open?")
+        pump_event_loop(5)
+        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
+        push_sdl_mouse_motion_event(target[0], target[1], target[0] - start[0], target[1] - start[1])
+        pump_event_loop(3)
+        push_sdl_mouse_button_event(target[0], target[1], SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        current_weapon = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+        self.assertEqual(original_weapon, current_weapon)
+        self.assertEqual(1, player.countItems("ChaosSword"))
 
     def test_inventory_quest_item_selection_is_ignored(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
@@ -14402,6 +14811,26 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual(0, selected_after_quest_click.get("inventoryCollection", 0))
         self.assertEqual(0, selected_after_quest_click.get("equippedCollection", 0))
 
+        inventory_list = find_list_view(panel, "inventoryCollection")
+        equipped_list = find_list_view(panel, "equippedCollection")
+        item_column, item_row, _ = find_visible_list_cell_by_type(inventory_list, g.getGui(), "letterToBeren")
+        start_x, start_y = list_cell_center(inventory_list, item_column, item_row)
+        target_x, target_y = list_cell_center(equipped_list, 0, 0)
+        weapon_before = player.getWeapon().getTypeId() if player.getWeapon() else None
+
+        push_sdl_mouse_button_event(start_x, start_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONDOWN)
+        pump_event_loop(3)
+        self.assertFalse(g.getGui().hasDragSession())
+        self.assertFalse(g.getGui().hasPointerCapture())
+
+        push_sdl_mouse_motion_event(target_x, target_y, target_x - start_x, target_y - start_y)
+        push_sdl_mouse_button_event(target_x, target_y, SDL_BUTTON_LEFT, SDL_MOUSEBUTTONUP)
+        pump_event_loop(5)
+
+        weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
+        self.assertEqual(1, player.countItems("letterToBeren"))
+        self.assertEqual(weapon_before, weapon_after)
+
     def test_fight_quest_item_selection_is_ignored(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
         quest_item = g.createObject("letterToBeren")
@@ -14416,6 +14845,81 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         selected_after_quest_click = get_panel_selection_box_counts_by_collection(panel)
 
         self.assertEqual(0, selected_after_quest_click.get("itemsCollection", 0))
+
+    def test_cave_loss_does_not_reopen_fight_panel(self):
+        game, g, game_map, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        cave = find_runtime_object(game_map, "cave1")
+        cave.setBoolProperty("enabled", True)
+        cave_coords = cave.getCoords()
+        entry_coords = (game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+        staging = next(
+            game.Coords(cave_coords.x + dx, cave_coords.y + dy, cave_coords.z)
+            for dx, dy in ((2, 0), (-2, 0), (0, 2), (0, -2), (3, 0), (-3, 0), (0, 3), (0, -3))
+            if game_map.canStep(game.Coords(cave_coords.x + dx, cave_coords.y + dy, cave_coords.z))
+        )
+        player.relocateWithoutMoveHooks(staging)
+
+        player.setStringProperty("affiliation", "gooby")
+        run_blocking_gui_action(
+            game, lambda: player.moveTo(cave_coords.x, cave_coords.y, cave_coords.z), push_space_key
+        )
+        pump_event_loop(5)
+        player.setStringProperty("affiliation", "")
+        self.assertIsNone(game_map.getObjectByName("cave1"))
+
+        spawned = []
+        for obj in game_map.getObjects():
+            if not hasattr(obj, "isPlayer") or obj.isPlayer() or not hasattr(obj, "getFightController"):
+                continue
+            coords = obj.getCoords()
+            if abs(coords.x - cave_coords.x) <= 1 and abs(coords.y - cave_coords.y) <= 1 and coords.z == cave_coords.z:
+                spawned.append(obj)
+        self.assertTrue(spawned, "Entering an enabled cave should spawn hostile cave monsters.")
+
+        killer = spawned[0]
+        killer.baseStats.agility = 100
+        killer.baseStats.hit = 100
+        killer.baseStats.dmgMin = 500
+        killer.baseStats.dmgMax = 500
+        killer.baseStats.crit = 0
+        player.unequipArmor()
+        player.baseStats.agility = 1
+        player.baseStats.hit = 0
+        player.baseStats.dmgMin = 0
+        player.baseStats.dmgMax = 0
+        player.baseStats.crit = 0
+        player.setHp(1)
+
+        target = killer.getCoords()
+        player.moveTo(target.x, target.y, target.z)
+        pump_event_loop(5)
+
+        self.assertIsNotNone(game_map.getObjectByName(player.getName()))
+        self.assertEqual(entry_coords, coords_tuple(player.getCoords()))
+        for _ in range(5):
+            self.assertFalse(gui_contains_class(g, "CGameFightPanel"))
+            pump_event_loop(2)
+
+    def test_fight_panel_select_interaction_cancels_on_sdl_quit(self):
+        game, g, _, _ = create_xvfb_gameplay_session(self, map_name="nouraajd")
+        panel = g.createObject("CGameFightPanel")
+        enemy = g.createObject("GoblinThief")
+        enemy.name = "quitPanelGoblin"
+        enemy.setHp(enemy.getHpMax())
+        panel.setEnemy(enemy)
+        g.getGui().pushChild(panel)
+        wait_for_panel_class(self, g, "CGameFightPanel")
+
+        try:
+            game.event_loop.instance().invoke(push_sdl_quit_event)
+            self.assertIsNone(panel.selectInteraction())
+            self.assertTrue(panel.isCancelled())
+        finally:
+            drain_sdl_events()
+            panel.close()
+            pump_event_loop(5)
+
+        self.assertFalse(gui_contains_class(g, "CGameFightPanel"))
 
     def test_screenshot_question_panel_has_rendered_pixels(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
