@@ -285,16 +285,16 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
 }
 
 struct DragListHarness {
-std::shared_ptr<CGame> create_loader_gui_game() {
-    auto game = std::make_shared<CGame>();
-    for (const auto &[name, builder] : *CTypes::builders()) {
-        game->getObjectHandler()->registerType(name, builder);
+    std::shared_ptr<CGame> create_loader_gui_game() {
+        auto game = std::make_shared<CGame>();
+        for (const auto &[name, builder] : *CTypes::builders()) {
+            game->getObjectHandler()->registerType(name, builder);
+        }
+        auto guiConfig = std::make_shared<json>();
+        (*guiConfig)["class"] = "CGui";
+        game->getObjectHandler()->registerConfig("gui", guiConfig);
+        return game;
     }
-    auto guiConfig = std::make_shared<json>();
-    (*guiConfig)["class"] = "CGui";
-    game->getObjectHandler()->registerConfig("gui", guiConfig);
-    return game;
-}
 
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CGame> game;
@@ -683,7 +683,6 @@ void test_panel_event_callbacks_stop_after_close() {
     expect_true(!gui->findChild(panel), "closed panel should be detached from the GUI");
 }
 
-void test_gui_routes_mouse_motion_to_target_child() {
 void test_loader_gui_sessions_shutdown_stale_callbacks() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -736,6 +735,7 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     expect_true(secondRenderCount == renderCountAfterShutdown, "second shutdown should stop later frame rendering");
 }
 
+void test_gui_routes_mouse_motion_to_target_child() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
