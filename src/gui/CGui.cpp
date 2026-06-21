@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CProxyTargetGraphicsObject.h"
+#include "gui/panel/CGamePanel.h"
 
 #include <algorithm>
 #include <limits>
@@ -109,6 +110,26 @@ CGui::CGui() {
 }
 
 CGui::~CGui() = default;
+
+void CGui::shutdown() {
+    clearDragSession();
+    releasePointerCapture();
+
+    auto topLevelChildren = getChildren();
+    for (const auto &child : topLevelChildren) {
+        if (!child || !child->getModal() || !findChild(child)) {
+            continue;
+        }
+        if (auto panel = vstd::cast<CGamePanel>(child)) {
+            panel->close();
+        } else {
+            removeChild(child);
+        }
+    }
+    setChildren({});
+    _textureCache.clear();
+    _textManager.clear();
+}
 
 void CGui::render(int i1) {
     CUtil::setRenderDrawColor(renderer.get(), CColors::Black);

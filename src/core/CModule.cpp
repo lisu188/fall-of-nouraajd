@@ -440,6 +440,9 @@ void init_game_module(py::module_ &m) {
         .def("getGuiHandler", &CGameContext::getGuiHandler, "Return the GUI handler service.")
         .def("getScriptHandler", &CGameContext::getScriptHandler, "Return the Python script execution service.")
         .def("getRngHandler", &CGameContext::getRngHandler, "Return the random encounter/loot handler.")
+        .def("isActive", &CGameContext::isActive, "Return whether this game context still accepts session work.")
+        .def("shutdown", static_cast<void (CGameContext::*)()>(&CGameContext::shutdown),
+             "Explicitly shut down this game context and release session state.")
         .def("getTransitionGeneration", &CGameContext::getTransitionGeneration,
              "Return the current transition/session generation.")
         .def("captureTransitionGeneration", &CGameContext::captureTransitionGeneration,

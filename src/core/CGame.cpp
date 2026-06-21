@@ -25,7 +25,7 @@ CGame::CGame() {}
 
 CGame::~CGame() {
     if (context) {
-        context->advanceTransitionGeneration();
+        context->shutdown(this);
     }
 }
 

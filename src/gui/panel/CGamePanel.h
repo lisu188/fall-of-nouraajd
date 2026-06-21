@@ -36,5 +36,5 @@ class CGamePanel : public CGameGraphicsObject {
 
     void awaitClosing();
 
-    void close();
+    virtual void close();
 };
