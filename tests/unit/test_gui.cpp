@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
@@ -279,6 +281,17 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     gui->setGame(game);
     game->getObjectHandler()->registerType(CProxyGraphicsLayout::static_meta()->name(),
                                            []() { return std::make_shared<CProxyGraphicsLayout>(); });
+    return game;
+}
+
+std::shared_ptr<CGame> create_loader_gui_game() {
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto guiConfig = std::make_shared<json>();
+    (*guiConfig)["class"] = "CGui";
+    game->getObjectHandler()->registerConfig("gui", guiConfig);
     return game;
 }
 
@@ -670,6 +683,58 @@ void test_panel_event_callbacks_stop_after_close() {
     expect_true(!gui->findChild(panel), "closed panel should be detached from the GUI");
 }
 
+void test_loader_gui_sessions_shutdown_stale_callbacks() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto firstGame = create_loader_gui_game();
+    CGameLoader::loadGui(firstGame);
+    auto firstGui = firstGame->getGui();
+    auto firstContext = firstGame->getContext();
+    expect_true(firstGui != nullptr, "first loader GUI session should create a GUI");
+
+    auto firstRecorder = attach_mouse_recorder(firstGui);
+    int firstRenderCount = 0;
+    firstGui->pushChild(std::make_shared<CountingRenderObject>(firstRenderCount));
+
+    firstContext->shutdown();
+    expect_true(!firstContext->isActive(), "first context should be inactive after explicit shutdown");
+    expect_true(firstGame->getGui() == nullptr, "first shutdown should detach the game GUI");
+    expect_true(firstGui->getChildren().empty(), "first shutdown should clear GUI children");
+    drain_event_loop();
+    expect_true(firstRecorder->button_count == 0, "first shutdown should prevent stale event dispatch");
+    expect_true(firstRenderCount == 0, "first shutdown should prevent stale frame rendering");
+
+    auto secondGame = create_loader_gui_game();
+    CGameLoader::loadGui(secondGame);
+    auto secondGui = secondGame->getGui();
+    auto secondContext = secondGame->getContext();
+    expect_true(secondGui != nullptr, "second loader GUI session should create a GUI");
+
+    auto secondRecorder = attach_mouse_recorder(secondGui);
+    int secondRenderCount = 0;
+    secondGui->pushChild(std::make_shared<CountingRenderObject>(secondRenderCount));
+
+    SDL_Event event{};
+    event.type = SDL_MOUSEBUTTONDOWN;
+    event.button.button = SDL_BUTTON_LEFT;
+    event.button.x = 35;
+    event.button.y = 55;
+    SDL_PushEvent(&event);
+    drain_event_loop();
+
+    expect_true(firstRecorder->button_count == 0, "second session events should not reach the first GUI");
+    expect_true(secondRecorder->button_count == 1, "second session should receive one event-loop dispatch");
+    expect_true(secondRenderCount > 0, "second active GUI should render through its event-loop callback");
+
+    secondContext->shutdown();
+    expect_true(!secondContext->isActive(), "second context should be inactive after explicit shutdown");
+    const int renderCountAfterShutdown = secondRenderCount;
+    drain_event_loop();
+    expect_true(secondRecorder->button_count == 1, "second shutdown should stop later event dispatch");
+    expect_true(secondRenderCount == renderCountAfterShutdown, "second shutdown should stop later frame rendering");
+}
+
 void test_gui_routes_mouse_motion_to_target_child() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -880,6 +945,7 @@ int main() {
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
+    test_loader_gui_sessions_shutdown_stale_callbacks();
     test_gui_routes_mouse_button_up_without_drag_to_target_child();
     test_gui_routes_mouse_wheel_to_target_child();
     test_gui_routes_window_leave_as_mouse_cancel();

@@ -16,8 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGameContext.h"
+#include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CSceneManager.h"
 #include "core/CSlotConfig.h"
+#include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
@@ -30,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 CGameContext::CGameContext(std::shared_ptr<CGame> game) : game(std::move(game)) {}
 
 std::shared_ptr<CObjectHandler> CGameContext::getObjectHandler() {
+    requireActiveService("CObjectHandler");
     if (!objectHandler) {
         objectHandler = std::make_shared<CObjectHandler>();
     }
@@ -37,6 +41,7 @@ std::shared_ptr<CObjectHandler> CGameContext::getObjectHandler() {
 }
 
 std::shared_ptr<CGuiHandler> CGameContext::getGuiHandler() {
+    requireActiveService("CGuiHandler");
     if (!guiHandler) {
         auto owner = game.lock();
         if (!owner) {
@@ -48,6 +53,7 @@ std::shared_ptr<CGuiHandler> CGameContext::getGuiHandler() {
 }
 
 std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {
+    requireActiveService("CScriptHandler");
     if (!scriptHandler) {
         scriptHandler = std::make_shared<CScriptHandler>();
     }
@@ -55,6 +61,7 @@ std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {
 }
 
 std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
+    requireActiveService("CRngHandler");
     if (!rngHandler) {
         auto owner = game.lock();
         if (!owner) {
@@ -66,6 +73,7 @@ std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
 }
 
 std::shared_ptr<CSlotConfig> CGameContext::getSlotConfiguration() {
+    requireActiveService("CSlotConfig");
     return slotConfiguration.get([this]() {
         auto owner = game.lock();
         if (!owner) {
@@ -73,6 +81,40 @@ std::shared_ptr<CSlotConfig> CGameContext::getSlotConfiguration() {
         }
         return owner->createObject<CSlotConfig>("slotConfiguration");
     });
+}
+
+bool CGameContext::isActive() const { return active.load(std::memory_order_acquire); }
+
+void CGameContext::shutdown() {
+    auto owner = game.lock();
+    shutdown(owner.get());
+}
+
+void CGameContext::shutdown(CGame *owner) {
+    if (!active.exchange(false, std::memory_order_acq_rel)) {
+        return;
+    }
+
+    advanceTransitionGeneration();
+    if (owner) {
+        if (owner->sceneManager) {
+            owner->sceneManager->resetTransition();
+        }
+        if (owner->_gui) {
+            owner->_gui->shutdown();
+            owner->_gui.reset();
+        }
+        owner->map.reset();
+    }
+    performance_guard::clearTargetFlowCache();
+    if (scriptHandler) {
+        scriptHandler->releaseState();
+    }
+    slotConfiguration.clear();
+    scriptHandler.reset();
+    guiHandler.reset();
+    rngHandler.reset();
+    objectHandler.reset();
 }
 
 CGameContext::TransitionGeneration CGameContext::getTransitionGeneration() const {
@@ -84,9 +126,15 @@ CGameContext::TransitionGeneration CGameContext::captureTransitionGeneration() c
 }
 
 bool CGameContext::isTransitionGenerationCurrent(TransitionGeneration expectedGeneration) const {
-    return getTransitionGeneration() == expectedGeneration;
+    return isActive() && getTransitionGeneration() == expectedGeneration;
 }
 
 CGameContext::TransitionGeneration CGameContext::advanceTransitionGeneration() {
     return transitionGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+}
+
+void CGameContext::requireActiveService(const char *serviceName) const {
+    if (!isActive()) {
+        throw std::runtime_error(std::string("Cannot access ") + serviceName + " after CGameContext shutdown.");
+    }
 }

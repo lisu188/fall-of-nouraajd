@@ -78,6 +78,8 @@ class CGui : public CGameGraphicsObject {
 
     ~CGui() override;
 
+    void shutdown();
+
     void render(int i1);
 
     bool event(SDL_Event *event);

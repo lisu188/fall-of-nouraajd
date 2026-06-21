@@ -936,6 +936,7 @@ void test_game_context_rejects_services_without_owner_game() {
 void test_game_context_transition_generation_helpers_and_shutdown() {
     auto game = std::make_shared<CGame>();
     auto context = game->getContext();
+    expect_true(context->isActive(), "new game context should start active");
 
     auto initial_generation = context->getTransitionGeneration();
     auto captured_generation = context->captureTransitionGeneration();
@@ -954,6 +955,7 @@ void test_game_context_transition_generation_helpers_and_shutdown() {
 
     auto shutdown_generation = context->captureTransitionGeneration();
     game.reset();
+    expect_true(!context->isActive(), "destroying the owning game should mark the context inactive");
     expect_true(context->getTransitionGeneration() == shutdown_generation + 1,
                 "destroying the owning game should advance transition generation");
     expect_true(!context->isTransitionGenerationCurrent(shutdown_generation),
