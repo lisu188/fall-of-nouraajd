@@ -690,6 +690,44 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
                 "panel cancellation should publish the cancelled status text");
 }
 
+void test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = load_empty_game();
+    CGameLoader::loadGui(game);
+    auto player = add_test_player(game);
+
+    player->setHp(10);
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setName("unitAttachedPanelCancelAction");
+    action->setManaCost(0);
+    player->addAction(action);
+
+    auto defender = add_test_creature(game, "unitAttachedPanelCancelDefender", 1, 0);
+    auto controller = std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController());
+    expect_true(controller != nullptr, "player should use a player fight controller for attached panel cancellation");
+    if (!controller) {
+        return;
+    }
+    controller->start(player, defender);
+
+    auto gui = game->getGui();
+    auto panel = vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel"));
+    expect_true(panel != nullptr, "fight panel should exist before attached panel cancellation");
+    if (!panel) {
+        return;
+    }
+
+    panel->cancel();
+
+    expect_true(!controller->control(player, defender),
+                "attached fight panel cancellation should not report selected action progress");
+    expect_true(controller->isCancelled(player, defender), "attached fight panel cancellation should cancel control");
+    controller->end(player, defender);
+}
+
 void test_fight_panel_resets_status_between_sequential_encounters() {
     auto game = load_empty_game();
     auto encounterMap = game->getMap();
@@ -939,6 +977,7 @@ int main() {
     test_fight_handler_reports_cancelled_quit_event();
     test_fight_handler_ends_original_started_controllers();
     test_fight_handler_reports_cancelled_closed_fight_panel();
+    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels();
     test_fight_panel_resets_status_between_sequential_encounters();
     test_fight_handler_counts_effect_duration_as_progress();
     test_playtest_trace_records_native_limits_and_quest_completion();
