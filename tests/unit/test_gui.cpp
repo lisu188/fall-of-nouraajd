@@ -284,6 +284,7 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     return game;
 }
 
+struct DragListHarness {
 std::shared_ptr<CGame> create_loader_gui_game() {
     auto game = std::make_shared<CGame>();
     for (const auto &[name, builder] : *CTypes::builders()) {
@@ -295,7 +296,6 @@ std::shared_ptr<CGame> create_loader_gui_game() {
     return game;
 }
 
-struct DragListHarness {
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CGame> game;
     std::shared_ptr<DragCallbackPanel> panel;
@@ -307,6 +307,93 @@ std::shared_ptr<CLayout> fixed_layout(int x, int y, int w, int h) {
     auto layout = std::make_shared<CLayout>();
     layout->setRect(x, y, w, h);
     return layout;
+}
+
+void test_gui_window_is_resizable_and_guard_paths_fail_closed() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    SDL_Window *window = SDL_RenderGetWindow(gui->getRenderer());
+    expect_true(window != nullptr, "GUI renderer should expose its SDL window");
+    if (window) {
+        const Uint32 flags = SDL_GetWindowFlags(window);
+        expect_true((flags & SDL_WINDOW_RESIZABLE) != 0, "GUI window should be created resizable");
+
+        int minimum_width = 0;
+        int minimum_height = 0;
+        SDL_GetWindowMinimumSize(window, &minimum_width, &minimum_height);
+        expect_true(minimum_width == 320 && minimum_height == 240,
+                    "GUI window should enforce the logical minimum size");
+    }
+
+    gui->setLayout(fixed_layout(0, 0, 1920, 1080));
+    gui->setWidth(100);
+    gui->setHeight(100);
+    expect_true(gui->getWidth() == 320 && gui->getHeight() == 240, "GUI logical size should clamp to the minimum");
+    gui->setWidth(9000);
+    gui->setHeight(5000);
+    expect_true(gui->getWidth() == 7680 && gui->getHeight() == 4320, "GUI logical size should clamp to the maximum");
+
+    expect_true(!gui->event(nullptr), "GUI should reject null SDL events");
+    expect_true(!gui->isPointerCapturedBy(nullptr), "GUI should reject null pointer capture probes");
+    expect_true(gui->getDragSession() == nullptr, "new GUI should not expose a drag session");
+    const std::shared_ptr<const CGui> const_gui = gui;
+    expect_true(const_gui->getDragSession() == nullptr, "const drag-session accessor should fail closed");
+
+    auto payload = std::make_shared<CGameObject>();
+    auto unattached_source = std::make_shared<MouseEventRecorder>();
+    gui->startDragSession(unattached_source, payload, 1, 10, 20);
+    expect_true(!gui->hasDragSession(), "unattached widgets should not start GUI drag sessions");
+
+    auto captured_source = attach_mouse_recorder(gui);
+    gui->capturePointer(captured_source);
+    expect_true(gui->isPointerCapturedBy(captured_source), "attached widgets should be eligible for pointer capture");
+    captured_source->setParent(nullptr);
+
+    SDL_Event captured_motion{};
+    captured_motion.type = SDL_MOUSEMOTION;
+    captured_motion.motion.x = 30;
+    captured_motion.motion.y = 40;
+    captured_motion.motion.xrel = 1;
+    captured_motion.motion.yrel = 1;
+    expect_true(!gui->event(&captured_motion), "detached pointer capture should be released without dispatch");
+    expect_true(!gui->hasPointerCapture(), "stale pointer capture should be cleared");
+    gui->removeChild(captured_source);
+
+    auto source = attach_mouse_recorder(gui);
+    auto target = attach_drop_target_recorder(gui);
+    gui->startDragSession(source, payload, 5, 20, 30);
+    expect_true(gui->hasDragSession(), "attached widgets should start GUI drag sessions");
+    expect_true(const_gui->getDragSession() != nullptr, "const drag-session accessor should expose active sessions");
+    gui->acceptDragSession(target);
+    gui->updateDragSession(80, 90);
+    gui->cancelDragSession();
+    expect_true(gui->getDragSession() && gui->getDragSession()->canceled, "canceling a drag session should mark it");
+    gui->clearDragSession();
+
+    gui->startDragSession(source, payload, 6, 20, 30);
+    SDL_Event release{};
+    release.type = SDL_MOUSEBUTTONUP;
+    release.button.button = SDL_BUTTON_LEFT;
+    release.button.x = 900;
+    release.button.y = 900;
+    gui->event(&release);
+    expect_true(!gui->hasDragSession(), "button release without an accepted target should clear the drag session");
+
+    if (window) {
+        const int previous_width = gui->getWidth();
+        const int previous_height = gui->getHeight();
+        SDL_Event wrong_window_resize{};
+        wrong_window_resize.type = SDL_WINDOWEVENT;
+        wrong_window_resize.window.event = SDL_WINDOWEVENT_SIZE_CHANGED;
+        wrong_window_resize.window.windowID = SDL_GetWindowID(window) + 1;
+        wrong_window_resize.window.data1 = 800;
+        wrong_window_resize.window.data2 = 600;
+        gui->event(&wrong_window_resize);
+        expect_true(gui->getWidth() == previous_width && gui->getHeight() == previous_height,
+                    "resize events for another SDL window should be ignored");
+    }
 }
 
 DragListHarness create_drag_list_harness() {
@@ -596,6 +683,7 @@ void test_panel_event_callbacks_stop_after_close() {
     expect_true(!gui->findChild(panel), "closed panel should be detached from the GUI");
 }
 
+void test_gui_routes_mouse_motion_to_target_child() {
 void test_loader_gui_sessions_shutdown_stale_callbacks() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -648,7 +736,6 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     expect_true(secondRenderCount == renderCountAfterShutdown, "second shutdown should stop later frame rendering");
 }
 
-void test_gui_routes_mouse_motion_to_target_child() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
@@ -852,12 +939,13 @@ int main() {
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
+    test_gui_window_is_resizable_and_guard_paths_fail_closed();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
     test_panel_event_callbacks_stop_after_close();
-    test_loader_gui_sessions_shutdown_stale_callbacks();
     test_gui_routes_mouse_motion_to_target_child();
+    test_loader_gui_sessions_shutdown_stale_callbacks();
     test_gui_routes_mouse_button_up_without_drag_to_target_child();
     test_gui_routes_mouse_wheel_to_target_child();
     test_gui_routes_window_leave_as_mouse_cancel();

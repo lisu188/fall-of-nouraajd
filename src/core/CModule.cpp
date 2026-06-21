@@ -66,6 +66,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPythonOverrides.h"
 #include "core/CRuntimeBridge.h"
 #include "core/CSceneManager.h"
+#include "core/CSlotConfig.h"
 #include "core/CTags.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"

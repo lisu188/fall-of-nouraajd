@@ -33,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -133,6 +134,16 @@ bool moves_closer(const std::shared_ptr<CMap> &map, Coords from, Coords to, Coor
 void replace_tile(const MapFixture &fixture, Coords coords, bool can_step, const std::string &tile_type) {
     fixture.map->removeTile(coords.x, coords.y, coords.z);
     fixture.map->addTile(make_tile(fixture.game, can_step, tile_type), coords.x, coords.y, coords.z);
+}
+
+void add_navigation_edge(const MapFixture &fixture, Coords source, Coords target,
+                         std::optional<std::string> source_object_name = std::nullopt) {
+    CNavigationEdge edge;
+    edge.source = source;
+    edge.target = target;
+    edge.enabled = true;
+    edge.sourceObjectName = std::move(source_object_name);
+    fixture.map->registerNavigationEdge(std::move(edge));
 }
 
 void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
@@ -244,6 +255,47 @@ void test_relevant_tile_change_invalidates_target_navigation() {
     expect_true(fixture.map->canStep(rerouted_step), "rerouted tile-invalidation step should be passable");
     expect_true(performance_guard::targetFlowCacheSize() == 2,
                 "tile navigation revision change should create one replacement flow field");
+}
+
+void test_navigation_edge_removal_invalidates_target_navigation() {
+    auto fixture = make_open_map(5, 3);
+    const Coords start_coords(0, 1, 0);
+    const Coords goal_coords(4, 1, 0);
+    auto goal = make_object(fixture, "edgeInvalidationGoal", goal_coords);
+    auto actor = make_actor(fixture, "edgeInvalidationActor", start_coords, "edgeInvalidationGoal");
+
+    for (int x = 1; x < 4; ++x) {
+        for (int y = 0; y < fixture.height; ++y) {
+            replace_tile(fixture, Coords(x, y, 0), false, "edgeInvalidationWall");
+        }
+    }
+
+    add_object(fixture, goal);
+    add_object(fixture, actor);
+    add_navigation_edge(fixture, start_coords, goal_coords, "edgeShortcut");
+
+    const auto revision_with_edge = fixture.map->getNavigationRevision();
+    performance_guard::clearTargetFlowCache();
+    const auto shortcut_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(shortcut_step == goal_coords, "edge-invalidation path should initially use the authored edge");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "edge-invalidation warm path should build one target flow field");
+
+    const auto repeated_shortcut_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(repeated_shortcut_step == goal_coords, "unchanged edge topology should reuse the authored edge");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "unchanged edge topology should keep reusing the cached target flow field");
+
+    expect_true(
+        fixture.map->removeNavigationEdge(start_coords, goal_coords, std::optional<std::string>("edgeShortcut")),
+        "removing the authored edge should report success");
+    expect_true(fixture.map->getNavigationRevision() == revision_with_edge + 1,
+                "removing the authored edge should bump navigation revision exactly once");
+
+    const auto blocked_step = fixture.map->normalizeCoords(resolve_step(actor));
+    expect_true(blocked_step == start_coords, "target navigation should stop after the only edge route is removed");
+    expect_true(performance_guard::targetFlowCacheSize() == 2,
+                "edge navigation revision change should create one replacement flow field");
 }
 
 void test_irrelevant_metadata_activity_does_not_invalidate_navigation() {
@@ -385,6 +437,7 @@ void run_engine_hotspot_performance_tests() {
     test_many_target_controllers_share_one_goal_without_mutating_navigation();
     test_relevant_object_move_invalidates_target_navigation();
     test_relevant_tile_change_invalidates_target_navigation();
+    test_navigation_edge_removal_invalidates_target_navigation();
     test_irrelevant_metadata_activity_does_not_invalidate_navigation();
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
