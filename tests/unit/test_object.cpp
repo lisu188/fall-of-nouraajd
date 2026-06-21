@@ -328,6 +328,78 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     expect_true(creature->getGold() == 20, "takeGold should subtract from creature gold");
 }
 
+void test_game_object_comparator_and_identity_sets_document_current_semantics() {
+    std::shared_ptr<CGameObject> null_object;
+    auto object = std::make_shared<CGameObject>();
+
+    expect_true(CGameObject::name_comparator(null_object, null_object),
+                "name_comparator should treat two null pointers as equal");
+    expect_true(!CGameObject::name_comparator(object, null_object),
+                "name_comparator should not treat one null pointer as equal");
+
+    auto type_id_a = std::make_shared<CGameObject>();
+    type_id_a->setType("CEffect");
+    type_id_a->setName("burn-one");
+    type_id_a->setTypeId("burn");
+
+    auto type_id_b = std::make_shared<CGameObject>();
+    type_id_b->setType("CItem");
+    type_id_b->setName("burn-two");
+    type_id_b->setTypeId("burn");
+
+    auto type_id_c = std::make_shared<CGameObject>();
+    type_id_c->setType("CEffect");
+    type_id_c->setName("burn-one");
+    type_id_c->setTypeId("freeze");
+
+    expect_true(CGameObject::name_comparator(type_id_a, type_id_b),
+                "name_comparator should prefer matching typeId over type/name differences");
+    expect_true(!CGameObject::name_comparator(type_id_a, type_id_c),
+                "name_comparator should distinguish different typeIds");
+
+    auto named_a = std::make_shared<CGameObject>();
+    named_a->setType("CEffect");
+    named_a->setName("haste");
+    named_a->setLabel("first label");
+
+    auto named_b = std::make_shared<CGameObject>();
+    named_b->setType("CEffect");
+    named_b->setName("haste");
+    named_b->setLabel("second label");
+
+    auto named_c = std::make_shared<CGameObject>();
+    named_c->setType("CItem");
+    named_c->setName("haste");
+
+    expect_true(CGameObject::name_comparator(named_a, named_b),
+                "name_comparator should fall back to type/name when both typeIds are empty");
+    expect_true(!CGameObject::name_comparator(named_a, named_c),
+                "name_comparator should distinguish type/name fallback mismatches");
+
+    std::set<std::shared_ptr<CGameObject>> identity_set;
+    identity_set.insert(type_id_a);
+    identity_set.insert(type_id_b);
+    expect_true(identity_set.size() == 2,
+                "default shared_ptr sets should preserve distinct instances with matching configured ids");
+
+    auto creature = std::make_shared<CCreature>();
+    auto burn_effect_a = std::make_shared<CEffect>();
+    burn_effect_a->setType("CEffect");
+    burn_effect_a->setName("burn-one");
+    burn_effect_a->setTypeId("burn");
+
+    auto burn_effect_b = std::make_shared<CEffect>();
+    burn_effect_b->setType("CEffect");
+    burn_effect_b->setName("burn-two");
+    burn_effect_b->setTypeId("burn");
+
+    creature->addEffect(burn_effect_a);
+    creature->addEffect(burn_effect_b);
+    const auto effects = creature->getEffects();
+    expect_true(effects.size() == 1 && effects.contains(burn_effect_a) && !effects.contains(burn_effect_b),
+                "creature addEffect should de-duplicate current effects by configured comparator semantics");
+}
+
 } // namespace
 
 int main() {
@@ -338,6 +410,7 @@ int main() {
     test_player_quest_setters_notify_property_observers();
     test_map_direct_state_setters_notify_property_observers();
     test_creature_inventory_equipment_and_ratio_helpers();
+    test_game_object_comparator_and_identity_sets_document_current_semantics();
 
     return finish_tests();
 }
