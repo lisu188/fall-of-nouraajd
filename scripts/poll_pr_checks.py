@@ -13,11 +13,12 @@ from dataclasses import dataclass
 from typing import Any, Sequence
 
 try:
-    from ci_change_classifier import COVERAGE_PATH_PATTERNS
+    from ci_change_classifier import COVERAGE_PATH_PATTERNS, classifyPaths
 except ImportError:  # pragma: no cover - used when imported as scripts.poll_pr_checks
-    from scripts.ci_change_classifier import COVERAGE_PATH_PATTERNS
+    from scripts.ci_change_classifier import COVERAGE_PATH_PATTERNS, classifyPaths
 
-DEFAULT_JOBS = ("linux",)
+DEFAULT_LIGHTWEIGHT_JOBS = ("linux",)
+DEFAULT_NATIVE_JOBS = ("linux", "windows-deps", "windows")
 DEFAULT_WORKFLOW = "build.yml"
 DEFAULT_INTERVAL_SECONDS = 30
 DEFAULT_TIMEOUT_SECONDS = 7200
@@ -113,6 +114,12 @@ def changedPathRequiresCoverage(path: str) -> bool:
 
 def changedFilesRequireCoverage(paths: Sequence[str]) -> bool:
     return any(changedPathRequiresCoverage(path) for path in paths)
+
+
+def defaultJobsForChangedFiles(paths: Sequence[str]) -> tuple[str, ...]:
+    if classifyPaths(paths).nativeNeeded:
+        return DEFAULT_NATIVE_JOBS
+    return DEFAULT_LIGHTWEIGHT_JOBS
 
 
 def appendUniqueStep(steps: Sequence[str], step: str) -> tuple[str, ...]:
@@ -398,7 +405,7 @@ def pollChecks(
     pr: str,
     repo: str | None,
     workflow: str,
-    requiredJobs: Sequence[str],
+    requiredJobs: Sequence[str] | None,
     requiredSteps: Sequence[str],
     intervalSeconds: int,
     timeoutSeconds: int,
@@ -412,8 +419,11 @@ def pollChecks(
         return pr_state_evaluation
     head_sha = str(pr_payload["headRefOid"])
     effective_steps = tuple(requiredSteps)
-    if autoRequireCoverage and COVERAGE_STEP not in effective_steps:
+    changed_files: tuple[str, ...] = ()
+    if requiredJobs is None or (autoRequireCoverage and COVERAGE_STEP not in effective_steps):
         changed_files = runGhPrFiles(pr, repo)
+    effective_jobs = tuple(requiredJobs) if requiredJobs is not None else defaultJobsForChangedFiles(changed_files)
+    if autoRequireCoverage and COVERAGE_STEP not in effective_steps:
         if changedFilesRequireCoverage(changed_files):
             effective_steps = appendUniqueStep(effective_steps, COVERAGE_STEP)
 
@@ -421,7 +431,7 @@ def pollChecks(
         runs = runGhRunList(head_sha, workflow, repo)
         run_summary = selectRunForHead(runs, head_sha)
         run_payload = runGhRunView(run_summary["databaseId"], repo) if run_summary else None
-        evaluation = evaluateRun(run_payload, requiredJobs, effective_steps)
+        evaluation = evaluateRun(run_payload, effective_jobs, effective_steps)
         printEvaluation(pr_payload, run_payload, evaluation, effective_steps)
         if evaluation.succeeded or evaluation.failed:
             return evaluation
@@ -461,7 +471,10 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
         "--check",
         action="append",
         dest="jobs",
-        help="Required job/check name to poll. May be repeated. Defaults to linux.",
+        help=(
+            "Required job/check name to poll. May be repeated. Defaults to an automatic path-based set: "
+            "linux for lightweight PRs, linux/windows-deps/windows for native validation PRs."
+        ),
     )
     parser.add_argument(
         "--require-step",
@@ -495,7 +508,7 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parseArgs(sys.argv[1:] if argv is None else argv)
-    jobs = tuple(args.jobs or DEFAULT_JOBS)
+    jobs = tuple(args.jobs) if args.jobs is not None else None
     steps = tuple(args.steps or ())
     try:
         evaluation = pollChecks(
