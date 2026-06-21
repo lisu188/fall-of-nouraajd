@@ -566,6 +566,115 @@ class ContentValidatorTest(unittest.TestCase):
             'unknown property "bogus" for class "CPropertyDerived"',
         )
 
+    def test_cpp_property_schema_reports_scalar_type_mismatches(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaWrongScalars"] = {
+            "class": "CPropertyDerived",
+            "properties": {
+                "active": 1,
+                "count": "2",
+                "name": False,
+            },
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "schemaWrongScalars.properties.active",
+            'property "active" for class "CPropertyDerived" expected bool; got int',
+        )
+        self.assertIssueContains(
+            issues,
+            "schemaWrongScalars.properties.count",
+            'property "count" for class "CPropertyDerived" expected int; got string',
+        )
+        self.assertIssueContains(
+            issues,
+            "schemaWrongScalars.properties.name",
+            'property "name" for class "CPropertyDerived" expected string; got bool',
+        )
+
+    def test_cpp_property_schema_reports_scalar_container_shape_mismatches(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaWrongShapes"] = {
+            "class": "CPropertyDerived",
+            "properties": {
+                "count": [2],
+                "name": {"ref": "LifePotion"},
+            },
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "schemaWrongShapes.properties.count",
+            'property "count" for class "CPropertyDerived" expected int; got array',
+        )
+        self.assertIssueContains(
+            issues,
+            "schemaWrongShapes.properties.name",
+            'property "name" for class "CPropertyDerived" expected string; got object',
+        )
+
+    def test_cpp_property_schema_reports_array_and_object_shape_mismatches(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaWrongContainers"] = {
+            "class": "CPropertyDerived",
+            "properties": {
+                "loot": {"ref": "LifePotion"},
+                "target": "LifePotion",
+            },
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "schemaWrongContainers.properties.loot",
+            'property "loot" for class "CPropertyDerived" expected array; got object',
+        )
+        self.assertIssueContains(
+            issues,
+            "schemaWrongContainers.properties.target",
+            'property "target" for class "CPropertyDerived" expected object; got string',
+        )
+
+    def test_cpp_property_schema_accepts_reviewed_dynamic_property_namespace(self):
+        root = self.make_fixture()
+        self.write_property_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["schemaDynamic"] = {
+            "class": "CPropertyDerived",
+            "properties": {
+                "campaign_gate_open": True,
+                "plugin_checkpoint": {"state": "armed"},
+                "quest_state_main": "done",
+            },
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
     def test_cpp_property_schema_resolves_ref_override_class(self):
         root = self.make_fixture()
         self.write_property_schema_fixture(root)
@@ -811,7 +920,9 @@ class ContentValidatorTest(unittest.TestCase):
 
                 class CPropertyDerived {
                     V_META(CPropertyDerived, CPropertyBase,
-                        V_PROPERTY(CPropertyDerived, int, count, getCount, setCount))
+                        V_PROPERTY(CPropertyDerived, int, count, getCount, setCount),
+                        V_PROPERTY(CPropertyDerived, bool, active, getActive, setActive),
+                        V_PROPERTY(CPropertyDerived, std::shared_ptr<CGameObject>, target, getTarget, setTarget))
                 };
             """).lstrip(),
             encoding="utf-8",
