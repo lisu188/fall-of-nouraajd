@@ -12745,8 +12745,10 @@ class GameTest(unittest.TestCase):
 
             exit_coords = find_adjacent_walkable_tile(game_map, spawn_coords)
             player.moveTo(exit_coords.x, exit_coords.y, exit_coords.z)
-            spawn_point.onTurn(None)
+            turn_before_finalize = game_map.getTurn()
+            advance_map_only(game_map, 1)
 
+            self.assertEqual(turn_before_finalize + 1, game_map.getTurn())
             self.assertTrue(spawn_point.getBoolProperty("destroyed"))
             self.assertFalse(spawn_point.getBoolProperty("pendingSeal"))
             self.assertFalse(spawn_point.getBoolProperty("canStep"))
