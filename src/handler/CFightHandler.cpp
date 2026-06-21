@@ -220,6 +220,13 @@ void clear_combat_status(const std::shared_ptr<CMap> &encounterMap) {
     }
 }
 
+void cancel_fight(CFightResult &result, const std::shared_ptr<CCreature> &survivor,
+                  const std::shared_ptr<CCreature> &opponent) {
+    result.outcome = CFightOutcome::Cancelled;
+    result.survivor = survivor;
+    result.opponent = opponent;
+}
+
 encounter_type sanitize_opponents(const std::shared_ptr<CMap> &encounterMap, const std::shared_ptr<CCreature> &attacker,
                                   const encounter_type &opponents) {
     if (!is_active_participant(encounterMap, attacker)) {
@@ -413,14 +420,37 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
         CPlaytestTrace::record("combat_started", fields);
     }
 
+    auto finish_result = [&]() -> CFightResult {
+        controllerEndGuard.endAll();
+
+        if (result.outcome != CFightOutcome::Invalid) {
+            const bool include_initiative = result.outcome != CFightOutcome::AttackerDefeat;
+            update_combat_status(encounterMap, attacker, opponents,
+                                 final_status_message(result.outcome, attackerName, result.rounds), include_initiative);
+        }
+
+        if (CPlaytestTrace::enabled()) {
+            json fields = {
+                {"attacker", CPlaytestTrace::objectRef(attacker)},
+                {"opponents", CPlaytestTrace::objectRefs(allOpponents)},
+                {"outcome", static_cast<int>(result.outcome)},
+                {"outcomeName", final_status_message(result.outcome, attackerName, result.rounds)},
+                {"rounds", result.rounds},
+                {"survivor", CPlaytestTrace::objectRef(result.survivor)},
+            };
+            CPlaytestTrace::addMapContext(fields, encounterMap);
+            CPlaytestTrace::record("combat_finished", fields);
+        }
+
+        return result;
+    };
+
     int stale_turns = 0;
     for (int turn = 0; turn < 100 && stale_turns < 20 && result.outcome == CFightOutcome::Invalid &&
                        is_active_participant(encounterMap, attacker) && !opponents.empty();
          ++turn) {
         if (SDL_HasEvent(SDL_QUIT)) {
-            result.outcome = CFightOutcome::Cancelled;
-            result.survivor = attacker;
-            result.opponent = current;
+            cancel_fight(result, attacker, current);
             break;
         }
         result.rounds = turn + 1;
@@ -451,10 +481,8 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
                 if (!CTags::isTagPresent(attacker->getEffects(), CTag::Stun)) {
                     attackerController->control(attacker, current);
                     if (attackerController->isCancelled(attacker, current)) {
-                        result.outcome = CFightOutcome::Cancelled;
-                        result.survivor = attacker;
-                        result.opponent = current;
-                        break;
+                        cancel_fight(result, attacker, current);
+                        return finish_result();
                     }
                     remove_dead_opponents(encounterMap, attacker, opponents, attacker);
                     if (!attacker->isAlive()) {
@@ -501,10 +529,8 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
                 if (auto controller = actor->getFightController()) {
                     controller->control(actor, attacker);
                     if (controller->isCancelled(actor, attacker)) {
-                        result.outcome = CFightOutcome::Cancelled;
-                        result.survivor = attacker;
-                        result.opponent = actor;
-                        break;
+                        cancel_fight(result, attacker, actor);
+                        return finish_result();
                     }
                 }
                 if (!attacker->isAlive()) {
@@ -558,28 +584,7 @@ CFightResult resolve_fight_many(std::shared_ptr<CCreature> attacker, const encou
         }
     }
 
-    controllerEndGuard.endAll();
-
-    if (result.outcome != CFightOutcome::Invalid) {
-        const bool include_initiative = result.outcome != CFightOutcome::AttackerDefeat;
-        update_combat_status(encounterMap, attacker, opponents,
-                             final_status_message(result.outcome, attackerName, result.rounds), include_initiative);
-    }
-
-    if (CPlaytestTrace::enabled()) {
-        json fields = {
-            {"attacker", CPlaytestTrace::objectRef(attacker)},
-            {"opponents", CPlaytestTrace::objectRefs(allOpponents)},
-            {"outcome", static_cast<int>(result.outcome)},
-            {"outcomeName", final_status_message(result.outcome, attackerName, result.rounds)},
-            {"rounds", result.rounds},
-            {"survivor", CPlaytestTrace::objectRef(result.survivor)},
-        };
-        CPlaytestTrace::addMapContext(fields, encounterMap);
-        CPlaytestTrace::record("combat_finished", fields);
-    }
-
-    return result;
+    return finish_result();
 }
 
 } // namespace
