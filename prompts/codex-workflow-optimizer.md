@@ -137,6 +137,7 @@ Repeat the following cycle:
      - `python3 -m unittest tests.test_pr_review_audit`
      - `python3 -m unittest tests.test_workflow_observations`
      - `python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes`
+       This is run-tree discovery evidence only; rerun without `--skip-run-tree-sizes` before relying on byte totals.
    - Collect relevant evidence such as failures, test duration, queue conflicts, stale claims, PR-state errors,
      unnecessary rebuilds, resource pressure, disk pressure, stale run/worktrees, prunable worktree metadata, and
      prompt/document drift.
