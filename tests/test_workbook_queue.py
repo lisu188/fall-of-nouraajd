@@ -163,8 +163,7 @@ class WorkbookQueueTest(unittest.TestCase):
             "fall_of_nouraajd_creature_archetype_jira_plan.xlsx",
             "fall_of_nouraajd_github_issues_implementation_workbook_migrated.xlsx",
         }
-        reference = "fall_of_nouraajd_github_issues_implementation_workbook.xlsx"
-        paths = [repository_root / "planning" / name for name in sorted(expected | {reference})]
+        paths = [repository_root / "planning" / name for name in sorted(expected)]
         missing = [path.name for path in paths if not path.is_file()]
         self.assertEqual(missing, [], f"Missing planning workbooks: {missing}")
 
@@ -175,8 +174,7 @@ class WorkbookQueueTest(unittest.TestCase):
                 expected,
                 f"Skipped workbook details: {discovery.skipped}",
             )
-            self.assertEqual([Path(item["workbook"]).name for item in discovery.skipped], [reference])
-            self.assertIn("Issue Proposals", discovery.skipped[0]["reason"])
+            self.assertEqual(discovery.skipped, [])
             errors, _ = workbook_queue.validateDiscovery(discovery)
             self.assertEqual(errors, [])
         finally:
