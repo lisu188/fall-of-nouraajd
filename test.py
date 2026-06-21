@@ -11075,6 +11075,8 @@ class GameTest(unittest.TestCase):
                 and "already sacrificed" not in courtyard_state.get("properties", {}).get("text", "").lower()
                 and "Victor drinks a vial of poison" not in courtyard_state.get("properties", {}).get("text", "")
             ),
+            "catacombs_uses_catacombs_image": config["catacombs"]["properties"].get("animation")
+            == "images/buildings/catacombs",
         }
 
         failed = sorted([name for name, ok in checks.items() if not ok])
