@@ -121,7 +121,11 @@ void CCreature::removeItem(std::shared_ptr<CItem> item, bool quest) {
     if (!quest && vstd::castable<CPlayer>(this->ptr<CCreature>()) && item->hasTag(CTag::Quest)) {
         vstd::logger::fatal("Tried to drop quest item");
     } else {
-        if (items.erase(item)) {
+        auto itemIt = std::find_if(items.begin(), items.end(), [item](const auto &candidate) {
+            return CGameObject::sameInstance(candidate, item);
+        });
+        if (itemIt != items.end()) {
+            items.erase(itemIt);
             if (CPlaytestTrace::enabled()) {
                 json fields = {
                     {"item", CPlaytestTrace::objectRef(item)},
@@ -302,7 +306,7 @@ void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
         vstd::logger::warning("Skipping null effect for", to_string());
         return;
     }
-    if (vstd::ctn(effects, effect, CGameObject::name_comparator)) {
+    if (vstd::ctn(effects, effect, CGameObject::sameConfiguredType)) {
         vstd::logger::debug(effect->to_string(), "skipping already present effect for", this->to_string());
     } else {
         vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
@@ -360,7 +364,7 @@ bool CCreature::isPlayer() {
         return false;
     }
     const std::shared_ptr<CPlayer> player = map->getPlayer();
-    return player && player == this->ptr<CPlayer>();
+    return player && CGameObject::sameInstance(player, this->ptr<CPlayer>());
 }
 
 int CCreature::getHpRatio() {
@@ -412,7 +416,7 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
         getMap()->getEventHandler()->gameEvent(
             oldItem, std::make_shared<CGameEventCaused>(CGameEvent::CType::onUnequip, this->ptr<CCreature>()));
         this->addItem(oldItem);
-        if (newItem == oldItem) {
+        if (CGameObject::sameInstance(newItem, oldItem)) {
             newItem = nullptr;
         }
     }
@@ -442,7 +446,10 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
     }
 }
 
-bool CCreature::hasInInventory(std::shared_ptr<CItem> item) { return vstd::ctn(items, item); }
+bool CCreature::hasInInventory(std::shared_ptr<CItem> item) {
+    return std::any_of(items.begin(), items.end(),
+                       [item](const auto &candidate) { return CGameObject::sameInstance(candidate, item); });
+}
 
 bool CCreature::hasInInventory(std::function<bool(std::shared_ptr<CItem>)> item) {
     return std::any_of(items.begin(), items.end(), item);
@@ -497,7 +504,7 @@ bool CCreature::hasEquipped(std::function<bool(std::shared_ptr<CItem>)> item) {
 
 bool CCreature::hasEquipped(std::shared_ptr<CItem> item) {
     for (auto it : equipped) {
-        if (it.second == item) {
+        if (CGameObject::sameInstance(it.second, item)) {
             return true;
         }
     }
@@ -526,7 +533,7 @@ std::shared_ptr<CItem> CCreature::getItemAtSlot(std::string slot) {
 
 std::string CCreature::getSlotWithItem(std::shared_ptr<CItem> item) {
     for (auto it = equipped.begin(); it != equipped.end(); it++) {
-        if ((*it).second == item) {
+        if (CGameObject::sameInstance((*it).second, item)) {
             return (*it).first;
         }
     }
@@ -583,15 +590,18 @@ void CCreature::afterMove() {
     const auto arrival = map->normalizeCoords(getCoords());
 
     auto moverStillAtArrival = [self, map, arrival]() {
-        return self->isAlive() && self->getMap() == map && map->getObjectByName(self->getName()) == self &&
+        return self->isAlive() && self->getMap() == map &&
+               CGameObject::sameRuntimeIdentity(map->getObjectByName(self->getName()), self) &&
                map->normalizeCoords(self->getCoords()) == arrival;
     };
 
     auto fightPred = [self, map](std::shared_ptr<CMapObject> object) {
         auto other = vstd::cast<CCreature>(object);
-        return other && self != object && !self->isNpc() && !other->isNpc() && !self->isAffiliatedWith(object) &&
-               self->getMap() == map && map->getObjectByName(self->getName()) == self && other->getMap() == map &&
-               map->getObjectByName(other->getName()) == other;
+        return other && !CGameObject::sameInstance(self, object) && !self->isNpc() && !other->isNpc() &&
+               !self->isAffiliatedWith(object) && self->getMap() == map &&
+               CGameObject::sameRuntimeIdentity(map->getObjectByName(self->getName()), self) &&
+               other->getMap() == map &&
+               CGameObject::sameRuntimeIdentity(map->getObjectByName(other->getName()), other);
     };
 
     std::vector<std::shared_ptr<CCreature>> opponents;
@@ -677,7 +687,9 @@ void CCreature::setNpc(bool value) { npc = value; }
 
 // TODO: make this a CGameEvent
 void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature) {
-    vstd::fail_if(!vstd::ctn(actions, action));
+    vstd::fail_if(!std::any_of(actions.begin(), actions.end(), [action](const auto &candidate) {
+        return CGameObject::sameInstance(candidate, action);
+    }));
     action->onAction(this->ptr<CCreature>(), creature);
     if (creature->getArmor()) {
         if (creature->getArmor()->getInteraction()) {
@@ -687,14 +699,18 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
 }
 
 void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
-    if (effects.erase(effect)) {
+    auto effectIt = std::find_if(effects.begin(), effects.end(), [effect](const auto &candidate) {
+        return CGameObject::sameInstance(candidate, effect);
+    });
+    if (effectIt != effects.end()) {
+        effects.erase(effectIt);
         recordDirectPropertyChanged("effects");
     }
     signal("effectsChanged");
 }
 
 void CCreature::useItem(std::shared_ptr<CItem> item) {
-    vstd::fail_if(!vstd::ctn(items, item), "Tried to use item not in inventory!");
+    vstd::fail_if(!hasInInventory(item), "Tried to use item not in inventory!");
     const bool restores_hp = item->hasTag(CTag::Heal);
     const bool restores_mana = item->hasTag(CTag::Mana);
     const bool can_restore_hp = restores_hp && getHp() < getHpMax();

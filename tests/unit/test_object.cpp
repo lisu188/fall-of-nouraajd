@@ -443,20 +443,30 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
 
     auto inventory_item = std::make_shared<CItem>();
     inventory_item->setTypeId("potion");
+    auto same_type_inventory_item = std::make_shared<CItem>();
+    same_type_inventory_item->setTypeId("potion");
     auto equipped_item = std::make_shared<CItem>();
     equipped_item->setTypeId("sword");
+    auto same_type_equipped_item = std::make_shared<CItem>();
+    same_type_equipped_item->setTypeId("sword");
     auto null_slot_item = std::shared_ptr<CItem>();
 
     creature->setItems({nullptr, inventory_item});
     creature->setEquipped({{"0", equipped_item}, {"1", null_slot_item}});
     expect_true(creature->hasInInventory(inventory_item), "creature should track inventory items");
+    expect_true(!creature->hasInInventory(same_type_inventory_item),
+                "creature inventory identity should not collapse matching configured item ids");
     expect_true(creature->hasEquipped(equipped_item), "creature should find directly equipped items");
+    expect_true(!creature->hasEquipped(same_type_equipped_item),
+                "creature equipment identity should not collapse matching configured item ids");
     expect_true(creature->hasEquipped([](const auto &item) { return item && item->getTypeId() == "sword"; }),
                 "creature should find equipped items with predicates");
     expect_true(creature->hasItem(equipped_item) && creature->hasItem(inventory_item),
                 "hasItem should search inventory and equipped slots");
     expect_true(creature->getAllItems().size() == 2, "getAllItems should merge inventory and non-null equipment");
     expect_true(creature->getSlotWithItem(equipped_item) == "0", "creature should locate equipped item slots");
+    expect_true(creature->getSlotWithItem(same_type_equipped_item) == "-1",
+                "creature slot lookup should require the exact equipped item instance");
     expect_true(creature->getSlotWithItem(inventory_item) == "-1", "missing equipped items should report no slot");
     expect_true(creature->countItems("potion") == 1, "creature should count matching inventory type ids");
 

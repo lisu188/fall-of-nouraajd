@@ -35,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
+#include "object/CTrigger.h"
 #include "test_harness.h"
 
 #include <SDL.h>
@@ -314,6 +315,36 @@ void test_handler_constructors_are_covered_by_native_tests() {
     expect_true(rng_handler.getRandomEncounter(0).empty(),
                 "default RNG handler should return no encounters without a game");
     (void)quest_handler;
+}
+
+std::shared_ptr<CTrigger> make_unit_trigger(const std::string &name, const std::string &typeId) {
+    auto trigger = std::make_shared<CTrigger>();
+    trigger->setType("CTrigger");
+    trigger->setName(name);
+    trigger->setTypeId(typeId);
+    trigger->setObject("unitObject");
+    trigger->setEvent(CGameEvent::CType::onEnter);
+    return trigger;
+}
+
+void test_event_handler_trigger_registration_uses_named_comparison_helpers() {
+    CEventHandler handler;
+    auto first = make_unit_trigger("unitDuplicateTrigger", "unitDuplicateTriggerType");
+    auto duplicate = make_unit_trigger("unitDuplicateTrigger", "unitDuplicateTriggerType");
+    auto same_type_different_name = make_unit_trigger("unitDistinctTrigger", "unitDuplicateTriggerType");
+
+    handler.registerTrigger(first);
+    handler.registerTrigger(duplicate);
+    expect_true(handler.getTriggers().size() == 1,
+                "trigger registration should de-duplicate matching configured trigger registrations");
+
+    handler.registerTrigger(first);
+    expect_true(handler.getTriggers().size() == 1,
+                "trigger registration should de-duplicate the exact same trigger instance");
+
+    handler.registerTrigger(same_type_different_name);
+    expect_true(handler.getTriggers().size() == 2,
+                "trigger registration should preserve distinct trigger names with the same configured type id");
 }
 
 void test_fight_handler_rejects_stale_and_cross_map_participants() {
@@ -1021,6 +1052,7 @@ int main() {
 
     test_script_handler_executes_commands_and_wraps_functions();
     test_handler_constructors_are_covered_by_native_tests();
+    test_event_handler_trigger_registration_uses_named_comparison_helpers();
     test_fight_handler_rejects_stale_and_cross_map_participants();
     test_fight_handler_attributes_lethal_effects_to_valid_casters();
     test_fight_handler_reports_explicit_outcomes_and_final_status();

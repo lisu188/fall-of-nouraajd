@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CTextureCache.h"
 
+#include <algorithm>
+
 CListView::collection_pointer CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
     auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
     if (!player) {
@@ -36,7 +38,8 @@ void CGameTradePanel::inventoryCallback(std::shared_ptr<CGui> gui, int index,
 }
 
 bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return vstd::ctn(selectedInventory, object, [](auto a, auto b) { return a == b.lock(); });
+    return std::any_of(selectedInventory.begin(), selectedInventory.end(),
+                       [object](const auto &selection) { return CGameObject::sameInstance(selection.lock(), object); });
 }
 
 CListView::collection_pointer CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
@@ -52,7 +55,8 @@ void CGameTradePanel::marketCallback(std::shared_ptr<CGui> gui, int index, std::
 }
 
 bool CGameTradePanel::marketSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return vstd::ctn(selectedMarket, object, [](auto a, auto b) { return a == b.lock(); });
+    return std::any_of(selectedMarket.begin(), selectedMarket.end(),
+                       [object](const auto &selection) { return CGameObject::sameInstance(selection.lock(), object); });
 }
 
 bool CGameTradePanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
@@ -139,8 +143,12 @@ int CGameTradePanel::getTotalBuyCost() {
 
 void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
     if (selection.lock()) {
-        if (vstd::ctn(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
-            vstd::erase(selectedMarket, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
+        auto selected = selection.lock();
+        auto selectionIt = std::find_if(selectedMarket.begin(), selectedMarket.end(), [selected](const auto &item) {
+            return CGameObject::sameInstance(item.lock(), selected);
+        });
+        if (selectionIt != selectedMarket.end()) {
+            selectedMarket.erase(selectionIt);
         } else {
             selectedMarket.push_back(selection);
         }
@@ -149,8 +157,12 @@ void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
 
 void CGameTradePanel::selectInventory(std::weak_ptr<CItem> selection) {
     if (selection.lock() && !selection.lock()->hasTag(CTag::Quest)) {
-        if (vstd::ctn(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); })) {
-            vstd::erase(selectedInventory, selection, [](auto a, auto b) { return a.lock() == b.lock(); });
+        auto selected = selection.lock();
+        auto selectionIt =
+            std::find_if(selectedInventory.begin(), selectedInventory.end(),
+                         [selected](const auto &item) { return CGameObject::sameInstance(item.lock(), selected); });
+        if (selectionIt != selectedInventory.end()) {
+            selectedInventory.erase(selectionIt);
         } else {
             selectedInventory.push_back(selection);
         }

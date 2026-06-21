@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/panel/CListView.h"
@@ -568,6 +569,7 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     auto gui = std::make_shared<CGui>();
     auto player = std::make_shared<CPlayer>();
     auto potion = std::make_shared<CPotion>();
+    auto same_type_potion = std::make_shared<CPotion>();
     auto panel = std::make_shared<CGameInventoryPanel>();
 
     game->setMap(map);
@@ -582,17 +584,40 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
 
     potion->setGame(game);
     potion->setName("coveredFullHealthPotion");
+    potion->setTypeId("coveredFullHealthPotionType");
     potion->addTag(CTag::Heal);
+    same_type_potion->setTypeId(potion->getTypeId());
     player->addItem(potion);
 
     const auto inventory_size = player->getItems().size();
     panel->inventoryCallback(gui, 0, potion);
     expect_true(panel->inventorySelect(gui, 0, potion), "first inventory click should select a usable item");
+    expect_true(!panel->inventorySelect(gui, 0, same_type_potion),
+                "inventory selection should not select a different item instance with the same configured id");
 
     panel->inventoryCallback(gui, 0, potion);
     expect_true(player->getItems().size() == inventory_size,
                 "full-health potion double-select should call useItem without consuming the item");
     expect_true(!panel->inventorySelect(gui, 0, potion), "second inventory click should clear the used selection");
+}
+
+void test_fight_panel_enemy_selection_uses_exact_instance() {
+    auto panel = std::make_shared<CGameFightPanel>();
+    auto enemy = std::make_shared<CCreature>();
+    auto same_type_enemy = std::make_shared<CCreature>();
+
+    enemy->setName("unitSelectedEnemy");
+    enemy->setTypeId("unitSelectedEnemyType");
+    enemy->setHp(1);
+    same_type_enemy->setName(enemy->getName());
+    same_type_enemy->setTypeId(enemy->getTypeId());
+    same_type_enemy->setHp(1);
+
+    panel->setEnemy(enemy);
+
+    expect_true(panel->enemiesSelect(nullptr, 0, enemy), "fight enemy selection should match the selected instance");
+    expect_true(!panel->enemiesSelect(nullptr, 0, same_type_enemy),
+                "fight enemy selection should not match a different creature with the same configured id");
 }
 
 void test_list_view_drag_callbacks_validate_and_drop_without_click_fallback() {
@@ -1025,6 +1050,7 @@ int main() {
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
+    test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();

@@ -54,7 +54,9 @@ class ObjectComparisonAuditTest(unittest.TestCase):
         )
 
         creature = self.read("src/object/CCreature.cpp")
-        self.assertIn("vstd::ctn(effects, effect, CGameObject::name_comparator)", creature)
+        self.assertIn("vstd::ctn(effects, effect, CGameObject::sameConfiguredType)", creature)
+        self.assertIn("CGameObject::sameInstance((*it).second, item)", creature)
+        self.assertIn("CGameObject::sameRuntimeIdentity(map->getObjectByName(self->getName()), self)", creature)
         self.assertIn("std::set<std::shared_ptr<CItem>> allItems", creature)
 
         graphics = self.read("src/gui/object/CGameGraphicsObject.cpp")
@@ -68,12 +70,19 @@ class ObjectComparisonAuditTest(unittest.TestCase):
         self.assertIn("map->getObjectByName(creature->getName()) == creature", fight)
 
         events = self.read("src/handler/CEventHandler.cpp")
-        self.assertIn("existing == trigger", events)
-        self.assertIn("existing->getTypeId() == trigger->getTypeId()", events)
+        self.assertIn("CGameObject::sameInstance(existing, trigger)", events)
+        self.assertIn("CGameObject::sameConfiguredType(existing, trigger)", events)
 
         fight_panel = self.read("src/gui/panel/CGameFightPanel.cpp")
         self.assertIn("names.insert(candidate->getName()).second", fight_panel)
-        self.assertIn("enemy.lock() == object", fight_panel)
+        self.assertIn("CGameObject::sameInstance(enemy.lock(), object)", fight_panel)
+
+        inventory_panel = self.read("src/gui/panel/CGameInventoryPanel.cpp")
+        self.assertIn("CGameObject::sameInstance(selectedInventory.lock(), object)", inventory_panel)
+        self.assertIn("CGameObject::sameInstance(selectedEquipped.lock(), object)", inventory_panel)
+
+        trade_panel = self.read("src/gui/panel/CGameTradePanel.cpp")
+        self.assertIn("CGameObject::sameInstance(selection.lock(), object)", trade_panel)
 
 
 if __name__ == "__main__":
