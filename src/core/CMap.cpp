@@ -369,8 +369,8 @@ bool CMap::canStep(int x, int y, int z) {
 bool CMap::canStep(Coords coords) { return canStep(coords.x, coords.y, coords.z); }
 
 int CMap::getMovementCost(int x, int y, int z) {
-    getTile(x, y, z);
-    return 1;
+    auto tile = getTile(x, y, z);
+    return tile ? std::max(1, tile->getMovementCost()) : 1;
 }
 
 int CMap::getMovementCost(Coords coords) {

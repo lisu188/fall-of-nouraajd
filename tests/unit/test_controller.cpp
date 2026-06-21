@@ -95,11 +95,12 @@ std::shared_ptr<CPlayer> player_at(const std::shared_ptr<CGame> &game, Coords co
     return player;
 }
 
-void add_navigation_edge(const std::shared_ptr<CMap> &map, Coords source, Coords target, bool bidirectional = false) {
+void add_navigation_edge(const std::shared_ptr<CMap> &map, Coords source, Coords target, bool bidirectional = false,
+                         bool enabled = true) {
     CNavigationEdge edge;
     edge.source = source;
     edge.target = target;
-    edge.enabled = true;
+    edge.enabled = enabled;
     edge.bidirectional = bidirectional;
     map->registerNavigationEdge(edge);
 }
@@ -268,6 +269,97 @@ void test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level
     expect_true(second == Coords(1, 0, 1), "target flow field should cross the authored z-level edge");
 }
 
+void test_player_controller_respects_disabled_and_one_way_cross_level_edges() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1), false, false);
+
+    auto player = player_at(game, Coords(1, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+
+    controller->setTarget(player, Coords(1, 0, 1));
+    expect_true(resolve_coords(controller->control(player)) == Coords(1, 0, 0),
+                "disabled cross-level edges should not produce a player route");
+
+    map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 1), Coords(1, 0, 0));
+
+    auto lower_player = player_at(game, Coords(1, 0, 0));
+    auto lower_controller = std::make_shared<CPlayerController>();
+    lower_player->setController(lower_controller);
+    lower_controller->setTarget(lower_player, Coords(1, 0, 1));
+    expect_true(resolve_coords(lower_controller->control(lower_player)) == Coords(1, 0, 0),
+                "one-way drops should not be usable in reverse");
+
+    auto upper_player = player_at(game, Coords(1, 0, 1));
+    auto upper_controller = std::make_shared<CPlayerController>();
+    upper_player->setController(upper_controller);
+    upper_controller->setTarget(upper_player, Coords(1, 0, 0));
+    expect_true(resolve_coords(upper_controller->control(upper_player)) == Coords(1, 0, 0),
+                "one-way drops should route from the upper level to the lower level");
+}
+
+void test_player_controller_uses_bidirectional_cross_level_edge_both_ways() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1), true);
+
+    auto lower_player = player_at(game, Coords(0, 0, 0));
+    auto lower_controller = std::make_shared<CPlayerController>();
+    lower_player->setController(lower_controller);
+    lower_controller->setTarget(lower_player, Coords(2, 0, 1));
+
+    auto lower_first = resolve_coords(lower_controller->control(lower_player));
+    expect_true(lower_first == Coords(1, 0, 0), "bidirectional stairs should be reachable from the lower level");
+    lower_player->moveTo(lower_first);
+    lower_controller->onStepCommitted(lower_player, lower_first);
+
+    auto lower_second = resolve_coords(lower_controller->control(lower_player));
+    expect_true(lower_second == Coords(1, 0, 1), "bidirectional stairs should cross upward");
+
+    auto upper_player = player_at(game, Coords(2, 0, 1));
+    auto upper_controller = std::make_shared<CPlayerController>();
+    upper_player->setController(upper_controller);
+    upper_controller->setTarget(upper_player, Coords(0, 0, 0));
+
+    auto upper_first = resolve_coords(upper_controller->control(upper_player));
+    expect_true(upper_first == Coords(1, 0, 1), "bidirectional stairs should be reachable from the upper level");
+    upper_player->moveTo(upper_first);
+    upper_controller->onStepCommitted(upper_player, upper_first);
+
+    auto upper_second = resolve_coords(upper_controller->control(upper_player));
+    expect_true(upper_second == Coords(1, 0, 0), "bidirectional stairs should cross downward");
+}
+
+void test_target_controller_flow_field_invalidates_when_cross_level_edge_is_added() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 3, 1, 2);
+
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("unitTargetAfterEdgeChange");
+    target->setCoords(Coords(1, 0, 1));
+    map->addObject(target);
+
+    auto chaser = creature_at(1, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("unitChaserAfterEdgeChange");
+    chaser->setHp(1);
+    auto controller = std::make_shared<CTargetController>();
+    controller->setTarget("unitTargetAfterEdgeChange");
+    chaser->setController(controller);
+    map->addObject(chaser);
+
+    performance_guard::clearTargetFlowCache();
+    expect_true(resolve_coords(controller->control(chaser)) == Coords(1, 0, 0),
+                "target flow field should stay put before the cross-level edge exists");
+
+    add_navigation_edge(map, Coords(1, 0, 0), Coords(1, 0, 1));
+    expect_true(resolve_coords(controller->control(chaser)) == Coords(1, 0, 1),
+                "target flow field should use a newly added cross-level edge");
+}
+
 void test_fight_controller_guard_paths_and_fallbacks() {
     auto attacker = creature_at(0, 0, 0);
     auto opponent = creature_at(1, 0, 0);
@@ -346,6 +438,9 @@ int main() {
     test_npc_random_controller_clears_stale_blocked_path();
     test_player_controller_uses_navigation_neighbors_for_cross_level_route();
     test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();
+    test_player_controller_respects_disabled_and_one_way_cross_level_edges();
+    test_player_controller_uses_bidirectional_cross_level_edge_both_ways();
+    test_target_controller_flow_field_invalidates_when_cross_level_edge_is_added();
     test_fight_controller_guard_paths_and_fallbacks();
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
 

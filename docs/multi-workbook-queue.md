@@ -16,13 +16,17 @@ Current queue-compatible workbooks are:
 
 - `planning/fall_of_nouraajd_issue_proposals.xlsx`
 - `planning/fall_of_nouraajd_creature_archetype_jira_plan.xlsx`
-- `planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx`
+- `planning/fall_of_nouraajd_github_issues_implementation_workbook_migrated.xlsx`
 
-The GitHub issues implementation workbook retains its original planning sheets
+The migrated GitHub issues implementation workbook retains the original planning sheets
 (`Dashboard`, `GitHub Issues`, `Implementation Briefs`, `Source Evidence`, and
 `Validation & Close Log`) and adds a canonical `Issue Proposals` sheet. The
 queue rows preserve the source issue number and source-backed implementation
 notes while initializing workflow state as unclaimed `NOT_STARTED` work.
+
+The original `planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx`
+does not contain `Issue Proposals`; discovery reports it as a skipped reference
+workbook and controllers must not mutate it as a queue.
 
 Inspect discovery before dispatching:
 
