@@ -2705,12 +2705,14 @@ NOURAAJD_QUEST_STATE_NAMES = (
 NOURAAJD_MAP_BOOL_FLAGS = (
     "completed_rolf",
     "completed_gooby",
+    "GOOBY_REWARD_CLAIMED",
     "DELIVERED_LETTER",
     "RELIC_RETURNED",
     "OCTOBOGZ_SLAIN",
     "OCTOBOGZ_CLEARED",
     "CAVE_PURGED",
     "completed_octobogz",
+    "OCTOBOGZ_REWARD_CLAIMED",
     "AMULET_QUEST_STARTED",
     "AMULET_RETURNED",
     "VICTOR_QUEST_STARTED",
@@ -2844,8 +2846,8 @@ def map_dialog_sources(map_name):
         if not isinstance(data, dict):
             continue
         for dialog_id, value in data.items():
-            if isinstance(value, dict) and str(value.get("class", "")).endswith("Dialog"):
-                dialogs[dialog_id] = {"path": path, "definition": value}
+            if isinstance(value, dict) and "Dialog" in str(value.get("class", "")):
+                dialogs[dialog_id] = {"path": path, "definition": value, "document": data}
     return dialogs
 
 
@@ -2861,12 +2863,18 @@ def require_source_dialog(map_name, dialog_id):
     )
 
 
-def collect_source_dialog_hooks(dialog_definition):
+def collect_source_dialog_hooks(dialog_definition, document=None):
     actions = {}
     conditions = {}
+    visited_refs = set()
 
     def visit(node):
         if isinstance(node, dict):
+            ref = node.get("ref")
+            if isinstance(ref, str) and isinstance(document, dict) and ref in document and ref not in visited_refs:
+                visited_refs.add(ref)
+                visit(document[ref])
+
             properties = node.get("properties")
             if isinstance(properties, dict):
                 action = properties.get("action")
@@ -2993,7 +3001,7 @@ class McpScenarioHarness:
 
     def invokeDialogAction(self, dialog_id, action, *, condition=None, require_condition=True, pump_iterations=3):
         dialog, source = self.createDialog(dialog_id)
-        source_actions, source_conditions = collect_source_dialog_hooks(source["definition"])
+        source_actions, source_conditions = collect_source_dialog_hooks(source["definition"], source.get("document"))
         source_path = source["path"].relative_to(REPO_ROOT)
         if action not in source_actions:
             available = ", ".join(sorted(source_actions)) or "none"
@@ -3038,6 +3046,25 @@ class McpScenarioHarness:
             self.pump(1)
         return runtime_name
 
+    def checkQuests(self, *, pump_iterations=1):
+        assert_mcp_handle_method("CPlayer", "checkQuests")
+        self.player.checkQuests()
+        self.pump(pump_iterations)
+        return self.refresh()
+
+    def addPlayerItem(self, item_id, *, pump_iterations=1):
+        assert_mcp_handle_method("CCreature", "addItem")
+        self.player.addItem(item_id)
+        self.pump(pump_iterations)
+        return self.refresh()
+
+    def advanceTurns(self, turns, *, pump_iterations=1):
+        assert_mcp_handle_method("CMap", "move")
+        for _ in range(max(int(turns), 0)):
+            self.gameMap.move()
+        self.pump(pump_iterations)
+        return self.refresh()
+
     def snapshot(
         self,
         *,
@@ -3054,6 +3081,7 @@ class McpScenarioHarness:
         return {
             "map": self.gameMap.mapName,
             "turn": self.gameMap.getTurn(),
+            "gold": self.player.getGold(),
             "quest_states": {
                 quest: self.gameMap.getStringProperty(f"quest_state_{quest}") for quest in quest_state_names
             },
@@ -13263,6 +13291,313 @@ class GameTest(unittest.TestCase):
                     "quest_states": after_gooby["quest_states"],
                     "flags": after_gooby["map_flags"],
                     "objects": after_gooby["objects"],
+                },
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_mcp_scenario_harness_drives_nouraajd_beren_cleanse_chain(self):
+        scenario = McpScenarioHarness.start("nouraajd", DEFAULT_PLAYER)
+        watched_objects = ("catacombs", "cave2")
+
+        initial = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("letter_pending", initial["quest_states"]["beren_chain"])
+        self.assertEqual("not_started", initial["quest_states"]["octobogz_contract"])
+        self.assertFalse(initial["player_flags"]["CAN_CRAFT_SCROLLS"])
+        self.assertFalse(initial["player_flags"]["CAN_BREW_GREATER_POTIONS"])
+        self.assertTrue(initial["objects"]["catacombs"])
+        self.assertTrue(initial["objects"]["cave2"])
+
+        scenario.invokeDialogAction("townHallDialog", "give_letter", condition="can_offer_letter_work")
+        after_letter = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("letter_in_hand", after_letter["quest_states"]["beren_chain"])
+        self.assertEqual(initial["items"]["letterToBeren"] + 1, after_letter["items"]["letterToBeren"])
+        self.assertIn("deliverLetterQuest", after_letter["active_quests"])
+
+        scenario.invokeDialogAction("berenDialog", "deliver_letter", condition="can_deliver_letter")
+        scenario.checkQuests()
+        after_delivery = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("letter_delivered", after_delivery["quest_states"]["beren_chain"])
+        self.assertEqual(0, after_delivery["items"]["letterToBeren"])
+        self.assertTrue(after_delivery["player_flags"]["CAN_CRAFT_SCROLLS"])
+        self.assertTrue(after_delivery["map_flags"]["DELIVERED_LETTER"])
+        self.assertIn("deliverLetterQuest", after_delivery["completed_quests"])
+        self.assertIn("retrieveRelicQuest", after_delivery["active_quests"])
+
+        scenario.removeObjectByName("catacombs")
+        after_catacombs = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("relic_obtained", after_catacombs["quest_states"]["beren_chain"])
+        self.assertEqual(initial["items"]["holyRelic"] + 1, after_catacombs["items"]["holyRelic"])
+        self.assertFalse(after_catacombs["objects"]["catacombs"])
+
+        scenario.invokeDialogAction("berenDialog", "return_relic", condition="can_return_relic")
+        scenario.checkQuests()
+        after_relic = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("relic_returned_waiting_kill", after_relic["quest_states"]["beren_chain"])
+        self.assertEqual(0, after_relic["items"]["holyRelic"])
+        self.assertTrue(after_relic["player_flags"]["CAN_BREW_GREATER_POTIONS"])
+        self.assertTrue(after_relic["map_flags"]["RELIC_RETURNED"])
+        self.assertIn("retrieveRelicQuest", after_relic["completed_quests"])
+        self.assertIn("cleanseCaveQuest", after_relic["active_quests"])
+
+        scenario.invokeDialogAction("dialog", "accept_quest")
+        after_contract = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("active", after_contract["quest_states"]["octobogz_contract"])
+        self.assertIn("octoBogzQuest", after_contract["active_quests"])
+
+        scenario.removeObjectByName("cave2")
+        after_octo = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("ready_to_report", after_octo["quest_states"]["beren_chain"])
+        self.assertEqual("completed", after_octo["quest_states"]["octobogz_contract"])
+        self.assertTrue(after_octo["map_flags"]["OCTOBOGZ_SLAIN"])
+        self.assertTrue(after_octo["map_flags"]["OCTOBOGZ_CLEARED"])
+        self.assertTrue(after_octo["map_flags"]["completed_octobogz"])
+        self.assertTrue(after_octo["map_flags"]["OCTOBOGZ_REWARD_CLAIMED"])
+        self.assertEqual(after_contract["gold"] + 1000, after_octo["gold"])
+        self.assertEqual(after_contract["items"]["ShadowBlade"] + 1, after_octo["items"]["ShadowBlade"])
+        self.assertIn("octoBogzQuest", after_octo["completed_quests"])
+        self.assertFalse(after_octo["objects"]["cave2"])
+
+        nouraajd_map = scenario.gameMap
+        scenario.invokeDialogAction("berenDialog", "finish_cleanse", condition="can_finish_cleanse", pump_iterations=10)
+        after_transition = scenario.snapshot(quest_state_names=(), map_flags=(), item_ids=())
+        self.assertEqual("ritual", after_transition["map"])
+        self.assertTrue(nouraajd_map.getBoolProperty("CAVE_PURGED"))
+        self.assertIn("cleanseCaveQuest", after_transition["completed_quests"])
+        self.assertNotIn("cleanseCaveQuest", after_transition["active_quests"])
+
+        return True, json.dumps(
+            {
+                "initial": {
+                    "quest_states": initial["quest_states"],
+                    "player_flags": initial["player_flags"],
+                    "objects": initial["objects"],
+                },
+                "after_delivery": {
+                    "quest_states": after_delivery["quest_states"],
+                    "items": after_delivery["items"],
+                    "player_flags": after_delivery["player_flags"],
+                    "completed_quests": after_delivery["completed_quests"],
+                },
+                "after_relic": {
+                    "quest_states": after_relic["quest_states"],
+                    "items": after_relic["items"],
+                    "player_flags": after_relic["player_flags"],
+                    "active_quests": after_relic["active_quests"],
+                },
+                "after_octo": {
+                    "quest_states": after_octo["quest_states"],
+                    "map_flags": after_octo["map_flags"],
+                    "items": after_octo["items"],
+                    "gold_delta": after_octo["gold"] - after_contract["gold"],
+                },
+                "after_transition": {
+                    "map": after_transition["map"],
+                    "completed_quests": after_transition["completed_quests"],
+                    "cave_purged": nouraajd_map.getBoolProperty("CAVE_PURGED"),
+                },
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_mcp_scenario_harness_drives_nouraajd_amulet_cleanup(self):
+        scenario = McpScenarioHarness.start("nouraajd", DEFAULT_PLAYER)
+        watched_objects = ("oldWoman", "amuletGoblin")
+
+        initial = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("not_started", initial["quest_states"]["amulet"])
+        self.assertEqual(0, initial["items"]["preciousAmulet"])
+        self.assertTrue(initial["objects"]["oldWoman"])
+        self.assertFalse(initial["objects"]["amuletGoblin"])
+
+        scenario.invokeDialogAction("questDialog", "start_amulet_quest")
+        after_start = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("active", after_start["quest_states"]["amulet"])
+        self.assertTrue(after_start["map_flags"]["AMULET_QUEST_STARTED"])
+        self.assertIn("amuletQuest", after_start["active_quests"])
+        self.assertTrue(after_start["objects"]["oldWoman"])
+        self.assertTrue(after_start["objects"]["amuletGoblin"])
+
+        scenario.addPlayerItem("preciousAmulet")
+        after_loot = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual(1, after_loot["items"]["preciousAmulet"])
+
+        scenario.invokeDialogAction("questReturnDialog", "complete_amulet_quest")
+        scenario.checkQuests()
+        after_return = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("returned", after_return["quest_states"]["amulet"])
+        self.assertTrue(after_return["map_flags"]["AMULET_RETURNED"])
+        self.assertEqual(0, after_return["items"]["preciousAmulet"])
+        self.assertEqual(initial["gold"] + 50, after_return["gold"])
+        self.assertFalse(after_return["objects"]["oldWoman"])
+        self.assertFalse(after_return["objects"]["amuletGoblin"])
+        self.assertIn("amuletQuest", after_return["completed_quests"])
+        self.assertNotIn("amuletQuest", after_return["active_quests"])
+
+        scenario.addPlayerItem("preciousAmulet")
+        scenario.invokeDialogAction("questReturnDialog", "complete_amulet_quest")
+        scenario.checkQuests()
+        after_repeat = scenario.snapshot(object_names=watched_objects)
+        self.assertEqual("returned", after_repeat["quest_states"]["amulet"])
+        self.assertEqual(after_return["gold"], after_repeat["gold"])
+        self.assertEqual(1, after_repeat["items"]["preciousAmulet"])
+        self.assertFalse(after_repeat["objects"]["oldWoman"])
+        self.assertFalse(after_repeat["objects"]["amuletGoblin"])
+
+        return True, json.dumps(
+            {
+                "initial": {
+                    "quest_states": initial["quest_states"],
+                    "items": initial["items"],
+                    "objects": initial["objects"],
+                },
+                "after_start": {
+                    "quest_states": after_start["quest_states"],
+                    "map_flags": after_start["map_flags"],
+                    "objects": after_start["objects"],
+                    "active_quests": after_start["active_quests"],
+                },
+                "after_return": {
+                    "quest_states": after_return["quest_states"],
+                    "items": after_return["items"],
+                    "objects": after_return["objects"],
+                    "gold_delta": after_return["gold"] - initial["gold"],
+                    "completed_quests": after_return["completed_quests"],
+                },
+                "after_repeat": {
+                    "items": after_repeat["items"],
+                    "gold_delta": after_repeat["gold"] - initial["gold"],
+                    "objects": after_repeat["objects"],
+                },
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_mcp_scenario_harness_drives_nouraajd_victor_endings(self):
+        watched_objects = ("cultLeaderQuest",)
+        watched_prefixes = ("victorCultist",)
+
+        scenario_good = McpScenarioHarness.start("nouraajd", DEFAULT_PLAYER)
+        good_initial = scenario_good.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("not_started", good_initial["quest_states"]["victor"])
+        self.assertFalse(good_initial["objects"]["cultLeaderQuest"])
+        self.assertEqual(0, good_initial["object_prefix_counts"]["victorCultist"])
+
+        scenario_good.invokeDialogAction("tavernDialog2", "talked_to_victor")
+        good_after_tavern = scenario_good.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("met_victor", good_after_tavern["quest_states"]["victor"])
+        self.assertTrue(good_after_tavern["map_flags"]["VICTOR_QUEST_STARTED"])
+        self.assertIn("victorQuest", good_after_tavern["active_quests"])
+
+        scenario_good.invokeDialogAction(
+            "townHallDialog",
+            "spawn_cultists",
+            condition="can_discuss_victor_records",
+        )
+        good_after_spawn = scenario_good.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("encounter_active", good_after_spawn["quest_states"]["victor"])
+        self.assertTrue(good_after_spawn["map_flags"]["VICTOR_COURTYARD_FOUND"])
+        self.assertTrue(good_after_spawn["map_flags"]["VICTOR_CULTISTS_SPAWNED"])
+        self.assertTrue(good_after_spawn["objects"]["cultLeaderQuest"])
+        self.assertGreater(good_after_spawn["object_prefix_counts"]["victorCultist"], 0)
+
+        scenario_good.removeObjectByName("cultLeaderQuest")
+        good_after_end = scenario_good.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("good_end", good_after_end["quest_states"]["victor"])
+        self.assertEqual(good_initial["gold"] + 500, good_after_end["gold"])
+        self.assertTrue(good_after_end["map_flags"]["VICTOR_GOOD_END"])
+        self.assertTrue(good_after_end["map_flags"]["VICTOR_REWARD_CLAIMED"])
+        self.assertFalse(good_after_end["map_flags"]["VICTOR_BAD_END"])
+        self.assertFalse(good_after_end["objects"]["cultLeaderQuest"])
+        self.assertEqual(0, good_after_end["object_prefix_counts"]["victorCultist"])
+        self.assertIn("victorQuest", good_after_end["completed_quests"])
+
+        scenario_good.invokeDialogAction("townHallDialog", "spawn_cultists", require_condition=False)
+        good_after_repeat = scenario_good.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("good_end", good_after_repeat["quest_states"]["victor"])
+        self.assertEqual(good_after_end["gold"], good_after_repeat["gold"])
+        self.assertFalse(good_after_repeat["objects"]["cultLeaderQuest"])
+        self.assertEqual(0, good_after_repeat["object_prefix_counts"]["victorCultist"])
+
+        scenario_bad = McpScenarioHarness.start("nouraajd", DEFAULT_PLAYER)
+        bad_initial = scenario_bad.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        scenario_bad.invokeDialogAction("tavernDialog2", "talked_to_victor")
+        scenario_bad.invokeDialogAction(
+            "townHallDialog",
+            "spawn_cultists",
+            condition="can_discuss_victor_records",
+        )
+        bad_after_spawn = scenario_bad.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("encounter_active", bad_after_spawn["quest_states"]["victor"])
+        self.assertTrue(bad_after_spawn["objects"]["cultLeaderQuest"])
+        self.assertGreater(bad_after_spawn["object_prefix_counts"]["victorCultist"], 0)
+
+        scenario_bad.advanceTurns(NOURAAJD_VICTOR_TIMEOUT + 1)
+        scenario_bad.checkQuests()
+        bad_after_timeout = scenario_bad.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("bad_end", bad_after_timeout["quest_states"]["victor"])
+        self.assertEqual(bad_initial["gold"], bad_after_timeout["gold"])
+        self.assertFalse(bad_after_timeout["map_flags"]["VICTOR_GOOD_END"])
+        self.assertTrue(bad_after_timeout["map_flags"]["VICTOR_BAD_END"])
+        self.assertFalse(bad_after_timeout["map_flags"]["VICTOR_REWARD_CLAIMED"])
+        self.assertFalse(bad_after_timeout["objects"]["cultLeaderQuest"])
+        self.assertEqual(0, bad_after_timeout["object_prefix_counts"]["victorCultist"])
+        self.assertIn("victorQuest", bad_after_timeout["completed_quests"])
+
+        scenario_bad.invokeDialogAction("townHallDialog", "spawn_cultists", require_condition=False)
+        bad_after_repeat = scenario_bad.snapshot(object_names=watched_objects, object_prefixes=watched_prefixes)
+        self.assertEqual("bad_end", bad_after_repeat["quest_states"]["victor"])
+        self.assertEqual(bad_after_timeout["gold"], bad_after_repeat["gold"])
+        self.assertFalse(bad_after_repeat["objects"]["cultLeaderQuest"])
+        self.assertEqual(0, bad_after_repeat["object_prefix_counts"]["victorCultist"])
+
+        return True, json.dumps(
+            {
+                "good": {
+                    "after_tavern": {
+                        "quest_states": good_after_tavern["quest_states"],
+                        "active_quests": good_after_tavern["active_quests"],
+                    },
+                    "after_spawn": {
+                        "quest_states": good_after_spawn["quest_states"],
+                        "map_flags": good_after_spawn["map_flags"],
+                        "objects": good_after_spawn["objects"],
+                        "object_prefix_counts": good_after_spawn["object_prefix_counts"],
+                    },
+                    "after_end": {
+                        "quest_states": good_after_end["quest_states"],
+                        "map_flags": good_after_end["map_flags"],
+                        "gold_delta": good_after_end["gold"] - good_initial["gold"],
+                        "objects": good_after_end["objects"],
+                        "object_prefix_counts": good_after_end["object_prefix_counts"],
+                    },
+                    "after_repeat": {
+                        "quest_states": good_after_repeat["quest_states"],
+                        "gold_delta": good_after_repeat["gold"] - good_initial["gold"],
+                        "objects": good_after_repeat["objects"],
+                    },
+                },
+                "bad": {
+                    "after_spawn": {
+                        "quest_states": bad_after_spawn["quest_states"],
+                        "objects": bad_after_spawn["objects"],
+                        "object_prefix_counts": bad_after_spawn["object_prefix_counts"],
+                    },
+                    "after_timeout": {
+                        "quest_states": bad_after_timeout["quest_states"],
+                        "map_flags": bad_after_timeout["map_flags"],
+                        "gold_delta": bad_after_timeout["gold"] - bad_initial["gold"],
+                        "objects": bad_after_timeout["objects"],
+                        "object_prefix_counts": bad_after_timeout["object_prefix_counts"],
+                    },
+                    "after_repeat": {
+                        "quest_states": bad_after_repeat["quest_states"],
+                        "gold_delta": bad_after_repeat["gold"] - bad_initial["gold"],
+                        "objects": bad_after_repeat["objects"],
+                    },
                 },
             },
             sort_keys=True,
