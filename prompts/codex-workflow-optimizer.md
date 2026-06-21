@@ -171,12 +171,11 @@ Repeat the following cycle:
      validation, after each controller loop, and after merged-checkpoint cleanup.
    - Treat low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree registrations as
      blockers to new heavy work until safely reported or cleaned.
-   - Prefer GitHub Actions polling as the default path for heavy Linux compilation, native tests, full Python suites,
-     and coverage after focused local checks:
-     `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux`.
-   - Treat a successful PR `build / linux` check as sufficient PR delivery evidence for heavy Linux validation whenever
-     the workflow covers the required checks; use `--require-step coverage` for coverage-relevant changes.
-   - Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
+   - Prefer GitHub Actions polling as the default path for heavy validation after focused local checks:
+     `python3 scripts/poll_pr_checks.py <PR_NUMBER>`.
+   - Treat successful path-selected PR build checks as sufficient PR delivery evidence whenever the workflow covers the
+     required checks; use `--require-step coverage` for coverage-relevant changes when you need to force that step.
+   - Run heavy local validation only when CI cannot cover the required evidence, a focused local reproduction is
      needed before opening the PR, or GitHub Actions polling is unavailable or blocked.
 
 7. Review
@@ -186,8 +185,8 @@ Repeat the following cycle:
 
 8. Validate
    - Run focused workflow tests first.
-   - Publish the PR after focused local checks and satisfy repository-required heavy Linux validation primarily through
-     completed GitHub Actions polling for the exact PR head.
+   - Publish the PR after focused local checks and satisfy repository-required heavy validation primarily through
+     completed path-selected GitHub Actions polling for the exact PR head.
    - Use local heavy compilation, full suites, or coverage only for CI gaps, necessary focused reproduction, or unavailable
      polling.
    - Record exact commands and outcomes.
@@ -202,10 +201,10 @@ Repeat the following cycle:
    - Commit only intended files.
    - Push the branch and open a PR targeting `main`.
    - Include root cause, changes, evidence, tests, risks, and manual-review items.
-   - Poll selected GitHub Actions checks to supply Linux compilation, test, and coverage evidence whenever the workflow
-     covers the required checks.
-   - For ordinary PR delivery, passing `build / linux` is enough; request extra platform or release jobs only when the
-     task targets that surface or the user asks for them.
+   - Poll selected GitHub Actions checks to supply compilation, test, platform, and coverage evidence whenever the
+     workflow covers the required checks.
+   - For ordinary PR delivery, use the poller's path-selected default job set; request release, MCP gameplay, manual, or
+     issue-specific jobs only when the task targets that surface or the user asks for them.
    - If CI polling supplies the full validation evidence, poll the selected check(s) to success and update the PR
      validation notes before enabling auto-merge.
    - Enable squash auto-merge according to `AGENTS.md`.

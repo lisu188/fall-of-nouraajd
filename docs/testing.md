@@ -127,15 +127,17 @@ steps and Windows jobs are skipped after focused workflow validation. The workfl
 path-gated, do not configure it as an always-present branch-protection check.
 
 ## CI-Polled Validation
-For local agents, prefer the PR `linux` job as the default delivery path for heavy Linux validation. Run focused local
-checks first, open the pull request, and poll the Linux check to a successful conclusion instead of duplicating local
-compilation, native tests, full Python tests, or coverage:
+For local agents, prefer the PR build workflow as the default delivery path for heavy validation. Run focused local
+checks first, open the pull request, and poll the path-selected required checks to a successful conclusion instead of
+duplicating local compilation, native tests, full Python tests, or coverage:
 
 ```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
+python3 scripts/poll_pr_checks.py <PR_NUMBER>
 ```
 
-Use `--check` more than once only when the task explicitly needs additional platform or release jobs:
+When no `--check` is supplied, the poller inspects PR paths with `scripts/ci_change_classifier.py`: lightweight
+workflow/docs/tooling PRs require `linux`, while native/source/content PRs require `linux`, `windows-deps`, and
+`windows`. Use explicit `--check` values only to intentionally override the path-selected set for a documented reason:
 
 ```bash
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --check windows-deps --check windows
@@ -146,18 +148,18 @@ workflow coverage rule. Passing `--require-step coverage` explicitly is still va
 check:
 
 ```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --require-step coverage
 ```
 
-Run heavy local Linux validation only when CI cannot cover the required evidence, a focused local reproduction is
-necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing `build / linux` is
-sufficient PR delivery evidence for the classifier-selected validation class: native/source/content changes run the
-Release build, native tests, performance guard, gameplay suite, and UI suite, while workflow-only changes keep a terminal
-Linux check and skip unrelated native-heavy steps. It proves coverage only when the workflow's changed-path rule runs the
-`coverage` step somewhere in the selected build workflow run, currently in `linux-coverage`; the poller auto-adds that
-step for coverage-relevant PR paths. Record the polled job name, conclusion, and URL separately from local commands. Do
-not report skipped local commands as passed, and do not enable auto-merge until the selected CI-polled validation has
-passed when it is the only full-validation evidence.
+Run heavy local validation only when CI cannot cover the required evidence, a focused local reproduction is
+necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the path-selected checks
+is sufficient PR delivery evidence for the classifier-selected validation class: native/source/content changes require
+Linux and Windows build jobs, while workflow-only changes keep a terminal Linux check and skip unrelated native-heavy
+steps. It proves coverage only when the workflow's changed-path rule runs the `coverage` step somewhere in the selected
+build workflow run, currently in `linux-coverage`; the poller auto-adds that step for coverage-relevant PR paths. Record
+the polled job names, conclusions, and URLs separately from local commands. Do not report skipped local commands as
+passed, and do not enable auto-merge until the selected CI-polled validation has passed when it is the only
+full-validation evidence.
 
 Manual repository settings for `main`:
 - require a pull request before merging

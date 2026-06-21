@@ -13,9 +13,10 @@ Keep changes narrow. Do not modify unrelated files, generated build output, pack
 Never push directly to `main`. Publish reviewable pull requests and use squash merging only.
 
 For ordinary implementation or workflow-optimization PRs, run focused local validation, open the PR, and use GitHub
-Actions polling for heavy Linux validation when the workflow covers the required evidence. If CI polling supplies the
-full validation evidence, run `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux` to success before enabling
-auto-merge; add `--require-step coverage` for coverage-relevant changes. After the required evidence is present, run
+Actions polling when the workflow covers the required evidence. If CI polling supplies the full validation evidence, run
+`python3 scripts/poll_pr_checks.py <PR_NUMBER>` to success before enabling auto-merge; it selects `linux` for
+lightweight PRs and `linux`, `windows-deps`, and `windows` for native validation PRs. Add `--require-step coverage` for
+coverage-relevant changes when you need to force that step. After the required evidence is present, run
 `gh pr merge <PR_NUMBER> --auto --squash` unless the user explicitly asks not to, GitHub reports that auto-merge is
 unavailable, or branch protection/check state prevents it. If validation or auto-merge is blocked, report the exact
 blocker and leave the PR intact.
@@ -261,7 +262,7 @@ quick protocol checks.
 
 For every code change, satisfy this full workflow. For agent PR delivery, do not run these native-build-heavy commands
 locally unless a focused local reproduction is necessary or GitHub Actions cannot provide the needed evidence; normally
-use focused local checks, open the PR, and poll `build / linux`. Local equivalents are:
+use focused local checks, open the PR, and poll the path-selected build workflow checks. Local equivalents are:
 
 ```sh
 cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
@@ -281,33 +282,31 @@ GAME_XVFB_JOBS=4 python3 test.py --suite ui
 `python3 test.py` and `python3 test.py --suite full` both run the full Python suite. `./scripts/run_coverage.sh` uses
 `python3 test.py --suite coverage-safe` for the coverage Python phase.
 
-Prefer GitHub Actions polling as the default path for heavy Linux validation. Run focused local checks that exercise the
-changed behavior, open the pull request, and poll the GitHub Actions `linux` check in the `build` workflow to a final
-successful conclusion instead of running local compilation, native tests, the full Python suite, and required coverage
-locally:
+Prefer GitHub Actions polling as the default path for heavy validation. Run focused local checks that exercise the
+changed behavior, open the pull request, and poll the GitHub Actions `build` workflow to a final successful conclusion
+instead of running local compilation, native tests, the full Python suite, and required coverage locally:
 
 ```sh
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux
+python3 scripts/poll_pr_checks.py <PR_NUMBER>
 ```
 
 For coverage-relevant changes, the poller auto-requires the CI `coverage` step when changed paths match the workflow
 coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that check:
 
 ```sh
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --require-step coverage
+python3 scripts/poll_pr_checks.py <PR_NUMBER> --require-step coverage
 ```
 
-Run heavy local Linux validation only when the PR workflow cannot cover the required evidence, a focused local
+Run heavy local validation only when the PR workflow cannot cover the required evidence, a focused local
 reproduction is necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the PR
-`build / linux` check, polled with `python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux`, is sufficient PR
-delivery evidence for the validation class selected by `scripts/ci_change_classifier.py`: native/source/content changes
-run Linux compilation, native tests, native performance guards, Python suites, and conditional coverage, while
-workflow-only docs/prompts/tooling changes keep a terminal `linux` check but skip unrelated native-heavy steps after
-focused workflow validation. Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step
-somewhere in the selected build workflow run, currently in the conditional `linux-coverage` job; the poller auto-adds
-this step for coverage-relevant PR paths. Additional Windows, release, MCP gameplay, manual, or platform-specific
-validation is needed only when the task explicitly targets that surface or the user requests it. Report local commands,
-skipped or blocked local commands, and CI job names/conclusions separately; never imply a skipped local command passed.
+selected build workflow checks, polled with `python3 scripts/poll_pr_checks.py <PR_NUMBER>`, is sufficient PR delivery
+evidence for the validation class selected by `scripts/ci_change_classifier.py`: native/source/content changes require
+`linux`, `windows-deps`, and `windows`; workflow-only docs/prompts/tooling changes require the terminal `linux` check
+and skip unrelated native-heavy steps after focused workflow validation. Coverage is satisfied by CI only when the
+workflow's path rule runs the `coverage` step somewhere in the selected build workflow run, currently in the conditional
+`linux-coverage` job; the poller auto-adds this step for coverage-relevant PR paths. Use explicit `--check` values only
+when intentionally narrowing or expanding the required jobs for a documented reason. Report local commands, skipped or
+blocked local commands, and CI job names/conclusions separately; never imply a skipped local command passed.
 When CI polling supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge.
 If GitHub merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and
 continue from the merged state.

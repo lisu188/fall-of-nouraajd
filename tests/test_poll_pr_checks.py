@@ -67,6 +67,13 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertTrue(poll_pr_checks.changedFilesRequireCoverage(["tests/unit/test_core.cpp"]))
         self.assertFalse(poll_pr_checks.changedFilesRequireCoverage(["docs/testing.md", "scripts/poll_pr_checks.py"]))
 
+    def test_default_jobs_follow_changed_path_validation_class(self) -> None:
+        self.assertEqual(("linux",), poll_pr_checks.defaultJobsForChangedFiles(["docs/testing.md"]))
+        self.assertEqual(
+            ("linux", "windows-deps", "windows"),
+            poll_pr_checks.defaultJobsForChangedFiles(["src/handler/CFightHandler.cpp"]),
+        )
+
     def test_coverage_path_patterns_match_workflow_detector(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
 
@@ -346,6 +353,109 @@ class PollPrChecksTest(unittest.TestCase):
 
         self.assertTrue(evaluation.failed)
         self.assertIn("linux-coverage/coverage=FAILURE", evaluation.message)
+
+    def test_poll_checks_auto_requires_windows_for_native_paths(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        completed_run = self.runPayload(
+            [
+                self.jobPayload(name="linux"),
+                self.jobPayload(
+                    name="linux-coverage", steps=[{"name": "coverage", "status": "completed", "conclusion": "success"}]
+                ),
+                self.jobPayload(name="windows-deps"),
+                self.jobPayload(name="windows", conclusion="failure"),
+            ]
+        )
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("src/handler/CFightHandler.cpp",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=None,
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("windows=FAILURE", evaluation.message)
+
+    def test_poll_checks_auto_defaults_to_linux_for_lightweight_paths(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        completed_run = self.runPayload([self.jobPayload(name="linux")])
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("scripts/poll_pr_checks.py",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=None,
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.succeeded)
+        self.assertEqual(("linux",), tuple(job.name for job in evaluation.jobs))
+
+    def test_explicit_linux_check_does_not_require_windows(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        completed_run = self.runPayload(
+            [
+                self.jobPayload(name="linux"),
+                self.jobPayload(
+                    name="linux-coverage",
+                    steps=[{"name": "coverage", "status": "completed", "conclusion": "success"}],
+                ),
+                self.jobPayload(name="windows-deps"),
+                self.jobPayload(name="windows", conclusion="failure"),
+            ]
+        )
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("src/handler/CFightHandler.cpp",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.succeeded)
+        self.assertEqual(("linux", "linux-coverage"), tuple(job.name for job in evaluation.jobs))
 
     def test_poll_checks_does_not_auto_require_coverage_for_unmatched_paths(self) -> None:
         open_pr = {
