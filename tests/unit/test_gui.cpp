@@ -63,6 +63,18 @@ class CountingRenderObject : public CGameGraphicsObject {
     int &render_count;
 };
 
+class CountingGui : public CGui {
+    V_META(CountingGui, CGui, vstd::meta::empty())
+
+  public:
+    explicit CountingGui(int &render_count) : render_count(render_count) {}
+
+    void renderObject(std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int) override { ++render_count; }
+
+  private:
+    int &render_count;
+};
+
 class MouseEventRecorder : public CGameGraphicsObject {
   public:
     bool mouseEvent(std::shared_ptr<CGui>, SDL_EventType type, int button, int x, int y) override {
@@ -286,13 +298,13 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     return game;
 }
 
-std::shared_ptr<CGame> create_loader_gui_game() {
+std::shared_ptr<CGame> create_loader_gui_game(const std::string &guiClass = "CGui") {
     auto game = std::make_shared<CGame>();
     for (const auto &[name, builder] : *CTypes::builders()) {
         game->getObjectHandler()->registerType(name, builder);
     }
     auto guiConfig = std::make_shared<json>();
-    (*guiConfig)["class"] = "CGui";
+    (*guiConfig)["class"] = guiClass;
     game->getObjectHandler()->registerConfig("gui", guiConfig);
     return game;
 }
@@ -735,6 +747,40 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     drain_event_loop();
     expect_true(secondRecorder->button_count == 1, "second shutdown should stop later event dispatch");
     expect_true(secondRenderCount == renderCountAfterShutdown, "second shutdown should stop later frame rendering");
+
+    int directRenderCount = 0;
+    int directEventCount = 0;
+    CTypes::register_type_metadata<CountingGui, CGui, CGameGraphicsObject, CGameObject>();
+    auto directShutdownGame = create_loader_gui_game("CountingGui");
+    directShutdownGame->getObjectHandler()->registerType(
+        "CountingGui", [&directRenderCount]() { return std::make_shared<CountingGui>(directRenderCount); });
+    CGameLoader::loadGui(directShutdownGame);
+    auto directShutdownGui = vstd::cast<CountingGui>(directShutdownGame->getGui());
+    expect_true(directShutdownGui != nullptr, "direct shutdown test should load a counting GUI");
+    expect_true(directShutdownGame->getContext()->isActive(),
+                "direct GUI shutdown should leave the game context active before the shutdown");
+
+    directShutdownGui->registerEventCallback(
+        [](std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *) { return true; },
+        [&directEventCount](std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *) {
+            ++directEventCount;
+            return true;
+        });
+    directShutdownGui->shutdown();
+    expect_true(!directShutdownGui->isActive(), "direct GUI shutdown should mark the GUI inactive");
+    expect_true(directShutdownGame->getGui() == directShutdownGui,
+                "direct GUI shutdown should leave the game GUI pointer intact for stale callback coverage");
+
+    SDL_Event staleEvent{};
+    staleEvent.type = SDL_MOUSEBUTTONDOWN;
+    staleEvent.button.button = SDL_BUTTON_LEFT;
+    staleEvent.button.x = 35;
+    staleEvent.button.y = 55;
+    SDL_PushEvent(&staleEvent);
+    drain_event_loop();
+
+    expect_true(directRenderCount == 0, "direct GUI shutdown should prevent stale frame rendering");
+    expect_true(directEventCount == 0, "direct GUI shutdown should prevent stale root event dispatch");
 }
 
 void test_gui_routes_mouse_motion_to_target_child() {
