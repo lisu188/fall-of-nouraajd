@@ -728,6 +728,57 @@ void test_player_fight_controller_returns_cancelled_when_attached_fight_panel_ca
     controller->end(player, defender);
 }
 
+void test_fight_handler_returns_cancelled_when_player_control_cancels() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = load_empty_game();
+    CGameLoader::loadGui(game);
+    auto player = add_test_player(game);
+    player->setHp(10);
+
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setName("unitLoopPanelCancelAction");
+    action->setManaCost(0);
+    player->addAction(action);
+
+    auto defender = add_test_creature(game, "unitLoopPanelCancelDefender", 1, 0);
+    auto defender_controller = std::dynamic_pointer_cast<NoProgressFightController>(defender->getFightController());
+    auto gui = game->getGui();
+    expect_true(gui != nullptr, "handler-level panel cancellation regression requires a loaded GUI");
+    expect_true(std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController()) != nullptr,
+                "handler-level panel cancellation should use the real player fight controller");
+
+    auto cancellation_callback_ran = std::make_shared<bool>(false);
+    auto panel_was_cancelled = std::make_shared<bool>(false);
+    vstd::event_loop<>::instance()->invoke([game, cancellation_callback_ran, panel_was_cancelled]() {
+        *cancellation_callback_ran = true;
+        auto panel = game && game->getGui() ? vstd::cast<CGameFightPanel>(game->getGui()->findChild("CGameFightPanel"))
+                                            : nullptr;
+        if (panel) {
+            panel->cancel();
+            *panel_was_cancelled = panel->isCancelled();
+        }
+    });
+
+    const auto result = CFightHandler::fightManyResult(player, {defender});
+
+    expect_true(*cancellation_callback_ran, "fight panel cancellation should run while player control is waiting");
+    expect_true(*panel_was_cancelled, "queued cancellation should cancel the active fight panel");
+    expect_true(result.outcome == CFightOutcome::Cancelled,
+                "player fight controller cancellation should return cancelled instead of falling through to stalled");
+    expect_true(result.rounds == 1, "player fight controller cancellation should report the active combat round");
+    expect_true(result.survivor == player && result.opponent == defender,
+                "player fight controller cancellation should keep participant metadata");
+    expect_true(gui && gui->findChild("CGameFightPanel") == nullptr,
+                "player fight controller cleanup should close the cancelled fight panel");
+    expect_controller_lifecycle(defender_controller, 1, 1,
+                                "opponent cleanup should still run after player control cancellation");
+    expect_true(game->getMap()->getStringProperty("combatStatus").find("cancelled") != std::string::npos,
+                "player control cancellation should publish the cancelled status text");
+}
+
 void test_fight_panel_resets_status_between_sequential_encounters() {
     auto game = load_empty_game();
     auto encounterMap = game->getMap();
@@ -978,6 +1029,7 @@ int main() {
     test_fight_handler_ends_original_started_controllers();
     test_fight_handler_reports_cancelled_closed_fight_panel();
     test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels();
+    test_fight_handler_returns_cancelled_when_player_control_cancels();
     test_fight_panel_resets_status_between_sequential_encounters();
     test_fight_handler_counts_effect_duration_as_progress();
     test_playtest_trace_records_native_limits_and_quest_completion();
