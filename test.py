@@ -120,6 +120,7 @@ MCP_PROTOCOL_VERSION = "2025-11-25"
 MCP_STDIO_TOOL_TIMEOUT_SECONDS = 10
 MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
+MCP_STDIO_TAIL_LIMIT_BYTES = 8192
 GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
@@ -137,6 +138,8 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_http_notification_response_declares_empty_body",
     "McpServerTest.test_initialize_response_preserves_request_id",
     "McpServerTest.test_map_design_brief_rejects_path_traversal",
+    "McpServerTest.test_stdio_process_drains_stderr_while_waiting_for_stdout",
+    "McpServerTest.test_stdio_timeout_diagnostics_include_request_context_and_stream_tails",
     "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
     "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
@@ -16847,6 +16850,74 @@ class McpServerTest(unittest.TestCase):
         tool_names = {tool.get("name") for tool in tools}
         self.assertTrue({"engine_list", "engine_call", "engine_handle_call", "simulation_run"}.issubset(tool_names))
 
+    def test_stdio_process_drains_stderr_while_waiting_for_stdout(self):
+        script = (
+            "import json, sys, time\n"
+            "sys.stderr.buffer.write((b'synthetic-stderr-drain\\n') * 65536)\n"
+            "sys.stderr.flush()\n"
+            "sys.stdin.readline()\n"
+            "time.sleep(0.05)\n"
+            "sys.stdout.write(json.dumps({'jsonrpc': '2.0', 'id': 42, 'result': {'ok': True}}) + '\\n')\n"
+            "sys.stdout.flush()\n"
+        )
+        proc = self._start_stdio_process([sys.executable, "-c", script], map_name="synthetic")
+        try:
+            self._send_rpc(proc, {"jsonrpc": "2.0", "id": 42, "method": "tools/list"})
+            response = self._read_rpc(proc, timeout=3.0)
+
+            self.assertEqual(42, response.get("id"))
+            self.assertEqual({"ok": True}, response.get("result"))
+            self.assertIn("synthetic-stderr-drain", self._mcp_process_tail_text(proc, "stderr"))
+        finally:
+            self._shutdown_process(proc)
+
+    def test_stdio_timeout_diagnostics_include_request_context_and_stream_tails(self):
+        script = (
+            "import json, sys\n"
+            "sys.stderr.write('stderr-timeout-marker\\n')\n"
+            "sys.stderr.flush()\n"
+            "sys.stdout.write(json.dumps({"
+            "'jsonrpc': '2.0', "
+            "'method': 'notifications/progress', "
+            "'params': {'message': 'stdout-timeout-marker'}"
+            "}) + '\\n')\n"
+            "sys.stdout.flush()\n"
+            "for _line in sys.stdin:\n"
+            "    pass\n"
+        )
+        proc = self._start_stdio_process([sys.executable, "-c", script], map_name="diagnosticMap")
+        try:
+            self._send_rpc(
+                proc,
+                {
+                    "jsonrpc": "2.0",
+                    "id": 77,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "engine_handle_call",
+                        "arguments": {"handle": 1, "method": "move", "args": []},
+                    },
+                },
+            )
+
+            with self.assertRaises(AssertionError) as raised:
+                self._read_rpc(proc, timeout=0.1)
+
+            message = str(raised.exception)
+            for expected in (
+                "request_id=77",
+                "method=move",
+                "map=diagnosticMap",
+                "elapsed_seconds=",
+                "stderr_tail=",
+                "stderr-timeout-marker",
+                "stdout_tail=",
+                "stdout-timeout-marker",
+            ):
+                self.assertIn(expected, message)
+        finally:
+            self._shutdown_process(proc)
+
     def test_map_design_brief_summarizes_selected_map_hooks(self):
         server = self.make_stub_server()
 
@@ -16982,24 +17053,7 @@ class McpServerTest(unittest.TestCase):
             httpd.server_close()
 
     def test_stdio_handshake_and_tool_listing(self):
-        script = REPO_ROOT / "mcp.py"
-        self.assertTrue(script.exists(), "MCP entry point is missing")
-        proc = subprocess.Popen(
-            [
-                sys.executable,
-                str(script),
-                "--stdio",
-                "--repo-root",
-                str(REPO_ROOT),
-                "--build-dir",
-                str(build_dir),
-            ],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0,
-            cwd=str(REPO_ROOT),
-        )
+        proc = self._start_stdio_mcp_process()
         try:
             self._send_rpc(
                 proc,
@@ -17215,6 +17269,11 @@ class McpServerTest(unittest.TestCase):
         ]
         if build_config:
             command.extend(["--build-config", build_config])
+        proc = self._start_stdio_process(command, env=env, map_name=map_name)
+        proc._playtest_trace_path = trace_path
+        return proc
+
+    def _start_stdio_process(self, command, *, env=None, map_name=None):
         proc = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
@@ -17224,18 +17283,120 @@ class McpServerTest(unittest.TestCase):
             cwd=str(REPO_ROOT),
             env=env,
         )
-        proc._playtest_trace_path = trace_path
-        proc._mcp_stderr_chunks = []
+        proc._mcp_map_name = map_name
+        proc._mcp_stdout_tail = bytearray()
+        proc._mcp_stderr_tail = bytearray()
+        proc._mcp_tail_lock = threading.Lock()
+        proc._mcp_last_request = None
+        proc._mcp_last_request_started_at = None
 
         def drain_stderr():
             if proc.stderr is None:
                 return
             for chunk in iter(lambda: proc.stderr.read(4096), b""):
-                proc._mcp_stderr_chunks.append(chunk)
+                self._append_mcp_process_tail(proc, "stderr", chunk)
 
         proc._mcp_stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
         proc._mcp_stderr_thread.start()
         return proc
+
+    def _append_mcp_process_tail(self, proc, stream_name, chunk):
+        if not chunk:
+            return
+        attr = f"_mcp_{stream_name}_tail"
+        lock = getattr(proc, "_mcp_tail_lock", None)
+
+        def append():
+            tail = getattr(proc, attr, bytearray())
+            tail.extend(chunk)
+            overflow = len(tail) - MCP_STDIO_TAIL_LIMIT_BYTES
+            if overflow > 0:
+                del tail[:overflow]
+            setattr(proc, attr, tail)
+
+        if lock is None:
+            append()
+        else:
+            with lock:
+                append()
+
+    def _mcp_process_tail_text(self, proc, stream_name):
+        attr = f"_mcp_{stream_name}_tail"
+        lock = getattr(proc, "_mcp_tail_lock", None)
+        if lock is None:
+            data = bytes(getattr(proc, attr, b""))
+        else:
+            with lock:
+                data = bytes(getattr(proc, attr, b""))
+        return data.decode("utf-8", errors="replace")
+
+    def _record_mcp_request(self, proc, payload):
+        request = self._describe_mcp_request(proc, payload)
+        proc._mcp_last_request = request
+        proc._mcp_last_request_started_at = time.monotonic()
+        if request.get("map"):
+            proc._mcp_map_name = request["map"]
+
+    def _describe_mcp_request(self, proc, payload):
+        if not isinstance(payload, dict):
+            return {}
+        rpc_method = payload.get("method")
+        params = payload.get("params") if isinstance(payload.get("params"), dict) else {}
+        tool_name = params.get("name") if rpc_method == "tools/call" else None
+        arguments = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
+        method = rpc_method
+        if tool_name == "engine_call":
+            method = arguments.get("name") or tool_name
+        elif tool_name == "engine_handle_call":
+            method = arguments.get("method") or tool_name
+        elif tool_name:
+            method = tool_name
+
+        map_name = getattr(proc, "_mcp_map_name", None)
+        if not map_name and tool_name == "simulation_run":
+            map_name = arguments.get("map") or arguments.get("map_name")
+        if not map_name and tool_name == "map_design_brief":
+            map_name = arguments.get("map_name")
+        if not map_name and tool_name == "engine_call":
+            engine_name = arguments.get("name")
+            engine_args = arguments.get("args") if isinstance(arguments.get("args"), list) else []
+            if engine_name in {"CGameLoader.startGame", "CGameLoader.startGameWithPlayer"} and len(engine_args) >= 2:
+                map_name = engine_args[1]
+
+        return {
+            "id": payload.get("id"),
+            "rpc_method": rpc_method,
+            "tool": tool_name,
+            "method": method,
+            "map": map_name,
+        }
+
+    def _mcp_process_diagnostic_message(self, proc, reason, *, timeout, read_started_at):
+        request = getattr(proc, "_mcp_last_request", None) or {}
+        request_started_at = getattr(proc, "_mcp_last_request_started_at", None) or read_started_at
+        elapsed = time.monotonic() - request_started_at
+        fields = [
+            f"{reason}.",
+            f"elapsed_seconds={elapsed:.3f}",
+            f"timeout_seconds={timeout:.3f}",
+            f"request_id={request.get('id')}",
+            f"method={request.get('method')}",
+        ]
+        if request.get("rpc_method"):
+            fields.append(f"rpc_method={request.get('rpc_method')}")
+        if request.get("tool"):
+            fields.append(f"tool={request.get('tool')}")
+        map_name = getattr(proc, "_mcp_map_name", None) or request.get("map")
+        if map_name:
+            fields.append(f"map={map_name}")
+        fields.extend(
+            [
+                f"returncode={proc.poll()}",
+                f"stderr_tail={self._mcp_process_tail_text(proc, 'stderr').strip()!r}",
+                f"stdout_tail={self._mcp_process_tail_text(proc, 'stdout').strip()!r}",
+            ]
+        )
+        return "\n".join(fields)
 
     def _initialize_stdio_mcp(self, proc):
         self._send_rpc(
@@ -17375,16 +17536,24 @@ class McpServerTest(unittest.TestCase):
         controller = self._mcp_handle_call(session, player_handle, "getController")
         target_coords = self._mcp_handle_call(session, target_handle, "getCoords")
         self._mcp_handle_call(session, controller, "setTarget", [player_handle, target_coords])
+        last_state = {"target_coords": target_coords, "turn": None, "player_coords": None}
         for _ in range(max_turns):
             player_coords = self._mcp_serialized_player_coords(session, map_handle)
+            last_state["player_coords"] = player_coords
+            last_state["turn"] = self._mcp_handle_call(session, map_handle, "getTurn")
             if until(player_coords):
                 return player_coords
             self._mcp_handle_call(session, map_handle, "move")
             self._mcp_pump_event_loop(session)
             player_coords = self._mcp_serialized_player_coords(session, map_handle)
+            last_state["player_coords"] = player_coords
+            last_state["turn"] = self._mcp_handle_call(session, map_handle, "getTurn")
             if until(player_coords):
                 return player_coords
-        raise AssertionError(f"Player did not satisfy MCP movement predicate after {max_turns} turns.")
+        raise AssertionError(
+            f"Player did not satisfy MCP movement predicate after {max_turns} turns: "
+            f"{json.dumps(last_state, sort_keys=True)}"
+        )
 
     def _mcp_walkthrough_test(self, session):
         _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "test")
@@ -17596,6 +17765,7 @@ class McpServerTest(unittest.TestCase):
     def _send_rpc(self, proc, payload):
         if proc.stdin is None:
             self.fail("Process stdin not available")
+        self._record_mcp_request(proc, payload)
         line = json.dumps(payload, separators=(",", ":")) + "\n"
         proc.stdin.write(line.encode("utf-8"))
         proc.stdin.flush()
@@ -17619,9 +17789,10 @@ class McpServerTest(unittest.TestCase):
     def _read_rpc(self, proc, timeout: float = 10.0):
         if proc.stdout is None:
             self.fail("Process stdout not available")
+        read_started_at = time.monotonic()
         deadline = time.monotonic() + timeout
         while True:
-            line = self._readline(proc.stdout, deadline)
+            line = self._readline(proc, deadline, timeout=timeout, read_started_at=read_started_at)
             if line in (b"", b"\r\n", b"\n"):
                 continue
             payload = json.loads(line.decode("utf-8"))
@@ -17629,11 +17800,21 @@ class McpServerTest(unittest.TestCase):
                 continue
             return payload
 
-    def _readline(self, stream, deadline: float) -> bytes:
+    def _readline(self, proc, deadline: float, *, timeout: float, read_started_at: float) -> bytes:
+        stream = proc.stdout
+        if stream is None:
+            self.fail("Process stdout not available")
         if os.name == "nt":
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                self.fail("Timed out waiting for MCP response header")
+                self.fail(
+                    self._mcp_process_diagnostic_message(
+                        proc,
+                        "Timed out waiting for MCP response header",
+                        timeout=timeout,
+                        read_started_at=read_started_at,
+                    )
+                )
             result_queue = queue.Queue(maxsize=1)
 
             def read_line():
@@ -17641,35 +17822,70 @@ class McpServerTest(unittest.TestCase):
 
             threading.Thread(target=read_line, daemon=True).start()
             try:
-                return result_queue.get(timeout=remaining)
+                line = result_queue.get(timeout=remaining)
+                self._append_mcp_process_tail(proc, "stdout", line)
+                if not line:
+                    self.fail(
+                        self._mcp_process_diagnostic_message(
+                            proc,
+                            "MCP process closed stdout before a response",
+                            timeout=timeout,
+                            read_started_at=read_started_at,
+                        )
+                    )
+                return line
             except queue.Empty:
-                self.fail("Timed out waiting for MCP response header")
+                self.fail(
+                    self._mcp_process_diagnostic_message(
+                        proc,
+                        "Timed out waiting for MCP response header",
+                        timeout=timeout,
+                        read_started_at=read_started_at,
+                    )
+                )
 
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                self.fail("Timed out waiting for MCP response header")
+                self.fail(
+                    self._mcp_process_diagnostic_message(
+                        proc,
+                        "Timed out waiting for MCP response header",
+                        timeout=timeout,
+                        read_started_at=read_started_at,
+                    )
+                )
             readable, _, _ = select.select([stream], [], [], remaining)
             if readable:
                 line = stream.readline()
                 if not line:
-                    return b""
+                    self.fail(
+                        self._mcp_process_diagnostic_message(
+                            proc,
+                            "MCP process closed stdout before a response",
+                            timeout=timeout,
+                            read_started_at=read_started_at,
+                        )
+                    )
+                self._append_mcp_process_tail(proc, "stdout", line)
                 return line
 
     def _shutdown_process(self, proc):
         if proc.stdin:
-            proc.stdin.close()
+            try:
+                proc.stdin.close()
+            except OSError:
+                pass
         try:
             # Coverage-instrumented native teardown can finish several seconds after stdio closes.
             proc.wait(timeout=MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-        stderr_chunks = getattr(proc, "_mcp_stderr_chunks", None)
         stderr_thread = getattr(proc, "_mcp_stderr_thread", None)
         if stderr_thread is not None:
             stderr_thread.join(timeout=1.0)
-            stderr_output = b"".join(stderr_chunks or []).decode("utf-8", errors="ignore")
+            stderr_output = self._mcp_process_tail_text(proc, "stderr")
         else:
             stderr_output = proc.stderr.read().decode("utf-8", errors="ignore") if proc.stderr else ""
         if proc.stdout:
@@ -17677,7 +17893,10 @@ class McpServerTest(unittest.TestCase):
         if proc.stderr:
             proc.stderr.close()
         if proc.returncode not in (0, None):
-            self.fail(f"MCP server exited with {proc.returncode}: {stderr_output}")
+            stdout_output = self._mcp_process_tail_text(proc, "stdout")
+            self.fail(
+                f"MCP server exited with {proc.returncode}: stderr_tail={stderr_output!r} stdout_tail={stdout_output!r}"
+            )
 
 
 def parse_runner_args(argv):
