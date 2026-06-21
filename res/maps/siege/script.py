@@ -75,22 +75,16 @@ def load(self, context):
             self.setBoolProperty("pendingSeal", False)
 
         def hasCreatureAtGate(self):
-            gate_coords = self.getCoords()
-            occupied = False
-
-            def checkObject(ob):
-                nonlocal occupied
-                coords = ob.getCoords()
-                if (
-                    isinstance(ob, CCreature)
-                    and coords.x == gate_coords.x
-                    and coords.y == gate_coords.y
-                    and coords.z == gate_coords.z
-                ):
-                    occupied = True
-
-            self.getMap().forObjects(checkObject, lambda ob: not occupied)
-            return occupied
+            game_map = self.getMap()
+            for ob in game_map.getObjectsAtCoords(self.getCoords()):
+                if not isinstance(ob, CCreature):
+                    continue
+                if not ob.isAlive():
+                    continue
+                if game_map.getObjectByName(ob.getName()) is None:
+                    continue
+                return True
+            return False
 
         def completePendingSeal(self):
             if self.hasCreatureAtGate():
