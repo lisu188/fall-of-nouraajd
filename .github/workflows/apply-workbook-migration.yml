@@ -1,0 +1,111 @@
+name: apply workbook schema migration
+
+on:
+  push:
+    branches:
+      - codex/support-multiple-workbook-queues
+
+permissions:
+  contents: write
+
+concurrency:
+  group: workbook-schema-migration-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: codex/support-multiple-workbook-queues
+          fetch-depth: 0
+
+      - name: Reconstruct and apply the verified OOXML overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/workbook-migration-overlay/part-*.b64 | base64 --decode > /tmp/workbook-overlay.zip
+          echo "cc0c945042815b63b869b5f0bf93dac3779231c7cc8d04d3a1a69f114428713d  /tmp/workbook-overlay.zip" | sha256sum --check --strict
+
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import zipfile
+          from pathlib import Path
+
+          workbook = Path("planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx")
+          overlay = Path("/tmp/workbook-overlay.zip")
+          temporary = workbook.with_name(f".{workbook.name}.migration.tmp")
+
+          with zipfile.ZipFile(workbook, "r") as source, zipfile.ZipFile(overlay, "r") as patch:
+              replacements = set(patch.namelist())
+              with zipfile.ZipFile(temporary, "w") as output:
+                  for info in source.infolist():
+                      if info.filename not in replacements:
+                          output.writestr(info, source.read(info.filename))
+                  for info in patch.infolist():
+                      output.writestr(info, patch.read(info.filename))
+
+          os.replace(temporary, workbook)
+          with zipfile.ZipFile(workbook, "r") as migrated:
+              damaged = migrated.testzip()
+              if damaged:
+                  raise RuntimeError(f"Damaged XLSX member after migration: {damaged}")
+              workbook_xml = migrated.read("xl/workbook.xml")
+              if b"Issue Proposals" not in workbook_xml:
+                  raise RuntimeError("Migrated workbook is missing the Issue Proposals sheet")
+              if len(migrated.namelist()) < 20:
+                  raise RuntimeError("Migration unexpectedly discarded workbook package parts")
+          PY
+
+      - name: Make aggregate CLI executable directly
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("scripts/workbook_queue.py")
+          content = path.read_text(encoding="utf-8")
+          old = "from scripts import issue_queue\n"
+          new = (
+              "try:\n"
+              "    from scripts import issue_queue\n"
+              "except ModuleNotFoundError:  # Support `python3 scripts/workbook_queue.py`.\n"
+              "    import issue_queue\n"
+          )
+          if content.count(old) != 1:
+              raise RuntimeError("Expected one aggregate queue import to update")
+          path.write_text(content.replace(old, new), encoding="utf-8")
+          PY
+
+      - name: Validate the migrated workbook and aggregate workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/workbook_queue.py tests/test_workbook_queue.py
+          python3 scripts/issue_queue.py validate --workbook planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx
+          python3 -m unittest tests.test_workbook_queue
+          python3 scripts/workbook_queue.py workbooks --json
+          python3 scripts/workbook_queue.py validate
+          python3 -m unittest tests.test_issue_queue
+          python3 -m unittest tests.test_ci_change_classifier
+
+      - name: Commit the workbook and remove migration scaffolding
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .github/workbook-migration .github/workbook-migration-overlay
+          rm -f .github/workflows/export-planning-workbook.yml
+          rm -f .github/workflows/apply-workbook-migration.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "Migrate GitHub issues workbook to queue schema"
+          git push origin HEAD:codex/support-multiple-workbook-queues
