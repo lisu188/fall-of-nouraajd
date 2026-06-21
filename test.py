@@ -449,6 +449,29 @@ IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS = {
             "objects": [{"name": "ritualLeader", "typeId": "ritualLeaderTemplate"}],
         },
     },
+    "ritual_completed_nouraajd_quest_v1": {
+        "primary": "ritual_completed_nouraajd_quest_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "ritual",
+            "turn": 58,
+            "description": "immutable completed external quest fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [3, 22, 0],
+                "activeQuests": [],
+                "completedQuests": ["rolfQuest"],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
     "siege_progression_v1": {
         "primary": "siege_progression_v1.json",
         "summary": {
@@ -6853,6 +6876,7 @@ class GameTest(unittest.TestCase):
         map_dirs = [
             map_root / f"{map_prefix}_class_source",
             map_root / f"{map_prefix}_type_source",
+            map_root / f"{map_prefix}_name_source",
             map_root / f"{map_prefix}_empty_config",
             map_root / f"{map_prefix}_scalar_config",
             map_root / f"{map_prefix}_bad@map",
@@ -6867,7 +6891,10 @@ class GameTest(unittest.TestCase):
                         "def load(self, context):",
                         "    from game import CQuest, register",
                         "    @register(context)",
-                        "    class UnitClassOnlyQuest(CQuest):",
+                        "    class UnitActiveClassQuest(CQuest):",
+                        "        pass",
+                        "    @register(context)",
+                        "    class UnitCompletedClassQuest(CQuest):",
                         "        pass",
                     ]
                 )
@@ -6877,10 +6904,14 @@ class GameTest(unittest.TestCase):
             (class_source / "config.json").write_text(
                 json.dumps(
                     {
-                        "unitClassOnlyAlias": {
-                            "class": "UnitClassOnlyQuest",
-                            "properties": {"description": "Class-only dependency quest"},
-                        }
+                        "unitActiveClassAlias": {
+                            "class": "UnitActiveClassQuest",
+                            "properties": {"description": "Active class-only dependency quest"},
+                        },
+                        "unitCompletedClassAlias": {
+                            "class": "UnitCompletedClassQuest",
+                            "properties": {"description": "Completed class-only dependency quest"},
+                        },
                     }
                 ),
                 encoding="utf-8",
@@ -6888,28 +6919,81 @@ class GameTest(unittest.TestCase):
 
             type_source = map_dirs[1]
             type_source.mkdir(parents=True, exist_ok=True)
-            (type_source / "script.py").write_text("def load(self, context):\n    pass\n", encoding="utf-8")
+            (type_source / "script.py").write_text(
+                "\n".join(
+                    [
+                        "def load(self, context):",
+                        "    from game import CQuest, register",
+                        "    @register(context)",
+                        "    class UnitActiveTypeQuest(CQuest):",
+                        "        pass",
+                        "    @register(context)",
+                        "    class UnitCompletedTypeQuest(CQuest):",
+                        "        pass",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
             (type_source / "config.json").write_text(
                 json.dumps(
                     {
-                        "unitTypeOnlyAlias": {
-                            "class": "UnitTypeOnlyQuest",
-                            "properties": {"typeId": "externalTypeQuest"},
-                        }
+                        "unitActiveTypeAlias": {
+                            "class": "CQuest",
+                            "properties": {"typeId": "externalActiveTypeQuest"},
+                        },
+                        "unitCompletedTypeAlias": {
+                            "class": "CQuest",
+                            "properties": {"typeId": "externalCompletedTypeQuest"},
+                        },
                     }
                 ),
                 encoding="utf-8",
             )
 
-            empty_config = map_dirs[2]
+            name_source = map_dirs[2]
+            name_source.mkdir(parents=True, exist_ok=True)
+            (name_source / "script.py").write_text(
+                "\n".join(
+                    [
+                        "def load(self, context):",
+                        "    from game import CQuest, register",
+                        "    @register(context)",
+                        "    class UnitActiveNameQuest(CQuest):",
+                        "        pass",
+                        "    @register(context)",
+                        "    class UnitCompletedNameQuest(CQuest):",
+                        "        pass",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (name_source / "config.json").write_text(
+                json.dumps(
+                    {
+                        "unitActiveNameAlias": {
+                            "class": "CQuest",
+                            "properties": {"name": "externalActiveNameQuest"},
+                        },
+                        "unitCompletedNameAlias": {
+                            "class": "CQuest",
+                            "properties": {"name": "externalCompletedNameQuest"},
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            empty_config = map_dirs[3]
             empty_config.mkdir(parents=True, exist_ok=True)
             (empty_config / "config.json").write_text("[]\n", encoding="utf-8")
 
-            scalar_config = map_dirs[3]
+            scalar_config = map_dirs[4]
             scalar_config.mkdir(parents=True, exist_ok=True)
             (scalar_config / "config.json").write_text('{"notObject": false}\n', encoding="utf-8")
 
-            invalid_map = map_dirs[4]
+            invalid_map = map_dirs[5]
             invalid_map.mkdir(parents=True, exist_ok=True)
 
             save_path.parent.mkdir(exist_ok=True)
@@ -6934,28 +7018,54 @@ class GameTest(unittest.TestCase):
                                             False,
                                             {"class": "CQuest"},
                                             {
-                                                "class": "UnitClassOnlyQuest",
+                                                "class": "UnitActiveClassQuest",
                                                 "properties": {
-                                                    "name": "classQuest",
-                                                    "typeId": "externalClassQuest",
+                                                    "name": "activeClassQuest",
+                                                    "typeId": "externalActiveClassQuest",
                                                 },
                                             },
                                             {
-                                                "class": "CQuest",
+                                                "class": "UnitActiveTypeQuest",
                                                 "properties": {
-                                                    "name": "typeQuest",
-                                                    "typeId": "externalTypeQuest",
+                                                    "name": "activeTypeQuest",
+                                                    "typeId": "externalActiveTypeQuest",
+                                                },
+                                            },
+                                            {
+                                                "class": "UnitActiveNameQuest",
+                                                "properties": {
+                                                    "name": "externalActiveNameQuest",
                                                 },
                                             },
                                         ],
                                         "completedQuests": [
+                                            {
+                                                "class": "UnitCompletedClassQuest",
+                                                "properties": {
+                                                    "name": "completedClassQuest",
+                                                    "typeId": "externalCompletedClassQuest",
+                                                },
+                                            },
+                                            {
+                                                "class": "UnitCompletedTypeQuest",
+                                                "properties": {
+                                                    "name": "completedTypeQuest",
+                                                    "typeId": "externalCompletedTypeQuest",
+                                                },
+                                            },
+                                            {
+                                                "class": "UnitCompletedNameQuest",
+                                                "properties": {
+                                                    "name": "externalCompletedNameQuest",
+                                                },
+                                            },
                                             {
                                                 "class": "CQuest",
                                                 "properties": {
                                                     "name": "genericCompletedQuest",
                                                     "typeId": "genericCompletedQuest",
                                                 },
-                                            }
+                                            },
                                         ],
                                     },
                                 }
@@ -6974,8 +7084,12 @@ class GameTest(unittest.TestCase):
             self.assertEqual("ritual", loaded_map.mapName)
             self.assertEqual(7, loaded_map.getTurn())
             self.assertEqual((3, 22, 0), coords_tuple(loaded_player.getCoords()))
-            self.assertIn("externalClassQuest", quest_names(loaded_player))
-            self.assertIn("externalTypeQuest", quest_names(loaded_player))
+            self.assertIn("externalActiveClassQuest", quest_names(loaded_player))
+            self.assertIn("externalActiveTypeQuest", quest_names(loaded_player))
+            self.assertIn("externalActiveNameQuest", quest_names(loaded_player))
+            self.assertIn("externalCompletedClassQuest", completed_quest_names(loaded_player))
+            self.assertIn("externalCompletedTypeQuest", completed_quest_names(loaded_player))
+            self.assertIn("externalCompletedNameQuest", completed_quest_names(loaded_player))
             self.assertIn("genericCompletedQuest", completed_quest_names(loaded_player))
 
             return True, json.dumps(

@@ -934,9 +934,11 @@ bool config_matches_saved_quest_refs(const json &entry, const CSavedQuestRefs &r
     }
     if (entry.contains("properties") && entry["properties"].is_object()) {
         const json &properties = entry["properties"];
-        if (properties.contains("typeId") && properties["typeId"].is_string() &&
-            refs.typeIds.contains(properties["typeId"].get<std::string>())) {
-            return true;
+        for (const char *key : {"typeId", "name"}) {
+            if (properties.contains(key) && properties[key].is_string() &&
+                refs.typeIds.contains(properties[key].get<std::string>())) {
+                return true;
+            }
         }
     }
     return false;
