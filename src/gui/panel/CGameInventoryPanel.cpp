@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGameInventoryPanel.h"
 #include "core/CGame.h"
 #include "core/CMap.h"
+#include "core/CSlotConfig.h"
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
 
