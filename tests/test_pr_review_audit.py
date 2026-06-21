@@ -39,6 +39,48 @@ class PrReviewAuditTest(unittest.TestCase):
         self.assertTrue(review["mergeAllowed"])
         self.assertFalse(review["controllerDispatchAttention"])
 
+    def test_auto_merge_disabled_blocks_ready_controller_pr(self) -> None:
+        review = self.classify(
+            {
+                "number": 134,
+                "title": "Fix validated implementation",
+                "files": ["src/core/CGameContext.cpp"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [successCheck()],
+                "autoMergeError": "GraphQL: Auto merge is not allowed for this repository (enablePullRequestAutoMerge)",
+                "queue": {
+                    "status": "IN_PROGRESS",
+                    "owner": "controller/ctrl-a/subagent-9",
+                    "claimId": "validated-claim",
+                },
+            }
+        )
+
+        self.assertEqual("merge_policy_blocked", review["actionCategory"])
+        self.assertEqual("implementation_pr_with_active_workbook_claim", review["prType"])
+        self.assertIn("merge_policy_blocked", review["buckets"])
+        self.assertIn("repository auto-merge is disabled or unavailable", review["blockers"])
+        self.assertFalse(review["mergeAllowed"])
+        self.assertTrue(review["controllerDispatchAttention"])
+        self.assertTrue(review["humanApprovalRequired"])
+        self.assertIn("explicit alternate merge authorization", review["recommendedActions"][0])
+
+    def test_nested_auto_merge_error_blocks_ready_workflow_pr(self) -> None:
+        review = self.classify(
+            {
+                "number": 135,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [successCheck()],
+                "autoMergeRequest": {"error": "GraphQL: Auto merge is not allowed for this repository"},
+            }
+        )
+
+        self.assertEqual("merge_policy_blocked", review["actionCategory"])
+        self.assertEqual("workflow_pr", review["prType"])
+        self.assertFalse(review["mergeAllowed"])
+        self.assertTrue(review["humanApprovalRequired"])
+
     def test_workbook_only_queue_pr_is_ready_only_after_successful_signals(self) -> None:
         review = self.classify(
             {

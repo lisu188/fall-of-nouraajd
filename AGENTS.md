@@ -41,15 +41,18 @@ python3 scripts/pr_review_audit.py --input /tmp/pr-review-snapshot.json --format
 ```
 
 Feed it a normalized JSON snapshot containing changed files, merge state, check rollup, queue linkage, and recovery
-state. The audit separates `actionCategory` from `prType` so workbook-only queue PRs, active-claim implementation PRs,
-workflow PRs, stale linked claims, and cleanup candidates can be reviewed consistently. Its output is advisory and
-read-only: it must never close PRs, delete branches, edit the workbook, or override failed checks. Destructive cleanup,
-obsolete/duplicate PR closure, stale-claim recovery, dirty worktree recovery, and any merge with missing signals require
-explicit human approval. A controller-owned implementation PR marked `failing_ci`, `needs_update_rebase`,
+state. Include `autoMergeError` or `autoMergeRequest.error` when an attempted auto-merge fails. The audit separates
+`actionCategory` from `prType` so workbook-only queue PRs, active-claim implementation PRs, workflow PRs, stale linked
+claims, and cleanup candidates can be reviewed consistently. It reports `merge_policy_blocked` when repository settings
+or permissions prevent auto-merge; request the repository setting change or explicit alternate merge authorization
+instead of repeatedly retrying the same merge command. Its output is advisory and read-only: it must never close PRs,
+delete branches, edit the workbook, or override failed checks. Destructive cleanup, obsolete/duplicate PR closure,
+stale-claim recovery, dirty worktree recovery, and any merge with missing signals require explicit human approval. A
+controller-owned implementation PR marked `failing_ci`, `merge_policy_blocked`, `needs_update_rebase`,
 `human_review_required`, or `never_touch` is controller attention debt; resolve or assign recovery for that PR, but do
 not use source overlap alone to leave the controller below its four owned implementation slots when eligible work exists.
-Unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable rows remain occupied recovery slots until a
-workbook heartbeat, release, reclaim, or terminal-status update has actually merged.
+Unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable rows remain occupied recovery slots until a workbook
+heartbeat, release, reclaim, or terminal-status update has actually merged.
 
 ## Workflow observation ledger
 

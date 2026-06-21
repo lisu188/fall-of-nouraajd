@@ -131,19 +131,23 @@ a normalized snapshot that includes changed files, merge state, CI rollup, queue
 python3 scripts/pr_review_audit.py --input /tmp/pr-review-snapshot.json --format table
 ```
 
-The audit emits an `actionCategory` such as `ready_to_merge`, `poll`, `failing_ci`, `needs_update_rebase`,
+Include `autoMergeError` or `autoMergeRequest.error` when an attempted auto-merge fails. The audit emits an
+`actionCategory` such as `ready_to_merge`, `poll`, `failing_ci`, `merge_policy_blocked`, `needs_update_rebase`,
 `human_review_required`, `obsolete_duplicate_close`, `branch_cleanup_candidate`, or `never_touch`, plus a separate
 `prType` such as `workbook_only_queue_pr`, `implementation_pr_with_active_workbook_claim`, `workflow_pr`, or
 `unknown_pr`. Treat the result as advisory evidence for the controller and project-manager brief. It does not close PRs,
-delete branches, touch the workbook, or bypass failing checks. Human approval is required before closing obsolete or
-duplicate PRs, deleting local or remote branches, reclaiming recoverable stale claims, touching dirty worktrees, or
-merging any PR with missing classification signals.
+delete branches, touch the workbook, or bypass failing checks. A `merge_policy_blocked` result means the controller
+should request the repository setting change or explicit alternate merge authorization instead of repeatedly retrying
+the same auto-merge command. Human approval is required before closing obsolete or duplicate PRs, deleting local or
+remote branches, reclaiming recoverable stale claims, touching dirty worktrees, or merging any PR with missing
+classification signals.
 
-Controller-owned implementation PRs classified as `failing_ci`, `needs_update_rebase`, `human_review_required`, or
-`never_touch` require controller attention or explicit recovery assignment before the controller treats their issues as
-resolved. They do not reintroduce source-overlap as a hard claim exclusion: keep the exact four owned implementation
-slots whenever status-and-dependency eligible work exists and no concrete non-source blocker prevents dispatch, but do
-not refill through unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable rows.
+Controller-owned implementation PRs classified as `failing_ci`, `merge_policy_blocked`, `needs_update_rebase`,
+`human_review_required`, or `never_touch` require controller attention or explicit recovery assignment before the
+controller treats their issues as resolved. They do not reintroduce source-overlap as a hard claim exclusion: keep the
+exact four owned implementation slots whenever status-and-dependency eligible work exists and no concrete non-source
+blocker prevents dispatch, but do not refill through unresolved heartbeat-overdue, lease-expired, suspect, or
+reclaimable rows.
 
 ## Workflow observations
 
