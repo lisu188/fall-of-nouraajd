@@ -359,10 +359,23 @@ def queueStatus(queue: dict[str, Any]) -> str:
 
 
 def queueClaimIsStale(queue: dict[str, Any]) -> bool:
-    return any(
+    if any(
         truthy(firstValue(queue, name, default=False))
-        for name in ("stale", "claimStale", "claim_stale", "leaseExpired", "lease_expired")
-    )
+        for name in (
+            "stale",
+            "claimStale",
+            "claim_stale",
+            "heartbeatOverdue",
+            "heartbeat_overdue",
+            "leaseExpired",
+            "lease_expired",
+            "reclaimable",
+        )
+    ):
+        return True
+
+    claimHealth = normalizeToken(firstValue(queue, "claimHealth", "claim_health", default=""))
+    return bool(claimHealth and claimHealth != "healthy")
 
 
 def queueOwner(queue: dict[str, Any]) -> str:
@@ -478,7 +491,7 @@ def actionFromSignals(
 
     queue = queuePayload(record)
     if queueClaimIsStale(queue):
-        blockers.append("linked workbook claim is stale or lease-expired")
+        blockers.append("linked workbook claim requires recovery before merge or cleanup")
         buckets.append("human_review_required")
 
     if prType == "unknown_pr":

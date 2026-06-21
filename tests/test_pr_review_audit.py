@@ -402,7 +402,91 @@ class PrReviewAuditTest(unittest.TestCase):
         self.assertEqual("human_review_required", review["actionCategory"])
         self.assertEqual("implementation_pr_with_stale_workbook_claim", review["prType"])
         self.assertTrue(review["controllerDispatchAttention"])
-        self.assertIn("linked workbook claim is stale or lease-expired", review["blockers"])
+        self.assertIn("linked workbook claim requires recovery before merge or cleanup", review["blockers"])
+
+    def test_heartbeat_overdue_linked_claim_requires_human_review(self) -> None:
+        review = self.classify(
+            {
+                "number": 130,
+                "files": ["src/gui/CMap.cpp"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [successCheck()],
+                "queue": {
+                    "status": "IN_PROGRESS",
+                    "owner": "controller/ctrl-a/subagent-5",
+                    "claimId": "heartbeat-overdue-claim",
+                    "heartbeatOverdue": True,
+                    "leaseExpired": False,
+                },
+            }
+        )
+
+        self.assertEqual("human_review_required", review["actionCategory"])
+        self.assertEqual("implementation_pr_with_stale_workbook_claim", review["prType"])
+        self.assertTrue(review["controllerDispatchAttention"])
+
+    def test_reclaimable_linked_claim_requires_human_review(self) -> None:
+        review = self.classify(
+            {
+                "number": 131,
+                "files": ["src/core/CGameContext.cpp"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [successCheck()],
+                "queue": {
+                    "status": "IN_PROGRESS",
+                    "owner": "controller/ctrl-a/subagent-6",
+                    "claimId": "reclaimable-claim",
+                    "reclaimable": True,
+                },
+            }
+        )
+
+        self.assertEqual("human_review_required", review["actionCategory"])
+        self.assertEqual("implementation_pr_with_stale_workbook_claim", review["prType"])
+        self.assertTrue(review["controllerDispatchAttention"])
+
+    def test_unhealthy_claim_health_requires_human_review(self) -> None:
+        review = self.classify(
+            {
+                "number": 132,
+                "files": ["src/handler/CFightHandler.cpp"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [successCheck()],
+                "queue": {
+                    "status": "IN_PROGRESS",
+                    "owner": "controller/ctrl-a/subagent-7",
+                    "claimId": "lease-expired-recent-heartbeat",
+                    "claimHealth": "lease_expired_heartbeat_recent",
+                },
+            }
+        )
+
+        self.assertEqual("human_review_required", review["actionCategory"])
+        self.assertEqual("implementation_pr_with_stale_workbook_claim", review["prType"])
+        self.assertTrue(review["controllerDispatchAttention"])
+
+    def test_healthy_claim_health_keeps_active_claim_type(self) -> None:
+        review = self.classify(
+            {
+                "number": 133,
+                "files": ["src/handler/CFightHandler.cpp"],
+                "mergeStateStatus": "CLEAN",
+                "checks": [successCheck()],
+                "queue": {
+                    "status": "IN_PROGRESS",
+                    "owner": "controller/ctrl-a/subagent-8",
+                    "claimId": "healthy-claim",
+                    "claimHealth": "healthy",
+                    "heartbeatOverdue": False,
+                    "leaseExpired": False,
+                    "reclaimable": False,
+                },
+            }
+        )
+
+        self.assertEqual("ready_to_merge", review["actionCategory"])
+        self.assertEqual("implementation_pr_with_active_workbook_claim", review["prType"])
+        self.assertFalse(review["controllerDispatchAttention"])
 
     def test_unknown_unlinked_pr_is_not_merge_ready(self) -> None:
         review = self.classify(
