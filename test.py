@@ -535,6 +535,14 @@ def fixture_player_summary(snapshot):
     raise AssertionError("Save fixture snapshot does not contain a canonical player object.")
 
 
+def snapshot_player_properties(snapshot):
+    for obj in snapshot.get("properties", {}).get("objects", []):
+        properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        if obj.get("class") == "CPlayer" or properties.get("name") == "player":
+            return properties
+    raise AssertionError("Save snapshot does not contain a canonical player object.")
+
+
 def fixture_quest_ids(quests):
     if not isinstance(quests, list):
         return []
@@ -8801,6 +8809,76 @@ class GameTest(unittest.TestCase):
                 {
                     "old_schema_loaded": True,
                     "resaved_schema": saved_json.get("schemaVersion"),
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_legacy_player_identity_defaults_from_type_id(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("legacy_player_identity")
+        install_save_fixture_slot(save_name, IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["schema_v1_test_map"])
+        try:
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
+
+            self.assertEqual("Warrior", loaded_player.getTypeId())
+            self.assertEqual("Warrior", loaded_player.getPlayerClassId())
+            self.assertEqual("human", loaded_player.getRaceId())
+
+            game.CMapLoader.save(loaded_map, save_name)
+            saved_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            player_properties = snapshot_player_properties(assert_save_envelope(self, saved_json, "test"))
+            self.assertEqual("Warrior", player_properties.get("playerClassId"))
+            self.assertEqual("human", player_properties.get("raceId"))
+
+            return True, json.dumps(
+                {
+                    "playerClassId": loaded_player.getPlayerClassId(),
+                    "raceId": loaded_player.getRaceId(),
+                    "savedPlayerClassId": player_properties.get("playerClassId"),
+                    "savedRaceId": player_properties.get("raceId"),
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
+    def test_player_identity_properties_round_trip_explicit_values(self):
+        game = load_game_module()
+
+        save_name = unique_save_name("player_identity_round_trip")
+        cleanup_save_slot(save_name)
+        try:
+            _source_game, source_map, source_player = load_game_map_with_player("test", "Sorcerer")
+            source_player.setPlayerClassId("Wayfarer")
+            source_player.setRaceId("riverFolk")
+
+            game.CMapLoader.save(source_map, save_name)
+            saved_json = json.loads(save_primary_path(save_name).read_text(encoding="utf-8"))
+            saved_properties = snapshot_player_properties(assert_save_envelope(self, saved_json, "test"))
+            self.assertEqual("Sorcerer", saved_properties.get("typeId"))
+            self.assertEqual("Wayfarer", saved_properties.get("playerClassId"))
+            self.assertEqual("riverFolk", saved_properties.get("raceId"))
+
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_player = loaded_game.getMap().getPlayer()
+            self.assertEqual("Sorcerer", loaded_player.getTypeId())
+            self.assertEqual("Wayfarer", loaded_player.getPlayerClassId())
+            self.assertEqual("riverFolk", loaded_player.getRaceId())
+
+            return True, json.dumps(
+                {
+                    "typeId": loaded_player.getTypeId(),
+                    "playerClassId": loaded_player.getPlayerClassId(),
+                    "raceId": loaded_player.getRaceId(),
                 },
                 sort_keys=True,
             )
