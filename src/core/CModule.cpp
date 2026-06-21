@@ -1007,6 +1007,10 @@ void init_game_module(py::module_ &m) {
         .def("setQuests", &CPlayer::setQuests, "Replace active quests.")
         .def("getCompletedQuests", &CPlayer::getCompletedQuests, "Return the player's completed quests.")
         .def("setCompletedQuests", &CPlayer::setCompletedQuests, "Replace completed quests.")
+        .def("getPlayerClassId", &CPlayer::getPlayerClassId, "Return the player's class identity id.")
+        .def("setPlayerClassId", &CPlayer::setPlayerClassId, "Set the player's class identity id.")
+        .def("getRaceId", &CPlayer::getRaceId, "Return the player's race identity id.")
+        .def("setRaceId", &CPlayer::setRaceId, "Set the player's race identity id.")
         .def("checkQuests", &CPlayer::checkQuests, "Move completed quests into the completed quest log.");
 
     py::class_<CListString, CGameObject, std::shared_ptr<CListString>>(m, "CListString", "String list wrapper object.")

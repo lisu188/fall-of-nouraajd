@@ -24,7 +24,9 @@ class CQuest;
 class CPlayer : public CCreature {
     V_META(CPlayer, CCreature, V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, quests, getQuests, setQuests),
            V_PROPERTY(CPlayer, std::set<std::shared_ptr<CQuest>>, completedQuests, getCompletedQuests,
-                      setCompletedQuests))
+                      setCompletedQuests),
+           V_PROPERTY(CPlayer, std::string, playerClassId, getPlayerClassId, setPlayerClassId),
+           V_PROPERTY(CPlayer, std::string, raceId, getRaceId, setRaceId))
 
   public:
     CPlayer() = default;
@@ -41,6 +43,14 @@ class CPlayer : public CCreature {
 
     void setCompletedQuests(std::set<std::shared_ptr<CQuest>> completedQuests);
 
+    std::string getPlayerClassId();
+
+    void setPlayerClassId(std::string playerClassId);
+
+    std::string getRaceId();
+
+    void setRaceId(std::string raceId);
+
     void checkQuests();
 
     void incTurn();
@@ -48,6 +58,8 @@ class CPlayer : public CCreature {
   private:
     std::set<std::shared_ptr<CQuest>> quests;
     std::set<std::shared_ptr<CQuest>> completedQuests;
+    std::string playerClassId;
+    std::string raceId;
 
     int turn = 0;
 };
