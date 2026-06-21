@@ -15,6 +15,13 @@ WORKFLOW_TEXT_PATHS = (
     PROMPTS_DIR / "codex-workflow-optimizer.md",
     PROMPTS_DIR / "codex-workflow-optimizer-goal.txt",
 )
+OBSERVATION_POLICY_TEXT_PATHS = (
+    REPO_ROOT / "AGENTS.md",
+    REPO_ROOT / "docs" / "codex-agent-queue.md",
+    REPO_ROOT / "docs" / "codex-workflow-observations.md",
+    PROMPTS_DIR / "codex-queue-controller.md",
+    PROMPTS_DIR / "codex-queue-goal.txt",
+)
 
 
 class PromptInventoryTest(unittest.TestCase):
@@ -56,6 +63,21 @@ class PromptInventoryTest(unittest.TestCase):
                         explicit_all_platforms,
                         "ordinary PR polling should use the path-selected default, not a Linux-only command",
                     )
+
+    def test_queue_controller_observation_policy_is_direct_and_append_only(self) -> None:
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in OBSERVATION_POLICY_TEXT_PATHS).lower()
+
+        self.assertIn(
+            "each queue controller may publish controller-discovered workflow observations directly", combined
+        )
+        self.assertIn("workers, qa, and project-manager agents report observations to their controller", combined)
+        self.assertIn("do not edit or delete existing records or receipts", combined)
+        self.assertIn("record-only prs add only files under `planning/workflow_observations/records/`", combined)
+        self.assertIn(
+            "resolution-only prs add only files under `planning/workflow_observations/resolutions/`",
+            combined,
+        )
+        self.assertIn("never mix ledger files with xlsx", combined)
 
 
 if __name__ == "__main__":

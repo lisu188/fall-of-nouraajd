@@ -75,8 +75,11 @@ Resolution statuses are `resolved`, `duplicate`, `invalid`, and `wont-fix`.
 
 ## Workflow rules
 
-Workers, QA, and project-manager agents report observations to the controller. They do not publish ledger files
-themselves. Record workflow failures and optimization leads, not gameplay defects and not routine progress.
+Each queue controller may publish controller-discovered workflow observations directly after evidence and secret review.
+Workers, QA, and project-manager agents report observations to their controller. They do not publish ledger files
+themselves. Observation updates are append-only: add a new record under `planning/workflow_observations/records/` or a
+new resolution receipt under `planning/workflow_observations/resolutions/`. Do not edit or delete existing records or
+receipts. Record workflow failures and optimization leads, not gameplay defects and not routine progress.
 
 Record observations for significant queue or lease faults, stale state, PR or merge failures, CI waste, prompt drift,
 resource or recovery failures, missing worker status, unsafe ambiguity, and repeated manual intervention. Include

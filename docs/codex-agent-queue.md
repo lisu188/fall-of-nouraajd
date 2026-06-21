@@ -152,11 +152,14 @@ evidence files for workflow problems such as queue/lease faults, missing live wo
 failures, CI waste, prompt drift, resource or recovery failures, unsafe ambiguity, and repeated manual intervention.
 They are not gameplay defects, routine progress updates, or implementation queue rows.
 
-Workers, QA, and project-manager agents report observations to the controller. They do not publish ledger files. The
-controller reviews evidence for secrets and relevance, runs `python3 scripts/workflow_observations.py validate`, and
-publishes observation-only PRs that add only `planning/workflow_observations/records/<id>.json`. After a workflow fix
-merges and post-merge verification passes, publish a separate resolution-only PR that adds only
-`planning/workflow_observations/resolutions/<id>.json`.
+Each queue controller may publish controller-discovered workflow observations directly after evidence and secret review.
+Workers, QA, and project-manager agents report observations to their controller. They do not publish ledger files.
+Observation updates are append-only: add a new record under `planning/workflow_observations/records/` or a new
+resolution receipt under `planning/workflow_observations/resolutions/`. Do not edit or delete existing records or
+receipts. The controller reviews evidence for secrets and relevance, runs
+`python3 scripts/workflow_observations.py validate`, and publishes observation-only PRs that add only
+`planning/workflow_observations/records/<id>.json`. After a workflow fix merges and post-merge verification passes,
+publish a separate resolution-only PR that adds only `planning/workflow_observations/resolutions/<id>.json`.
 
 Observation-only and resolution-only PRs are not CI-exempt under the current repository policy. They do not need the
 global XLSX serialization lane because each record or receipt is a unique immutable path, but same-ID publication must

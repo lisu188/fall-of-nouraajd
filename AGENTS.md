@@ -60,8 +60,10 @@ repeated manual intervention. It is not an implementation backlog and must not b
 
 Observation records live under `planning/workflow_observations/records/`; resolution receipts live under
 `planning/workflow_observations/resolutions/`. Files are immutable one-record-per-file JSON. Do not edit or delete old
-records or receipts. Workers, QA, and project-manager agents report observations to the controller; the controller
-reviews evidence and publishes observation-only or resolution-only PRs.
+records or receipts. Each queue controller may publish controller-discovered workflow observations directly after
+evidence and secret review. Workers, QA, and project-manager agents report observations to their controller; they do not
+publish ledger files themselves. Observation updates are append-only: add a new record or resolution receipt, never
+mutate existing evidence. The controller reviews evidence and publishes observation-only or resolution-only PRs.
 
 Record-only and resolution-only PRs are not CI-exempt under the current repository policy. They need not be globally
 serialized because each ID maps to a unique immutable file, but they must run `python3 scripts/workflow_observations.py

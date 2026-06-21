@@ -40,8 +40,11 @@ Explicitly spawn worker subagents for implementation tasks. Do not merely descri
    recommendations are advisory until the controller or user approves a serialized workbook-only queue update.
 19. Every controller instance must have a unique controller ID. Use it in every worker owner string so multiple
    controllers can run without owner collisions.
-20. Record significant workflow problems in the immutable workflow-observation ledger after evidence and secret review.
-   Observations are not implementation queue rows and never replace XLSX claim, heartbeat, or terminal status updates.
+20. Each queue controller may publish controller-discovered workflow observations directly after evidence and secret
+   review. Workers, QA, and project-manager agents report observations to their controller and do not publish ledger
+   files themselves. Observation updates are append-only: add new records or resolution receipts, never edit or delete
+   existing records or receipts. Observations are not implementation queue rows and never replace XLSX claim, heartbeat,
+   or terminal status updates.
 
 ## Startup
 
@@ -662,9 +665,9 @@ Do not merge partial implementation code merely to publish a queue status. If co
   heartbeat live work or publish a workbook-only release/reclaim/terminal change only after the row's recovery path is
   verified.
 - Queue workbook conflict: close or resolve the older queue PR first; never attempt a binary merge by combining workbook copies.
-- Significant workflow problem: have workers, QA, or PM report it to the controller, then record it with
-  `python3 scripts/workflow_observations.py record` after evidence and secret review. Publish the new record through an
-  observation-only PR. Do not mix observation records with XLSX or implementation changes.
+- Significant workflow problem: if this controller detects it, or workers, QA, or PM report it to the controller, record
+  it with `python3 scripts/workflow_observations.py record` after evidence and secret review. Publish the new record
+  through an observation-only PR. Do not mix observation records with XLSX, implementation, or workflow-code changes.
 
 Never convert `BLOCKED`, `FAILED`, or `CANCELLED` to `DONE` merely to unlock dependencies.
 
