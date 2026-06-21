@@ -1,0 +1,21 @@
+name: export planning workbook
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d199908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: github-issues-workbook
+          path: planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx
+          if-no-files-found: error
