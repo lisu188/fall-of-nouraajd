@@ -1,0 +1,30 @@
+name: workbook queues
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Test aggregate workbook queue tooling
+        run: python3 -m unittest tests.test_workbook_queue
+      - name: Report planning workbook discovery
+        run: python3 scripts/workbook_queue.py workbooks --json
+      - name: Validate aggregate queue state
+        run: python3 scripts/workbook_queue.py validate
