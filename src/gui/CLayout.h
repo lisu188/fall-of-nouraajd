@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "gui/object/CGameGraphicsObject.h"
 #include "object/CGameObject.h"
+
+#include <optional>
 
 class CLayout : public CGameObject {
     V_META(CLayout, CGameObject, V_PROPERTY(CLayout, std::string, w, getW, setW),
@@ -62,6 +64,28 @@ class CLayout : public CGameObject {
 
     void setRect(const std::shared_ptr<SDL_Rect> &rect);
 
+    void setRuntimeX(int x);
+
+    void setRuntimeY(int y);
+
+    void setRuntimeW(int w);
+
+    void setRuntimeH(int h);
+
+    void setRuntimeRect(int x, int y, int w, int h);
+
+    void setRuntimeRect(const std::shared_ptr<SDL_Rect> &rect);
+
+    void clearRuntimeX();
+
+    void clearRuntimeY();
+
+    void clearRuntimeW();
+
+    void clearRuntimeH();
+
+    void clearRuntimeRect();
+
     std::string getVertical();
 
     void setVertical(std::string vertical);
@@ -77,6 +101,10 @@ class CLayout : public CGameObject {
     std::string y = "0";
     std::string vertical;
     std::string horizontal;
+    std::optional<int> runtimeX;
+    std::optional<int> runtimeY;
+    std::optional<int> runtimeW;
+    std::optional<int> runtimeH;
 };
 
 class CCenteredLayout : public CLayout {

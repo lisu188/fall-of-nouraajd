@@ -170,7 +170,7 @@ void CGui::setWidth(int width) {
     const bool changed = CGui::width != clampedWidth;
     CGui::width = clampedWidth;
     if (auto layout = getLayout()) {
-        layout->setW(std::to_string(CGui::width));
+        layout->setRuntimeW(CGui::width);
     }
     if (changed) {
         recordDirectPropertyChanged("width");
@@ -184,7 +184,7 @@ void CGui::setHeight(int height) {
     const bool changed = CGui::height != clampedHeight;
     CGui::height = clampedHeight;
     if (auto layout = getLayout()) {
-        layout->setH(std::to_string(CGui::height));
+        layout->setRuntimeH(CGui::height);
     }
     if (changed) {
         recordDirectPropertyChanged("height");
