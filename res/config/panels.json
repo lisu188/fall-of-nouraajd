@@ -64,7 +64,7 @@
               "properties": {
                 "horizontal": "LEFT",
                 "vertical": "PARENT",
-                "w": 50
+                "w": "50"
               }
             },
             "priority": 1,
@@ -91,7 +91,7 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": 200,
+          "h": "200",
           "horizontal": "PARENT",
           "vertical": "UP"
         }
@@ -192,10 +192,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": 300,
-                "w": 200,
-                "x": 150,
-                "y": 100
+                "h": "300",
+                "w": "200",
+                "x": "150",
+                "y": "100"
               }
             }
           }
@@ -230,10 +230,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": 300,
-                "w": 200,
-                "x": 450,
-                "y": 100
+                "h": "300",
+                "w": "200",
+                "x": "450",
+                "y": "100"
               }
             }
           }
@@ -442,7 +442,7 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": 100,
+          "h": "100",
           "horizontal": "PARENT",
           "vertical": "DOWN"
         }
@@ -455,8 +455,8 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": 300,
-          "w": 400
+          "h": "300",
+          "w": "400"
         }
       },
       "children": [
@@ -503,10 +503,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 200,
-                "x": 200,
-                "y": 500
+                "h": "100",
+                "w": "200",
+                "x": "200",
+                "y": "500"
               }
             },
             "text": "SELL"
@@ -519,10 +519,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": 100,
-                "w": 200,
-                "x": 400,
-                "y": 500
+                "h": "100",
+                "w": "200",
+                "x": "400",
+                "y": "500"
               }
             },
             "text": "BUY"
@@ -534,10 +534,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": 200,
-                "w": 200,
-                "x": 200,
-                "y": 0
+                "h": "200",
+                "w": "200",
+                "x": "200",
+                "y": "0"
               }
             },
             "render": "renderSellCost"
@@ -549,10 +549,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": 200,
-                "w": 200,
-                "x": 400,
-                "y": 0
+                "h": "200",
+                "w": "200",
+                "x": "400",
+                "y": "0"
               }
             },
             "render": "renderBuyCost"

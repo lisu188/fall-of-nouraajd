@@ -87,6 +87,9 @@ REVIEWED_DYNAMIC_PROPERTIES = {
     "CDialogState": {"condition"},
     "CScroll": {"singleUse"},
 }
+REVIEWED_DYNAMIC_PROPERTY_PREFIXES = {
+    "CGameObject": ("campaign_", "plugin_", "quest_state_"),
+}
 PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
 TYPE_REGISTRATION_EXCLUSIONS_PATH = Path("scripts/type_registration_exclusions.json")
 
@@ -1104,8 +1107,19 @@ class ContentValidator:
             return
         dynamic_properties = REVIEWED_DYNAMIC_PROPERTIES.get(class_name, set())
         properties_location = append_field(location, "properties")
-        for property_name in properties:
-            if property_name not in property_schema and property_name not in dynamic_properties:
+        for property_name, property_value in properties.items():
+            if property_name in property_schema:
+                self._validate_property_value_type(
+                    path,
+                    append_field(properties_location, property_name),
+                    class_name,
+                    property_schema[property_name],
+                    property_value,
+                )
+                continue
+            if property_name not in dynamic_properties and not self._is_reviewed_dynamic_property(
+                class_name, property_name
+            ):
                 self._issue(
                     path,
                     append_field(properties_location, property_name),
@@ -1153,6 +1167,37 @@ class ContentValidator:
         if seen_classes is None:
             self._metadata_property_schema_cache[class_name] = properties
         return properties
+
+    def _validate_property_value_type(
+        self, path: Path, location: str, class_name: str, cpp_property: CppMetadataProperty, value: Any
+    ) -> None:
+        expected_kind = expected_json_property_kind(cpp_property.type_token)
+        if expected_kind is None:
+            return
+        actual_kind = json_value_kind(value)
+        if actual_kind != expected_kind:
+            self._issue(
+                path,
+                location,
+                f'property "{cpp_property.name}" for class "{class_name}" expected {expected_kind}; got {actual_kind}',
+            )
+
+    def _is_reviewed_dynamic_property(self, class_name: str, property_name: str) -> bool:
+        for lineage_class in self._metadata_class_lineage(class_name):
+            prefixes = REVIEWED_DYNAMIC_PROPERTY_PREFIXES.get(lineage_class, ())
+            if any(property_name.startswith(prefix) for prefix in prefixes):
+                return True
+        return False
+
+    def _metadata_class_lineage(self, class_name: str) -> tuple[str, ...]:
+        lineage: list[str] = []
+        seen: set[str] = set()
+        current: str | None = class_name
+        while current and current not in seen:
+            lineage.append(current)
+            seen.add(current)
+            current = self.metadata_class_bases.get(current)
+        return tuple(lineage)
 
     def _validate_top_level_ref_cycles(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
         for entry in list(context.config_entries.values()) + list(self.global_entries.values()):
@@ -1716,6 +1761,46 @@ def tile_types_by_id(map_data: Any) -> dict[int, str]:
         if isinstance(tile_config, dict) and isinstance(tile_config.get("type"), str):
             tile_types[tile_id] = tile_config["type"]
     return tile_types
+
+
+def expected_json_property_kind(type_token: str) -> str | None:
+    if type_token == "bool":
+        return "bool"
+    if type_token == "int":
+        return "int"
+    if type_token == "std::string":
+        return "string"
+    if type_token == "CTags" or re.match(r"^std::(?:set|list|vector)<", type_token):
+        return "array"
+    if type_token.startswith("std::shared_ptr<") or type_token in {
+        "CInteractionMap",
+        "CItemMap",
+        "CSlotMap",
+        "int_int_map",
+        "int_string_map",
+        "string_int_map",
+        "string_string_map",
+    }:
+        return "object"
+    return None
+
+
+def json_value_kind(value: Any) -> str:
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "object"
+    if value is None:
+        return "null"
+    return type(value).__name__
 
 
 def normalize_cpp_type(raw: str) -> str:
