@@ -136,7 +136,7 @@ class CResourcesProvider {
     static std::list<std::string> searchPath;
 };
 
-class CConfigurationProvider : private std::map<std::string, std::shared_ptr<json>> {
+class CConfigurationProvider {
   public:
     explicit CConfigurationProvider(
         std::shared_ptr<CResourcesProvider> resourcesProvider = CResourcesProvider::getInstance());
@@ -151,6 +151,7 @@ class CConfigurationProvider : private std::map<std::string, std::shared_ptr<jso
     void loadConfig(const std::string &path);
 
     std::shared_ptr<CResourcesProvider> resourcesProvider;
+    std::map<std::string, std::shared_ptr<json>> configurations;
 };
 
 class CAnimationProvider {
