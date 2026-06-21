@@ -16,6 +16,6 @@ jobs:
           fetch-depth: 1
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: github-issues-workbook
-          path: planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx
+          name: github-issues-migrated-workbook
+          path: planning/fall_of_nouraajd_github_issues_implementation_workbook_migrated.xlsx
           if-no-files-found: error

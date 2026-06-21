@@ -24,10 +24,6 @@ The migrated GitHub issues implementation workbook retains the original planning
 queue rows preserve the source issue number and source-backed implementation
 notes while initializing workflow state as unclaimed `NOT_STARTED` work.
 
-The original `planning/fall_of_nouraajd_github_issues_implementation_workbook.xlsx`
-does not contain `Issue Proposals`; discovery reports it as a skipped reference
-workbook and controllers must not mutate it as a queue.
-
 Inspect discovery before dispatching:
 
 ```bash
