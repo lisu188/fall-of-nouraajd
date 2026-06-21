@@ -590,6 +590,12 @@ void CListView::initialize() {
         });
 }
 
+void CListView::refresh() {
+    refreshSubscriptions();
+    CProxyTargetGraphicsObject::refresh();
+    refreshAll();
+}
+
 void CListView::refreshFromRefreshEvent() { refreshFromSubscription(); }
 
 void CListView::refreshFromPropertyChanged(std::string propertyName) {
@@ -693,9 +699,27 @@ void CListView::connectRefreshSubscriptions(const std::shared_ptr<CGameObject> &
 }
 
 void CListView::refreshFromSubscription() {
-    refreshSubscriptions();
-    refresh();
-    refreshAll();
+    if (refreshFromSubscriptionQueued) {
+        return;
+    }
+
+    refreshFromSubscriptionQueued = true;
+    std::weak_ptr<CListView> weakSelf = this->ptr<CListView>();
+    vstd::call_later([weakSelf]() {
+        auto self = weakSelf.lock();
+        if (!self) {
+            return;
+        }
+
+        self->refreshFromSubscriptionQueued = false;
+        auto gui = self->getGui();
+        if (!self->isAttachedToGui(gui)) {
+            return;
+        }
+
+        self->refreshSubscriptions();
+        self->refresh();
+    });
 }
 
 bool CListView::shouldRefreshForProperty(const std::string &propertyName) const {

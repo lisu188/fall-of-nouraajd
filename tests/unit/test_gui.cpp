@@ -477,6 +477,55 @@ void test_list_view_refreshes_from_generic_property_notifications() {
                 "generic propertyChanged subscription should refresh the list for any changed property");
 }
 
+void test_list_view_coalesces_property_refreshes_per_event_loop_tick() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
+    list->setResolvedRefreshTarget(refresh_target);
+    list->setRefreshOnPropertyChanged(true);
+
+    list->refresh();
+    const int after_initial_refresh = list->refresh_count;
+
+    refresh_target->setNumericProperty("threat", 1);
+    refresh_target->setStringProperty("label", "first");
+    refresh_target->setBoolProperty("enabled", true);
+    expect_true(list->refresh_count == after_initial_refresh,
+                "property notifications should queue refresh work instead of refreshing synchronously");
+
+    drain_event_loop();
+
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "multiple property notifications in one event-loop turn should coalesce to one list refresh");
+}
+
+void test_list_view_skips_queued_property_refresh_after_detach() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
+    list->setResolvedRefreshTarget(refresh_target);
+    list->setRefreshOnPropertyChanged(true);
+
+    list->refresh();
+    const int after_initial_refresh = list->refresh_count;
+
+    refresh_target->setNumericProperty("threat", 1);
+    gui->removeChild(list);
+    drain_event_loop();
+
+    expect_true(list->refresh_count == after_initial_refresh, "detached list views should ignore queued refresh work");
+}
+
 void test_list_view_refresh_event_compatibility() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -526,8 +575,7 @@ void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
                 "property-specific subscription should ignore unrelated property notifications");
 
     list->setResolvedRefreshTarget(second_target);
-    first_target->setStringProperty("label", "handoff");
-    drain_event_loop();
+    list->refresh();
     expect_true(list->refresh_count == after_initial_refresh + 2,
                 "subscription refresh should reconnect when the resolved refresh target changes");
 
@@ -542,8 +590,7 @@ void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
                 "new refresh target should drive later property-specific refreshes");
 
     list->setResolvedRefreshTarget(nullptr);
-    second_target->setStringProperty("label", "to-null");
-    drain_event_loop();
+    list->refresh();
     expect_true(list->refresh_count == after_initial_refresh + 4,
                 "subscription refresh should handle the refresh script resolving to null");
 
@@ -1047,6 +1094,8 @@ int main() {
 
     test_widget_ignores_unarmed_non_left_clicks();
     test_list_view_refreshes_from_generic_property_notifications();
+    test_list_view_coalesces_property_refreshes_per_event_loop_tick();
+    test_list_view_skips_queued_property_refresh_after_detach();
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
