@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -158,9 +161,10 @@ class WorkbookQueueTest(unittest.TestCase):
         expected = {
             "fall_of_nouraajd_issue_proposals.xlsx",
             "fall_of_nouraajd_creature_archetype_jira_plan.xlsx",
-            "fall_of_nouraajd_github_issues_implementation_workbook.xlsx",
+            "fall_of_nouraajd_github_issues_implementation_workbook_migrated.xlsx",
         }
-        paths = [repository_root / "planning" / name for name in sorted(expected)]
+        reference = "fall_of_nouraajd_github_issues_implementation_workbook.xlsx"
+        paths = [repository_root / "planning" / name for name in sorted(expected | {reference})]
         missing = [path.name for path in paths if not path.is_file()]
         self.assertEqual(missing, [], f"Missing planning workbooks: {missing}")
 
@@ -171,11 +175,38 @@ class WorkbookQueueTest(unittest.TestCase):
                 expected,
                 f"Skipped workbook details: {discovery.skipped}",
             )
-            self.assertEqual(discovery.skipped, [])
+            self.assertEqual([Path(item["workbook"]).name for item in discovery.skipped], [reference])
+            self.assertIn("Issue Proposals", discovery.skipped[0]["reason"])
             errors, _ = workbook_queue.validateDiscovery(discovery)
             self.assertEqual(errors, [])
         finally:
             discovery.close()
+
+    def test_direct_script_workbooks_command_runs_without_pythonpath(self) -> None:
+        issue = "[EPIC_01][STORY_01][SUBSTORY_01] Direct CLI issue"
+        workbook = self.create_queue("direct.xlsx", [self.row(issue)])
+        repository_root = Path(__file__).resolve().parents[1]
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/workbook_queue.py",
+                "workbooks",
+                "--json",
+                "--workbook",
+                str(workbook),
+            ],
+            cwd=repository_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["compatibleCount"], 1)
+        self.assertEqual(payload["skippedCount"], 0)
 
 
 if __name__ == "__main__":
