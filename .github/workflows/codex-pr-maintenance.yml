@@ -4,54 +4,41 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  fix-pr-729:
-    runs-on: ubuntu-latest
+  validate-pr-729:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GAME_CONFIGURE_SKIP_APT: "1"
+      GAME_CONFIGURE_SKIP_SUBMODULES: "1"
     steps:
-      - name: Check out PR 729 branch
+      - name: Check out repaired PR 729 branch
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
+          repository: lisu188/fall-of-nouraajd
           ref: codex/e02-s02-ss03-session-shutdown-1601d574
-          fetch-depth: 0
-      - name: Move shutdown regression to file scope
-        shell: bash
+          submodules: recursive
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Install build dependencies
         run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("tests/unit/test_gui.cpp")
-          text = path.read_text(encoding="utf-8")
-          outer = "void test_gui_routes_mouse_motion_to_target_child() {\n"
-          inner = "void test_loader_gui_sessions_shutdown_stale_callbacks() {\n"
-          combined = outer + inner
-          if combined not in text:
-              raise RuntimeError("Expected nested shutdown test marker was not found.")
-          text = text.replace(combined, inner, 1)
-
-          tail = (
-              '    expect_true(secondRenderCount == renderCountAfterShutdown, '
-              '"second shutdown should stop later frame rendering");\n'
-              '}\n\n'
-              '    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");\n'
-          )
-          replacement = (
-              '    expect_true(secondRenderCount == renderCountAfterShutdown, '
-              '"second shutdown should stop later frame rendering");\n'
-              '}\n\n'
-              'void test_gui_routes_mouse_motion_to_target_child() {\n'
-              '    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");\n'
-          )
-          if tail not in text:
-              raise RuntimeError("Expected shutdown-test tail anchor was not found.")
-          path.write_text(text.replace(tail, replacement, 1), encoding="utf-8")
-          PY
-          clang-format -i tests/unit/test_gui.cpp
-          git diff --check
-          git add tests/unit/test_gui.cpp
-          git commit -m "Fix shutdown GUI regression function placement"
-          git push origin HEAD:codex/e02-s02-ss03-session-shutdown-1601d574
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format \
+            python3-dev pybind11-dev libboost-dev \
+            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev
+      - name: Configure
+        run: GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
+      - name: Build affected native targets
+        run: cmake --build cmake-build-release --target _game core_unit_tests gui_unit_tests -j"$(nproc)"
+      - name: Run affected native tests
+        run: ctest --test-dir cmake-build-release --output-on-failure -R 'for_unit_tests\.(core|gui)_unit_tests'
+      - name: Run static integrity checks
+        run: |
+          git diff --check origin/main...HEAD
+          python3 -m py_compile test.py
+          python3 -m unittest tests.test_slot_context_ownership
