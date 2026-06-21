@@ -201,8 +201,9 @@ python3 scripts/poll_pr_checks.py <PR_NUMBER>
 ```
 
 When no `--check` is supplied, the poller inspects PR paths with `scripts/ci_change_classifier.py`: lightweight
-workflow/docs/tooling PRs require `linux`, while native/source/content PRs require `linux`, `windows-deps`, and
-`windows`. Use explicit `--check` values only to intentionally override the path-selected set for a documented reason:
+workflow/docs/tooling PRs, including workflow-observation record/receipt JSON-only PRs, require `linux`, while
+native/source/content PRs require `linux`, `windows-deps`, and `windows`. Use explicit `--check` values only to
+intentionally override the path-selected set for a documented reason:
 
 ```bash
 python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --check windows-deps --check windows

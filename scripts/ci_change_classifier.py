@@ -46,6 +46,8 @@ LIGHTWEIGHT_PATH_PATTERNS = (
     "AGENTS.md",
     "docs/*",
     "planning/*.xlsx",
+    "planning/workflow_observations/records/*.json",
+    "planning/workflow_observations/resolutions/*.json",
     "prompts/*",
     "scripts/ci_change_classifier.py",
     "scripts/controller_resource_audit.py",
