@@ -28,8 +28,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/embed.h>
 
-#include <limits>
-
 namespace {
 
 class MouseEventRecorder : public CGameGraphicsObject {
@@ -70,30 +68,6 @@ std::shared_ptr<json> serialize_gui_tree(const std::shared_ptr<CGui> &gui) {
     return CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(gui);
 }
 
-const json *find_serialized_drag_proxy(const std::shared_ptr<json> &gui_tree) {
-    if (!gui_tree || !gui_tree->contains("properties")) {
-        return nullptr;
-    }
-    const auto &properties = (*gui_tree)["properties"];
-    if (!properties.contains("children") || !properties["children"].is_array()) {
-        return nullptr;
-    }
-
-    const json *proxy = nullptr;
-    for (const auto &child : properties["children"]) {
-        if (!child.contains("properties") || !child["properties"].contains("priority")) {
-            continue;
-        }
-        if (child["properties"]["priority"].get<int>() == std::numeric_limits<int>::max()) {
-            if (proxy) {
-                return nullptr;
-            }
-            proxy = &child;
-        }
-    }
-    return proxy;
-}
-
 std::string serialized_layout_value(const json &node, const std::string &key) {
     if (!node.contains("properties")) {
         return "";
@@ -104,6 +78,33 @@ std::string serialized_layout_value(const json &node, const std::string &key) {
     }
     const auto &layout = properties["layout"]["properties"];
     return layout.contains(key) && layout[key].is_string() ? layout[key].get<std::string>() : "";
+}
+
+const json *find_serialized_drag_proxy(const std::shared_ptr<json> &gui_tree, const std::string &x = "",
+                                       const std::string &y = "") {
+    if (!gui_tree || !gui_tree->contains("properties")) {
+        return nullptr;
+    }
+    const auto &properties = (*gui_tree)["properties"];
+    if (!properties.contains("children") || !properties["children"].is_array()) {
+        return nullptr;
+    }
+
+    const json *proxy = nullptr;
+    for (const auto &child : properties["children"]) {
+        if (serialized_layout_value(child, "w") != "50" || serialized_layout_value(child, "h") != "50") {
+            continue;
+        }
+        if ((!x.empty() && serialized_layout_value(child, "x") != x) ||
+            (!y.empty() && serialized_layout_value(child, "y") != y)) {
+            continue;
+        }
+        if (proxy) {
+            return nullptr;
+        }
+        proxy = &child;
+    }
+    return proxy;
 }
 
 std::shared_ptr<CGameObject> drag_payload(const std::shared_ptr<CGame> &game) {
@@ -138,8 +139,8 @@ void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_c
 
     gui->startDragSession(source, drag_payload(game), 4, 40, 50);
     auto initial_tree = serialize_gui_tree(gui);
-    const json *initial_proxy = find_serialized_drag_proxy(initial_tree);
-    expect_true(initial_proxy != nullptr, "drag start should attach a serialized high-priority proxy child");
+    const json *initial_proxy = find_serialized_drag_proxy(initial_tree, "15", "25");
+    expect_true(initial_proxy != nullptr, "drag start should attach a serialized proxy child");
     if (initial_proxy) {
         expect_true(serialized_layout_value(*initial_proxy, "x") == "15" &&
                         serialized_layout_value(*initial_proxy, "y") == "25",
@@ -151,8 +152,8 @@ void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_c
 
     gui->updateDragSession(90, 110);
     auto moved_tree = serialize_gui_tree(gui);
-    const json *moved_proxy = find_serialized_drag_proxy(moved_tree);
-    expect_true(moved_proxy != nullptr, "drag update should keep one serialized high-priority proxy child");
+    const json *moved_proxy = find_serialized_drag_proxy(moved_tree, "65", "85");
+    expect_true(moved_proxy != nullptr, "drag update should keep one serialized proxy child");
     if (moved_proxy) {
         expect_true(serialized_layout_value(*moved_proxy, "x") == "65" &&
                         serialized_layout_value(*moved_proxy, "y") == "85",
@@ -167,7 +168,7 @@ void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_c
 
     gui->startDragSession(source, drag_payload(game), 5, 60, 70);
     auto restarted_tree = serialize_gui_tree(gui);
-    expect_true(find_serialized_drag_proxy(restarted_tree) != nullptr,
+    expect_true(find_serialized_drag_proxy(restarted_tree, "35", "45") != nullptr,
                 "new drag should attach a fresh serialized proxy child");
     gui->cancelDragSession();
     auto canceled_tree = serialize_gui_tree(gui);

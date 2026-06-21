@@ -25,12 +25,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CProxyTargetGraphicsObject.h"
 
 #include <algorithm>
-#include <limits>
 #include <string>
 
 namespace {
 constexpr int DRAG_PROXY_FALLBACK_SIZE = 50;
-constexpr int DRAG_PROXY_PRIORITY = std::numeric_limits<int>::max();
 constexpr int GUI_MIN_WIDTH = 320;
 constexpr int GUI_MIN_HEIGHT = 240;
 
@@ -51,7 +49,6 @@ std::shared_ptr<CGameGraphicsObject> createDragProxyWidget(const std::shared_ptr
         return nullptr;
     }
     animation->withCallback([](std::shared_ptr<CGui>, SDL_EventType, int, int, int) { return false; });
-    animation->setPriority(DRAG_PROXY_PRIORITY);
     return animation;
 }
 
@@ -81,7 +78,7 @@ void syncDragProxyWidget(const std::shared_ptr<CGui> &gui, CGui::DragSession &se
     }
     session.proxyWidget->setLayout(createDragProxyLayout(gui, session.current));
     if (!session.proxyWidget->isAttachedToGui(gui)) {
-        gui->addChild(session.proxyWidget);
+        gui->pushChild(session.proxyWidget);
     }
 }
 
