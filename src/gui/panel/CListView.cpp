@@ -53,22 +53,32 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT && gui && gui->hasDragSession()) {
         auto self = this->ptr<CListView>();
         const auto *session = gui->getDragSession();
+        auto sourceList = vstd::cast<CListView>(session->sourceWidget.lock());
         const bool sourceIsSelf = session->sourceWidget.lock() == self;
+        int index = -1;
+        std::shared_ptr<CGameObject> object;
+        const bool hitObject = tryGetClickedObject(gui, x, y, index, object);
         if (sourceIsSelf) {
-            int index = -1;
-            std::shared_ptr<CGameObject> object;
-            if (session->sourceCallbackDeferred && !session->canceled && !dragMoved(*session) &&
-                tryGetClickedObject(gui, x, y, index, object)) {
+            if (!session->canceled && dragMoved(*session) && hitObject && hasTargetDragCallbacks()) {
+                return runDropCallbacks(gui, index, object, sourceList, session->sourceIndex, session->payload);
+            }
+            if (session->sourceCallbackDeferred && !session->canceled && !dragMoved(*session) && hitObject) {
                 invokeCallback(gui, index, object);
+            } else if ((session->canceled || dragMoved(*session)) && !session->acceptedTarget.lock()) {
+                invokeDragCancel(gui, session->sourceIndex, session->payload);
             }
             return true;
         }
-        int index = -1;
-        std::shared_ptr<CGameObject> object;
-        if (!session->canceled && dragMoved(*session) && tryGetClickedObject(gui, x, y, index, object)) {
+        if (!session->canceled && dragMoved(*session) && hitObject) {
+            if (hasTargetDragCallbacks()) {
+                return runDropCallbacks(gui, index, object, sourceList, session->sourceIndex, session->payload);
+            }
             invokeCallback(gui, index, object);
             gui->acceptDragSession(self);
             return true;
+        }
+        if (sourceList) {
+            sourceList->notifySourceDragCancel(gui, session->sourceIndex, session->payload);
         }
         return false;
     }
@@ -82,6 +92,15 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     }
     if (button == SDL_BUTTON_RIGHT) {
         return invokeRightClickCallback(gui, index, object);
+    }
+    if (gui && hasSourceDragCallbacks()) {
+        if (invokeDragStart(gui, index, object)) {
+            auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
+            auto self = this->ptr<CListView>();
+            gui->startDragSession(self, object, index, rect->x + x, rect->y + y, true);
+            gui->capturePointer(self);
+        }
+        return true;
     }
     if (gui) {
         auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
@@ -272,6 +291,64 @@ bool CListView::invokeSelect(std::shared_ptr<CGui> gui, int i, std::shared_ptr<C
     }
 }
 
+bool CListView::invokeDragStart(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    auto parent = getParent();
+    if (!canInvokeParentCallback(gui, parent) || dragStart.empty()) {
+        return true;
+    }
+    try {
+        return parent->meta()
+            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                dragStart, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring list drag-start callback failure:", dragStart, exception.what());
+        return false;
+    }
+}
+
+bool CListView::invokeDragValidate(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    auto parent = getParent();
+    if (!canInvokeParentCallback(gui, parent) || dragValidate.empty()) {
+        return true;
+    }
+    try {
+        return parent->meta()
+            ->invoke_method<bool, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                dragValidate, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring list drag-validate callback failure:", dragValidate, exception.what());
+        return false;
+    }
+}
+
+void CListView::invokeDrop(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    auto parent = getParent();
+    if (!canInvokeParentCallback(gui, parent) || drop.empty()) {
+        return;
+    }
+    try {
+        parent->meta()
+            ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                drop, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring list drop callback failure:", drop, exception.what());
+    }
+}
+
+void CListView::invokeDragCancel(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object) {
+    auto parent = getParent();
+    if (!canInvokeParentCallback(gui, parent) || dragCancel.empty()) {
+        return;
+    }
+    try {
+        parent->meta()
+            ->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>>(
+                dragCancel, vstd::cast<CGameGraphicsObject>(parent), gui, i, object);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring list drag-cancel callback failure:", dragCancel, exception.what());
+    }
+}
+
 bool CListView::canInvokeParentCallback(const std::shared_ptr<CGui> &gui,
                                         const std::shared_ptr<CGameGraphicsObject> &parent) {
     return parent && isAttachedToGui(gui) && parent->isAttachedToGui(gui);
@@ -294,6 +371,31 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
     }
     object = indexedCollection.find(index)->second;
     return true;
+}
+
+bool CListView::hasSourceDragCallbacks() const { return !dragStart.empty() || !dragCancel.empty(); }
+
+bool CListView::hasTargetDragCallbacks() const { return !dragValidate.empty() || !drop.empty(); }
+
+bool CListView::runDropCallbacks(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object,
+                                 const std::shared_ptr<CListView> &sourceList, int sourceIndex,
+                                 std::shared_ptr<CGameObject> sourceObject) {
+    if (!invokeDragValidate(gui, i, object)) {
+        if (sourceList) {
+            sourceList->notifySourceDragCancel(gui, sourceIndex, sourceObject);
+        }
+        return false;
+    }
+    invokeDrop(gui, i, object);
+    if (gui) {
+        gui->acceptDragSession(this->ptr<CListView>());
+    }
+    return true;
+}
+
+void CListView::notifySourceDragCancel(std::shared_ptr<CGui> gui, int sourceIndex,
+                                       std::shared_ptr<CGameObject> sourceObject) {
+    invokeDragCancel(gui, sourceIndex, sourceObject);
 }
 
 std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) {
@@ -378,11 +480,19 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
                 bool dragStarted = false;
                 if (auto source = sourceGraphic.lock()) {
                     auto rect = source->getLayout() ? source->getLayout()->getRect(source) : CUtil::rect(0, 0, 0, 0);
-                    gui->startDragSession(self, object, itemIndex, rect->x + x, rect->y + y, deferSourceCallback);
-                    gui->capturePointer(self);
-                    dragStarted = gui->hasDragSession();
+                    if (self->hasSourceDragCallbacks()) {
+                        if (self->invokeDragStart(gui, itemIndex, object)) {
+                            gui->startDragSession(self, object, itemIndex, rect->x + x, rect->y + y, true);
+                            gui->capturePointer(self);
+                            dragStarted = gui->hasDragSession();
+                        }
+                    } else {
+                        gui->startDragSession(self, object, itemIndex, rect->x + x, rect->y + y, deferSourceCallback);
+                        gui->capturePointer(self);
+                        dragStarted = gui->hasDragSession();
+                    }
                 }
-                if (!deferSourceCallback || !dragStarted) {
+                if (!self->hasSourceDragCallbacks() && (!deferSourceCallback || !dragStarted)) {
                     self->invokeCallback(gui, itemIndex, object);
                 }
                 return true;
@@ -422,6 +532,22 @@ void CListView::setRightClickCallback(std::string rightClickCallback) {
 std::string CListView::getSelect() { return select; }
 
 void CListView::setSelect(std::string select) { CListView::select = select; }
+
+std::string CListView::getDragStart() { return dragStart; }
+
+void CListView::setDragStart(std::string dragStart) { CListView::dragStart = dragStart; }
+
+std::string CListView::getDragValidate() { return dragValidate; }
+
+void CListView::setDragValidate(std::string dragValidate) { CListView::dragValidate = dragValidate; }
+
+std::string CListView::getDrop() { return drop; }
+
+void CListView::setDrop(std::string drop) { CListView::drop = drop; }
+
+std::string CListView::getDragCancel() { return dragCancel; }
+
+void CListView::setDragCancel(std::string dragCancel) { CListView::dragCancel = dragCancel; }
 
 std::shared_ptr<CScript> CListView::getRefreshObject() { return refreshObject; }
 
