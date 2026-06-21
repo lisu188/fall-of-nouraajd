@@ -83,6 +83,12 @@ or method calls. `capture_gui_screenshot` returns PNG metadata and inline base64
 writing arbitrary server-side paths. Prefer this layer for new walkthrough coverage, then drop to `engine_call` or
 `engine_handle_call` only when the helper does not expose the needed engine operation.
 
+MCP stdio subprocess tests must drain `stderr` while the server is running. The server and native layer can write enough
+diagnostic output to block a long walkthrough if the pipe is not consumed. Keep fast smoke requests on the normal
+10-second tool timeout, use the documented 60-second timeout only for full map serialization or other known long-route
+operations, and include request id, method, map name when known, elapsed time, plus bounded stdout/stderr tails in
+timeout failures.
+
 ## Native performance guards
 The deterministic native performance guard suite is built with the `performance_guard_tests` target and run through
 CTest label `performance`:
