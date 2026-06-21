@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 namespace {
+constexpr const char *DEFAULT_PLAYER_RACE_ID = "human";
+
 std::string questId(const std::shared_ptr<CQuest> &quest) {
     if (!quest) {
         return "";
@@ -97,6 +99,30 @@ void CPlayer::setCompletedQuests(std::set<std::shared_ptr<CQuest>> _completedQue
     std::erase_if(_completedQuests, [](const auto &quest) { return quest == nullptr; });
     completedQuests = std::move(_completedQuests);
     recordDirectPropertyChanged("completedQuests");
+}
+
+std::string CPlayer::getPlayerClassId() {
+    if (!playerClassId.empty()) {
+        return playerClassId;
+    }
+    return getTypeId();
+}
+
+void CPlayer::setPlayerClassId(std::string _playerClassId) {
+    playerClassId = std::move(_playerClassId);
+    recordDirectPropertyChanged("playerClassId");
+}
+
+std::string CPlayer::getRaceId() {
+    if (!raceId.empty()) {
+        return raceId;
+    }
+    return DEFAULT_PLAYER_RACE_ID;
+}
+
+void CPlayer::setRaceId(std::string _raceId) {
+    raceId = std::move(_raceId);
+    recordDirectPropertyChanged("raceId");
 }
 
 void CPlayer::incTurn() { turn++; }
