@@ -47,6 +47,8 @@ class CSlotConfig;
 
 class CGame : public CGameObject {
     V_META(CGame, CGameObject, vstd::meta::empty())
+    friend class CGameContext;
+
   public:
     CGame();
 

@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CLoader.h"
 #include "core/CController.h"
+#include "core/CGameContext.h"
 #include "core/CJsonUtil.h"
 #include "core/CSaveFormat.h"
 #include "core/CSceneManager.h"
@@ -1230,6 +1231,16 @@ void CGameLoader::initScriptHandler(const std::shared_ptr<CScriptHandler> &, con
 }
 
 void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
+    if (!game) {
+        vstd::logger::warning("Failed to load GUI without a game");
+        return;
+    }
+    auto context = game->getContext();
+    if (!context->isActive()) {
+        vstd::logger::warning("Failed to load GUI after game context shutdown");
+        return;
+    }
+
     std::shared_ptr<CGui> gui = game->createObject<CGui>("gui");
     if (!gui) {
         vstd::logger::warning("Failed to create GUI");
@@ -1239,15 +1250,21 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
     game->setGui(gui);
 
     std::weak_ptr<CGame> weakGame = game;
-    vstd::event_loop<>::instance()->registerFrameCallback([weakGame](int time) {
+    std::weak_ptr<CGameContext> weakContext = context;
+    std::weak_ptr<CGui> weakGui = gui;
+    vstd::event_loop<>::instance()->registerFrameCallback([weakGame, weakContext, weakGui](int time) {
         auto game = weakGame.lock();
-        if (game && game->getGui()) {
-            game->getGui()->render(time);
+        auto context = weakContext.lock();
+        auto gui = weakGui.lock();
+        if (game && context && context->isActive() && gui && game->getGui() == gui) {
+            gui->render(time);
         }
     });
-    vstd::event_loop<>::instance()->registerEventCallback([weakGame](SDL_Event *event) {
+    vstd::event_loop<>::instance()->registerEventCallback([weakGame, weakContext, weakGui](SDL_Event *event) {
         auto game = weakGame.lock();
-        return game && game->getGui() && game->getGui()->event(event);
+        auto context = weakContext.lock();
+        auto gui = weakGui.lock();
+        return game && context && context->isActive() && gui && game->getGui() == gui && gui->event(event);
     });
 }
 

@@ -21,8 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 
 class CGame;
+class CGameContext;
 
 class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
+    friend class CGameContext;
+
   public:
     enum class TransitionState { Idle, TransitionPending, Transitioning };
 
