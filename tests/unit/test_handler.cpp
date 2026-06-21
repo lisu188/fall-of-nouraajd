@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CStats.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "object/CCreature.h"
@@ -88,6 +89,18 @@ class CancellingFightController : public NoProgressFightController {
     bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
 };
 
+class ReplacingOnStartFightController : public NoProgressFightController {
+  public:
+    std::shared_ptr<NoProgressFightController> replacement = std::make_shared<NoProgressFightController>();
+
+    void start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        NoProgressFightController::start(me, opponent);
+        if (me) {
+            me->setFightController(replacement);
+        }
+    }
+};
+
 void set_environment_variable(const std::string &name, const std::optional<std::string> &value) {
 #ifdef _WIN32
     _putenv_s(name.c_str(), value ? value->c_str() : "");
@@ -147,15 +160,37 @@ std::shared_ptr<CGame> load_empty_game() {
     return game;
 }
 
-std::shared_ptr<CCreature> add_test_creature(const std::shared_ptr<CGame> &game, const std::string &name, int x = 0,
-                                             int y = 0) {
-    auto creature = game->createObject<CCreature>("CCreature");
-    creature->setName(name);
+void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
+    creature->setBaseStats(std::make_shared<CStats>());
+    creature->setLevelStats(std::make_shared<CStats>());
+    creature->getBaseStats()->setMainStat("strength");
+    creature->getBaseStats()->setStamina(10);
+    creature->getBaseStats()->setStrength(10);
     creature->getBaseStats()->setAgility(10);
     creature->getBaseStats()->setHit(100);
     creature->getBaseStats()->setCrit(0);
     creature->getBaseStats()->setDmgMin(0);
     creature->getBaseStats()->setDmgMax(0);
+}
+
+std::shared_ptr<CPlayer> add_test_player(const std::shared_ptr<CGame> &game) {
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    initialize_test_creature_stats(player);
+    player->setHp(10);
+    game->getMap()->setPlayer(player);
+    player->setController(std::make_shared<CPlayerController>());
+    player->setFightController(std::make_shared<CPlayerFightController>());
+    player->setHp(10);
+    return player;
+}
+
+std::shared_ptr<CCreature> add_test_creature(const std::shared_ptr<CGame> &game, const std::string &name, int x = 0,
+                                             int y = 0) {
+    auto creature = std::make_shared<CCreature>();
+    creature->setGame(game);
+    creature->setName(name);
+    initialize_test_creature_stats(creature);
     creature->setHp(10);
     creature->setFightController(std::make_shared<NoProgressFightController>());
     creature->setPosX(x);
@@ -168,7 +203,8 @@ std::shared_ptr<CCreature> add_test_creature(const std::shared_ptr<CGame> &game,
 
 std::shared_ptr<CItem> add_unit_loot(const std::shared_ptr<CGame> &game, const std::shared_ptr<CCreature> &creature,
                                      const std::string &name) {
-    auto item = game->createObject<CItem>("CItem");
+    auto item = std::make_shared<CItem>();
+    item->setGame(game);
     item->setName(name);
     item->setTypeId(name);
     creature->addItem(item);
@@ -428,10 +464,9 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     expect_true(CFightHandler::fight(legacy_victor, legacy_defeated),
                 "legacy two-creature bool wrapper should still return true for resolved victory");
 
-    auto player_game = CGameLoader::loadGame();
-    CGameLoader::startGameWithPlayer(player_game, "empty", "Warrior");
+    auto player_game = load_empty_game();
     auto player_map = player_game->getMap();
-    auto player = player_map->getPlayer();
+    auto player = add_test_player(player_game);
     player->setHp(1);
     player->setFightController(std::make_shared<NoProgressFightController>());
     const auto player_controller = std::dynamic_pointer_cast<NoProgressFightController>(player->getFightController());
@@ -554,17 +589,72 @@ void test_fight_handler_reports_cancelled_quit_event() {
                 "cancelled combat should publish the cancelled status text");
 }
 
+void test_fight_handler_ends_original_started_controllers() {
+    auto victory_game = load_empty_game();
+    auto victor = add_test_creature(victory_game, "unitOriginalEndVictor");
+    victor->setFightController(std::make_shared<KillingFightController>());
+    auto defeated = add_test_creature(victory_game, "unitOriginalEndDefeated", 1, 0);
+    auto defeated_controller = std::make_shared<ReplacingOnStartFightController>();
+    defeated->setFightController(defeated_controller);
+
+    const auto victory = CFightHandler::fightManyResult(victor, {defeated});
+
+    expect_true(victory.outcome == CFightOutcome::AttackerVictory,
+                "controller replacement victory fixture should resolve");
+    expect_controller_lifecycle(defeated_controller, 1, 1,
+                                "victory cleanup should end the controller object that was started");
+    expect_controller_lifecycle(defeated_controller->replacement, 0, 0,
+                                "victory cleanup should not end a replacement controller that was never started");
+
+    expect_true(SDL_InitSubSystem(SDL_INIT_EVENTS) == 0, "SDL event subsystem should initialize for quit events");
+    SDL_FlushEvent(SDL_QUIT);
+    auto cancel_game = load_empty_game();
+    auto cancel_attacker = add_test_creature(cancel_game, "unitOriginalEndCancelAttacker");
+    auto cancel_defender = add_test_creature(cancel_game, "unitOriginalEndCancelDefender", 1, 0);
+    auto cancel_defender_controller = std::make_shared<ReplacingOnStartFightController>();
+    cancel_defender->setFightController(cancel_defender_controller);
+
+    SDL_Event quit_event{};
+    quit_event.type = SDL_QUIT;
+    expect_true(SDL_PushEvent(&quit_event) == 1, "SDL_QUIT event should be queued for replacement cleanup coverage");
+
+    const auto cancelled = CFightHandler::fightManyResult(cancel_attacker, {cancel_defender});
+    SDL_FlushEvent(SDL_QUIT);
+
+    expect_true(cancelled.outcome == CFightOutcome::Cancelled,
+                "controller replacement cancellation fixture should report cancellation");
+    expect_controller_lifecycle(cancel_defender_controller, 1, 1,
+                                "cancelled cleanup should end the controller object that was started");
+    expect_controller_lifecycle(cancel_defender_controller->replacement, 0, 0,
+                                "cancelled cleanup should not end a replacement controller that was never started");
+
+    auto stalled_game = load_empty_game();
+    auto stalled_attacker = add_test_creature(stalled_game, "unitOriginalEndStalledAttacker");
+    auto stalled_defender = add_test_creature(stalled_game, "unitOriginalEndStalledDefender", 1, 0);
+    auto stalled_defender_controller = std::make_shared<ReplacingOnStartFightController>();
+    stalled_defender->setFightController(stalled_defender_controller);
+
+    const auto stalled = CFightHandler::fightManyResult(stalled_attacker, {stalled_defender});
+
+    expect_true(stalled.outcome == CFightOutcome::Stalled,
+                "controller replacement stalled fixture should report a stall");
+    expect_controller_lifecycle(stalled_defender_controller, 1, 1,
+                                "stalled cleanup should end the controller object that was started");
+    expect_controller_lifecycle(stalled_defender_controller->replacement, 0, 0,
+                                "stalled cleanup should not end a replacement controller that was never started");
+}
+
 void test_fight_handler_reports_cancelled_closed_fight_panel() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
-    auto game = CGameLoader::loadGame();
+    auto game = load_empty_game();
     CGameLoader::loadGui(game);
-    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
+    auto player = add_test_player(game);
 
-    auto player = game->getMap()->getPlayer();
     player->setHp(10);
-    auto action = game->createObject<CInteraction>("CInteraction");
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
     action->setName("unitPanelCancelledAction");
     action->setManaCost(0);
     player->addAction(action);
@@ -698,9 +788,8 @@ void test_playtest_trace_records_native_limits_and_quest_completion() {
     CPlaytestTrace::addMapContext(mapless_fields, nullptr);
     expect_true(!mapless_fields.contains("map"), "map context should not be added for null maps");
 
-    auto game = CGameLoader::loadGame();
-    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
-    auto player = game->getMap()->getPlayer();
+    auto game = load_empty_game();
+    auto player = add_test_player(game);
     auto quest = std::make_shared<CompletedQuest>();
     quest->setName("unitCompletedQuest");
     quest->setTypeId("unitCompletedQuest");
@@ -816,10 +905,9 @@ void test_fight_handler_records_outcome_trace_metadata() {
 }
 
 void test_player_respawn_normalizes_wrapped_entry_coords() {
-    auto game = CGameLoader::loadGame();
-    CGameLoader::startGameWithPlayer(game, "empty", "Warrior");
+    auto game = load_empty_game();
     auto map = game->getMap();
-    auto player = map->getPlayer();
+    auto player = add_test_player(game);
 
     map->setXBounds({{0, 1}});
     map->setYBounds({{0, 1}});
@@ -849,6 +937,7 @@ int main() {
     test_fight_handler_reports_explicit_outcomes_and_final_status();
     test_fight_handler_reports_invalid_result_metadata();
     test_fight_handler_reports_cancelled_quit_event();
+    test_fight_handler_ends_original_started_controllers();
     test_fight_handler_reports_cancelled_closed_fight_panel();
     test_fight_panel_resets_status_between_sequential_encounters();
     test_fight_handler_counts_effect_duration_as_progress();
