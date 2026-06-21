@@ -5,6 +5,22 @@ on:
     branches:
       - main
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+  workflow_dispatch:
+    inputs:
+      run-campaign-scenarios:
+        description: Run full-route campaign scenarios
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "17 4 * * 1"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
@@ -151,6 +167,19 @@ jobs:
       - name: Smoke test game imports
         if: needs.linux-fast.outputs.native-needed == 'true'
         run: PYTHONPATH=cmake-build-release:res python3 -c "import _game; import game; print('game imports ok')"
+      - name: campaign gate (nouraajd smoke)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        timeout-minutes: 10
+        run: python3 test.py GameTest.test_mcp_scenario_harness_drives_nouraajd_rolf_gooby
+      - name: campaign gate (quest state and rewards)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        timeout-minutes: 20
+        run: |
+          python3 test.py \
+            GameTest.test_nouraajd_quest_state_machine \
+            GameTest.test_nouraajd_victor_timeout_cleanup_regression \
+            GameTest.test_nouraajd_octobogz_unique_reward_is_not_duplicated \
+            GameTest.test_nouraajd_octobogz_late_contract_claims_existing_clear_reward
       - name: ccache stats after build
         if: always() && needs.linux-fast.outputs.native-needed == 'true'
         shell: bash
@@ -172,6 +201,39 @@ jobs:
         if: needs.linux-fast.outputs.native-needed == 'true'
         timeout-minutes: 45
         run: python3 test.py --suite ui --jobs "$(nproc)"
+      - name: campaign gate (full-route skip reason)
+        if: >-
+          ${{
+            always() &&
+            (
+              needs.linux-fast.outputs.native-needed != 'true' ||
+              !(
+                github.event_name == 'schedule' ||
+                (github.event_name == 'workflow_dispatch' && (inputs['run-campaign-scenarios'] == true || inputs['run-campaign-scenarios'] == 'true')) ||
+                (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'campaign-scenarios'))
+              )
+            )
+          }}
+        run: |
+          echo "Full-route campaign scenarios skipped."
+          echo "Run them on the Monday schedule, with workflow_dispatch input run-campaign-scenarios=true, or by adding the campaign-scenarios PR label."
+          echo "Skipped full-route campaign scenarios are not counted as passed."
+      - name: campaign gate (full-route scenarios)
+        if: >-
+          ${{
+            needs.linux-fast.outputs.native-needed == 'true' &&
+            (
+              github.event_name == 'schedule' ||
+              (github.event_name == 'workflow_dispatch' && (inputs['run-campaign-scenarios'] == true || inputs['run-campaign-scenarios'] == 'true')) ||
+              (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'campaign-scenarios'))
+            )
+          }}
+        timeout-minutes: 30
+        run: |
+          python3 test.py \
+            GameTest.test_map_walkthrough_nouraajd \
+            McpServerTest.test_stdio_map_walkthrough_nouraajd \
+            GameTest.test_campaign_transitions_preserve_player_and_start_siege
       - name: package
         if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
         run: cmake --build cmake-build-release --target package -j"$(nproc)"
