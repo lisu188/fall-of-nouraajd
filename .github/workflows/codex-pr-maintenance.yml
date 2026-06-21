@@ -46,48 +46,52 @@ jobs:
             echo "Merge reported the expected shared-file conflicts."
           fi
 
-          # Preserve PR #731's inventory policy, then layer current-main compatibility and the verified cancel fix.
           git checkout HEAD -- src/gui/panel/CGameInventoryPanel.cpp
           git checkout origin/main -- test.py
 
           python3 - <<'PY'
           from pathlib import Path
 
-          def replace_once(path: Path, old: str, new: str, label: str) -> None:
+          def unique_index(lines, target, start=0, end=None):
+              end = len(lines) if end is None else end
+              matches = [i for i in range(start, end) if lines[i] == target]
+              if len(matches) != 1:
+                  raise RuntimeError(f"Expected one line {target!r}, found {len(matches)} in range {start}:{end}.")
+              return matches[0]
+
+          def insert_after_function(path, signature, block, sentinel):
               text = path.read_text(encoding="utf-8")
-              count = text.count(old)
-              if count != 1:
-                  raise RuntimeError(f"{label}: expected one anchor, found {count}.")
-              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+              if sentinel in text:
+                  return
+              lines = text.splitlines()
+              start = unique_index(lines, signature)
+              depth = 0
+              opened = False
+              end = None
+              for i in range(start, len(lines)):
+                  depth += lines[i].count("{")
+                  if "{" in lines[i]:
+                      opened = True
+                  depth -= lines[i].count("}")
+                  if opened and depth == 0:
+                      end = i
+                      break
+              if end is None:
+                  raise RuntimeError(f"Could not find function end for {signature!r}.")
+              lines[end + 1 : end + 1] = [""] + block.splitlines()
+              path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
           cpp = Path("src/gui/panel/CGameInventoryPanel.cpp")
-          cpp_text = cpp.read_text(encoding="utf-8")
-          slot_include = '#include "core/CSlotConfig.h"\n'
-          if slot_include not in cpp_text:
-              include_anchor = '#include "core/CMap.h"\n'
-              if include_anchor not in cpp_text:
-                  raise RuntimeError("CGameInventoryPanel.cpp include anchor was not found.")
-              cpp_text = cpp_text.replace(include_anchor, include_anchor + slot_include, 1)
-              cpp.write_text(cpp_text, encoding="utf-8")
+          cpp_lines = cpp.read_text(encoding="utf-8").splitlines()
+          if '#include "core/CSlotConfig.h"' not in cpp_lines:
+              include_at = unique_index(cpp_lines, '#include "core/CMap.h"')
+              cpp_lines.insert(include_at + 1, '#include "core/CSlotConfig.h"')
+              cpp.write_text("\n".join(cpp_lines) + "\n", encoding="utf-8")
 
-          replace_once(
+          insert_after_function(
               cpp,
-              '''bool CGameInventoryPanel::inventoryDragStart(std::shared_ptr<CGui> gui, int index,
-                                                       std::shared_ptr<CGameObject> object) {
-              auto item = usable_item(object);
-              auto player = inventory_player(gui);
-              return player && item && player->hasInInventory(item);
-          }
-
-          ''',
-              '''bool CGameInventoryPanel::inventoryDragStart(std::shared_ptr<CGui> gui, int index,
-                                                       std::shared_ptr<CGameObject> object) {
-              auto item = usable_item(object);
-              auto player = inventory_player(gui);
-              return player && item && player->hasInInventory(item);
-          }
-
-          void CGameInventoryPanel::inventoryDragCancel(std::shared_ptr<CGui> gui, int index,
+              "bool CGameInventoryPanel::inventoryDragStart(std::shared_ptr<CGui> gui, int index,",
+              '''void CGameInventoryPanel::inventoryDragCancel(std::shared_ptr<CGui> gui, int index,
                                                         std::shared_ptr<CGameObject> object) {
               auto item = usable_item(object);
               auto player = inventory_player(gui);
@@ -97,32 +101,13 @@ jobs:
               selectedEquipped.reset();
               selectedInventory = item;
               refreshViews();
-          }
-
-          ''',
-              "inventory drag-cancel implementation",
+          }''',
+              "CGameInventoryPanel::inventoryDragCancel",
           )
-
-          replace_once(
+          insert_after_function(
               cpp,
-              '''bool CGameInventoryPanel::equippedDragStart(std::shared_ptr<CGui> gui, int index,
-                                                      std::shared_ptr<CGameObject> object) {
-              auto item = usable_item(object);
-              auto player = inventory_player(gui);
-              const std::string slotName = vstd::str(index);
-              return player && item && slot_exists(gui, slotName) && player->getItemAtSlot(slotName) == item;
-          }
-
-          ''',
-              '''bool CGameInventoryPanel::equippedDragStart(std::shared_ptr<CGui> gui, int index,
-                                                      std::shared_ptr<CGameObject> object) {
-              auto item = usable_item(object);
-              auto player = inventory_player(gui);
-              const std::string slotName = vstd::str(index);
-              return player && item && slot_exists(gui, slotName) && player->getItemAtSlot(slotName) == item;
-          }
-
-          void CGameInventoryPanel::equippedDragCancel(std::shared_ptr<CGui> gui, int index,
+              "bool CGameInventoryPanel::equippedDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {",
+              '''void CGameInventoryPanel::equippedDragCancel(std::shared_ptr<CGui> gui, int index,
                                                        std::shared_ptr<CGameObject> object) {
               auto item = usable_item(object);
               auto player = inventory_player(gui);
@@ -133,88 +118,71 @@ jobs:
               selectedInventory.reset();
               selectedEquipped = item;
               refreshViews();
-          }
-
-          ''',
-              "equipped drag-cancel implementation",
+          }''',
+              "CGameInventoryPanel::equippedDragCancel",
           )
 
           header = Path("src/gui/panel/CGameInventoryPanel.h")
-          replace_once(
-              header,
-              '''        V_METHOD(CGameInventoryPanel, inventoryDragStart, bool, std::shared_ptr<CGui>, int,
-                           std::shared_ptr<CGameObject>),
-          ''',
-              '''        V_METHOD(CGameInventoryPanel, inventoryDragStart, bool, std::shared_ptr<CGui>, int,
-                           std::shared_ptr<CGameObject>),
-                  V_METHOD(CGameInventoryPanel, inventoryDragCancel, void, std::shared_ptr<CGui>, int,
-                           std::shared_ptr<CGameObject>),
-          ''',
-              "inventory drag-cancel metadata",
-          )
-          replace_once(
-              header,
-              '''        V_METHOD(CGameInventoryPanel, equippedDragStart, bool, std::shared_ptr<CGui>, int,
-                           std::shared_ptr<CGameObject>),
-          ''',
-              '''        V_METHOD(CGameInventoryPanel, equippedDragStart, bool, std::shared_ptr<CGui>, int,
-                           std::shared_ptr<CGameObject>),
-                  V_METHOD(CGameInventoryPanel, equippedDragCancel, void, std::shared_ptr<CGui>, int,
-                           std::shared_ptr<CGameObject>),
-          ''',
-              "equipped drag-cancel metadata",
-          )
-          replace_once(
-              header,
-              '''    bool inventoryDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
-
-          ''',
-              '''    bool inventoryDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
-
-              void inventoryDragCancel(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
-
-          ''',
-              "inventory drag-cancel declaration",
-          )
-          replace_once(
-              header,
-              '''    bool equippedDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
-
-          ''',
-              '''    bool equippedDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
-
-              void equippedDragCancel(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
-
-          ''',
-              "equipped drag-cancel declaration",
-          )
+          header_lines = header.read_text(encoding="utf-8").splitlines()
+          if not any("inventoryDragCancel" in line for line in header_lines):
+              meta = unique_index(
+                  header_lines,
+                  "        V_METHOD(CGameInventoryPanel, inventoryDragStart, bool, std::shared_ptr<CGui>, int,",
+              )
+              header_lines[meta + 2 : meta + 2] = [
+                  "        V_METHOD(CGameInventoryPanel, inventoryDragCancel, void, std::shared_ptr<CGui>, int,",
+                  "                 std::shared_ptr<CGameObject>),",
+              ]
+              declaration = unique_index(
+                  header_lines,
+                  "    bool inventoryDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);",
+              )
+              header_lines[declaration + 1 : declaration + 1] = [
+                  "",
+                  "    void inventoryDragCancel(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);",
+              ]
+          if not any("equippedDragCancel" in line for line in header_lines):
+              meta = unique_index(
+                  header_lines,
+                  "        V_METHOD(CGameInventoryPanel, equippedDragStart, bool, std::shared_ptr<CGui>, int,",
+              )
+              header_lines[meta + 2 : meta + 2] = [
+                  "        V_METHOD(CGameInventoryPanel, equippedDragCancel, void, std::shared_ptr<CGui>, int,",
+                  "                 std::shared_ptr<CGameObject>),",
+              ]
+              declaration = unique_index(
+                  header_lines,
+                  "    bool equippedDragStart(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);",
+              )
+              header_lines[declaration + 1 : declaration + 1] = [
+                  "",
+                  "    void equippedDragCancel(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);",
+              ]
+          header.write_text("\n".join(header_lines) + "\n", encoding="utf-8")
 
           panels = Path("res/config/panels.json")
-          replace_once(
-              panels,
-              '            "dragStart": "inventoryDragStart",\n',
-              '            "dragStart": "inventoryDragStart",\n            "dragCancel": "inventoryDragCancel",\n',
-              "inventory drag-cancel wiring",
-          )
-          replace_once(
-              panels,
-              '            "dragStart": "equippedDragStart",\n',
-              '            "dragStart": "equippedDragStart",\n            "dragCancel": "equippedDragCancel",\n',
-              "equipped drag-cancel wiring",
-          )
+          panel_text = panels.read_text(encoding="utf-8")
+          if '"dragCancel": "inventoryDragCancel"' not in panel_text:
+              anchor = '            "dragStart": "inventoryDragStart",\n'
+              if panel_text.count(anchor) != 1:
+                  raise RuntimeError("Inventory dragStart JSON anchor was not unique.")
+              panel_text = panel_text.replace(
+                  anchor, anchor + '            "dragCancel": "inventoryDragCancel",\n', 1
+              )
+          if '"dragCancel": "equippedDragCancel"' not in panel_text:
+              anchor = '            "dragStart": "equippedDragStart",\n'
+              if panel_text.count(anchor) != 1:
+                  raise RuntimeError("Equipped dragStart JSON anchor was not unique.")
+              panel_text = panel_text.replace(
+                  anchor, anchor + '            "dragCancel": "equippedDragCancel",\n', 1
+              )
+          panels.write_text(panel_text, encoding="utf-8")
 
           test_path = Path("test.py")
           lines = test_path.read_text(encoding="utf-8").splitlines()
 
-          def unique_index(target, start=0, end=None):
-              end = len(lines) if end is None else end
-              matches = [i for i in range(start, end) if lines[i] == target]
-              if len(matches) != 1:
-                  raise RuntimeError(f"Expected one line {target!r}, found {len(matches)} in range {start}:{end}.")
-              return matches[0]
-
           def function_range(signature, next_prefix="    def "):
-              start = unique_index(signature)
+              start = unique_index(lines, signature)
               for i in range(start + 1, len(lines)):
                   if lines[i].startswith(next_prefix) or lines[i] == "    @game_test":
                       return start, i
@@ -243,7 +211,7 @@ jobs:
               "def click_first_list_object(test_case, list_view, gui, predicate=None, button=SDL_BUTTON_LEFT):", "def "
           )
           press = unique_index(
-              "                    graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1)", start, end
+              lines, "                    graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1)", start, end
           )
           lines[press : press + 1] = [
               "                    if graphic.mouseEvent(gui, SDL_MOUSEBUTTONDOWN, button, 1, 1):",
@@ -254,14 +222,14 @@ jobs:
           ]
 
           start, end = function_range("    def test_inventory_double_select_uses_selected_item(self):")
-          y_line = unique_index("        inventory_list.setYPrefferedSize(2)", start, end)
+          y_line = unique_index(lines, "        inventory_list.setYPrefferedSize(2)", start, end)
           if lines[y_line + 1] != "        inventory_list.refresh()":
               raise RuntimeError("Double-select refresh anchor changed.")
           lines.insert(y_line + 1, '        inventory_list.setDragStart("")')
 
           start, end = function_range("    def test_fight_panel_callbacks_and_list_views(self):")
-          loop = unique_index("        for list_view in (inventory_list, equipped_list):", start, end)
-          allow = unique_index("            list_view.setAllowOversize(True)", loop, min(end, loop + 12))
+          loop = unique_index(lines, "        for list_view in (inventory_list, equipped_list):", start, end)
+          allow = unique_index(lines, "            list_view.setAllowOversize(True)", loop, min(end, loop + 12))
           if lines[allow + 1] != "            list_view.refresh()":
               raise RuntimeError("Fight-panel list refresh anchor changed.")
           lines[allow + 1 : allow + 1] = [
@@ -272,7 +240,10 @@ jobs:
 
           start, end = function_range("    def test_inventory_quest_item_selection_is_ignored(self):")
           assert_line = unique_index(
-              '        self.assertEqual(0, selected_after_quest_click.get("equippedCollection", 0))', start, end
+              lines,
+              '        self.assertEqual(0, selected_after_quest_click.get("equippedCollection", 0))',
+              start,
+              end,
           )
           lines[assert_line + 1 : assert_line + 1] = [
               "",
