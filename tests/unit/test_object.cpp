@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CStats.h"
 #include "core/CMap.h"
 #include "core/CTypes.h"
+#include "gui/CAnimation.h"
 #include "object/CCreature.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
@@ -63,6 +64,13 @@ using StringIntProbeMap = std::map<std::string, int>;
 using StringStringProbeMap = std::map<std::string, std::string>;
 using IntVectorProbe = std::vector<int>;
 
+class PropertyChangeEmitter : public CGameObject {
+    V_META(PropertyChangeEmitter, CGameObject, vstd::meta::empty())
+
+  public:
+    void recordChangedProperty(const std::string &property_name) { recordDirectPropertyChanged(property_name); }
+};
+
 void drain_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     for (int i = 0; i < 5; ++i) {
@@ -77,6 +85,14 @@ std::shared_ptr<CStats> stats_with_main(int stamina, int intelligence, int armor
     stats->setIntelligence(intelligence);
     stats->setArmor(armor);
     return stats;
+}
+
+std::shared_ptr<CGame> game_with_registered_types() {
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    return game;
 }
 
 void test_market_guard_paths_and_item_transfers() {
@@ -436,6 +452,51 @@ void test_game_object_property_helpers_and_owned_tile_movement() {
                 "public tile coordinate setters should update all tile coordinates");
 }
 
+void test_animation_property_events_invalidate_cached_graphics_object() {
+    auto game = game_with_registered_types();
+    auto object = std::make_shared<PropertyChangeEmitter>();
+    object->setGame(game);
+    object->setAnimation("images/item");
+
+    auto static_animation = object->getGraphicsObject();
+    expect_true(static_animation && static_animation->meta()->inherits("CStaticAnimation"),
+                "initial graphics object should use the static animation source");
+
+    object->recordChangedProperty("label");
+    auto after_unrelated_property = object->getGraphicsObject();
+    expect_true(after_unrelated_property == static_animation,
+                "unrelated property events should not invalidate the cached graphics object");
+
+    object->notifyPropertyChanged("label");
+    auto after_unrelated_notification = object->getGraphicsObject();
+    expect_true(after_unrelated_notification == static_animation,
+                "unrelated property notifications should not invalidate the cached graphics object");
+
+    object->recordChangedProperty("animation");
+    auto after_animation_event = object->getGraphicsObject();
+    expect_true(after_animation_event && after_animation_event != static_animation,
+                "animation property events should invalidate the cached graphics object");
+    expect_true(after_animation_event && after_animation_event->meta()->inherits("CStaticAnimation"),
+                "animation property event refresh should keep using the current animation source");
+
+    object->notifyPropertiesChanged({"label"});
+    auto after_unrelated_notification_batch = object->getGraphicsObject();
+    expect_true(after_unrelated_notification_batch == after_animation_event,
+                "unrelated property notification batches should not invalidate the cached graphics object");
+
+    object->notifyPropertiesChanged({"animation", "label"});
+    auto after_animation_notification_batch = object->getGraphicsObject();
+    expect_true(after_animation_notification_batch && after_animation_notification_batch != after_animation_event,
+                "animation property notification batches should invalidate the cached graphics object");
+
+    object->setAnimation("images/monsters/octobogz");
+    auto dynamic_animation = object->getGraphicsObject();
+    expect_true(dynamic_animation && dynamic_animation != after_animation_notification_batch,
+                "changing animation should rebuild the cached graphics object");
+    expect_true(dynamic_animation && dynamic_animation->meta()->inherits("CDynamicAnimation"),
+                "rebuilt graphics object should use the updated animation source");
+}
+
 void test_creature_inventory_equipment_and_ratio_helpers() {
     auto creature = std::make_shared<CCreature>();
     creature->setBaseStats(stats_with_main(10, 10, 200));
@@ -675,6 +736,7 @@ int main() {
     test_game_object_get_map_prefers_owner_and_falls_back_to_active_map();
     test_game_object_equivalent_value_covers_supported_property_types();
     test_game_object_property_helpers_and_owned_tile_movement();
+    test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
