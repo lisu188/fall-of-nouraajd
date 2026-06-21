@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGame.h"
 #include "core/CGlobal.h"
+#include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "object/CGameObject.h"
@@ -34,6 +35,7 @@ class CGui : public CGameGraphicsObject {
            V_PROPERTY(CGui, int, width, getWidth, setWidth), V_PROPERTY(CGui, int, tileSize, getTileSize, setTileSize))
     fn::sdl::WindowPtr window;
     fn::sdl::RendererPtr renderer;
+    CRenderContext renderContext;
 
   public:
     struct DragSession {
@@ -51,6 +53,10 @@ class CGui : public CGameGraphicsObject {
     using CGameGraphicsObject::render;
 
     SDL_Renderer *getRenderer() const;
+
+    CRenderContext &getRenderContext();
+
+    const CRenderContext &getRenderContext() const;
 
     int getWidth();
 

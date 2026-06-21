@@ -105,6 +105,7 @@ CGui::CGui() {
     SDL_SetWindowMinimumSize(rawWindow, GUI_MIN_WIDTH, GUI_MIN_HEIGHT);
     window.reset(rawWindow);
     renderer.reset(rawRenderer);
+    renderContext.setRenderer(renderer.get());
     // TODO: set icon
     // TODO: check render flags
 }
@@ -139,6 +140,10 @@ void CGui::render(int i1) {
 }
 
 SDL_Renderer *CGui::getRenderer() const { return renderer.get(); }
+
+CRenderContext &CGui::getRenderContext() { return renderContext; }
+
+const CRenderContext &CGui::getRenderContext() const { return renderContext; }
 
 std::shared_ptr<CTextureCache> CGui::getTextureCache() {
     return _textureCache.get([this]() { return std::make_shared<CTextureCache>(this->ptr<CGui>()); });
