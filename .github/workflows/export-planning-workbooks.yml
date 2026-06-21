@@ -1,0 +1,19 @@
+name: export planning workbooks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: planning-workbooks
+          path: planning/*.xlsx
+          if-no-files-found: error
