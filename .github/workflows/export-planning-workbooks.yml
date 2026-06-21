@@ -1,4 +1,4 @@
-name: export planning workbooks
+name: export queue workflow sources
 
 on:
   pull_request:
@@ -14,6 +14,18 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: planning-workbooks
-          path: planning/*.xlsx
+          name: queue-workflow-sources
+          path: |
+            planning/*.xlsx
+            scripts/issue_queue.py
+            scripts/ci_change_classifier.py
+            scripts/pr_review_audit.py
+            tests/test_issue_queue.py
+            tests/test_ci_change_classifier.py
+            tests/test_pr_review_audit.py
+            .github/workflows/build.yml
+            AGENTS.md
+            docs/codex-agent-queue.md
+            prompts/codex-queue-controller.md
+            prompts/codex-queue-goal.txt
           if-no-files-found: error
