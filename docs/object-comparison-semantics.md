@@ -19,18 +19,18 @@ an equality predicate, not a strict ordering comparator.
 
 | Site | Current semantic | Notes |
 | --- | --- | --- |
-| `src/object/CGameObject.cpp` `CGameObject::name_comparator` | Configured type equality / serialized reference-key equality | Nulls use shared-pointer identity. Non-empty `typeId` is the configured key. If both `typeId` values are empty, equality falls back to `type` plus `name`. Other serialized fields are ignored, so this is not full serialized value equality. |
-| `src/object/CCreature.cpp` `addEffect` and `setEffects` | Configured type equality | Effect insertion deduplicates by `CGameObject::name_comparator`, so two effect instances with the same `typeId` or `type` plus `name` are treated as the same active effect. |
+| `src/object/CGameObject.cpp` `CGameObject::name_comparator` | Deprecated configured type equality / serialized reference-key wrapper | Compatibility wrapper around `CGameObject::sameConfiguredType`. Nulls use shared-pointer identity. Non-empty `typeId` is the configured key. If both `typeId` values are empty, equality falls back to `type` plus `name`. Other serialized fields are ignored, so this is not full serialized value equality. |
+| `src/object/CCreature.cpp` `addEffect` and `setEffects` | Configured type equality | Effect insertion deduplicates by `CGameObject::sameConfiguredType`, so two effect instances with the same `typeId` or `type` plus `name` are treated as the same active effect. |
 
 ## Object Model
 
 | Site | Current semantic | Notes |
 | --- | --- | --- |
 | `src/object/CMarket.cpp` `CMarket::items`, `add`, `remove`, `sellItem`, `buyItem` | Shared-pointer identity | Market stock and inventory transfers operate on concrete item instances. |
-| `src/object/CCreature.cpp` `items`, `actions`, `addItems`, `removeItem`, `hasInInventory`, `useItem`, `getAllItems` | Shared-pointer identity | Inventory/action membership preserves distinct item/action instances even when configured ids match. |
-| `src/object/CCreature.cpp` `equipped`, `equipItem`, `hasEquipped`, `getSlotWithItem` | Shared-pointer identity | Equipment slot values point to concrete item instances. |
+| `src/object/CCreature.cpp` `items`, `actions`, `addItems`, `removeItem`, `hasInInventory`, `useItem`, `getAllItems` | Shared-pointer identity | Inventory/action membership uses `CGameObject::sameInstance` where explicit equality is needed, preserving distinct item/action instances even when configured ids match. |
+| `src/object/CCreature.cpp` `equipped`, `equipItem`, `hasEquipped`, `getSlotWithItem` | Shared-pointer identity | Equipment slot comparisons use `CGameObject::sameInstance`; slot values point to concrete item instances. |
 | `src/object/CCreature.cpp` `effects`, `removeEffect`, `getEffects` | Shared-pointer identity after configured de-duplication | The set stores concrete effect instances; only insertion through `addEffect` applies configured equality. |
-| `src/object/CCreature.cpp` `isPlayer`, `beforeMove`, `afterMove` fight predicates | Runtime map/object identity | Movement and combat events require the live creature still registered on the same map under the same object name. |
+| `src/object/CCreature.cpp` `isPlayer`, `beforeMove`, `afterMove` fight predicates | Runtime map/object identity | Player checks use `CGameObject::sameInstance`; movement and combat events use `CGameObject::sameRuntimeIdentity` where explicit equality is needed and require the live creature still registered on the same map under the same object name. |
 | `src/object/CMapObject.cpp` `move`, `setCoords`, `setPos*` registration checks | Runtime map/object identity | Coordinate-side effects only apply when the map name lookup returns the same live object. |
 | `src/object/CPlayer.cpp` `quests`, `completedQuests`, `checkQuests`, setters | Shared-pointer identity | Quest sets store concrete quest objects. |
 | `src/object/CPlayer.cpp` `addQuest` | Configured type equality | New quests are skipped by `typeId` when present, otherwise by `name`, across active and completed quests. |
@@ -41,7 +41,7 @@ an equality predicate, not a strict ordering comparator.
 
 | Site | Current semantic | Notes |
 | --- | --- | --- |
-| `src/handler/CEventHandler.cpp` `registerTrigger` | Shared-pointer identity or configured type equality | Duplicate trigger registration skips the same trigger pointer, or another trigger with the same `type`, `typeId`, and `name` for the same object/event key. |
+| `src/handler/CEventHandler.cpp` `registerTrigger` | Shared-pointer identity or configured type equality | Duplicate trigger registration uses `CGameObject::sameInstance` for the same trigger pointer, or `CGameObject::sameConfiguredType` plus matching `type` and `name` for the same object/event key. |
 | `src/handler/CEventHandler.cpp` `getTriggers` | Shared-pointer identity | The returned set contains concrete trigger instances. |
 | `src/handler/CFightHandler.cpp` `is_registered_on_map`, `is_active_participant`, `contains_participant`, turn-order comparisons, reward eligibility, `defeatedCreature` | Runtime map/object identity | Combat must track live participants, not configured creature types. Vector membership and winner/loser checks use pointer identity. |
 | `src/handler/CFightHandler.cpp` `sanitize_opponents` | Runtime object identity | Duplicate opponents are removed by raw `CCreature *` identity after map registration checks. |
@@ -62,9 +62,9 @@ an equality predicate, not a strict ordering comparator.
 | `src/gui/CGui.cpp` pointer capture, drag-session containment, `findChild` checks | Shared-pointer identity | GUI interaction state must follow the exact widget/root objects. |
 | `src/gui/panel/CListView.cpp` `calculateIndices` with grouping enabled | Configured type equality | Grouping collapses objects by `typeId`. |
 | `src/gui/panel/CListView.cpp` index maps and drag/callback payloads | Shared-pointer identity | Indexed objects and drag payloads are concrete object instances. |
-| `src/gui/panel/CGameInventoryPanel.cpp` selection/equipment callbacks | Shared-pointer identity | Selection and use/equip actions require the selected concrete item. |
-| `src/gui/panel/CGameTradePanel.cpp` selected inventory/market lists | Shared-pointer identity | Weak-pointer selections toggle and finalize concrete item instances. |
-| `src/gui/panel/CGameFightPanel.cpp` action/item/enemy selections | Shared-pointer identity | Current action, item, and selected enemy are live object instances. |
+| `src/gui/panel/CGameInventoryPanel.cpp` selection/equipment callbacks | Shared-pointer identity | Selection and use/equip actions use `CGameObject::sameInstance` and require the selected concrete item. |
+| `src/gui/panel/CGameTradePanel.cpp` selected inventory/market lists | Shared-pointer identity | Weak-pointer selections use `CGameObject::sameInstance` to toggle and finalize concrete item instances. |
+| `src/gui/panel/CGameFightPanel.cpp` action/item/enemy selections | Shared-pointer identity | Current action, item, and selected enemy use `CGameObject::sameInstance` and are live object instances. |
 | `src/gui/panel/CGameFightPanel.cpp` `setEnemies` | Configured/runtime name equality | The enemy list keeps one living enemy per object name, then subsequent selection uses pointer identity. |
 | `src/gui/panel/CGameDialogPanel.cpp` `getCurrentOptions` | Configured type equality | Options are ordered and deduplicated by configured option number. |
 | `src/gui/panel/CGameDialogPanel.cpp` `reload` widget set | Shared-pointer identity | Temporary text widgets are concrete GUI instances. |

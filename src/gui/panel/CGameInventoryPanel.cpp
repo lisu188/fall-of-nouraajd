@@ -33,10 +33,10 @@ void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index
     if (newSelection && newSelection->hasTag(CTag::Quest)) {
         return;
     }
-    if (selectedInventory.lock() != newSelection) {
+    if (!CGameObject::sameInstance(selectedInventory.lock(), newSelection)) {
         selectedEquipped.reset();
         selectedInventory = newSelection;
-    } else if (selectedInventory.lock() && selectedInventory.lock() == newSelection) {
+    } else if (selectedInventory.lock() && CGameObject::sameInstance(selectedInventory.lock(), newSelection)) {
         gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
         selectedInventory.reset();
     } else if (selectedInventory.lock() == nullptr && selectedEquipped.lock() != nullptr) {
@@ -60,7 +60,8 @@ bool CGameInventoryPanel::inventoryRightClickCallback(std::shared_ptr<CGui> gui,
 }
 
 bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return object && !object->hasTag(CTag::Quest) && selectedInventory.lock() && selectedInventory.lock() == object;
+    return object && !object->hasTag(CTag::Quest) && selectedInventory.lock() &&
+           CGameObject::sameInstance(selectedInventory.lock(), object);
 }
 
 CListView::collection_pointer CGameInventoryPanel::equippedCollection(std::shared_ptr<CGui> gui) {
@@ -101,7 +102,7 @@ bool CGameInventoryPanel::equippedSelect(std::shared_ptr<CGui> gui, int index, s
     return (!object || !object->hasTag(CTag::Quest)) &&
            ((selectedInventory.lock() &&
              gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index), selectedInventory.lock())) ||
-            (selectedEquipped.lock() && selectedEquipped.lock() == object));
+            (selectedEquipped.lock() && CGameObject::sameInstance(selectedEquipped.lock(), object)));
 }
 
 CGameInventoryPanel::CGameInventoryPanel() {}
