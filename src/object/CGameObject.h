@@ -34,6 +34,8 @@ class CGame;
 class CAnimation;
 
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
+    friend class CMap;
+
     V_META(CGameObject, vstd::meta::empty, V_PROPERTY(CGameObject, std::string, name, getName, setName),
            V_PROPERTY(CGameObject, std::string, type, getType, setType),
            V_PROPERTY(CGameObject, std::string, typeId, getTypeId, setTypeId),
@@ -207,6 +209,10 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     std::shared_ptr<CGameObject> _clone();
 
+    void setOwningMap(std::shared_ptr<CMap> map);
+
+    void clearOwningMap(const std::shared_ptr<CMap> &expectedMap);
+
     void beginPropertyNotificationBatch();
 
     void endPropertyNotificationBatch();
@@ -225,6 +231,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     CTags tags;
 
     std::weak_ptr<CGame> game;
+    std::weak_ptr<CMap> owningMap;
 
     int propertyNotificationBatchDepth = 0;
     std::vector<std::string> directPropertyNotificationSuppressedNames;

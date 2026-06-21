@@ -987,6 +987,80 @@ void test_map_object_relocate_without_move_hooks_updates_spatial_state_once() {
                 "relocateWithoutMoveHooks should emit one old-coordinate and one new-coordinate signal");
 }
 
+void test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes() {
+    auto game = std::make_shared<CGame>();
+    auto old_map = std::make_shared<CMap>();
+    auto new_map = std::make_shared<CMap>();
+    old_map->setGame(game);
+    new_map->setGame(game);
+    old_map->setMapName("oldMap");
+    new_map->setMapName("newMap");
+    game->setMap(old_map);
+
+    auto retained_object = std::make_shared<CMapObject>();
+    retained_object->setGame(game);
+    retained_object->setName("retainedObject");
+    old_map->addObject(retained_object);
+
+    auto retained_tile = std::make_shared<CTile>();
+    retained_tile->setGame(game);
+    expect_true(old_map->addTile(retained_tile, 1, 1, 0), "fixture tile should be added to the old map");
+
+    auto rehomed_object = std::make_shared<CMapObject>();
+    rehomed_object->setGame(game);
+    rehomed_object->setName("rehomedObject");
+    old_map->addObject(rehomed_object);
+
+    auto rehomed_tile = std::make_shared<CTile>();
+    rehomed_tile->setGame(game);
+    expect_true(old_map->addTile(rehomed_tile, 3, 1, 0), "rehomed tile should start on the old map");
+
+    new_map->addObject(rehomed_object);
+    expect_true(new_map->addTile(rehomed_tile, 3, 1, 0), "rehomed tile should move to the new map");
+
+    game->setMap(new_map);
+
+    expect_true(retained_object->getMap() == old_map,
+                "retained old-map objects should resolve their owning map after the active map changes");
+    expect_true(retained_tile->getMap() == old_map,
+                "retained old-map tiles should resolve their owning map after the active map changes");
+    expect_true(rehomed_object->getMap() == new_map, "rehomed objects should resolve their new map owner");
+    expect_true(rehomed_tile->getMap() == new_map, "rehomed tiles should resolve their new map owner");
+
+    auto restored_object = std::make_shared<CMapObject>();
+    restored_object->setGame(game);
+    restored_object->setName("restoredObject");
+    auto restored_tile = std::make_shared<CTile>();
+    restored_tile->setGame(game);
+    restored_tile->setPosx(2);
+    restored_tile->setPosy(1);
+    restored_tile->setPosz(0);
+
+    old_map->setObjects({retained_object, restored_object});
+    old_map->setTiles({retained_tile, restored_tile});
+
+    expect_true(restored_object->getMap() == old_map,
+                "objects restored through setObjects should resolve the restoring map");
+    expect_true(restored_tile->getMap() == old_map, "tiles restored through setTiles should resolve the restoring map");
+    expect_true(rehomed_object->getMap() == new_map,
+                "setObjects should not clear objects already rehomed to another map");
+    expect_true(rehomed_tile->getMap() == new_map, "setTiles should not clear tiles already rehomed to another map");
+
+    bool destroy_callback_saw_old_map = false;
+    old_map->setTriggers(
+        {std::make_shared<CCustomTrigger>("retainedObject", CGameEvent::CType::onDestroy,
+                                          [&](std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent>) {
+                                              destroy_callback_saw_old_map = object && object->getMap() == old_map;
+                                          })});
+
+    old_map->removeObject(retained_object);
+
+    expect_true(destroy_callback_saw_old_map,
+                "destroy callbacks should still resolve the object owner before ownership is cleared");
+    expect_true(retained_object->getMap() == new_map,
+                "removed objects should fall back to the active game map after destroy callbacks finish");
+}
+
 void test_map_player_trigger_registration_is_idempotent() {
     auto game = CGameLoader::loadGame();
     auto map = std::make_shared<CMap>();
@@ -1114,6 +1188,7 @@ int main() {
     test_map_move_interrupts_invalid_planned_steps();
     test_creature_tracks_pending_move_origin_only_during_after_move();
     test_map_object_relocate_without_move_hooks_updates_spatial_state_once();
+    test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes();
     test_map_player_trigger_registration_is_idempotent();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();

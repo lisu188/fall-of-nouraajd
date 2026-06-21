@@ -135,6 +135,7 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
         vstd::logger::warning("Ignoring null player assignment");
         return;
     }
+    player->setOwningMap(this->ptr<CMap>());
     player->setName("player");
     player->setController(getGame()->createObject<CPlayerController>());
     player->setFightController(getGame()->createObject<CPlayerFightController>());
@@ -271,6 +272,7 @@ void CMap::bumpNavigationRevision() {
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     Coords coords = normalizeCoords(tile->getCoords());
     Coords target = normalizeCoords(Coords(x, y, z));
+    tile->setOwningMap(this->ptr<CMap>());
     auto it = tiles.find(coords);
     if (it != tiles.end()) {
         tiles.erase(it);
@@ -289,6 +291,7 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     if (this->contains(coords.x, coords.y, coords.z)) {
         return false;
     }
+    tile->setOwningMap(this->ptr<CMap>());
     tile->setPosx(coords.x);
     tile->setPosy(coords.y);
     tile->setPosz(coords.z);
@@ -303,7 +306,11 @@ void CMap::removeTile(int x, int y, int z) {
     Coords coords = normalizeCoords(Coords(x, y, z));
     auto it = this->tiles.find(coords);
     if (it != this->tiles.end()) {
+        auto tile = it->second;
         this->tiles.erase(it);
+        if (tile) {
+            tile->clearOwningMap(this->ptr<CMap>());
+        }
     }
     bumpNavigationRevision();
     recordDirectPropertyChanged("tiles");
@@ -387,6 +394,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
         return;
     }
     std::shared_ptr<CCreature> creature = vstd::cast<CCreature>(mapObject);
+    mapObject->setOwningMap(this->ptr<CMap>());
     if (creature.get()) {
         if (creature->getLevel() == 0) {
             creature->addExp(0);
@@ -418,6 +426,10 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
     bumpNavigationRevision();
     recordDirectPropertyChanged("objects");
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onDestroy));
+    auto current_object_it = mapObjects.find(mapObject->getName());
+    if (current_object_it == mapObjects.end() || current_object_it->second != mapObject) {
+        mapObject->clearOwningMap(this->ptr<CMap>());
+    }
     signal("objectChanged", mapObject->getCoords());
 }
 
@@ -595,11 +607,18 @@ void CMap::setTurn(int turn) {
 }
 
 void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
+    auto map = this->ptr<CMap>();
+    for (const auto &[coords, tile] : tiles) {
+        if (tile) {
+            tile->clearOwningMap(map);
+        }
+    }
     tiles.clear();
     for (const auto &ob : objects) {
         if (!ob) {
             continue;
         }
+        ob->setOwningMap(map);
         tiles[normalizeCoords(ob->getCoords())] = ob;
     }
     bumpNavigationRevision();
@@ -629,6 +648,12 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
             }
         }
     }
+    auto map = this->ptr<CMap>();
+    for (const auto &[name, object] : mapObjects) {
+        if (object) {
+            object->clearOwningMap(map);
+        }
+    }
     mapObjects.clear();
     mapObjectsCache.clear();
     for (auto ob : objects) {
@@ -636,6 +661,7 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
             vstd::logger::warning("Ignoring null map object in CMap::setObjects");
             continue;
         }
+        ob->setOwningMap(map);
         mapObjects[ob->getName()] = ob;
         mapObjectsCache.insert(std::make_pair(normalizeCoords(ob->getCoords()), ob->getName()));
     }
