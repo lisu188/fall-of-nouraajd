@@ -20,6 +20,7 @@ jobs:
             scripts/issue_queue.py
             scripts/ci_change_classifier.py
             scripts/pr_review_audit.py
+            scripts/workflow_observations.py
             tests/test_issue_queue.py
             tests/test_ci_change_classifier.py
             tests/test_pr_review_audit.py
@@ -29,7 +30,9 @@ jobs:
             AGENTS.md
             docs/codex-agent-queue.md
             docs/codex-workflow-observations.md
+            docs/testing.md
             prompts/codex-queue-controller.md
             prompts/codex-queue-goal.txt
             prompts/codex-workflow-optimizer.md
+            prompts/codex-workflow-optimizer-goal.txt
           if-no-files-found: error
