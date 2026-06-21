@@ -68,9 +68,11 @@ jobs:
               text = text.replace(anchor, anchor + include, 1)
           old = "        auto rect = list->getRect();\n"
           new = "        auto layout = list->getLayout();\n        auto rect = layout ? layout->getRect(list) : nullptr;\n"
-          if text.count(old) != 1:
-              raise RuntimeError("Private getRect call anchor was not unique.")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise RuntimeError("Neither the legacy nor public layout rect call was found.")
+          path.write_text(text, encoding="utf-8")
           PY
 
           python3 -m py_compile test.py
