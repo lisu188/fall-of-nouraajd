@@ -17,18 +17,47 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CStats.h"
+#include "core/CMap.h"
+#include "core/CTypes.h"
 #include "object/CCreature.h"
+#include "object/CEffect.h"
+#include "object/CGameObject.h"
 #include "object/CItem.h"
+#include "object/CMapObject.h"
 #include "object/CMarket.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
+#include "object/CTile.h"
 #include "test_harness.h"
+#include "vutil.h"
 
 #include <limits>
 #include <memory>
 #include <set>
+#include <utility>
 
 namespace {
+
+class PropertyChangeProbe : public CGameObject {
+    V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
+           V_METHOD(PropertyChangeProbe, onPropertiesChanged, void, std::set<std::string>))
+
+  public:
+    void onPropertyChanged(std::string property_name) { changedProperties.insert(std::move(property_name)); }
+
+    void onPropertiesChanged(std::set<std::string> property_names) {
+        changedProperties.insert(property_names.begin(), property_names.end());
+    }
+
+    std::set<std::string> changedProperties;
+};
+
+void drain_event_loop() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+}
 
 std::shared_ptr<CStats> stats_with_main(int stamina, int intelligence, int armor = 0) {
     auto stats = std::make_shared<CStats>();
@@ -169,6 +198,86 @@ void test_player_quest_setters_filter_nulls_and_skip_duplicates() {
     expect_true(player->getCompletedQuests().size() == 1, "completed duplicate quest should remain completed only");
 }
 
+void test_creature_direct_setters_notify_property_observers() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto creature = std::make_shared<CCreature>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    auto effect = std::make_shared<CEffect>();
+    auto inventory_item = std::make_shared<CItem>();
+    auto equipped_item = std::make_shared<CItem>();
+
+    creature->connect("propertyChanged", probe, "onPropertyChanged");
+    creature->connect("propertiesChanged", probe, "onPropertiesChanged");
+
+    creature->setAnimation("images/misc/marker");
+    creature->setGold(5);
+    creature->setHp(12);
+    creature->setMana(7);
+    creature->setEffects({effect});
+    creature->setItems({inventory_item});
+    creature->setEquipped({{"0", equipped_item}});
+
+    drain_event_loop();
+
+    expect_true(probe->changedProperties.contains("animation"),
+                "direct animation setter should notify property observers");
+    expect_true(probe->changedProperties.contains("gold"), "direct gold setter should notify property observers");
+    expect_true(probe->changedProperties.contains("hp"), "direct hp setter should notify property observers");
+    expect_true(probe->changedProperties.contains("mana"), "direct mana setter should notify property observers");
+    expect_true(probe->changedProperties.contains("effects"), "direct effects setter should notify property observers");
+    expect_true(probe->changedProperties.contains("items"), "direct inventory setter should notify property observers");
+    expect_true(probe->changedProperties.contains("equipped"),
+                "direct equipment setter should notify property observers");
+}
+
+void test_player_quest_setters_notify_property_observers() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto player = std::make_shared<CPlayer>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    auto active = std::make_shared<CQuest>();
+    auto completed = std::make_shared<CQuest>();
+
+    player->connect("propertyChanged", probe, "onPropertyChanged");
+    player->connect("propertiesChanged", probe, "onPropertiesChanged");
+
+    player->setQuests({active});
+    player->setCompletedQuests({completed});
+
+    drain_event_loop();
+
+    expect_true(probe->changedProperties.contains("quests"),
+                "direct active quest setter should notify property observers");
+    expect_true(probe->changedProperties.contains("completedQuests"),
+                "direct completed quest setter should notify property observers");
+}
+
+void test_map_direct_state_setters_notify_property_observers() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto map = std::make_shared<CMap>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    auto tile = std::make_shared<CTile>();
+    auto object = std::make_shared<CMapObject>();
+    object->setName("observedObject");
+
+    map->connect("propertyChanged", probe, "onPropertyChanged");
+    map->connect("propertiesChanged", probe, "onPropertiesChanged");
+
+    map->setTurn(3);
+    map->setTiles({tile});
+    map->setObjects({object});
+
+    drain_event_loop();
+
+    expect_true(probe->changedProperties.contains("turn"), "direct map turn setter should notify property observers");
+    expect_true(probe->changedProperties.contains("tiles"), "direct tile setter should notify property observers");
+    expect_true(probe->changedProperties.contains("objects"), "direct object setter should notify property observers");
+    expect_true(probe->changedProperties.contains("navigationRevision"),
+                "map navigation revision changes should notify property observers");
+}
+
 void test_creature_inventory_equipment_and_ratio_helpers() {
     auto creature = std::make_shared<CCreature>();
     creature->setBaseStats(stats_with_main(10, 10, 200));
@@ -225,6 +334,9 @@ int main() {
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
     test_player_quest_setters_filter_nulls_and_skip_duplicates();
+    test_creature_direct_setters_notify_property_observers();
+    test_player_quest_setters_notify_property_observers();
+    test_map_direct_state_setters_notify_property_observers();
     test_creature_inventory_equipment_and_ratio_helpers();
 
     return finish_tests();

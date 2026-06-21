@@ -51,6 +51,8 @@ void CPlayer::checkQuests() {
             quest->onComplete();
             quests.erase(quests.find(quest));
             completedQuests.insert(quest);
+            recordDirectPropertyChanged("quests");
+            recordDirectPropertyChanged("completedQuests");
         }
     }
 }
@@ -77,6 +79,7 @@ void CPlayer::addQuest(std::string questName) {
             CPlaytestTrace::addMapContext(fields, getMap());
             CPlaytestTrace::record("quest_added", fields);
         }
+        recordDirectPropertyChanged("quests");
     }
 }
 
@@ -85,6 +88,7 @@ std::set<std::shared_ptr<CQuest>> CPlayer::getQuests() { return quests; }
 void CPlayer::setQuests(std::set<std::shared_ptr<CQuest>> _quests) {
     std::erase_if(_quests, [](const auto &quest) { return quest == nullptr; });
     this->quests = std::move(_quests);
+    recordDirectPropertyChanged("quests");
 }
 
 std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() { return completedQuests; }
@@ -92,6 +96,7 @@ std::set<std::shared_ptr<CQuest>> CPlayer::getCompletedQuests() { return complet
 void CPlayer::setCompletedQuests(std::set<std::shared_ptr<CQuest>> _completedQuests) {
     std::erase_if(_completedQuests, [](const auto &quest) { return quest == nullptr; });
     completedQuests = std::move(_completedQuests);
+    recordDirectPropertyChanged("completedQuests");
 }
 
 void CPlayer::incTurn() { turn++; }

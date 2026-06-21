@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 
 #include <set>
+#include <vector>
 
 class CGameEvent;
 
@@ -76,11 +77,18 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     template <typename T> void setProperty(std::string name, T property) {
         auto object = this->ptr();
-        if (this->meta()->has_property(name, object)) {
-            this->meta()->set_property<CGameObject, T>(name, object, property);
-        } else {
-            this->meta()->set_dynamic_property<CGameObject, T>(name, object, property);
+        directPropertyNotificationSuppressedNames.push_back(name);
+        try {
+            if (this->meta()->has_property(name, object)) {
+                this->meta()->set_property<CGameObject, T>(name, object, property);
+            } else {
+                this->meta()->set_dynamic_property<CGameObject, T>(name, object, property);
+            }
+        } catch (...) {
+            directPropertyNotificationSuppressedNames.pop_back();
+            throw;
         }
+        directPropertyNotificationSuppressedNames.pop_back();
         recordPropertyChanged(name);
     }
 
@@ -191,6 +199,9 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
         }
     }
 
+  protected:
+    void recordDirectPropertyChanged(const std::string &name);
+
   private:
     std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;
 
@@ -216,6 +227,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
     std::weak_ptr<CGame> game;
 
     int propertyNotificationBatchDepth = 0;
+    std::vector<std::string> directPropertyNotificationSuppressedNames;
     std::set<std::string> batchedPropertyNotifications;
 };
 
