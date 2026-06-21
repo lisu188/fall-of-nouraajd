@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CPathFinder.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CProvider.h"
 #include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CScript.h"
@@ -962,6 +963,65 @@ void test_game_context_transition_generation_helpers_and_shutdown() {
                 "shutdown should make previously captured transition generation stale");
 }
 
+void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services() {
+    auto closing_game = std::make_shared<CGame>();
+    auto survivor_game = std::make_shared<CGame>();
+    auto closing_context = closing_game->getContext();
+    auto survivor_context = survivor_game->getContext();
+
+    auto closing_map = std::make_shared<CMap>();
+    closing_map->setGame(closing_game);
+    closing_game->setMap(closing_map);
+
+    auto survivor_map = std::make_shared<CMap>();
+    survivor_map->setGame(survivor_game);
+    survivor_game->setMap(survivor_map);
+
+    auto survivor_object_handler = survivor_game->getObjectHandler();
+    auto survivor_gui_handler = survivor_game->getGuiHandler();
+    auto survivor_resources = survivor_game->getResourcesProvider();
+    auto survivor_configuration = survivor_game->getConfigurationProvider();
+    auto survivor_items = survivor_configuration->getConfiguration("items.json");
+    expect_true(survivor_items && survivor_items->is_object(),
+                "surviving game resource provider should load configuration before shutdown");
+
+    closing_game->getObjectHandler();
+    closing_game->getGuiHandler();
+    closing_game->getResourcesProvider();
+    closing_game->getConfigurationProvider();
+
+    const auto shutdown_generation = closing_context->captureTransitionGeneration();
+    closing_context->shutdown();
+    closing_context->shutdown();
+
+    expect_true(!closing_context->isActive(), "explicit shutdown should mark the closed context inactive");
+    expect_true(closing_context->getTransitionGeneration() == shutdown_generation + 1,
+                "idempotent shutdown should advance transition generation only once");
+    expect_true(closing_game->getMap() == nullptr, "shutdown should detach the closed game's active map");
+    expect_runtime_error([&]() { closing_game->getObjectHandler(); },
+                         "closed game should reject object handler access");
+    expect_runtime_error([&]() { closing_game->getGuiHandler(); }, "closed game should reject GUI handler access");
+    expect_runtime_error([&]() { closing_game->getResourcesProvider(); },
+                         "closed game should reject resource provider access");
+    expect_runtime_error([&]() { closing_game->getConfigurationProvider(); },
+                         "closed game should reject configuration provider access");
+
+    expect_true(survivor_context->isActive(), "shutting down one game should not shut down another context");
+    expect_true(survivor_game->getMap() == survivor_map, "shutting down one game should not detach another game's map");
+    expect_true(survivor_map->getGame() == survivor_game,
+                "surviving map should retain its owning game after another game shuts down");
+    expect_true(survivor_game->getObjectHandler() == survivor_object_handler,
+                "surviving game should retain its object handler after another game shuts down");
+    expect_true(survivor_game->getGuiHandler() == survivor_gui_handler,
+                "surviving game should retain its GUI handler after another game shuts down");
+    expect_true(survivor_game->getResourcesProvider() == survivor_resources,
+                "surviving game should retain its resource provider after another game shuts down");
+    expect_true(survivor_game->getConfigurationProvider() == survivor_configuration,
+                "surviving game should retain its configuration provider after another game shuts down");
+    expect_true(survivor_configuration->getConfiguration("items.json") == survivor_items,
+                "surviving configuration provider cache should remain valid after another game shuts down");
+}
+
 void test_playtest_trace_records_and_helper_payloads() {
     CPlaytestTrace::configure(false);
     CPlaytestTrace::record("ignored");
@@ -1279,6 +1339,7 @@ int main() {
     test_game_context_owns_distinct_gui_handlers_per_game();
     test_game_context_rejects_services_without_owner_game();
     test_game_context_transition_generation_helpers_and_shutdown();
+    test_game_context_shutdown_is_idempotent_and_preserves_other_game_services();
     test_playtest_trace_records_and_helper_payloads();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
