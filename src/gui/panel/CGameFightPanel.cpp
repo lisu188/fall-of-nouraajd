@@ -103,9 +103,11 @@ void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
     auto player = active_player(gui);
     if (!player || !newSelection) {
         selected.reset();
-    } else if (selected.lock() != newSelection && newSelection->getManaCost() <= player->getMana()) {
+    } else if (!CGameObject::sameInstance(selected.lock(), newSelection) &&
+               newSelection->getManaCost() <= player->getMana()) {
         selected = newSelection;
-    } else if (newSelection && selected.lock() == newSelection && newSelection->getManaCost() <= player->getMana()) {
+    } else if (newSelection && CGameObject::sameInstance(selected.lock(), newSelection) &&
+               newSelection->getManaCost() <= player->getMana()) {
         finalSelected = newSelection;
     } else {
         // TODO: rethink moving selection to CListView
@@ -115,7 +117,7 @@ void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,
 }
 
 bool CGameFightPanel::interactionsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return selected.lock() && selected.lock() == object;
+    return selected.lock() && CGameObject::sameInstance(selected.lock(), object);
 }
 
 CListView::collection_pointer CGameFightPanel::itemsCollection(std::shared_ptr<CGui> gui) {
@@ -137,9 +139,9 @@ void CGameFightPanel::itemsCallback(std::shared_ptr<CGui> gui, int index, std::s
     if (newSelection && newSelection->hasTag(CTag::Quest)) {
         return;
     }
-    if (selectedItem.lock() != newSelection) {
+    if (!CGameObject::sameInstance(selectedItem.lock(), newSelection)) {
         selectedItem = newSelection;
-    } else if (selectedItem.lock() && selectedItem.lock() == newSelection) {
+    } else if (selectedItem.lock() && CGameObject::sameInstance(selectedItem.lock(), newSelection)) {
         player->useItem(newSelection);
         selectedItem.reset();
     }
@@ -163,7 +165,8 @@ bool CGameFightPanel::itemsRightClickCallback(std::shared_ptr<CGui> gui, int ind
 }
 
 bool CGameFightPanel::itemsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return object && !object->hasTag(CTag::Quest) && selectedItem.lock() && selectedItem.lock() == object;
+    return object && !object->hasTag(CTag::Quest) && selectedItem.lock() &&
+           CGameObject::sameInstance(selectedItem.lock(), object);
 }
 
 CGameFightPanel::CGameFightPanel() {}
@@ -236,7 +239,9 @@ void CGameFightPanel::close() {
 std::shared_ptr<CCreature> CGameFightPanel::getEnemy() { return enemy.lock(); }
 
 void CGameFightPanel::setEnemy(std::shared_ptr<CCreature> en) {
-    if (en && en->isAlive() && std::find(enemies.begin(), enemies.end(), en) == enemies.end()) {
+    const auto enemyIt = std::find_if(enemies.begin(), enemies.end(),
+                                      [en](const auto &enemy) { return CGameObject::sameInstance(enemy, en); });
+    if (en && en->isAlive() && enemyIt == enemies.end()) {
         enemies.push_back(en);
     }
     enemy = en && en->isAlive() ? en : nullptr;
@@ -258,7 +263,9 @@ void CGameFightPanel::setEnemies(const std::vector<std::shared_ptr<CCreature>> &
     }
 
     auto current = enemy.lock();
-    auto current_it = std::find(enemies.begin(), enemies.end(), current);
+    auto current_it = std::find_if(enemies.begin(), enemies.end(), [current](const auto &candidate) {
+        return CGameObject::sameInstance(candidate, current);
+    });
     enemy =
         current_it != enemies.end() ? *current_it : (enemies.empty() ? std::shared_ptr<CCreature>() : enemies.front());
     clear_stale_combat_status(getGui(), enemies, enemy.lock());
@@ -287,7 +294,7 @@ void CGameFightPanel::enemiesCallback(std::shared_ptr<CGui> gui, int index,
 }
 
 bool CGameFightPanel::enemiesSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return object && enemy.lock() && enemy.lock() == object;
+    return object && enemy.lock() && CGameObject::sameInstance(enemy.lock(), object);
 }
 
 std::string CGameFightPanel::getCombatStatus(std::shared_ptr<CGui> gui) {

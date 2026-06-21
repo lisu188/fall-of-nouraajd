@@ -84,9 +84,10 @@ void CEventHandler::registerTrigger(std::shared_ptr<CTrigger> trigger) {
         if (!existing) {
             continue;
         }
-        const bool sameIdentity = existing == trigger || (existing->getType() == trigger->getType() &&
-                                                          existing->getTypeId() == trigger->getTypeId() &&
-                                                          existing->getName() == trigger->getName());
+        const bool sameIdentity =
+            CGameObject::sameInstance(existing, trigger) ||
+            (existing->getType() == trigger->getType() && CGameObject::sameConfiguredType(existing, trigger) &&
+             existing->getName() == trigger->getName());
         if (sameIdentity) {
             vstd::logger::debug("Ignoring duplicate trigger registration:", trigger->getTypeId(), trigger->getObject(),
                                 trigger->getEvent());
