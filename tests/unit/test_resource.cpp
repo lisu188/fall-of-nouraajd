@@ -17,8 +17,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CProvider.h"
+#include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CLoader.h"
 #include "core/CSaveFormat.h"
 #include "test_harness.h"
+
+#include <pybind11/embed.h>
 
 #include <algorithm>
 #include <chrono>
@@ -120,11 +125,47 @@ void test_resource_provider_save_uses_provider_root_when_cwd_changes() {
     std::filesystem::remove_all(tempRoot);
 }
 
+void test_load_game_creates_context_owned_providers() {
+    auto first_game = CGameLoader::loadGame();
+    auto second_game = CGameLoader::loadGame();
+
+    auto first_context = first_game->getContext();
+    auto second_context = second_game->getContext();
+
+    auto first_resources = first_context->getResourcesProvider();
+    auto first_resources_from_game = first_game->getResourcesProvider();
+    auto second_resources = second_game->getResourcesProvider();
+    expect_true(first_resources == first_resources_from_game,
+                "CGame should delegate resource provider access to CGameContext");
+    expect_true(first_resources != CResourcesProvider::getInstance(),
+                "context-owned resource providers should be distinct from the legacy singleton");
+    expect_true(first_resources != second_resources,
+                "CGameLoader::loadGame should create one resource provider instance per game context");
+
+    auto first_configuration = first_context->getConfigurationProvider();
+    auto first_configuration_from_game = first_game->getConfigurationProvider();
+    auto second_configuration = second_context->getConfigurationProvider();
+    expect_true(first_configuration == first_configuration_from_game,
+                "CGame should delegate configuration provider access to CGameContext");
+    expect_true(first_configuration != second_configuration,
+                "CGameLoader::loadGame should create one configuration provider instance per game context");
+
+    auto first_items = first_configuration->getConfiguration("items.json");
+    auto second_items = second_configuration->getConfiguration("items.json");
+    expect_true(first_items && second_items, "context-owned configuration providers should load config resources");
+    expect_true(first_items == first_configuration->getConfiguration("items.json"),
+                "context-owned configuration providers should cache configs per provider instance");
+    expect_true(first_items != second_items, "separate game contexts should not share configuration provider caches");
+}
+
 } // namespace
 
 int main() {
+    pybind11::scoped_interpreter guard{};
+
     test_resource_provider_paths_and_config_loader();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
+    test_load_game_creates_context_owned_providers();
 
     return finish_tests();
 }

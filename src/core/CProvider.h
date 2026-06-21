@@ -138,16 +138,19 @@ class CResourcesProvider {
 
 class CConfigurationProvider : private std::map<std::string, std::shared_ptr<json>> {
   public:
-    static std::shared_ptr<json> getConfig(const std::string &path);
-
-  private:
-    CConfigurationProvider() = default;
+    explicit CConfigurationProvider(
+        std::shared_ptr<CResourcesProvider> resourcesProvider = CResourcesProvider::getInstance());
 
     ~CConfigurationProvider();
 
+    static std::shared_ptr<json> getConfig(const std::string &path);
+
     std::shared_ptr<json> getConfiguration(const std::string &path);
 
+  private:
     void loadConfig(const std::string &path);
+
+    std::shared_ptr<CResourcesProvider> resourcesProvider;
 };
 
 class CAnimationProvider {

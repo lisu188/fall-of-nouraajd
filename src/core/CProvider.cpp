@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <chrono>
 #include <cctype>
+#include <utility>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -309,6 +310,13 @@ const std::string CResType::MAP = "MAP";
 const std::string CResType::PLUGIN = "PLUGIN";
 const std::string CResType::SAVE = "SAVE";
 
+CConfigurationProvider::CConfigurationProvider(std::shared_ptr<CResourcesProvider> resourcesProvider)
+    : resourcesProvider(std::move(resourcesProvider)) {
+    if (!this->resourcesProvider) {
+        this->resourcesProvider = CResourcesProvider::getInstance();
+    }
+}
+
 std::shared_ptr<json> CConfigurationProvider::getConfig(const std::string &path) {
     static CConfigurationProvider instance;
     return instance.getConfiguration(path);
@@ -326,12 +334,13 @@ std::shared_ptr<json> CConfigurationProvider::getConfiguration(const std::string
 
 void CConfigurationProvider::loadConfig(const std::string &path) {
     if (isConfigResourcePath(path)) {
-        auto config = std::static_pointer_cast<CTextResource>(CConfigResourceLoader().load(path));
-        this->insert(std::make_pair(path, CJsonUtil::from_string(config->getText(), path)));
+        auto config = CConfigResourceLoader().load(path);
+        this->insert(
+            std::make_pair(path, CJsonUtil::from_string(resourcesProvider->load(config->getFilePath()), path)));
         return;
     }
 
-    this->insert(std::make_pair(path, CResourcesProvider::getInstance()->loadJson(path)));
+    this->insert(std::make_pair(path, resourcesProvider->loadJson(path)));
 }
 
 std::list<std::string> CResourcesProvider::searchPath = buildResourceSearchPath();
