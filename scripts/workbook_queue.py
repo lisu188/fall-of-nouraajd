@@ -12,7 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from scripts import issue_queue
+try:
+    from scripts import issue_queue
+except ModuleNotFoundError:  # Support `python3 scripts/workbook_queue.py`.
+    import issue_queue
 
 DEFAULT_PATTERN = "planning/*.xlsx"
 ENV_WORKBOOKS = "GAME_ISSUE_QUEUE_FILES"
@@ -52,9 +55,7 @@ def resolveWorkbookPaths(rawPaths: Sequence[str] | None = None) -> list[Path]:
         candidates.extend(Path(item).expanduser() for item in rawPaths if item)
     elif os.environ.get(ENV_WORKBOOKS):
         candidates.extend(
-            Path(item).expanduser()
-            for item in os.environ[ENV_WORKBOOKS].split(os.pathsep)
-            if item.strip()
+            Path(item).expanduser() for item in os.environ[ENV_WORKBOOKS].split(os.pathsep) if item.strip()
         )
     elif os.environ.get("GAME_ISSUE_QUEUE_FILE"):
         candidates.append(Path(os.environ["GAME_ISSUE_QUEUE_FILE"]).expanduser())
