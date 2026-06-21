@@ -4810,6 +4810,95 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(report, sort_keys=True)
 
     @game_test
+    def test_multi_game_lifecycle_shutdown_preserves_surviving_session(self):
+        game = load_game_module()
+
+        closing_game = game.CGameLoader.loadGame()
+        survivor_game = game.CGameLoader.loadGame()
+        closing_context = closing_game.getContext()
+        survivor_context = survivor_game.getContext()
+
+        try:
+            game.CGameLoader.startGameWithPlayer(closing_game, "test", "Warrior")
+            game.CGameLoader.startGameWithPlayer(survivor_game, "empty", "Warrior")
+            closing_map = closing_game.getMap()
+            survivor_map = survivor_game.getMap()
+            survivor_player = survivor_map.getPlayer()
+            self.assertIsNotNone(closing_map)
+            self.assertIsNotNone(survivor_map)
+            self.assertIsNotNone(survivor_player)
+
+            closing_object_handler = closing_game.getObjectHandler()
+            survivor_object_handler = survivor_game.getObjectHandler()
+            survivor_script_handler = survivor_context.getScriptHandler()
+            survivor_gui_handler = survivor_game.getGuiHandler()
+
+            closing_object_handler.registerConfigJson(
+                "closingLifecycleProbe",
+                json.dumps({"class": "CGameObject", "properties": {"label": "closing"}}),
+            )
+            survivor_object_handler.registerConfigJson(
+                "survivorLifecycleProbe",
+                json.dumps({"class": "CGameObject", "properties": {"label": "survivor"}}),
+            )
+            self.assertEqual("closing", closing_game.createObject("closingLifecycleProbe").getStringProperty("label"))
+            self.assertEqual(
+                "survivor", survivor_game.createObject("survivorLifecycleProbe").getStringProperty("label")
+            )
+            self.assertIsNone(survivor_game.createObject("closingLifecycleProbe"))
+            self.assertIsNone(closing_game.createObject("survivorLifecycleProbe"))
+
+            game.CGameLoader.loadGui(closing_game)
+            game.CGameLoader.loadGui(survivor_game)
+            closing_gui = closing_game.getGui()
+            survivor_gui = survivor_game.getGui()
+            self.assertIsNotNone(closing_gui)
+            self.assertIsNotNone(survivor_gui)
+            self.assertIsNot(closing_gui, survivor_gui)
+
+            closing_context.shutdown()
+            closing_context.shutdown()
+            game.event_loop.instance().run()
+
+            self.assertFalse(closing_context.isActive())
+            self.assertIsNone(closing_game.getMap())
+            self.assertIsNone(closing_game.getGui())
+            with self.assertRaisesRegex(RuntimeError, "shutdown"):
+                closing_game.getObjectHandler()
+            with self.assertRaisesRegex(RuntimeError, "shutdown"):
+                closing_context.getScriptHandler()
+            with self.assertRaisesRegex(RuntimeError, "shutdown"):
+                closing_game.getGuiHandler()
+
+            self.assertTrue(survivor_context.isActive())
+            self.assertIs(survivor_map, survivor_game.getMap())
+            self.assertIs(survivor_player, survivor_game.getMap().getPlayer())
+            self.assertIs(survivor_object_handler, survivor_game.getObjectHandler())
+            self.assertIs(survivor_script_handler, survivor_context.getScriptHandler())
+            self.assertIs(survivor_gui_handler, survivor_game.getGuiHandler())
+            self.assertIs(survivor_gui, survivor_game.getGui())
+
+            inventory_panel = survivor_gui_handler.openPanel("inventoryPanel")
+            self.assertIsNotNone(inventory_panel)
+            survivor_object = survivor_game.createObject("survivorLifecycleProbe")
+            self.assertIsNotNone(survivor_object)
+            self.assertEqual("survivor", survivor_object.getStringProperty("label"))
+
+            report = {
+                "closing_context_active": closing_context.isActive(),
+                "survivor_gui": survivor_gui.getType(),
+                "survivor_map": survivor_map.getType(),
+                "survivor_panel": inventory_panel.getType(),
+                "survivor_player": survivor_player.getType(),
+            }
+            return True, json.dumps(report, sort_keys=True)
+        finally:
+            if survivor_context.isActive():
+                survivor_context.shutdown()
+            if closing_context.isActive():
+                closing_context.shutdown()
+
+    @game_test
     def test_chest_on_enter_grants_random_loot_to_real_player(self):
         g, game_map, player = load_game_map_with_player("test", "Warrior")
         chest = game_map.getGame().createObject("chest")
