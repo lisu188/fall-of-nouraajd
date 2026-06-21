@@ -2,7 +2,6 @@ import re
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / "docs" / "object-comparison-semantics.md"
 
@@ -44,10 +43,11 @@ class ObjectComparisonAuditTest(unittest.TestCase):
 
     def test_source_patterns_match_documented_current_semantics(self):
         game_object = self.read("src/object/CGameObject.cpp")
+        self.assertIn("return CGameObject::sameConfiguredType(a, b);", game_object)
         self.assertRegex(
             game_object,
             re.compile(
-                r"name_comparator.*?getTypeId\(\) == b->getTypeId\(\).*?"
+                r"sameConfiguredType.*?getTypeId\(\) == b->getTypeId\(\).*?"
                 r"getType\(\) == b->getType\(\) && a->getName\(\) == b->getName\(\)",
                 re.S,
             ),
