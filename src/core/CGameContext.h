@@ -21,11 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <memory>
 
+#include "core/CGlobal.h"
+
 class CGame;
 class CGuiHandler;
 class CObjectHandler;
 class CRngHandler;
 class CScriptHandler;
+class CSlotConfig;
 
 class CGameContext {
     friend class CGame;
@@ -42,6 +45,8 @@ class CGameContext {
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
     std::shared_ptr<CRngHandler> getRngHandler();
+
+    std::shared_ptr<CSlotConfig> getSlotConfiguration();
 
     bool isActive() const;
 
@@ -65,6 +70,7 @@ class CGameContext {
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
     std::shared_ptr<CRngHandler> rngHandler;
+    vstd::lazy<CSlotConfig> slotConfiguration;
     std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;
 };
