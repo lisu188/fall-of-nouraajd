@@ -5375,6 +5375,40 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_teleporter_clears_navigation_edge_when_target_is_removed(self):
+        _g, game_map, _player = load_game_map_with_player("test", "Warrior")
+        active_teleporter = find_runtime_object(game_map, "teleporter1")
+        teleporter = find_runtime_object(game_map, "teleporter2")
+        teleporter_coords = coords_tuple(teleporter.getCoords())
+
+        def navigation_neighbors(obj):
+            return sorted(coords_tuple(coord) for coord in game_map.getNavigationNeighbors(obj.getCoords()))
+
+        advance_map_only(game_map, 1)
+
+        self.assertTrue(active_teleporter.getBoolProperty("waypoint"))
+        self.assertIn(teleporter_coords, navigation_neighbors(active_teleporter))
+        revision_with_edge = game_map.getNavigationRevision()
+
+        game_map.removeObject(teleporter)
+        active_teleporter.onTurn(None)
+
+        self.assertFalse(active_teleporter.getBoolProperty("waypoint"))
+        self.assertNotIn(teleporter_coords, navigation_neighbors(active_teleporter))
+        self.assertGreater(game_map.getNavigationRevision(), revision_with_edge)
+
+        return True, json.dumps(
+            {
+                "active_name": active_teleporter.getName(),
+                "active_waypoint": active_teleporter.getBoolProperty("waypoint"),
+                "removed_target": teleporter.getName(),
+                "revision_after_remove": game_map.getNavigationRevision(),
+                "revision_with_edge": revision_with_edge,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_take_mana_clamps_at_zero(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
@@ -6808,8 +6842,56 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_multilevel_map_disables_stairs_when_target_is_blocked(self):
+        game = load_game_module()
+        g, game_map, _player = load_game_map_with_player("multilevel")
+        stairs_up = find_runtime_object(game_map, "stairsUp")
+        upper_landing = game.Coords(4, 1, 1)
+
+        def navigation_neighbors(obj):
+            return sorted(coords_tuple(coord) for coord in game_map.getNavigationNeighbors(obj.getCoords()))
+
+        advance_map_only(game_map, 1)
+
+        self.assertTrue(stairs_up.getBoolProperty("waypoint"))
+        self.assertIn(coords_tuple(upper_landing), navigation_neighbors(stairs_up))
+        revision_with_edge = game_map.getNavigationRevision()
+
+        blocker = g.createObject("CEvent")
+        blocker.setStringProperty("name", "unitBlockedUpperStairsLanding")
+        blocker.setBoolProperty("canStep", False)
+        game_map.addObject(blocker)
+        try:
+            blocker.moveTo(upper_landing.x, upper_landing.y, upper_landing.z)
+            self.assertFalse(game_map.canStep(upper_landing))
+
+            stairs_up.onTurn(None)
+            self.assertFalse(stairs_up.getBoolProperty("waypoint"))
+            self.assertNotIn(coords_tuple(upper_landing), navigation_neighbors(stairs_up))
+            revision_blocked = game_map.getNavigationRevision()
+            self.assertGreater(revision_blocked, revision_with_edge)
+
+            game_map.removeObject(blocker)
+            stairs_up.onTurn(None)
+            self.assertTrue(stairs_up.getBoolProperty("waypoint"))
+            self.assertIn(coords_tuple(upper_landing), navigation_neighbors(stairs_up))
+            self.assertGreater(game_map.getNavigationRevision(), revision_blocked)
+
+            return True, json.dumps(
+                {
+                    "landing": coords_tuple(upper_landing),
+                    "revision_blocked": revision_blocked,
+                    "revision_restored": game_map.getNavigationRevision(),
+                    "revision_with_edge": revision_with_edge,
+                    "stairs_waypoint": stairs_up.getBoolProperty("waypoint"),
+                },
+                sort_keys=True,
+            )
+        finally:
+            game_map.removeObject(blocker)
+
+    @game_test
     def test_multilevel_map_player_uses_stairs_both_directions(self):
-        _game_module = load_game_module()
         _g, game_map, player = load_game_map_with_player("multilevel")
         player_name = player.getName()
         player_hp_max = player.getHpMax()
@@ -6818,6 +6900,11 @@ class GameTest(unittest.TestCase):
 
         route = drive_multilevel_route(game_map, player)
         controller = get_player_controller(player)
+        deterministic_route = [
+            tuple(int(value) for value in step.split(","))
+            for step in game_map.getStringProperty("deterministicRoute").split(";")
+            if step
+        ]
 
         self.assertEqual((6, 5, 0), coords_tuple(player.getCoords()))
         self.assertTrue(controller.isCompleted(player))
@@ -6830,9 +6917,15 @@ class GameTest(unittest.TestCase):
         self.assertTrue(game_map.getBoolProperty("visited_upper_goal"))
         self.assertTrue(game_map.getBoolProperty("visited_lower_goal"))
         self.assertGreater(route["turns"], 0)
+        self.assertEqual((1, 1, 0), deterministic_route[0])
+        self.assertIn(route["upper_landing"], deterministic_route)
+        self.assertIn(route["upper_goal"], deterministic_route)
+        self.assertIn(route["lower_landing"], deterministic_route)
+        self.assertEqual(route["lower_goal"], deterministic_route[-1])
 
         return True, json.dumps(
             {
+                "deterministic_route": deterministic_route,
                 "final_player": coords_tuple(player.getCoords()),
                 "potion_count": player.countItems("LesserLifePotion"),
                 "route": route,
@@ -6840,6 +6933,43 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_multilevel_map_monster_pursues_player_across_levels(self):
+        g, game_map, player = load_game_map_with_player("multilevel")
+        upper_goal = find_runtime_object(game_map, "multilevelUpperGoal")
+
+        chaser = g.createObject("Cultist")
+        chaser.setStringProperty("name", "unitMultilevelPursuer")
+        controller = g.createObject("CTargetController")
+        controller.setTarget(player.getName())
+        chaser.setController(controller)
+        chaser.setBoolProperty("npc", True)
+        game_map.addObject(chaser)
+        try:
+            chaser.moveTo(upper_goal.getCoords().x, upper_goal.getCoords().y, upper_goal.getCoords().z)
+            trail = [coords_tuple(chaser.getCoords())]
+
+            for _ in range(10):
+                game_map.move()
+                pump_event_loop(2)
+                trail.append(coords_tuple(chaser.getCoords()))
+                if chaser.getCoords().z == player.getCoords().z:
+                    break
+
+            self.assertIn((4, 1, 0), trail)
+            self.assertEqual(player.getCoords().z, chaser.getCoords().z)
+
+            return True, json.dumps(
+                {
+                    "chaser": chaser.getName(),
+                    "player": coords_tuple(player.getCoords()),
+                    "trail": trail,
+                },
+                sort_keys=True,
+            )
+        finally:
+            game_map.removeObject(chaser)
 
     @game_test
     def test_multilevel_map_z_state_persists_after_save_load(self):
