@@ -474,6 +474,28 @@ detached
         self.assertEqual([], warnings)
         self.assertEqual((), report.missingRequiredChecks)
 
+    def test_merge_policy_report_flags_disabled_auto_merge(self) -> None:
+        report = controller_resource_audit.mergePolicyReportFromPayload(
+            "owner/repo",
+            {"allow_auto_merge": False, "delete_branch_on_merge": True},
+        )
+
+        errors, warnings = controller_resource_audit.evaluateMergePolicy(report)
+
+        self.assertEqual([], errors)
+        self.assertFalse(report.allowAutoMerge)
+        self.assertTrue(report.deleteBranchOnMerge)
+        self.assertTrue(any("repository auto-merge is disabled" in warning for warning in warnings), warnings)
+
+    def test_merge_policy_report_warns_when_auto_merge_field_is_missing(self) -> None:
+        report = controller_resource_audit.mergePolicyReportFromPayload("owner/repo", {})
+
+        errors, warnings = controller_resource_audit.evaluateMergePolicy(report)
+
+        self.assertEqual([], errors)
+        self.assertIsNone(report.allowAutoMerge)
+        self.assertTrue(any("auto-merge setting is missing" in warning for warning in warnings), warnings)
+
     def test_payload_includes_optional_branch_protection_report(self) -> None:
         git = controller_resource_audit.GitHealthReport(
             statusExitCode=0,
@@ -498,6 +520,11 @@ detached
             expectedChecks=("linux",),
             missingRequiredChecks=("linux",),
         )
+        merge_policy = controller_resource_audit.MergePolicyReport(
+            repo="owner/repo",
+            allowAutoMerge=False,
+            deleteBranchOnMerge=True,
+        )
 
         payload = controller_resource_audit.payload(
             Path("/repo"),
@@ -509,10 +536,13 @@ detached
             branch,
             [],
             ["owner/repo:main: branch is not protected"],
+            mergePolicy=merge_policy,
         )
 
         self.assertEqual(False, payload["branchProtection"]["protected"])
         self.assertEqual(["linux"], payload["branchProtection"]["missingRequiredChecks"])
+        self.assertEqual(False, payload["mergePolicy"]["allowAutoMerge"])
+        self.assertEqual(True, payload["mergePolicy"]["deleteBranchOnMerge"])
         self.assertEqual(False, payload["git"]["headBehindOriginMain"])
         self.assertEqual(0, payload["git"]["headAheadOriginMainCount"])
         self.assertEqual(0, payload["git"]["headBehindOriginMainCount"])
