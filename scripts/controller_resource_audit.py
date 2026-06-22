@@ -81,6 +81,14 @@ class BranchProtectionReport:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class MergePolicyReport:
+    repo: str
+    allowAutoMerge: bool | None
+    deleteBranchOnMerge: bool | None
+    error: str | None = None
+
+
 def bytesToGib(value: int) -> float:
     return value / (1024.0**3)
 
@@ -492,6 +500,41 @@ def evaluateBranchProtection(report: BranchProtectionReport | None) -> tuple[lis
     return errors, warnings
 
 
+def mergePolicyReportFromPayload(repo: str, payload: dict[str, Any]) -> MergePolicyReport:
+    allowAutoMerge = payload.get("allow_auto_merge")
+    deleteBranchOnMerge = payload.get("delete_branch_on_merge")
+    return MergePolicyReport(
+        repo=repo,
+        allowAutoMerge=allowAutoMerge if isinstance(allowAutoMerge, bool) else None,
+        deleteBranchOnMerge=deleteBranchOnMerge if isinstance(deleteBranchOnMerge, bool) else None,
+    )
+
+
+def auditMergePolicy(repo: str) -> MergePolicyReport:
+    try:
+        return mergePolicyReportFromPayload(repo, runGhApiJson(f"repos/{repo}"))
+    except RuntimeError as exc:
+        return MergePolicyReport(repo=repo, allowAutoMerge=None, deleteBranchOnMerge=None, error=str(exc))
+
+
+def evaluateMergePolicy(report: MergePolicyReport | None) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if report is None:
+        return errors, warnings
+    if report.error:
+        warnings.append(f"{report.repo}: repository merge policy could not be inspected: {report.error}")
+        return errors, warnings
+    if report.allowAutoMerge is False:
+        warnings.append(
+            f"{report.repo}: repository auto-merge is disabled; gh pr merge --auto will fail until settings change "
+            "or explicit alternate merge authorization is recorded"
+        )
+    elif report.allowAutoMerge is None:
+        warnings.append(f"{report.repo}: repository auto-merge setting is missing from GitHub metadata")
+    return errors, warnings
+
+
 def branchProtectionPayload(report: BranchProtectionReport | None) -> dict[str, Any] | None:
     if report is None:
         return None
@@ -502,6 +545,17 @@ def branchProtectionPayload(report: BranchProtectionReport | None) -> dict[str, 
         "requiredChecks": list(report.requiredChecks),
         "expectedChecks": list(report.expectedChecks),
         "missingRequiredChecks": list(report.missingRequiredChecks),
+        "error": report.error,
+    }
+
+
+def mergePolicyPayload(report: MergePolicyReport | None) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    return {
+        "repo": report.repo,
+        "allowAutoMerge": report.allowAutoMerge,
+        "deleteBranchOnMerge": report.deleteBranchOnMerge,
         "error": report.error,
     }
 
@@ -560,6 +614,7 @@ def payload(
     branchProtection: BranchProtectionReport | None,
     errors: Sequence[str],
     warnings: Sequence[str],
+    mergePolicy: MergePolicyReport | None = None,
 ) -> dict[str, Any]:
     return {
         "repoRoot": str(repoRoot),
@@ -612,6 +667,7 @@ def payload(
             ],
         },
         "branchProtection": branchProtectionPayload(branchProtection),
+        "mergePolicy": mergePolicyPayload(mergePolicy),
         "errors": list(errors),
         "warnings": list(warnings),
     }
@@ -645,6 +701,11 @@ def printHuman(report: dict[str, Any]) -> None:
             f"Branch protection: {branchProtection['repo']}:{branchProtection['branch']} "
             f"protected={protectedText}, missing checks={branchProtection['missingRequiredChecks']}"
         )
+    mergePolicy = report.get("mergePolicy")
+    if mergePolicy:
+        allowAutoMerge = mergePolicy["allowAutoMerge"]
+        allowText = "unknown" if allowAutoMerge is None else str(allowAutoMerge).lower()
+        print(f"Merge policy: {mergePolicy['repo']} allow_auto_merge={allowText}")
     for warning in report["warnings"]:
         print(f"WARNING: {warning}")
     for error in report["errors"]:
@@ -722,9 +783,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     branchProtection = None
+    mergePolicy = None
     if args.github_repo:
         expectedChecks = tuple(args.required_status_check or DEFAULT_REQUIRED_STATUS_CHECKS)
         branchProtection = auditBranchProtection(args.github_repo, args.protected_branch, expectedChecks)
+        mergePolicy = auditMergePolicy(args.github_repo)
 
     minFreeBytes = int(args.min_free_gib * 1024 * 1024 * 1024)
     errors, warnings = evaluateDiskReports(diskReports, minFreeBytes, args.max_used_percent)
@@ -734,6 +797,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     branchErrors, branchWarnings = evaluateBranchProtection(branchProtection)
     errors.extend(branchErrors)
     warnings.extend(branchWarnings)
+    mergePolicyErrors, mergePolicyWarnings = evaluateMergePolicy(mergePolicy)
+    errors.extend(mergePolicyErrors)
+    warnings.extend(mergePolicyWarnings)
     summary = worktreeSummary(worktrees)
     if summary["prunable"]:
         warnings.append(f"{summary['prunable']} prunable worktree registration(s); review and run git worktree prune")
@@ -747,6 +813,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         branchProtection,
         errors,
         warnings,
+        mergePolicy=mergePolicy,
     )
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
