@@ -64,6 +64,14 @@ class PromptInventoryTest(unittest.TestCase):
                         "ordinary PR polling should use the path-selected default, not a Linux-only command",
                     )
 
+    def test_pr_audit_policy_documents_auto_merge_blockers(self) -> None:
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in WORKFLOW_TEXT_PATHS).lower()
+
+        self.assertIn("automergeerror", combined)
+        self.assertIn("automergerequest.error", combined)
+        self.assertIn("merge_policy_blocked", combined)
+        self.assertIn("explicit alternate merge authorization", combined)
+
     def test_queue_controller_observation_policy_is_direct_and_append_only(self) -> None:
         combined = "\n".join(path.read_text(encoding="utf-8") for path in OBSERVATION_POLICY_TEXT_PATHS).lower()
 
