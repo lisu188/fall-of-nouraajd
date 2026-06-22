@@ -667,10 +667,17 @@ void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
     named_c->setType("CEffect");
     named_c->setName("slow");
 
+    auto named_with_type_id = std::make_shared<CGameObject>();
+    named_with_type_id->setType("CEffect");
+    named_with_type_id->setName("haste");
+    named_with_type_id->setTypeId("configuredHaste");
+
     expect_true(CGameObject::sameConfiguredType(named_a, named_b),
                 "sameConfiguredType should fall back to type/name when both typeIds are empty");
     expect_true(!CGameObject::sameConfiguredType(named_a, named_c),
                 "sameConfiguredType should not collapse all objects with empty typeIds");
+    expect_true(!CGameObject::sameConfiguredType(named_a, named_with_type_id),
+                "sameConfiguredType should not fall back to type/name when only one typeId is empty");
 
     auto first_map = std::make_shared<CMap>();
     auto second_map = std::make_shared<CMap>();
@@ -685,8 +692,55 @@ void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
                 "sameRuntimeIdentity should distinguish the same object name on different owning maps");
 
     CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CItem, CMapObject, CGameObject>();
+    CTypes::register_type<CQuest, CGameObject>();
     auto game = std::make_shared<CGame>();
     game->getObjectHandler()->registerType("CGameObject", []() { return std::make_shared<CGameObject>(); });
+    game->getObjectHandler()->registerType("CItem", []() { return std::make_shared<CItem>(); });
+    game->getObjectHandler()->registerType("CQuest", []() { return std::make_shared<CQuest>(); });
+
+    auto item_config = std::make_shared<json>();
+    (*item_config)["class"] = "CItem";
+    (*item_config)["properties"]["label"] = "Configured item";
+    game->getObjectHandler()->registerConfig("ComparisonItem", item_config);
+
+    auto configured_item = game->createObject<CItem>("ComparisonItem");
+    auto same_config_item = game->createObject<CItem>("ComparisonItem");
+    expect_true(configured_item && same_config_item, "test setup should create configured comparison items");
+    expect_true(!CGameObject::sameInstance(configured_item, same_config_item),
+                "two items from the same config should remain distinct live instances");
+    expect_true(CGameObject::sameConfiguredType(configured_item, same_config_item),
+                "two items from the same config should share configured type identity");
+
+    auto cloned_item = configured_item->clone<CItem>();
+    expect_true(static_cast<bool>(cloned_item), "test setup should clone configured items");
+    expect_true(!CGameObject::sameInstance(configured_item, cloned_item),
+                "cloned items should be distinct live instances");
+    expect_true(CGameObject::sameConfiguredType(configured_item, cloned_item),
+                "cloned items should retain their configured type identity");
+    expect_true(!CGameObject::sameRuntimeIdentity(configured_item, cloned_item),
+                "detached cloned items should not be treated as the same runtime map/name identity");
+
+    auto quest_config = std::make_shared<json>();
+    (*quest_config)["class"] = "CQuest";
+    (*quest_config)["properties"]["description"] = "Compare configured quests";
+    game->getObjectHandler()->registerConfig("ComparisonQuest", quest_config);
+
+    auto first_quest = game->createObject<CQuest>("ComparisonQuest");
+    auto second_quest = game->createObject<CQuest>("ComparisonQuest");
+    expect_true(first_quest && second_quest, "test setup should create configured comparison quests");
+    expect_true(!CGameObject::sameInstance(first_quest, second_quest),
+                "two quests from the same config should remain distinct quest objects");
+    expect_true(CGameObject::sameConfiguredType(first_quest, second_quest),
+                "two quests from the same config should share configured quest identity");
+
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->addQuest("ComparisonQuest");
+    player->addQuest("ComparisonQuest");
+    expect_true(player->getQuests().size() == 1,
+                "player addQuest should de-duplicate quests by configured quest identity");
 
     auto source = std::make_shared<CGameObject>();
     source->setGame(game);
