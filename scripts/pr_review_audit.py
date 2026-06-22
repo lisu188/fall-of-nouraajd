@@ -36,6 +36,10 @@ HUMAN_MERGE_STATES = {"blocked", "draft", "unknown", "unstable"}
 
 OPEN_STATES = {"open"}
 OBSOLETE_LABELS = {"duplicate", "obsolete", "superseded"}
+AUTO_MERGE_DISABLED_MARKERS = (
+    "auto_merge_is_not_allowed",
+    "enablepullrequestautomerge",
+)
 
 
 @dataclass(frozen=True)
@@ -419,6 +423,31 @@ def localSafetyBlockers(record: dict[str, Any]) -> list[str]:
     return blockers
 
 
+def autoMergePolicyBlocker(record: dict[str, Any]) -> str | None:
+    candidates = [
+        firstValue(
+            record,
+            "autoMergeError",
+            "auto_merge_error",
+            "autoMergeFailure",
+            "auto_merge_failure",
+            "mergeError",
+            "merge_error",
+            default="",
+        ),
+        nestedValue(record, "autoMerge", "error"),
+        nestedValue(record, "auto_merge", "error"),
+        nestedValue(record, "autoMergeRequest", "error"),
+        nestedValue(record, "auto_merge_request", "error"),
+    ]
+    for value in candidates:
+        text = str(value or "").strip()
+        normalized = normalizeToken(text)
+        if text and any(marker in normalized for marker in AUTO_MERGE_DISABLED_MARKERS):
+            return "repository auto-merge is disabled or unavailable"
+    return None
+
+
 def actionFromSignals(
     record: dict[str, Any],
     prType: str,
@@ -489,6 +518,11 @@ def actionFromSignals(
         blockers.append("check rollup is missing or unrecognized")
         buckets.append("human_review_required")
 
+    autoMergeBlocker = autoMergePolicyBlocker(record)
+    if autoMergeBlocker:
+        blockers.append(autoMergeBlocker)
+        buckets.append("merge_policy_blocked")
+
     queue = queuePayload(record)
     if queueClaimIsStale(queue):
         blockers.append("linked workbook claim requires recovery before merge or cleanup")
@@ -503,6 +537,8 @@ def actionFromSignals(
         return "failing_ci", buckets
     if "human_review_required" in buckets:
         return "human_review_required", buckets
+    if "merge_policy_blocked" in buckets:
+        return "merge_policy_blocked", buckets
     if "poll" in buckets:
         return "poll", buckets
     buckets.append("ready_to_merge")
@@ -520,6 +556,10 @@ def recommendedActions(actionCategory: str, prType: str, blockers: Sequence[str]
         return ["fix or re-run failed required checks before merge or cleanup"]
     if actionCategory == "needs_update_rebase":
         return ["update or rebase the branch before any merge decision"]
+    if actionCategory == "merge_policy_blocked":
+        return [
+            "request repository auto-merge settings or explicit alternate merge authorization before retrying merge"
+        ]
     if actionCategory == "obsolete_duplicate_close":
         return ["request explicit human approval before closing obsolete or duplicate work"]
     if actionCategory == "branch_cleanup_candidate":
@@ -556,6 +596,7 @@ def classifyPr(record: dict[str, Any]) -> dict[str, Any]:
         in {
             "failing_ci",
             "human_review_required",
+            "merge_policy_blocked",
             "needs_update_rebase",
             "never_touch",
             "obsolete_duplicate_close",
@@ -564,6 +605,7 @@ def classifyPr(record: dict[str, Any]) -> dict[str, Any]:
     humanApproval = actionCategory in {
         "branch_cleanup_candidate",
         "human_review_required",
+        "merge_policy_blocked",
         "never_touch",
         "obsolete_duplicate_close",
     }
