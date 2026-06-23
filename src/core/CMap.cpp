@@ -145,6 +145,60 @@ void CMap::setPlayer(std::shared_ptr<CPlayer> player) {
     player->moveTo(entryx, entryy, entryz);
 }
 
+std::shared_ptr<CPlayer> CMap::detachPlayer() {
+    auto detachedPlayer = player ? player : vstd::cast<CPlayer>(getObjectByName("player"));
+    auto canonicalPlayer = vstd::cast<CPlayer>(getObjectByName("player"));
+    if (!detachedPlayer && !canonicalPlayer) {
+        return nullptr;
+    }
+
+    if (detachedPlayer) {
+        removeObjectWithoutEvents(detachedPlayer);
+    }
+    if (canonicalPlayer && canonicalPlayer != detachedPlayer) {
+        removeObjectWithoutEvents(canonicalPlayer);
+    }
+    if (detachedPlayer) {
+        detachedPlayer->clearOwningMap(this->ptr<CMap>());
+    }
+    player.reset();
+    return detachedPlayer ? detachedPlayer : canonicalPlayer;
+}
+
+void CMap::attachPlayer(std::shared_ptr<CPlayer> player) { attachPlayer(std::move(player), getEntry()); }
+
+void CMap::attachPlayer(std::shared_ptr<CPlayer> player, Coords coords) {
+    if (!player) {
+        vstd::logger::warning("Ignoring null player attachment");
+        return;
+    }
+
+    auto existingCanonicalObject = getObjectByName("player");
+    if (existingCanonicalObject && existingCanonicalObject != player) {
+        removeObjectWithoutEvents(existingCanonicalObject);
+    }
+    if (this->player && this->player != player) {
+        removeObjectWithoutEvents(this->player);
+    }
+
+    auto map = this->ptr<CMap>();
+    player->setOwningMap(map);
+    player->setName("player");
+    player->setController(getGame()->createObject<CPlayerController>());
+    player->setFightController(getGame()->createObject<CPlayerFightController>());
+    this->player = player;
+    registerPlayerTriggers();
+
+    const auto target = normalizeCoords(coords);
+    if (getObjectByName("player") == player) {
+        player->moveTo(target);
+        return;
+    }
+
+    addObject(player);
+    player->moveTo(target);
+}
+
 bool CMap::restorePlayerAfterLoad(std::string &error) {
     std::shared_ptr<CPlayer> restoredPlayer;
     int restoredPlayerCount = 0;
@@ -428,6 +482,27 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
         mapObject->clearOwningMap(this->ptr<CMap>());
     }
     signal("objectChanged", mapObject->getCoords());
+}
+
+bool CMap::removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject) {
+    if (!mapObject) {
+        return false;
+    }
+
+    auto map_object_it = std::ranges::find_if(mapObjects, [&](const auto &entry) { return entry.second == mapObject; });
+    if (map_object_it == mapObjects.end()) {
+        return false;
+    }
+
+    const auto registeredName = map_object_it->first;
+    const auto coords = mapObject->getCoords();
+    mapObjects.erase(map_object_it);
+    vstd::erase_if(mapObjectsCache, [&registeredName](auto it) { return it.second == registeredName; });
+    mapObject->clearOwningMap(this->ptr<CMap>());
+    bumpNavigationRevision();
+    recordDirectPropertyChanged("objects");
+    signal("objectChanged", coords);
+    return true;
 }
 
 int CMap::getEntryX() { return entryx; }

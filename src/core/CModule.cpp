@@ -589,6 +589,8 @@ void init_game_module(py::module_ &m) {
     int (CMap::*getMovementCost)(Coords) = &CMap::getMovementCost;
     std::shared_ptr<CTile> (CMap::*getTile)(int, int, int) = &CMap::getTile;
     void (CMap::*addObject)(const std::shared_ptr<CMapObject> &) = &CMap::addObject;
+    void (CMap::*attachPlayerAtEntry)(std::shared_ptr<CPlayer>) = &CMap::attachPlayer;
+    void (CMap::*attachPlayerAtCoords)(std::shared_ptr<CPlayer>, Coords) = &CMap::attachPlayer;
     std::vector<Coords> (CMap::*getNavigationNeighbors)(Coords, bool) const = &CMap::getNavigationNeighbors;
 
     py::class_<CMap, CGameObject, std::shared_ptr<CMap>>(
@@ -598,6 +600,10 @@ void init_game_module(py::module_ &m) {
         .def("removeObject", &CMap::removeObject, "Remove a map object instance.")
         .def("replaceTile", &CMap::replaceTile, "Replace a tile at coordinates with a tile type id.")
         .def("getPlayer", &CMap::getPlayer, "Return the player object assigned to this map.")
+        .def("detachPlayer", &CMap::detachPlayer, "Detach and return the active player without destroy events.")
+        .def("attachPlayer", attachPlayerAtEntry,
+             "Attach a player at the map entry and run destination movement hooks.")
+        .def("attachPlayer", attachPlayerAtCoords, "Attach a player at coordinates and run destination movement hooks.")
         .def("getLocationByName", &CMap::getLocationByName, "Return Coords for a named location object.")
         .def("removeAll", &CMap::removeObjects, "Remove objects matching a predicate.")
         .def("getEventHandler", &CMap::getEventHandler, "Return the map event handler.")
