@@ -150,9 +150,9 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
         std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, mapName);
         game->setMap(map);
         if (oldMap && game->getMap()) {
-            std::shared_ptr<CPlayer> player = oldMap->getPlayer();
+            std::shared_ptr<CPlayer> player = oldMap->detachPlayer();
             if (player) {
-                game->getMap()->setPlayer(player);
+                game->getMap()->attachPlayer(player);
             }
             game->getMap()->setTurn(oldMap->getTurn());
         }

@@ -142,6 +142,12 @@ class CMap : public CGameObject {
 
     void setPlayer(std::shared_ptr<CPlayer> player);
 
+    std::shared_ptr<CPlayer> detachPlayer();
+
+    void attachPlayer(std::shared_ptr<CPlayer> player);
+
+    void attachPlayer(std::shared_ptr<CPlayer> player, Coords coords);
+
     bool restorePlayerAfterLoad(std::string &error);
 
     void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
@@ -270,6 +276,8 @@ class CMap : public CGameObject {
     std::string fallbackTileType(Coords coords) const;
 
     std::shared_ptr<CTile> resolveTileForLookup(Coords coords);
+
+    bool removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
 
     int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
 

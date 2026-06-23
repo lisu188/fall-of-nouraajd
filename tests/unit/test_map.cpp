@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
+#include "handler/CEventHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CGameObject.h"
@@ -116,6 +117,26 @@ int count_trace_event(const std::vector<json> &records, const std::string &event
     return count;
 }
 
+int count_players_on_map(const std::shared_ptr<CMap> &map) {
+    int count = 0;
+    for (const auto &object : map->getObjects()) {
+        if (std::dynamic_pointer_cast<CPlayer>(object)) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+std::size_t count_player_event_triggers(const std::shared_ptr<CMap> &map) {
+    std::size_t count = 0;
+    for (const auto &trigger : map->getEventHandler()->getTriggers()) {
+        if (trigger && trigger->getObject() == "player") {
+            ++count;
+        }
+    }
+    return count;
+}
+
 bool has_trace_event_reason(const std::vector<json> &records, const std::string &event, const std::string &reason) {
     for (const auto &record : records) {
         if (record.contains("event") && record["event"].get<std::string>() == event && record.contains("reason") &&
@@ -155,6 +176,10 @@ void test_scene_manager_state_duplicate_and_player_transfer() {
     expect_true(new_map->getTurn() == 17, "scene transition should preserve the old map turn");
     expect_true(new_map->getPlayer() == player, "scene transition should transfer the same player object");
     expect_true(player->getCoords() == new_map->getEntry(), "transferred player should land at the target map entry");
+    expect_true(old_map->getObjectByName("player") == nullptr,
+                "scene transition should detach the transferred player from the old map");
+    expect_true(count_players_on_map(old_map) == 0, "old map should not retain a stale player object after transfer");
+    expect_true(count_players_on_map(new_map) == 1, "new map should contain exactly one player after transfer");
     expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
                 "scene manager should return to idle after transition completion");
     expect_true(!manager->isTransitionPending(), "completed scene transition should clear pending state");
@@ -1151,6 +1176,73 @@ void test_map_player_trigger_registration_is_idempotent() {
     expect_true(map->getPlayer() == second_player, "setPlayer should still replace the active player");
 }
 
+void test_map_player_detach_attach_transfer_api() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto old_map = game->getMap();
+    auto player = old_map->getPlayer();
+    player->setHp(7);
+    const auto old_trigger_count = count_player_event_triggers(old_map);
+
+    auto detached_player = old_map->detachPlayer();
+
+    expect_true(detached_player == player, "detachPlayer should return the active player");
+    expect_true(old_map->getObjectByName("player") == nullptr, "detachPlayer should remove the canonical player name");
+    expect_true(count_players_on_map(old_map) == 0, "detachPlayer should leave no player object on the source map");
+    expect_true(player->getHp() == 7, "detachPlayer should not run the player onDestroy restart trigger");
+    expect_true(count_player_event_triggers(old_map) == old_trigger_count,
+                "detachPlayer should not add duplicate source-map player triggers");
+
+    auto new_map = std::make_shared<CMap>();
+    game->setMap(new_map);
+    new_map->setGame(game);
+    new_map->setEntryX(2);
+    new_map->setEntryY(1);
+    new_map->setEntryZ(0);
+
+    new_map->attachPlayer(player);
+    const auto first_attach_trigger_count = count_player_event_triggers(new_map);
+
+    expect_true(new_map->getPlayer() == player, "attachPlayer should set the active player pointer");
+    expect_true(new_map->getObjectByName("player") == player, "attachPlayer should add the canonical player object");
+    expect_true(player->getName() == "player", "attachPlayer should assign canonical player identity");
+    expect_true(std::dynamic_pointer_cast<CPlayerController>(player->getController()) != nullptr,
+                "attachPlayer should install a player controller");
+    expect_true(std::dynamic_pointer_cast<CPlayerFightController>(player->getFightController()) != nullptr,
+                "attachPlayer should install a player fight controller");
+    expect_true(player->getMap() == new_map, "attachPlayer should update map ownership");
+    expect_true(player->getCoords() == new_map->getEntry(), "attachPlayer should place the player at the entry");
+    expect_true(count_players_on_map(new_map) == 1, "attachPlayer should leave exactly one player object");
+    expect_true(new_map->getObjectCacheEntryCountForTesting() == 1,
+                "attachPlayer should create exactly one spatial cache entry for the player");
+    expect_true(first_attach_trigger_count >= 2, "attachPlayer should register player lifecycle triggers");
+
+    new_map->attachPlayer(player, Coords(4, 3, 0));
+
+    expect_true(player->getCoords() == Coords(4, 3, 0), "attachPlayer(coords) should relocate the same player");
+    expect_true(count_players_on_map(new_map) == 1, "reattaching the same player should not duplicate player objects");
+    expect_true(new_map->getObjectsAtCoords(new_map->getEntry()).empty(),
+                "reattaching the same player should clear the old spatial cache entry");
+    expect_true(new_map->getObjectsAtCoords(Coords(4, 3, 0)).contains(player),
+                "reattaching the same player should index the new spatial cache entry");
+    expect_true(new_map->getObjectCacheEntryCountForTesting() == 1,
+                "reattaching the same player should keep exactly one spatial cache entry");
+    expect_true(count_player_event_triggers(new_map) == first_attach_trigger_count,
+                "reattaching the same player should not duplicate player triggers");
+
+    auto replacement_player = game->createObject<CPlayer>("Warrior");
+    new_map->attachPlayer(replacement_player, Coords(1, 1, 0));
+
+    expect_true(new_map->getPlayer() == replacement_player, "attachPlayer should replace the active player pointer");
+    expect_true(new_map->getObjectByName("player") == replacement_player,
+                "attachPlayer should replace the canonical player object");
+    expect_true(count_players_on_map(new_map) == 1, "replacing the player should preserve the one-player invariant");
+    expect_true(!new_map->getObjects().contains(player),
+                "replacing the player should remove the previous player object");
+    expect_true(count_player_event_triggers(new_map) == first_attach_trigger_count,
+                "replacing the player should not duplicate player triggers");
+}
+
 void test_map_keeps_tiles_and_objects_separate_by_z() {
     auto map = std::make_shared<CMap>();
     map->setXBounds({{0, 4}, {1, 4}});
@@ -1265,6 +1357,7 @@ int main() {
     test_map_object_relocate_without_move_hooks_updates_spatial_state_once();
     test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes();
     test_map_player_trigger_registration_is_idempotent();
+    test_map_player_detach_attach_transfer_api();
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();
     test_animation_provider_uses_dynamic_animation_for_directory_resources();
