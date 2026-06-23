@@ -1,0 +1,25 @@
+{
+  "evidence": [
+    {
+      "mergeCommit": "5a8baf71de178a3f083adb340d58591e4bcbf1ba",
+      "mergedPr": 826,
+      "observed": {
+        "installFallbackPresent": true,
+        "saveRecoveredTreePresent": true,
+        "summaryReportsFallback": true
+      },
+      "postMergeChecks": [
+        "rg -n \"Install vcpkg deps when installed cache is missing|Save missing vcpkg installed tree|cache missing; installed with x-gha\" .github/workflows/build.yml"
+      ]
+    }
+  ],
+  "mergeCommit": "5a8baf71de178a3f083adb340d58591e4bcbf1ba",
+  "mergedPr": 826,
+  "observationId": "20260621T133018Z-ctrl-lis-2-b175230b-e328ca33",
+  "resolutionSummary": "PR #826 made the downstream Windows job recover missing vcpkg installed-cache keys by running vcpkg install with x-gha and saving the recovered installed tree.",
+  "resolvedAtUtc": "2026-06-21T16:32:10Z",
+  "resolver": "workflow-optimizer",
+  "schemaVersion": 1,
+  "sourceCommit": "9d2c1e2eac8624f21f0566cca230540d3e1a61a6",
+  "status": "resolved"
+}
