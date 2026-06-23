@@ -18,10 +18,12 @@ jobs:
           path: |
             planning/*.xlsx
             scripts/issue_queue.py
+            scripts/workbook_queue.py
             scripts/ci_change_classifier.py
             scripts/pr_review_audit.py
             scripts/workflow_observations.py
             tests/test_issue_queue.py
+            tests/test_workbook_queue.py
             tests/test_ci_change_classifier.py
             tests/test_pr_review_audit.py
             tests/test_prompt_inventory.py
