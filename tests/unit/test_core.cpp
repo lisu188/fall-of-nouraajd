@@ -90,10 +90,15 @@ struct ConceptStepCost {
     int operator()(const Coords &, const Coords &) const { return 1; }
 };
 
+constexpr int BULK_DESERIALIZATION_PROPERTY_COUNT = 12;
+
 class PropertyChangeProbe : public CGameObject {
     V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
            V_METHOD(PropertyChangeProbe, onPropertiesChanged, void, std::set<std::string>),
-           V_METHOD(PropertyChangeProbe, onLabelChanged), V_METHOD(PropertyChangeProbe, onThreatChanged))
+           V_METHOD(PropertyChangeProbe, onLabelChanged), V_METHOD(PropertyChangeProbe, onThreatChanged),
+           V_METHOD(PropertyChangeProbe, onInventoryChanged),
+           V_METHOD(PropertyChangeProbe, onObjectChanged, void, Coords),
+           V_METHOD(PropertyChangeProbe, onTileChanged, void, Coords))
 
   public:
     void onPropertyChanged(std::string property_name) { changed_properties.push_back(property_name); }
@@ -106,10 +111,19 @@ class PropertyChangeProbe : public CGameObject {
 
     void onThreatChanged() { ++threat_changed_calls; }
 
+    void onInventoryChanged() { ++inventory_changed_calls; }
+
+    void onObjectChanged(Coords coords) { object_changed_coords.push_back(coords); }
+
+    void onTileChanged(Coords coords) { tile_changed_coords.push_back(coords); }
+
     std::vector<std::string> changed_properties;
     std::vector<std::set<std::string>> changed_property_batches;
+    std::vector<Coords> object_changed_coords;
+    std::vector<Coords> tile_changed_coords;
     int label_changed_calls = 0;
     int threat_changed_calls = 0;
+    int inventory_changed_calls = 0;
 };
 
 class PrimitiveSerializationHolder : public CGameObject {
@@ -636,6 +650,66 @@ void test_property_setters_emit_change_signals() {
     expect_true(probe->threat_changed_calls == 1, "setNumericProperty should emit the property-specific signal");
 }
 
+void test_inventory_mutation_notifies_property_subscribers_once() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto creature = std::make_shared<CCreature>();
+    auto item = std::make_shared<CItem>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+
+    creature->connect("propertyChanged", probe, "onPropertyChanged");
+    creature->connect("propertiesChanged", probe, "onPropertiesChanged");
+    creature->connect("inventoryChanged", probe, "onInventoryChanged");
+
+    creature->addItem(item);
+    drain_event_loop();
+
+    expect_true((probe->changed_properties == std::vector<std::string>{"items"}),
+                "one inventory add should notify property subscribers exactly once");
+    expect_true(probe->changed_property_batches.empty(),
+                "one inventory add should not use a bulk property notification batch");
+    expect_true(probe->inventory_changed_calls == 1,
+                "one inventory add should preserve exactly one legacy inventoryChanged signal");
+}
+
+void test_map_domain_signals_emit_for_tile_and_object_changes() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto object = std::make_shared<CMapObject>();
+    object->setName("domainSignalObject");
+    object->setCanStep(true);
+    object->setCoords(Coords(0, 0, 0));
+    map->setObjects({object});
+
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    map->connect("propertyChanged", probe, "onPropertyChanged");
+    map->connect("tileChanged", probe, "onTileChanged");
+    map->connect("objectChanged", probe, "onObjectChanged");
+
+    auto tile = std::make_shared<CTile>();
+    tile->setCanStep(true);
+    map->addTile(tile, 1, 2, 0);
+
+    object->moveTo(Coords(1, 0, 0));
+    drain_event_loop();
+
+    const std::vector<Coords> expected_object_changed_coords{Coords(0, 0, 0), Coords(1, 0, 0)};
+
+    expect_true((probe->tile_changed_coords == std::vector<Coords>{Coords(1, 2, 0)}),
+                "tile mutations should still emit tileChanged for the changed coordinate");
+    expect_true(probe->object_changed_coords == expected_object_changed_coords,
+                "object movement should emit objectChanged for the old and new coordinates");
+    expect_true(std::ranges::count(probe->changed_properties, "tiles") == 1,
+                "tile domain changes should still notify generic property subscribers");
+    expect_true(std::ranges::count(probe->changed_properties, "objects") == 1,
+                "object movement should notify generic property subscribers once");
+}
+
 template <typename T, typename ValueType> bool has_primitive_value_type() {
     auto value_type = CTypes::primitiveValueType<T>();
     return CTypes::isPrimitiveType<T>() && value_type.has_value() &&
@@ -875,6 +949,37 @@ void test_object_deserialization_batches_property_notifications() {
                 "deserialization should emit one consolidated property batch with all changed fields");
     expect_true(probe->label_changed_calls == 0, "deserialization batches should suppress field-specific signals");
     expect_true(probe->threat_changed_calls == 0, "deserialization batches should suppress dynamic field signals");
+}
+
+void test_bulk_object_deserialization_notifications_stay_batched() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+    object->connect("propertiesChanged", probe, "onPropertiesChanged");
+    game->getObjectHandler()->registerType("BulkObservedObject", [object]() { return object; });
+
+    auto config = std::make_shared<json>();
+    (*config)["class"] = "BulkObservedObject";
+    std::set<std::string> expected_property_names;
+    for (int i = 0; i < BULK_DESERIALIZATION_PROPERTY_COUNT; ++i) {
+        const auto property_name = "bulkField" + std::to_string(i);
+        (*config)["properties"][property_name] = i;
+        expected_property_names.insert(property_name);
+    }
+
+    auto deserialized =
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, config);
+    drain_event_loop();
+
+    expect_true(deserialized == object, "bulk test setup should deserialize the pre-connected observed object");
+    expect_true(probe->changed_properties.empty(),
+                "bulk deserialization should not emit per-property change notifications");
+    expect_true(probe->changed_property_batches == std::vector<std::set<std::string>>{expected_property_names},
+                "bulk deserialization should emit one batch containing every changed property name");
 }
 
 void test_object_clone_batches_property_notifications() {
@@ -1331,10 +1436,13 @@ int main() {
     test_unknown_tag_rejection();
     test_tag_mutation_iteration_and_range_helpers();
     test_property_setters_emit_change_signals();
+    test_inventory_mutation_notifies_property_subscribers_once();
+    test_map_domain_signals_emit_for_tile_and_object_changes();
     test_reviewed_value_wrappers_have_explicit_primitive_metadata();
     test_nested_primitive_wrappers_serialize_direct_values_and_round_trip();
     test_nested_property_notification_batches_emit_one_deterministic_signal();
     test_object_deserialization_batches_property_notifications();
+    test_bulk_object_deserialization_notifications_stay_batched();
     test_object_clone_batches_property_notifications();
     test_game_context_owns_distinct_gui_handlers_per_game();
     test_game_context_rejects_services_without_owner_game();

@@ -20,7 +20,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
+#include "core/CTypes.h"
 #include "object/CCreature.h"
+#include "object/CItem.h"
 #include "object/CMapObject.h"
 #include "object/CTile.h"
 #include "test_harness.h"
@@ -33,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <optional>
 #include <string>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -44,6 +47,7 @@ constexpr int SHARED_TARGET_ACTORS = 40;
 constexpr int SPATIAL_MARKERS = 80;
 constexpr int SPATIAL_HOTSPOT_MARKERS = 6;
 constexpr int MODERATE_MOVE_ACTORS = 24;
+constexpr int BULK_INVENTORY_ITEM_COUNT = 96;
 
 struct MapFixture {
     std::shared_ptr<CGame> game;
@@ -51,6 +55,37 @@ struct MapFixture {
     int width = 0;
     int height = 0;
 };
+
+class NotificationCountProbe : public CGameObject {
+    V_META(NotificationCountProbe, CGameObject, V_METHOD(NotificationCountProbe, onPropertyChanged, void, std::string),
+           V_METHOD(NotificationCountProbe, onPropertiesChanged, void, std::set<std::string>),
+           V_METHOD(NotificationCountProbe, onInventoryChanged))
+
+  public:
+    void onPropertyChanged(std::string property_name) {
+        ++property_changed_calls;
+        observed_property_names.insert(std::move(property_name));
+    }
+
+    void onPropertiesChanged(std::set<std::string> property_names) {
+        ++properties_changed_calls;
+        observed_property_names.insert(property_names.begin(), property_names.end());
+    }
+
+    void onInventoryChanged() { ++inventory_changed_calls; }
+
+    int property_changed_calls = 0;
+    int properties_changed_calls = 0;
+    int inventory_changed_calls = 0;
+    std::set<std::string> observed_property_names;
+};
+
+void drain_event_loop() {
+    auto loop = vstd::event_loop<>::instance();
+    for (int i = 0; i < 5; ++i) {
+        loop->run();
+    }
+}
 
 std::shared_ptr<CTile> make_tile(const std::shared_ptr<CGame> &game, bool can_step, const std::string &tile_type) {
     auto tile = std::make_shared<CTile>();
@@ -426,6 +461,35 @@ void test_moderate_actor_map_move_turn_state_and_revision_bounds() {
                 "moderate actor turn should not add or remove map objects");
 }
 
+void test_bulk_inventory_property_notifications_are_count_bounded() {
+    CTypes::register_type_metadata<NotificationCountProbe, CGameObject>();
+
+    auto creature = std::make_shared<CCreature>();
+    auto probe = std::make_shared<NotificationCountProbe>();
+    creature->connect("propertyChanged", probe, "onPropertyChanged");
+    creature->connect("propertiesChanged", probe, "onPropertiesChanged");
+    creature->connect("inventoryChanged", probe, "onInventoryChanged");
+
+    std::set<std::shared_ptr<CItem>> items;
+    for (int i = 0; i < BULK_INVENTORY_ITEM_COUNT; ++i) {
+        auto item = std::make_shared<CItem>();
+        item->setName("bulkInventoryItem" + std::to_string(i));
+        items.insert(item);
+    }
+
+    creature->setItems(items);
+    drain_event_loop();
+
+    expect_true(probe->property_changed_calls == 0,
+                "bulk inventory replacement should not emit per-item propertyChanged signals");
+    expect_true(probe->properties_changed_calls == 1,
+                "bulk inventory replacement should emit one batched propertiesChanged signal");
+    expect_true(probe->observed_property_names == std::set<std::string>{"items"},
+                "bulk inventory property notification should report only the items property");
+    expect_true(probe->inventory_changed_calls == BULK_INVENTORY_ITEM_COUNT,
+                "legacy inventoryChanged remains item-level until GUI refresh migrates to property notifications");
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -441,4 +505,5 @@ void run_engine_hotspot_performance_tests() {
     test_irrelevant_metadata_activity_does_not_invalidate_navigation();
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
+    test_bulk_inventory_property_notifications_are_count_bounded();
 }
