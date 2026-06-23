@@ -92,6 +92,8 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void initialize();
 
+    void refresh() override;
+
     void refreshFromRefreshEvent();
 
     void refreshFromPropertyChanged(std::string propertyName);
@@ -114,6 +116,8 @@ class CListView : public CProxyTargetGraphicsObject {
     bool subscribedRefreshOnPropertyChanged = false;
 
     std::set<std::string> subscribedRefreshProperties;
+
+    bool refreshFromSubscriptionQueued = false;
 
     bool allowOversize = true;
 
