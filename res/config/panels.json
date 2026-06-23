@@ -368,6 +368,10 @@
             "grouping": true,
             "callback": "inventoryCallback",
             "collection": "inventoryCollection",
+            "dragStart": "inventoryDragStart",
+            "dragCancel": "inventoryDragCancel",
+            "dragValidate": "inventoryDropValidate",
+            "drop": "inventoryDrop",
             "layout": {
               "class": "CLayout",
               "properties": {
@@ -393,6 +397,10 @@
           "properties": {
             "callback": "equippedCallback",
             "collection": "equippedCollection",
+            "dragStart": "equippedDragStart",
+            "dragCancel": "equippedDragCancel",
+            "dragValidate": "equippedDropValidate",
+            "drop": "equippedDrop",
             "layout": {
               "class": "CLayout",
               "properties": {

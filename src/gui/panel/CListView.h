@@ -223,7 +223,8 @@ class CListView : public CProxyTargetGraphicsObject {
 
     bool canInvokeParentCallback(const std::shared_ptr<CGui> &gui, const std::shared_ptr<CGameGraphicsObject> &parent);
 
-    bool tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index, std::shared_ptr<CGameObject> &object);
+    bool tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int &index, std::shared_ptr<CGameObject> &object,
+                             bool allowEmptyCell = false);
 
     bool hasSourceDragCallbacks() const;
 
