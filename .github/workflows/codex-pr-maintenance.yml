@@ -1,0 +1,112 @@
+name: codex-pr-maintenance
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-and-validate-pr-731:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      GAME_CONFIGURE_SKIP_APT: "1"
+      GAME_CONFIGURE_SKIP_SUBMODULES: "1"
+    steps:
+      - name: Check out clean PR 731 repair branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: codex/clean-repair-pr-731
+          submodules: recursive
+          fetch-depth: 0
+      - name: Check out maintenance resolver
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          ref: codex/repair-pr-731
+          path: maintenance-tools
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Install validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
+            python3-dev pybind11-dev libboost-dev \
+            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev xvfb xauth
+          python3 -m pip install --upgrade -r requirements-dev.txt
+      - name: Merge current main and apply verified resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+          if [[ $merge_status -ne 0 ]]; then
+            echo "Merge reported the expected shared-file conflicts."
+          fi
+
+          git checkout HEAD -- src/gui/panel/CGameInventoryPanel.cpp
+          git checkout origin/main -- test.py
+          python3 maintenance-tools/scripts/maintenance_resolve_pr731.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/gui/panel/CGameInventoryPanel.cpp")
+          text = path.read_text(encoding="utf-8")
+          include = '#include "gui/CLayout.h"\n'
+          if include not in text:
+              anchor = '#include "gui/CGui.h"\n'
+              if text.count(anchor) != 1:
+                  raise RuntimeError("CLayout include anchor was not unique.")
+              text = text.replace(anchor, anchor + include, 1)
+          old = "        auto rect = list->getRect();\n"
+          new = "        auto layout = list->getLayout();\n        auto rect = layout ? layout->getRect(list) : nullptr;\n"
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise RuntimeError("Neither the legacy nor public layout rect call was found.")
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          python3 -m py_compile test.py
+          python3 -m black -l 120 test.py
+          clang-format -i src/gui/panel/CGameInventoryPanel.cpp src/gui/panel/CGameInventoryPanel.h \
+            src/gui/panel/CListView.cpp src/gui/panel/CListView.h
+
+          git add res/config/panels.json src/gui/panel/CGameInventoryPanel.cpp src/gui/panel/CGameInventoryPanel.h \
+            src/gui/panel/CListView.cpp src/gui/panel/CListView.h test.py
+          unresolved=$(git diff --name-only --diff-filter=U)
+          if [[ -n "$unresolved" ]]; then
+            echo "Unresolved conflicts remain:"
+            echo "$unresolved"
+            exit 1
+          fi
+          git diff --cached --check
+      - name: Run static validation
+        run: |
+          python3 -m py_compile test.py
+          python3 -m black --check -l 120 test.py
+          python3 -m json.tool res/config/panels.json >/dev/null
+          python3 scripts/issue_queue.py validate
+      - name: Configure and build
+        run: |
+          GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
+          cmake --build cmake-build-release --target _game -j"$(nproc)"
+      - name: Run focused inventory drag regressions
+        env:
+          GAME_XVFB_JOBS: "1"
+          GAME_XVFB_ONLY_CHILD_TESTS: test_inventory_drag_release_outside_source_equips_item,test_inventory_preselected_drag_release_equips_item,test_inventory_drag_valid_equip_unequip_and_refresh_counts,test_inventory_drag_invalid_slot_and_cancel_keep_state,test_inventory_drag_close_or_modal_panel_cancels_without_equip,test_inventory_quest_item_selection_is_ignored,test_inventory_equipped_selection_resets_inventory_selection
+        run: python3 test.py XvfbGameplayTest.test_keyboard_gameplay_under_xvfb
+      - name: Commit verified merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          git commit -m "Merge main into PR 731 and preserve inventory drop rules"
+          git push origin HEAD:codex/clean-repair-pr-731
