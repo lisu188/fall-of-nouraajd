@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "object/CCreature.h"
@@ -214,6 +215,28 @@ void test_npc_random_controller_clears_stale_blocked_path() {
     expect_true(replanned != planned, "NPC random controller should not keep a newly blocked stale next step");
     expect_true(replanned == original || map->canStep(replanned),
                 "NPC random controller should either stay put or replan to a passable step");
+}
+
+void test_ground_controller_ignores_stale_transition_generation() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 2, 1);
+    map->getTile(0, 0, 0)->setTileType("stone");
+    map->getTile(1, 0, 0)->setTileType("floor");
+
+    auto creature = creature_at(0, 0, 0);
+    creature->setGame(game);
+    creature->setName("unitStaleGroundWalker");
+    creature->setHp(1);
+    auto controller = std::make_shared<CGroundController>();
+    controller->setTileType("floor");
+    creature->setController(controller);
+    map->addObject(creature);
+
+    auto pending = controller->control(creature);
+    game->getContext()->advanceTransitionGeneration();
+
+    expect_true(resolve_coords(pending) == Coords(0, 0, 0),
+                "ground controller should ignore deferred steps from stale transition generations");
 }
 
 void test_player_controller_uses_navigation_neighbors_for_cross_level_route() {
@@ -436,6 +459,7 @@ int main() {
     test_movement_controller_null_and_no_map_paths();
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();
+    test_ground_controller_ignores_stale_transition_generation();
     test_player_controller_uses_navigation_neighbors_for_cross_level_route();
     test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();
     test_player_controller_respects_disabled_and_one_way_cross_level_edges();

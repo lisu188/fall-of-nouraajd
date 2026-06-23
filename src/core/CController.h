@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
@@ -122,6 +123,8 @@ class CPlayerFightController : public CFightController {
     std::shared_ptr<CGameFightPanel> fightPanel;
     std::weak_ptr<CMap> encounterMap;
     std::weak_ptr<CCreature> controlledCreature;
+    std::uint64_t encounterGeneration = 0;
+    bool hasEncounterGeneration = false;
     bool cancelled = false;
 
     bool hasCancelledContext(std::shared_ptr<CCreature> me);
