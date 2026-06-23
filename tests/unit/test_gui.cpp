@@ -324,6 +324,57 @@ std::shared_ptr<CLayout> fixed_layout(int x, int y, int w, int h) {
     return layout;
 }
 
+void expect_rect(std::shared_ptr<SDL_Rect> rect, int x, int y, int w, int h, const char *message) {
+    expect_true(rect && rect->x == x && rect->y == y && rect->w == w && rect->h == h, message);
+}
+
+void test_layout_runtime_overrides_preserve_serialized_percentage_layouts() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto parentLayout = std::make_shared<CLayout>();
+    parentLayout->setRect(10, 20, 200, 100);
+    parent->setLayout(parentLayout);
+
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto childLayout = std::make_shared<CLayout>();
+    childLayout->setX("10%");
+    childLayout->setY("20%");
+    childLayout->setW("50%");
+    childLayout->setH("25%");
+    child->setLayout(childLayout);
+    parent->addChild(child);
+
+    expect_rect(childLayout->getRect(child), 30, 40, 100, 25,
+                "percentage child layout should resolve from the serialized parent rectangle");
+
+    parentLayout->setRuntimeRect(15, 25, 400, 200);
+    expect_rect(childLayout->getRect(child), 55, 65, 200, 50,
+                "percentage child layout should recompute from the runtime parent rectangle");
+    expect_true(parentLayout->getX() == "10" && parentLayout->getY() == "20" && parentLayout->getW() == "200" &&
+                    parentLayout->getH() == "100",
+                "parent runtime rectangle should not rewrite serialized layout values");
+
+    childLayout->setRuntimeW(90);
+    childLayout->setRuntimeH(40);
+    expect_rect(childLayout->getRect(child), 55, 65, 90, 40,
+                "partial runtime size overrides should preserve percentage position");
+
+    childLayout->setRuntimeX(7);
+    childLayout->setRuntimeY(8);
+    expect_rect(childLayout->getRect(child), 22, 33, 90, 40,
+                "partial runtime position overrides should move relative to the current parent rectangle");
+    expect_true(childLayout->getX() == "10%" && childLayout->getY() == "20%" && childLayout->getW() == "50%" &&
+                    childLayout->getH() == "25%",
+                "child runtime rectangle should not rewrite serialized percentage layout values");
+
+    childLayout->clearRuntimeRect();
+    expect_rect(childLayout->getRect(child), 55, 65, 200, 50,
+                "clearing child runtime overrides should restore percentage resolution against the runtime parent");
+
+    parentLayout->clearRuntimeRect();
+    expect_rect(childLayout->getRect(child), 30, 40, 100, 25,
+                "clearing parent runtime overrides should restore the serialized parent rectangle");
+}
+
 void test_gui_window_is_resizable_and_guard_paths_fail_closed() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -346,6 +397,8 @@ void test_gui_window_is_resizable_and_guard_paths_fail_closed() {
     gui->setWidth(100);
     gui->setHeight(100);
     expect_true(gui->getWidth() == 320 && gui->getHeight() == 240, "GUI logical size should clamp to the minimum");
+    expect_true(gui->getLayout()->getW() == "1920" && gui->getLayout()->getH() == "1080",
+                "GUI runtime resize should not rewrite serialized root layout dimensions");
     gui->setWidth(9000);
     gui->setHeight(5000);
     expect_true(gui->getWidth() == 7680 && gui->getHeight() == 4320, "GUI logical size should clamp to the maximum");
@@ -1092,6 +1145,7 @@ void test_render_context_rejects_null_texture_and_copies_valid_texture() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
     test_widget_ignores_unarmed_non_left_clicks();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();

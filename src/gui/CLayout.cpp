@@ -77,6 +77,40 @@ void CLayout::setRect(int x, int y, int w, int h) {
 
 void CLayout::setRect(const std::shared_ptr<SDL_Rect> &rect) { setRect(rect->x, rect->y, rect->w, rect->h); }
 
+void CLayout::setRuntimeX(int x) { runtimeX = x; }
+
+void CLayout::setRuntimeY(int y) { runtimeY = y; }
+
+void CLayout::setRuntimeW(int w) { runtimeW = w; }
+
+void CLayout::setRuntimeH(int h) { runtimeH = h; }
+
+void CLayout::setRuntimeRect(int x, int y, int w, int h) {
+    setRuntimeX(x);
+    setRuntimeY(y);
+    setRuntimeW(w);
+    setRuntimeH(h);
+}
+
+void CLayout::setRuntimeRect(const std::shared_ptr<SDL_Rect> &rect) {
+    setRuntimeRect(rect->x, rect->y, rect->w, rect->h);
+}
+
+void CLayout::clearRuntimeX() { runtimeX.reset(); }
+
+void CLayout::clearRuntimeY() { runtimeY.reset(); }
+
+void CLayout::clearRuntimeW() { runtimeW.reset(); }
+
+void CLayout::clearRuntimeH() { runtimeH.reset(); }
+
+void CLayout::clearRuntimeRect() {
+    clearRuntimeX();
+    clearRuntimeY();
+    clearRuntimeW();
+    clearRuntimeH();
+}
+
 void CLayout::setHorizontal(std::string horizontal) { CLayout::horizontal = horizontal; }
 
 std::string CLayout::getHorizontal() { return horizontal; }
@@ -115,8 +149,18 @@ std::shared_ptr<SDL_Rect> CLayout::getRect(std::shared_ptr<CGameGraphicsObject> 
 
     int x = parseValue(getX(), parent->w);
     int y = parseValue(getY(), parent->h);
-    int w = horizontal == "PARENT" ? parent->w : parseValue(getW(), parent->w);
-    int h = vertical == "PARENT" ? parent->h : parseValue(getH(), parent->h);
+    int w = 0;
+    if (runtimeW) {
+        w = *runtimeW;
+    } else {
+        w = horizontal == "PARENT" ? parent->w : parseValue(getW(), parent->w);
+    }
+    int h = 0;
+    if (runtimeH) {
+        h = *runtimeH;
+    } else {
+        h = vertical == "PARENT" ? parent->h : parseValue(getH(), parent->h);
+    }
 
     if (horizontal == "LEFT" || horizontal == "PARENT") {
         x = 0;
@@ -137,6 +181,9 @@ std::shared_ptr<SDL_Rect> CLayout::getRect(std::shared_ptr<CGameGraphicsObject> 
     } else if (!vertical.empty()) {
         vstd::logger::debug("Unknown vertical layout:", vertical);
     }
+
+    x = runtimeX.value_or(x);
+    y = runtimeY.value_or(y);
 
     return CUtil::rect(parent->x + x, parent->y + y, w, h);
 }
