@@ -47,6 +47,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <set>
 #include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -442,6 +443,32 @@ class FixedStepController : public CController {
     int turnEndedCount = 0;
 };
 
+class TransitionDuringControlController : public CController {
+  public:
+    TransitionDuringControlController(std::string map_name, Coords target)
+        : mapName(std::move(map_name)), target(target) {}
+
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        return vstd::later([this, creature]() {
+            futureRan = true;
+            if (creature && creature->getGame()) {
+                creature->getGame()->changeMap(mapName);
+            }
+            return target;
+        });
+    }
+
+    void onStepCommitted(std::shared_ptr<CCreature>, const Coords &) override { committedCount++; }
+
+    void interrupt(std::shared_ptr<CCreature>) override { interruptCount++; }
+
+    std::string mapName;
+    Coords target;
+    bool futureRan = false;
+    int committedCount = 0;
+    int interruptCount = 0;
+};
+
 class MovementOriginProbeCreature : public CCreature {
   public:
     void afterMove() override {
@@ -501,6 +528,64 @@ std::shared_ptr<CCreature> test_creature(const std::shared_ptr<CGame> &game, con
     creature->setPosZ(coords.z);
     creature->setHp(creature->getHpMax());
     return creature;
+}
+
+void test_map_move_ignores_controller_future_after_transition_generation_changes() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+
+    Coords origin = ZERO;
+    Coords planned = ZERO;
+    bool found = false;
+    for (const auto &[z, bounds] : map->getBounds()) {
+        for (int y = 0; y <= bounds.second && !found; ++y) {
+            for (int x = 0; x <= bounds.first && !found; ++x) {
+                Coords candidate(x, y, z);
+                if (!map->canStep(candidate)) {
+                    continue;
+                }
+                for (const auto &delta : {EAST, WEST, SOUTH, NORTH}) {
+                    Coords step = map->normalizeCoords(candidate + delta);
+                    if (step != candidate && map->canStep(step)) {
+                        origin = candidate;
+                        planned = step;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (found) {
+            break;
+        }
+    }
+    expect_true(found, "transition-stale controller fixture should find a walkable planned step");
+    if (!found) {
+        return;
+    }
+
+    auto controller = std::make_shared<TransitionDuringControlController>("ritual", planned);
+    auto creature = test_creature(game, "transitionStaleFutureWalker", origin, controller);
+    map->addObject(creature);
+
+    map->move();
+
+    expect_true(controller->futureRan, "controller future should run during map movement");
+    expect_true(game->getSceneManager()->isTransitionPending(),
+                "controller future should queue a transition while map movement is still resolving");
+    expect_true(creature->getCoords() == origin,
+                "stale controller future result should not move a creature after transition generation changes");
+    expect_true(controller->committedCount == 0,
+                "stale controller future result should not be reported as a committed step");
+    expect_true(controller->interruptCount == 0,
+                "stale controller future result should be dropped before movement interruption callbacks");
+
+    pump_event_loop_iterations();
+
+    expect_true(game->getMap()->getMapName() == "ritual", "queued transition should still commit after movement ends");
+    expect_true(game->getMap()->getObjectByName("transitionStaleFutureWalker") == nullptr,
+                "non-player object from the old map should not be carried into the new map");
 }
 
 template <typename Func> void expect_runtime_error(Func func, const char *message) {
@@ -1345,6 +1430,7 @@ int main() {
     test_scene_manager_repeated_transitions_and_controller_usability();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
+    test_map_move_ignores_controller_future_after_transition_generation_changes();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_tile_movement_cost_deserialization();
     test_map_movement_cost_default_lookup_without_materializing();

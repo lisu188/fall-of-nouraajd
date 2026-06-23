@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CSerialization.h"
 #include "object/CItem.h"
@@ -572,6 +573,18 @@ void CMap::move() {
 
     vstd::logger::debug("Turn:", map->turn);
 
+    auto game = map->getGame();
+    auto transitionContext = game ? game->getContext() : nullptr;
+    const auto expectedGeneration =
+        transitionContext ? transitionContext->captureTransitionGeneration() : CGameContext::TransitionGeneration{0};
+    auto canApplyDeferredMoveWork = [map, transitionContext, expectedGeneration]() {
+        if (transitionContext && !transitionContext->isTransitionGenerationCurrent(expectedGeneration)) {
+            return false;
+        }
+        auto game = map->getGame();
+        return !game || game->getMap() == map;
+    };
+
     // TODO: map->applyEffects();
 
     map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
@@ -604,10 +617,14 @@ void CMap::move() {
         active_objects.push_back(object);
     }
 
-    auto controller = [coordinates](std::shared_ptr<CMapObject> object) {
+    auto controller = [coordinates, canApplyDeferredMoveWork, map](std::shared_ptr<CMapObject> object) {
         auto creature = vstd::cast<CCreature>(object);
         return creature->getController()->control(creature)->thenLater(
-            [creature, coordinates](Coords coords) { coordinates->push_back(std::make_pair(creature, coords)); });
+            [creature, coordinates, canApplyDeferredMoveWork, map](Coords coords) {
+                if (canApplyDeferredMoveWork() && creature && map->getObjectByName(creature->getName()) == creature) {
+                    coordinates->push_back(std::make_pair(creature, coords));
+                }
+            });
     };
 
     std::vector<std::shared_ptr<vstd::future<void, Coords>>> pending;
@@ -626,6 +643,9 @@ void CMap::move() {
     vstd::wait_until([&round_complete]() { return round_complete; });
 
     for (auto [creature, coords] : *coordinates) {
+        if (!canApplyDeferredMoveWork()) {
+            break;
+        }
         auto controller_ptr = creature->getController();
         if (!is_active_creature(creature)) {
             controller_ptr->interrupt(creature);
