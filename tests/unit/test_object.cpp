@@ -958,6 +958,65 @@ void test_creature_action_merge_dedupes_by_type_id() {
                 "the later name-keyed action should replace the earlier one when typeId is empty");
 }
 
+void test_creature_duplicate_attack_from_race_and_class_collapses_to_single_identity() {
+    // [EPIC_02][STORY_05][SUBSTORY_02] Deduplicate actions by stable identity.
+    // Required validation: a duplicated `Attack` configured in BOTH the race
+    // source and the class source must collapse to a single effective action of
+    // stable identity (typeId, falling back to name), with the most-specific
+    // source winning -- not two `Attack` entries accumulating from the overlap.
+    //
+    // Race / class actions funnel into the creature through the approved merge
+    // primitive `CCreature::addAction` (docs/design/creature_archetypes.md,
+    // "Creature action merge contract": setActions composes the set by calling
+    // addAction per entry, applied least-specific -> most-specific). The
+    // composed, de-duplicated set is exposed via getEffectiveInteractions().
+    auto creature = std::make_shared<CCreature>();
+
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    // (1) Race source: an innate Attack plus a race-only ability.
+    auto raceAttack = interaction("Attack", "raceAttack");
+    auto raceClaw = interaction("Claw", "raceClaw");
+    // (2) Class source: a duplicate Attack (same typeId, different instance).
+    auto classAttack = interaction("Attack", "classAttack");
+
+    // Compose least-specific -> most-specific, exactly as setActions would when
+    // merging race then class sources.
+    creature->addAction(raceAttack);
+    creature->addAction(raceClaw);
+    creature->addAction(classAttack);
+
+    auto countTypeId = [](const std::set<std::shared_ptr<CInteraction>> &set, const std::string &typeId) {
+        return std::count_if(set.begin(), set.end(),
+                             [&typeId](const auto &action) { return action && action->getTypeId() == typeId; });
+    };
+
+    // Stored action set: one Attack (class wins) plus the unique race Claw.
+    const auto actions = creature->getActions();
+    expect_true(countTypeId(actions, "Attack") == 1,
+                "an Attack duplicated across race and class sources must collapse to a single entry");
+    expect_true(actions.contains(classAttack) && !actions.contains(raceAttack),
+                "the more-specific class Attack should win over the race Attack of the same typeId");
+    expect_true(actions.contains(raceClaw), "a unique race-only action should survive the merge");
+    expect_true(actions.size() == 2, "the merged set should hold exactly one Attack plus the unique Claw");
+
+    // Effective interaction set exposes the same single-identity, deterministic
+    // composition.
+    const auto effective = creature->getEffectiveInteractions();
+    expect_true(countTypeId(effective, "Attack") == 1,
+                "the effective interaction set must expose the deduplicated Attack exactly once");
+    expect_true(effective.find(classAttack) != effective.end() && effective.find(raceAttack) == effective.end(),
+                "getEffectiveInteractions should keep the most-specific Attack identity");
+    expect_true(effective.size() == 2,
+                "the effective interaction set should contain no duplicate action identity");
+}
+
 void test_no_archetype_creature_level_up_mutates_actions_via_levelling() {
     // Regression guard (EPIC_03/STORY_01/SUBSTORY_02): a legacy creature with NO race/creatureClass
     // archetype must keep the existing level-up action mutation. CCreature::levelUp()
@@ -1457,6 +1516,7 @@ int main() {
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_action_merge_dedupes_by_type_id();
+    test_creature_duplicate_attack_from_race_and_class_collapses_to_single_identity();
     test_no_archetype_creature_level_up_mutates_actions_via_levelling();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
