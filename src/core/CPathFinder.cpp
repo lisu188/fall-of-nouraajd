@@ -32,11 +32,17 @@ constexpr int MAX_PATH_DUMP_PIXELS = 4'000'000;
 // normal navigation stays unaffected, while still failing safely on pathological inputs.
 constexpr int MAX_PATH_LENGTH = 100'000;
 constexpr long long PATHFINDER_ENVELOPE_FACTOR = 4;
-constexpr long long PATHFINDER_ENVELOPE_MARGIN = 256;
+// Additive slack on top of the goal-relative term. It must comfortably exceed the largest legitimate
+// raw-coordinate detour, including the worst case on a *wrapping* (toroidal) map where the shortest
+// path crosses an edge and a reachable cell can sit up to the full map diagonal away from the start
+// in raw coordinates. Authored maps top out at 200x200 (two-axis-corner raw span 398), so 512 keeps
+// all in-bounds navigation reachable while still bounding sparse/unbounded searches. The
+// 1,000,000-node visit cap remains the absolute ceiling.
+constexpr long long PATHFINDER_ENVELOPE_MARGIN = 512;
 
 inline long long manhattanSpan(const Coords &a, const Coords &b) {
-    return static_cast<long long>(std::abs(static_cast<long long>(a.x) - b.x)) +
-           std::abs(static_cast<long long>(a.y) - b.y) + std::abs(static_cast<long long>(a.z) - b.z);
+    return std::abs(static_cast<long long>(a.x) - b.x) + std::abs(static_cast<long long>(a.y) - b.y) +
+           std::abs(static_cast<long long>(a.z) - b.z);
 }
 
 // Maximum Manhattan distance from the start that a candidate node may have before it is discarded.

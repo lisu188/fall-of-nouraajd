@@ -546,7 +546,7 @@ void testEnvelopeBudgetBoundsUnreachableGoalInOpenPlane() {
     // explored region proportional to the start->goal span, so the search fails safely after
     // exploring a bounded neighborhood.
     const Coords start(0, 0, 0);
-    const Coords goal(64, 0, 0);
+    const Coords goal(32, 0, 0);
     CallbackCounters counters;
 
     auto can_step = [&counters, goal](const Coords &coords) {
@@ -570,10 +570,10 @@ void testEnvelopeBudgetBoundsUnreachableGoalInOpenPlane() {
     expectMetricEquals("envelope open-plane path length", static_cast<long long>(path.size()), 1);
     expect_true(!path.empty() && path.front() == start,
                 "envelope open-plane path returns start metric=1 baseline=1 threshold=1");
-    // The explored frontier is bounded by the envelope (4 * manhattan(start, goal) + 256 = 512 here),
+    // The explored frontier is bounded by the envelope (4 * manhattan(start, goal) + 512 = 640 here),
     // which limits coordinates to a finite disc; the resulting canStep calls stay far below the
     // 1,000,000-node visit ceiling, proving the envelope (not the global cap) bounded the search.
-    const long long envelope = 4 * (std::abs(goal.x - start.x) + std::abs(goal.y - start.y)) + 256;
+    const long long envelope = 4 * (std::abs(goal.x - start.x) + std::abs(goal.y - start.y)) + 512;
     // Upper bound on distinct probed coordinates: the L1 disc of radius (envelope + 1) (one ring of
     // out-of-envelope neighbors may still be probed before being discarded). The cache in the
     // pathfinder dedupes per coordinate, so this is a hard mathematical ceiling, not an empirical
