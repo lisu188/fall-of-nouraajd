@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "handler/CObjectHandler.h"
+#include "object/CCreatureRace.h"
 #include "object/CDialog.h"
 #include "object/CMarket.h"
 #include "object/CObject.h"
@@ -153,6 +154,11 @@ bool register_controllers(const NativePluginHostV1 *host) {
 bool register_creatures(const NativePluginHostV1 *host) {
     auto *game = host_game(host);
     bool registered = true;
+    // Register the race archetype definition before the concrete creatures. It
+    // derives from CGameObject (not CCreature), so configured race IDs are
+    // constructible while the class stays out of CCreature inheritance and the
+    // random-encounter / getAllSubTypes("CCreature") enumeration.
+    registered = register_type<CCreatureRace, CGameObject>(game) && registered;
     registered = register_type<CCreature, CMapObject, CGameObject>(game) && registered;
     registered = register_type<CPlayer, CCreature, CMapObject, CGameObject>(game) && registered;
     if (registered) {
