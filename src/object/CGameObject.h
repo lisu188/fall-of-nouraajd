@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 
+#include <exception>
 #include <set>
 #include <vector>
 
@@ -195,7 +196,19 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
             if (ob) {
                 if (signal == _signal) {
                     auto _slot = slot;
-                    auto task = [=]() { ob->meta()->invoke_method<void, CGameObject, Args...>(_slot, ob, args...); };
+                    auto task = [=]() {
+                        if (_slot.empty()) {
+                            return;
+                        }
+                        // Config-driven reflective slot dispatch: fail closed so a
+                        // missing / invalid signal handler name cannot crash the
+                        // event loop. Actions no-op and are logged.
+                        try {
+                            ob->meta()->invoke_method<void, CGameObject, Args...>(_slot, ob, args...);
+                        } catch (const std::exception &exception) {
+                            vstd::logger::warning("Ignoring signal slot callback failure:", _slot, exception.what());
+                        }
+                    };
                     if constexpr (now) {
                         vstd::now(task);
                     } else {
