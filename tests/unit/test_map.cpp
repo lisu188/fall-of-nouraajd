@@ -1994,6 +1994,51 @@ void test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present
                 "a cancelled encounter should leave both combatants alive and correctly indexed");
 }
 
+// Drives a full map move cycle for a player whose CPlayerController path steps directly into a
+// hostile cell. After the encounter resolves the post-combat policy returns the player to its
+// pre-step origin and the commit loop must interrupt the path controller, so a subsequent move
+// cycle does not automatically retarget the same enemy cell.
+void test_post_combat_player_path_stops_after_encounter() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta), "post-combat path-stop fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatPathStopFoe", hostile_cell);
+
+    auto controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    expect_true(controller != nullptr, "the loaded player should be driven by a CPlayerController");
+    controller->setTarget(player, hostile_cell);
+    expect_true(!controller->isCompleted(player),
+                "pathing into the hostile cell should leave the controller with a pending path");
+
+    map->move();
+
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "a player path that hits combat should leave the player at the pre-step origin");
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "a player path that hits combat must not leave the player inside the hostile cell");
+    expect_true(!hostile->isAlive(), "the path-stop encounter should resolve the hostile occupant");
+    expect_true(controller->isCompleted(player),
+                "the encounter should interrupt the path controller so no pending path remains");
+
+    // A second movement cycle must not automatically step the player back into the enemy cell
+    // from the now-cleared path.
+    map->move();
+
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "an interrupted path must not auto-retry stepping into the resolved enemy cell");
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "the player must not re-enter the hostile cell after the path is interrupted");
+}
+
 } // namespace
 
 int main() {
@@ -2038,5 +2083,6 @@ int main() {
     test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell();
     test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present();
 
+    test_post_combat_player_path_stops_after_encounter();
     return finish_tests();
 }
