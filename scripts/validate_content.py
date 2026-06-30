@@ -157,6 +157,18 @@ CREATURE_CLASS_BASE_CLASS = "CCreatureClass"
 CREATURE_ARCHETYPE_BASE_CLASSES = (CREATURE_RACE_BASE_CLASS, CREATURE_CLASS_BASE_CLASS)
 CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG)
 
+# CCreature.creatureClass reference resolution policy (EPIC_06/STORY_01/SUBSTORY_02).
+# A CCreature config carries its class template through the JSON *property*
+# "creatureClass" (CREATURE_CLASS_REFERENCE_PROPERTY) -- never the top-level object
+# constructor key "class".  That property value is itself an object node (a ref or
+# inline class) that the runtime loader resolves late; it must resolve, through any
+# ref/config chain, to a definition whose effective engine class is or inherits
+# CCreatureClass.  A value that is not an object node (a wrong-typed scalar/array), a
+# ref that does not resolve to a known config (missing), and an object that resolves
+# to a non-CCreatureClass class (wrong type) are each reported distinctly with the
+# exact "...properties.creatureClass" path.  No creature on current content sets this
+# property, so the check is forward-guarding and vacuously satisfied until authored.
+
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
 # that overrides template behavior.  Any override touching one of these properties
@@ -1392,6 +1404,7 @@ class ContentValidator:
         self._validate_object_classes(entry.path, entry.key, entry.data, known_classes)
         self._validate_object_properties(entry.path, entry.key, entry.data, visible, known_classes)
         self._validate_creature_class_actions_levelling(entry.path, entry.key, entry.data, visible)
+        self._validate_creature_class_property(entry.path, entry.key, entry.data, visible)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -2495,6 +2508,67 @@ class ContentValidator:
 
     def _class_resolves_to_interaction(self, class_name: str) -> bool:
         return class_name == INTERACTION_BASE_CLASS or self._class_inherits_from(class_name, INTERACTION_BASE_CLASS)
+
+    def _validate_creature_class_property(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        """Validate a CCreature's "creatureClass" property resolves to a CCreatureClass.
+
+        Recurses through the config tree so a creature node nested under a ref chain
+        or another object is still checked.  For every node whose effective class is or
+        inherits ``CCreature`` it inspects the *property* ``properties.creatureClass``
+        (never the top-level object-constructor key ``class``) and verifies that its
+        value is an object node resolving, through any ref/config chain, to a definition
+        whose effective class is or inherits ``CCreatureClass``.  Wrong-typed values,
+        unresolvable/missing references, and resolved-but-wrong-class targets are each
+        reported distinctly at the exact ``properties.creatureClass`` path.
+        """
+        if isinstance(value, dict):
+            if self._is_creature_node(value, visible):
+                self._validate_creature_class_reference_target(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_creature_class_property(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_creature_class_property(path, append_index(location, index), child, visible)
+
+    def _validate_creature_class_reference_target(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict) or CREATURE_CLASS_REFERENCE_PROPERTY not in properties:
+            return
+        reference = properties[CREATURE_CLASS_REFERENCE_PROPERTY]
+        reference_location = append_field(append_field(location, "properties"), CREATURE_CLASS_REFERENCE_PROPERTY)
+        if not isinstance(reference, dict):
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_CLASS_REFERENCE_PROPERTY}" expected an object resolving to '
+                f'"{CREATURE_CLASS_BASE_CLASS}"; got {json_value_kind(reference)}',
+            )
+            return
+        resolved_class = self._effective_object_class(reference, visible)
+        if resolved_class is None:
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_CLASS_REFERENCE_PROPERTY}" expected an object resolving to '
+                f'"{CREATURE_CLASS_BASE_CLASS}"; reference does not resolve to a known config',
+            )
+            return
+        if not self._class_resolves_to_creature_class(resolved_class):
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_CLASS_REFERENCE_PROPERTY}" expected an object resolving to '
+                f'"{CREATURE_CLASS_BASE_CLASS}"; got "{resolved_class}"',
+            )
+
+    def _class_resolves_to_creature_class(self, class_name: str) -> bool:
+        return class_name == CREATURE_CLASS_BASE_CLASS or self._class_inherits_from(
+            class_name, CREATURE_CLASS_BASE_CLASS
+        )
 
     def _record_effective_action_id(
         self, path: Path, location: str, action: Any, seen_action_ids: dict[str, str]
