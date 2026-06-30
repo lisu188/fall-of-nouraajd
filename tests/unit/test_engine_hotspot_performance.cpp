@@ -490,6 +490,52 @@ void test_bulk_inventory_property_notifications_are_count_bounded() {
                 "legacy inventoryChanged remains item-level until GUI refresh migrates to property notifications");
 }
 
+void test_weighted_target_flow_field_is_single_build_and_materialization_bounded() {
+    auto fixture = make_open_map(6, 3);
+    // Make the row-0 band between the chasers and the goal expensive so the weighted flow field has
+    // to route around it; this exercises movement-cost lookups during flow-field construction.
+    for (int x = 1; x <= 4; ++x) {
+        if (auto tile = fixture.map->getTile(Coords(x, 0, 0))) {
+            tile->setMovementCost(30);
+        }
+    }
+
+    const Coords goal_coords(5, 0, 0);
+    add_object(fixture, make_object(fixture, "weightedGoal", goal_coords));
+
+    std::vector<std::shared_ptr<CCreature>> chasers;
+    for (int y = 0; y < 3; ++y) {
+        auto chaser = make_actor(fixture, "weightedChaser" + std::to_string(y), Coords(0, y, 0), "weightedGoal");
+        add_object(fixture, chaser);
+        chasers.push_back(chaser);
+    }
+
+    const auto revision_before = fixture.map->getNavigationRevision();
+    const auto tiles_before = fixture.map->getTiles().size();
+    const auto objects_before = fixture.map->getObjects().size();
+
+    performance_guard::clearTargetFlowCache();
+    expect_true(performance_guard::targetFlowCacheSize() == 0, "weighted flow cache should start empty");
+    for (const auto &chaser : chasers) {
+        resolve_step(chaser);
+    }
+
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "weighted chasers sharing one goal should reuse a single target flow field");
+    expect_true(fixture.map->getNavigationRevision() == revision_before,
+                "weighted flow-field reads should not mutate the navigation revision");
+    expect_true(fixture.map->getTiles().size() == tiles_before,
+                "weighted flow-field reads should not materialize extra tiles");
+    expect_true(fixture.map->getObjects().size() == objects_before,
+                "weighted flow-field reads should not add or remove objects");
+
+    for (const auto &chaser : chasers) {
+        resolve_step(chaser);
+    }
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "repeated weighted reads should keep reusing the cached target flow field");
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -499,6 +545,7 @@ void run_engine_hotspot_performance_tests() {
     }
 
     test_many_target_controllers_share_one_goal_without_mutating_navigation();
+    test_weighted_target_flow_field_is_single_build_and_materialization_bounded();
     test_relevant_object_move_invalidates_target_navigation();
     test_relevant_tile_change_invalidates_target_navigation();
     test_navigation_edge_removal_invalidates_target_navigation();
