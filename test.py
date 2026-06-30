@@ -6582,6 +6582,133 @@ class GameTest(unittest.TestCase):
             save_path.unlink(missing_ok=True)
 
     @game_test
+    def test_repeated_save_load_does_not_duplicate_stats_or_actions(self):
+        # [EPIC_03][STORY_02][SUBSTORY_02] Repeated save -> load cycles must be idempotent for a
+        # legacy creature's effective stats and action identities: nothing may be duplicated into
+        # the concrete baseStats/actions or drift across reloads.
+        #
+        # Mirrors the save/load round-trip pattern used by
+        # test_save_load_after_scene_manager_transition_preserves_active_map_player_state (load via
+        # load_game_map_with_player -> CMapLoader.save -> CGameLoader.loadSavedGame). The target is
+        # the legacy Warrior player (res/config/monsters.json: legacy CPlayer with baseStats,
+        # equipped Sword/PlateArmor and an "Attack" action), which today resolves through the
+        # legacy fallback branch of CCreature::getStats()/getActions() (no race/creatureClass).
+        #
+        # DEFERRED (same deferral as merged PR #994's archetype round-trip assertion): the
+        # race/class-specific contract -- that race.baseStats / creatureClass.baseStats and
+        # class-granted actions stay referenced once and are never copied into the concrete
+        # creature.baseStats/actions across reloads -- cannot be asserted yet because race/class
+        # archetype objects (CCreatureClass) do not exist on main. This test pins the LEGACY case.
+        game = load_game_module()
+
+        # Numeric stat keys composing a legacy creature's effective stat block (CStats int
+        # properties, src/core/CStats.cpp). Reading every one catches duplication or drift in any
+        # contributor (baseStats, per-level growth, equipment, effects).
+        stat_keys = [
+            "strength",
+            "agility",
+            "stamina",
+            "intelligence",
+            "armor",
+            "block",
+            "dmgMin",
+            "dmgMax",
+            "hit",
+            "crit",
+            "attack",
+            "damage",
+            "fireResist",
+            "frostResist",
+            "thunderResist",
+            "shadowResist",
+            "normalResist",
+        ]
+
+        def capture_effective_stats(creature):
+            stats = creature.getStats()
+            captured = {key: stats.getNumericProperty(key) for key in stat_keys}
+            captured["mainStat"] = stats.getStringProperty("mainStat")
+            captured["mainValue"] = stats.getMainValue()
+            return captured
+
+        def capture_action_identities(creature):
+            # Action identity = (typeId, name). Returned as a sorted list so a DOUBLED action would
+            # change the list (e.g. ["Attack"] -> ["Attack", "Attack"]) and as a set so a re-keyed
+            # duplicate is still caught. A duplicated action would make the two differ in length.
+            identities = [(action.getTypeId(), action.getName()) for action in creature.getActions()]
+            return sorted(identities)
+
+        save_name = unique_save_name("reload_idempotence_legacy_creature")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+
+        try:
+            _g, game_map, player = load_game_map_with_player("test", "Warrior")
+            self.assertIsNotNone(player)
+
+            baseline_stats = capture_effective_stats(player)
+            baseline_actions = capture_action_identities(player)
+            # Sanity: the legacy Warrior must actually expose stats and at least one action,
+            # otherwise the idempotence assertions below would be vacuous.
+            self.assertTrue(baseline_actions, "legacy Warrior should expose at least one action")
+            self.assertGreater(baseline_stats["strength"], 0)
+
+            # Discrimination check: if a reload duplicated an action, the captured identity list
+            # would grow (its length would no longer match the baseline). For example, a doubled
+            # "Attack" action would turn ["Attack"] into ["Attack", "Attack"], and the assertEqual
+            # on the full sorted list below would fail. Likewise a duplicated stat contribution
+            # would inflate a numeric value and break the per-cycle assertEqual on baseline_stats.
+            baseline_action_count = len(baseline_actions)
+
+            cycle_stats = [baseline_stats]
+            cycle_actions = [baseline_actions]
+
+            current_map = game_map
+            for _cycle in range(2):
+                game.CMapLoader.save(current_map, save_name)
+
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_map = loaded_game.getMap()
+                loaded_player = loaded_map.getPlayer()
+                self.assertIsNotNone(loaded_player)
+
+                reloaded_stats = capture_effective_stats(loaded_player)
+                reloaded_actions = capture_action_identities(loaded_player)
+
+                # Idempotent: effective stats identical, no inflation/drift.
+                self.assertEqual(baseline_stats, reloaded_stats)
+                # Idempotent: action identities identical as a set and not duplicated (same count).
+                self.assertEqual(baseline_actions, reloaded_actions)
+                self.assertEqual(baseline_action_count, len(reloaded_actions))
+                self.assertEqual(set(baseline_actions), set(reloaded_actions))
+
+                cycle_stats.append(reloaded_stats)
+                cycle_actions.append(reloaded_actions)
+
+                # Feed the freshly loaded map into the next save -> load -> save -> load cycle.
+                current_map = loaded_map
+
+            # Every cycle (initial + both reloads) must agree exactly: no duplication, no drift.
+            for stats_snapshot in cycle_stats:
+                self.assertEqual(baseline_stats, stats_snapshot)
+            for actions_snapshot in cycle_actions:
+                self.assertEqual(baseline_actions, actions_snapshot)
+
+            return True, json.dumps(
+                {
+                    "actionCount": baseline_action_count,
+                    "actions": ["|".join(identity) for identity in baseline_actions],
+                    "cycles": len(cycle_stats),
+                    "mainStat": baseline_stats["mainStat"],
+                    "stats": baseline_stats,
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+            save_path.unlink(missing_ok=True)
+
+    @game_test
     def test_toroidal_map_wraps_and_survives_save_load(self):
         game = load_game_module()
 
@@ -18208,9 +18335,7 @@ class McpServerTest(unittest.TestCase):
 
     def test_engine_handle_call_rejects_out_of_bounds_set_target(self):
         server = self.make_stub_server()
-        controller, StubCoords = self._make_pathfinding_stub_handles(
-            server, x_bounds={0: 63}, y_bounds={0: 63}
-        )
+        controller, StubCoords = self._make_pathfinding_stub_handles(server, x_bounds={0: 63}, y_bounds={0: 63})
         server.handles["coords"] = StubCoords(5000, 5000, 0)
 
         result = server._engine_handle_call(
