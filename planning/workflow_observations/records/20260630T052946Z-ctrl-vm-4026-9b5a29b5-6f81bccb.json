@@ -1,0 +1,66 @@
+{
+  "affectedPaths": [
+    "planning/fall_of_nouraajd_issue_proposals.xlsx"
+  ],
+  "category": "recovery",
+  "controllerId": "ctrl-vm-4026-9b5a29b5",
+  "createdAtUtc": "2026-06-30T05:29:46Z",
+  "details": "Eight implementation pull requests merged into main on 2026-06-22/23 but their queue rows were never advanced past IN_PROGRESS via a terminal completion PR. The prior controllers (ctrl-lis-2-*, ctrl-lis-683731-*) merged the implementation work yet did not publish the required workbook-only completion, leaving the rows stale IN_PROGRESS for ~9 days.\n\nDiscovered rows -> merged implementation PR:\n- row 37 [EPIC_02][STORY_03][SUBSTORY_03] -> PR #853\n- row 42 [EPIC_02][STORY_04][SUBSTORY_02] -> PR #727\n- row 50 [EPIC_02][STORY_05][SUBSTORY_05] -> PR #802\n- row 61 [EPIC_03][STORY_02][SUBSTORY_06] -> PR #856\n- row 65 [EPIC_03][STORY_03][SUBSTORY_04] -> PR #862\n- row 95 [EPIC_05][STORY_01][SUBSTORY_04] -> PR #731\n- row 99 [EPIC_05][STORY_02][SUBSTORY_02] -> PR #860\n- row 108 [EPIC_05][STORY_04][SUBSTORY_02] -> PR #858\n\nImpact: these rows falsely occupied queue capacity, blocked their dependent issues from becoming eligible, and (because the workers were long gone) were indistinguishable from genuinely abandoned claims at the timing layer. A controller that skipped per-PR merge-state verification could have erroneously reclaimed them and caused duplicate re-implementation of already-merged work. Reconciled by controller ctrl-vm-4026-9b5a29b5 by publishing the missing completion PRs (#874, #876, #877, #878, #879, #880, #881, #882).\n",
+  "evidence": [
+    {
+      "discoveredBy": "ctrl-vm-4026-9b5a29b5",
+      "mergedImplPrWithoutCompletion": [
+        {
+          "completionPr": 878,
+          "pr": 853,
+          "row": 37
+        },
+        {
+          "completionPr": 882,
+          "pr": 727,
+          "row": 42
+        },
+        {
+          "completionPr": 880,
+          "pr": 802,
+          "row": 50
+        },
+        {
+          "completionPr": 877,
+          "pr": 856,
+          "row": 61
+        },
+        {
+          "completionPr": 879,
+          "pr": 862,
+          "row": 65
+        },
+        {
+          "completionPr": 881,
+          "pr": 731,
+          "row": 95
+        },
+        {
+          "completionPr": 874,
+          "pr": 860,
+          "row": 99
+        },
+        {
+          "completionPr": 876,
+          "pr": 858,
+          "row": 108
+        }
+      ],
+      "staleDurationDaysApprox": 9
+    }
+  ],
+  "fingerprint": "merged implementation pr left in_progress without terminal completion",
+  "id": "20260630T052946Z-ctrl-vm-4026-9b5a29b5-6f81bccb",
+  "impact": "Eight already-merged implementation rows occupied queue capacity, blocked dependents, and risked erroneous reclaim and duplicate re-implementation",
+  "phase": "completion",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "6a0f1279d19cf11d3872d14c3544f1de463ddacc",
+  "summary": "Merged implementation PRs left as stale IN_PROGRESS without terminal completion"
+}
