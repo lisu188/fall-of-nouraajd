@@ -1991,6 +1991,34 @@ void test_creature_class_metadata_round_trip() {
                 "CCreatureClass must not be enumerated as a CCreature subtype");
 }
 
+// CCreature carries optional race/creatureClass archetype-definition references
+// (null on legacy creatures). This pins the additive wiring: the accessors store
+// and return the references, usesArchetypeComposition() reflects their presence,
+// and the properties are reflectively registered (so they serialize like any other
+// V_PROPERTY). It does not change any legacy stat/level-up behavior.
+void test_creature_archetype_property_wiring() {
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+
+    auto creature = std::make_shared<CCreature>();
+    expect_true(creature->getRace() == nullptr && creature->getCreatureClass() == nullptr,
+                "race/creatureClass default to null on a legacy creature");
+    expect_true(!creature->usesArchetypeComposition(),
+                "a creature with no race/creatureClass should not use archetype composition");
+
+    creature->setRace(race);
+    expect_true(creature->getRace() == race, "setRace/getRace round-trips the reference");
+    expect_true(creature->usesArchetypeComposition(), "a creature with a race uses archetype composition");
+
+    creature->setRace(nullptr);
+    creature->setCreatureClass(klass);
+    expect_true(creature->getRace() == nullptr, "clearing the race reference is honored");
+    expect_true(creature->getCreatureClass() == klass, "setCreatureClass/getCreatureClass round-trips the reference");
+    expect_true(creature->usesArchetypeComposition(), "a creature with a creatureClass uses archetype composition");
+}
+
 } // namespace
 
 int main() {
@@ -2042,6 +2070,7 @@ int main() {
     test_creature_effective_actions_baseline_capture();
     test_creature_race_metadata_round_trip();
     test_creature_class_metadata_round_trip();
+    test_creature_archetype_property_wiring();
 
     return finish_tests();
 }

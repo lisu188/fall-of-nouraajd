@@ -42,6 +42,10 @@ class CController;
 
 class CFightController;
 
+class CCreatureRace;
+
+class CCreatureClass;
+
 typedef std::map<std::string, std::shared_ptr<CInteraction>> CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem>> CItemMap;
 
@@ -61,6 +65,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
            V_PROPERTY(CCreature, std::shared_ptr<CController>, controller, getController, setController),
            V_PROPERTY(CCreature, std::shared_ptr<CFightController>, fightController, getFightController,
                       setFightController),
+           V_PROPERTY(CCreature, std::shared_ptr<CCreatureRace>, race, getRace, setRace),
+           V_PROPERTY(CCreature, std::shared_ptr<CCreatureClass>, creatureClass, getCreatureClass, setCreatureClass),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
            V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
            V_METHOD(CCreature, getEffects, std::set<std::shared_ptr<CEffect>>))
@@ -264,6 +270,21 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     std::string getArchetypeClassLabel();
 
+    // Archetype definition references (null on legacy creatures). race/creatureClass
+    // are CGameObject-derived metadata definitions, not CCreature subtypes.
+    std::shared_ptr<CCreatureRace> getRace();
+
+    void setRace(std::shared_ptr<CCreatureRace> value);
+
+    std::shared_ptr<CCreatureClass> getCreatureClass();
+
+    void setCreatureClass(std::shared_ptr<CCreatureClass> value);
+
+    // True when this creature carries either archetype definition. Composed
+    // stat/action/level behavior branches on this so partial migrations are
+    // explicit and creatures without archetypes keep the legacy paths exactly.
+    bool usesArchetypeComposition();
+
   protected:
     virtual void levelUp();
 
@@ -278,6 +299,10 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     std::shared_ptr<CController> controller;
 
     std::shared_ptr<CFightController> fightController;
+
+    std::shared_ptr<CCreatureRace> race;
+
+    std::shared_ptr<CCreatureClass> creatureClass;
 
     std::optional<Coords> pendingMoveOrigin;
 
