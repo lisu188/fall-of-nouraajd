@@ -1963,6 +1963,130 @@ class ContentValidatorTest(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def write_creature_race_fixture(self, root):
+        """Declare synthetic CCreature + CCreatureRace metadata for race checks.
+
+        CCreature configs do not declare a "race" property on real content, so the
+        validator is vacuously satisfied there; these synthetic headers let the test
+        exercise the forward guard.  CCreatureRace and a sibling non-race class are
+        registered statically (without V_META registration) so they are constructible
+        and the inheritance check can confirm the resolved race class lineage.
+        """
+        header = root / "src/object/CCreatureRaceFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                        V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CCreature {
+                    V_META(CCreature, CGameObject,
+                        V_PROPERTY(CCreature, std::string, name, getName, setName))
+                };
+
+                class CCreatureRace {
+                    V_META(CCreatureRace, CGameObject,
+                        V_PROPERTY(CCreatureRace, std::string, label, getLabel, setLabel))
+                };
+
+                class CCreatureClass {
+                    V_META(CCreatureClass, CGameObject,
+                        V_PROPERTY(CCreatureClass, std::string, label, getLabel, setLabel))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CCreatureRaceTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerCreatureRaceTypes() {
+                    CTypes::register_type<CCreatureRace, CGameObject>();
+                    CTypes::register_type<CCreatureClass, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def test_creature_race_ref_to_creature_race_passes(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["humanRace"] = {"class": "CCreatureRace", "properties": {"label": "Human"}}
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": {"ref": "humanRace"}},
+        }
+        write_json(config_path, config)
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_race_unknown_ref_reports_ref_path(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": {"ref": "missingRace"}},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "Townsfolk.properties.race.ref",
+            'property "race" for class "CCreature" references unknown id "missingRace"; '
+            'expected a "CCreatureRace" definition',
+        )
+
+    def test_creature_race_ref_to_non_race_reports_ref_path(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        # CCreatureClass is constructible but is not a CCreatureRace lineage.
+        config["warriorClass"] = {"class": "CCreatureClass", "properties": {"label": "Warrior"}}
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": {"ref": "warriorClass"}},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "Townsfolk.properties.race.ref",
+            'property "race" for class "CCreature" expected object inheriting from '
+            '"CCreatureRace"; got "CCreatureClass"',
+        )
+
+    def test_creature_race_wrong_typed_value_reports_race_path(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": "humanRace"},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "Townsfolk.properties.race",
+            'property "race" for class "CCreature" expected object inheriting from ' '"CCreatureRace"; got string',
+        )
+
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
         for substring in substrings:

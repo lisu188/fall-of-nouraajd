@@ -83,7 +83,11 @@ BUILTIN_CLASSES = {
     "CWeapon",
 }
 REVIEWED_DYNAMIC_PROPERTIES = {
-    "CCreature": {"class"},
+    # "race" is the CCreatureRace archetype reference reviewed by
+    # _validate_creature_race_reference (EPIC_06/STORY_01/SUBSTORY_01); it is accepted
+    # as a known dynamic property so its resolution is checked rather than rejected as
+    # an unknown property.
+    "CCreature": {"class", "race"},
     "CDialogState": {"condition"},
     "CScroll": {"singleUse"},
 }
@@ -168,6 +172,18 @@ CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES
 # to a non-CCreatureClass class (wrong type) are each reported distinctly with the
 # exact "...properties.creatureClass" path.  No creature on current content sets this
 # property, so the check is forward-guarding and vacuously satisfied until authored.
+
+# CCreature.race resolution policy (EPIC_06/STORY_01/SUBSTORY_01).
+# A creature names its race archetype via the "race" property, which the runtime
+# loader resolves late through the same ref/config machinery as any object node: the
+# value is an object node ({"ref": "<raceId>"} or an inline {"class": ...}) whose
+# effective engine class must be -- or inherit from -- CCreatureRace.  A reference to
+# an unknown id, to a config whose class is not a CCreatureRace, or a wrong-typed
+# (non-object) "race" value would silently resolve to no/wrong race at load time, so
+# each is reported here against the exact path (e.g. configId.properties.race.ref).
+# CCreature configs do not declare a "race" property on current content, so this
+# check is forward-guarding and vacuously satisfied until such configs are authored.
+CREATURE_RACE_PROPERTY = "race"
 
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
@@ -1515,6 +1531,82 @@ class ContentValidator:
                     f'unknown property "{property_name}" for class "{class_name}"',
                 )
         self._validate_creature_class_main_stat(path, properties_location, class_name, properties)
+        self._validate_creature_race_reference(
+            path, properties_location, class_name, properties, visible, known_classes
+        )
+
+    def _validate_creature_race_reference(
+        self,
+        path: Path,
+        properties_location: str,
+        class_name: str,
+        properties: dict[str, Any],
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+    ) -> None:
+        """Verify a CCreature.race resolves to a CCreatureRace definition.
+
+        A creature names its race archetype through the "race" property, which the
+        engine resolves through the same ref/config machinery as any object node.  The
+        value must be an object node ({"ref": "<raceId>"} or an inline {"class": ...})
+        whose effective engine class is -- or inherits from -- CCreatureRace.  An
+        unknown reference, a reference to a config whose class is not a CCreatureRace,
+        or a wrong-typed (non-object / class-less) "race" value would silently resolve
+        to no/wrong race at load time, so each is reported against the exact path
+        (e.g. configId.properties.race.ref).  CCreature configs do not declare a "race"
+        property on current content, so this check is vacuously satisfied (forward
+        guarding) until such configs are authored.
+        """
+        if class_name != CREATURE_BASE_CLASS and not self._class_inherits_from(class_name, CREATURE_BASE_CLASS):
+            return
+        if CREATURE_RACE_PROPERTY not in properties:
+            return
+        race_value = properties[CREATURE_RACE_PROPERTY]
+        race_location = append_field(properties_location, CREATURE_RACE_PROPERTY)
+        if not isinstance(race_value, dict):
+            self._issue(
+                path,
+                race_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" expected object inheriting from '
+                f'"{CREATURE_RACE_BASE_CLASS}"; got {json_value_kind(race_value)}',
+            )
+            return
+        ref = race_value.get("ref")
+        declared_class = race_value.get("class")
+        if isinstance(ref, str):
+            reference_location = append_field(race_location, "ref")
+        elif isinstance(declared_class, str):
+            reference_location = append_field(race_location, "class")
+        else:
+            reference_location = race_location
+        if isinstance(ref, str) and ref not in visible:
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" references unknown id "{ref}"; '
+                f'expected a "{CREATURE_RACE_BASE_CLASS}" definition',
+            )
+            return
+        actual_class = self._effective_object_class(race_value, visible)
+        if actual_class is None:
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" expected object inheriting from '
+                f'"{CREATURE_RACE_BASE_CLASS}"; got object without class/ref',
+            )
+            return
+        if actual_class not in known_classes:
+            return
+        if actual_class != CREATURE_RACE_BASE_CLASS and not self._class_inherits_from(
+            actual_class, CREATURE_RACE_BASE_CLASS
+        ):
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" expected object inheriting from '
+                f'"{CREATURE_RACE_BASE_CLASS}"; got "{actual_class}"',
+            )
 
     def _validate_creature_class_main_stat(
         self,
