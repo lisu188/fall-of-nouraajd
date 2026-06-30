@@ -1477,6 +1477,37 @@ void test_game_context_owns_a_map_session_store() {
                 "context-owned store should retain maps across accessor calls");
 }
 
+class TurnCountingController : public CController {
+  public:
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        controlCalls++;
+        return vstd::later([creature]() { return creature->getCoords(); });
+    }
+
+    int controlCalls = 0;
+};
+
+void test_map_move_blocks_new_turn_while_transition_pending() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+
+    auto controller = std::make_shared<TurnCountingController>();
+    auto creature = test_creature(game, "transitionPendingWalker", ZERO, controller);
+    map->addObject(creature);
+
+    expect_true(game->getSceneManager()->requestMapChange(game, "ritual"),
+                "requesting a map change should be accepted while the scene manager is idle");
+    expect_true(game->getSceneManager()->isTransitionPending(),
+                "the scene manager should report a pending transition after the request");
+
+    const int turn_before = map->getTurn();
+    map->move();
+
+    expect_true(controller->controlCalls == 0, "no controller cycle should start while a transition is pending");
+    expect_true(map->getTurn() == turn_before, "the old map should not advance a turn while a transition is pending");
+}
+
 } // namespace
 
 int main() {
@@ -1509,6 +1540,7 @@ int main() {
     test_animation_provider_uses_dynamic_animation_for_directory_resources();
     test_map_session_store_put_get_evict_and_ownership();
     test_game_context_owns_a_map_session_store();
+    test_map_move_blocks_new_turn_while_transition_pending();
 
     return finish_tests();
 }
