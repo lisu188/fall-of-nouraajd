@@ -14330,6 +14330,52 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(spawn_states, sort_keys=True)
 
     @game_test
+    def test_siege_pritz_mage_keeps_single_wand_and_player_controller(self):
+        # Regression guard for the upcoming creature-archetype migration: the siege
+        # mage must keep referencing PritzMage, carry exactly one quest magicWand in
+        # its own inventory (not promoted into a class/race definition), and target
+        # the player. See res/maps/siege/config.json (siegePritzMage / magicWand).
+        siege_config = json.loads((MAPS_DIR / "siege" / "config.json").read_text())
+
+        mage_config = siege_config["siegePritzMage"]
+        self.assertEqual("PritzMage", mage_config.get("ref"))
+        config_items = mage_config.get("properties", {}).get("items") or []
+        self.assertEqual(["magicWand"], [item.get("ref") for item in config_items])
+        config_controller = mage_config.get("properties", {}).get("controller", {})
+        self.assertEqual("CTargetController", config_controller.get("class"))
+        self.assertEqual("player", config_controller.get("properties", {}).get("target"))
+        self.assertIn("quest", siege_config["magicWand"].get("properties", {}).get("tags", []))
+
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+
+        mage = g.createObject("siegePritzMage")
+        self.assertIsNotNone(mage)
+
+        items = list(mage.getItems())
+        self.assertNotIn(None, items)
+        self.assertEqual(["magicWand"], sorted(item.getTypeId() for item in items))
+
+        mage_json = json.loads(game.jsonify(mage))
+        mage_properties = mage_json.get("properties", {})
+        spawned_items = mage_properties.get("items") or []
+        self.assertEqual(["magicWand"], sorted(item["properties"]["typeId"] for item in spawned_items))
+        spawned_controller = mage_properties.get("controller", {})
+        self.assertEqual("CTargetController", spawned_controller.get("class"))
+        self.assertEqual("player", spawned_controller.get("properties", {}).get("target"))
+
+        return True, json.dumps(
+            {
+                "ref": mage_config.get("ref"),
+                "config_wand_refs": [item.get("ref") for item in config_items],
+                "spawned_wand_type_ids": sorted(item.getTypeId() for item in items),
+                "controller_class": spawned_controller.get("class"),
+                "controller_target": spawned_controller.get("properties", {}).get("target"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_siege_spawn_point_defers_blocking_sealed_occupied_gate(self):
         class FakeEvent:
             def __init__(self, cause):
