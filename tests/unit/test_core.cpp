@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
 #include "object/CCreature.h"
+#include "object/CCreatureRace.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
 #include "object/CInteraction.h"
@@ -1775,6 +1776,73 @@ void test_creature_effective_actions_baseline_capture() {
     std::cout << "creature-actions-baseline-levelling-unlocks-observed\t" << templatesWithLevellingUnlock << '\n';
 }
 
+// CCreatureRace is a CGameObject-derived metadata definition. This pins that it
+// round-trips through CSerialization with all of its metadata (base stats, innate
+// actions, creatureType, subtypes, playerSelectable, plus inherited label/
+// description) intact, deserializes back into a CCreatureRace (not a creature/map
+// object), and that its setters are null-safe.
+void test_creature_race_metadata_round_trip() {
+    CTypes::register_type_metadata<CCreatureRace, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CCreatureRace::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureRace>(); });
+    game->getObjectHandler()->registerType(CStats::static_meta()->name(), []() { return std::make_shared<CStats>(); });
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    auto baseStats = std::make_shared<CStats>();
+    baseStats->setStrength(7);
+    auto action = std::make_shared<CInteraction>();
+    action->setTypeId("raceStrike");
+
+    auto race = std::make_shared<CCreatureRace>();
+    race->setGame(game);
+    race->setBaseStats(baseStats);
+    race->setActions({action});
+    race->setCreatureType("humanoid");
+    race->setSubtypes({"human", "northerner"});
+    race->setPlayerSelectable(true);
+    race->setLabel("Human");
+    race->setDescription("The common folk of Nouraajd.");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(race);
+    expect_true((*serialized)["class"].get<std::string>() == CCreatureRace::static_meta()->name(),
+                "a serialized CCreatureRace should keep its metadata class identity");
+
+    auto round_trip = std::dynamic_pointer_cast<CCreatureRace>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+
+    expect_true(round_trip != nullptr,
+                "a CCreatureRace should deserialize back into a CCreatureRace, not a creature or map object");
+    expect_true(round_trip->getCreatureType() == "humanoid", "creatureType should survive the round-trip");
+    expect_true(round_trip->getSubtypes() == std::set<std::string>({"human", "northerner"}),
+                "subtypes should survive the round-trip");
+    expect_true(round_trip->isPlayerSelectable(), "playerSelectable should survive the round-trip");
+    expect_true(round_trip->getLabel() == "Human", "inherited label should survive the round-trip");
+    expect_true(round_trip->getDescription() == "The common folk of Nouraajd.",
+                "inherited description should survive the round-trip");
+    expect_true(round_trip->getBaseStats() && round_trip->getBaseStats()->getStrength() == 7,
+                "base stats should survive the round-trip");
+    expect_true(round_trip->getActions().size() == 1, "innate actions should survive the round-trip");
+
+    // Null-safety: empty/null stats and null actions must not crash aggregation.
+    auto bare = std::make_shared<CCreatureRace>();
+    bare->setBaseStats(nullptr);
+    expect_true(bare->getBaseStats() != nullptr, "null baseStats should normalize to an empty CStats");
+    bare->setActions({nullptr});
+    expect_true(bare->getActions().empty(), "null actions should be filtered out");
+
+    // A race definition is not a creature subtype, so it must never appear in the
+    // CCreature subtype enumeration.
+    auto creatureSubtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureRace::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "CCreatureRace must not be enumerated as a CCreature subtype");
+}
+
 } // namespace
 
 int main() {
@@ -1823,6 +1891,7 @@ int main() {
     test_serialization_collection_and_error_helpers();
     test_creature_effective_stats_baseline_capture();
     test_creature_effective_actions_baseline_capture();
+    test_creature_race_metadata_round_trip();
 
     return finish_tests();
 }
