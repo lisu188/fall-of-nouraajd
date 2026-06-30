@@ -34,6 +34,36 @@ standard library and do not require the compiled `_game` module. They are run
 early in CI before the native build so broken map/config/dialog refs fail before
 expensive gameplay tests.
 
+### Quest-state-transition validation
+Content validation also checks each map's quest state machine. The check is wired
+into the standard `scripts/validate_content.py` path: it lives in
+`ContentValidator._validate_quest_state_transitions(context)`, which
+`ContentValidator._validate_map_context(context)` invokes after that map's config
+JSON, dialog JSON, `map.json`, and `script.py` are loaded and after the other
+per-map checks run. Because `_validate_map_context` is called from
+`ContentValidator.validate()` (the entry point behind `validate_repo()` and the
+`scripts/validate_content.py` CLI), the quest check runs on every normal
+validation, not as a later runtime-only test, and its findings are reported as
+ordinary `ValidationIssue` errors that fail the run.
+
+For each quest key a map script declares (via `QUEST_KEYS`, `QUEST_DEFAULTS`, and
+`_set_state`/`state_in`/`get_state` usage parsed by `ScriptAnalyzer`), the check
+reports: defaults, transition writes, or state reads that reference an undeclared
+quest key (missing from `QUEST_KEYS`), and terminal completion states that are
+unreachable because they are neither the quest default nor any transition target.
+Run it the same way as the rest of content validation:
+
+```bash
+python3 scripts/validate_content.py --repo-root .
+python3 -m unittest tests.test_content_validator
+```
+
+`tests/test_content_validator.py` covers the quest-transition rules through the
+end-to-end `validate_repo()` run, including
+`test_given_bad_quest_transition_when_running_standard_validation_path_then_reported_as_error`,
+which pins that the quest validator runs inside the standard
+`ContentValidator.validate()` path rather than only via a direct helper call.
+
 For Windows Visual Studio Release builds, use the same target and CTest label with the active configuration:
 
 ```bat
