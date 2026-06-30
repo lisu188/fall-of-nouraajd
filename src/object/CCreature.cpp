@@ -570,6 +570,13 @@ std::shared_ptr<CArmor> CCreature::getArmor() { return vstd::cast<CArmor>(getIte
 
 // TODO: get rid of this, calculate level automatically
 void CCreature::levelUp() {
+    // Legacy fallback compatibility contract (docs/design/creature_archetypes.md,
+    // "Legacy fallback compatibility contract"): a creature with no race and no
+    // creatureClass uses this legacy level-up path exactly -- increment level and
+    // apply the concrete template's own `levelling` unlock (getLevelAction). No
+    // race/class-driven growth or progression participates, because those archetype
+    // objects (CCreatureRace / CCreatureClass) do not exist yet. Any future
+    // archetype level growth must slot in without altering this no-archetype path.
     level++;
     // TODO: dynamic action calculation
     addAction(getLevelAction());
@@ -846,6 +853,9 @@ std::shared_ptr<CStats> CCreature::getStats() {
     // (CCreatureClass) do not exist yet, so positions 1, 2, 4 and the class-first main
     // stat are extension points that contribute nothing today; they slot in here
     // without disturbing the equipment-then-effects tail or the legacy fallback.
+    // Legacy fallback compatibility contract (same doc, "Legacy fallback
+    // compatibility contract"): for a creature with no race and no creatureClass
+    // (every creature today) this composes the legacy stat block exactly.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
     // Main stat: creatureClass.baseStats.mainStat first (extension point), then the
     // legacy creature.baseStats.mainStat fallback below.
