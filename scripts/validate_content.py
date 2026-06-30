@@ -107,6 +107,31 @@ CREATURE_ARCHETYPE_ID_SUFFIXES = {
     CREATURE_CLASSES_CONFIG: CREATURE_CLASS_ID_SUFFIX,
 }
 
+# Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
+# Map config files reference creature templates via "ref" plus a "properties" block
+# that overrides template behavior.  Any override touching one of these properties
+# carries map-local behavior (Pritz controllers, quest-item carriers, npc dressing)
+# that a later template migration must preserve rather than flatten.  The native
+# CCreature template spells "stats" as the baseStats/levelStats pair and "labels"
+# as the singular "label" key, so both spellings are watched here.
+CREATURE_BASE_CLASS = "CCreature"
+CREATURE_OVERRIDE_PROPERTIES = (
+    "baseStats",
+    "levelStats",
+    "stats",
+    "actions",
+    "controller",
+    "fightController",
+    "affiliation",
+    "items",
+    "equipped",
+    "sw",
+    "animation",
+    "npc",
+    "label",
+    "labels",
+)
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -123,6 +148,27 @@ class ConfigEntry:
     key: str
     data: Any
     path: Path
+
+
+@dataclass(frozen=True)
+class CreatureOverride:
+    path: str
+    key: str
+    location: str
+    template: str
+    properties: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "path": self.path,
+            "key": self.key,
+            "location": self.location,
+            "template": self.template,
+            "properties": list(self.properties),
+        }
+
+    def __str__(self) -> str:
+        return f"{self.path}: {self.location}: ref \"{self.template}\" overrides {', '.join(self.properties)}"
 
 
 @dataclass(frozen=True)
@@ -727,6 +773,64 @@ class ContentValidator:
         for context in self.map_contexts:
             self._validate_map_context(context)
         return sorted(self.issues, key=lambda issue: (issue.path, issue.location, issue.message))
+
+    def inventory_creature_overrides(self) -> list[CreatureOverride]:
+        """Enumerate every map-local creature reference that overrides template behavior.
+
+        This shares the class-resolution machinery used by validation but does not
+        emit validation issues or affect exit status; it is a read-only report used
+        to guard a later creature-template migration against losing map-local
+        behavior (controllers, quest-item carriers, npc dressing).
+        """
+        self._collect_engine_classes()
+        self._collect_plugin_classes()
+        self._load_global_configs()
+        self._load_maps()
+        overrides: list[CreatureOverride] = []
+        for context in self.map_contexts:
+            visible = self._visible_entries(context)
+            for entry in context.config_entries.values():
+                self._collect_creature_overrides(entry.path, entry.key, entry.key, entry.data, visible, overrides)
+        return sorted(overrides, key=lambda override: (override.path, override.location))
+
+    def _collect_creature_overrides(
+        self,
+        path: Path,
+        key: str,
+        location: str,
+        value: Any,
+        visible: dict[str, ConfigEntry],
+        overrides: list[CreatureOverride],
+    ) -> None:
+        if isinstance(value, dict):
+            properties = value.get("properties")
+            if isinstance(value.get("ref"), str) and isinstance(properties, dict) and self._is_creature_node(value, visible):
+                overridden = tuple(name for name in CREATURE_OVERRIDE_PROPERTIES if name in properties)
+                if overridden:
+                    overrides.append(
+                        CreatureOverride(
+                            path=self._rel(path),
+                            key=key,
+                            location=location,
+                            template=value["ref"],
+                            properties=overridden,
+                        )
+                    )
+            for child_key, child in value.items():
+                self._collect_creature_overrides(
+                    path, key, append_field(location, child_key), child, visible, overrides
+                )
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._collect_creature_overrides(path, key, append_index(location, index), child, visible, overrides)
+
+    def _is_creature_node(self, value: dict[str, Any], visible: dict[str, ConfigEntry]) -> bool:
+        class_name = self._effective_object_class(value, visible)
+        if not isinstance(class_name, str):
+            return False
+        if class_name == CREATURE_BASE_CLASS:
+            return True
+        return self._class_inherits_from(class_name, CREATURE_BASE_CLASS)
 
     def _collect_engine_classes(self) -> None:
         source_roots = [self.repo_root / "src"]
@@ -2227,10 +2331,25 @@ def validate_repo(repo_root: Path | str) -> list[ValidationIssue]:
     return ContentValidator(Path(repo_root)).validate()
 
 
+def inventory_creature_overrides(repo_root: Path | str) -> list[CreatureOverride]:
+    return ContentValidator(Path(repo_root)).inventory_creature_overrides()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate game JSON resources and literal script refs.")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--report-creature-overrides",
+        action="store_true",
+        help="Print the map-local creature override inventory as JSON and exit without validating.",
+    )
     args = parser.parse_args(argv)
+
+    if args.report_creature_overrides:
+        overrides = inventory_creature_overrides(args.repo_root)
+        json.dump([override.as_dict() for override in overrides], sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
 
     issues = validate_repo(args.repo_root)
     if issues:
