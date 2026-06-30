@@ -334,6 +334,32 @@ void test_target_controller_flow_field_prefers_longer_lower_cost_route() {
     expect_true(chaser->getCoords() == target->getCoords(), "target weighted detour should reach the target");
 }
 
+void test_player_controller_prefers_cheap_navigation_edge_over_expensive_band() {
+    auto game = std::make_shared<CGame>();
+    auto map = weighted_detour_map(game);
+    // A bidirectional waypoint edge spans the expensive row-0 band. Its step cost is the destination
+    // tile cost (1), not the 30-cost band, so weighted pathing must cross the edge instead of taking
+    // the expensive direct row or the longer cheap detour.
+    add_navigation_edge(map, Coords(0, 0, 0), Coords(4, 0, 0), true);
+
+    const auto tiles_before = map->getTiles().size();
+
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+    controller->setTarget(player, Coords(4, 0, 0));
+
+    auto first_step = resolve_coords(controller->control(player));
+    expect_true(first_step == Coords(4, 0, 0),
+                "weighted pathing should cross the cheap waypoint edge rather than the expensive band or detour");
+    player->moveTo(first_step);
+    controller->onStepCommitted(player, first_step);
+
+    expect_true(player->getCoords() == Coords(4, 0, 0), "the weighted edge crossing should reach the target");
+    expect_true(controller->isCompleted(player), "reaching the target through the edge should complete the controller");
+    expect_true(map->getTiles().size() == tiles_before, "weighted edge pathing should not materialize extra tiles");
+}
+
 void test_player_controller_uses_navigation_neighbors_for_cross_level_route() {
     auto game = std::make_shared<CGame>();
     auto map = open_tile_map(game, 3, 1, 2);
@@ -731,6 +757,7 @@ int main() {
     test_player_controller_prefers_longer_lower_cost_route();
     test_npc_random_controller_prefers_longer_lower_cost_route();
     test_target_controller_flow_field_prefers_longer_lower_cost_route();
+    test_player_controller_prefers_cheap_navigation_edge_over_expensive_band();
     test_player_controller_uses_navigation_neighbors_for_cross_level_route();
     test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();
     test_player_controller_respects_disabled_and_one_way_cross_level_edges();
