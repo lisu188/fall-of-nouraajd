@@ -715,6 +715,69 @@ void test_no_archetype_creature_stats_keep_legacy_composition() {
     });
 }
 
+void test_creature_stat_precedence_orders_sources_and_main_stat() {
+    // Pins the approved creature stat precedence contract
+    // (docs/design/creature_archetypes.md, "Creature stat precedence contract"):
+    // effective stats compose, least- to most-specific, as
+    //   race.baseStats -> creatureClass.baseStats -> creature.baseStats ->
+    //   creatureClass.levelStats (per level) -> creature.levelStats (per level) ->
+    //   equipment -> effects,
+    // and the composed mainStat is taken from creatureClass.baseStats first, falling
+    // back to legacy creature.baseStats when no class is present. The race /
+    // creatureClass archetype objects do not exist yet, so this pins the currently
+    // implemented portion (positions 3, 5, 6, 7) and the legacy main-stat fallback.
+    auto creature = std::make_shared<CCreature>();
+
+    // Each currently-implemented source contributes to the SAME property (intelligence)
+    // so the test proves every later source is layered on top of (does not discard) the
+    // earlier ones, in the documented order.
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence"); // legacy creature.baseStats mainStat -> the fallback
+    base->setIntelligence(10);         // 3. creature.baseStats
+    creature->setBaseStats(base);
+
+    auto level_stats = std::make_shared<CStats>();
+    level_stats->setIntelligence(2); // 5. creature.levelStats, applied once per level
+    creature->setLevelStats(level_stats);
+
+    const int level = 3;
+    creature->setLevel(level);
+
+    auto equip_bonus = std::make_shared<CStats>();
+    equip_bonus->setIntelligence(5); // 6. equipment
+    auto item = std::make_shared<CItem>();
+    item->setBonus(equip_bonus);
+    creature->setEquipped({{"0", item}});
+
+    auto effect_bonus = std::make_shared<CStats>();
+    effect_bonus->setIntelligence(7); // 7. effects (most specific implemented source)
+    auto effect = std::make_shared<CEffect>();
+    effect->setBonus(effect_bonus);
+    creature->setEffects({effect});
+
+    auto stats = creature->getStats();
+
+    // Each source is layered in order, so the composed value is the running total of
+    // every documented stage; dropping or reordering any stage changes this number.
+    const int expected_intelligence = 10 /*base*/ + level * 2 /*levelStats*/ + 5 /*equip*/ + 7 /*effects*/;
+    expect_true(stats->getIntelligence() == expected_intelligence,
+                "stat precedence should layer base + level*levelStats + equipment + effects in order");
+
+    // Main stat is selected (not accumulated): with no creatureClass it falls back to
+    // the legacy creature.baseStats mainStat, and getMainValue reads it from the fully
+    // composed block.
+    expect_true(stats->getMainStat() == "intelligence",
+                "composed main stat should fall back to legacy creature baseStats when no class is present");
+    expect_true(stats->getMainValue() == expected_intelligence,
+                "main value should read the selected main stat out of the fully composed stat block");
+
+    // Sanity: dropping the most-specific implemented source (effects) must lower the
+    // result, proving effects really are part of the composed order (last wins on top).
+    creature->setEffects({});
+    expect_true(creature->getStats()->getIntelligence() == expected_intelligence - 7,
+                "removing the effects source should remove exactly its contribution from the composed stat");
+}
+
 void test_creature_archetype_identity_accessors_use_fallbacks() {
     auto creature = std::make_shared<CCreature>();
 
@@ -1112,6 +1175,66 @@ void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
                 "equivalentValue should reject unsupported cyclic object-reference graphs safely");
 }
 
+class TypedSignalProbe : public CGameObject {
+    V_META(TypedSignalProbe, CGameObject, V_METHOD(TypedSignalProbe, onPropertyChanged, void, std::string),
+           V_METHOD(TypedSignalProbe, onInventoryChanged))
+
+  public:
+    void onPropertyChanged(std::string property_name) { changedProperties.insert(std::move(property_name)); }
+
+    void onInventoryChanged() { ++inventoryChangedCalls; }
+
+    std::set<std::string> changedProperties;
+    int inventoryChangedCalls = 0;
+};
+
+void test_dynamic_property_cannot_spoof_typed_engine_signal() {
+    CTypes::register_type_metadata<TypedSignalProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<TypedSignalProbe>();
+
+    // A subscriber to the typed engine signal "inventoryChanged" (as CCreature emits
+    // it). A dynamic/runtime property literally named "inventory" derives the same
+    // "inventoryChanged" channel name in notifyPropertyChanged -> must be dropped fail
+    // closed so the dynamic property cannot fire (spoof) the typed engine slot.
+    object->connect("inventoryChanged", probe, "onInventoryChanged");
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+
+    object->setStringProperty("inventory", "spoofed");
+    drain_event_loop();
+
+    expect_true(probe->inventoryChangedCalls == 0,
+                "a dynamic property named like a typed engine signal must not fire the typed signal's slot");
+    expect_true(probe->changedProperties.contains("inventory"),
+                "the generic propertyChanged channel must still report the dynamic property change");
+
+    // A non-colliding dynamic property still reaches its per-property "<name>Changed"
+    // subscriber (the namespace guard only suppresses reserved typed-signal names).
+    auto specific_probe = std::make_shared<TypedSignalProbe>();
+    object->connect("threatChanged", specific_probe, "onInventoryChanged");
+    object->setNumericProperty("threat", 1);
+    drain_event_loop();
+    expect_true(specific_probe->inventoryChangedCalls == 1,
+                "a non-colliding dynamic property must still fire its per-property notification slot");
+}
+
+void test_typed_engine_signal_still_fires_directly() {
+    CTypes::register_type_metadata<TypedSignalProbe, CGameObject>();
+    auto creature = std::make_shared<CCreature>();
+    auto probe = std::make_shared<TypedSignalProbe>();
+
+    // The real typed engine signal (emitted directly via signal("inventoryChanged"))
+    // must still reach its slot; the reserved-name guard only blocks the dynamic
+    // property channel, never direct typed emission.
+    creature->connect("inventoryChanged", probe, "onInventoryChanged");
+    creature->addItem(std::make_shared<CItem>());
+    drain_event_loop();
+
+    expect_true(probe->inventoryChangedCalls >= 1,
+                "directly emitted typed engine signals must still reach their slots");
+}
+
 void test_signal_slots_fail_closed_on_bad_config() {
     CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
 
@@ -1141,6 +1264,8 @@ void test_signal_slots_fail_closed_on_bad_config() {
 
 int main() {
     test_signal_slots_fail_closed_on_bad_config();
+    test_dynamic_property_cannot_spoof_typed_engine_signal();
+    test_typed_engine_signal_still_fires_directly();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
@@ -1154,6 +1279,7 @@ int main() {
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_no_archetype_creature_stats_keep_legacy_composition();
+    test_creature_stat_precedence_orders_sources_and_main_stat();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_action_merge_dedupes_by_type_id();

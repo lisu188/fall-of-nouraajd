@@ -62,6 +62,7 @@ jobs:
         run: |
           python3 scripts/validate_content.py --repo-root .
           python3 -m unittest tests.test_content_validator
+          python3 -m unittest tests.test_creature_stat_scale_baseline
       - name: test (python fast)
         run: python3 test.py --suite fast
       - name: classify changed paths
@@ -370,6 +371,7 @@ jobs:
         run: |
           python scripts/validate_content.py --repo-root .
           python -m unittest tests.test_content_validator
+          python -m unittest tests.test_creature_stat_scale_baseline
       - name: test (python fast)
         run: python test.py --suite fast
       - &setup-msvc
@@ -633,6 +635,7 @@ jobs:
         run: |
           python scripts/validate_content.py --repo-root .
           python -m unittest tests.test_content_validator
+          python -m unittest tests.test_creature_stat_scale_baseline
       - name: test (python fast)
         run: python test.py --suite fast
       - *setup-msvc

@@ -83,7 +83,11 @@ BUILTIN_CLASSES = {
     "CWeapon",
 }
 REVIEWED_DYNAMIC_PROPERTIES = {
-    "CCreature": {"class"},
+    # "race" is the CCreatureRace archetype reference reviewed by
+    # _validate_creature_race_reference (EPIC_06/STORY_01/SUBSTORY_01); it is accepted
+    # as a known dynamic property so its resolution is checked rather than rejected as
+    # an unknown property.
+    "CCreature": {"class", "race"},
     "CDialogState": {"condition"},
     "CScroll": {"singleUse"},
 }
@@ -115,6 +119,123 @@ CREATURE_ARCHETYPE_ID_SUFFIXES = {
     CREATURE_CLASSES_CONFIG: CREATURE_CLASS_ID_SUFFIX,
 }
 
+# CCreatureClass.mainStat validation (EPIC_06/STORY_02/SUBSTORY_01).
+# A creature class archetype names the stat it scales from via the "mainStat"
+# property, which the engine resolves at runtime through CStats::getMainValue ->
+# CStats::getNumericProperty(mainStat).  That lookup only succeeds when the value
+# names one of CStats' numeric (int) metadata properties; a typo such as
+# "strenght" would silently resolve to 0 main value at runtime.  The allowed names
+# are derived from the live CStats metadata schema (the int-typed properties), never
+# hard-coded, so the check stays in lockstep with src/core/CStats.h.  CCreatureClass
+# configs do not exist on the current content, so this validator is forward-guarding
+# and vacuously satisfied until such archetypes are authored.
+CREATURE_CLASS_OBJECT_CLASS = "CCreatureClass"
+CREATURE_CLASS_MAIN_STAT_PROPERTY = "mainStat"
+MAIN_STAT_SCHEMA_CLASS = "CStats"
+MAIN_STAT_NUMERIC_TYPE_TOKEN = "int"
+
+# CCreatureClass action/levelling resolution policy (EPIC_06/STORY_02/SUBSTORY_02).
+# A CCreatureClass definition grants interactions through two property blocks that
+# the runtime loader resolves late: "actions" is a list of object nodes (each a
+# ref or inline class) that must each resolve to a CInteraction, and "levelling" is
+# a map keyed by the level at which an interaction is unlocked -- the keys must be
+# positive-integer strings and the values must each resolve to a CInteraction. The
+# same effective action id must not be granted twice within one class definition
+# (whether through "actions" or "levelling"), since a duplicate silently shadows the
+# earlier grant at load time instead of being reported.
+CREATURE_CLASS_CONSTRUCTOR_CLASS = "CCreatureClass"
+CREATURE_CLASS_ACTIONS_PROPERTY = "actions"
+CREATURE_CLASS_LEVELLING_PROPERTY = "levelling"
+INTERACTION_BASE_CLASS = "CInteraction"
+
+# CCreatureRace stat/action/type validation (EPIC_06/STORY_03/SUBSTORY_01).
+# A CCreatureRace definition carries the per-race template fields the engine merges
+# into a creature: "baseStats" is a CStats payload whose keys must each name a CStats
+# metadata property (a typo such as "strenght" would be silently dropped at load
+# time), "actions" is a list of object nodes that must each resolve to a CInteraction
+# (the same resolution the class actions validator enforces), and "creatureType" /
+# "subtypes" tag the race for type-driven lookups.  For now the type fields are
+# DATA-ONLY -- the only rule is that "creatureType" is a non-empty string and every
+# "subtypes" entry is a non-empty string; no mechanical type semantics are invented.
+# The allowed baseStats keys are derived from the live CStats metadata schema so they
+# stay in lockstep with src/core/CStats.h, and CInteraction resolution reuses the
+# class-action helper.  CCreatureRace configs do not exist on current content, so this
+# check is vacuously satisfied (forward-guarding) until such archetypes are authored.
+CREATURE_RACE_CONSTRUCTOR_CLASS = "CCreatureRace"
+CREATURE_RACE_BASE_STATS_PROPERTY = "baseStats"
+CREATURE_RACE_ACTIONS_PROPERTY = "actions"
+CREATURE_RACE_TYPE_PROPERTY = "creatureType"
+CREATURE_RACE_SUBTYPES_PROPERTY = "subtypes"
+CREATURE_RACE_STATS_SCHEMA_CLASS = "CStats"
+
+# Archetype-definition base classes (EPIC_06/STORY_04/SUBSTORY_02).
+# CCreatureRace and CCreatureClass configs are *referenced definitions* (a race or
+# class template carried by a creature via the "creatureClass"/race reference
+# property), never actors that can be instantiated onto a map or spawned at
+# runtime.  Any config whose effective engine class is one of these -- or which is
+# declared in the dedicated archetype config files -- must therefore be rejected
+# when used as a concrete spawn target: map object types, map tile types, and
+# createObject/addObjectByName script calls.
+CREATURE_RACE_BASE_CLASS = "CCreatureRace"
+CREATURE_CLASS_BASE_CLASS = "CCreatureClass"
+CREATURE_ARCHETYPE_BASE_CLASSES = (CREATURE_RACE_BASE_CLASS, CREATURE_CLASS_BASE_CLASS)
+CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG)
+
+# CCreature.creatureClass reference resolution policy (EPIC_06/STORY_01/SUBSTORY_02).
+# A CCreature config carries its class template through the JSON *property*
+# "creatureClass" (CREATURE_CLASS_REFERENCE_PROPERTY) -- never the top-level object
+# constructor key "class".  That property value is itself an object node (a ref or
+# inline class) that the runtime loader resolves late; it must resolve, through any
+# ref/config chain, to a definition whose effective engine class is or inherits
+# CCreatureClass.  A value that is not an object node (a wrong-typed scalar/array), a
+# ref that does not resolve to a known config (missing), and an object that resolves
+# to a non-CCreatureClass class (wrong type) are each reported distinctly with the
+# exact "...properties.creatureClass" path.  No creature on current content sets this
+# property, so the check is forward-guarding and vacuously satisfied until authored.
+
+# CCreature.race resolution policy (EPIC_06/STORY_01/SUBSTORY_01).
+# A creature names its race archetype via the "race" property, which the runtime
+# loader resolves late through the same ref/config machinery as any object node: the
+# value is an object node ({"ref": "<raceId>"} or an inline {"class": ...}) whose
+# effective engine class must be -- or inherit from -- CCreatureRace.  A reference to
+# an unknown id, to a config whose class is not a CCreatureRace, or a wrong-typed
+# (non-object) "race" value would silently resolve to no/wrong race at load time, so
+# each is reported here against the exact path (e.g. configId.properties.race.ref).
+# CCreature configs do not declare a "race" property on current content, so this
+# check is forward-guarding and vacuously satisfied until such configs are authored.
+CREATURE_RACE_PROPERTY = "race"
+
+# Player-selectable race label uniqueness (EPIC_06/STORY_03/SUBSTORY_02).
+# At character creation res/game.py turns the player-selectable race templates into a
+# label->id selection map exactly the way player_class_options builds the class map:
+#   label = race.getStringProperty("label") or race_id
+#   options[label] = race_id
+# The map is keyed by the display label (falling back to the template id when the race
+# carries no "label"), so two player-selectable races that resolve to the same label
+# would silently collapse to a single entry -- the second id overwrites the first and a
+# player picking that label can never reach the shadowed race.  This check enforces that
+# every player-selectable CCreatureRace's resolved label-or-id key is unique.  Only races
+# whose "playerSelectable" property resolves true participate; non-selectable races never
+# enter the selection map, so their labels are free to collide.  No CCreatureRace configs
+# exist on current content, so this is forward-guarding and vacuously satisfied today.
+CREATURE_RACE_PLAYER_SELECTABLE_PROPERTY = "playerSelectable"
+CREATURE_RACE_LABEL_PROPERTY = "label"
+
+# Gooby quest runtime-name preservation (EPIC_05/STORY_03/SUBSTORY_02).
+# The Gooby hunt depends on a fixed spawn/rename chain in the nouraajd map script:
+# CaveTrigger spawns the template named GOOBY_TEMPLATE_NAME ("gooby") and immediately
+# renames the runtime object to GOOBY_RUNTIME_NAME ("gooby1") via
+# setStringProperty("name", "gooby1"); GoobyTrigger then fires onDestroy against the
+# runtime name "gooby1" and marks the main quest "gooby_slain".  Both names are
+# load-bearing constants that a template migration must NOT rename: if the template id
+# changed, createObject would spawn nothing; if the runtime name changed, the onDestroy
+# trigger and quest-completion flow could never recognize the slain creature.  This
+# guard fires only on a map that participates in the chain -- one that spawns the
+# "gooby" template or wires a trigger against the "gooby1" runtime name -- so unrelated
+# maps and synthetic fixtures stay unaffected, but the real chain is asserted whole.
+GOOBY_TEMPLATE_NAME = "gooby"
+GOOBY_RUNTIME_NAME = "gooby1"
+
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
 # that overrides template behavior.  Any override touching one of these properties
@@ -123,6 +244,17 @@ CREATURE_ARCHETYPE_ID_SUFFIXES = {
 # CCreature template spells "stats" as the baseStats/levelStats pair and "labels"
 # as the singular "label" key, so both spellings are watched here.
 CREATURE_BASE_CLASS = "CCreature"
+# Player vs monster classification (EPIC_01/STORY_01/SUBSTORY_04).
+# CPlayer derives from CCreature in engine metadata (src/object/CPlayer.h:
+# V_META(CPlayer, CCreature, ...)), so getAllSubTypes("CCreature") -- used by
+# CRngHandler to build the random-encounter creature table -- enumerates player
+# templates alongside true monsters.  Classification below is derived purely from
+# that metadata inheritance lineage (never from template-id name strings): a
+# template is a player when its resolved class inherits CPlayer, and a monster
+# when it inherits CCreature but not CPlayer.  The player templates that leak into
+# the CCreature enumeration are flagged so random-encounter code can explicitly
+# exclude them.
+PLAYER_BASE_CLASS = "CPlayer"
 CREATURE_OVERRIDE_PROPERTIES = (
     "baseStats",
     "levelStats",
@@ -139,6 +271,25 @@ CREATURE_OVERRIDE_PROPERTIES = (
     "label",
     "labels",
 )
+
+# Amulet quest item/runtime actor preservation (EPIC_05/STORY_02/SUBSTORY_02).
+# The amulet quest's thief carrier ("goblinThief") owns the quest item as
+# *quest-instance inventory*: the map config attaches "preciousAmulet" through the
+# carrier's "items" override, and the map script spawns that carrier at runtime
+# (createObject("goblinThief")) under the fixed object name "amuletGoblin", which the
+# completion path resolves via getObjectByName("amuletGoblin") to despawn the thief.
+# A later archetype migration must keep "preciousAmulet" as instance inventory on the
+# thief carrier rather than relocate it onto a shared GoblinRace/thief class template,
+# and must keep the runtime actor name resolvable.  This guard therefore asserts, on
+# any map that declares the AMULET_CARRIER_CONFIG, that the carrier's effective items
+# still include AMULET_QUEST_ITEM (following ref inheritance) and that the script
+# spawns the carrier under AMULET_RUNTIME_ACTOR_NAME as a name that getObjectByName can
+# resolve.  Maps that do not declare the carrier are vacuously satisfied.  Identifiers
+# are matched structurally against config/script content, never inferred from prose.
+AMULET_CARRIER_CONFIG = "goblinThief"
+AMULET_QUEST_ITEM = "preciousAmulet"
+AMULET_RUNTIME_ACTOR_NAME = "amuletGoblin"
+CREATURE_ITEMS_PROPERTY = "items"
 
 
 @dataclass(frozen=True)
@@ -177,6 +328,55 @@ class CreatureOverride:
 
     def __str__(self) -> str:
         return f"{self.path}: {self.location}: ref \"{self.template}\" overrides {', '.join(self.properties)}"
+
+
+@dataclass(frozen=True)
+class CreatureClassification:
+    """Metadata-inheritance partition of CCreature templates into players vs monsters.
+
+    Derived solely from engine class lineage (CPlayer derives from CCreature), not
+    from template-id naming heuristics.  ``players_in_creature_enumeration`` lists the
+    player templates that getAllSubTypes("CCreature") returns, so random-encounter
+    code can explicitly exclude them.
+    """
+
+    player_templates: tuple[str, ...]
+    monster_templates: tuple[str, ...]
+    players_in_creature_enumeration: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "playerTemplates": list(self.player_templates),
+            "monsterTemplates": list(self.monster_templates),
+            "playersInCreatureEnumeration": list(self.players_in_creature_enumeration),
+        }
+
+
+@dataclass(frozen=True)
+class UnmigratedCreature:
+    """A production CCreature/CPlayer config still missing race/creatureClass migration.
+
+    ``config_id`` is the global config key and ``path`` the file that declares it.
+    ``missing`` is the sorted tuple of archetype reference properties absent from the
+    config's ``properties`` block -- a subset of {"race", "creatureClass"}.  This is a
+    purely informational report (it never emits validation issues or affects exit
+    status); it drives one migration ticket per remaining creature family so a partial
+    archetype migration cannot ship silently.
+    """
+
+    config_id: str
+    path: str
+    missing: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "configId": self.config_id,
+            "path": self.path,
+            "missing": list(self.missing),
+        }
+
+    def __str__(self) -> str:
+        return f"{self.path}: {self.config_id}: missing {', '.join(self.missing)}"
 
 
 @dataclass(frozen=True)
@@ -910,6 +1110,86 @@ class ContentValidator:
                 self._collect_creature_overrides(entry.path, entry.key, entry.key, entry.data, visible, overrides)
         return sorted(overrides, key=lambda override: (override.path, override.location))
 
+    def classify_creature_templates(self) -> CreatureClassification:
+        """Partition global CCreature templates into players vs monsters by metadata.
+
+        A template is classified by resolving its effective engine class (following
+        ``ref`` chains) and walking the C++ metadata inheritance lineage: it is a
+        player when the class inherits ``CPlayer`` and a (non-player) monster when it
+        inherits ``CCreature`` but not ``CPlayer``.  No template-id name strings are
+        consulted.  Player templates that fall inside the broader CCreature lineage --
+        i.e. those that getAllSubTypes("CCreature") would enumerate for random
+        encounters -- are also reported separately so encounter code can exclude them.
+        """
+        self._collect_engine_classes()
+        self._collect_plugin_classes()
+        self._load_global_configs()
+        visible = dict(self.global_entries)
+        players: list[str] = []
+        monsters: list[str] = []
+        for key, entry in self.global_entries.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if not (class_name == CREATURE_BASE_CLASS or self._class_inherits_from(class_name, CREATURE_BASE_CLASS)):
+                continue
+            if self._class_inherits_from(class_name, PLAYER_BASE_CLASS):
+                players.append(key)
+            else:
+                monsters.append(key)
+        players.sort()
+        monsters.sort()
+        return CreatureClassification(
+            player_templates=tuple(players),
+            monster_templates=tuple(monsters),
+            # CPlayer inherits CCreature, so every player template is also returned by
+            # the CCreature subtype enumeration that random-encounter code relies on.
+            players_in_creature_enumeration=tuple(players),
+        )
+
+    def report_unmigrated_creatures(self) -> list[UnmigratedCreature]:
+        """List production CCreature/CPlayer configs missing race and/or creatureClass.
+
+        Resolves each global config's effective engine class (following ``ref`` chains)
+        and selects those whose class is, or inherits from, ``CCreature`` -- which also
+        covers ``CPlayer`` templates since CPlayer derives from CCreature.  For each such
+        config it inspects the ``properties`` block for the archetype reference
+        properties ``race`` (CREATURE_RACE_PROPERTY) and ``creatureClass``
+        (CREATURE_CLASS_REFERENCE_PROPERTY) and records whichever are absent.  This is a
+        read-only report: it shares the validation class-resolution machinery but never
+        emits validation issues or changes exit status, so the normal validation run --
+        which today would flag every still-unmigrated creature -- stays green.  Results
+        are sorted by config id for deterministic output, and each missing-property list
+        is itself sorted ("creatureClass" before "race").
+        """
+        self._collect_engine_classes()
+        self._collect_plugin_classes()
+        self._load_global_configs()
+        visible = dict(self.global_entries)
+        unmigrated: list[UnmigratedCreature] = []
+        for key, entry in self.global_entries.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if not (class_name == CREATURE_BASE_CLASS or self._class_inherits_from(class_name, CREATURE_BASE_CLASS)):
+                continue
+            properties = entry.data.get("properties")
+            properties = properties if isinstance(properties, dict) else {}
+            missing = tuple(
+                sorted(
+                    name
+                    for name in (CREATURE_CLASS_REFERENCE_PROPERTY, CREATURE_RACE_PROPERTY)
+                    if name not in properties
+                )
+            )
+            if missing:
+                unmigrated.append(UnmigratedCreature(config_id=key, path=self._rel(entry.path), missing=missing))
+        return sorted(unmigrated, key=lambda creature: (creature.config_id, creature.path))
+
     def _collect_creature_overrides(
         self,
         path: Path,
@@ -921,7 +1201,11 @@ class ContentValidator:
     ) -> None:
         if isinstance(value, dict):
             properties = value.get("properties")
-            if isinstance(value.get("ref"), str) and isinstance(properties, dict) and self._is_creature_node(value, visible):
+            if (
+                isinstance(value.get("ref"), str)
+                and isinstance(properties, dict)
+                and self._is_creature_node(value, visible)
+            ):
                 overridden = tuple(name for name in CREATURE_OVERRIDE_PROPERTIES if name in properties)
                 if overridden:
                     overrides.append(
@@ -1234,17 +1518,22 @@ class ContentValidator:
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_crafting_refs()
         self._validate_creature_archetype_naming()
+        self._validate_duplicate_player_selectable_race_labels(visible)
 
     def _validate_map_context(self, context: MapContext) -> None:
         visible = self._visible_entries(context)
         known_classes = self._known_classes(context)
+        archetype_ids = self._archetype_definition_ids(visible)
         for entry in context.config_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_top_level_ref_cycles(context, visible)
-        self._validate_map_json(context, visible, known_classes)
+        self._validate_map_json(context, visible, known_classes, archetype_ids)
         self._validate_dialogs(context, visible)
-        self._validate_script_refs(context, visible, known_classes)
+        self._validate_script_refs(context, visible, known_classes, archetype_ids)
+        self._validate_gooby_runtime_names(context)
         self._validate_script_property_hygiene(context)
+        self._validate_quest_state_transitions(context)
+        self._validate_amulet_quest_actor(context, visible)
 
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)
@@ -1271,6 +1560,9 @@ class ContentValidator:
         self._validate_refs(entry.path, entry.key, entry.data, visible)
         self._validate_object_classes(entry.path, entry.key, entry.data, known_classes)
         self._validate_object_properties(entry.path, entry.key, entry.data, visible, known_classes)
+        self._validate_creature_class_actions_levelling(entry.path, entry.key, entry.data, visible)
+        self._validate_creature_class_property(entry.path, entry.key, entry.data, visible)
+        self._validate_creature_race_definition(entry.path, entry.key, entry.data, visible)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -1380,6 +1672,148 @@ class ContentValidator:
                     append_field(properties_location, property_name),
                     f'unknown property "{property_name}" for class "{class_name}"',
                 )
+        self._validate_creature_class_main_stat(path, properties_location, class_name, properties)
+        self._validate_creature_race_reference(
+            path, properties_location, class_name, properties, visible, known_classes
+        )
+
+    def _validate_creature_race_reference(
+        self,
+        path: Path,
+        properties_location: str,
+        class_name: str,
+        properties: dict[str, Any],
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+    ) -> None:
+        """Verify a CCreature.race resolves to a CCreatureRace definition.
+
+        A creature names its race archetype through the "race" property, which the
+        engine resolves through the same ref/config machinery as any object node.  The
+        value must be an object node ({"ref": "<raceId>"} or an inline {"class": ...})
+        whose effective engine class is -- or inherits from -- CCreatureRace.  An
+        unknown reference, a reference to a config whose class is not a CCreatureRace,
+        or a wrong-typed (non-object / class-less) "race" value would silently resolve
+        to no/wrong race at load time, so each is reported against the exact path
+        (e.g. configId.properties.race.ref).  CCreature configs do not declare a "race"
+        property on current content, so this check is vacuously satisfied (forward
+        guarding) until such configs are authored.
+        """
+        if class_name != CREATURE_BASE_CLASS and not self._class_inherits_from(class_name, CREATURE_BASE_CLASS):
+            return
+        if CREATURE_RACE_PROPERTY not in properties:
+            return
+        race_value = properties[CREATURE_RACE_PROPERTY]
+        race_location = append_field(properties_location, CREATURE_RACE_PROPERTY)
+        if not isinstance(race_value, dict):
+            self._issue(
+                path,
+                race_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" expected object inheriting from '
+                f'"{CREATURE_RACE_BASE_CLASS}"; got {json_value_kind(race_value)}',
+            )
+            return
+        ref = race_value.get("ref")
+        declared_class = race_value.get("class")
+        if isinstance(ref, str):
+            reference_location = append_field(race_location, "ref")
+        elif isinstance(declared_class, str):
+            reference_location = append_field(race_location, "class")
+        else:
+            reference_location = race_location
+        if isinstance(ref, str) and ref not in visible:
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" references unknown id "{ref}"; '
+                f'expected a "{CREATURE_RACE_BASE_CLASS}" definition',
+            )
+            return
+        actual_class = self._effective_object_class(race_value, visible)
+        if actual_class is None:
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" expected object inheriting from '
+                f'"{CREATURE_RACE_BASE_CLASS}"; got object without class/ref',
+            )
+            return
+        if actual_class not in known_classes:
+            return
+        if actual_class != CREATURE_RACE_BASE_CLASS and not self._class_inherits_from(
+            actual_class, CREATURE_RACE_BASE_CLASS
+        ):
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_RACE_PROPERTY}" for class "{class_name}" expected object inheriting from '
+                f'"{CREATURE_RACE_BASE_CLASS}"; got "{actual_class}"',
+            )
+
+    def _validate_creature_class_main_stat(
+        self,
+        path: Path,
+        properties_location: str,
+        class_name: str,
+        properties: dict[str, Any],
+    ) -> None:
+        """Verify a CCreatureClass.mainStat names a numeric CStats property.
+
+        The engine resolves a creature class's main stat through
+        ``CStats::getNumericProperty(mainStat)`` (CStats::getMainValue), so a
+        non-empty ``mainStat`` must name one of CStats' numeric (int) metadata
+        properties.  Empty, non-string, or typo values (e.g. "strenght") would
+        resolve to a zero main value at runtime, so they are rejected here with the
+        exact class config location.  The allowed names are derived from the live
+        CStats metadata schema, so this stays in lockstep with src/core/CStats.h.
+        ``CCreatureClass`` archetypes do not exist on current content, so this check
+        is vacuously satisfied (forward-guarding) until they are authored.
+        """
+        if class_name != CREATURE_CLASS_OBJECT_CLASS and not self._class_inherits_from(
+            class_name, CREATURE_CLASS_OBJECT_CLASS
+        ):
+            return
+        if CREATURE_CLASS_MAIN_STAT_PROPERTY not in properties:
+            return
+        main_stat = properties[CREATURE_CLASS_MAIN_STAT_PROPERTY]
+        main_stat_location = append_field(properties_location, CREATURE_CLASS_MAIN_STAT_PROPERTY)
+        if not isinstance(main_stat, str) or not main_stat:
+            self._issue(
+                path,
+                main_stat_location,
+                f'property "{CREATURE_CLASS_MAIN_STAT_PROPERTY}" for class "{class_name}" '
+                f"expected a non-empty numeric {MAIN_STAT_SCHEMA_CLASS} property name; "
+                f"got {json_value_kind(main_stat)}",
+            )
+            return
+        allowed_stats = self._numeric_main_stat_names()
+        if allowed_stats is None:
+            return
+        if main_stat not in allowed_stats:
+            self._issue(
+                path,
+                main_stat_location,
+                f'property "{CREATURE_CLASS_MAIN_STAT_PROPERTY}" for class "{class_name}" '
+                f'value "{main_stat}" is not a numeric {MAIN_STAT_SCHEMA_CLASS} property; '
+                f"expected one of {', '.join(sorted(allowed_stats))}",
+            )
+
+    def _numeric_main_stat_names(self) -> set[str] | None:
+        """Return CStats' numeric (int) metadata property names, or None if absent.
+
+        Derived from the live CStats metadata schema so the allowed set never drifts
+        from src/core/CStats.h.  Returns None when CStats metadata is unavailable
+        (e.g. before the native sources exist), leaving the check inert rather than
+        guessing a stat set.
+        """
+        property_schema = self._metadata_property_schema(MAIN_STAT_SCHEMA_CLASS)
+        if not property_schema:
+            return None
+        return {
+            cpp_property.name
+            for cpp_property in property_schema.values()
+            if cpp_property.type_token == MAIN_STAT_NUMERIC_TYPE_TOKEN
+        }
 
     def _effective_object_class(
         self, value: dict[str, Any], visible: dict[str, ConfigEntry], seen_refs: set[str] | None = None
@@ -1585,7 +2019,13 @@ class ContentValidator:
                     break
                 current = next_entry
 
-    def _validate_map_json(self, context: MapContext, visible: dict[str, ConfigEntry], known_classes: set[str]) -> None:
+    def _validate_map_json(
+        self,
+        context: MapContext,
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+        archetype_ids: set[str],
+    ) -> None:
         data = context.map_data
         if not isinstance(data, dict):
             self._issue(context.map_path, "$", "expected top-level JSON object")
@@ -1605,10 +2045,10 @@ class ContentValidator:
             layer_type = layer.get("type")
             if layer_type == "tilelayer":
                 self._validate_tile_layer(
-                    context, layer, layer_location, width, height, tile_types, visible, known_classes
+                    context, layer, layer_location, width, height, tile_types, visible, known_classes, archetype_ids
                 )
             elif layer_type == "objectgroup":
-                self._validate_object_layer(context, layer, layer_location, visible, known_classes)
+                self._validate_object_layer(context, layer, layer_location, visible, known_classes, archetype_ids)
 
     def _validate_tile_layer(
         self,
@@ -1620,6 +2060,7 @@ class ContentValidator:
         tile_types: dict[int, str],
         visible: dict[str, ConfigEntry],
         known_classes: set[str],
+        archetype_ids: set[str],
     ) -> None:
         data = layer.get("data")
         if not isinstance(data, list):
@@ -1644,6 +2085,10 @@ class ContentValidator:
                     f"{location}.data[{index}]",
                     f"tile id {tile_id} has no tilesets[0].tileproperties[{tile_id - 1}].type",
                 )
+            elif self._reject_archetype_spawn_target(
+                context.map_path, f"{location}.data[{index}]", tile_type, "tile type", archetype_ids
+            ):
+                continue
             elif (
                 tile_type not in visible
                 and tile_type not in known_classes
@@ -1662,6 +2107,7 @@ class ContentValidator:
         location: str,
         visible: dict[str, ConfigEntry],
         known_classes: set[str],
+        archetype_ids: set[str],
     ) -> None:
         objects = layer.get("objects")
         if not isinstance(objects, list):
@@ -1688,6 +2134,10 @@ class ContentValidator:
             object_type = obj.get("type")
             if not isinstance(object_type, str) or not object_type:
                 self._issue(context.map_path, f"{object_location}.type", "expected non-empty object type")
+            elif self._reject_archetype_spawn_target(
+                context.map_path, f"{object_location}.type", object_type, "object type", archetype_ids
+            ):
+                pass
             elif (
                 object_type not in visible
                 and object_type not in known_classes
@@ -1880,7 +2330,11 @@ class ContentValidator:
             )
 
     def _validate_script_refs(
-        self, context: MapContext, visible: dict[str, ConfigEntry], known_classes: set[str]
+        self,
+        context: MapContext,
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+        archetype_ids: set[str],
     ) -> None:
         if not context.script_info:
             return
@@ -1888,6 +2342,10 @@ class ContentValidator:
         object_names = context.placed_names | context.script_info.named_objects | {"player"}
         for call in context.script_info.calls:
             if call.name in SCRIPT_REF_CALLS:
+                if self._reject_archetype_spawn_target(
+                    context.script_info.path, call.location, call.value, "object ref or class", archetype_ids
+                ):
+                    continue
                 if (
                     call.value not in visible
                     and call.value not in known_classes
@@ -1918,6 +2376,136 @@ class ContentValidator:
                     self._issue(context.script_info.path, trigger.location, f'unknown trigger event "{trigger.value}"')
             elif trigger.name == "trigger target" and trigger.value not in object_names:
                 self._issue(context.script_info.path, trigger.location, f'unknown trigger target "{trigger.value}"')
+
+    def _validate_amulet_quest_actor(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
+        """Guard that the amulet quest keeps its item carrier and runtime actor name.
+
+        Vacuous unless this map declares the amulet thief carrier
+        (AMULET_CARRIER_CONFIG).  When it does, two invariants are enforced so an
+        archetype migration cannot quietly drop them:
+
+        * The carrier still carries AMULET_QUEST_ITEM as quest-instance inventory --
+            i.e. its effective "items" (resolving ``ref`` inheritance) reference the
+            quest item by ref or by a node whose resolved "name" is the quest item.
+            Reported against ``<carrier>.properties.items`` so the migration can see the
+            item must stay on the instance rather than move to a race/class template.
+        * The map script spawns the carrier under AMULET_RUNTIME_ACTOR_NAME and that
+            name is recognized as a resolvable map object (the completion path resolves
+            it via getObjectByName).  Reported against the spawning script.
+        """
+        carrier_entry = context.config_entries.get(AMULET_CARRIER_CONFIG)
+        if carrier_entry is None:
+            return
+        if isinstance(carrier_entry.data, dict):
+            items = self._effective_property_value(carrier_entry.data, CREATURE_ITEMS_PROPERTY, visible)
+            if not self._items_reference(items, AMULET_QUEST_ITEM, visible):
+                self._issue(
+                    carrier_entry.path,
+                    f"{append_field(AMULET_CARRIER_CONFIG, 'properties')}.{CREATURE_ITEMS_PROPERTY}",
+                    f'amulet quest carrier "{AMULET_CARRIER_CONFIG}" must carry quest item '
+                    f'"{AMULET_QUEST_ITEM}" as instance inventory; it must not be moved to a '
+                    f"shared race/class template during the archetype migration",
+                )
+
+        info = context.script_info
+        if info is None:
+            return
+        spawns_runtime_actor = any(
+            spawn.template == AMULET_CARRIER_CONFIG and spawn.runtime_name == AMULET_RUNTIME_ACTOR_NAME
+            for spawn in info.spawned_creatures
+        )
+        if not spawns_runtime_actor:
+            self._issue(
+                info.path,
+                f'createObject("{AMULET_CARRIER_CONFIG}")',
+                f'amulet quest runtime actor name "{AMULET_RUNTIME_ACTOR_NAME}" must be assigned to a '
+                f'spawned "{AMULET_CARRIER_CONFIG}"; the completion path resolves it via '
+                f"getObjectByName and would otherwise break",
+            )
+            return
+        recognized_names = context.placed_names | info.named_objects | {"player"}
+        if AMULET_RUNTIME_ACTOR_NAME not in recognized_names:
+            self._issue(
+                info.path,
+                f'getObjectByName("{AMULET_RUNTIME_ACTOR_NAME}")',
+                f'amulet quest runtime actor name "{AMULET_RUNTIME_ACTOR_NAME}" is not resolvable as a '
+                f"map object name",
+            )
+
+    def _items_reference(self, items: Any, item_id: str, visible: dict[str, ConfigEntry]) -> bool:
+        """Whether an "items" value references ``item_id`` by ref or resolved name."""
+        if not isinstance(items, list):
+            return False
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("ref") == item_id:
+                return True
+            name = self._effective_property_value(entry, "name", visible)
+            if name == item_id:
+                return True
+        return False
+
+    def _validate_gooby_runtime_names(self, context: MapContext) -> None:
+        """Assert the Gooby quest spawn/rename chain keeps its load-bearing names.
+
+        EPIC_05/STORY_03/SUBSTORY_02. The chain is: CaveTrigger
+        ``createObject("gooby")`` -> ``setStringProperty("name", "gooby1")``, and a
+        ``@trigger(..., "onDestroy", "gooby1")`` plus quest-completion flow that
+        recognizes the runtime name "gooby1".  A migration must preserve both the
+        template id "gooby" and the runtime name "gooby1"; renaming either silently
+        breaks the spawn, the onDestroy trigger, or quest completion.
+
+        The guard engages only on a map that already participates in the chain -- one
+        that spawns the "gooby" template, or that renames a spawn to "gooby1", or that
+        wires a trigger against the "gooby1" runtime name -- so unrelated maps and
+        synthetic fixtures stay unaffected.  Once engaged it requires the full chain:
+        a "gooby" template spawn that is renamed to "gooby1", and a trigger target
+        recognizing "gooby1".  Every diagnostic reports the script path so an author
+        sees exactly where the chain broke.
+        """
+        info = context.script_info
+        if not info:
+            return
+
+        gooby_template_spawns = [c for c in info.spawned_creatures if c.template == GOOBY_TEMPLATE_NAME]
+        renamed_to_runtime = [c for c in info.spawned_creatures if c.runtime_name == GOOBY_RUNTIME_NAME]
+        runtime_trigger_targets = [
+            t for t in info.trigger_targets if t.name == "trigger target" and t.value == GOOBY_RUNTIME_NAME
+        ]
+
+        # Engage only when this map participates in the Gooby chain in some form.
+        if not (gooby_template_spawns or renamed_to_runtime or runtime_trigger_targets):
+            return
+
+        chain_spawns = [c for c in gooby_template_spawns if c.runtime_name == GOOBY_RUNTIME_NAME]
+
+        if not gooby_template_spawns:
+            location = renamed_to_runtime[0].location if renamed_to_runtime else runtime_trigger_targets[0].location
+            self._issue(
+                info.path,
+                location,
+                f'Gooby quest chain references runtime name "{GOOBY_RUNTIME_NAME}" but no spawn of '
+                f'template "{GOOBY_TEMPLATE_NAME}" remains; the template name must not be renamed',
+            )
+            return
+
+        if not chain_spawns:
+            self._issue(
+                info.path,
+                gooby_template_spawns[0].location,
+                f'CaveTrigger spawns template "{GOOBY_TEMPLATE_NAME}" but does not rename the runtime '
+                f'object to "{GOOBY_RUNTIME_NAME}"; the runtime name must be preserved',
+            )
+            return
+
+        if not runtime_trigger_targets:
+            self._issue(
+                info.path,
+                chain_spawns[0].location,
+                f'runtime object "{GOOBY_RUNTIME_NAME}" is spawned from template "{GOOBY_TEMPLATE_NAME}" but no '
+                f'trigger recognizes "{GOOBY_RUNTIME_NAME}"; quest-completion flow must keep recognizing it',
+            )
 
     def _validate_script_property_hygiene(self, context: MapContext) -> None:
         info = context.script_info
@@ -2002,6 +2590,67 @@ class ContentValidator:
                 continue
             valid_flags.add(flag.name)
         return valid_flags
+
+    def _validate_quest_state_transitions(self, context: MapContext) -> None:
+        """Validate the state machine declared by a map script's quest-state usage.
+
+        Builds on the quest-state collection produced by ScriptAnalyzer (QUEST_KEYS,
+        QUEST_DEFAULTS, _set_state/state_in writes and reads, and terminal completion
+        checks). A quest key is "declared" when QUEST_KEYS maps it to a storage key.
+        The rules enforced are:
+
+        * every QUEST_DEFAULTS default references a declared quest key;
+        * every transition target (a _set_state write) belongs to a declared quest key;
+        * every state read (a get_state comparison or state_in) belongs to a declared
+            quest key;
+        * every terminal completion state is reachable from a default -- i.e. it is the
+            default state itself or a state assigned by some transition write. A terminal
+            state that is never the default and never written can never be entered, so the
+            completion check it guards can never fire.
+
+        Undeclared keys are detected because any get_state/_set_state/state_in reference
+        records a ScriptQuestStateUsage entry whose storage_key stays None when the key
+        is absent from QUEST_KEYS.
+        """
+        info = context.script_info
+        if not info:
+            return
+        for quest_key in sorted(info.quest_states):
+            usage = info.quest_states[quest_key]
+            declared = bool(usage.storage_key)
+            location = f'quest "{quest_key}"'
+            if usage.default_state is not None and not declared:
+                self._issue(
+                    info.path,
+                    location,
+                    f'quest default "{usage.default_state}" references undeclared quest key "{quest_key}" '
+                    "(missing from QUEST_KEYS)",
+                )
+            if not declared:
+                for state in sorted(usage.written_states):
+                    self._issue(
+                        info.path,
+                        location,
+                        f'transition target "{state}" writes undeclared quest key "{quest_key}" '
+                        "(missing from QUEST_KEYS)",
+                    )
+                for state in sorted(usage.read_states):
+                    self._issue(
+                        info.path,
+                        location,
+                        f'state read "{state}" references undeclared quest key "{quest_key}" '
+                        "(missing from QUEST_KEYS)",
+                    )
+                continue
+            reachable = set(usage.written_states)
+            if usage.default_state is not None:
+                reachable.add(usage.default_state)
+            for state in sorted(usage.terminal_check_states - reachable):
+                self._issue(
+                    info.path,
+                    location,
+                    f'terminal state "{state}" is unreachable: it is neither the default nor a transition target',
+                )
 
     def _first_property_access(self, info: ScriptInfo, property_name: str) -> ScriptPropertyAccess | None:
         accesses = [
@@ -2114,6 +2763,392 @@ class ContentValidator:
             for index, child in enumerate(value):
                 self._validate_creature_class_reference(path, append_index(location, index), child)
 
+    def _validate_duplicate_player_selectable_race_labels(self, visible: dict[str, ConfigEntry]) -> None:
+        """Reject duplicate selection labels among player-selectable CCreatureRace configs.
+
+        res/game.py builds the race-selection menu as a label->id map (mirroring
+        player_class_options): the key is the race's resolved "label" property, falling
+        back to its template id when no label is set, and the value is the template id.
+        Two player-selectable races sharing that key collapse to one menu entry, so the
+        second silently overwrites the first.  This enumerates every global config whose
+        effective class is (or inherits) CCreatureRace and whose resolved
+        "playerSelectable" property is true, keys each by label-or-id, and reports any key
+        claimed by more than one race -- naming the conflicting ids and their paths.
+        Non-player-selectable races are ignored because they never enter the menu.
+        """
+        labels: dict[str, list[ConfigEntry]] = {}
+        for key, entry in self.global_entries.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if not (
+                class_name == CREATURE_RACE_BASE_CLASS
+                or self._class_inherits_from(class_name, CREATURE_RACE_BASE_CLASS)
+            ):
+                continue
+            selectable = self._effective_property_value(entry.data, CREATURE_RACE_PLAYER_SELECTABLE_PROPERTY, visible)
+            if selectable is not True:
+                continue
+            label = self._effective_property_value(entry.data, CREATURE_RACE_LABEL_PROPERTY, visible)
+            selection_key = label if isinstance(label, str) and label else key
+            labels.setdefault(selection_key, []).append(entry)
+        for selection_key, entries in labels.items():
+            if len(entries) < 2:
+                continue
+            conflicting = sorted(entry.key for entry in entries)
+            for entry in sorted(entries, key=lambda candidate: candidate.key):
+                others = ", ".join(other for other in conflicting if other != entry.key)
+                self._issue(
+                    entry.path,
+                    entry.key,
+                    f'player-selectable race selection label "{selection_key}" is not unique; '
+                    f"it collides with {others} -- res/game.py maps a selected label back to a "
+                    f"single race id, so duplicate labels make the selection ambiguous",
+                )
+
+    def _effective_property_value(
+        self,
+        value: dict[str, Any],
+        property_name: str,
+        visible: dict[str, ConfigEntry],
+        seen_refs: set[str] | None = None,
+    ) -> Any:
+        """Resolve a property's effective value, honoring ``ref`` inheritance.
+
+        A config node may define properties inline or inherit them from a referenced
+        template via ``ref``; an inline ``properties`` value overrides the referenced
+        one.  Returns ``None`` when the property is absent (or the ref chain cycles or
+        dangles), mirroring how the runtime loader resolves overrides on top of a base
+        template.
+        """
+        properties = value.get("properties")
+        if isinstance(properties, dict) and property_name in properties:
+            return properties[property_name]
+        ref = value.get("ref")
+        if not isinstance(ref, str):
+            return None
+        seen = set(seen_refs or set())
+        if ref in seen:
+            return None
+        seen.add(ref)
+        ref_entry = visible.get(ref)
+        if ref_entry is None or not isinstance(ref_entry.data, dict):
+            return None
+        return self._effective_property_value(ref_entry.data, property_name, visible, seen)
+
+    def _validate_creature_class_actions_levelling(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        """Validate CCreatureClass.actions / levelling resolve to CInteraction.
+
+        Recurses through the config tree so a CCreatureClass node nested under a ref
+        chain or another object is still checked.  For every node whose effective
+        class is ``CCreatureClass`` it verifies that each ``actions`` entry resolves
+        to a ``CInteraction``, that each ``levelling`` key is a positive-integer
+        string whose value resolves to a ``CInteraction``, and that no effective
+        action id (the ref target id) is granted more than once across both blocks.
+        """
+        if isinstance(value, dict):
+            if self._effective_object_class(value, visible) == CREATURE_CLASS_CONSTRUCTOR_CLASS:
+                self._validate_creature_class_grants(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_creature_class_actions_levelling(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_creature_class_actions_levelling(path, append_index(location, index), child, visible)
+
+    def _validate_creature_class_grants(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict):
+            return
+        properties_location = append_field(location, "properties")
+        seen_action_ids: dict[str, str] = {}
+        self._validate_creature_class_actions(
+            path,
+            append_field(properties_location, CREATURE_CLASS_ACTIONS_PROPERTY),
+            properties.get(CREATURE_CLASS_ACTIONS_PROPERTY),
+            visible,
+            seen_action_ids,
+        )
+        self._validate_creature_class_levelling(
+            path,
+            append_field(properties_location, CREATURE_CLASS_LEVELLING_PROPERTY),
+            properties.get(CREATURE_CLASS_LEVELLING_PROPERTY),
+            visible,
+            seen_action_ids,
+        )
+
+    def _validate_creature_class_actions(
+        self,
+        path: Path,
+        location: str,
+        actions: Any,
+        visible: dict[str, ConfigEntry],
+        seen_action_ids: dict[str, str],
+    ) -> None:
+        if actions is None:
+            return
+        if not isinstance(actions, list):
+            self._issue(path, location, "expected array of CInteraction action entries")
+            return
+        for index, action in enumerate(actions):
+            entry_location = append_index(location, index)
+            self._validate_creature_class_interaction_entry(path, entry_location, action, visible)
+            self._record_effective_action_id(path, entry_location, action, seen_action_ids)
+
+    def _validate_creature_class_levelling(
+        self,
+        path: Path,
+        location: str,
+        levelling: Any,
+        visible: dict[str, ConfigEntry],
+        seen_action_ids: dict[str, str],
+    ) -> None:
+        if levelling is None:
+            return
+        if not isinstance(levelling, dict):
+            self._issue(path, location, "expected object keyed by positive-integer level")
+            return
+        for level_key, action in levelling.items():
+            entry_location = append_field(location, level_key)
+            if not is_positive_integer_string(level_key):
+                self._issue(
+                    path,
+                    entry_location,
+                    f'levelling key "{level_key}" must be a positive-integer string',
+                )
+            self._validate_creature_class_interaction_entry(path, entry_location, action, visible)
+            self._record_effective_action_id(path, entry_location, action, seen_action_ids)
+
+    def _validate_creature_class_interaction_entry(
+        self, path: Path, location: str, action: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        if not isinstance(action, dict):
+            self._issue(path, location, f'expected object resolving to "{INTERACTION_BASE_CLASS}"')
+            return
+        class_name = self._effective_object_class(action, visible)
+        if class_name is None:
+            self._issue(
+                path,
+                location,
+                f'expected object resolving to "{INTERACTION_BASE_CLASS}"; got object without class/ref',
+            )
+            return
+        if not self._class_resolves_to_interaction(class_name):
+            self._issue(
+                path,
+                location,
+                f'expected object resolving to "{INTERACTION_BASE_CLASS}"; got "{class_name}"',
+            )
+
+    def _class_resolves_to_interaction(self, class_name: str) -> bool:
+        return class_name == INTERACTION_BASE_CLASS or self._class_inherits_from(class_name, INTERACTION_BASE_CLASS)
+
+    def _validate_creature_class_property(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        """Validate a CCreature's "creatureClass" property resolves to a CCreatureClass.
+
+        Recurses through the config tree so a creature node nested under a ref chain
+        or another object is still checked.  For every node whose effective class is or
+        inherits ``CCreature`` it inspects the *property* ``properties.creatureClass``
+        (never the top-level object-constructor key ``class``) and verifies that its
+        value is an object node resolving, through any ref/config chain, to a definition
+        whose effective class is or inherits ``CCreatureClass``.  Wrong-typed values,
+        unresolvable/missing references, and resolved-but-wrong-class targets are each
+        reported distinctly at the exact ``properties.creatureClass`` path.
+        """
+        if isinstance(value, dict):
+            if self._is_creature_node(value, visible):
+                self._validate_creature_class_reference_target(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_creature_class_property(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_creature_class_property(path, append_index(location, index), child, visible)
+
+    def _validate_creature_class_reference_target(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict) or CREATURE_CLASS_REFERENCE_PROPERTY not in properties:
+            return
+        reference = properties[CREATURE_CLASS_REFERENCE_PROPERTY]
+        reference_location = append_field(append_field(location, "properties"), CREATURE_CLASS_REFERENCE_PROPERTY)
+        if not isinstance(reference, dict):
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_CLASS_REFERENCE_PROPERTY}" expected an object resolving to '
+                f'"{CREATURE_CLASS_BASE_CLASS}"; got {json_value_kind(reference)}',
+            )
+            return
+        resolved_class = self._effective_object_class(reference, visible)
+        if resolved_class is None:
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_CLASS_REFERENCE_PROPERTY}" expected an object resolving to '
+                f'"{CREATURE_CLASS_BASE_CLASS}"; reference does not resolve to a known config',
+            )
+            return
+        if not self._class_resolves_to_creature_class(resolved_class):
+            self._issue(
+                path,
+                reference_location,
+                f'property "{CREATURE_CLASS_REFERENCE_PROPERTY}" expected an object resolving to '
+                f'"{CREATURE_CLASS_BASE_CLASS}"; got "{resolved_class}"',
+            )
+
+    def _class_resolves_to_creature_class(self, class_name: str) -> bool:
+        return class_name == CREATURE_CLASS_BASE_CLASS or self._class_inherits_from(
+            class_name, CREATURE_CLASS_BASE_CLASS
+        )
+
+    def _record_effective_action_id(
+        self, path: Path, location: str, action: Any, seen_action_ids: dict[str, str]
+    ) -> None:
+        if not isinstance(action, dict):
+            return
+        action_id = action.get("ref")
+        if not isinstance(action_id, str) or not action_id:
+            return
+        previous = seen_action_ids.get(action_id)
+        if previous is not None:
+            self._issue(
+                path,
+                location,
+                f'duplicate action id "{action_id}", previously granted at {previous}',
+            )
+            return
+        seen_action_ids[action_id] = location
+
+    def _validate_creature_race_definition(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        """Validate CCreatureRace baseStats keys, actions, and type fields.
+
+        Recurses through the config tree so a CCreatureRace node nested under a ref
+        chain or another object is still checked.  For every node whose effective class
+        is ``CCreatureRace`` it verifies that each ``baseStats`` key names a ``CStats``
+        metadata property, that each ``actions`` entry resolves to a ``CInteraction``,
+        and that ``creatureType`` / every ``subtypes`` entry is a non-empty string. The
+        type fields stay DATA-ONLY (non-empty-string checks only); no mechanical type
+        semantics are inferred.
+        """
+        if isinstance(value, dict):
+            if self._effective_object_class(value, visible) == CREATURE_RACE_CONSTRUCTOR_CLASS:
+                self._validate_creature_race_fields(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_creature_race_definition(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_creature_race_definition(path, append_index(location, index), child, visible)
+
+    def _validate_creature_race_fields(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict):
+            return
+        properties_location = append_field(location, "properties")
+        if CREATURE_RACE_BASE_STATS_PROPERTY in properties:
+            self._validate_creature_race_base_stats(
+                path,
+                append_field(properties_location, CREATURE_RACE_BASE_STATS_PROPERTY),
+                properties[CREATURE_RACE_BASE_STATS_PROPERTY],
+            )
+        if CREATURE_RACE_ACTIONS_PROPERTY in properties:
+            self._validate_creature_race_actions(
+                path,
+                append_field(properties_location, CREATURE_RACE_ACTIONS_PROPERTY),
+                properties[CREATURE_RACE_ACTIONS_PROPERTY],
+                visible,
+            )
+        if CREATURE_RACE_TYPE_PROPERTY in properties:
+            self._validate_creature_race_type(
+                path,
+                append_field(properties_location, CREATURE_RACE_TYPE_PROPERTY),
+                properties[CREATURE_RACE_TYPE_PROPERTY],
+            )
+        if CREATURE_RACE_SUBTYPES_PROPERTY in properties:
+            self._validate_creature_race_subtypes(
+                path,
+                append_field(properties_location, CREATURE_RACE_SUBTYPES_PROPERTY),
+                properties[CREATURE_RACE_SUBTYPES_PROPERTY],
+            )
+
+    def _validate_creature_race_base_stats(self, path: Path, location: str, base_stats: Any) -> None:
+        if not isinstance(base_stats, dict):
+            self._issue(
+                path,
+                location,
+                f"expected {CREATURE_RACE_STATS_SCHEMA_CLASS}-compatible object; got {json_value_kind(base_stats)}",
+            )
+            return
+        allowed_keys = self._creature_race_stats_property_names()
+        if allowed_keys is None:
+            return
+        for stat_key in base_stats:
+            if stat_key not in allowed_keys:
+                self._issue(
+                    path,
+                    append_field(location, stat_key),
+                    f'"{stat_key}" is not a {CREATURE_RACE_STATS_SCHEMA_CLASS} property; '
+                    f"expected one of {', '.join(sorted(allowed_keys))}",
+                )
+
+    def _creature_race_stats_property_names(self) -> set[str] | None:
+        """Return all CStats metadata property names, or None when CStats is absent.
+
+        Derived from the live CStats metadata schema so the allowed baseStats keys
+        never drift from src/core/CStats.h.  Returns None when CStats metadata is
+        unavailable (e.g. before the native sources exist), leaving the check inert
+        rather than guessing a stat set.
+        """
+        property_schema = self._metadata_property_schema(CREATURE_RACE_STATS_SCHEMA_CLASS)
+        if not property_schema:
+            return None
+        return set(property_schema)
+
+    def _validate_creature_race_actions(
+        self, path: Path, location: str, actions: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        if not isinstance(actions, list):
+            self._issue(path, location, f"expected array of {INTERACTION_BASE_CLASS} action entries")
+            return
+        for index, action in enumerate(actions):
+            self._validate_creature_class_interaction_entry(path, append_index(location, index), action, visible)
+
+    def _validate_creature_race_type(self, path: Path, location: str, creature_type: Any) -> None:
+        if not isinstance(creature_type, str) or not creature_type:
+            self._issue(
+                path,
+                location,
+                f'"{CREATURE_RACE_TYPE_PROPERTY}" expected a non-empty string; got {json_value_kind(creature_type)}',
+            )
+
+    def _validate_creature_race_subtypes(self, path: Path, location: str, subtypes: Any) -> None:
+        if not isinstance(subtypes, list):
+            self._issue(
+                path,
+                location,
+                f'"{CREATURE_RACE_SUBTYPES_PROPERTY}" expected an array of non-empty strings; '
+                f"got {json_value_kind(subtypes)}",
+            )
+            return
+        for index, subtype in enumerate(subtypes):
+            if not isinstance(subtype, str) or not subtype:
+                self._issue(
+                    path,
+                    append_index(location, index),
+                    f"expected a non-empty string; got {json_value_kind(subtype)}",
+                )
+
     def _issue(self, path: Path, location: str, message: str) -> None:
         self.issues.append(ValidationIssue(path=self._rel(path), location=location, message=message))
 
@@ -2127,6 +3162,57 @@ class ContentValidator:
         has_ref = "ref" in value
         has_class = "class" in value
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
+
+    def _archetype_definition_ids(self, visible: dict[str, ConfigEntry]) -> set[str]:
+        """Resolve config ids that name a CCreatureRace/CCreatureClass *definition*.
+
+        An id is an archetype definition when its effective engine class (following
+        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES or inherits from
+        one, or when it is a top-level entry declared in the dedicated archetype
+        config files (creature_races.json / creature_classes.json).  Such ids are
+        referenced definitions, not actors, so using them as a concrete spawn target
+        is rejected.  Resolution is purely structural -- never from id name strings.
+        """
+        archetype_ids: set[str] = set()
+        for key, entry in visible.items():
+            if not isinstance(entry.data, dict):
+                continue
+            if self._is_archetype_definition_node(entry.data, visible) or self._is_archetype_definition_config(
+                entry.path
+            ):
+                archetype_ids.add(key)
+        return archetype_ids
+
+    def _is_archetype_definition_node(self, value: dict[str, Any], visible: dict[str, ConfigEntry]) -> bool:
+        class_name = self._effective_object_class(value, visible)
+        if not isinstance(class_name, str):
+            return False
+        return class_name in CREATURE_ARCHETYPE_BASE_CLASSES or any(
+            self._class_inherits_from(class_name, base) for base in CREATURE_ARCHETYPE_BASE_CLASSES
+        )
+
+    def _is_archetype_definition_config(self, path: Path) -> bool:
+        return self._rel(path) in {
+            (Path("res") / "config" / name).as_posix() for name in CREATURE_ARCHETYPE_DEFINITION_CONFIGS
+        }
+
+    def _reject_archetype_spawn_target(
+        self, path: Path, location: str, name: str, label: str, archetype_ids: set[str]
+    ) -> bool:
+        """Emit an issue when ``name`` is an archetype definition used as a spawn target.
+
+        Returns True when the name was rejected so callers can skip the regular
+        unknown-reference diagnostic.
+        """
+        if name not in archetype_ids:
+            return False
+        self._issue(
+            path,
+            location,
+            f'{label} "{name}" is a creature archetype definition '
+            f"(CCreatureRace/CCreatureClass) and cannot be used as a concrete spawn target",
+        )
+        return True
 
     def _class_reference_message(self, class_name: str, label: str) -> str:
         exclusion = self.registration_exclusions.get(class_name)
@@ -2234,6 +3320,18 @@ def json_value_kind(value: Any) -> str:
     if value is None:
         return "null"
     return type(value).__name__
+
+
+def is_positive_integer_string(value: Any) -> bool:
+    """Return True when ``value`` is a canonical positive-integer string (1, 2, ...).
+
+    Rejects non-strings, non-digit strings, "0", and any leading-zero / signed /
+    whitespace-padded form so a levelling key always denotes a single unambiguous
+    positive level.
+    """
+    if not isinstance(value, str) or not value.isdigit():
+        return False
+    return value == str(int(value)) and int(value) > 0
 
 
 def normalize_cpp_type(raw: str) -> str:
@@ -2476,6 +3574,14 @@ def inventory_creature_overrides(repo_root: Path | str) -> list[CreatureOverride
     return ContentValidator(Path(repo_root)).inventory_creature_overrides()
 
 
+def classify_creature_templates(repo_root: Path | str) -> CreatureClassification:
+    return ContentValidator(Path(repo_root)).classify_creature_templates()
+
+
+def report_unmigrated_creatures(repo_root: Path | str) -> list[UnmigratedCreature]:
+    return ContentValidator(Path(repo_root)).report_unmigrated_creatures()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate game JSON resources and literal script refs.")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -2484,11 +3590,36 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print the map-local creature override inventory as JSON and exit without validating.",
     )
+    parser.add_argument(
+        "--report-creature-classification",
+        action="store_true",
+        help="Print the metadata-derived player/monster classification as JSON and exit without validating.",
+    )
+    parser.add_argument(
+        "--report-unmigrated",
+        action="store_true",
+        help=(
+            "Print the production CCreature/CPlayer configs still missing race and/or "
+            "creatureClass as JSON and exit without validating."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.report_creature_overrides:
         overrides = inventory_creature_overrides(args.repo_root)
         json.dump([override.as_dict() for override in overrides], sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    if args.report_creature_classification:
+        classification = classify_creature_templates(args.repo_root)
+        json.dump(classification.as_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    if args.report_unmigrated:
+        unmigrated = report_unmigrated_creatures(args.repo_root)
+        json.dump([creature.as_dict() for creature in unmigrated], sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
 

@@ -27,7 +27,9 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.validate_content import (
     ContentValidator,
     ScriptPropertyHygieneAllowance,
+    classify_creature_templates,
     inventory_creature_overrides,
+    report_unmigrated_creatures,
     validate_repo,
 )
 
@@ -158,9 +160,7 @@ class ContentValidatorTest(unittest.TestCase):
 
         issues = validate_repo(root)
 
-        self.assertIssueContains(
-            issues, "properties.action", 'dialog action "valid action" is not a valid method name'
-        )
+        self.assertIssueContains(issues, "properties.action", 'dialog action "valid action" is not a valid method name')
         self.assertIssueContains(
             issues, "properties.condition", 'dialog condition "9condition" is not a valid method name'
         )
@@ -405,6 +405,80 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertEqual("gooby1", named.get("gooby"))
         self.assertEqual("amuletGoblin", named.get("goblinThief"))
 
+    def test_real_gooby_quest_runtime_names_preserved(self):
+        # The real nouraajd chain (createObject("gooby") -> name "gooby1", onDestroy
+        # trigger on "gooby1") must satisfy the runtime-name preservation guard.
+        issues = validate_repo(REPO_ROOT)
+        gooby_issues = [str(issue) for issue in issues if "gooby" in str(issue).lower()]
+        self.assertEqual([], gooby_issues)
+
+    def test_renamed_gooby_template_breaks_chain(self):
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="goobyMonster",  # template renamed away from "gooby"
+            runtime="gooby1",
+            trigger_target="gooby1",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'no spawn of template "gooby" remains',
+        )
+
+    def test_renamed_gooby_runtime_name_breaks_chain(self):
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="gooby",
+            runtime="goobyAlive",  # runtime name renamed away from "gooby1"
+            trigger_target="goobyAlive",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'does not rename the runtime object to "gooby1"',
+        )
+
+    def test_gooby_runtime_name_without_trigger_breaks_chain(self):
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="gooby",
+            runtime="gooby1",
+            trigger_target=None,  # nothing recognizes "gooby1" anymore
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'no trigger recognizes "gooby1"',
+        )
+
+    def test_intact_gooby_chain_fixture_passes_guard(self):
+        # The synthetic chain, when intact, raises no Gooby preservation issue
+        # (proving the rule is load-bearing rather than always-failing).
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="gooby",
+            runtime="gooby1",
+            trigger_target="gooby1",
+        )
+
+        issues = validate_repo(root)
+
+        gooby_issues = [str(issue) for issue in issues if "gooby" in str(issue).lower()]
+        self.assertEqual([], gooby_issues)
+
     def test_given_player_bool_read_without_default_when_validating_then_reports_uninitialized_property(self):
         root = self.make_fixture()
         write_property_hygiene_script(
@@ -602,6 +676,244 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertEqual([], [str(issue) for issue in issues])
 
+    def test_given_default_for_undeclared_quest_key_when_validating_then_reports_missing_declaration(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked", "ghost": "not_started"}
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "ghost"',
+            'quest default "not_started" references undeclared quest key "ghost" (missing from QUEST_KEYS)',
+        )
+
+    def test_given_transition_target_for_undeclared_quest_key_when_validating_then_reports_missing_declaration(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    self._set_state("ghost", "active")
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "ghost"',
+            'transition target "active" writes undeclared quest key "ghost" (missing from QUEST_KEYS)',
+        )
+
+    def test_given_state_read_for_undeclared_quest_key_when_validating_then_reports_missing_declaration(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def check(self):
+                    return self.get_state("ghost") == "active"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "ghost"',
+            'state read "active" references undeclared quest key "ghost" (missing from QUEST_KEYS)',
+        )
+
+    def test_given_unreachable_terminal_state_when_validating_then_reports_unreachable_terminal(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    self._set_state("main", "active")
+
+                def isCompleted(self):
+                    return self.get_state("main") == "finished"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "main"',
+            'terminal state "finished" is unreachable: it is neither the default nor a transition target',
+        )
+
+    def test_given_reachable_quest_state_machine_when_validating_then_accepts_transitions(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    if self.get_state("main") == "locked":
+                        self._set_state("main", "active")
+                    if self.get_state("main") == "active":
+                        self._set_state("main", "finished")
+
+                def isCompleted(self):
+                    return self.get_state("main") == "finished"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_given_default_terminal_state_when_validating_then_treats_default_as_reachable(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "resolved"}
+
+                def isCompleted(self):
+                    return self.get_state("main") == "resolved"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_given_bad_quest_transition_when_running_standard_validation_path_then_reported_as_error(self):
+        # Regression for E07/S01/SS04: the quest-state-transition validator must run in
+        # the NORMAL validation path (validate_repo -> ContentValidator.validate ->
+        # _validate_map_context), not only via a direct helper call. A synthetic map with
+        # an unreachable terminal state must be caught by the default end-to-end run and
+        # surfaced as a standard ValidationIssue error.
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    self._set_state("main", "active")
+
+                def isCompleted(self):
+                    return self.get_state("main") == "unreachable"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        unreachable_message = (
+            'terminal state "unreachable" is unreachable: it is neither the default nor a transition target'
+        )
+
+        # The default end-to-end run (the exact entrypoint scripts/validate_content.py
+        # invokes) must report the bad transition; it is not gated behind a runtime-only test.
+        end_to_end_issues = validate_repo(root)
+        self.assertIssueContains(end_to_end_issues, "res/maps/broken/script.py", 'quest "main"', unreachable_message)
+
+        # ContentValidator.validate() (which main()/validate_repo() call) must produce the
+        # same error, and the quest validator must stay wired into _validate_map_context so
+        # a future refactor cannot silently drop it from the standard path.
+        validate_issues = ContentValidator(root).validate()
+        self.assertTrue(
+            any(unreachable_message in str(issue) for issue in validate_issues),
+            "quest-state-transition validator did not run inside ContentValidator.validate()",
+        )
+        self.assertTrue(
+            hasattr(ContentValidator, "_validate_quest_state_transitions"),
+            "quest-state-transition validator helper is missing",
+        )
+
+        # Pin the wiring: _validate_map_context must invoke the quest-state validator so it
+        # always runs after map config, dialog JSON, map.json, and script.py are loaded.
+        import inspect
+
+        map_context_source = inspect.getsource(ContentValidator._validate_map_context)
+        self.assertIn("_validate_quest_state_transitions", map_context_source)
+
+    def test_given_script_granted_quest_id_missing_from_config_when_validating_then_reports_unknown_quest(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    event.getCause().addQuest("phantomQuest")
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'addQuest("phantomQuest")',
+            'unknown quest id "phantomQuest"',
+        )
+
     def test_creature_archetype_naming_policy_accepts_conforming_ids(self):
         root = self.make_fixture()
         write_json(
@@ -669,6 +981,476 @@ class ContentValidatorTest(unittest.TestCase):
             'class reference must use property "creatureClass"',
             'never the reserved object-constructor key "class"',
         )
+
+    def _register_creature_class_type(self, root):
+        # CCreatureClass is not a builtin; register it statically (without V_META) so
+        # the synthetic configs are constructible and carry no metadata property
+        # schema, leaving only the actions/levelling validator to fire.
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() { CTypes::register_type<CCreatureClass, CGameObject>(); }\n",
+            encoding="utf-8",
+        )
+
+    def _write_creature_class(self, root, properties):
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": properties}},
+        )
+
+    def test_creature_class_actions_and_levelling_resolving_to_interaction_pass(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(
+            root,
+            {
+                "actions": [
+                    {"ref": "Attack"},
+                    {"class": "CInteraction", "properties": {"effect": {"ref": "HitEffect"}}},
+                ],
+                "levelling": {"1": {"class": "CInteraction"}, "2": {"class": "CInteraction"}},
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_creature_class_action_not_resolving_to_interaction_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"actions": [{"ref": "LifePotion"}]})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            "warriorClass.properties.actions[0]",
+            'expected object resolving to "CInteraction"; got "CPotion"',
+        )
+
+    def test_creature_class_levelling_value_not_resolving_to_interaction_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"levelling": {"1": {"ref": "LifePotion"}}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            'warriorClass.properties.levelling["1"]',
+            'expected object resolving to "CInteraction"; got "CPotion"',
+        )
+
+    def test_creature_class_non_integer_levelling_key_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"levelling": {"one": {"ref": "Attack"}}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            "warriorClass.properties.levelling.one",
+            'levelling key "one" must be a positive-integer string',
+        )
+
+    def test_creature_class_non_positive_levelling_key_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"levelling": {"0": {"ref": "Attack"}}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            'warriorClass.properties.levelling["0"]',
+            'levelling key "0" must be a positive-integer string',
+        )
+
+    def test_creature_class_duplicate_action_id_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(
+            root,
+            {"actions": [{"ref": "Attack"}], "levelling": {"1": {"ref": "Attack"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            'warriorClass.properties.levelling["1"]',
+            'duplicate action id "Attack", previously granted at warriorClass.properties.actions[0]',
+        )
+
+    def _write_creature_with_creature_class(self, root, creature_class_value):
+        # A concrete CCreature carrying its class template through the "creatureClass"
+        # *property* (never the top-level constructor key "class").  CCreatureClass is
+        # registered statically so the definition is constructible.
+        self._register_creature_class_type(root)
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": creature_class_value, "label": "Goblin"},
+                }
+            },
+        )
+
+    def test_creature_class_property_resolving_to_creature_class_passes(self):
+        root = self.make_fixture()
+        self._write_creature_with_creature_class(root, {"ref": "warriorClass"})
+
+        issues = validate_repo(root)
+
+        creature_class_issues = [
+            str(issue) for issue in issues if "creatureClass" in str(issue) and "Goblin" in str(issue)
+        ]
+        self.assertEqual([], creature_class_issues)
+
+    def test_creature_class_property_inline_creature_class_passes(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {
+                        "creatureClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}},
+                        "label": "Goblin",
+                    },
+                }
+            },
+        )
+
+        issues = validate_repo(root)
+
+        creature_class_issues = [
+            str(issue) for issue in issues if "creatureClass" in str(issue) and "Goblin" in str(issue)
+        ]
+        self.assertEqual([], creature_class_issues)
+
+    def test_creature_class_property_missing_reference_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "ghostClass"}, "label": "Goblin"},
+                }
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/monsters.json",
+            "Goblin.properties.creatureClass",
+            'property "creatureClass" expected an object resolving to "CCreatureClass"; '
+            "reference does not resolve to a known config",
+        )
+
+    def test_creature_class_property_wrong_target_class_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_with_creature_class(root, {"ref": "LifePotion"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/monsters.json",
+            "Goblin.properties.creatureClass",
+            'property "creatureClass" expected an object resolving to "CCreatureClass"; got "CPotion"',
+        )
+
+    def test_creature_class_property_wrong_typed_value_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_with_creature_class(root, "warriorClass")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/monsters.json",
+            "Goblin.properties.creatureClass",
+            'property "creatureClass" expected an object resolving to "CCreatureClass"; got string',
+        )
+
+    def test_creature_top_level_class_key_is_not_mistaken_for_creature_class_property(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        # The creature's top-level "class": "CCreature" constructor key must never be
+        # treated as the "creatureClass" reference property: a creature that omits the
+        # property is vacuously satisfied and emits no creatureClass diagnostic.
+        write_json(
+            root / "res/config/monsters.json",
+            {"Goblin": {"class": "CCreature", "properties": {"label": "Goblin"}}},
+        )
+
+        issues = validate_repo(root)
+
+        creature_class_issues = [str(issue) for issue in issues if "creatureClass" in str(issue)]
+        self.assertEqual([], creature_class_issues)
+
+    def test_archetype_id_as_map_object_type_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"][0]["type"] = "warriorClass"
+        write_json(map_path, map_data)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            "layers[1].objects[0].type",
+            'object type "warriorClass" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_archetype_id_as_tile_type_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"class": "CCreatureRace", "properties": {"label": "Human"}}},
+        )
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["tilesets"][0]["tileproperties"] = {"0": {"type": "humanRace"}}
+        map_data["layers"][0]["data"] = [1, 0, 0, 0]
+        write_json(map_path, map_data)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            "layers[0].data[0]",
+            'tile type "humanRace" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_archetype_id_as_add_object_by_name_target_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getMap().addObjectByName("warriorClass", None)',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'addObjectByName("warriorClass")',
+            'object ref or class "warriorClass" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_archetype_id_as_create_object_target_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("warriorClass")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'createObject("warriorClass")',
+            'object ref or class "warriorClass" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_concrete_creature_spawn_alongside_archetype_definitions_passes(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"class": "CCreatureRace", "properties": {"label": "Human"}}},
+        )
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "warriorClass"}, "label": "Goblin"},
+                }
+            },
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("Goblin")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        archetype_issues = [str(issue) for issue in issues if "creature archetype definition" in str(issue)]
+        self.assertEqual([], archetype_issues)
+
+    def _register_creature_race_type(self, root):
+        # CCreatureRace is not a builtin; register it statically (without V_META) so the
+        # synthetic race configs are constructible and carry no metadata property schema,
+        # leaving only the label-uniqueness validator to fire.
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() { CTypes::register_type<CCreatureRace, CGameObject>(); }\n",
+            encoding="utf-8",
+        )
+
+    def test_distinct_player_selectable_race_labels_pass(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+                "elfRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Elf"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_duplicate_player_selectable_race_labels_are_reported(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+                "northernerRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace",
+            'player-selectable race selection label "Human" is not unique',
+            "it collides with northernerRace",
+        )
+        self.assertIssueContains(
+            issues,
+            "northernerRace",
+            "it collides with humanRace",
+        )
+
+    def test_player_selectable_race_without_label_collides_by_id(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        # One race carries an explicit label equal to the other's id; the label-less race
+        # falls back to its id "humanRace", so the two collide on the "humanRace" key.
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True},
+                },
+                "elfRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "humanRace"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace",
+            'player-selectable race selection label "humanRace" is not unique',
+            "it collides with elfRace",
+        )
+
+    def test_non_player_selectable_duplicate_race_labels_are_ignored(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+                "spectralHumanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": False, "label": "Human"},
+                },
+                "undeclaredHumanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"label": "Human"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
 
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
@@ -774,6 +1556,86 @@ class ContentValidatorTest(unittest.TestCase):
             "res/maps/broken/config.json",
             "schemaUnknown.properties.bogus",
             'unknown property "bogus" for class "CPropertyDerived"',
+        )
+
+    def test_creature_class_main_stat_numeric_stat_passes(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["WarriorClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": "strength"},
+        }
+        write_json(config_path, config)
+
+        validator = ContentValidator(root)
+        validator._collect_engine_classes()
+
+        self.assertEqual({"strength", "agility", "intelligence"}, validator._numeric_main_stat_names())
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_class_main_stat_typo_reports_class_path(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["WarriorClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": "strenght"},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "WarriorClass.properties.mainStat",
+            'property "mainStat" for class "CCreatureClass" value "strenght" is not a numeric CStats property',
+            "expected one of agility, intelligence, strength",
+        )
+
+    def test_creature_class_main_stat_non_numeric_stat_reports_class_path(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        # "mainStat" itself is a std::string CStats property -- present but non-numeric.
+        config["MageClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": "mainStat"},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "MageClass.properties.mainStat",
+            'property "mainStat" for class "CCreatureClass" value "mainStat" is not a numeric CStats property',
+        )
+
+    def test_creature_class_main_stat_empty_reports_class_path(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["EmptyClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": ""},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "EmptyClass.properties.mainStat",
+            'property "mainStat" for class "CCreatureClass" expected a non-empty numeric CStats property name; '
+            "got string",
         )
 
     def test_cpp_property_schema_reports_scalar_type_mismatches(self):
@@ -1306,6 +2168,407 @@ class ContentValidatorTest(unittest.TestCase):
         manifest.parent.mkdir(parents=True, exist_ok=True)
         write_json(manifest, {"exclusions": exclusions})
 
+    def write_creature_class_main_stat_fixture(self, root):
+        """Declare synthetic CStats + CCreatureClass metadata for mainStat checks.
+
+        CCreatureClass does not exist on real content, so the validator is vacuously
+        satisfied there; these synthetic headers let the test exercise the forward
+        guard.  CStats mirrors src/core/CStats.h closely enough to drive the numeric
+        property derivation: a couple of int stats plus the std::string mainStat.
+        """
+        header = root / "src/object/CCreatureClassFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                        V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CStats {
+                    V_META(CStats, CGameObject,
+                        V_PROPERTY(CStats, int, strength, getStrength, setStrength),
+                        V_PROPERTY(CStats, int, agility, getAgility, setAgility),
+                        V_PROPERTY(CStats, int, intelligence, getIntelligence, setIntelligence),
+                        V_PROPERTY(CStats, std::string, mainStat, getMainStat, setMainStat))
+                };
+
+                class CCreatureClass {
+                    V_META(CCreatureClass, CGameObject,
+                        V_PROPERTY(CCreatureClass, std::string, mainStat, getMainStat, setMainStat))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CCreatureClassTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerCreatureClassTypes() {
+                    CTypes::register_type<CStats, CGameObject>();
+                    CTypes::register_type<CCreatureClass, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def write_creature_race_fixture(self, root):
+        """Declare synthetic CCreature + CCreatureRace metadata for race checks.
+
+        CCreature configs do not declare a "race" property on real content, so the
+        validator is vacuously satisfied there; these synthetic headers let the test
+        exercise the forward guard.  CCreatureRace and a sibling non-race class are
+        registered statically (without V_META registration) so they are constructible
+        and the inheritance check can confirm the resolved race class lineage.
+        """
+        header = root / "src/object/CCreatureRaceFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                        V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CCreature {
+                    V_META(CCreature, CGameObject,
+                        V_PROPERTY(CCreature, std::string, name, getName, setName))
+                };
+
+                class CCreatureRace {
+                    V_META(CCreatureRace, CGameObject,
+                        V_PROPERTY(CCreatureRace, std::string, label, getLabel, setLabel))
+                };
+
+                class CCreatureClass {
+                    V_META(CCreatureClass, CGameObject,
+                        V_PROPERTY(CCreatureClass, std::string, label, getLabel, setLabel))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CCreatureRaceTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerCreatureRaceTypes() {
+                    CTypes::register_type<CCreatureRace, CGameObject>();
+                    CTypes::register_type<CCreatureClass, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def write_creature_race_stats_fixture(self, root):
+        """Declare synthetic CStats metadata + register CCreatureRace for stat/action/type checks.
+
+        CCreatureRace does not exist on real content, so the validator is vacuously
+        satisfied there; this fixture exercises the forward guard for the
+        baseStats/actions/creatureType/subtypes validator.  CStats carries V_META
+        mirroring src/core/CStats.h closely enough to drive the baseStats key
+        derivation.  CCreatureRace is registered statically WITHOUT V_META so the
+        synthetic configs are constructible and recognised as race definitions while
+        carrying no metadata property schema -- leaving only the race-field validator
+        (not the generic property-schema validator) to fire on its baseStats/actions/
+        creatureType/subtypes fields.  Kept separate from write_creature_race_fixture
+        (which backs the race-resolution tests) so the two helpers do not shadow.
+        """
+        header = root / "src/object/CCreatureRaceStatsFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                        V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CStats {
+                    V_META(CStats, CGameObject,
+                        V_PROPERTY(CStats, int, strength, getStrength, setStrength),
+                        V_PROPERTY(CStats, int, agility, getAgility, setAgility),
+                        V_PROPERTY(CStats, int, intelligence, getIntelligence, setIntelligence),
+                        V_PROPERTY(CStats, std::string, mainStat, getMainStat, setMainStat))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CCreatureRaceStatsTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerCreatureRaceStatsTypes() {
+                    CTypes::register_type<CStats, CGameObject>();
+                    CTypes::register_type<CCreatureRace, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def test_creature_race_ref_to_creature_race_passes(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["humanRace"] = {"class": "CCreatureRace", "properties": {"label": "Human"}}
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": {"ref": "humanRace"}},
+        }
+        write_json(config_path, config)
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_race_unknown_ref_reports_ref_path(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": {"ref": "missingRace"}},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "Townsfolk.properties.race.ref",
+            'property "race" for class "CCreature" references unknown id "missingRace"; '
+            'expected a "CCreatureRace" definition',
+        )
+
+    def test_creature_race_ref_to_non_race_reports_ref_path(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        # CCreatureClass is constructible but is not a CCreatureRace lineage.
+        config["warriorClass"] = {"class": "CCreatureClass", "properties": {"label": "Warrior"}}
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": {"ref": "warriorClass"}},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "Townsfolk.properties.race.ref",
+            'property "race" for class "CCreature" expected object inheriting from '
+            '"CCreatureRace"; got "CCreatureClass"',
+        )
+
+    def test_creature_race_wrong_typed_value_reports_race_path(self):
+        root = self.make_fixture()
+        self.write_creature_race_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["Townsfolk"] = {
+            "class": "CCreature",
+            "properties": {"race": "humanRace"},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "Townsfolk.properties.race",
+            'property "race" for class "CCreature" expected object inheriting from ' '"CCreatureRace"; got string',
+        )
+
+    def _write_creature_race(self, root, properties):
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"class": "CCreatureRace", "properties": properties}},
+        )
+
+    def test_creature_race_valid_base_stats_actions_and_types_pass(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(
+            root,
+            {
+                "baseStats": {"strength": 5, "agility": 3, "mainStat": "strength"},
+                "actions": [
+                    {"ref": "Attack"},
+                    {"class": "CInteraction", "properties": {"effect": {"ref": "HitEffect"}}},
+                ],
+                "creatureType": "humanoid",
+                "subtypes": ["human", "noble"],
+            },
+        )
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_race_unknown_base_stats_key_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"baseStats": {"strenght": 5}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.baseStats.strenght",
+            '"strenght" is not a CStats property; expected one of agility, intelligence, mainStat, name, strength',
+        )
+
+    def test_creature_race_action_not_resolving_to_interaction_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"actions": [{"ref": "LifePotion"}]})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.actions[0]",
+            'expected object resolving to "CInteraction"; got "CPotion"',
+        )
+
+    def test_creature_race_empty_creature_type_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"creatureType": ""})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.creatureType",
+            '"creatureType" expected a non-empty string; got string',
+        )
+
+    def test_creature_race_empty_subtype_string_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"subtypes": ["human", ""]})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.subtypes[1]",
+            "expected a non-empty string; got string",
+        )
+
+    def test_amulet_quest_carrier_and_runtime_actor_pass_validation(self):
+        root = self.make_amulet_fixture()
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_amulet_quest_item_removed_from_carrier_is_reported(self):
+        root = self.make_amulet_fixture()
+        config_path = root / "res/maps/amulet/config.json"
+        config = read_json(config_path)
+        # Simulate the migration moving the quest item off the thief carrier (e.g. onto a
+        # shared GoblinRace/thief class template) by dropping it from the carrier items.
+        config["goblinThief"]["properties"]["items"] = []
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/amulet/config.json",
+            "goblinThief.properties.items",
+            'must carry quest item "preciousAmulet" as instance inventory',
+        )
+
+    def test_amulet_quest_runtime_actor_name_broken_is_reported(self):
+        root = self.make_amulet_fixture()
+        script_path = root / "res/maps/amulet/script.py"
+        # Break only the runtime name assigned to the spawned carrier.
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace('"amuletGoblin"', '"strayGoblin"'),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/amulet/script.py",
+            'createObject("goblinThief")',
+            'runtime actor name "amuletGoblin" must be assigned to a spawned "goblinThief"',
+        )
+
+    def test_amulet_quest_guard_is_load_bearing(self):
+        # Removing the registration must make the broken-item fixture stop being rejected,
+        # proving the guard (not some sibling rule) is what catches the violation.
+        root = self.make_amulet_fixture()
+        config_path = root / "res/maps/amulet/config.json"
+        config = read_json(config_path)
+        config["goblinThief"]["properties"]["items"] = []
+        write_json(config_path, config)
+
+        validator = ContentValidator(root)
+        validator._validate_amulet_quest_actor = lambda *args, **kwargs: None
+        issue_text = "\n".join(str(issue) for issue in validator.validate())
+
+        self.assertNotIn('must carry quest item "preciousAmulet"', issue_text)
+
+    def make_amulet_fixture(self):
+        root = self.make_fixture()
+        (root / "res/maps/amulet").mkdir(parents=True)
+        write_json(
+            root / "res/config/items.json",
+            {
+                "LifePotion": {"class": "CPotion"},
+                "HitEffect": {"class": "CEffect"},
+                "Attack": {"class": "CInteraction", "properties": {"effect": {"ref": "HitEffect"}}},
+                "GoblinThief": {"class": "CCreature"},
+                "preciousAmulet": {"class": "CItem", "properties": {"name": "preciousAmulet"}},
+            },
+        )
+        write_json(
+            root / "res/maps/amulet/map.json",
+            {
+                "type": "map",
+                "width": 2,
+                "height": 2,
+                "layers": [
+                    {"type": "tilelayer", "width": 2, "height": 2, "data": [0, 0, 0, 0]},
+                    {
+                        "type": "objectgroup",
+                        "objects": [
+                            {
+                                "id": 1,
+                                "name": "start",
+                                "type": "AmuletEvent",
+                                "x": 0,
+                                "y": 0,
+                                "width": 1,
+                                "height": 1,
+                            }
+                        ],
+                    },
+                ],
+                "tilesets": [{"firstgid": 1, "tileproperties": {}}],
+                "nextobjectid": 2,
+            },
+        )
+        write_json(
+            root / "res/maps/amulet/config.json",
+            {
+                "goblinThief": {
+                    "ref": "GoblinThief",
+                    "properties": {"items": [{"ref": "preciousAmulet"}]},
+                },
+            },
+        )
+        write_amulet_script(root / "res/maps/amulet/script.py")
+        return root
+
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
         for substring in substrings:
@@ -1457,6 +2720,86 @@ def write_script(path, script_quest, script_map):
     )
 
 
+def write_amulet_script(path):
+    path.write_text(
+        textwrap.dedent("""
+            def load(self, context):
+                from game import CEvent
+                from game import register
+
+                @register(context)
+                class AmuletEvent(CEvent):
+                    def onEnter(self, event):
+                        game = self.getGame()
+                        game_map = game.getMap()
+                        goblin = game.createObject("goblinThief")
+                        goblin.setStringProperty("name", "amuletGoblin")
+                        game_map.addObject(goblin)
+
+                    def complete(self):
+                        amulet_goblin = self.getMap().getObjectByName("amuletGoblin")
+                        if amulet_goblin:
+                            self.getMap().removeObject(amulet_goblin)
+            """).lstrip(),
+        encoding="utf-8",
+    )
+
+
+def write_gooby_chain_script(path, template, runtime, trigger_target):
+    """Write a script whose CaveTrigger spawns ``template`` and renames it to ``runtime``.
+
+    Mirrors the real nouraajd Gooby chain so the runtime-name preservation guard can be
+    exercised: a createObject spawn, a setStringProperty("name", ...) rename, and an
+    optional onDestroy trigger against ``trigger_target``.  The template config entry is
+    written alongside so unrelated ref checks stay quiet.  Pass ``trigger_target=None`` to
+    omit the recognizing trigger.
+    """
+    config_path = path.parent / "config.json"
+    config = read_json(config_path)
+    config[template] = {"class": "CCreature"}
+    write_json(config_path, config)
+
+    trigger_block = ""
+    if trigger_target is not None:
+        trigger_block = textwrap.dedent(f"""
+            @trigger(context, "onDestroy", "{trigger_target}")
+            class GoobyTrigger(CTrigger):
+                def trigger(self, obj, event):
+                    pass
+            """)
+    trigger_block = textwrap.indent(trigger_block.strip(), "    ")
+
+    path.write_text(
+        textwrap.dedent(f"""
+            def load(self, context):
+                from game import CEvent
+                from game import CQuest
+                from game import CTrigger
+                from game import register
+                from game import trigger
+
+                @register(context)
+                class StartEvent(CEvent):
+                    def onEnter(self, event):
+                        pass
+
+                @register(context)
+                class GoodQuest(CQuest):
+                    pass
+
+                @trigger(context, "onDestroy", "cave1")
+                class CaveTrigger(CTrigger):
+                    def trigger(self, obj, event):
+                        game = self.getGame()
+                        gooby = game.createObject("{template}")
+                        gooby.setStringProperty("name", "{runtime}")
+                        game.getMap().addObject(gooby)
+
+            """).lstrip() + trigger_block + "\n",
+        encoding="utf-8",
+    )
+
+
 def write_property_hygiene_script(path, body):
     header = textwrap.dedent("""
         def load(self, context):
@@ -1581,6 +2924,200 @@ class CreatureOverrideInventoryTest(unittest.TestCase):
             },
         )
         return root
+
+
+class CreatureClassificationTest(unittest.TestCase):
+    # Concrete player template ids shipped in res/config/monsters.json. These are
+    # the "class": "CPlayer" entries; the classification must derive playerhood from
+    # CPlayer metadata inheritance, never from these names.
+    EXPECTED_PLAYER_TEMPLATES = ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer")
+
+    def test_repo_classification_lists_concrete_player_templates_as_players(self):
+        classification = classify_creature_templates(REPO_ROOT)
+
+        for player in self.EXPECTED_PLAYER_TEMPLATES:
+            with self.subTest(player=player):
+                self.assertIn(player, classification.player_templates)
+                # A player template must never be silently treated as a monster.
+                self.assertNotIn(player, classification.monster_templates)
+
+    def test_repo_classification_separates_monsters_from_players(self):
+        classification = classify_creature_templates(REPO_ROOT)
+
+        self.assertEqual(set(self.EXPECTED_PLAYER_TEMPLATES), set(classification.player_templates))
+        self.assertTrue(classification.monster_templates)
+        # Known non-player creatures must land in the monster partition.
+        self.assertIn("Cultist", classification.monster_templates)
+        self.assertIn("Pritz", classification.monster_templates)
+        # Player and monster partitions are disjoint.
+        self.assertEqual(
+            set(),
+            set(classification.player_templates) & set(classification.monster_templates),
+        )
+
+    def test_player_templates_are_flagged_in_creature_enumeration(self):
+        # CPlayer inherits CCreature, so getAllSubTypes("CCreature") (used by the
+        # random-encounter table builder) enumerates every player template. The
+        # classification must surface exactly these so encounter code can exclude them.
+        classification = classify_creature_templates(REPO_ROOT)
+
+        self.assertEqual(
+            set(self.EXPECTED_PLAYER_TEMPLATES),
+            set(classification.players_in_creature_enumeration),
+        )
+        self.assertEqual(
+            set(classification.player_templates),
+            set(classification.players_in_creature_enumeration),
+        )
+
+    def test_classification_is_derived_from_metadata_inheritance_not_names(self):
+        # A creature template whose id looks like a monster but whose class is a
+        # CPlayer subclass must classify as a player; a player-sounding id on a plain
+        # CCreature must classify as a monster. This proves lineage, not naming, drives
+        # the decision.
+        root = self.make_classification_fixture()
+
+        classification = classify_creature_templates(root)
+
+        self.assertIn("grumpyOgre", classification.player_templates)
+        self.assertNotIn("grumpyOgre", classification.monster_templates)
+        self.assertIn("heroLookalike", classification.monster_templates)
+        self.assertNotIn("heroLookalike", classification.player_templates)
+        self.assertIn("grumpyOgre", classification.players_in_creature_enumeration)
+        self.assertNotIn("heroLookalike", classification.players_in_creature_enumeration)
+
+    def make_classification_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "src/object").mkdir(parents=True)
+
+        # Engine metadata: CPlayer derives from CCreature, mirroring src/object/CPlayer.h.
+        (root / "src/object/CCreatures.h").write_text(
+            textwrap.dedent("""
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                # Monster-sounding id, but a CPlayer subtype -> classified as player.
+                "grumpyOgre": {"class": "CPlayer", "properties": {"label": "Ogre"}},
+                # Hero-sounding id, but a plain CCreature -> classified as monster.
+                "heroLookalike": {"class": "CCreature", "properties": {"label": "Hero"}},
+            },
+        )
+        return root
+
+
+class UnmigratedCreatureReportTest(unittest.TestCase):
+    def make_unmigrated_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "src/object").mkdir(parents=True)
+
+        # Engine metadata: CPlayer derives from CCreature, mirroring src/object/CPlayer.h.
+        (root / "src/object/CCreatures.h").write_text(
+            textwrap.dedent("""
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                # Fully migrated creature: carries both archetype references.
+                "MigratedGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}, "creatureClass": {"ref": "BruteClass"}},
+                },
+                # Missing only the class reference.
+                "NoClassGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}},
+                },
+                # Missing only the race reference.
+                "NoRaceGoblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "BruteClass"}},
+                },
+                # Unmigrated creature: missing both (and no properties block at all path).
+                "LegacyGoblin": {"class": "CCreature", "properties": {"label": "Goblin"}},
+                # Player template (CPlayer inherits CCreature) -- also subject to migration.
+                "LegacyHero": {"class": "CPlayer", "properties": {"label": "Hero"}},
+                # Not a creature -- must never appear in the report.
+                "PlainItem": {"class": "CItem", "properties": {"label": "Sword"}},
+            },
+        )
+        return root
+
+    def test_report_lists_only_creatures_missing_archetype_references(self):
+        root = self.make_unmigrated_fixture()
+
+        report = report_unmigrated_creatures(root)
+        missing_by_id = {creature.config_id: creature.missing for creature in report}
+
+        self.assertEqual(
+            {
+                "NoClassGoblin": ("creatureClass",),
+                "NoRaceGoblin": ("race",),
+                "LegacyGoblin": ("creatureClass", "race"),
+                "LegacyHero": ("creatureClass", "race"),
+            },
+            missing_by_id,
+        )
+        # Fully migrated creatures and non-creatures never appear.
+        self.assertNotIn("MigratedGoblin", missing_by_id)
+        self.assertNotIn("PlainItem", missing_by_id)
+
+    def test_report_output_is_deterministically_sorted(self):
+        root = self.make_unmigrated_fixture()
+
+        report = report_unmigrated_creatures(root)
+
+        ids = [creature.config_id for creature in report]
+        self.assertEqual(sorted(ids), ids)
+        for creature in report:
+            self.assertEqual(sorted(creature.missing), list(creature.missing))
+            self.assertEqual("res/config/monsters.json", creature.path)
+
+    def test_report_does_not_affect_normal_validation(self):
+        # Every shipped creature is unmigrated today, yet the normal validation run
+        # must still pass -- the report is informational and shares no failing path.
+        self.assertEqual([], [str(issue) for issue in validate_repo(REPO_ROOT)])
+
+        report = report_unmigrated_creatures(REPO_ROOT)
+        # The report is non-empty on current content (nothing is migrated yet) and the
+        # production player templates surface as still needing migration.
+        self.assertTrue(report)
+        report_ids = {creature.config_id for creature in report}
+        for player in ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer"):
+            self.assertIn(player, report_ids)
+            self.assertEqual(("creatureClass", "race"), next(c.missing for c in report if c.config_id == player))
 
 
 if __name__ == "__main__":

@@ -570,6 +570,13 @@ std::shared_ptr<CArmor> CCreature::getArmor() { return vstd::cast<CArmor>(getIte
 
 // TODO: get rid of this, calculate level automatically
 void CCreature::levelUp() {
+    // Legacy fallback compatibility contract (docs/design/creature_archetypes.md,
+    // "Legacy fallback compatibility contract"): a creature with no race and no
+    // creatureClass uses this legacy level-up path exactly -- increment level and
+    // apply the concrete template's own `levelling` unlock (getLevelAction). No
+    // race/class-driven growth or progression participates, because those archetype
+    // objects (CCreatureRace / CCreatureClass) do not exist yet. Any future
+    // archetype level growth must slot in without altering this no-archetype path.
     level++;
     // TODO: dynamic action calculation
     addAction(getLevelAction());
@@ -831,18 +838,45 @@ void CCreature::removeQuestItem(std::shared_ptr<CItem> item) { removeItem(item, 
 
 void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) { removeItem(item, true); }
 
-std::shared_ptr<CStats> CCreature::getStats() {
+std::shared_ptr<CStats> CCreature::getStats() { return buildLegacyStats(); }
+
+std::shared_ptr<CStats> CCreature::buildLegacyStats() {
+    // Stat precedence contract (docs/design/creature_archetypes.md, "Creature stat
+    // precedence contract"): effective stats are composed least- to most-specific:
+    //   1. race.baseStats             -- extension point (no backing object yet)
+    //   2. creatureClass.baseStats    -- extension point (no backing object yet)
+    //   3. creature.baseStats         -- concrete template's own base (legacy)
+    //   4. creatureClass.levelStats   -- extension point, per level (no object yet)
+    //   5. creature.levelStats        -- concrete template's per-level growth (legacy)
+    //   6. equipment bonuses
+    //   7. effect bonuses
+    // Main stat is selected from creatureClass.baseStats first, falling back to the
+    // legacy creature.baseStats mainStat. The race / creature-class archetype objects
+    // (CCreatureClass) do not exist yet, so positions 1, 2, 4 and the class-first main
+    // stat are extension points that contribute nothing today; they slot in here
+    // without disturbing the equipment-then-effects tail or the legacy fallback.
+    // Legacy fallback compatibility contract (same doc, "Legacy fallback
+    // compatibility contract"): for a creature with no race and no creatureClass
+    // (every creature today) this composes the legacy stat block exactly.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
+    // Main stat: creatureClass.baseStats.mainStat first (extension point), then the
+    // legacy creature.baseStats.mainStat fallback below.
     ret->setMainStat(getBaseStats()->getMainStat());
+    // 1-2. race / creature-class baseStats: extension point (nothing to add yet).
+    // 3. creature.baseStats (legacy concrete base).
     ret->addBonus(getBaseStats());
+    // 4. creatureClass.levelStats per level: extension point (nothing to add yet).
+    // 5. creature.levelStats per level (legacy concrete growth).
     for (int i = 0; i < level; i++) {
         ret->addBonus(getLevelStats());
     }
+    // 6. equipment bonuses.
     for (auto [slot, item] : getEquipped()) {
         if (item) {
             ret->addBonus(item->getBonus());
         }
     }
+    // 7. effect bonuses.
     for (auto effect : getEffects()) {
         if (effect) {
             ret->addBonus(effect->getBonus());
