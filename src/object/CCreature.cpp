@@ -19,6 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
+
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
@@ -916,3 +919,15 @@ std::string CCreature::getArchetypeClassLabel() {
     }
     return getArchetypeClassId();
 }
+
+std::shared_ptr<CCreatureRace> CCreature::getRace() { return race; }
+
+// A null race is valid: it marks a legacy (non-archetype) creature.
+void CCreature::setRace(std::shared_ptr<CCreatureRace> value) { race = value; }
+
+std::shared_ptr<CCreatureClass> CCreature::getCreatureClass() { return creatureClass; }
+
+// A null creatureClass is valid: it marks a legacy (non-archetype) creature.
+void CCreature::setCreatureClass(std::shared_ptr<CCreatureClass> value) { creatureClass = value; }
+
+bool CCreature::usesArchetypeComposition() { return race != nullptr || creatureClass != nullptr; }
