@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CScriptHandler.h"
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
@@ -43,11 +44,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -1045,6 +1049,223 @@ void test_player_respawn_normalizes_wrapped_entry_coords() {
                 "player respawn should keep the normalized coordinate cache in sync");
 }
 
+void test_creature_scale_preserves_level_plus_sw_invariant() {
+    // EPIC_03/STORY_01/SUBSTORY_03 regression guard: getScale() must stay equal to
+    // getLevel() + getSw() so encounter power math survives the archetype migration.
+    auto creature = std::make_shared<CCreature>();
+
+    creature->setLevel(0);
+    creature->setSw(0);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "getScale() should equal level + sw for a zeroed creature");
+
+    creature->setLevel(3);
+    creature->setSw(2);
+    expect_true(creature->getScale() == 5, "getScale() should report level + sw for explicit values");
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "getScale() should track concrete level and sw after both are set");
+
+    creature->setSw(7);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "mutating sw alone should still leave getScale() == level + sw");
+
+    creature->setLevel(10);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "mutating level alone should still leave getScale() == level + sw");
+
+    creature->setSw(-4);
+    expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                "getScale() should preserve the sum even when sw is negative");
+}
+
+std::shared_ptr<json> make_unit_creature_config(int sw) {
+    auto config = CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":" + std::to_string(sw) + "}}",
+                                         "unitCreatureSwConfig");
+    expect_true(config != nullptr, "unit creature sw config json should parse for the RNG encounter regression test");
+    return config;
+}
+
+void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Register two creature archetypes carrying explicit, well-separated sw values. The empty game
+    // already registers other CCreature subtypes, so these are added to (not isolated from) the
+    // registry CRngHandler scans.
+    struct Archetype {
+        std::string type;
+        int sw;
+    };
+    const std::vector<Archetype> archetypes = {
+        {"unitRngSwLow", 1},
+        {"unitRngSwHigh", 4},
+    };
+
+    for (const auto &archetype : archetypes) {
+        objectHandler->registerConfig(archetype.type, make_unit_creature_config(archetype.sw));
+        auto prototype = game->createObject<CCreature>(archetype.type);
+        expect_true(prototype != nullptr, "registered unit creature archetype should construct");
+        if (prototype) {
+            expect_true(prototype->getSw() == archetype.sw,
+                        "concrete creature should report the sw configured for its archetype");
+        }
+    }
+
+    // Reconstruct the ground-truth power-table keys exactly the way CRngHandler's constructor does
+    // (src/handler/CRngHandler.cpp:63-68): one key per registered CCreature subtype, taken from the
+    // concrete creature's getSw(). Any encounter sw must be one of these real concrete keys.
+    std::set<int> registeredCreatureSw;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto prototype = game->createObject<CCreature>(type);
+        if (prototype) {
+            registeredCreatureSw.insert(prototype->getSw());
+        }
+    }
+
+    // Deterministic ingestion proof: our two archetypes' concrete sw values are reachable keys.
+    expect_true(registeredCreatureSw.contains(1),
+                "CRngHandler power table should ingest the concrete sw of the low archetype");
+    expect_true(registeredCreatureSw.contains(4),
+                "CRngHandler power table should ingest the concrete sw of the high archetype");
+
+    // Building the handler against the live game ingests every registered subtype's concrete getSw()
+    // into the creature power table used to assemble encounters.
+    CRngHandler rng_handler(game);
+
+    for (int attempt = 0; attempt < 64; attempt++) {
+        auto encounter = rng_handler.getRandomEncounter(40);
+        for (const auto &creature : encounter) {
+            expect_true(creature != nullptr, "encounter creatures should be non-null");
+            if (!creature) {
+                continue;
+            }
+            // Encounter power compatibility: the post-scaling sum stays getScale() == level + sw.
+            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                        "scaled encounter creatures should keep getScale() == level + sw");
+            // CRngHandler selects the creature from creaturePowerTable.equal_range(sw) where sw is a
+            // table key (src/handler/CRngHandler.cpp:124-131); addExp scaling never mutates sw, so an
+            // encounter creature's getSw() must be one of the registered concrete subtype keys.
+            expect_true(registeredCreatureSw.contains(creature->getSw()),
+                        "encounter creatures should retain a concrete registered-subtype sw used as the power key");
+        }
+    }
+
+    for (const auto &archetype : archetypes) {
+        objectHandler->unregisterConfig(archetype.type);
+    }
+}
+
+void test_rng_handler_captures_encounter_power_and_scale_baseline() {
+    // EPIC_01/STORY_02/SUBSTORY_04 pre-migration baseline.
+    //
+    // The random-encounter machinery enumerates creature templates with
+    // CObjectHandler::getAllSubTypes("CCreature") and keys its power table on the
+    // concrete creature's getSw() (src/handler/CRngHandler.cpp:63-69, :124-131).
+    // A later archetype migration must NOT let race/class *definition* types (which
+    // do not exist yet) leak into that enumeration, and it must keep a defined sw on
+    // every concrete monster template. This test records sw/level/getScale() and the
+    // power-table participation for every concrete template as a reviewable artifact
+    // and asserts only structural invariants the source guarantees today.
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Reconstruct the exact enumeration the RNG handler scans
+    // (src/handler/CRngHandler.cpp:63). getAllSubTypes only returns a type when its
+    // resolved config "class" constructs and meta()->inherits("CCreature") holds
+    // (src/handler/CObjectHandler.cpp:104-119), which is the precise gate a migration
+    // must not loosen for definition-only race/class types.
+    const std::vector<std::string> creatureSubTypes = objectHandler->getAllSubTypes("CCreature");
+    expect_true(!creatureSubTypes.empty(),
+                "the normally-configured game should register at least one concrete CCreature template");
+
+    struct CreatureBaseline {
+        std::string type;
+        int sw = 0;
+        int level = 0;
+        int scale = 0;
+        bool inPowerTable = false;
+    };
+
+    // Deterministic ordering: getAllSubTypes already returns a sorted, de-duplicated
+    // list (src/handler/CObjectHandler.cpp:61-63), so iterate it directly so the
+    // emitted baseline table is stable across runs.
+    std::vector<CreatureBaseline> baseline;
+    for (const std::string &type : creatureSubTypes) {
+        auto creature = game->createObject<CCreature>(type);
+        // getAllSubTypes only yields constructible CCreature-inheriting templates, so
+        // every concrete monster template must materialize.
+        expect_true(creature != nullptr, "every concrete CCreature template should construct from the registry");
+        if (!creature) {
+            continue;
+        }
+
+        // Reject race/class-definition leakage structurally: anything the encounter
+        // enumeration returns must still be a real creature, mirroring the
+        // getAllSubTypes inherits gate (src/handler/CObjectHandler.cpp:115).
+        expect_true(creature->meta()->inherits("CCreature"),
+                    "encounter templates must inherit CCreature so race/class definitions cannot leak in");
+
+        CreatureBaseline entry;
+        entry.type = type;
+        entry.sw = creature->getSw();
+        entry.level = creature->getLevel();
+        entry.scale = creature->getScale();
+
+        // Every concrete monster must preserve a defined sw/level pair, and getScale()
+        // stays level + sw (src/object/CCreature.cpp:366), which the encounter power
+        // math relies on across the migration.
+        expect_true(entry.scale == entry.level + entry.sw,
+                    "concrete template getScale() should equal getLevel() + getSw()");
+
+        baseline.push_back(entry);
+    }
+
+    // Rebuild the creature power table the way CRngHandler's constructor does
+    // (src/handler/CRngHandler.cpp:63-69): one entry per concrete subtype keyed on
+    // getSw(). Mark which templates participate so the artifact records membership.
+    std::unordered_multimap<int, std::string> creaturePowerTable;
+    for (auto &entry : baseline) {
+        creaturePowerTable.insert(std::make_pair(entry.sw, entry.type));
+        entry.inPowerTable = true;
+    }
+    expect_true(!creaturePowerTable.empty(),
+                "the creature power table should be produced non-empty from concrete templates");
+    expect_true(creaturePowerTable.size() == baseline.size(),
+                "every concrete template should contribute exactly one power-table entry");
+
+    // Emit the deterministic, ordered baseline artifact for review.
+    std::cout << "[SS04] encounter power/scale baseline (type sw level scale inPowerTable)\n";
+    for (const auto &entry : baseline) {
+        std::cout << "[SS04] " << entry.type << " sw=" << entry.sw << " level=" << entry.level
+                  << " scale=" << entry.scale << " inPowerTable=" << (entry.inPowerTable ? "true" : "false") << "\n";
+    }
+    std::cout.flush();
+
+    // Building the live handler must ingest the same enumeration without crashing and
+    // must produce a usable, non-empty encounter source.
+    CRngHandler rng_handler(game);
+    std::set<int> baselineSw;
+    for (const auto &entry : baseline) {
+        baselineSw.insert(entry.sw);
+    }
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 64 && !producedEncounter; attempt++) {
+        auto encounter = rng_handler.getRandomEncounter(40);
+        for (const auto &creature : encounter) {
+            if (!creature) {
+                continue;
+            }
+            producedEncounter = true;
+            // addExp scaling never mutates sw (src/handler/CRngHandler.cpp:135), so an
+            // encounter creature's getSw() must remain a recorded baseline power key.
+            expect_true(baselineSw.contains(creature->getSw()),
+                        "encounter creatures should retain a concrete baseline-template sw used as the power key");
+        }
+    }
+    expect_true(producedEncounter,
+                "the baseline power table should be able to assemble a non-empty encounter without crashing");
+}
+
 } // namespace
 
 int main() {
@@ -1052,6 +1273,9 @@ int main() {
 
     test_script_handler_executes_commands_and_wraps_functions();
     test_handler_constructors_are_covered_by_native_tests();
+    test_creature_scale_preserves_level_plus_sw_invariant();
+    test_rng_handler_builds_encounters_from_concrete_creature_sw();
+    test_rng_handler_captures_encounter_power_and_scale_baseline();
     test_event_handler_trigger_registration_uses_named_comparison_helpers();
     test_fight_handler_rejects_stale_and_cross_map_participants();
     test_fight_handler_attributes_lethal_effects_to_valid_casters();

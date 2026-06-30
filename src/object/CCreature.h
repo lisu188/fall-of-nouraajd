@@ -176,6 +176,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     std::set<std::shared_ptr<CInteraction>> getInteractions();
 
+    std::set<std::shared_ptr<CInteraction>> getEffectiveInteractions();
+
     bool hasEquipped(std::shared_ptr<CItem> item);
 
     bool hasEquipped(std::function<bool(std::shared_ptr<CItem>)> item);
@@ -290,6 +292,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     std::shared_ptr<CStats> levelStats = std::make_shared<CStats>();
 
     void takeDamage(int i);
+
+    std::shared_ptr<CStats> buildLegacyStats();
 
     std::shared_ptr<CInteraction> getLevelAction();
 

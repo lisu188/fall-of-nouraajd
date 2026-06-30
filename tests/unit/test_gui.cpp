@@ -23,24 +23,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
+#include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CGameGraphicsObject.h"
+#include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/panel/CListView.h"
 #include "handler/CObjectHandler.h"
+#include "object/CCreature.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
 
+#include <chrono>
+#include <limits>
 #include <utility>
 
 namespace {
@@ -245,6 +251,22 @@ class DragCallbackPanel : public CGamePanel {
     bool allow_drop = true;
 };
 
+// Parent that exposes valid reflective widget callbacks plus a private one, used
+// to prove config-driven CWidget render/click dispatch fails closed on bad names.
+class WidgetCallbackPanel : public CGamePanel {
+    V_META(WidgetCallbackPanel, CGamePanel,
+           V_METHOD(WidgetCallbackPanel, renderWidget, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(WidgetCallbackPanel, clickWidget, void, std::shared_ptr<CGui>))
+
+  public:
+    void renderWidget(std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int) { ++renders; }
+
+    void clickWidget(std::shared_ptr<CGui>) { ++clicks; }
+
+    int renders = 0;
+    int clicks = 0;
+};
+
 void drain_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     for (int i = 0; i < 5; ++i) {
@@ -287,6 +309,7 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     CTypes::register_type_metadata<RefreshCountingListView, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
                                    CGameObject>();
     CTypes::register_type_metadata<DragCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+    CTypes::register_type_metadata<WidgetCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
 
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
@@ -653,11 +676,165 @@ void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
                 "previous refresh target should be disconnected when the refresh script resolves to null");
 }
 
+void test_list_view_refresh_property_collision_fails_closed() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
+    list->setResolvedRefreshTarget(refresh_target);
+
+    // "inventory" derives the "inventoryChanged" channel, which collides with the
+    // typed engine signal CCreature emits. Configuring it as a refreshProperty must
+    // fail closed: the list must NOT wire a property-specific reflective subscription
+    // on the typed channel (no spoofing in either direction) while a valid configured
+    // property ("label") still refreshes normally.
+    list->setRefreshProperties({"inventory", "label"});
+
+    list->refresh();
+    const int after_initial_refresh = list->refresh_count;
+
+    // A direct typed-engine emission on the colliding channel must NOT refresh the list
+    // (the colliding property was never subscribed) and must not crash.
+    refresh_target->signal("inventoryChanged");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh,
+                "a refreshProperty colliding with a typed engine signal must not be subscribed (fail closed)");
+
+    // A dynamic property literally named "inventory" must not refresh the list either:
+    // its per-property notification is dropped fail-closed and the name is rejected.
+    refresh_target->setStringProperty("inventory", "spoofed");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh,
+                "a colliding dynamic property change must not drive a fail-closed refreshProperty");
+
+    // The valid configured property still refreshes.
+    refresh_target->setStringProperty("label", "ok");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "a non-colliding configured refreshProperty must still refresh the list");
+}
+
 std::shared_ptr<CStats> player_stats() {
     auto stats = std::make_shared<CStats>();
     stats->setMainStat("stamina");
     stats->setStamina(10);
     return stats;
+}
+
+struct MinimapHarness {
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CPlayer> player;
+};
+
+MinimapHarness make_minimap_harness() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    MinimapHarness harness;
+    harness.game = std::make_shared<CGame>();
+    harness.map = std::make_shared<CMap>();
+    harness.gui = std::make_shared<CGui>();
+    harness.player = std::make_shared<CPlayer>();
+
+    harness.game->setMap(harness.map);
+    harness.game->setGui(harness.gui);
+    harness.map->setGame(harness.game);
+    harness.gui->setGame(harness.game);
+
+    harness.player->setGame(harness.game);
+    harness.player->setBaseStats(player_stats());
+    harness.player->setHp(harness.player->getHpMax());
+    harness.map->setPlayer(harness.player);
+    return harness;
+}
+
+// Renders the minimap once and asserts the call returns (the pre-fix bug could iterate/scale over
+// attacker-extreme or overflow-prone level extents). Returns elapsed milliseconds for liveness checks.
+double render_minimap_once(const MinimapHarness &harness) {
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    auto rect = CUtil::rect(0, 0, 128, 128);
+    const auto start = std::chrono::steady_clock::now();
+    minimap->renderObject(harness.gui, rect, 0);
+    const auto end = std::chrono::steady_clock::now();
+    return std::chrono::duration<double, std::milli>(end - start).count();
+}
+
+// Liveness budget: a bounded/fail-closed minimap render must complete near-instantly. The unbounded
+// path would iterate billions of cells, so a generous wall-clock cap reliably catches a regression
+// without flaking on slow CI.
+constexpr double MINIMAP_RENDER_BUDGET_MS = 2000.0;
+
+void test_minimap_bounds_extreme_metadata_fails_closed() {
+    auto harness = make_minimap_harness();
+    // Attacker-extreme xBound/yBound metadata (post-loader clamp these would already be smaller, but the
+    // minimap must defend independently of the loader).
+    harness.map->setXBounds({{0, std::numeric_limits<int>::max()}});
+    harness.map->setYBounds({{0, std::numeric_limits<int>::max()}});
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should fail closed on extreme metadata bounds instead of iterating to INT_MAX");
+}
+
+void test_minimap_bounds_overflow_prone_extents_fail_closed() {
+    auto harness = make_minimap_harness();
+    // maxX = INT_MAX combined with a negative-spanning min would overflow int extent arithmetic.
+    harness.map->setEntryX(-1000);
+    harness.map->setEntryY(-1000);
+    harness.player->moveTo(-1000, -1000, 0);
+    harness.map->setXBounds({{0, std::numeric_limits<int>::max()}});
+    harness.map->setYBounds({{0, std::numeric_limits<int>::max()}});
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should fail closed on overflow-prone level extents without signed-overflow UB");
+}
+
+void test_minimap_bounds_sparse_coordinates_fail_closed() {
+    auto harness = make_minimap_harness();
+    // No metadata bounds -> bounds are derived from sparse coordinates. A single far-flung tile must not
+    // expand iteration/scaling over the enormous empty span between the player and that tile.
+    harness.map->setXBounds({});
+    harness.map->setYBounds({});
+    harness.map->addTile(std::make_shared<CTile>(), 50'000'000, 50'000'000, 0);
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should fail closed on sparse far-flung coordinates instead of iterating empty space");
+}
+
+void test_minimap_bounds_negative_sparse_coordinates_render() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({});
+    harness.map->setYBounds({});
+    // A compact cluster including negative coordinates must still render (regression: clamping must not
+    // reject legitimately small negative-origin levels).
+    harness.map->addTile(std::make_shared<CTile>(), -5, -5, 0);
+    harness.map->addTile(std::make_shared<CTile>(), -3, -2, 0);
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should render a small negative-origin level without failing closed");
+}
+
+void test_minimap_bounds_normal_map_renders() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({{0, 32}});
+    harness.map->setYBounds({{0, 32}});
+    harness.map->setDefaultTiles({{0, "GrassTile"}});
+    harness.map->addTile(std::make_shared<CTile>(), 4, 4, 0);
+    harness.map->addTile(std::make_shared<CTile>(), 10, 12, 0);
+    auto creature = std::make_shared<CCreature>();
+    harness.map->addObject(creature, Coords(6, 6, 0));
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
 }
 
 void test_inventory_double_select_uses_selected_item_and_clears_selection() {
@@ -1140,6 +1317,63 @@ void test_render_context_rejects_null_texture_and_copies_valid_texture() {
     expect_true(stats.failedCopies == 0, "render context should not count failed copies for valid smoke path");
 }
 
+void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto panel = std::make_shared<WidgetCallbackPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    gui->pushChild(panel);
+
+    auto widget = std::make_shared<CWidget>();
+    widget->setLayout(fixed_layout(0, 0, 100, 80));
+    panel->addChild(widget);
+
+    auto rect = std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 100, 80});
+
+    auto left_click = [&](const std::shared_ptr<CWidget> &w) {
+        w->mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1);
+        w->mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 1, 1);
+    };
+
+    // Missing reflective method: render must no-op without crashing.
+    widget->setRender("missingRenderCallback");
+    widget->renderObject(gui, rect, 0);
+    expect_true(panel->renders == 0, "missing widget render callback should no-op and fail closed");
+
+    // Missing reflective method on a click action: must no-op without crashing.
+    widget->setClick("missingClickCallback");
+    left_click(widget);
+    expect_true(panel->clicks == 0, "missing widget click callback should no-op and fail closed");
+
+    // Empty names are skipped entirely before dispatch.
+    widget->setRender("");
+    widget->setClick("");
+    widget->renderObject(gui, rect, 0);
+    left_click(widget);
+    expect_true(panel->renders == 0 && panel->clicks == 0, "empty widget callback names should be skipped");
+
+    // The dispatch entry point / unregistered private names are not valid
+    // reflective targets and must also fail closed rather than crash.
+    widget->setRender("_privateRender");
+    widget->setClick("invokeAction");
+    widget->renderObject(gui, rect, 0);
+    left_click(widget);
+    expect_true(panel->renders == 0 && panel->clicks == 0,
+                "private / meta widget callback names should fail closed and never dispatch");
+
+    // Valid config-driven callbacks must keep working unchanged.
+    widget->setRender("renderWidget");
+    widget->renderObject(gui, rect, 0);
+    expect_true(panel->renders == 1, "valid widget render callback should still fire");
+
+    widget->setClick("clickWidget");
+    left_click(widget);
+    expect_true(panel->clicks == 1, "valid widget click callback should still fire");
+}
+
 } // namespace
 
 int main() {
@@ -1147,11 +1381,13 @@ int main() {
 
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
     test_widget_ignores_unarmed_non_left_clicks();
+    test_widget_reflective_callbacks_fail_closed_on_bad_config();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
+    test_list_view_refresh_property_collision_fails_closed();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
@@ -1170,6 +1406,11 @@ int main() {
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
+    test_minimap_bounds_extreme_metadata_fails_closed();
+    test_minimap_bounds_overflow_prone_extents_fail_closed();
+    test_minimap_bounds_sparse_coordinates_fail_closed();
+    test_minimap_bounds_negative_sparse_coordinates_render();
+    test_minimap_bounds_normal_map_renders();
 
     return finish_tests();
 }

@@ -152,7 +152,81 @@ void CCreature::removeItem(std::function<bool(std::shared_ptr<CItem>)> item_pred
 
 std::set<std::shared_ptr<CItem>> CCreature::getInInventory() { return items; }
 
-std::set<std::shared_ptr<CInteraction>> CCreature::getInteractions() { return actions; }
+std::set<std::shared_ptr<CInteraction>> CCreature::getInteractions() { return getEffectiveInteractions(); }
+
+std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
+    // Composes the creature's effective interaction set from every source that
+    // backs it today, de-duplicated so identical actions are never exposed
+    // twice. Dedupe key is the action typeId, falling back to its name when the
+    // typeId is empty (matching the identity rules CGameObject uses elsewhere).
+    //
+    // Precedence (lowest first, so later sources override earlier duplicates):
+    //   1. race actions          -- extension point (no backing object yet)
+    //   2. creature-class actions -- extension point (no backing object yet)
+    //   3. class level unlocks    -- levelling entries unlocked up to the
+    //                                current level (the model expresses class
+    //                                level unlocks through `levelling` today)
+    //   4. concrete own actions   -- the creature's own configured actions win
+    //
+    // Race / creature-class archetype objects (CCreatureClass) do not exist in
+    // the codebase yet, so there is nothing to pull their actions from. The
+    // ordered composition below is structured so those sources slot in ahead of
+    // the level unlocks once the archetype foundation lands, without changing
+    // the concrete-actions-win precedence.
+
+    std::vector<std::shared_ptr<CInteraction>> ordered;
+
+    auto dedupeKey = [](const std::shared_ptr<CInteraction> &action) -> std::string {
+        std::string typeId = action->getTypeId();
+        if (!typeId.empty()) {
+            return "T:" + typeId;
+        }
+        return "N:" + action->getName();
+    };
+
+    // 1-2. race / creature-class actions: extension point. Nothing to add until
+    //      the archetype foundation provides those objects.
+
+    // 3. class level unlocks: levelling entries unlocked up to the current
+    //    level. Keys are the level at which the entry unlocks (see
+    //    getLevelAction / levelUp).
+    for (const auto &[levelKey, action] : levelling) {
+        if (!action) {
+            continue;
+        }
+        int unlockLevel = 0;
+        try {
+            unlockLevel = std::stoi(levelKey);
+        } catch (...) {
+            // Non-numeric levelling keys are not level-gated unlocks; include
+            // them so no configured action is silently dropped.
+            unlockLevel = 0;
+        }
+        if (unlockLevel <= level) {
+            ordered.push_back(action);
+        }
+    }
+
+    // 4. concrete own actions: added last so they win duplicate-key conflicts.
+    for (const auto &action : actions) {
+        if (action) {
+            ordered.push_back(action);
+        }
+    }
+
+    // De-duplicate by key, keeping the last occurrence so higher-precedence
+    // sources (added later above) override lower-precedence duplicates.
+    std::map<std::string, std::shared_ptr<CInteraction>> byKey;
+    for (const auto &action : ordered) {
+        byKey[dedupeKey(action)] = action;
+    }
+
+    std::set<std::shared_ptr<CInteraction>> effective;
+    for (const auto &[key, action] : byKey) {
+        effective.insert(action);
+    }
+    return effective;
+}
 
 CItemMap CCreature::getEquipped() { return equipped; }
 
@@ -296,6 +370,30 @@ bool CCreature::isAlive() { return hp > 0; }
 void CCreature::addAction(std::shared_ptr<CInteraction> action) {
     if (!action) {
         return;
+    }
+    // Action merge contract (docs/design/creature_archetypes.md, "Creature action
+    // merge contract"): actions are composed in precedence order and deduplicated by
+    // configured identity. The identity key is the action `typeId`, falling back to
+    // `name` only when `typeId` is empty. A later (more specific) source overrides an
+    // earlier one, so duplicate actions (e.g. a second `Attack`) collapse to a single
+    // entry and do not accumulate, while unique concrete overrides are preserved.
+    auto sameAction = [&action](const std::shared_ptr<CInteraction> &candidate) {
+        if (!candidate) {
+            return false;
+        }
+        const std::string &candidateTypeId = candidate->getTypeId();
+        const std::string &actionTypeId = action->getTypeId();
+        if (!candidateTypeId.empty() || !actionTypeId.empty()) {
+            return candidateTypeId == actionTypeId;
+        }
+        return candidate->getName() == action->getName();
+    };
+    auto existing = std::find_if(actions.begin(), actions.end(), sameAction);
+    if (existing != actions.end()) {
+        if (CGameObject::sameInstance(*existing, action)) {
+            return;
+        }
+        actions.erase(existing);
     }
     actions.insert(action);
     signal("interactionsChanged");
@@ -472,6 +570,13 @@ std::shared_ptr<CArmor> CCreature::getArmor() { return vstd::cast<CArmor>(getIte
 
 // TODO: get rid of this, calculate level automatically
 void CCreature::levelUp() {
+    // Legacy fallback compatibility contract (docs/design/creature_archetypes.md,
+    // "Legacy fallback compatibility contract"): a creature with no race and no
+    // creatureClass uses this legacy level-up path exactly -- increment level and
+    // apply the concrete template's own `levelling` unlock (getLevelAction). No
+    // race/class-driven growth or progression participates, because those archetype
+    // objects (CCreatureRace / CCreatureClass) do not exist yet. Any future
+    // archetype level growth must slot in without altering this no-archetype path.
     level++;
     // TODO: dynamic action calculation
     addAction(getLevelAction());
@@ -733,18 +838,45 @@ void CCreature::removeQuestItem(std::shared_ptr<CItem> item) { removeItem(item, 
 
 void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) { removeItem(item, true); }
 
-std::shared_ptr<CStats> CCreature::getStats() {
+std::shared_ptr<CStats> CCreature::getStats() { return buildLegacyStats(); }
+
+std::shared_ptr<CStats> CCreature::buildLegacyStats() {
+    // Stat precedence contract (docs/design/creature_archetypes.md, "Creature stat
+    // precedence contract"): effective stats are composed least- to most-specific:
+    //   1. race.baseStats             -- extension point (no backing object yet)
+    //   2. creatureClass.baseStats    -- extension point (no backing object yet)
+    //   3. creature.baseStats         -- concrete template's own base (legacy)
+    //   4. creatureClass.levelStats   -- extension point, per level (no object yet)
+    //   5. creature.levelStats        -- concrete template's per-level growth (legacy)
+    //   6. equipment bonuses
+    //   7. effect bonuses
+    // Main stat is selected from creatureClass.baseStats first, falling back to the
+    // legacy creature.baseStats mainStat. The race / creature-class archetype objects
+    // (CCreatureClass) do not exist yet, so positions 1, 2, 4 and the class-first main
+    // stat are extension points that contribute nothing today; they slot in here
+    // without disturbing the equipment-then-effects tail or the legacy fallback.
+    // Legacy fallback compatibility contract (same doc, "Legacy fallback
+    // compatibility contract"): for a creature with no race and no creatureClass
+    // (every creature today) this composes the legacy stat block exactly.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
+    // Main stat: creatureClass.baseStats.mainStat first (extension point), then the
+    // legacy creature.baseStats.mainStat fallback below.
     ret->setMainStat(getBaseStats()->getMainStat());
+    // 1-2. race / creature-class baseStats: extension point (nothing to add yet).
+    // 3. creature.baseStats (legacy concrete base).
     ret->addBonus(getBaseStats());
+    // 4. creatureClass.levelStats per level: extension point (nothing to add yet).
+    // 5. creature.levelStats per level (legacy concrete growth).
     for (int i = 0; i < level; i++) {
         ret->addBonus(getLevelStats());
     }
+    // 6. equipment bonuses.
     for (auto [slot, item] : getEquipped()) {
         if (item) {
             ret->addBonus(item->getBonus());
         }
     }
+    // 7. effect bonuses.
     for (auto effect : getEffects()) {
         if (effect) {
             ret->addBonus(effect->getBonus());
