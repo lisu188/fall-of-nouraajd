@@ -257,6 +257,25 @@ CREATURE_OVERRIDE_PROPERTIES = (
     "labels",
 )
 
+# Amulet quest item/runtime actor preservation (EPIC_05/STORY_02/SUBSTORY_02).
+# The amulet quest's thief carrier ("goblinThief") owns the quest item as
+# *quest-instance inventory*: the map config attaches "preciousAmulet" through the
+# carrier's "items" override, and the map script spawns that carrier at runtime
+# (createObject("goblinThief")) under the fixed object name "amuletGoblin", which the
+# completion path resolves via getObjectByName("amuletGoblin") to despawn the thief.
+# A later archetype migration must keep "preciousAmulet" as instance inventory on the
+# thief carrier rather than relocate it onto a shared GoblinRace/thief class template,
+# and must keep the runtime actor name resolvable.  This guard therefore asserts, on
+# any map that declares the AMULET_CARRIER_CONFIG, that the carrier's effective items
+# still include AMULET_QUEST_ITEM (following ref inheritance) and that the script
+# spawns the carrier under AMULET_RUNTIME_ACTOR_NAME as a name that getObjectByName can
+# resolve.  Maps that do not declare the carrier are vacuously satisfied.  Identifiers
+# are matched structurally against config/script content, never inferred from prose.
+AMULET_CARRIER_CONFIG = "goblinThief"
+AMULET_QUEST_ITEM = "preciousAmulet"
+AMULET_RUNTIME_ACTOR_NAME = "amuletGoblin"
+CREATURE_ITEMS_PROPERTY = "items"
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -1498,6 +1517,7 @@ class ContentValidator:
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
         self._validate_script_property_hygiene(context)
         self._validate_quest_state_transitions(context)
+        self._validate_amulet_quest_actor(context, visible)
 
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)
@@ -2340,6 +2360,75 @@ class ContentValidator:
                     self._issue(context.script_info.path, trigger.location, f'unknown trigger event "{trigger.value}"')
             elif trigger.name == "trigger target" and trigger.value not in object_names:
                 self._issue(context.script_info.path, trigger.location, f'unknown trigger target "{trigger.value}"')
+
+    def _validate_amulet_quest_actor(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
+        """Guard that the amulet quest keeps its item carrier and runtime actor name.
+
+        Vacuous unless this map declares the amulet thief carrier
+        (AMULET_CARRIER_CONFIG).  When it does, two invariants are enforced so an
+        archetype migration cannot quietly drop them:
+
+        * The carrier still carries AMULET_QUEST_ITEM as quest-instance inventory --
+          i.e. its effective "items" (resolving ``ref`` inheritance) reference the
+          quest item by ref or by a node whose resolved "name" is the quest item.
+          Reported against ``<carrier>.properties.items`` so the migration can see the
+          item must stay on the instance rather than move to a race/class template.
+        * The map script spawns the carrier under AMULET_RUNTIME_ACTOR_NAME and that
+          name is recognized as a resolvable map object (the completion path resolves
+          it via getObjectByName).  Reported against the spawning script.
+        """
+        carrier_entry = context.config_entries.get(AMULET_CARRIER_CONFIG)
+        if carrier_entry is None:
+            return
+        if isinstance(carrier_entry.data, dict):
+            items = self._effective_property_value(carrier_entry.data, CREATURE_ITEMS_PROPERTY, visible)
+            if not self._items_reference(items, AMULET_QUEST_ITEM, visible):
+                self._issue(
+                    carrier_entry.path,
+                    f"{append_field(AMULET_CARRIER_CONFIG, 'properties')}.{CREATURE_ITEMS_PROPERTY}",
+                    f'amulet quest carrier "{AMULET_CARRIER_CONFIG}" must carry quest item '
+                    f'"{AMULET_QUEST_ITEM}" as instance inventory; it must not be moved to a '
+                    f"shared race/class template during the archetype migration",
+                )
+
+        info = context.script_info
+        if info is None:
+            return
+        spawns_runtime_actor = any(
+            spawn.template == AMULET_CARRIER_CONFIG and spawn.runtime_name == AMULET_RUNTIME_ACTOR_NAME
+            for spawn in info.spawned_creatures
+        )
+        if not spawns_runtime_actor:
+            self._issue(
+                info.path,
+                f'createObject("{AMULET_CARRIER_CONFIG}")',
+                f'amulet quest runtime actor name "{AMULET_RUNTIME_ACTOR_NAME}" must be assigned to a '
+                f'spawned "{AMULET_CARRIER_CONFIG}"; the completion path resolves it via '
+                f"getObjectByName and would otherwise break",
+            )
+            return
+        recognized_names = context.placed_names | info.named_objects | {"player"}
+        if AMULET_RUNTIME_ACTOR_NAME not in recognized_names:
+            self._issue(
+                info.path,
+                f'getObjectByName("{AMULET_RUNTIME_ACTOR_NAME}")',
+                f'amulet quest runtime actor name "{AMULET_RUNTIME_ACTOR_NAME}" is not resolvable as a '
+                f"map object name",
+            )
+
+    def _items_reference(self, items: Any, item_id: str, visible: dict[str, ConfigEntry]) -> bool:
+        """Whether an "items" value references ``item_id`` by ref or resolved name."""
+        if not isinstance(items, list):
+            return False
+        for entry in items:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("ref") == item_id:
+                return True
+            name = self._effective_property_value(entry, "name", visible)
+            if name == item_id:
+                return True
+        return False
 
     def _validate_script_property_hygiene(self, context: MapContext) -> None:
         info = context.script_info
