@@ -1112,6 +1112,66 @@ void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
                 "equivalentValue should reject unsupported cyclic object-reference graphs safely");
 }
 
+class TypedSignalProbe : public CGameObject {
+    V_META(TypedSignalProbe, CGameObject, V_METHOD(TypedSignalProbe, onPropertyChanged, void, std::string),
+           V_METHOD(TypedSignalProbe, onInventoryChanged))
+
+  public:
+    void onPropertyChanged(std::string property_name) { changedProperties.insert(std::move(property_name)); }
+
+    void onInventoryChanged() { ++inventoryChangedCalls; }
+
+    std::set<std::string> changedProperties;
+    int inventoryChangedCalls = 0;
+};
+
+void test_dynamic_property_cannot_spoof_typed_engine_signal() {
+    CTypes::register_type_metadata<TypedSignalProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<TypedSignalProbe>();
+
+    // A subscriber to the typed engine signal "inventoryChanged" (as CCreature emits
+    // it). A dynamic/runtime property literally named "inventory" derives the same
+    // "inventoryChanged" channel name in notifyPropertyChanged -> must be dropped fail
+    // closed so the dynamic property cannot fire (spoof) the typed engine slot.
+    object->connect("inventoryChanged", probe, "onInventoryChanged");
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+
+    object->setStringProperty("inventory", "spoofed");
+    drain_event_loop();
+
+    expect_true(probe->inventoryChangedCalls == 0,
+                "a dynamic property named like a typed engine signal must not fire the typed signal's slot");
+    expect_true(probe->changedProperties.contains("inventory"),
+                "the generic propertyChanged channel must still report the dynamic property change");
+
+    // A non-colliding dynamic property still reaches its per-property "<name>Changed"
+    // subscriber (the namespace guard only suppresses reserved typed-signal names).
+    auto specific_probe = std::make_shared<TypedSignalProbe>();
+    object->connect("threatChanged", specific_probe, "onInventoryChanged");
+    object->setNumericProperty("threat", 1);
+    drain_event_loop();
+    expect_true(specific_probe->inventoryChangedCalls == 1,
+                "a non-colliding dynamic property must still fire its per-property notification slot");
+}
+
+void test_typed_engine_signal_still_fires_directly() {
+    CTypes::register_type_metadata<TypedSignalProbe, CGameObject>();
+    auto creature = std::make_shared<CCreature>();
+    auto probe = std::make_shared<TypedSignalProbe>();
+
+    // The real typed engine signal (emitted directly via signal("inventoryChanged"))
+    // must still reach its slot; the reserved-name guard only blocks the dynamic
+    // property channel, never direct typed emission.
+    creature->connect("inventoryChanged", probe, "onInventoryChanged");
+    creature->addItem(std::make_shared<CItem>());
+    drain_event_loop();
+
+    expect_true(probe->inventoryChangedCalls >= 1,
+                "directly emitted typed engine signals must still reach their slots");
+}
+
 void test_signal_slots_fail_closed_on_bad_config() {
     CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
 
@@ -1141,6 +1201,8 @@ void test_signal_slots_fail_closed_on_bad_config() {
 
 int main() {
     test_signal_slots_fail_closed_on_bad_config();
+    test_dynamic_property_cannot_spoof_typed_engine_signal();
+    test_typed_engine_signal_still_fires_directly();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();

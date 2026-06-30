@@ -676,6 +676,48 @@ void test_list_view_property_subscriptions_follow_resolved_target_and_null() {
                 "previous refresh target should be disconnected when the refresh script resolves to null");
 }
 
+void test_list_view_refresh_property_collision_fails_closed() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto refresh_target = std::make_shared<CGameObject>();
+    auto list = std::make_shared<RefreshCountingListView>();
+    gui->pushChild(list);
+    list->setResolvedRefreshTarget(refresh_target);
+
+    // "inventory" derives the "inventoryChanged" channel, which collides with the
+    // typed engine signal CCreature emits. Configuring it as a refreshProperty must
+    // fail closed: the list must NOT wire a property-specific reflective subscription
+    // on the typed channel (no spoofing in either direction) while a valid configured
+    // property ("label") still refreshes normally.
+    list->setRefreshProperties({"inventory", "label"});
+
+    list->refresh();
+    const int after_initial_refresh = list->refresh_count;
+
+    // A direct typed-engine emission on the colliding channel must NOT refresh the list
+    // (the colliding property was never subscribed) and must not crash.
+    refresh_target->signal("inventoryChanged");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh,
+                "a refreshProperty colliding with a typed engine signal must not be subscribed (fail closed)");
+
+    // A dynamic property literally named "inventory" must not refresh the list either:
+    // its per-property notification is dropped fail-closed and the name is rejected.
+    refresh_target->setStringProperty("inventory", "spoofed");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh,
+                "a colliding dynamic property change must not drive a fail-closed refreshProperty");
+
+    // The valid configured property still refreshes.
+    refresh_target->setStringProperty("label", "ok");
+    drain_event_loop();
+    expect_true(list->refresh_count == after_initial_refresh + 1,
+                "a non-colliding configured refreshProperty must still refresh the list");
+}
+
 std::shared_ptr<CStats> player_stats() {
     auto stats = std::make_shared<CStats>();
     stats->setMainStat("stamina");
@@ -1345,6 +1387,7 @@ int main() {
     test_list_view_skips_queued_property_refresh_after_detach();
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
+    test_list_view_refresh_property_collision_fails_closed();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();

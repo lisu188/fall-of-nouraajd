@@ -48,6 +48,15 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
   public:
     static std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
 
+    // Typed engine signals share the same flat string channel as the dynamic
+    // per-property "<name>Changed" notifications emitted from setProperty. To stop
+    // an arbitrary (config/runtime) property from spoofing a typed engine event,
+    // a dynamic property notification whose derived signal name lands in this
+    // reserved set is dropped fail-closed (the generic propertyChanged channel
+    // still fires). The set lists every name emitted directly via signal(...) with
+    // a hardcoded engine name across the codebase.
+    static bool isReservedTypedSignalName(const std::string &signalName);
+
     static bool sameInstance(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
 
     static bool sameRuntimeIdentity(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);

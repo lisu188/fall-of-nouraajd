@@ -296,4 +296,8 @@ class CListView : public CProxyTargetGraphicsObject {
     void refreshFromSubscription();
 
     bool shouldRefreshForProperty(const std::string &propertyName) const;
+
+    // True when a configured refreshProperty's derived "<name>Changed" channel collides
+    // with a reserved typed engine signal name (must be rejected fail-closed).
+    static bool isCollidingRefreshProperty(const std::string &propertyName);
 };

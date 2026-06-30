@@ -671,7 +671,7 @@ void CListView::disconnectRefreshSubscriptions() {
     }
     if (!subscribedRefreshOnPropertyChanged) {
         for (const auto &propertyName : subscribedRefreshProperties) {
-            if (!propertyName.empty()) {
+            if (!propertyName.empty() && !isCollidingRefreshProperty(propertyName)) {
                 refreshTarget->disconnect(propertyName + "Changed", self, "refreshFromPropertySpecificChanged");
             }
         }
@@ -695,11 +695,26 @@ void CListView::connectRefreshSubscriptions(const std::shared_ptr<CGameObject> &
     }
     if (!refreshOnPropertyChanged) {
         for (const auto &propertyName : refreshProperties) {
-            if (!propertyName.empty()) {
-                refreshTarget->connect(propertyName + "Changed", self, "refreshFromPropertySpecificChanged");
+            if (propertyName.empty()) {
+                continue;
             }
+            // Fail closed: a configured property whose "<name>Changed" channel collides
+            // with a typed engine signal must NOT be wired through the property-specific
+            // reflective dispatch, otherwise a benign list refresh config would subscribe
+            // to (and could spoof / be spoofed by) a typed engine event. Skip + log; valid
+            // configured properties still subscribe and refresh normally.
+            if (isCollidingRefreshProperty(propertyName)) {
+                vstd::logger::warning("Ignoring list refreshProperty colliding with typed engine signal:",
+                                      propertyName + "Changed");
+                continue;
+            }
+            refreshTarget->connect(propertyName + "Changed", self, "refreshFromPropertySpecificChanged");
         }
     }
+}
+
+bool CListView::isCollidingRefreshProperty(const std::string &propertyName) {
+    return CGameObject::isReservedTypedSignalName(propertyName + "Changed");
 }
 
 void CListView::refreshFromSubscription() {
@@ -727,7 +742,13 @@ void CListView::refreshFromSubscription() {
 }
 
 bool CListView::shouldRefreshForProperty(const std::string &propertyName) const {
-    return refreshOnPropertyChanged || refreshProperties.contains(propertyName);
+    if (refreshOnPropertyChanged) {
+        return true;
+    }
+    // A configured property that collides with a typed engine signal name is rejected
+    // fail-closed (it is never subscribed); do not let it drive a refresh via the
+    // generic propertiesChanged path either.
+    return refreshProperties.contains(propertyName) && !isCollidingRefreshProperty(propertyName);
 }
 
 int CListView::getXPrefferedSize() const { return xPrefferedSize; }

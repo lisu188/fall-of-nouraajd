@@ -136,6 +136,24 @@ bool equivalentValueInternal(const std::shared_ptr<CGameObject> &a, const std::s
 
 } // namespace
 
+bool CGameObject::isReservedTypedSignalName(const std::string &signalName) {
+    // Engine-owned signal names emitted directly via signal(...) with a hardcoded
+    // string. A dynamic property whose "<name>Changed" derived signal would equal
+    // one of these must NOT be dispatched on the typed channel, otherwise a
+    // config/runtime property named e.g. "inventory"/"equipped"/"items" could fire
+    // a typed engine slot (mismatched reflective dispatch / spoofed engine event).
+    static const std::set<std::string> reserved = {// CGameObject property-notification channel
+                                                   "propertyChanged", "propertiesChanged",
+                                                   // CCreature typed signals
+                                                   "inventoryChanged", "equippedChanged", "effectsChanged",
+                                                   "interactionsChanged",
+                                                   // CMarket typed signal
+                                                   "itemsChanged",
+                                                   // CMap typed signals
+                                                   "tileChanged", "objectChanged", "turnPassed"};
+    return reserved.contains(signalName);
+}
+
 std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> CGameObject::name_comparator =
     [](std::shared_ptr<CGameObject> a, std::shared_ptr<CGameObject> b) {
         return CGameObject::sameConfiguredType(a, b);
@@ -339,8 +357,21 @@ void CGameObject::notifyPropertyChanged(const std::string &name) {
 }
 
 void CGameObject::notifyPropertyChangedWithoutInvalidation(const std::string &name) {
+    // Generic notification: always safe, this is the dynamic property channel that
+    // GUI/refresh subscribers (propertyChanged / propertySpecific) rely on.
     signal("propertyChanged", name);
-    signal(name + "Changed");
+    // Per-property typed-style notification lives in the SAME flat string channel as
+    // the engine's typed signals. Keep dynamic property notifications namespaced away
+    // from typed engine signal names: if "<name>Changed" collides with a reserved
+    // typed signal, fail closed (drop it + log) so a dynamic/runtime property cannot
+    // spoof a typed engine event or hit a typed slot with a mismatched signature.
+    const std::string perPropertySignal = name + "Changed";
+    if (isReservedTypedSignalName(perPropertySignal)) {
+        vstd::logger::warning("Ignoring dynamic property notification colliding with typed engine signal:",
+                              perPropertySignal);
+        return;
+    }
+    signal(perPropertySignal);
 }
 
 void CGameObject::notifyPropertiesChanged(const std::set<std::string> &names) {
