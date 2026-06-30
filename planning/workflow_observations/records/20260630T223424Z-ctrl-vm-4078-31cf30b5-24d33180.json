@@ -1,0 +1,55 @@
+{
+  "affectedPaths": [
+    "planning/fall_of_nouraajd_issue_proposals.xlsx"
+  ],
+  "category": "other",
+  "controllerId": "ctrl-vm-4078-31cf30b5",
+  "createdAtUtc": "2026-06-30T22:34:24Z",
+  "details": "Multiple queue rows in planning/fall_of_nouraajd_issue_proposals.xlsx are marked Status=NOT_STARTED\nbut their described work is already implemented on main, so a controller that mechanically selects\nthem (they pass status+dependency eligibility) spends a full claim -> worker-investigation cycle only\nto discover there is nothing to implement. Concrete examples verified against current source:\n\n- [EPIC_02][STORY_03][SUBSTORY_04]Add CMapSessionStore (NOT_STARTED): class CMapSessionStore with\n  get/put/evict/clear already exists (src/core/CGameContext.h:42-56, getMapSessionStore at :86,\n  member at :112; CGameContext.cpp:104), and tests test_map_session_store_put_get_evict_and_ownership\n  / test_game_context_owns_a_map_session_store already pass.\n- [EPIC_02][STORY_04][SUBSTORY_03]Block movement cycles while transition pending (NOT_STARTED): the\n  pending-transition guard already exists in CMap::move (src/core/CMap.cpp:578,\n  sceneManager->isTransitionPending()), with test_map_move_blocks_new_turn_while_transition_pending\n  already on main.\n- [EPIC_03][STORY_05][SUBSTORY_05]Add save round-trip comparison harness (NOT_STARTED): reusable\n  save/reload comparison helpers already exist in test.py (save_load_roundtrip:3048,\n  assert_save_load_roundtrip:3112, snapshot_player_properties:538, plus\n  test_save_state_summary_round_trips_through_save_load:15400).\n\nThese rows should be reconciled to a terminal state (DONE, or rescoped to the genuinely-remaining\ndelta) through a serialized workbook-only queue update so controllers do not waste claim cycles on\nalready-satisfied work. This is distinct from the existing open \"eligible-but-prose-blocked\" lead,\nwhich concerns rows blocked by missing/unmerged prerequisites; here the rows are already complete.\n",
+  "evidence": [
+    {
+      "alreadyImplementedRows": [
+        {
+          "evidence": [
+            "src/core/CGameContext.h:42 class CMapSessionStore",
+            "src/core/CGameContext.h:54 evict",
+            "src/core/CGameContext.h:56 clear",
+            "src/core/CGameContext.h:86 getMapSessionStore",
+            "tests/.. test_map_session_store_put_get_evict_and_ownership"
+          ],
+          "issue": "[EPIC_02][STORY_03][SUBSTORY_04]Add CMapSessionStore",
+          "workbookStatus": "NOT_STARTED"
+        },
+        {
+          "evidence": [
+            "src/core/CMap.cpp:578 sceneManager->isTransitionPending()",
+            "test_map_move_blocks_new_turn_while_transition_pending"
+          ],
+          "issue": "[EPIC_02][STORY_04][SUBSTORY_03]Block movement cycles while transition pending",
+          "workbookStatus": "NOT_STARTED"
+        },
+        {
+          "evidence": [
+            "test.py:3048 save_load_roundtrip",
+            "test.py:3112 assert_save_load_roundtrip",
+            "test.py:538 snapshot_player_properties",
+            "test.py:15400 test_save_state_summary_round_trips_through_save_load"
+          ],
+          "issue": "[EPIC_03][STORY_05][SUBSTORY_05]Add save round-trip comparison harness",
+          "workbookStatus": "NOT_STARTED"
+        }
+      ],
+      "discoveredBy": "ctrl-vm-4078-31cf30b5 refill selection",
+      "recommendation": "reconcile already-implemented NOT_STARTED rows to DONE or rescope via serialized workbook-only PR"
+    }
+  ],
+  "fingerprint": "queue rows not_started already implemented in source wasted claim",
+  "id": "20260630T223424Z-ctrl-vm-4078-31cf30b5-24d33180",
+  "impact": "Controllers spend claim+worker-investigation cycles on already-satisfied rows; queue drift hides true remaining P1 work",
+  "phase": "claim",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "medium",
+  "sourceCommit": "9ac1e6428edf51ac3171d360e9f433560ead0fef",
+  "summary": "Queue rows marked NOT_STARTED are already implemented on main, causing wasted claim cycles"
+}
