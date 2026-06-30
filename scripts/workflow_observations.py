@@ -492,18 +492,56 @@ def gitPathForRoot(root: Path) -> str:
     return PurePosixPath(str(root)).as_posix()
 
 
+def resolveLedgerDiffBase(baseRef: str) -> str:
+    """Resolve the diff base to the merge-base of ``baseRef`` and ``HEAD``.
+
+    The ledger-mixing check must inspect only the pull request's own changes.
+    Diffing directly against ``baseRef`` is a two-dot diff against the current
+    base tip, so when the base branch advances past the branch point (for
+    example a concurrently merged ledger record from another controller) those
+    unrelated files are swept into the diff and a ledger-only PR is falsely
+    rejected. Diffing against the merge-base instead restricts the comparison to
+    the branch point. When ``baseRef`` already is the merge-base (for example
+    ``--base HEAD`` against a working tree) this is a no-op. Falls back to
+    ``baseRef`` when no merge-base can be computed.
+    """
+
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", baseRef, "HEAD"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise ObservationError("git executable not found on PATH; cannot inspect ledger diff") from exc
+    except OSError as exc:
+        raise ObservationError(f"could not execute git merge-base for ledger inspection: {exc}") from exc
+    mergeBase = result.stdout.strip()
+    if result.returncode == 0 and mergeBase:
+        return mergeBase
+    return baseRef
+
+
 def validatePrChanges(root: Path, baseRef: str) -> list[str]:
     if not baseRef or not baseRef.strip():
         return ["--base must be a non-empty git ref"]
 
     rootPath = gitPathForRoot(root)
-    result = subprocess.run(
-        ["git", "diff", "--name-status", "--no-renames", baseRef],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    diffBase = resolveLedgerDiffBase(baseRef)
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-status", "--no-renames", diffBase],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise ObservationError("git executable not found on PATH; cannot inspect ledger diff") from exc
+    except OSError as exc:
+        raise ObservationError(f"could not execute git diff for ledger inspection: {exc}") from exc
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip() or "unknown git diff failure"
         raise ObservationError(f"could not inspect ledger diff from {baseRef}: {message}")
@@ -568,13 +606,16 @@ def validateDuplicateCycles(resolutions: dict[str, LoadedResolution]) -> list[st
 
 
 def currentCommit() -> str:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except OSError as exc:
+        raise ObservationError("could not determine source commit; pass --source-commit") from exc
     text = result.stdout.strip().lower()
     if result.returncode == 0 and COMMIT_PATTERN.match(text):
         return text

@@ -49,6 +49,13 @@ MAX_MCP_MESSAGE_BYTES = 1024 * 1024
 MAX_HTTP_SESSIONS = 32
 MAX_HTTP_STREAMS_PER_SESSION = 4
 MAX_TRACE_STRING_BYTES = 512
+# Handle methods that trigger engine pathfinding from arbitrary, client-supplied coordinates.
+# These are validated against the loaded map extents before invocation so an MCP client cannot
+# steer the pathfinder over sparse or effectively unbounded coordinate space.
+MCP_PATHFINDING_METHODS = frozenset({"setTarget"})
+# Hard ceiling on any single target coordinate magnitude accepted from MCP, applied even when a map
+# advertises no explicit bounds. Keeps the pathfinder envelope finite for sandbox/unbounded maps.
+MCP_MAX_TARGET_MAGNITUDE = 1_000_000
 MCP_EXCLUDED_EXPORTS = {
     "load",
     "register",
@@ -1279,6 +1286,23 @@ class EngineMcpServer:
         try:
             resolved_args = self._resolve_handle_references(call_args)
             resolved_kwargs = self._resolve_handle_references(call_kwargs)
+        except Exception as exc:
+            error_payload = {"error": str(exc)}
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+        guard_error = self._validate_pathfinding_call(target, method, resolved_args, resolved_kwargs)
+        if guard_error is not None:
+            return {
+                "content": [{"type": "text", "text": json.dumps(guard_error, ensure_ascii=False)}],
+                "structuredContent": guard_error,
+                "isError": True,
+            }
+
+        try:
             result = method_callable(*resolved_args, **resolved_kwargs)
             serialized = self._serialize_result(result)
             structured = {"result": serialized}
@@ -1970,6 +1994,114 @@ class EngineMcpServer:
             return path.resolve().relative_to(self.repo_root.resolve()).as_posix()
         except ValueError:
             return str(path)
+
+    @staticmethod
+    def _coord_components(coords: Any) -> tuple[int, int, int] | None:
+        try:
+            return int(coords.x), int(coords.y), int(coords.z)
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _bounds_for_level(bounds: Any, z: int) -> int | None:
+        if bounds is None:
+            return None
+        try:
+            items = bounds.items()
+        except AttributeError:
+            try:
+                items = dict(bounds).items()
+            except (TypeError, ValueError):
+                return None
+        for level, bound in items:
+            try:
+                if int(level) == z:
+                    return int(bound)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    def _validate_pathfinding_call(
+        self, target: Any, method: str, resolved_args: list[Any], resolved_kwargs: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Reject MCP-triggered pathfinding over out-of-bounds or impassable coordinates.
+
+        Returns an error payload (to be surfaced as an isError tool result) when the call would
+        steer the engine pathfinder toward an invalid target, or None when the call is allowed.
+        Validation is intentionally conservative: when engine objects do not expose the expected
+        accessors it defers to normal handling rather than blocking legitimate calls.
+        """
+        if method not in MCP_PATHFINDING_METHODS:
+            return None
+
+        # CPlayerController.setTarget(player, coords)
+        player = resolved_args[0] if len(resolved_args) > 0 else resolved_kwargs.get("player")
+        coords = resolved_args[1] if len(resolved_args) > 1 else resolved_kwargs.get("target")
+        if coords is None:
+            return None
+
+        components = self._coord_components(coords)
+        if components is None:
+            return None
+        x, y, z = components
+
+        if abs(x) > MCP_MAX_TARGET_MAGNITUDE or abs(y) > MCP_MAX_TARGET_MAGNITUDE:
+            return {
+                "error": (
+                    f"setTarget rejected: coordinate ({x}, {y}, {z}) exceeds the maximum allowed "
+                    f"magnitude {MCP_MAX_TARGET_MAGNITUDE}"
+                )
+            }
+
+        game_map = None
+        get_map = getattr(player, "getMap", None)
+        if callable(get_map):
+            try:
+                game_map = get_map()
+            except Exception:
+                game_map = None
+        if game_map is None:
+            return None
+
+        x_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getXBounds"), z)
+        y_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getYBounds"), z)
+        if x_bounds is not None and (x < 0 or x > x_bounds):
+            return {
+                "error": (
+                    f"setTarget rejected: x={x} is outside map extents [0, {x_bounds}] for level z={z}"
+                )
+            }
+        if y_bounds is not None and (y < 0 or y > y_bounds):
+            return {
+                "error": (
+                    f"setTarget rejected: y={y} is outside map extents [0, {y_bounds}] for level z={z}"
+                )
+            }
+
+        can_step = getattr(game_map, "canStep", None)
+        if callable(can_step):
+            try:
+                passable = can_step(coords)
+            except Exception:
+                passable = None
+            if passable is False:
+                return {
+                    "error": (
+                        f"setTarget rejected: target ({x}, {y}, {z}) is not a passable tile"
+                    )
+                }
+
+        return None
+
+    @staticmethod
+    def _safe_engine_call(obj: Any, method: str) -> Any:
+        accessor = getattr(obj, method, None)
+        if not callable(accessor):
+            return None
+        try:
+            return accessor()
+        except Exception:
+            return None
 
     def _resolve_handle_references(self, value: Any) -> Any:
         if isinstance(value, list):
