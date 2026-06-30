@@ -377,7 +377,7 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
     return true;
 }
 
-bool CListView::hasSourceDragCallbacks() const { return !dragStart.empty() || !dragCancel.empty(); }
+bool CListView::hasSourceDragCallbacks() const { return !dragStart.empty(); }
 
 bool CListView::hasTargetDragCallbacks() const { return !dragValidate.empty() || !drop.empty(); }
 
