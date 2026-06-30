@@ -21,6 +21,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
+#include "core/CTypeRegistration.h"
+#include "gui/CGui.h"
+#include "gui/object/CGameGraphicsObject.h"
+#include "gui/panel/CGameFightPanel.h"
+#include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
@@ -424,6 +429,86 @@ void test_fight_controller_guard_paths_and_fallbacks() {
                 "player fight controller should fall back to base opponent selection without a panel");
 }
 
+std::shared_ptr<CGame> fight_panel_game(const std::shared_ptr<CGui> &gui) {
+    type_registration::registerGuiTypes();
+    type_registration::registerGuiPanelTypes();
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+    return game;
+}
+
+std::size_t count_fight_panels(const std::shared_ptr<CGui> &gui) {
+    std::size_t count = 0;
+    for (const auto &child : gui->getChildren()) {
+        if (vstd::cast<CGameFightPanel>(child)) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+std::shared_ptr<CCreature> map_creature(const std::shared_ptr<CGame> &game, const std::string &name, Coords coords) {
+    auto creature = creature_at(coords.x, coords.y, coords.z);
+    creature->setGame(game);
+    creature->setName(name);
+    creature->setHp(creature->getHpMax());
+    game->getMap()->addObject(creature);
+    return creature;
+}
+
+void test_player_fight_controller_start_is_idempotent_and_guards_invalid_encounters() {
+    auto gui = std::make_shared<CGui>();
+    auto game = fight_panel_game(gui);
+
+    auto attacker = map_creature(game, "unitFightAttacker", Coords(0, 0, 0));
+    auto opponent = map_creature(game, "unitFightOpponent", Coords(1, 0, 0));
+
+    auto controller = std::make_shared<CPlayerFightController>();
+    attacker->setFightController(controller);
+
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "starting a fight should add exactly one fight panel to the GUI");
+
+    // Starting a second fight must discard the first panel instead of leaking or duplicating it.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1,
+                "starting a second fight should not leak or duplicate the fight panel under the GUI");
+
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending a fight should remove the fight panel from the GUI");
+
+    // Refuse to start with a missing opponent.
+    controller->start(attacker, nullptr);
+    expect_true(count_fight_panels(gui) == 0, "fight controller should not create a panel for a null opponent");
+    expect_true(controller->isCancelled(attacker, opponent),
+                "fight controller should fail closed when refusing to start");
+
+    // Refuse to start when the opponent is not present in the active map.
+    auto detached = creature_at(2, 0, 0);
+    detached->setGame(game);
+    detached->setName("unitDetachedOpponent");
+    detached->setHp(detached->getHpMax());
+    controller->start(attacker, detached);
+    expect_true(count_fight_panels(gui) == 0,
+                "fight controller should not bind a panel to an opponent absent from the active map");
+
+    // Refuse to start when the GUI is missing.
+    auto guiless = std::make_shared<CGame>();
+    auto guiless_map = std::make_shared<CMap>();
+    guiless->setMap(guiless_map);
+    guiless_map->setGame(guiless);
+    auto guiless_attacker = map_creature(guiless, "unitNoGuiAttacker", Coords(0, 0, 0));
+    auto guiless_opponent = map_creature(guiless, "unitNoGuiOpponent", Coords(1, 0, 0));
+    auto guiless_controller = std::make_shared<CPlayerFightController>();
+    guiless_controller->start(guiless_attacker, guiless_opponent);
+    expect_true(guiless_controller->isCancelled(guiless_attacker, guiless_opponent),
+                "fight controller should refuse to start without a GUI");
+}
+
 void test_monster_fight_controller_uses_mana_item_when_mana_is_low() {
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
@@ -466,6 +551,7 @@ int main() {
     test_player_controller_uses_bidirectional_cross_level_edge_both_ways();
     test_target_controller_flow_field_invalidates_when_cross_level_edge_is_added();
     test_fight_controller_guard_paths_and_fallbacks();
+    test_player_fight_controller_start_is_idempotent_and_guards_invalid_encounters();
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
 
     return finish_tests();

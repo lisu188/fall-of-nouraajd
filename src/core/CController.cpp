@@ -96,8 +96,8 @@ bool resolve_deferred_creature_context(const DeferredCreatureContext &context, s
         return false;
     }
 
-    const bool stillRegistered =
-        context.wasRegistered && !context.creatureName.empty() && map->getObjectByName(context.creatureName) == creature;
+    const bool stillRegistered = context.wasRegistered && !context.creatureName.empty() &&
+                                 map->getObjectByName(context.creatureName) == creature;
     auto game = context.game.lock();
     const bool expectedMapActive = !game || game->getMap() == map;
     if (!expectedMapActive && !stillRegistered) {
@@ -307,7 +307,7 @@ std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr
         std::shared_ptr<CCreature> creature;
         std::shared_ptr<CMap> map;
         return resolve_deferred_creature_context(deferredContext, creature, map) ? creature->getCoords()
-                                                                                : deferredContext.fallback;
+                                                                                 : deferredContext.fallback;
     });
 }
 
@@ -645,25 +645,36 @@ std::shared_ptr<CCreature> CFightController::selectOpponent(std::shared_ptr<CCre
 
 void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     cancelled = false;
-    fightPanel = nullptr;
+    // Discard any stale panel through its teardown path so its children are removed
+    // from CGui instead of leaking when the shared_ptr is overwritten below.
+    if (fightPanel) {
+        fightPanel->close();
+        fightPanel = nullptr;
+    }
     encounterMap.reset();
     controlledCreature.reset();
     encounterGeneration = 0;
     hasEncounterGeneration = false;
-    if (!me || !me->getMap() || !me->getMap()->getGame()) {
+    if (!me || !opponent || !me->getMap() || !me->getMap()->getGame()) {
         cancelled = true;
         return;
     }
-    encounterMap = me->getMap();
-    controlledCreature = me;
-    auto context = me->getMap()->getGame()->getContext();
-    encounterGeneration = context->captureTransitionGeneration();
-    hasEncounterGeneration = true;
-    auto gui = me->getMap()->getGame()->getGui();
+    auto map = me->getMap();
+    // Refuse to bind a panel to an opponent that is not present in the active map.
+    if (map->getGame()->getMap() != map || map->getObjectByName(opponent->getName()) != opponent) {
+        cancelled = true;
+        return;
+    }
+    auto gui = map->getGame()->getGui();
     if (!gui) {
         cancelled = true;
         return;
     }
+    encounterMap = map;
+    controlledCreature = me;
+    auto context = map->getGame()->getContext();
+    encounterGeneration = context->captureTransitionGeneration();
+    hasEncounterGeneration = true;
     fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
     fightPanel->resetCancellation();
     fightPanel->setEnemies({opponent});
