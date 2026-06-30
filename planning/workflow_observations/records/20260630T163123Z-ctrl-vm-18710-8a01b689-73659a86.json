@@ -1,0 +1,48 @@
+{
+  "affectedPaths": [
+    "tests/unit/test_core.cpp"
+  ],
+  "category": "other",
+  "controllerId": "ctrl-vm-18710-8a01b689",
+  "createdAtUtc": "2026-06-30T16:31:23Z",
+  "details": "Two reusable findings from landing the EPIC_01 pre-migration creature characterization baselines\n(rows E01/S02/SS01, SS02, SS04) as native unit tests in tests/unit/test_core.cpp / test_handler.cpp:\n\n1. CCreature::levelUp() is PROTECTED (src/object/CCreature.h:268). A build-less worker wrote\n   creature->levelUp() directly and it passed local non-compiling checks but failed the linux/windows\n   compile (\"'virtual void CCreature::levelUp()' is protected within this context\"). The public path to\n   drive a level-up is addExp(): it calls levelUp() while exp >= getExpForNextLevel(). addExp() also\n   early-returns on !isAlive() (hp <= 0), so a freshly createObject<CCreature>()'d template must be made\n   alive (setHp(getHpMax())) before addExp() will advance it. Pattern that works:\n     creature->setHp(creature->getHpMax());\n     creature->addExp(creature->getExpForNextLevel() - creature->getExp()); // advances exactly one level\n\n2. In the bare unit-test harness (CGameLoader::loadGame() + startGame(game, \"empty\") + createObject<CCreature>),\n   a freshly created creature template's NESTED levelling/action sub-objects do not fully deserialize -- CI\n   stderr shows repeated \"WARNING: Failed to deserialize object in array property 'actions' ... skipping null\n   entry\" and \"Failed to parse json ... preview: CStats\". As a result getLevelAction() clones come back null\n   and getLevelling() yields no usable per-level unlocks, so a characterization test cannot hard-require that\n   a legacy levelling unlock is present/added in this harness. Tests that need fully-realized creature\n   actions/levelling should either load a real map (e.g. \"test\") where creatures carry their realized state,\n   or scope action-presence assertions as best-effort. Simple scalar properties (sw, scale, numeric getStats)\n   DO work in the bare harness (SS01/SS04 passed), so only the nested action/levelling object graph is affected.\n\nEach finding cost a separate full linux+windows CI cycle to surface because workers cannot build natively.\n",
+  "evidence": [
+    {
+      "cyclesCost": "two separate linux+windows CI cycles (compile error, then runtime assertion) because workers cannot build natively",
+      "harnessDeserializationGap": {
+        "ciWarnings": [
+          "Failed to deserialize object in array property 'actions' ... skipping null entry",
+          "Failed to parse json ... preview: CStats"
+        ],
+        "effect": "getLevelAction() clones null; getLevelling() yields no usable unlocks; action-presence not assertable",
+        "harness": "CGameLoader::loadGame()+startGame(game,'empty')+createObject<CCreature>",
+        "worksInHarness": [
+          "getSw",
+          "getScale",
+          "numeric getStats"
+        ]
+      },
+      "landedRows": [
+        "E01/S02/SS01 #1005",
+        "E01/S02/SS04 #1004",
+        "E01/S02/SS02 #1011"
+      ],
+      "protectedLevelUp": {
+        "ciError": "'virtual void CCreature::levelUp()' is protected within this context",
+        "declaredAt": "src/object/CCreature.h:268",
+        "publicDriver": "CCreature::addExp() (loops levelUp while exp>=getExpForNextLevel); no-ops on !isAlive()",
+        "symbol": "CCreature::levelUp()"
+      }
+    }
+  ],
+  "fingerprint": "build-less worker native creature test protected-method and bare-harness deserialization limits",
+  "id": "20260630T163123Z-ctrl-vm-18710-8a01b689-73659a86",
+  "impact": "Each creature characterization test cost extra linux+windows CI cycles: a worker wrote the protected CCreature::levelUp() (compile error; public driver is addExp() which needs an alive creature), and the bare unit harness does not deserialize nested levelling/action sub-objects so action-presence cannot be hard-asserted there. Future workers/optimizers writing native creature tests should reuse these patterns instead of rediscovering them.",
+  "phase": "implementation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "low",
+  "sourceCommit": "793f8f99705051721465df7ec7ccc4ebc24f4412",
+  "suggestedImprovement": "Document in the worker brief/testing notes: drive level-ups via addExp() (setHp(getHpMax()) first); only assert scalar properties in the bare startGame('empty')+createObject harness; load a real map for tests needing realized creature actions/levelling. Optionally expose a public test-only level-up helper.",
+  "summary": "Build-less workers cannot catch protected-method/compile or bare-harness deserialization limits in native creature tests"
+}
