@@ -29,7 +29,8 @@ class CEffect;
 class CInteraction : public CGameObject {
 
     V_META(CInteraction, CGameObject, V_PROPERTY(CInteraction, std::shared_ptr<CEffect>, effect, getEffect, setEffect),
-           V_PROPERTY(CInteraction, int, manaCost, getManaCost, setManaCost))
+           V_PROPERTY(CInteraction, int, manaCost, getManaCost, setManaCost),
+           V_PROPERTY(CInteraction, bool, selfTarget, getSelfTarget, setSelfTarget))
 
   public:
     CInteraction();
@@ -50,7 +51,12 @@ class CInteraction : public CGameObject {
 
     void setManaCost(int value);
 
+    bool getSelfTarget() const;
+
+    void setSelfTarget(bool value);
+
   private:
     int manaCost = 0;
+    bool selfTarget = false;
     std::shared_ptr<CEffect> effect;
 };
