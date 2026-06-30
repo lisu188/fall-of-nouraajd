@@ -24,7 +24,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.validate_content import ContentValidator, ScriptPropertyHygieneAllowance, validate_repo
+from scripts.validate_content import (
+    ContentValidator,
+    ScriptPropertyHygieneAllowance,
+    inventory_creature_overrides,
+    validate_repo,
+)
 
 
 class ContentValidatorTest(unittest.TestCase):
@@ -1351,6 +1356,94 @@ def read_json(path):
 
 def write_json(path, data):
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+class CreatureOverrideInventoryTest(unittest.TestCase):
+    def test_repo_inventory_lists_known_map_local_overrides(self):
+        overrides = {
+            (override.path, override.location): override for override in inventory_creature_overrides(REPO_ROOT)
+        }
+
+        siege_mage = overrides[("res/maps/siege/config.json", "siegePritzMage")]
+        self.assertEqual("PritzMage", siege_mage.template)
+        self.assertEqual(("controller", "affiliation", "items"), siege_mage.properties)
+
+        nested_pritz = overrides[("res/maps/nouraajd/config.json", "cave1.properties.monster")]
+        self.assertEqual("cave1", nested_pritz.key)
+        self.assertEqual("Pritz", nested_pritz.template)
+        self.assertEqual(("controller", "affiliation"), nested_pritz.properties)
+
+        anchor = overrides[("res/maps/ritual/config.json", "ritualAnchorNorth.properties.monster")]
+        self.assertEqual("Cultist", anchor.template)
+        self.assertEqual(("controller",), anchor.properties)
+
+    def test_inventory_detects_nested_overrides_and_ignores_non_creatures(self):
+        root = self.make_creature_fixture()
+
+        overrides = inventory_creature_overrides(root)
+        by_location = {override.location: override for override in overrides}
+
+        self.assertIn("townGuard", by_location)
+        self.assertEqual("Soldier", by_location["townGuard"].template)
+        self.assertEqual(("controller", "items"), by_location["townGuard"].properties)
+
+        self.assertIn("spawner.properties.monster", by_location)
+        self.assertEqual(("affiliation",), by_location["spawner.properties.monster"].properties)
+
+        # A creature ref that overrides no watched property and a non-creature ref are excluded.
+        self.assertNotIn("plainSoldier", by_location)
+        self.assertNotIn("loot", by_location)
+
+    def make_creature_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "res/plugins").mkdir(parents=True)
+        (root / "res/maps/keep").mkdir(parents=True)
+
+        write_json(
+            root / "res/config/monsters.json",
+            {"Soldier": {"class": "CCreature", "properties": {"animation": "images/monsters/soldier"}}},
+        )
+        write_json(
+            root / "res/config/items.json",
+            {"Sword": {"class": "CItem"}},
+        )
+        write_json(
+            root / "res/config/buildings.json",
+            {"Spawner": {"class": "CBuilding"}},
+        )
+        write_json(
+            root / "res/maps/keep/map.json",
+            {
+                "type": "map",
+                "width": 1,
+                "height": 1,
+                "layers": [{"type": "tilelayer", "width": 1, "height": 1, "data": [0]}],
+                "tilesets": [{"firstgid": 1, "tileproperties": {}}],
+                "nextobjectid": 1,
+            },
+        )
+        write_json(
+            root / "res/maps/keep/config.json",
+            {
+                "townGuard": {
+                    "ref": "Soldier",
+                    "properties": {
+                        "controller": {"class": "CTargetController", "properties": {"target": "player"}},
+                        "items": [{"ref": "Sword"}],
+                    },
+                },
+                "plainSoldier": {"ref": "Soldier", "properties": {"message": "Just passing through."}},
+                "loot": {"ref": "Sword", "properties": {"animation": "images/item"}},
+                "spawner": {
+                    "ref": "Spawner",
+                    "properties": {"monster": {"ref": "Soldier", "properties": {"affiliation": "keep"}}},
+                },
+            },
+        )
+        return root
 
 
 if __name__ == "__main__":
