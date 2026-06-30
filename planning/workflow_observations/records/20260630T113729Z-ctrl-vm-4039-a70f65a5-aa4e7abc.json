@@ -1,0 +1,52 @@
+{
+  "affectedPaths": [
+    "scripts/workflow_observations.py"
+  ],
+  "branch": "codex/e03-s01-ss03-preserve-sw-getscale-vm4039",
+  "category": "ci",
+  "controllerId": "ctrl-vm-4039-a70f65a5",
+  "createdAtUtc": "2026-06-30T11:37:29Z",
+  "details": "With three or more controllers concurrently advancing main, an implementation PR branch created from an earlier main tip quickly becomes stale. The build workflow's linux-fast \"Validate workflow observation ledger\" step runs `scripts/workflow_observations.py validate --base <base>` where the computed base predates commits that have since merged to main. The resulting diff-vs-base therefore includes every file other controllers merged after the branch point -- including at least one append-only ledger record file under planning/workflow_observations/records/ -- alongside the PR's own unrelated source/test change. The validator then reports \"<path>: ledger PR changes must not be mixed with non-ledger changes\" for all of those swept-in files and exits 1, failing the whole build before the C++/native steps run.\n\nThe PR was not actually touching ledger files; the only real change was tests/unit/test_handler.cpp. The failure is an artifact of comparing a stale branch against a base that excludes already-merged main history.\n\nRecovery that worked: merging origin/main into the impl branch (or rebasing onto it) reduced the branch's diff-vs-main back to the single intended file, after which the ledger-validation step passed. The same staleness affected all four of this controller's impl branches; each was repaired by merging current main before relying on its build.\n\nSuggested durable fix: the ledger-validation CI step (and any change-classification it relies on) should compute the PR's own changes using a three-dot diff against the actual merge-base (base...HEAD) so commits already present on the base branch are excluded; and/or controller prompts should require merging/rebasing current main into an impl branch before opening its PR or trusting its build, especially under multi-controller concurrency.\n",
+  "evidence": [
+    {
+      "buildRunNumbers": [
+        1960,
+        1991
+      ],
+      "failedJob": "linux-fast",
+      "failedStep": "Validate workflow observation ledger",
+      "intendedChangedFiles": [
+        "tests/unit/test_handler.cpp"
+      ],
+      "mainTipAtFailure": "d1c319f6",
+      "prBranch": "codex/e03-s01-ss03-preserve-sw-getscale-vm4039",
+      "prNumber": 920,
+      "recovery": "merged origin/main into impl branch; diff-vs-main reduced to tests/unit/test_handler.cpp; ledger step passed",
+      "staleMergeBase": "e5f6cc14",
+      "sweptInLedgerRecord": "planning/workflow_observations/records/20260630T105537Z-ctrl-vm-4024-7534d796-733f3be1.json",
+      "validatorBaseUsed": "957a1a91",
+      "validatorReportedMixedPaths": [
+        "AGENTS.md",
+        "docs/codex-agent-queue.md",
+        "planning/fall_of_nouraajd_creature_archetype_jira_plan.xlsx",
+        "planning/fall_of_nouraajd_github_issues_implementation_workbook_migrated.xlsx",
+        "prompts/codex-queue-controller.md",
+        "scripts/ci_change_classifier.py",
+        "scripts/validate_content.py",
+        "tests/test_content_validator.py",
+        "tests/unit/test_handler.cpp"
+      ],
+      "workflow": "build"
+    }
+  ],
+  "fingerprint": "stale impl pr branch ledger validation mixed changes from merged main advancement",
+  "id": "20260630T113729Z-ctrl-vm-4039-a70f65a5-aa4e7abc",
+  "impact": "A full CI build cycle is wasted per stale impl PR and a recovery merge is required before the native/test steps ever run; affected all four of this controller's impl branches under concurrent controllers.",
+  "phase": "validation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "medium",
+  "sourceCommit": "5168fde024df9d93521afdcb1f1d1e5e0619607a",
+  "suggestedImprovement": "Compute PR-own changes via three-dot diff against the true merge-base (base...HEAD) in the ledger-validation CI step; and/or require controllers to merge/rebase current main into impl branches before relying on their build.",
+  "summary": "Stale impl-PR branches fail linux-fast ledger validation because multi-controller main advancement makes diff-vs-base include already-merged files and ledger records"
+}
