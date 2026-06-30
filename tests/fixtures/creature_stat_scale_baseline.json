@@ -1,0 +1,366 @@
+{
+  "_description": "Config-derived balance baseline for every creature/player template in res/config/monsters.json. For each template it pins the declared class, the baseStats (spawn-scale stat map), the levelStats (per-level growth increments), the levelling (level -> skill ref unlock map), and sw (spawn weight, when declared). All values are read straight from the authoritative config; runtime object names, memory addresses, order-sensitive set iteration, and runtime coordinates are normalized out. This is a balance-neutral contract reviewed before migration PRs. Regenerated and verified by tests/test_creature_stat_scale_baseline.py.",
+  "_source": "res/config/monsters.json",
+  "templates": {
+    "Assasin": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 12,
+        "dmgMin": 10,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "agility",
+        "stamina": 5,
+        "strength": 5
+      },
+      "class": "CPlayer",
+      "levelStats": {
+        "agility": 3,
+        "crit": 2,
+        "dmgMax": 2,
+        "dmgMin": 1,
+        "hit": 3,
+        "intelligence": 2,
+        "stamina": 1,
+        "strength": 1
+      },
+      "levelling": {
+        "1": "SneakAttack",
+        "2": "Mutilation",
+        "3": "LethalPoison",
+        "4": "Chloroform",
+        "5": "Stunner",
+        "6": "Backstab"
+      }
+    },
+    "CultLeader": {
+      "baseStats": {
+        "agility": 8,
+        "crit": 15,
+        "dmgMax": 8,
+        "dmgMin": 6,
+        "hit": 80,
+        "intelligence": 8,
+        "mainStat": "strength",
+        "stamina": 7,
+        "strength": 7
+      },
+      "class": "CCreature",
+      "levelStats": {
+        "agility": 3,
+        "crit": 2,
+        "dmgMax": 4,
+        "dmgMin": 3,
+        "hit": 4,
+        "intelligence": 3,
+        "stamina": 4,
+        "strength": 4
+      },
+      "levelling": {},
+      "sw": 2
+    },
+    "Cultist": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 3,
+        "dmgMin": 2,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "strength",
+        "stamina": 3,
+        "strength": 5
+      },
+      "class": "CCreature",
+      "levelStats": {
+        "agility": 2,
+        "crit": 1,
+        "dmgMax": 1,
+        "dmgMin": 1,
+        "hit": 3,
+        "intelligence": 1,
+        "stamina": 1,
+        "strength": 2
+      },
+      "levelling": {},
+      "sw": 1
+    },
+    "GoblinThief": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 3,
+        "dmgMin": 2,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "strength",
+        "stamina": 3,
+        "strength": 5
+      },
+      "class": "CCreature",
+      "levelStats": {
+        "agility": 2,
+        "crit": 1,
+        "dmgMax": 1,
+        "dmgMin": 1,
+        "hit": 3,
+        "intelligence": 1,
+        "normalResist": 5,
+        "stamina": 1,
+        "strength": 2
+      },
+      "levelling": {
+        "4": "DoubleAttack"
+      },
+      "sw": 1
+    },
+    "Gooby": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 12,
+        "dmgMin": 10,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "strength",
+        "stamina": 5,
+        "strength": 5
+      },
+      "class": "CCreature",
+      "levelStats": {
+        "agility": 2,
+        "crit": 1,
+        "dmgMax": 3,
+        "dmgMin": 2,
+        "hit": 3,
+        "intelligence": 1,
+        "normalResist": 5,
+        "stamina": 2,
+        "strength": 3
+      },
+      "levelling": {
+        "4": "DoubleAttack"
+      },
+      "sw": 1
+    },
+    "Inquisitor": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 8,
+        "dmgMax": 11,
+        "dmgMin": 9,
+        "hit": 78,
+        "intelligence": 7,
+        "mainStat": "intelligence",
+        "stamina": 6,
+        "strength": 6
+      },
+      "class": "CPlayer",
+      "levelStats": {
+        "agility": 1,
+        "crit": 1,
+        "dmgMax": 2,
+        "dmgMin": 1,
+        "hit": 2,
+        "intelligence": 2,
+        "stamina": 2,
+        "strength": 2
+      },
+      "levelling": {
+        "1": "ExposeCorruption",
+        "2": "Strike",
+        "3": "SanctifiedWard",
+        "4": "FrostBolt",
+        "5": "Barrier",
+        "6": "EndlessPain"
+      }
+    },
+    "OctoBogz": {
+      "baseStats": {
+        "agility": 10,
+        "crit": 20,
+        "dmgMax": 21,
+        "dmgMin": 17,
+        "hit": 80,
+        "intelligence": 10,
+        "mainStat": "strength",
+        "stamina": 10,
+        "strength": 10
+      },
+      "class": "CCreature",
+      "levelStats": {
+        "agility": 3,
+        "crit": 2,
+        "dmgMax": 5,
+        "dmgMin": 4,
+        "hit": 4,
+        "intelligence": 2,
+        "normalResist": 7,
+        "stamina": 3,
+        "strength": 5
+      },
+      "levelling": {
+        "2": "AbyssalShadows"
+      },
+      "sw": 2
+    },
+    "Pritz": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 3,
+        "dmgMin": 2,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "strength",
+        "stamina": 3,
+        "strength": 5
+      },
+      "class": "CCreature",
+      "levelStats": {
+        "agility": 2,
+        "crit": 1,
+        "dmgMax": 1,
+        "dmgMin": 1,
+        "hit": 3,
+        "intelligence": 1,
+        "normalResist": 5,
+        "stamina": 1,
+        "strength": 2
+      },
+      "levelling": {
+        "4": "DoubleAttack"
+      },
+      "sw": 1
+    },
+    "PritzMage": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 12,
+        "dmgMin": 10,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "intelligence",
+        "stamina": 5,
+        "strength": 5
+      },
+      "class": "CCreature",
+      "levelStats": {
+        "agility": 2,
+        "crit": 1,
+        "dmgMax": 3,
+        "dmgMin": 2,
+        "hit": 3,
+        "intelligence": 3,
+        "normalResist": 5,
+        "stamina": 2,
+        "strength": 3
+      },
+      "levelling": {
+        "2": "MagicMissile",
+        "3": "FrostBolt"
+      },
+      "sw": 2
+    },
+    "Sorcerer": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 12,
+        "dmgMin": 10,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "intelligence",
+        "stamina": 5,
+        "strength": 5
+      },
+      "class": "CPlayer",
+      "levelStats": {
+        "agility": 2,
+        "crit": 1,
+        "dmgMax": 1,
+        "dmgMin": 1,
+        "hit": 1,
+        "intelligence": 3,
+        "stamina": 1,
+        "strength": 1
+      },
+      "levelling": {
+        "1": "MagicMissile",
+        "10": "ChaosBlast",
+        "2": "AbyssalShadows",
+        "3": "FrostBolt",
+        "4": "EndlessPain",
+        "5": "ArmorOfEndlessWinter",
+        "7": "ShadowBolt",
+        "8": "Devour"
+      }
+    },
+    "Warrior": {
+      "baseStats": {
+        "agility": 5,
+        "crit": 10,
+        "dmgMax": 12,
+        "dmgMin": 10,
+        "hit": 75,
+        "intelligence": 5,
+        "mainStat": "strength",
+        "stamina": 5,
+        "strength": 5
+      },
+      "class": "CPlayer",
+      "levelStats": {
+        "agility": 2,
+        "crit": 1,
+        "dmgMax": 3,
+        "dmgMin": 2,
+        "hit": 3,
+        "intelligence": 1,
+        "stamina": 2,
+        "strength": 3
+      },
+      "levelling": {
+        "1": "Strike",
+        "2": "Barrier",
+        "3": "BloodThirst",
+        "4": "Bloodlash",
+        "5": "DeathStrike",
+        "6": "DoubleAttack"
+      }
+    },
+    "Wayfarer": {
+      "baseStats": {
+        "agility": 8,
+        "crit": 12,
+        "dmgMax": 11,
+        "dmgMin": 9,
+        "hit": 82,
+        "intelligence": 5,
+        "mainStat": "agility",
+        "stamina": 5,
+        "strength": 6
+      },
+      "class": "CPlayer",
+      "levelStats": {
+        "agility": 3,
+        "crit": 1,
+        "dmgMax": 2,
+        "dmgMin": 1,
+        "hit": 3,
+        "intelligence": 1,
+        "stamina": 1,
+        "strength": 2
+      },
+      "levelling": {
+        "1": "WayfarersStride",
+        "2": "SneakAttack",
+        "3": "SmugglersMark",
+        "4": "DoubleAttack",
+        "5": "Backstab",
+        "6": "BloodThirst"
+      }
+    }
+  }
+}
