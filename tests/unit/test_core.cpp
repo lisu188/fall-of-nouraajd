@@ -1883,9 +1883,10 @@ void test_interaction_self_target_property_round_trip() {
     expect_true(round_trip->getSelfTarget(), "selfTarget should survive a serialize/deserialize round-trip");
 
     // JSON that omits selfTarget (e.g. existing content) must remain valid and keep the false default.
-    auto legacy = std::make_shared<json>();
-    add_member(legacy, "class", CInteraction::static_meta()->name());
-    add_member(legacy, "properties", std::make_shared<json>());
+    auto legacy = std::make_shared<json>(*serialized);
+    (*legacy)["properties"].erase("selfTarget");
+    expect_true(!(*legacy)["properties"].contains("selfTarget"),
+                "legacy fixture should omit the selfTarget property");
     auto legacy_loaded = std::dynamic_pointer_cast<CInteraction>(
         CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, legacy));
     expect_true(legacy_loaded && !legacy_loaded->getSelfTarget(),
