@@ -621,7 +621,12 @@ void CMap::move() {
         auto creature = vstd::cast<CCreature>(object);
         return creature->getController()->control(creature)->thenLater(
             [creature, coordinates, canApplyDeferredMoveWork, map](Coords coords) {
-                if (canApplyDeferredMoveWork() && creature && map->getObjectByName(creature->getName()) == creature) {
+                // Keep planned steps for creatures that are still on this map's transition
+                // generation, even if the controller removed the creature during planning.
+                // The commit loop below interrupts non-active creatures; dropping them here
+                // would skip that interrupt. Stale results from a map transition are filtered
+                // by canApplyDeferredMoveWork().
+                if (canApplyDeferredMoveWork() && creature) {
                     coordinates->push_back(std::make_pair(creature, coords));
                 }
             });
