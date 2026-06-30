@@ -1245,6 +1245,10 @@ void test_save_format_codec_validation() {
                 "save envelope should use the canonical format marker");
     expect_true((*envelope)->at("schemaVersion").get<int>() == CSaveFormat::SCHEMA_VERSION,
                 "save envelope should use the canonical schema version");
+    // Optional archetype fields (race/creatureClass/playerClassId) are additive and must not bump
+    // the published schema version. Pin it so a future change that breaks schema-v1 compatibility
+    // fails here instead of silently invalidating existing v1 saves.
+    expect_true(CSaveFormat::SCHEMA_VERSION == 1, "schema version must stay 1 for optional archetype fields");
 
     auto decoded = CSaveFormat::decodeDocument(*envelope);
     expect_true(

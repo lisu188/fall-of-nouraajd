@@ -692,6 +692,38 @@ class SaveFixtureTest(unittest.TestCase):
         self.assertEqual([], summary["player"]["completedQuests"])
         self.assertEqual([], summary["player"]["items"])
 
+    def test_schema_v1_fixture_stays_on_version_one_with_legacy_player(self):
+        # Optional archetype fields (race/creatureClass/playerClassId) are additive and must NOT
+        # force a SCHEMA_VERSION bump. This pins the published schema-v1 contract: the immutable
+        # schema_v1 fixture must keep schemaVersion 1, the Python mirror constant must stay 1, and
+        # the fixture must continue to describe a legacy CPlayer (typeId "Warrior" only, no
+        # archetype identity fields) so it still resolves to legacy default stats on load.
+        self.assertEqual(1, SAVE_SCHEMA_VERSION, "Python schema-version mirror drifted from v1")
+
+        fixture_path = SAVE_FIXTURE_DIR / "schema_v1_test_map.json"
+        self.assertTrue(fixture_path.is_file(), fixture_path)
+        document = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(SAVE_FORMAT, document.get("format"))
+        self.assertEqual(1, document.get("schemaVersion"), "schema-v1 fixture must stay on version 1")
+        self.assertEqual(SAVE_SCHEMA_VERSION, document.get("schemaVersion"))
+        assert_save_envelope(self, document, "test")
+
+        player = snapshot_player_properties(save_snapshot(document))
+        # Legacy v1 player: identified by typeId only, with no archetype identity overrides.
+        self.assertEqual("Warrior", player.get("typeId"))
+        self.assertNotIn("playerClassId", player)
+        self.assertNotIn("raceId", player)
+        self.assertNotIn("creatureClass", player)
+        self.assertNotIn("archetype", player)
+        self.assertNotIn("race", player)
+
+        # The fixture's expected immutable summary must agree it is a legacy v1 save.
+        expected = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["schema_v1_test_map"]["summary"]
+        self.assertEqual(1, expected["schemaVersion"])
+        self.assertEqual("Warrior", expected["player"]["typeId"])
+        self.assertEqual(expected, save_fixture_summary(document))
+
 
 class ProgressTextTestResult(unittest.TextTestResult):
     def __init__(self, *args, **kwargs):
