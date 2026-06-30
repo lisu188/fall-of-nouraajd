@@ -291,6 +291,25 @@ AMULET_QUEST_ITEM = "preciousAmulet"
 AMULET_RUNTIME_ACTOR_NAME = "amuletGoblin"
 CREATURE_ITEMS_PROPERTY = "items"
 
+# Required production archetype enforcement (EPIC_06/STORY_04/SUBSTORY_01).
+# Once the archetype migration is declared complete, every production
+# CCreature/CPlayer config must declare BOTH its race (CREATURE_RACE_PROPERTY) and
+# its class (CREATURE_CLASS_REFERENCE_PROPERTY) reference properties so that no
+# production creature can silently remain on the legacy path -- with the only
+# permitted gaps being entries listed in an explicit reviewed exception manifest
+# (intended for low-level test fixtures, each exempted by exact config path + key
+# with a reason).  The migration is NOT complete on current content -- the archetype
+# config files do not exist and essentially no production creature declares
+# race/creatureClass yet -- so enforcement is gated behind ARCHETYPE_MIGRATION_COMPLETE
+# and is fully inert (emits nothing) while that switch is False.  The standalone
+# read-only report_unmigrated_creatures() inventory is unaffected and keeps working
+# regardless of this switch.
+ARCHETYPE_MIGRATION_COMPLETE = False
+CREATURE_REQUIRED_ARCHETYPE_PROPERTIES = (
+    CREATURE_RACE_PROPERTY,
+    CREATURE_CLASS_REFERENCE_PROPERTY,
+)
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -476,6 +495,30 @@ class ScriptPropertyAccess:
     def location(self) -> str:
         call = f'{self.method}("{self.name}")'
         return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
+
+
+@dataclass(frozen=True)
+class ArchetypeMigrationException:
+    """A reviewed exemption from the required-production-archetype rule.
+
+    ``path`` is the repo-relative config file (e.g. "res/config/test_fixtures.json")
+    and ``key`` the exact top-level config id within it that is allowed to remain on
+    the legacy path without declaring race/creatureClass.  ``reason`` documents why the
+    exemption is acceptable -- intended for low-level test fixtures, never production
+    creatures.  An entry only suppresses diagnostics for the creature whose path AND
+    key match exactly, so a manifest entry can never blanket-exempt real content.
+    """
+
+    path: str
+    key: str
+    reason: str
+
+
+# Reviewed exemptions from the required-production-archetype rule.  Empty by default:
+# no production creature is exempt, and low-level test fixtures are added here only
+# with an exact path/key and a reason.  Honored only while ARCHETYPE_MIGRATION_COMPLETE
+# is True (and even then, only for the exact path+key listed).
+ARCHETYPE_MIGRATION_EXCEPTIONS: tuple[ArchetypeMigrationException, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1058,6 +1101,8 @@ class ContentValidator:
         self,
         repo_root: Path,
         property_hygiene_allowlist: tuple[ScriptPropertyHygieneAllowance, ...] | None = None,
+        archetype_migration_complete: bool | None = None,
+        archetype_migration_exceptions: tuple[ArchetypeMigrationException, ...] | None = None,
     ) -> None:
         self.repo_root = repo_root.resolve()
         self.issues: list[ValidationIssue] = []
@@ -1078,6 +1123,15 @@ class ContentValidator:
         self.registration_exclusions: dict[str, RegistrationExclusion] = {}
         self.property_hygiene_allowlist = (
             SCRIPT_PROPERTY_HYGIENE_ALLOWLIST if property_hygiene_allowlist is None else property_hygiene_allowlist
+        )
+        # Required-production-archetype enforcement is gated behind this switch so the
+        # rule stays fully inert on pre-migration content; defaults to the module-level
+        # ARCHETYPE_MIGRATION_COMPLETE (False today) and is overridable for fixture tests.
+        self.archetype_migration_complete = (
+            ARCHETYPE_MIGRATION_COMPLETE if archetype_migration_complete is None else archetype_migration_complete
+        )
+        self.archetype_migration_exceptions = (
+            ARCHETYPE_MIGRATION_EXCEPTIONS if archetype_migration_exceptions is None else archetype_migration_exceptions
         )
 
     def validate(self) -> list[ValidationIssue]:
@@ -1519,6 +1573,7 @@ class ContentValidator:
         self._validate_crafting_refs()
         self._validate_creature_archetype_naming()
         self._validate_duplicate_player_selectable_race_labels(visible)
+        self._validate_required_production_archetypes(visible)
 
     def _validate_map_context(self, context: MapContext) -> None:
         visible = self._visible_entries(context)
@@ -2807,6 +2862,52 @@ class ContentValidator:
                     f"it collides with {others} -- res/game.py maps a selected label back to a "
                     f"single race id, so duplicate labels make the selection ambiguous",
                 )
+
+    def _validate_required_production_archetypes(self, visible: dict[str, ConfigEntry]) -> None:
+        """Require every production creature to declare race AND creatureClass post-migration.
+
+        Once the archetype migration is declared complete, no production CCreature/CPlayer
+        config may silently remain on the legacy path: each must declare both its race
+        (CREATURE_RACE_PROPERTY) and its class (CREATURE_CLASS_REFERENCE_PROPERTY) reference
+        property in its ``properties`` block.  Production creatures are the global
+        res/config entries whose effective engine class is, or inherits from, CCreature
+        (which also covers CPlayer, since CPlayer derives from CCreature) -- the exact same
+        resolution the read-only report_unmigrated_creatures() inventory uses.  Every
+        missing archetype across all production creatures is reported in a single run, with
+        one issue per absent property naming the precise ``configId.properties.<prop>`` path.
+
+        Enforcement is gated behind ``self.archetype_migration_complete`` so the rule is
+        fully inert on pre-migration content: while the switch is False (the default today)
+        nothing is emitted, keeping the standard validation green.  When the switch is on, a
+        creature exempted in the reviewed exception manifest (by exact path AND key) is not
+        flagged -- the manifest is intended for low-level test fixtures only.
+        """
+        if not self.archetype_migration_complete:
+            return
+        exempt_keys = {(exception.path, exception.key) for exception in self.archetype_migration_exceptions}
+        for key, entry in self.global_entries.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if not (class_name == CREATURE_BASE_CLASS or self._class_inherits_from(class_name, CREATURE_BASE_CLASS)):
+                continue
+            if (self._rel(entry.path), key) in exempt_keys:
+                continue
+            properties = entry.data.get("properties")
+            properties = properties if isinstance(properties, dict) else {}
+            properties_location = append_field(key, "properties")
+            for property_name in CREATURE_REQUIRED_ARCHETYPE_PROPERTIES:
+                if property_name not in properties:
+                    self._issue(
+                        entry.path,
+                        append_field(properties_location, property_name),
+                        f'production creature "{key}" (class "{class_name}") must declare archetype '
+                        f'property "{property_name}" after archetype migration; legacy creatures without '
+                        f"race/creatureClass are no longer allowed unless listed in the reviewed archetype "
+                        f"exception manifest",
+                    )
 
     def _effective_property_value(
         self,

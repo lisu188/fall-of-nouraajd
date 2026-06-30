@@ -25,6 +25,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.validate_content import (
+    ArchetypeMigrationException,
     ContentValidator,
     ScriptPropertyHygieneAllowance,
     classify_creature_templates,
@@ -3118,6 +3119,160 @@ class UnmigratedCreatureReportTest(unittest.TestCase):
         for player in ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer"):
             self.assertIn(player, report_ids)
             self.assertEqual(("creatureClass", "race"), next(c.missing for c in report if c.config_id == player))
+
+
+class RequiredProductionArchetypeTest(unittest.TestCase):
+    """EPIC_06/STORY_04/SUBSTORY_01 -- required production archetypes after migration.
+
+    The enforcement rule is gated behind the migration-complete switch.  These tests
+    drive it with the switch explicitly ON over synthetic in-memory content (never the
+    real monsters.json) to prove it flags every production creature missing race/class
+    in one run, honors the reviewed exception manifest, and stays inert with the switch
+    OFF (the default that keeps current full validation green).
+    """
+
+    def make_archetype_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "src/object").mkdir(parents=True)
+
+        # Engine metadata: CPlayer derives from CCreature, mirroring src/object/CPlayer.h.
+        (root / "src/object/CCreatures.h").write_text(
+            textwrap.dedent("""
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                # Fully migrated creature: declares both archetype references.
+                "MigratedGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}, "creatureClass": {"ref": "BruteClass"}},
+                },
+                # Missing only the class reference.
+                "NoClassGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}},
+                },
+                # Missing only the race reference.
+                "NoRaceGoblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "BruteClass"}},
+                },
+                # Unmigrated creature: missing both.
+                "LegacyGoblin": {"class": "CCreature", "properties": {"label": "Goblin"}},
+                # Player template (CPlayer inherits CCreature) -- also subject to the rule.
+                "LegacyHero": {"class": "CPlayer", "properties": {"label": "Hero"}},
+                # Not a creature -- must never be flagged.
+                "PlainItem": {"class": "CItem", "properties": {"label": "Sword"}},
+            },
+        )
+        return root
+
+    @staticmethod
+    def _archetype_locations(issues):
+        # Only the locations of this rule's diagnostics; the synthetic refs/labels in the
+        # fixture intentionally trip other validators (unknown ref/property), which are
+        # irrelevant to the required-archetype rule under test.
+        return {issue.location for issue in issues if "must declare archetype property" in str(issue)}
+
+    def test_switch_on_flags_all_production_creatures_missing_archetypes(self):
+        root = self.make_archetype_fixture()
+
+        issues = ContentValidator(root, archetype_migration_complete=True).validate()
+        flagged = self._archetype_locations(issues)
+
+        # Every missing archetype across every production creature is reported in ONE run,
+        # one issue per absent property at the exact "<id>.properties.<prop>" path.  The
+        # fully migrated creature and the non-creature never appear; CPlayer templates do
+        # (CPlayer inherits CCreature).
+        self.assertEqual(
+            {
+                "NoClassGoblin.properties.creatureClass",
+                "NoRaceGoblin.properties.race",
+                "LegacyGoblin.properties.race",
+                "LegacyGoblin.properties.creatureClass",
+                "LegacyHero.properties.race",
+                "LegacyHero.properties.creatureClass",
+            },
+            flagged,
+        )
+
+    def test_manifest_exempted_entry_is_not_flagged(self):
+        root = self.make_archetype_fixture()
+        exceptions = (
+            ArchetypeMigrationException(
+                path="res/config/monsters.json",
+                key="LegacyGoblin",
+                reason="Low-level test fixture exempted from archetype migration.",
+            ),
+        )
+
+        issues = ContentValidator(
+            root,
+            archetype_migration_complete=True,
+            archetype_migration_exceptions=exceptions,
+        ).validate()
+        flagged = self._archetype_locations(issues)
+
+        # The exact path+key exemption suppresses BOTH of LegacyGoblin's archetype
+        # diagnostics, while every other unmigrated creature is still flagged.
+        self.assertEqual(
+            {
+                "NoClassGoblin.properties.creatureClass",
+                "NoRaceGoblin.properties.race",
+                "LegacyHero.properties.race",
+                "LegacyHero.properties.creatureClass",
+            },
+            flagged,
+        )
+
+    def test_switch_off_is_inert_even_with_unmigrated_creatures(self):
+        root = self.make_archetype_fixture()
+
+        # Default constructor (switch defaults to ARCHETYPE_MIGRATION_COMPLETE == False).
+        default_issues = ContentValidator(root).validate()
+        explicit_off_issues = ContentValidator(root, archetype_migration_complete=False).validate()
+
+        for issues in (default_issues, explicit_off_issues):
+            archetype_issues = [str(issue) for issue in issues if "must declare archetype property" in str(issue)]
+            self.assertEqual([], archetype_issues)
+
+    def test_manifest_only_matches_exact_path_and_key(self):
+        root = self.make_archetype_fixture()
+        # A manifest entry whose key matches but whose path points at a different file
+        # must NOT suppress the diagnostic (exact path AND key are required).
+        exceptions = (
+            ArchetypeMigrationException(
+                path="res/config/other.json",
+                key="LegacyGoblin",
+                reason="Wrong file -- must not exempt the real LegacyGoblin.",
+            ),
+        )
+
+        issues = ContentValidator(
+            root,
+            archetype_migration_complete=True,
+            archetype_migration_exceptions=exceptions,
+        ).validate()
+        flagged = self._archetype_locations(issues)
+
+        self.assertIn("LegacyGoblin.properties.race", flagged)
+        self.assertIn("LegacyGoblin.properties.creatureClass", flagged)
 
 
 if __name__ == "__main__":
