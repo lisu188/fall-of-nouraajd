@@ -93,7 +93,7 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     if (button == SDL_BUTTON_RIGHT) {
         return invokeRightClickCallback(gui, index, object);
     }
-    if (gui && hasSourceDragCallbacks()) {
+    if (gui && !dragStart.empty()) {
         if (invokeDragStart(gui, index, object)) {
             auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
             auto self = this->ptr<CListView>();
