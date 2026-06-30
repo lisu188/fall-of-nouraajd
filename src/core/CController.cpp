@@ -96,8 +96,8 @@ bool resolve_deferred_creature_context(const DeferredCreatureContext &context, s
         return false;
     }
 
-    const bool stillRegistered =
-        context.wasRegistered && !context.creatureName.empty() && map->getObjectByName(context.creatureName) == creature;
+    const bool stillRegistered = context.wasRegistered && !context.creatureName.empty() &&
+                                 map->getObjectByName(context.creatureName) == creature;
     auto game = context.game.lock();
     const bool expectedMapActive = !game || game->getMap() == map;
     if (!expectedMapActive && !stillRegistered) {
@@ -307,7 +307,7 @@ std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr
         std::shared_ptr<CCreature> creature;
         std::shared_ptr<CMap> map;
         return resolve_deferred_creature_context(deferredContext, creature, map) ? creature->getCoords()
-                                                                                : deferredContext.fallback;
+                                                                                 : deferredContext.fallback;
     });
 }
 
@@ -544,7 +544,19 @@ void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _targe
         clearPath();
         return;
     }
-    target = std::make_shared<Coords>(player->getMap()->normalizeCoords(_target));
+    auto map = player->getMap();
+    auto normalized = map->normalizeCoords(_target);
+    // Reject targets outside the configured map extents before invoking the pathfinder so that
+    // arbitrary (potentially adversarial) coordinates cannot trigger a search over unbounded space.
+    // Note: passability of the goal tile is intentionally NOT checked here. A* exempts the goal from
+    // the canStep test, so legitimately targeting a momentarily non-steppable in-bounds tile (e.g.
+    // one occupied by a transition object or creature) must still compute a path. The pathfinder's
+    // envelope / node / path-length budgets bound the search even for adversarial in-bounds goals.
+    if (!map->isWithinBounds(normalized)) {
+        clearPath();
+        return;
+    }
+    target = std::make_shared<Coords>(normalized);
     path.clear();
     currentStep = 0;
     auto _path = calculatePath(player);
