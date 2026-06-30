@@ -355,7 +355,7 @@ jobs:
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}\vcpkg_installed\fast
       VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\cmake\triplets
       VCPKG_TARGET_TRIPLET: x64-windows-release
-      WINDOWS_FAST_TOOLS_DIR: ${{ github.workspace }}\.windows-tools\bin
+      WINDOWS_FAST_TOOLS_DIR: ${{ runner.temp }}\windows-fast-tools\bin
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Set up Python
@@ -417,7 +417,15 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
+          # Trusted tools must live OUTSIDE the (possibly attacker-controlled) PR
+          # workspace so a committed tool shim can never be picked up. Refuse to
+          # proceed if the configured tools directory is inside the workspace.
           $toolsDir = $env:WINDOWS_FAST_TOOLS_DIR
+          $workspaceFull = [System.IO.Path]::GetFullPath($env:GITHUB_WORKSPACE)
+          $toolsDirFull = [System.IO.Path]::GetFullPath($toolsDir)
+          if ($toolsDirFull.StartsWith($workspaceFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to use a fast-tools directory inside the workspace: $toolsDirFull"
+          }
           New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
 
           if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
@@ -432,28 +440,33 @@ jobs:
             throw "ninja was not found after setup."
           }
 
+          # Always (re)download and hash-verify the archive, then derive sccache.exe
+          # from the verified archive. Never trust a pre-existing sccache.exe on disk:
+          # a stale or workspace-seeded binary could otherwise be used unverified.
           $sccacheExe = Join-Path $toolsDir "sccache.exe"
-          if (-not (Test-Path $sccacheExe)) {
-            $assetName = "sccache-v{0}-x86_64-pc-windows-msvc.zip" -f $env:SCCACHE_VERSION
-            $archivePath = Join-Path $env:RUNNER_TEMP $assetName
-            $extractDir = Join-Path $env:RUNNER_TEMP "sccache"
-            $url = "https://github.com/mozilla/sccache/releases/download/v{0}/{1}" -f $env:SCCACHE_VERSION, $assetName
+          $assetName = "sccache-v{0}-x86_64-pc-windows-msvc.zip" -f $env:SCCACHE_VERSION
+          $archivePath = Join-Path $env:RUNNER_TEMP $assetName
+          $extractDir = Join-Path $env:RUNNER_TEMP "sccache"
+          $url = "https://github.com/mozilla/sccache/releases/download/v{0}/{1}" -f $env:SCCACHE_VERSION, $assetName
 
-            Invoke-WebRequest -Uri $url -OutFile $archivePath
-            $actualHash = (Get-FileHash -Algorithm SHA256 $archivePath).Hash.ToLowerInvariant()
-            if ($actualHash -ne $env:SCCACHE_SHA256) {
-              throw "Unexpected sccache archive hash '$actualHash'."
-            }
-
-            Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
-            Expand-Archive -Path $archivePath -DestinationPath $extractDir -Force
-            $downloadedSccache = Get-ChildItem -Path $extractDir -Recurse -Filter sccache.exe | Select-Object -First 1
-            if (-not $downloadedSccache) {
-              throw "sccache.exe was not found in the downloaded archive."
-            }
-            Copy-Item -Path $downloadedSccache.FullName -Destination $sccacheExe -Force
+          Invoke-WebRequest -Uri $url -OutFile $archivePath
+          $actualHash = (Get-FileHash -Algorithm SHA256 $archivePath).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:SCCACHE_SHA256) {
+            throw "Unexpected sccache archive hash '$actualHash'."
           }
 
+          Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
+          Expand-Archive -Path $archivePath -DestinationPath $extractDir -Force
+          $downloadedSccache = Get-ChildItem -Path $extractDir -Recurse -Filter sccache.exe | Select-Object -First 1
+          if (-not $downloadedSccache) {
+            throw "sccache.exe was not found in the downloaded archive."
+          }
+          Remove-Item -Force $sccacheExe -ErrorAction SilentlyContinue
+          Copy-Item -Path $downloadedSccache.FullName -Destination $sccacheExe -Force
+
+          # Pin the launcher to the verified absolute path outside the workspace.
+          # configure.bat prefers SCCACHE_EXECUTABLE over any `where sccache` lookup,
+          # so a workspace-provided sccache on PATH cannot be selected as the launcher.
           $toolsDir | Out-File -FilePath $env:GITHUB_PATH -Append
           "SCCACHE_EXECUTABLE=$sccacheExe" | Out-File -FilePath $env:GITHUB_ENV -Append
           $env:PATH = "$toolsDir;$env:PATH"
