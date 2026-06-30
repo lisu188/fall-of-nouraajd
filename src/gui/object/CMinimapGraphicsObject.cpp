@@ -416,4 +416,18 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     draw_viewport(renderer, gui, scale, playerCoords);
 }
 
-bool CMinimapGraphicsObject::mouseEvent(std::shared_ptr<CGui>, SDL_EventType, int, int, int) { return false; }
+bool CMinimapGraphicsObject::mouseEvent(std::shared_ptr<CGui>, SDL_EventType, int, int, int) {
+    // Consume in-bounds pointer button events. CGameGraphicsObject::event() only calls this hook for a
+    // visible minimap when the click is inside its rectangle (or it is modal), so returning true stops the
+    // event from falling through to lower-priority siblings such as the map layer. Left/right (and any other)
+    // button presses delivered inside the minimap are therefore swallowed and never move/interact with the
+    // world.
+    return true;
+}
+
+bool CMinimapGraphicsObject::mouseMotionEvent(std::shared_ptr<CGui>, SDL_EventType, int, int, int, int) {
+    // Consume in-bounds motion the same way as button events so hovering/dragging over the minimap does not
+    // reach the map underneath. Wheel events are deliberately NOT overridden: the base no-op leaves them
+    // unconsumed so map zoom keeps working when the cursor is over the minimap.
+    return true;
+}
