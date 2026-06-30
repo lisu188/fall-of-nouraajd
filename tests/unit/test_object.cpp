@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
+#include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
 #include "object/CMarket.h"
@@ -40,6 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <set>
 #include <string>
+#include <typeindex>
 #include <utility>
 #include <vector>
 
@@ -612,6 +614,170 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     expect_true(creature->getGold() == 20, "takeGold should subtract from creature gold");
 }
 
+void test_no_archetype_creature_stats_keep_legacy_composition() {
+    // Regression guard (EPIC_03/STORY_01/SUBSTORY_01): a creature with NO race/creatureClass
+    // archetype must keep the legacy stat composition computed in CCreature::getStats():
+    //   mainStat  = baseStats.mainStat
+    //   numerics  = baseStats + level * levelStats + sum(equipped item bonuses) + sum(effect bonuses)
+    // Since no archetype types exist yet, every creature is "no-archetype"; this captures today's
+    // behaviour as the legacy baseline and fails with a per-property diff if that composition changes.
+    auto creature = std::make_shared<CCreature>();
+
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence");
+    base->setStrength(10);
+    base->setAgility(4);
+    base->setStamina(7);
+    base->setIntelligence(12);
+    base->setArmor(3);
+    base->setBlock(2);
+    base->setDmgMin(5);
+    base->setDmgMax(9);
+    base->setAttack(6);
+    base->setHit(11);
+    base->setCrit(1);
+    base->setFireResist(8);
+    base->setFrostResist(0);
+    base->setNormalResist(2);
+    base->setThunderResist(4);
+    base->setShadowResist(6);
+    base->setDamage(13);
+    creature->setBaseStats(base);
+
+    auto level_stats = std::make_shared<CStats>();
+    level_stats->setStrength(2);
+    level_stats->setAgility(1);
+    level_stats->setStamina(3);
+    level_stats->setIntelligence(1);
+    level_stats->setArmor(1);
+    level_stats->setHit(1);
+    level_stats->setDamage(2);
+    creature->setLevelStats(level_stats);
+
+    const int level = 3;
+    creature->setLevel(level);
+
+    auto weapon_bonus = std::make_shared<CStats>();
+    weapon_bonus->setStrength(4);
+    weapon_bonus->setDmgMin(2);
+    weapon_bonus->setDmgMax(3);
+    weapon_bonus->setCrit(5);
+    auto weapon = std::make_shared<CItem>();
+    weapon->setBonus(weapon_bonus);
+
+    auto armor_bonus = std::make_shared<CStats>();
+    armor_bonus->setArmor(7);
+    armor_bonus->setBlock(3);
+    armor_bonus->setFrostResist(2);
+    auto armor_item = std::make_shared<CItem>();
+    armor_item->setBonus(armor_bonus);
+
+    auto empty_slot_item = std::shared_ptr<CItem>();
+    creature->setEquipped({{"0", weapon}, {"1", armor_item}, {"2", empty_slot_item}});
+
+    auto effect_bonus = std::make_shared<CStats>();
+    effect_bonus->setAgility(5);
+    effect_bonus->setHit(4);
+    effect_bonus->setShadowResist(1);
+    auto effect = std::make_shared<CEffect>();
+    effect->setBonus(effect_bonus);
+    creature->setEffects({effect});
+
+    // Independently recompute the expected legacy composition.
+    auto expected = std::make_shared<CStats>();
+    expected->setMainStat(base->getMainStat());
+    expected->addBonus(base);
+    for (int i = 0; i < level; ++i) {
+        expected->addBonus(level_stats);
+    }
+    expected->addBonus(weapon_bonus);
+    expected->addBonus(armor_bonus);
+    expected->addBonus(effect_bonus);
+
+    auto actual = creature->getStats();
+
+    expect_true(actual->getMainStat() == expected->getMainStat(),
+                "no-archetype creature getStats should keep baseStats mainStat");
+
+    actual->meta()->for_all_properties(actual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = actual->getProperty<int>(property->name());
+        int expected_value = expected->getProperty<int>(property->name());
+        if (actual_value != expected_value) {
+            std::cerr << "STAT DIFF [" << property->name() << "] expected " << expected_value << " but got "
+                      << actual_value << "\n";
+        }
+        expect_true(actual_value == expected_value,
+                    "no-archetype creature getStats should match legacy baseStats + level*levelStats + "
+                    "equipment + effects composition");
+    });
+}
+
+void test_creature_stat_precedence_orders_sources_and_main_stat() {
+    // Pins the approved creature stat precedence contract
+    // (docs/design/creature_archetypes.md, "Creature stat precedence contract"):
+    // effective stats compose, least- to most-specific, as
+    //   race.baseStats -> creatureClass.baseStats -> creature.baseStats ->
+    //   creatureClass.levelStats (per level) -> creature.levelStats (per level) ->
+    //   equipment -> effects,
+    // and the composed mainStat is taken from creatureClass.baseStats first, falling
+    // back to legacy creature.baseStats when no class is present. The race /
+    // creatureClass archetype objects do not exist yet, so this pins the currently
+    // implemented portion (positions 3, 5, 6, 7) and the legacy main-stat fallback.
+    auto creature = std::make_shared<CCreature>();
+
+    // Each currently-implemented source contributes to the SAME property (intelligence)
+    // so the test proves every later source is layered on top of (does not discard) the
+    // earlier ones, in the documented order.
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence"); // legacy creature.baseStats mainStat -> the fallback
+    base->setIntelligence(10);         // 3. creature.baseStats
+    creature->setBaseStats(base);
+
+    auto level_stats = std::make_shared<CStats>();
+    level_stats->setIntelligence(2); // 5. creature.levelStats, applied once per level
+    creature->setLevelStats(level_stats);
+
+    const int level = 3;
+    creature->setLevel(level);
+
+    auto equip_bonus = std::make_shared<CStats>();
+    equip_bonus->setIntelligence(5); // 6. equipment
+    auto item = std::make_shared<CItem>();
+    item->setBonus(equip_bonus);
+    creature->setEquipped({{"0", item}});
+
+    auto effect_bonus = std::make_shared<CStats>();
+    effect_bonus->setIntelligence(7); // 7. effects (most specific implemented source)
+    auto effect = std::make_shared<CEffect>();
+    effect->setBonus(effect_bonus);
+    creature->setEffects({effect});
+
+    auto stats = creature->getStats();
+
+    // Each source is layered in order, so the composed value is the running total of
+    // every documented stage; dropping or reordering any stage changes this number.
+    const int expected_intelligence = 10 /*base*/ + level * 2 /*levelStats*/ + 5 /*equip*/ + 7 /*effects*/;
+    expect_true(stats->getIntelligence() == expected_intelligence,
+                "stat precedence should layer base + level*levelStats + equipment + effects in order");
+
+    // Main stat is selected (not accumulated): with no creatureClass it falls back to
+    // the legacy creature.baseStats mainStat, and getMainValue reads it from the fully
+    // composed block.
+    expect_true(stats->getMainStat() == "intelligence",
+                "composed main stat should fall back to legacy creature baseStats when no class is present");
+    expect_true(stats->getMainValue() == expected_intelligence,
+                "main value should read the selected main stat out of the fully composed stat block");
+
+    // Sanity: dropping the most-specific implemented source (effects) must lower the
+    // result, proving effects really are part of the composed order (last wins on top).
+    creature->setEffects({});
+    expect_true(creature->getStats()->getIntelligence() == expected_intelligence - 7,
+                "removing the effects source should remove exactly its contribution from the composed stat");
+}
+
 void test_creature_archetype_identity_accessors_use_fallbacks() {
     auto creature = std::make_shared<CCreature>();
 
@@ -651,6 +817,141 @@ void test_creature_archetype_identity_accessors_use_fallbacks() {
                 "archetype race label should fall back through archetype race id to name when nothing else is set");
     expect_true(bare->getArchetypeClassLabel() == "lonely_actor",
                 "archetype class label should fall back through archetype class id to name when nothing else is set");
+}
+
+void test_creature_effective_interactions_compose_and_dedupe_sources() {
+    auto creature = std::make_shared<CCreature>();
+    creature->setLevel(2);
+
+    // Innate / class action exposed through a levelling unlock at level 1.
+    auto innate_strike = std::make_shared<CInteraction>();
+    innate_strike->setTypeId("strike");
+    innate_strike->setName("levelling-strike");
+
+    // A levelling unlock gated to a higher level than the creature has reached.
+    auto future_unlock = std::make_shared<CInteraction>();
+    future_unlock->setTypeId("ultimate");
+    future_unlock->setName("levelling-ultimate");
+
+    // A levelling unlock keyed by name only (no typeId) at an unlocked level.
+    auto named_unlock = std::make_shared<CInteraction>();
+    named_unlock->setName("ward");
+
+    CInteractionMap levelling;
+    levelling["1"] = innate_strike;
+    levelling["5"] = future_unlock;
+    levelling["2"] = named_unlock;
+    creature->setLevelling(levelling);
+
+    // Concrete action overriding the innate "strike" (same typeId, different
+    // instance) plus a unique concrete action.
+    auto concrete_strike = std::make_shared<CInteraction>();
+    concrete_strike->setTypeId("strike");
+    concrete_strike->setName("concrete-strike");
+    creature->addAction(concrete_strike);
+
+    auto unique_action = std::make_shared<CInteraction>();
+    unique_action->setTypeId("dash");
+    unique_action->setName("concrete-dash");
+    creature->addAction(unique_action);
+
+    auto effective = creature->getEffectiveInteractions();
+
+    auto contains = [&effective](const std::shared_ptr<CInteraction> &action) {
+        return effective.find(action) != effective.end();
+    };
+    auto count_with_type = [&effective](const std::string &typeId) {
+        return std::count_if(effective.begin(), effective.end(),
+                             [&typeId](const auto &action) { return action && action->getTypeId() == typeId; });
+    };
+
+    expect_true(effective.size() == 3, "effective interactions should expose strike, ward and dash exactly once each");
+    expect_true(count_with_type("strike") == 1,
+                "a typeId duplicated across innate and concrete sources should appear only once");
+    expect_true(contains(concrete_strike) && !contains(innate_strike),
+                "concrete actions should override duplicate innate/level-unlocked actions of the same typeId");
+    expect_true(contains(unique_action), "unique concrete actions should be present in the effective interaction set");
+    expect_true(contains(named_unlock),
+                "level-unlocked actions at or below the current level should be exposed (name-keyed dedupe)");
+    expect_true(!contains(future_unlock), "level unlocks above the current level should not yet be exposed");
+
+    // getInteractions() delegates to the composed, de-duplicated set.
+    expect_true(creature->getInteractions() == effective,
+                "getInteractions should delegate to the effective, de-duplicated interaction set");
+}
+void test_creature_action_merge_dedupes_by_type_id() {
+    // Pins the approved creature action merge contract
+    // (docs/design/creature_archetypes.md, "Creature action merge contract"):
+    // actions are composed in precedence order (race innate -> class starting ->
+    // class level unlocks -> concrete template) and deduplicated by `typeId`
+    // (falling back to `name` only when `typeId` is empty), last/most-specific wins.
+    auto creature = std::make_shared<CCreature>();
+
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    // (1) race innate: a generic Attack and a race-only ability.
+    auto raceAttack = interaction("Attack", "raceAttack");
+    auto raceClaw = interaction("Claw", "raceClaw");
+    // (2) class starting: a duplicate Attack (same typeId, different instance/name).
+    auto classAttack = interaction("Attack", "classAttack");
+    // (3) class level unlock: a unique unlock.
+    auto levelStrike = interaction("Strike", "levelStrike");
+    // (4) concrete template: the most specific Attack override plus a unique action.
+    auto concreteAttack = interaction("Attack", "concreteAttack");
+    auto concreteFinisher = interaction("Finisher", "concreteFinisher");
+
+    creature->addAction(raceAttack);
+    creature->addAction(raceClaw);
+    creature->addAction(classAttack);
+    creature->addAction(levelStrike);
+    creature->addAction(concreteAttack);
+    creature->addAction(concreteFinisher);
+
+    const auto actions = creature->getActions();
+
+    auto withTypeId = [&actions](const std::string &typeId) {
+        std::vector<std::shared_ptr<CInteraction>> matches;
+        for (const auto &action : actions) {
+            if (action && action->getTypeId() == typeId) {
+                matches.push_back(action);
+            }
+        }
+        return matches;
+    };
+
+    expect_true(withTypeId("Attack").size() == 1,
+                "duplicate Attack actions from race/class/concrete sources should collapse to a single entry");
+    expect_true(!withTypeId("Attack").empty() && withTypeId("Attack").front() == concreteAttack,
+                "the last/most-specific source should win for a deduplicated action typeId");
+    expect_true(actions.contains(raceClaw) && actions.contains(levelStrike) && actions.contains(concreteFinisher),
+                "unique actions from each source should be preserved through the merge");
+    expect_true(!actions.contains(raceAttack) && !actions.contains(classAttack),
+                "earlier Attack definitions should be replaced by the more specific source");
+    expect_true(actions.size() == 4, "the merged action set should keep one Attack plus the three unique actions");
+
+    // Re-adding the exact same instance is idempotent and does not duplicate.
+    creature->addAction(concreteAttack);
+    expect_true(creature->getActions().size() == 4, "re-adding the same action instance should be idempotent");
+
+    // typeId-empty actions fall back to name for dedupe.
+    auto namedCreature = std::make_shared<CCreature>();
+    auto firstWander = interaction("", "Wander");
+    auto secondWander = interaction("", "Wander");
+    auto patrol = interaction("", "Patrol");
+    namedCreature->addAction(firstWander);
+    namedCreature->addAction(secondWander);
+    namedCreature->addAction(patrol);
+    const auto namedActions = namedCreature->getActions();
+    expect_true(namedActions.size() == 2,
+                "actions without a typeId should deduplicate by name (last wins) and keep distinct names");
+    expect_true(namedActions.contains(secondWander) && !namedActions.contains(firstWander),
+                "the later name-keyed action should replace the earlier one when typeId is empty");
 }
 
 void test_game_object_comparator_and_identity_sets_document_current_semantics() {
@@ -874,9 +1175,97 @@ void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
                 "equivalentValue should reject unsupported cyclic object-reference graphs safely");
 }
 
+class TypedSignalProbe : public CGameObject {
+    V_META(TypedSignalProbe, CGameObject, V_METHOD(TypedSignalProbe, onPropertyChanged, void, std::string),
+           V_METHOD(TypedSignalProbe, onInventoryChanged))
+
+  public:
+    void onPropertyChanged(std::string property_name) { changedProperties.insert(std::move(property_name)); }
+
+    void onInventoryChanged() { ++inventoryChangedCalls; }
+
+    std::set<std::string> changedProperties;
+    int inventoryChangedCalls = 0;
+};
+
+void test_dynamic_property_cannot_spoof_typed_engine_signal() {
+    CTypes::register_type_metadata<TypedSignalProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<TypedSignalProbe>();
+
+    // A subscriber to the typed engine signal "inventoryChanged" (as CCreature emits
+    // it). A dynamic/runtime property literally named "inventory" derives the same
+    // "inventoryChanged" channel name in notifyPropertyChanged -> must be dropped fail
+    // closed so the dynamic property cannot fire (spoof) the typed engine slot.
+    object->connect("inventoryChanged", probe, "onInventoryChanged");
+    object->connect("propertyChanged", probe, "onPropertyChanged");
+
+    object->setStringProperty("inventory", "spoofed");
+    drain_event_loop();
+
+    expect_true(probe->inventoryChangedCalls == 0,
+                "a dynamic property named like a typed engine signal must not fire the typed signal's slot");
+    expect_true(probe->changedProperties.contains("inventory"),
+                "the generic propertyChanged channel must still report the dynamic property change");
+
+    // A non-colliding dynamic property still reaches its per-property "<name>Changed"
+    // subscriber (the namespace guard only suppresses reserved typed-signal names).
+    auto specific_probe = std::make_shared<TypedSignalProbe>();
+    object->connect("threatChanged", specific_probe, "onInventoryChanged");
+    object->setNumericProperty("threat", 1);
+    drain_event_loop();
+    expect_true(specific_probe->inventoryChangedCalls == 1,
+                "a non-colliding dynamic property must still fire its per-property notification slot");
+}
+
+void test_typed_engine_signal_still_fires_directly() {
+    CTypes::register_type_metadata<TypedSignalProbe, CGameObject>();
+    auto creature = std::make_shared<CCreature>();
+    auto probe = std::make_shared<TypedSignalProbe>();
+
+    // The real typed engine signal (emitted directly via signal("inventoryChanged"))
+    // must still reach its slot; the reserved-name guard only blocks the dynamic
+    // property channel, never direct typed emission.
+    creature->connect("inventoryChanged", probe, "onInventoryChanged");
+    creature->addItem(std::make_shared<CItem>());
+    drain_event_loop();
+
+    expect_true(probe->inventoryChangedCalls >= 1,
+                "directly emitted typed engine signals must still reach their slots");
+}
+
+void test_signal_slots_fail_closed_on_bad_config() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto valid_probe = std::make_shared<PropertyChangeProbe>();
+    auto broken_probe = std::make_shared<PropertyChangeProbe>();
+
+    // A config-driven slot that names a method which is not a valid reflective
+    // target (missing / private / dispatch-meta) must not crash the event loop,
+    // and must not starve a valid slot connected to the same signal.
+    object->connect("propertyChanged", broken_probe, "missingSlotCallback");
+    object->connect("propertyChanged", broken_probe, "_privateSlot");
+    object->connect("propertyChanged", broken_probe, "invokeAction");
+    object->connect("propertyChanged", broken_probe, "");
+    object->connect("propertyChanged", valid_probe, "onPropertyChanged");
+
+    object->notifyPropertyChanged("threat");
+    drain_event_loop();
+
+    expect_true(broken_probe->changedProperties.empty(),
+                "invalid signal slot callbacks should no-op and fail closed instead of crashing");
+    expect_true(valid_probe->changedProperties.contains("threat"),
+                "a valid signal slot should still fire even when sibling slots fail closed");
+}
+
 } // namespace
 
 int main() {
+    test_signal_slots_fail_closed_on_bad_config();
+    test_dynamic_property_cannot_spoof_typed_engine_signal();
+    test_typed_engine_signal_still_fires_directly();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
@@ -889,7 +1278,11 @@ int main() {
     test_game_object_property_helpers_and_owned_tile_movement();
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
+    test_no_archetype_creature_stats_keep_legacy_composition();
+    test_creature_stat_precedence_orders_sources_and_main_stat();
     test_creature_archetype_identity_accessors_use_fallbacks();
+    test_creature_effective_interactions_compose_and_dedupe_sources();
+    test_creature_action_merge_dedupes_by_type_id();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
 

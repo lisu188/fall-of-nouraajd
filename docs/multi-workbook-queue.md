@@ -17,6 +17,13 @@ Current queue-compatible workbooks are:
 - `planning/fall_of_nouraajd_issue_proposals.xlsx`
 - `planning/fall_of_nouraajd_creature_archetype_jira_plan.xlsx`
 - `planning/fall_of_nouraajd_github_issues_implementation_workbook_migrated.xlsx`
+- `planning/fall_of_nouraajd_level_design_proposals.xlsx`
+
+The level-design proposals workbook is the dedicated backlog for level-design
+Bugs and Improvements filed by the level-designer review loop
+(`prompts/codex-level-designer.md`). It holds findings against the authored
+levels under `res/maps/*` (quests/dialog, encounters/balance, navigation/layout,
+and content integrity) under `Level Design / <lens>` components.
 
 The migrated GitHub issues implementation workbook retains the original planning sheets
 (`Dashboard`, `GitHub Issues`, `Implementation Briefs`, `Source Evidence`, and
