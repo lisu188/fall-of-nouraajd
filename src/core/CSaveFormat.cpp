@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <cctype>
 #include <map>
+#include <vector>
 
 namespace CSaveFormat {
 
@@ -154,9 +155,61 @@ std::expected<DecodedDocument, std::string> migrateToCurrentSnapshot(const Sourc
 
 } // namespace
 
+std::optional<std::string> validateDocumentStructure(const json &document) {
+    // Explicit work stack instead of recursion so adversarial nesting cannot exhaust the C++ call
+    // stack. Each frame carries the node and its depth; bounds are checked before any descent.
+    struct Frame {
+        const json *node;
+        std::size_t depth;
+    };
+
+    std::vector<Frame> pending;
+    pending.push_back({&document, 1});
+    std::size_t visited = 0;
+
+    while (!pending.empty()) {
+        const Frame frame = pending.back();
+        pending.pop_back();
+
+        if (++visited > MAX_DOCUMENT_NODES) {
+            return "save document exceeds maximum node count";
+        }
+        if (frame.depth > MAX_DOCUMENT_DEPTH) {
+            return "save document exceeds maximum nesting depth";
+        }
+
+        const json &node = *frame.node;
+        if (node.is_object()) {
+            const auto &entries = node.items();
+            if (entries.size() > MAX_CONTAINER_ENTRIES) {
+                return "save document object exceeds maximum entry count";
+            }
+            for (const auto &entry : entries) {
+                pending.push_back({&entry.second, frame.depth + 1});
+            }
+        } else if (node.is_array()) {
+            if (node.size() > MAX_CONTAINER_ENTRIES) {
+                return "save document array exceeds maximum entry count";
+            }
+            for (const auto &child : node) {
+                pending.push_back({&child, frame.depth + 1});
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
 std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr<json> &document) {
     if (!document || !document->is_object()) {
         return std::unexpected("save root is not a JSON object");
+    }
+
+    // Bound the gross structure (depth / node count / container fan-out) before validating the
+    // schema, following any quest references, or running strict deserialization, so a crafted save
+    // cannot exhaust the stack or burn CPU walking pathological nesting.
+    if (auto structureError = validateDocumentStructure(*document)) {
+        return std::unexpected(*structureError);
     }
 
     if (document->contains("format")) {

@@ -1323,6 +1323,79 @@ void test_save_format_codec_validation() {
                 "save format should reject envelopes with invalid map names");
 }
 
+std::shared_ptr<json> make_save_envelope(const std::shared_ptr<json> &snapshot, const std::string &map_name = "test") {
+    auto envelope = std::make_shared<json>();
+    (*envelope)["format"] = CSaveFormat::FORMAT;
+    (*envelope)["schemaVersion"] = CSaveFormat::SCHEMA_VERSION;
+    (*envelope)["mapName"] = map_name;
+    (*envelope)["snapshot"] = *snapshot;
+    return envelope;
+}
+
+void test_save_format_bounds_crafted_documents() {
+    // Valid, shallow envelopes stay within bounds and decode unchanged.
+    auto valid_envelope = make_save_envelope(make_save_snapshot("test"));
+    expect_true(!CSaveFormat::validateDocumentStructure(*valid_envelope).has_value(),
+                "structural validation should accept normal save envelopes");
+    expect_true(CSaveFormat::decodeDocument(valid_envelope).has_value(),
+                "decode should accept structurally bounded envelopes");
+
+    // Deep nesting just below the depth boundary must still pass. Build a chain of nested arrays
+    // hung off an unrelated property so the CMap envelope/snapshot remains valid.
+    auto build_nested_envelope = [](std::size_t array_levels) {
+        auto snapshot = make_save_snapshot("test");
+        json chain = json::array();
+        json *cursor = &chain;
+        for (std::size_t level = 0; level < array_levels; ++level) {
+            (*cursor)[static_cast<std::size_t>(0)] = json::array();
+            cursor = &(*cursor)[static_cast<std::size_t>(0)];
+        }
+        (*snapshot)["properties"]["deepChain"] = chain;
+        return make_save_envelope(snapshot);
+    };
+
+    // The envelope adds a fixed prefix of object frames (root -> snapshot -> properties -> chain)
+    // before the array chain begins, so size the chain comfortably under and over the limit.
+    auto below_boundary = build_nested_envelope(CSaveFormat::MAX_DOCUMENT_DEPTH - 10);
+    expect_true(!CSaveFormat::validateDocumentStructure(*below_boundary).has_value(),
+                "structural validation should accept nesting just below the depth boundary");
+
+    auto above_boundary = build_nested_envelope(CSaveFormat::MAX_DOCUMENT_DEPTH + 10);
+    auto above_result = CSaveFormat::validateDocumentStructure(*above_boundary);
+    expect_true(above_result.has_value() && *above_result == "save document exceeds maximum nesting depth",
+                "structural validation should reject nesting above the depth boundary");
+    expect_true(!CSaveFormat::decodeDocument(above_boundary).has_value(),
+                "decode should reject deeply nested crafted documents before deserialization");
+
+    // A huge sibling array (wide fan-out, shallow depth) must be rejected on container size.
+    auto huge_snapshot = make_save_snapshot("test");
+    json huge_array = json::array();
+    for (std::size_t index = 0; index <= CSaveFormat::MAX_CONTAINER_ENTRIES; ++index) {
+        huge_array[index] = 0;
+    }
+    (*huge_snapshot)["properties"]["hugeArray"] = huge_array;
+    auto huge_envelope = make_save_envelope(huge_snapshot);
+    auto huge_result = CSaveFormat::validateDocumentStructure(*huge_envelope);
+    expect_true(huge_result.has_value() && *huge_result == "save document array exceeds maximum entry count",
+                "structural validation should reject arrays above the container limit");
+    expect_true(!CSaveFormat::decodeDocument(huge_envelope).has_value(),
+                "decode should reject oversized arrays before deserialization");
+
+    // Repeated/aliased quest references (the same object value copied many times) are bounded by
+    // node count and entry count, not by depth, and must not be treated specially.
+    auto repeated_snapshot = make_save_snapshot("test");
+    json journal = json::array();
+    json quest = json::object();
+    quest["class"] = "CQuest";
+    for (std::size_t index = 0; index < 1000; ++index) {
+        journal[index] = quest;
+    }
+    (*repeated_snapshot)["properties"]["quests"] = journal;
+    auto repeated_envelope = make_save_envelope(repeated_snapshot);
+    expect_true(!CSaveFormat::validateDocumentStructure(*repeated_envelope).has_value(),
+                "structural validation should accept many repeated quest references within bounds");
+}
+
 void test_serialization_collection_and_error_helpers() {
     auto game = std::make_shared<CGame>();
     auto object = std::make_shared<CGameObject>();
@@ -1452,6 +1525,7 @@ int main() {
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
+    test_save_format_bounds_crafted_documents();
     test_serialization_collection_and_error_helpers();
 
     return finish_tests();

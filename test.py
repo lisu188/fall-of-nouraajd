@@ -8851,6 +8851,79 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"rejected": rejected}, sort_keys=True)
 
     @game_test
+    def test_crafted_deeply_nested_save_is_rejected_without_stack_exhaustion(self):
+        # A crafted save whose snapshot nests far past CSaveFormat::MAX_DOCUMENT_DEPTH must be
+        # rejected by the structural bound before any reference traversal or strict deserialization
+        # runs, and the active game must be left untouched (no crash / stack exhaustion).
+        game = load_game_module()
+
+        base_envelope = json.loads((SAVE_FIXTURE_DIR / "schema_v1_test_map.json").read_text(encoding="utf-8"))
+
+        # Hang a deep array chain off an unrelated snapshot property so the CMap envelope/snapshot
+        # stays otherwise valid; the only reason for rejection is the nesting depth.
+        # Nest well past MAX_DOCUMENT_DEPTH (200) but under simdjson's parse depth limit (1024) so
+        # the JSON still parses and is rejected by our structural bound rather than the parser.
+        document = json.loads(json.dumps(base_envelope))
+        chain = []
+        cursor = chain
+        for _ in range(600):
+            child = []
+            cursor.append(child)
+            cursor = child
+        document["snapshot"].setdefault("properties", {})["deepChain"] = chain
+
+        save_name = unique_save_name("crafted_deep_nesting")
+        cleanup_save_slot(save_name)
+        save_primary_path(save_name).parent.mkdir(exist_ok=True)
+        save_primary_path(save_name).write_text(json.dumps(document), encoding="utf-8")
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
+        active_map = g.getMap()
+        active_map.description = "active-before-deep-nesting"
+        log_path = make_temp_log_path()
+        try:
+            game.set_logger_sink("file", str(log_path))
+            game.CGameLoader.loadSavedGame(g, save_name)
+        finally:
+            game.set_logger_sink("disabled", None)
+            cleanup_save_slot(save_name)
+
+        log_text = log_path.read_text()
+        log_path.unlink(missing_ok=True)
+
+        self.assertTrue(g.getMap() == active_map)
+        self.assertEqual("active-before-deep-nesting", g.getMap().description)
+        self.assertIn("save document exceeds maximum nesting depth", log_text)
+        self.assertIn("Saved game was not loaded; keeping the active map unchanged", log_text)
+
+        return True, json.dumps({"rejected": "deep_nesting"})
+
+    @game_test
+    def test_crafted_normal_save_round_trip_still_loads(self):
+        # Backstop the bound change: an ordinary save/load round-trip must remain unaffected.
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        marker = f"round-trip-{time.time_ns()}"
+        game_map.description = marker
+        save_paths = []
+        try:
+            save_path, loaded_game, loaded_map, loaded_player = save_load_roundtrip(
+                game, game_map, "bounded_round_trip"
+            )
+            save_paths.append(save_path)
+            self.assertIsNotNone(loaded_map)
+            self.assertEqual(marker, loaded_map.description)
+            self.assertIsNotNone(loaded_player)
+            self.assertEqual("test", loaded_map.mapName)
+        finally:
+            for save_path in save_paths:
+                cleanup_save_slot(save_path.stem)
+
+        return True, json.dumps({"description": marker})
+
+    @game_test
     def test_legacy_save_loads_and_resaves_as_versioned_format(self):
         game = load_game_module()
 
