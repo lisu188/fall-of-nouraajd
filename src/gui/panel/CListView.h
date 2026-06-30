@@ -42,6 +42,7 @@ class CListView : public CProxyTargetGraphicsObject {
            V_PROPERTY(CListView, int, yPrefferedSize, getYPrefferedSize, setYPrefferedSize),
            V_PROPERTY(CListView, int, tileSize, getTileSize, setTileSize),
            V_PROPERTY(CListView, bool, allowOversize, getAllowOversize, setAllowOversize),
+           V_PROPERTY(CListView, bool, dragEnabled, getDragEnabled, setDragEnabled),
            V_PROPERTY(CListView, bool, showEmpty, getShowEmpty, setShowEmpty),
            V_PROPERTY(CListView, bool, grouping, getGrouping, setGrouping), V_METHOD(CListView, initialize),
            V_METHOD(CListView, refreshFromRefreshEvent),
@@ -121,6 +122,12 @@ class CListView : public CProxyTargetGraphicsObject {
 
     bool allowOversize = true;
 
+    // When false, this list is a pure command/interaction list: a populated item's
+    // mouse-down must never start a GUI drag session, capture the pointer for drag,
+    // defer the source click callback, or create a drag proxy. Defaults true so every
+    // existing list (inventory/equipment/etc.) keeps its current draggable behavior.
+    bool dragEnabled = true;
+
     bool showEmpty = true;
 
     bool grouping = false;
@@ -141,6 +148,10 @@ class CListView : public CProxyTargetGraphicsObject {
     bool getAllowOversize();
 
     void setAllowOversize(bool _allowOversize);
+
+    bool getDragEnabled();
+
+    void setDragEnabled(bool _dragEnabled);
 
     bool getGrouping();
 

@@ -39,6 +39,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CListView.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
@@ -1103,6 +1104,105 @@ void test_list_view_legacy_click_callback_still_fires_without_drag_callbacks() {
                 "legacy click should keep the clicked item object");
 }
 
+void test_list_view_non_draggable_does_click_only_press_motion_release() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragEnabled(false);
+
+    // Mouse-down on a non-draggable command list must run the click callback and never
+    // start a drag session or capture the pointer.
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "non-draggable list should consume the left click");
+    expect_true(harness.panel->source_clicks == 1, "non-draggable list should fire the click callback once on press");
+    expect_true(harness.panel->drag_starts == 0, "non-draggable list should never call drag-start");
+    expect_true(!harness.gui->hasDragSession(), "non-draggable list must not create a drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "non-draggable list must not capture the pointer");
+
+    // Pointer motion and release must not suppress or duplicate the click callback, and must
+    // not retroactively spawn a session/proxy.
+    harness.gui->updateDragSession(180, 25);
+    expect_true(!harness.gui->hasDragSession(), "motion without a session must not create one");
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 180, 25),
+                "non-draggable list should consume the release");
+    expect_true(harness.panel->source_clicks == 1, "motion/release must not suppress or duplicate the click callback");
+    expect_true(harness.panel->drag_cancels == 0, "non-draggable list release must not report a drag cancel");
+    expect_true(!harness.gui->hasDragSession(), "non-draggable list must leave no drag session after release");
+    expect_true(!harness.gui->hasPointerCapture(), "non-draggable list must leave no pointer capture after release");
+}
+
+void test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    auto gui = std::make_shared<CGui>();
+    auto player = std::make_shared<CPlayer>();
+    auto interaction = std::make_shared<CInteraction>();
+    auto panel = std::make_shared<CGameFightPanel>();
+
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+
+    player->setGame(game);
+    player->setBaseStats(player_stats());
+    player->setMana(player->getManaMax());
+    map->setPlayer(player);
+
+    interaction->setGame(game);
+    interaction->setName("nonDraggableInteraction");
+    interaction->setTypeId("nonDraggableInteractionType");
+    interaction->setManaCost(0);
+    player->addAction(interaction);
+
+    // First combat click selects (highlights) the affordable interaction.
+    panel->interactionsCallback(gui, 0, interaction);
+    expect_true(panel->interactionsSelect(gui, 0, interaction),
+                "first combat interaction click should select the interaction");
+
+    // Second click on the same interaction confirms it; selection is preserved until the
+    // blocking select loop consumes finalSelected, so the highlight remains.
+    panel->interactionsCallback(gui, 0, interaction);
+    expect_true(panel->interactionsSelect(gui, 0, interaction),
+                "second combat interaction click should confirm without losing the selection");
+}
+
+void test_list_view_draggable_default_still_drags_after_non_draggable_change() {
+    auto harness = create_drag_list_harness();
+    // Default (unset dragEnabled) preserves legacy draggable behavior: a populated item
+    // still starts the generic drag session on press (inventory/equipment regression).
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "default draggable list should consume the click");
+    expect_true(harness.gui->hasDragSession(), "default draggable list should still create the existing drag session");
+    expect_true(harness.panel->source_clicks == 1, "default draggable list should still fire the click callback");
+    harness.gui->clearDragSession();
+    harness.gui->releasePointerCapture();
+
+    // Explicitly enabling drag keeps the same behavior.
+    harness.source->setDragEnabled(true);
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "explicitly draggable list should consume the click");
+    expect_true(harness.gui->hasDragSession(), "explicitly draggable list should still create a drag session");
+    harness.gui->clearDragSession();
+    harness.gui->releasePointerCapture();
+}
+
+void test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_or_capture() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragEnabled(false);
+
+    // Press on the non-draggable list (no session/capture is created), then remove the
+    // owning panel mid-interaction. Nothing dangling should remain.
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(!harness.gui->hasDragSession(), "non-draggable press should not create a session before removal");
+    expect_true(!harness.gui->hasPointerCapture(), "non-draggable press should not capture the pointer before removal");
+
+    harness.gui->removeChild(harness.panel);
+    expect_true(!harness.gui->hasDragSession(), "panel removal during input must leave no dangling drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "panel removal during input must leave no dangling pointer capture");
+}
+
 void test_panel_event_callbacks_stop_after_close() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -1534,6 +1634,10 @@ int main() {
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
+    test_list_view_non_draggable_does_click_only_press_motion_release();
+    test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm();
+    test_list_view_draggable_default_still_drags_after_non_draggable_change();
+    test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_or_capture();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
     test_loader_gui_sessions_shutdown_stale_callbacks();
