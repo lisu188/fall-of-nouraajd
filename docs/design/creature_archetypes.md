@@ -337,3 +337,79 @@ set by calling `addAction` per entry, and level unlocks call it via `levelUp`.
 specific) action. This contract is pinned by the native regression test
 `test_creature_action_merge_dedupes_by_type_id` in
 `tests/unit/test_object.cpp`.
+
+---
+
+# Creature stat precedence contract
+
+Status: Approved (design + engine). Scope: pins the order in which a creature's
+*effective* (composed) stats are assembled from its sources, so the upcoming
+race/class archetype authoring (EPIC_02) and the existing concrete monster
+templates produce one stable, well-defined stat block instead of an ambiguous or
+order-dependent merge. This is the stat analogue of the action merge contract
+above.
+
+## Approved precedence order
+
+A creature's effective stats are composed by accumulating, in this order from
+least specific to most specific (a later source's contribution is applied on
+top of the earlier ones):
+
+1. **`race.baseStats`** — flat stats every member of the race always has.
+2. **`creatureClass.baseStats`** — flat stats granted by the creature's class at
+   creation.
+3. **`creature.baseStats` overrides** — the concrete template / spawn's own
+   `baseStats` (today's `CCreature::baseStats`), layered on top of race/class
+   base.
+4. **`creatureClass.levelStats` (per level)** — the class's per-level stat growth,
+   applied once for each level the creature has reached.
+5. **`creature.levelStats` overrides (per level)** — the concrete template's own
+   per-level growth (today's `CCreature::levelStats`), applied once per level.
+6. **Equipment** — the stat bonuses of every equipped item.
+7. **Effects** — the stat bonuses of every active effect.
+
+Numeric stats accumulate additively (each source's per-property value is added),
+so for numeric properties "later overrides earlier" means the later source's
+contribution is layered on top of (added after) the earlier sources. The
+ordering still matters for any non-commutative or selecting step (notably the
+main stat below) and to give a single, reproducible composition.
+
+## Main stat selection (class first, then legacy creature baseStats)
+
+The composed block's **`mainStat`** is a *selected* (not accumulated) field. It
+is taken from the most specific source that declares it, resolved as:
+
+- **`creatureClass.baseStats.mainStat`** first (the class defines the role /
+  primary attribute), then
+- **falling back to the legacy `creature.baseStats.mainStat`** when no class is
+  present or the class does not declare a main stat.
+
+With no archetype objects in the codebase yet, every creature resolves to the
+legacy `creature.baseStats.mainStat` fallback; this is the value
+`CCreature::getStats` currently seeds onto the composed block. `getMainValue()`
+then reads the named property out of the fully composed block, so the main stat
+reflects all of the accumulated numeric sources above.
+
+## Future sources (race / creatureClass) compose at the documented positions
+
+The race and `creatureClass` archetype objects (`CCreatureClass`) do **not**
+exist in the codebase yet (`git grep CCreatureClass src/` finds only design
+comments). Positions 1, 2, and 4 above are therefore *future* sources: they have
+no backing object today and contribute nothing. The contract pins where they
+slot in once the archetype foundation lands, so adding them later is a localized
+change at `CCreature::getStats` (insert race/class base ahead of
+`creature.baseStats`, and class level growth ahead of `creature.levelStats`)
+without disturbing the equipment-then-effects tail or the
+class-then-legacy main-stat rule.
+
+## Where this is enforced and tested
+
+The single composition primitive is `CCreature::getStats`
+(`src/object/CCreature.cpp`): it seeds the main stat (legacy creature
+`baseStats` today, class-first once classes exist), then `addBonus`-accumulates
+`baseStats`, `levelStats` once per level, every equipped item's bonus, and every
+effect's bonus, in the documented order. This contract is pinned by the native
+regression tests `test_no_archetype_creature_stats_keep_legacy_composition`
+(full per-property composition) and
+`test_creature_stat_precedence_orders_sources_and_main_stat` (override ordering
+and the class-then-legacy main-stat fallback) in `tests/unit/test_object.cpp`.
