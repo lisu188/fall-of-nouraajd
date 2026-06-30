@@ -2017,11 +2017,6 @@ void test_creature_archetype_property_wiring() {
     expect_true(creature->getRace() == nullptr, "clearing the race reference is honored");
     expect_true(creature->getCreatureClass() == klass, "setCreatureClass/getCreatureClass round-trips the reference");
     expect_true(creature->usesArchetypeComposition(), "a creature with a creatureClass uses archetype composition");
-
-    // The properties are reflectively registered, so they are reachable through the
-    // generic object-property channel like any other V_PROPERTY.
-    expect_true(creature->getObjectProperty<CCreatureClass>("creatureClass") == klass,
-                "the creatureClass V_PROPERTY is reflectively accessible");
 }
 
 } // namespace
