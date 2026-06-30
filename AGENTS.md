@@ -16,10 +16,25 @@ For ordinary implementation or workflow-optimization PRs, run focused local vali
 Actions polling when the workflow covers the required evidence. If CI polling supplies the full validation evidence, run
 `python3 scripts/poll_pr_checks.py <PR_NUMBER>` to success before enabling auto-merge; it selects `linux` for
 lightweight PRs and `linux`, `windows-deps`, and `windows` for native validation PRs. Add `--require-step coverage` for
-coverage-relevant changes when you need to force that step. After the required evidence is present, run
-`gh pr merge <PR_NUMBER> --auto --squash` unless the user explicitly asks not to, GitHub reports that auto-merge is
-unavailable, or branch protection/check state prevents it. If validation or auto-merge is blocked, report the exact
-blocker and leave the PR intact.
+coverage-relevant changes when you need to force that step.
+
+Auto-merge for implementation PRs is not an unconditional default; it requires explicit, repo-verified authorization
+before you run `gh pr merge <PR_NUMBER> --auto --squash`. After the required validation evidence is present, resolve the
+authorization state from the repository merge policy and branch protection — for example with
+`python3 scripts/controller_resource_audit.py` (`mergePolicy.allowAutoMerge`, branch protection required checks) and the
+`pr_review_audit.py` `merge_policy_blocked` signal — and act on one of four states:
+
+- allowed: the repository reports `allow_auto_merge=true` and branch protection/check state permits it, so enable
+  squash auto-merge.
+- user-authorized: the user or a newer system instruction explicitly directs this merge even though the default probe
+  is not conclusive, so enable squash auto-merge per that explicit authorization.
+- disallowed: the repository reports auto-merge disabled or branch protection/check state blocks it, so leave the PR
+  open, request the repository setting change or explicit alternate merge authorization, and report the exact blocker.
+- unknown: authorization cannot be verified from the repository, so leave the PR open and report a blocker; do NOT
+  auto-merge on an unverified default.
+
+If validation or auto-merge is blocked, or the authorization state is disallowed or unknown, report the exact blocker
+and leave the PR intact.
 
 For workbook-only queue-state PRs that update only `planning/fall_of_nouraajd_issue_proposals.xlsx`, first confirm the
 diff is XLSX-only and `python3 scripts/issue_queue.py validate` passed. Then merge the claim, terminal-status,
@@ -663,9 +678,10 @@ After finishing a change, always complete the repository delivery workflow:
 5. Open a pull request targeting `main`.
 6. For implementation PRs, poll the selected GitHub Actions evidence to success before auto-merge when CI polling is
    replacing local heavy validation.
-7. Run `gh pr merge <PR_NUMBER> --auto --squash` after required evidence is present unless the user explicitly asks not
-   to, GitHub reports that auto-merge is unavailable, or branch protection/check state blocks it. Replace `<PR_NUMBER>`
-   with the pull request just opened.
+7. After required evidence is present, resolve the implementation-PR auto-merge authorization state per the pull request
+   merge policy (allowed / user-authorized / disallowed / unknown). Run `gh pr merge <PR_NUMBER> --auto --squash` only
+   when the state is allowed or user-authorized; when it is disallowed or unknown, leave the PR open and report the
+   blocker instead of auto-merging. Replace `<PR_NUMBER>` with the pull request just opened.
 8. For workbook-only queue-state PRs, use the immediate squash-merge rule in the pull request merge policy after
    confirming the diff is XLSX-only and queue validation passed.
 9. If GitHub queues auto-merge, do not wait for checks to finish unless those checks are the selected CI-polled

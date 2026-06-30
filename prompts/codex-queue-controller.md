@@ -599,13 +599,20 @@ IMPL_PR_URL=$(gh pr create \
   --body-file "$IMPL_PR_BODY")
 IMPL_PR_NUMBER=$(gh pr view "$IMPL_PR_URL" --json number --jq .number)
 python3 scripts/poll_pr_checks.py "$IMPL_PR_NUMBER"
-gh pr merge "$IMPL_PR_NUMBER" --auto --squash
+# Implementation-PR auto-merge is not an unconditional default. Resolve the authorization state per AGENTS.md
+# (allowed / user-authorized / disallowed / unknown) before enabling auto-merge.
+gh pr merge "$IMPL_PR_NUMBER" --auto --squash  # only when authorization is allowed or user-authorized
 ```
 
 Run the polling command before enabling auto-merge when CI supplies the full validation evidence. This is the normal PR
 delivery path for Linux compilation and testing. For coverage-relevant changes, add `--require-step coverage`. Local
 native-build validation is a fallback only when CI cannot provide the needed evidence or a focused local reproduction is
-necessary.
+necessary. Implementation-PR auto-merge requires explicit, repo-verified authorization per the `AGENTS.md` pull request
+merge policy: resolve the merge policy and branch protection (for example with `scripts/controller_resource_audit.py`
+and the `pr_review_audit.py` `merge_policy_blocked` signal) into one of four states, and run `gh pr merge --auto
+--squash` only when the state is allowed or user-authorized. When it is disallowed or unknown, leave the
+implementation PR open and report the blocker instead of auto-merging. This conditional gate applies to implementation
+PRs only; it does not change the bounded workbook-only queue-state-PR immediate-merge exception.
 
 Do not mark the task `DONE` when auto-merge is merely queued. Record the issue as awaiting implementation merge,
 continue other safe controller work, and re-check later. If the implementation PR is already `MERGED`, stop waiting for
