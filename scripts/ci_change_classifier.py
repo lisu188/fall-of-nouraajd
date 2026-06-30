@@ -41,6 +41,18 @@ NATIVE_PATH_PATTERNS = (
     "vstd/*",
 )
 
+# Paths whose content can change how required validation is routed, polled, or
+# scored: the build workflow definition, the poller, and this classifier itself.
+# A pull request that edits these files must not be allowed to classify its own
+# change as lightweight and thereby skip native/coverage validation. Touching any
+# of these forces strict native + coverage validation and human review, so the
+# authority for "what is required" never comes solely from PR-controlled logic.
+CI_AUTHORITY_PATH_PATTERNS = (
+    ".github/workflows/build.yml",
+    "scripts/ci_change_classifier.py",
+    "scripts/poll_pr_checks.py",
+)
+
 LIGHTWEIGHT_PATH_PATTERNS = (
     ".github/multi-workbook-inspection.txt",
     ".github/multi-workbook-payload/*",
@@ -78,6 +90,14 @@ class ChangeClassification:
     coverageNeeded: bool
     nativeNeeded: bool
     nativeReasons: tuple[str, ...]
+    authorityChange: bool = False
+    authorityPaths: tuple[str, ...] = ()
+
+    @property
+    def humanReviewRequired(self) -> bool:
+        # Changes to the validation-authority files (workflow/poller/classifier)
+        # cannot be merged on PR-controlled logic alone; they require human review.
+        return self.authorityChange
 
 
 def matchesAny(path: str, patterns: Sequence[str]) -> bool:
@@ -100,8 +120,18 @@ def classifyPaths(paths: Sequence[str], *, forceNative: bool = False) -> ChangeC
     coverageNeeded = any(matchesAny(path, COVERAGE_PATH_PATTERNS) for path in changed)
     nativeReasons: list[str] = []
 
+    authorityPaths = tuple(path for path in changed if matchesAny(path, CI_AUTHORITY_PATH_PATTERNS))
+    authorityChange = bool(authorityPaths)
+
     if forceNative:
         nativeReasons.append("forced")
+    if authorityChange:
+        # A PR that edits the routing/poller/classifier files cannot self-classify
+        # as lightweight: force strict native + coverage validation so it cannot
+        # skip its way out of required checks. Authority is taken from this fixed
+        # rule rather than from the (PR-controlled) edited logic.
+        coverageNeeded = True
+        nativeReasons.append("ci-authority change")
     if coverageNeeded:
         nativeReasons.append("coverage-relevant paths")
 
@@ -116,6 +146,8 @@ def classifyPaths(paths: Sequence[str], *, forceNative: bool = False) -> ChangeC
         coverageNeeded=coverageNeeded,
         nativeNeeded=bool(nativeReasons),
         nativeReasons=tuple(dict.fromkeys(nativeReasons)),
+        authorityChange=authorityChange,
+        authorityPaths=authorityPaths,
     )
 
 
@@ -134,6 +166,8 @@ def writeGithubOutput(path: Path, classification: ChangeClassification) -> None:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(f"coverage-needed={str(classification.coverageNeeded).lower()}\n")
         handle.write(f"native-needed={str(classification.nativeNeeded).lower()}\n")
+        handle.write(f"authority-change={str(classification.authorityChange).lower()}\n")
+        handle.write(f"human-review-required={str(classification.humanReviewRequired).lower()}\n")
 
 
 def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
@@ -178,7 +212,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(
         json.dumps(
             {
+                "authorityChange": classification.authorityChange,
+                "authorityPaths": list(classification.authorityPaths),
                 "coverageNeeded": classification.coverageNeeded,
+                "humanReviewRequired": classification.humanReviewRequired,
                 "nativeNeeded": classification.nativeNeeded,
                 "nativeReasons": list(classification.nativeReasons),
                 "paths": list(classification.paths),
