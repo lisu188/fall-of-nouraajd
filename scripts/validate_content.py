@@ -148,6 +148,26 @@ CREATURE_CLASS_ACTIONS_PROPERTY = "actions"
 CREATURE_CLASS_LEVELLING_PROPERTY = "levelling"
 INTERACTION_BASE_CLASS = "CInteraction"
 
+# CCreatureRace stat/action/type validation (EPIC_06/STORY_03/SUBSTORY_01).
+# A CCreatureRace definition carries the per-race template fields the engine merges
+# into a creature: "baseStats" is a CStats payload whose keys must each name a CStats
+# metadata property (a typo such as "strenght" would be silently dropped at load
+# time), "actions" is a list of object nodes that must each resolve to a CInteraction
+# (the same resolution the class actions validator enforces), and "creatureType" /
+# "subtypes" tag the race for type-driven lookups.  For now the type fields are
+# DATA-ONLY -- the only rule is that "creatureType" is a non-empty string and every
+# "subtypes" entry is a non-empty string; no mechanical type semantics are invented.
+# The allowed baseStats keys are derived from the live CStats metadata schema so they
+# stay in lockstep with src/core/CStats.h, and CInteraction resolution reuses the
+# class-action helper.  CCreatureRace configs do not exist on current content, so this
+# check is vacuously satisfied (forward-guarding) until such archetypes are authored.
+CREATURE_RACE_CONSTRUCTOR_CLASS = "CCreatureRace"
+CREATURE_RACE_BASE_STATS_PROPERTY = "baseStats"
+CREATURE_RACE_ACTIONS_PROPERTY = "actions"
+CREATURE_RACE_TYPE_PROPERTY = "creatureType"
+CREATURE_RACE_SUBTYPES_PROPERTY = "subtypes"
+CREATURE_RACE_STATS_SCHEMA_CLASS = "CStats"
+
 # Archetype-definition base classes (EPIC_06/STORY_04/SUBSTORY_02).
 # CCreatureRace and CCreatureClass configs are *referenced definitions* (a race or
 # class template carried by a creature via the "creatureClass"/race reference
@@ -1421,6 +1441,7 @@ class ContentValidator:
         self._validate_object_properties(entry.path, entry.key, entry.data, visible, known_classes)
         self._validate_creature_class_actions_levelling(entry.path, entry.key, entry.data, visible)
         self._validate_creature_class_property(entry.path, entry.key, entry.data, visible)
+        self._validate_creature_race_definition(entry.path, entry.key, entry.data, visible)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -2679,6 +2700,128 @@ class ContentValidator:
             )
             return
         seen_action_ids[action_id] = location
+
+    def _validate_creature_race_definition(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        """Validate CCreatureRace baseStats keys, actions, and type fields.
+
+        Recurses through the config tree so a CCreatureRace node nested under a ref
+        chain or another object is still checked.  For every node whose effective class
+        is ``CCreatureRace`` it verifies that each ``baseStats`` key names a ``CStats``
+        metadata property, that each ``actions`` entry resolves to a ``CInteraction``,
+        and that ``creatureType`` / every ``subtypes`` entry is a non-empty string. The
+        type fields stay DATA-ONLY (non-empty-string checks only); no mechanical type
+        semantics are inferred.
+        """
+        if isinstance(value, dict):
+            if self._effective_object_class(value, visible) == CREATURE_RACE_CONSTRUCTOR_CLASS:
+                self._validate_creature_race_fields(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_creature_race_definition(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_creature_race_definition(path, append_index(location, index), child, visible)
+
+    def _validate_creature_race_fields(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict):
+            return
+        properties_location = append_field(location, "properties")
+        if CREATURE_RACE_BASE_STATS_PROPERTY in properties:
+            self._validate_creature_race_base_stats(
+                path,
+                append_field(properties_location, CREATURE_RACE_BASE_STATS_PROPERTY),
+                properties[CREATURE_RACE_BASE_STATS_PROPERTY],
+            )
+        if CREATURE_RACE_ACTIONS_PROPERTY in properties:
+            self._validate_creature_race_actions(
+                path,
+                append_field(properties_location, CREATURE_RACE_ACTIONS_PROPERTY),
+                properties[CREATURE_RACE_ACTIONS_PROPERTY],
+                visible,
+            )
+        if CREATURE_RACE_TYPE_PROPERTY in properties:
+            self._validate_creature_race_type(
+                path,
+                append_field(properties_location, CREATURE_RACE_TYPE_PROPERTY),
+                properties[CREATURE_RACE_TYPE_PROPERTY],
+            )
+        if CREATURE_RACE_SUBTYPES_PROPERTY in properties:
+            self._validate_creature_race_subtypes(
+                path,
+                append_field(properties_location, CREATURE_RACE_SUBTYPES_PROPERTY),
+                properties[CREATURE_RACE_SUBTYPES_PROPERTY],
+            )
+
+    def _validate_creature_race_base_stats(self, path: Path, location: str, base_stats: Any) -> None:
+        if not isinstance(base_stats, dict):
+            self._issue(
+                path,
+                location,
+                f"expected {CREATURE_RACE_STATS_SCHEMA_CLASS}-compatible object; got {json_value_kind(base_stats)}",
+            )
+            return
+        allowed_keys = self._creature_race_stats_property_names()
+        if allowed_keys is None:
+            return
+        for stat_key in base_stats:
+            if stat_key not in allowed_keys:
+                self._issue(
+                    path,
+                    append_field(location, stat_key),
+                    f'"{stat_key}" is not a {CREATURE_RACE_STATS_SCHEMA_CLASS} property; '
+                    f"expected one of {', '.join(sorted(allowed_keys))}",
+                )
+
+    def _creature_race_stats_property_names(self) -> set[str] | None:
+        """Return all CStats metadata property names, or None when CStats is absent.
+
+        Derived from the live CStats metadata schema so the allowed baseStats keys
+        never drift from src/core/CStats.h.  Returns None when CStats metadata is
+        unavailable (e.g. before the native sources exist), leaving the check inert
+        rather than guessing a stat set.
+        """
+        property_schema = self._metadata_property_schema(CREATURE_RACE_STATS_SCHEMA_CLASS)
+        if not property_schema:
+            return None
+        return set(property_schema)
+
+    def _validate_creature_race_actions(
+        self, path: Path, location: str, actions: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        if not isinstance(actions, list):
+            self._issue(path, location, f"expected array of {INTERACTION_BASE_CLASS} action entries")
+            return
+        for index, action in enumerate(actions):
+            self._validate_creature_class_interaction_entry(path, append_index(location, index), action, visible)
+
+    def _validate_creature_race_type(self, path: Path, location: str, creature_type: Any) -> None:
+        if not isinstance(creature_type, str) or not creature_type:
+            self._issue(
+                path,
+                location,
+                f'"{CREATURE_RACE_TYPE_PROPERTY}" expected a non-empty string; got {json_value_kind(creature_type)}',
+            )
+
+    def _validate_creature_race_subtypes(self, path: Path, location: str, subtypes: Any) -> None:
+        if not isinstance(subtypes, list):
+            self._issue(
+                path,
+                location,
+                f'"{CREATURE_RACE_SUBTYPES_PROPERTY}" expected an array of non-empty strings; '
+                f"got {json_value_kind(subtypes)}",
+            )
+            return
+        for index, subtype in enumerate(subtypes):
+            if not isinstance(subtype, str) or not subtype:
+                self._issue(
+                    path,
+                    append_index(location, index),
+                    f"expected a non-empty string; got {json_value_kind(subtype)}",
+                )
 
     def _issue(self, path: Path, location: str, message: str) -> None:
         self.issues.append(ValidationIssue(path=self._rel(path), location=location, message=message))
