@@ -19,6 +19,9 @@ from pathlib import Path
 from typing import Any
 
 OBJECT_SCHEMA_KEYS = {"class", "ref", "properties"}
+# Recognised kinds for an optional map.json top-level "assets" declaration. Each declared asset
+# is a safe relative path under its own map directory; the kind documents how the entry resolves.
+MAP_ASSET_KINDS = {"file", "directory", "animationRoot", "logicalId"}
 SCRIPT_REF_CALLS = {"createObject", "addObjectByName"}
 SCRIPT_ITEM_CALLS = {"addItem"}
 SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_grant_quest", "grant_quest"}
@@ -1096,6 +1099,19 @@ class TriggerAnalyzer(ast.NodeVisitor):
             )
 
 
+def is_safe_map_relative_path(path: str) -> bool:
+    """Return True when ``path`` is a safe POSIX-style relative path under a map directory.
+
+    Rejects absolute paths, Windows-style separators or drive letters, leading slashes, and any
+    ``.``/``..``/empty path segment so a declared asset can never escape its own map directory.
+    """
+    if not isinstance(path, str) or not path or path != path.strip():
+        return False
+    if "\\" in path or ":" in path or path.startswith("/"):
+        return False
+    return all(segment not in ("", ".", "..") for segment in path.split("/"))
+
+
 class ContentValidator:
     def __init__(
         self,
@@ -1583,6 +1599,7 @@ class ContentValidator:
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_top_level_ref_cycles(context, visible)
         self._validate_map_json(context, visible, known_classes, archetype_ids)
+        self._validate_map_assets(context)
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
         self._validate_gooby_runtime_names(context)
@@ -2104,6 +2121,63 @@ class ContentValidator:
                 )
             elif layer_type == "objectgroup":
                 self._validate_object_layer(context, layer, layer_location, visible, known_classes, archetype_ids)
+
+    def _validate_map_assets(self, context: MapContext) -> None:
+        data = context.map_data
+        if not isinstance(data, dict) or "assets" not in data:
+            return
+        assets = data.get("assets")
+        if not isinstance(assets, list):
+            self._issue(context.map_path, "assets", "expected array")
+            return
+        seen_paths: set[str] = set()
+        for index, entry in enumerate(assets):
+            location = f"assets[{index}]"
+            if not isinstance(entry, dict):
+                self._issue(context.map_path, location, "expected object with 'path' and 'kind'")
+                continue
+            path_value = entry.get("path")
+            if not isinstance(path_value, str) or not path_value:
+                self._issue(context.map_path, f"{location}.path", "expected non-empty string")
+                continue
+            if not is_safe_map_relative_path(path_value):
+                self._issue(
+                    context.map_path,
+                    f"{location}.path",
+                    "must be a safe relative path under the map directory (no absolute paths, '..' traversal, "
+                    "backslashes, drive letters, or empty segments)",
+                )
+                continue
+            if path_value in seen_paths:
+                self._issue(context.map_path, f"{location}.path", f"duplicate asset declaration: {path_value}")
+            seen_paths.add(path_value)
+            kind = entry.get("kind")
+            if not isinstance(kind, str) or kind not in MAP_ASSET_KINDS:
+                self._issue(
+                    context.map_path,
+                    f"{location}.kind",
+                    f"expected one of {sorted(MAP_ASSET_KINDS)}",
+                )
+                continue
+            self._validate_map_asset_target(context, location, path_value, kind)
+
+    def _validate_map_asset_target(self, context: MapContext, location: str, path_value: str, kind: str) -> None:
+        if kind == "logicalId":
+            return
+        target = context.directory / path_value
+        if kind == "file":
+            if not target.is_file():
+                self._issue(context.map_path, f"{location}.path", f"declared file asset not found: {path_value}")
+        elif kind == "directory":
+            if not target.is_dir():
+                self._issue(context.map_path, f"{location}.path", f"declared directory asset not found: {path_value}")
+        elif kind == "animationRoot":
+            if not target.is_dir() and not (context.directory / f"{path_value}.png").is_file():
+                self._issue(
+                    context.map_path,
+                    f"{location}.path",
+                    f"declared animation root resolves to neither a directory nor a '<path>.png' file: {path_value}",
+                )
 
     def _validate_tile_layer(
         self,
