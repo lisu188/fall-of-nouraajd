@@ -649,7 +649,7 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
 
 std::expected<std::shared_ptr<CMap>, std::string>
 load_save_candidate(const std::shared_ptr<CGame> &game, const std::string &slotName, const std::string &path) {
-    auto raw = CResourcesProvider::getInstance()->loadJson(path);
+    auto raw = game->getResourcesProvider()->loadJson(path);
     if (!raw) {
         return std::unexpected("save file could not be read or parsed");
     }
@@ -1059,7 +1059,11 @@ void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name)
         return;
     }
 
-    CResourcesProvider::getInstance()->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
+    // Persist through the saved map's per-session resources provider; fall back to the process
+    // singleton only when the map has already been detached from its game (compatibility path).
+    auto game = map->getGame();
+    auto resources = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    resources->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
 }
 
 void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
