@@ -660,8 +660,13 @@ void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_pt
         return;
     }
     auto map = me->getMap();
-    // Refuse to bind a panel to an opponent that is not present in the active map.
-    if (map->getGame()->getMap() != map || map->getObjectByName(opponent->getName()) != opponent) {
+    // Refuse to bind a panel to an opponent that is not present on the encounter map.
+    // Use the same runtime-identity presence semantics the engine uses for combat
+    // participants (CCreature step-combat predicate / CFightHandler is_registered_on_map);
+    // a strict shared_ptr/game-map equality check would reject legitimate engine-initiated
+    // fights (e.g. restored instances after save-load, or combat that resolves on the
+    // source map while a scene transition to a new game map is pending).
+    if (!CGameObject::sameRuntimeIdentity(map->getObjectByName(opponent->getName()), opponent)) {
         cancelled = true;
         return;
     }

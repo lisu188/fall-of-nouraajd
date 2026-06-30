@@ -476,6 +476,7 @@ std::shared_ptr<CCreature> map_creature(const std::shared_ptr<CGame> &game, cons
 void test_player_fight_controller_start_is_idempotent_and_guards_invalid_encounters() {
     auto gui = std::make_shared<CGui>();
     auto game = fight_panel_game(gui);
+    auto map = game->getMap();
 
     auto attacker = map_creature(game, "unitFightAttacker", Coords(0, 0, 0));
     auto opponent = map_creature(game, "unitFightOpponent", Coords(1, 0, 0));
@@ -508,6 +509,19 @@ void test_player_fight_controller_start_is_idempotent_and_guards_invalid_encount
     controller->start(attacker, detached);
     expect_true(count_fight_panels(gui) == 0,
                 "fight controller should not bind a panel to an opponent absent from the active map");
+
+    // Accept an engine-initiated fight that resolves on the encounter map even while the
+    // active game map has advanced (e.g. a scene transition pending after the strike).
+    // The guard must use the encounter map (me->getMap()), not game->getMap().
+    auto pendingMap = std::make_shared<CMap>();
+    pendingMap->setGame(game);
+    game->setMap(pendingMap);
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1,
+                "fight controller should still start when the active game map has advanced past the encounter map");
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending the transitional fight should remove the panel");
+    game->setMap(map);
 
     // Refuse to start when the GUI is missing.
     auto guiless = std::make_shared<CGame>();
