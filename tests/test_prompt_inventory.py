@@ -38,6 +38,32 @@ class PromptInventoryTest(unittest.TestCase):
             for referenced_prompt in referenced_prompts:
                 self.assertTrue((REPO_ROOT / referenced_prompt).exists(), f"{referenced_prompt} should exist")
 
+    def test_bug_finder_prompt_files_bugs_through_the_propose_command(self) -> None:
+        prompt_path = PROMPTS_DIR / "codex-bug-finder.md"
+        goal_path = PROMPTS_DIR / "codex-bug-finder-goal.txt"
+        self.assertTrue(prompt_path.exists(), "bug-finder prompt should exist")
+        self.assertTrue(goal_path.exists(), "bug-finder goal launcher should exist")
+
+        prompt = prompt_path.read_text(encoding="utf-8")
+        goal = goal_path.read_text(encoding="utf-8")
+
+        self.assertTrue(goal.startswith("/goal "), "goal launcher should be a /goal launcher")
+        self.assertIn("prompts/codex-bug-finder.md", goal, "goal should launch the bug-finder prompt")
+        self.assertIn(
+            "scripts/issue_queue.py propose",
+            prompt,
+            "the bug-finder must file issues through the propose command",
+        )
+        for required_flag in ("--issue-name", "--priority", "--component", "--target-file"):
+            self.assertIn(
+                required_flag,
+                prompt,
+                f"the bug-finder prompt should document the {required_flag} propose argument",
+            )
+        # A bug finder must reproduce and deduplicate before filing, not speculate.
+        self.assertIn("reproduc", prompt.lower())
+        self.assertRegex(prompt.lower(), r"duplicat")
+
     def test_queue_prompts_do_not_reintroduce_stale_lease_reclaim_drift(self) -> None:
         banned_patterns = {
             r"when\s+the\s+lease\s+is\s+near\s+expiry": "heartbeats must use the derived heartbeat deadline",
