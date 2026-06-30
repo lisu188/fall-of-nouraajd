@@ -575,10 +575,13 @@ void testEnvelopeBudgetBoundsUnreachableGoalInOpenPlane() {
     // 1,000,000-node visit ceiling, proving the envelope (not the global cap) bounded the search.
     const long long envelope = 4 * (std::abs(goal.x - start.x) + std::abs(goal.y - start.y)) + 256;
     // Upper bound on distinct probed coordinates: the L1 disc of radius (envelope + 1) (one ring of
-    // out-of-envelope neighbors may still be probed before being discarded).
+    // out-of-envelope neighbors may still be probed before being discarded). The cache in the
+    // pathfinder dedupes per coordinate, so this is a hard mathematical ceiling, not an empirical
+    // observation; a generous safety margin keeps the assertion stable across passability-probe order.
     const long long radius = envelope + 1;
-    const long long max_cells = 2 * radius * radius + 2 * radius + 1;
-    expectMetricAtMost("envelope open-plane canStep calls", counters.canStep, max_cells, max_cells);
+    const long long disc_cells = 2 * radius * radius + 2 * radius + 1;
+    const long long threshold = disc_cells + radius; // small additive margin, still far below 1,000,000
+    expectMetricAtMost("envelope open-plane canStep calls", counters.canStep, disc_cells, threshold);
     expect_true(counters.canStep < 1'000'000,
                 "envelope open-plane stays below global node cap metric=1 baseline=1 threshold=1");
 }

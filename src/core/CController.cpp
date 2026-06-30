@@ -548,7 +548,11 @@ void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _targe
     auto normalized = map->normalizeCoords(_target);
     // Reject targets outside the configured map extents before invoking the pathfinder so that
     // arbitrary (potentially adversarial) coordinates cannot trigger a search over unbounded space.
-    if (!map->isWithinBounds(normalized) || !map->canStep(normalized)) {
+    // Note: passability of the goal tile is intentionally NOT checked here. A* exempts the goal from
+    // the canStep test, so legitimately targeting a momentarily non-steppable in-bounds tile (e.g.
+    // one occupied by a transition object or creature) must still compute a path. The pathfinder's
+    // envelope / node / path-length budgets bound the search even for adversarial in-bounds goals.
+    if (!map->isWithinBounds(normalized)) {
         clearPath();
         return;
     }
