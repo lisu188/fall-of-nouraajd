@@ -19,6 +19,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <vector>
 
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
+
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
@@ -723,7 +726,23 @@ void CCreature::afterMove() {
     map->forObjectsAtCoords(arrival, fightAction, fightPred);
     if (!opponents.empty()) {
         const auto result = CFightHandler::fightManyResult(self, opponents);
-        if (result.outcome != CFightOutcome::AttackerVictory || !moverStillAtArrival()) {
+        // Post-combat position policy. The fight ran because the mover stepped into a
+        // hostile cell. If the attacker was defeated or otherwise removed it already left
+        // the arrival square, so there is nothing more to do. For the player every
+        // resolved encounter (victory, cancellation or stall) restores the pre-step origin
+        // via the non-hook relocation helper, so the player never lingers inside the
+        // hostile cell and onStep/onEnter never fire there. Non-player movers keep the
+        // legacy behaviour: only a victory lets them stay and continue onto onStep/onEnter.
+        if (!moverStillAtArrival()) {
+            return;
+        }
+        if (self->isPlayer()) {
+            if (pendingMoveOrigin.has_value()) {
+                self->relocateWithoutMoveHooks(*pendingMoveOrigin);
+            }
+            return;
+        }
+        if (result.outcome != CFightOutcome::AttackerVictory) {
             return;
         }
     }
@@ -916,3 +935,15 @@ std::string CCreature::getArchetypeClassLabel() {
     }
     return getArchetypeClassId();
 }
+
+std::shared_ptr<CCreatureRace> CCreature::getRace() { return race; }
+
+// A null race is valid: it marks a legacy (non-archetype) creature.
+void CCreature::setRace(std::shared_ptr<CCreatureRace> value) { race = value; }
+
+std::shared_ptr<CCreatureClass> CCreature::getCreatureClass() { return creatureClass; }
+
+// A null creatureClass is valid: it marks a legacy (non-archetype) creature.
+void CCreature::setCreatureClass(std::shared_ptr<CCreatureClass> value) { creatureClass = value; }
+
+bool CCreature::usesArchetypeComposition() { return race != nullptr || creatureClass != nullptr; }
