@@ -124,6 +124,81 @@ class ContentValidatorTest(unittest.TestCase):
             "res/maps/broken/script.py",
         )
 
+    def _set_dialog_callback(self, root, *, action=None, condition=None):
+        dialog_path = root / "res/maps/broken/dialog.json"
+        dialog = read_json(dialog_path)
+        option = dialog["brokenDialog"]["properties"]["states"][0]["properties"]["options"][0]["properties"]
+        if action is not None:
+            option["action"] = action
+        if condition is not None:
+            option["condition"] = condition
+        write_json(dialog_path, dialog)
+        return dialog_path
+
+    def test_valid_dialog_callbacks_pass_validation(self):
+        root = self.make_fixture()
+        self._set_dialog_callback(root, action="valid_action", condition="valid_condition")
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_empty_dialog_callback_name_is_flagged(self):
+        root = self.make_fixture()
+        self._set_dialog_callback(root, action="", condition="")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "properties.action", "empty dialog action name")
+        self.assertIssueContains(issues, "properties.condition", "empty dialog condition name")
+
+    def test_non_identifier_dialog_callback_name_is_flagged(self):
+        root = self.make_fixture()
+        self._set_dialog_callback(root, action="valid action", condition="9condition")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues, "properties.action", 'dialog action "valid action" is not a valid method name'
+        )
+        self.assertIssueContains(
+            issues, "properties.condition", 'dialog condition "9condition" is not a valid method name'
+        )
+
+    def test_private_and_dunder_dialog_callback_names_are_flagged(self):
+        root = self.make_fixture()
+        self._set_dialog_callback(root, action="_private_action", condition="__dunder__")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "properties.action",
+            'dialog action "_private_action" is private and is rejected by the reflective dispatch',
+        )
+        self.assertIssueContains(
+            issues,
+            "properties.condition",
+            'dialog condition "__dunder__" is private and is rejected by the reflective dispatch',
+        )
+
+    def test_dispatch_entry_point_dialog_callback_name_is_flagged(self):
+        root = self.make_fixture()
+        self._set_dialog_callback(root, action="invokeAction", condition="invokeCondition")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "properties.action",
+            'dialog action "invokeAction" is the reflective dispatch entry point and cannot be a callback',
+        )
+        self.assertIssueContains(
+            issues,
+            "properties.condition",
+            'dialog condition "invokeCondition" is the reflective dispatch entry point and cannot be a callback',
+        )
+
     def test_invalid_market_refs_report_market_field(self):
         root = self.make_fixture()
         config_path = root / "res/maps/broken/config.json"

@@ -20,11 +20,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
 
+#include <exception>
+
 void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
     std::string text;
+    std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
     for (auto [key, value] : charSheet->getValues()) {
-        std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
-        text += key + ": " + vstd::str(player->meta()->invoke_method<int>(value, player)) + "\n";
+        if (value.empty() || !player) {
+            continue;
+        }
+        // Config-driven reflective accessor: fail closed so a missing / mistyped
+        // char-sheet method name can never crash the render loop.
+        try {
+            text += key + ": " + vstd::str(player->meta()->invoke_method<int>(value, player)) + "\n";
+        } catch (const std::exception &exception) {
+            vstd::logger::warning("Ignoring character sheet value callback failure:", value, exception.what());
+        }
     }
     gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
 }
