@@ -1785,6 +1785,98 @@ void test_post_combat_player_defeat_skips_further_movement() {
                 "afterMove should clear the pending move origin even when the attacker is defeated");
 }
 
+// Captures every numeric CStats field (src/core/CStats.h:26-40) plus the main-stat label into a
+// deterministic, order-stable vector so two effective-stat snapshots can be compared element by
+// element. Uses the concrete CStats getters directly so the snapshot needs no reflection plumbing.
+std::vector<int> capture_player_effective_stats(const std::shared_ptr<CStats> &stats) {
+    return {stats->getStrength(),  stats->getAgility(),       stats->getStamina(),
+            stats->getIntelligence(), stats->getArmor(),      stats->getBlock(),
+            stats->getDmgMin(),    stats->getDmgMax(),        stats->getAttack(),
+            stats->getHit(),       stats->getCrit(),          stats->getFireResist(),
+            stats->getFrostResist(), stats->getNormalResist(), stats->getThunderResist(),
+            stats->getShadowResist(), stats->getDamage()};
+}
+
+// EPIC_03/STORY_04/SUBSTORY_02: preserve archetypes through defeat recovery.
+//
+// "Recovery" in this codebase is the player onDestroy restart trigger registered in
+// CMap::registerPlayerTriggers (src/core/CMap.cpp:986-1008): when a defeated player is removed
+// from the map (CMap::removeObject fires onDestroy, src/core/CMap.cpp:481), the trigger re-adds the
+// SAME _player instance, relocates it to the entry, and sets HP to 1 -- it deliberately does not
+// construct a new player or assign fallback archetypes. Because the live instance persists, its
+// archetype reference fields (race/creatureClass), its serialized class/race IDs, and its
+// effective stats must come back identical after the defeat->recovery cycle. This is a
+// characterization test of that contract (no production change).
+void test_post_combat_defeat_recovery_preserves_player_archetypes() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    // Attach concrete archetype definition references and pin identity IDs to the live player, the
+    // same way the map-transition archetype test stages composition on a loaded player.
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+    player->setRace(race);
+    player->setCreatureClass(klass);
+    player->setRaceId("preserve-defeat-race");
+    player->setPlayerClassId("preserve-defeat-class");
+
+    expect_true(player->usesArchetypeComposition(),
+                "a player carrying race/creatureClass should use archetype composition before defeat");
+
+    const std::string race_id_before = player->getRaceId();
+    const std::string class_id_before = player->getPlayerClassId();
+    const auto stats_before = capture_player_effective_stats(player->getStats());
+    const int main_value_before = player->getStats()->getMainValue();
+    expect_true(!stats_before.empty(), "effective stats snapshot should capture at least one numeric stat");
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta),
+                "defeat-recovery archetype fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatSelfDefeatFightController>());
+    add_post_combat_hostile(game, "postCombatArchetypeFoe", hostile_cell);
+
+    // Drive the defeat, then pump the event loop so the onDestroy restart trigger recovers the player.
+    player->move(delta.x, delta.y, delta.z);
+    pump_event_loop_iterations();
+
+    // Recovery must keep the exact same live player instance on the map.
+    expect_true(map->getPlayer() == player,
+                "defeat recovery should keep the same player instance, not construct a replacement");
+    expect_true(player->isAlive(), "the recovered player should be alive again");
+    expect_true(map->normalizeCoords(player->getCoords()) == map->normalizeCoords(map->getEntry()),
+                "the recovered player should respawn at the map entry");
+
+    // Archetype reference fields preserved exactly (same pointers, not fallbacks).
+    expect_true(player->getRace() == race,
+                "defeat recovery must preserve the player's race reference exactly");
+    expect_true(player->getCreatureClass() == klass,
+                "defeat recovery must preserve the player's creatureClass reference exactly");
+    expect_true(player->usesArchetypeComposition(),
+                "the recovered player should still use archetype composition");
+
+    // Class/race identity IDs unchanged.
+    expect_true(player->getRaceId() == race_id_before && player->getRaceId() == "preserve-defeat-race",
+                "defeat recovery must preserve the player's race ID exactly");
+    expect_true(player->getPlayerClassId() == class_id_before &&
+                    player->getPlayerClassId() == "preserve-defeat-class",
+                "defeat recovery must preserve the player's class ID exactly");
+
+    // Effective stats unchanged across the defeat->recovery cycle.
+    const auto stats_after = capture_player_effective_stats(player->getStats());
+    expect_true(stats_after == stats_before,
+                "defeat recovery must preserve every effective stat value exactly");
+    expect_true(player->getStats()->getMainValue() == main_value_before,
+                "defeat recovery must preserve the player's effective main stat value exactly");
+}
+
 void test_post_combat_player_cancellation_returns_to_origin() {
     auto game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
@@ -1940,6 +2032,7 @@ int main() {
     test_set_base_stats_preserves_current_hp_and_mana();
     test_post_combat_player_victory_returns_to_origin();
     test_post_combat_player_defeat_skips_further_movement();
+    test_post_combat_defeat_recovery_preserves_player_archetypes();
     test_post_combat_player_cancellation_returns_to_origin();
     test_post_combat_player_multi_opponent_cell_returns_to_origin();
     test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell();
