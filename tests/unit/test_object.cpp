@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/embed.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <limits>
 #include <map>
@@ -1016,6 +1017,92 @@ void test_creature_duplicate_attack_from_race_and_class_collapses_to_single_iden
                 "the effective interaction set should contain no duplicate action identity");
 }
 
+void test_no_archetype_creature_level_up_mutates_actions_via_levelling() {
+    // Regression guard (EPIC_03/STORY_01/SUBSTORY_02): a legacy creature with NO race/creatureClass
+    // archetype must keep the existing level-up action mutation. CCreature::levelUp()
+    // (src/object/CCreature.cpp) increments the level and then calls addAction(getLevelAction());
+    // getLevelAction() looks the new level up in the `levelling` map and clones the configured
+    // action through the object handler, and addAction inserts it into the creature's MUTABLE
+    // `actions` set exposed by getActions(). This captures that behaviour as today's baseline:
+    // levelling unlocks land in the actions set on level-up. It fails if that mutation regresses.
+
+    // getLevelAction() round-trips the configured action through the object handler's clone()
+    // (serialize -> deserialize), so the handler must know how to construct a CInteraction (and the
+    // CEffect it can reference). Register the types the same way the proven configured-object clone
+    // coverage in this file does, then build the unlock templates through the handler so they clone
+    // cleanly -- a bare make_shared<CInteraction> is not wired into the type system for cloning.
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CInteraction, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CGameObject", []() { return std::make_shared<CGameObject>(); });
+    game->getObjectHandler()->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
+    game->getObjectHandler()->registerType("CInteraction", []() { return std::make_shared<CInteraction>(); });
+
+    auto makeUnlock = [&](const std::string &typeId, const std::string &name) {
+        auto config = std::make_shared<json>();
+        (*config)["class"] = "CInteraction";
+        (*config)["properties"]["typeId"] = typeId;
+        (*config)["properties"]["name"] = name;
+        game->getObjectHandler()->registerConfig(typeId, config);
+        return game->createObject<CInteraction>(typeId);
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setGame(game);
+
+    // Minimal stats so the heal(0)/addMana(0) calls inside levelUp() have a sane max to clamp to.
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence");
+    base->setStamina(7);
+    base->setIntelligence(12);
+    creature->setBaseStats(base);
+    creature->setLevelStats(std::make_shared<CStats>());
+
+    // Legacy levelling map: an action configured to unlock at level 1, and one gated behind a
+    // higher level that must NOT leak into the actions set on the first level-up.
+    auto strike = makeUnlock("levelStrike", "level-one-strike");
+    auto ultimate = makeUnlock("levelUltimate", "level-five-ultimate");
+    expect_true(static_cast<bool>(strike) && static_cast<bool>(ultimate),
+                "test setup should build the levelling unlock templates through the object handler");
+
+    CInteractionMap levelling;
+    levelling["1"] = strike;
+    levelling["5"] = ultimate;
+    creature->setLevelling(levelling);
+
+    expect_true(creature->getActions().empty(),
+                "a freshly constructed legacy creature should start with no concrete actions");
+
+    // level 0 -> 1: drive the level-up through the public experience path. levelUp() is protected,
+    // so we exercise it the way gameplay does: addExp() loops levelUp() while exp reaches
+    // getExpForNextLevel(). A freshly constructed creature is dead (hp 0), and addExp() early-returns
+    // when !isAlive(), so make it alive first. At level 0 getExpForNextLevel() == getExpForLevel(1)
+    // == 0, so a single addExp(0) advances exactly one level (0 -> 1) without granting the level-5
+    // unlock.
+    creature->setHp(10);
+    creature->addExp(0);
+    expect_true(creature->getLevel() == 1, "levelling should advance a legacy creature's level");
+
+    const auto afterFirst = creature->getActions();
+    auto hasTypeId = [](const std::set<std::shared_ptr<CInteraction>> &actions, const std::string &typeId) {
+        return std::any_of(actions.begin(), actions.end(),
+                           [&typeId](const auto &action) { return action && action->getTypeId() == typeId; });
+    };
+
+    expect_true(afterFirst.size() == 1,
+                "leveling a legacy creature to level 1 should insert exactly the level-1 levelling action");
+    expect_true(hasTypeId(afterFirst, "levelStrike"),
+                "levelUp should insert the level-1 levelling unlock into the legacy creature's mutable actions set");
+    expect_true(!hasTypeId(afterFirst, "levelUltimate"),
+                "levelUp should not insert a levelling unlock gated above the creature's current level");
+
+    // The action stored in the set is a clone, not the configured template instance, mirroring how
+    // getLevelAction() clones through the object handler today.
+    expect_true(afterFirst.find(strike) == afterFirst.end(),
+                "the inserted action should be a clone of the levelling template, not the template instance");
+}
+
 void test_game_object_comparator_and_identity_sets_document_current_semantics() {
     std::shared_ptr<CGameObject> null_object;
     auto object = std::make_shared<CGameObject>();
@@ -1430,6 +1517,7 @@ int main() {
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_action_merge_dedupes_by_type_id();
     test_creature_duplicate_attack_from_race_and_class_collapses_to_single_identity();
+    test_no_archetype_creature_level_up_mutates_actions_via_levelling();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
 
