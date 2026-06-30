@@ -724,6 +724,69 @@ class SaveFixtureTest(unittest.TestCase):
         self.assertEqual("Warrior", expected["player"]["typeId"])
         self.assertEqual(expected, save_fixture_summary(document))
 
+    def test_cplayer_quest_sets_round_trip_through_existing_properties(self):
+        # EPIC_03/STORY_02/SUBSTORY_03 baseline: CPlayer serializes its quest sets through the
+        # existing V_PROPERTY-backed "quests" (active) and "completedQuests" properties
+        # (src/object/CPlayer.h:25-27). This pins the legacy quest-serialization contract so that
+        # later adding archetype pointers to CCreature cannot silently regress quest restoration.
+        #
+        # A save->load round-trip is modeled here in pure Python by re-normalizing the persisted
+        # player quest sub-trees through normalize_save_snapshot (the suite's canonical save-state
+        # normalizer) and asserting the resolved quest id sets are unchanged. Each quest persists as
+        # a nested object carrying its own class + properties{name,typeId}, exactly as declared by
+        # the std::set<std::shared_ptr<CQuest>> V_PROPERTY pair.
+        quest_fixtures = {
+            "nouraajd_active_quests_v1": {
+                "active": ["rolfQuest", "victorQuest"],
+                "completed": [],
+            },
+            "ritual_completed_nouraajd_quest_v1": {
+                "active": [],
+                "completed": ["rolfQuest"],
+            },
+        }
+
+        for fixture_name, expected_quests in quest_fixtures.items():
+            with self.subTest(fixture=fixture_name):
+                fixture = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS[fixture_name]
+                fixture_path = SAVE_FIXTURE_DIR / fixture["primary"]
+                self.assertTrue(fixture_path.is_file(), fixture_path)
+                document = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+                player = snapshot_player_properties(save_snapshot(document))
+                # Active and completed quests live in distinct CPlayer properties; neither bleeds
+                # into the other.
+                active_quests = player.get("quests", [])
+                completed_quests = player.get("completedQuests", [])
+                self.assertIsInstance(active_quests, list, fixture_name)
+                self.assertIsInstance(completed_quests, list, fixture_name)
+
+                self.assertEqual(expected_quests["active"], fixture_quest_ids(active_quests), fixture_name)
+                self.assertEqual(expected_quests["completed"], fixture_quest_ids(completed_quests), fixture_name)
+
+                # Round-trip the persisted quest sub-trees: a stable re-serialization must yield the
+                # identical quest membership, with no cross-contamination between the two sets.
+                round_tripped_active = normalize_save_snapshot(active_quests)
+                round_tripped_completed = normalize_save_snapshot(completed_quests)
+                self.assertEqual(expected_quests["active"], fixture_quest_ids(round_tripped_active), fixture_name)
+                self.assertEqual(expected_quests["completed"], fixture_quest_ids(round_tripped_completed), fixture_name)
+                self.assertEqual(
+                    set(expected_quests["active"]) & set(expected_quests["completed"]),
+                    set(),
+                    "active and completed quest sets must stay disjoint after round-trip",
+                )
+
+                # The immutable expected summary must continue to agree with the fixture, so the
+                # quest baseline is enforced from both the raw fixture and the published expectation.
+                summary_player = fixture["summary"]["player"]
+                self.assertEqual(expected_quests["active"], summary_player["activeQuests"], fixture_name)
+                self.assertEqual(expected_quests["completed"], summary_player["completedQuests"], fixture_name)
+
+        # NOTE: race/creatureClass archetype identity fields do not exist on CCreature yet
+        # (CCreatureRace/CCreatureClass are not created on main). The archetype-specific
+        # "quests survive alongside archetype pointers" assertion is deferred until those fields
+        # land. This test's durable value is the legacy quest-serialization baseline above.
+
 
 class ProgressTextTestResult(unittest.TextTestResult):
     def __init__(self, *args, **kwargs):
