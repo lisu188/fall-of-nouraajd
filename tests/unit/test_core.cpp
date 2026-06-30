@@ -105,7 +105,7 @@ class PropertyChangeProbe : public CGameObject {
     V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
            V_METHOD(PropertyChangeProbe, onPropertiesChanged, void, std::set<std::string>),
            V_METHOD(PropertyChangeProbe, onLabelChanged), V_METHOD(PropertyChangeProbe, onThreatChanged),
-           V_METHOD(PropertyChangeProbe, onInventoryChanged),
+           V_METHOD(PropertyChangeProbe, onInventoryChanged), V_METHOD(PropertyChangeProbe, onInteractionsChanged),
            V_METHOD(PropertyChangeProbe, onObjectChanged, void, Coords),
            V_METHOD(PropertyChangeProbe, onTileChanged, void, Coords))
 
@@ -122,6 +122,8 @@ class PropertyChangeProbe : public CGameObject {
 
     void onInventoryChanged() { ++inventory_changed_calls; }
 
+    void onInteractionsChanged() { ++interactions_changed_calls; }
+
     void onObjectChanged(Coords coords) { object_changed_coords.push_back(coords); }
 
     void onTileChanged(Coords coords) { tile_changed_coords.push_back(coords); }
@@ -133,6 +135,7 @@ class PropertyChangeProbe : public CGameObject {
     int label_changed_calls = 0;
     int threat_changed_calls = 0;
     int inventory_changed_calls = 0;
+    int interactions_changed_calls = 0;
 };
 
 class PrimitiveSerializationHolder : public CGameObject {
@@ -2091,6 +2094,120 @@ void test_archetype_types_are_registered_with_type_system() {
                 "a registered CCreatureClass must not be enumerated as a CCreature subtype");
 }
 
+// EPIC_02/STORY_05/SUBSTORY_03: split legacy and composed levelUp paths.
+//
+// levelUp() (src/object/CCreature.cpp) now branches on usesArchetypeComposition():
+//   * Legacy (no race/creatureClass): increment level and fold the template's own
+//     `levelling` unlock for the new level into the serialized `actions` set via
+//     addAction(getLevelAction()) -- the historical behavior, unchanged.
+//   * Composed (race and/or creatureClass present): increment level and signal
+//     interactionsChanged so observers re-query getEffectiveInteractions, which
+//     already surfaces every `levelling` entry gated at or below the current level.
+//     The class-derived unlock is NOT mutated/serialized into `actions`, so it
+//     cannot accumulate as a permanent duplicate across repeated level-ups.
+//
+// levelUp() is protected; expose it through a minimal test subclass so the two
+// paths can be driven deterministically without the exp-curve/alive preconditions.
+class LevelUpProbeCreature : public CCreature {
+  public:
+    using CCreature::levelUp;
+};
+
+void test_levelup_legacy_path_serializes_unlock_into_actions() {
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    auto creature = std::make_shared<LevelUpProbeCreature>();
+    creature->setGame(game);
+    creature->setLevel(0);
+
+    // A levelling unlock keyed to the level the legacy creature is about to reach.
+    auto unlock = std::make_shared<CInteraction>();
+    unlock->setType(CInteraction::static_meta()->name());
+    unlock->setTypeId("legacyCleave");
+    unlock->setGame(game); // getLevelAction clones it, so the source needs a game
+    creature->setLevelling({{"1", unlock}});
+
+    expect_true(!creature->usesArchetypeComposition(),
+                "a creature with no race/creatureClass must take the legacy levelUp path");
+    expect_true(creature->getActions().empty(), "no actions are serialized before the first level-up");
+
+    creature->levelUp(); // 0 -> 1, folds in the level-1 levelling unlock
+
+    expect_true(creature->getLevel() == 1, "legacy levelUp increments the level");
+    auto actions = creature->getActions();
+    expect_true(actions.size() == 1, "legacy levelUp serializes the level unlock into the creature's own actions");
+    bool serialized_unlock = std::any_of(actions.begin(), actions.end(), [](const auto &action) {
+        return action && action->getTypeId() == "legacyCleave";
+    });
+    expect_true(serialized_unlock, "the serialized action is the cloned levelling unlock for the reached level");
+
+    // Re-leveling past the unlock level does not re-add it (addAction dedupe), so
+    // the legacy serialized set stays a single entry -- behavior is exactly as before.
+    creature->levelUp(); // 1 -> 2 (no level-2 unlock declared)
+    expect_true(creature->getLevel() == 2, "legacy levelUp keeps incrementing the level");
+    expect_true(creature->getActions().size() == 1,
+                "legacy levelUp past the unlock level keeps the serialized action set stable (no duplicates)");
+}
+
+void test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing() {
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto creature = std::make_shared<LevelUpProbeCreature>();
+    creature->setLevel(0);
+
+    // Mark the creature as composed by giving it a race archetype reference.
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+    creature->setRace(race);
+    expect_true(creature->usesArchetypeComposition(),
+                "a creature carrying a race archetype must take the composed levelUp path");
+
+    // A class-style level unlock gated to level 1, expressed through `levelling`.
+    auto unlock = std::make_shared<CInteraction>();
+    unlock->setTypeId("composedCleave");
+    creature->setLevelling({{"1", unlock}});
+
+    // Observe interactionsChanged so we can assert the composed path signals re-query.
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    creature->connect("interactionsChanged", probe, "onInteractionsChanged");
+
+    // Before reaching the unlock level the gate hides it (unlockLevel <= level is false).
+    expect_true(creature->getEffectiveInteractions().empty(),
+                "a composed level unlock above the current level is not yet exposed");
+
+    creature->levelUp(); // 0 -> 1
+    drain_event_loop();
+
+    expect_true(creature->getLevel() == 1, "composed levelUp increments the level");
+    expect_true(probe->interactions_changed_calls >= 1,
+                "composed levelUp signals interactionsChanged so observers re-query the effective set");
+    // The unlock is NOT serialized into the creature's own actions...
+    expect_true(creature->getActions().empty(),
+                "composed levelUp must not serialize class-derived unlocks into the creature's actions");
+    // ...but IS derived through getEffectiveInteractions once the level is reached.
+    auto effective = creature->getEffectiveInteractions();
+    bool derived_unlock = std::any_of(effective.begin(), effective.end(), [](const auto &action) {
+        return action && action->getTypeId() == "composedCleave";
+    });
+    expect_true(effective.size() == 1 && derived_unlock,
+                "the composed unlock is derived through getEffectiveInteractions, not stored in actions");
+
+    // Leveling again past the unlock level must not create permanent duplicate
+    // serialized actions: actions stays empty and the effective set stays a single
+    // entry (no accumulation).
+    creature->levelUp(); // 1 -> 2
+    drain_event_loop();
+    expect_true(creature->getActions().empty(), "repeated composed level-ups never accumulate serialized actions");
+    auto effective_after = creature->getEffectiveInteractions();
+    expect_true(effective_after.size() == 1,
+                "repeated composed level-ups expose the unlock exactly once (no permanent duplicates)");
+}
+
 } // namespace
 
 int main() {
@@ -2144,6 +2261,8 @@ int main() {
     test_creature_class_metadata_round_trip();
     test_creature_archetype_property_wiring();
     test_archetype_types_are_registered_with_type_system();
+    test_levelup_legacy_path_serializes_unlock_into_actions();
+    test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
 
     return finish_tests();
 }
