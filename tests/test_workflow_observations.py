@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts import issue_queue, workflow_observations
 
@@ -747,6 +748,26 @@ class WorkflowObservationsTest(unittest.TestCase):
             issue_queue.loadQueue(workbook)
 
         self.assertEqual(before, workbook.read_bytes())
+
+    def test_current_commit_raises_observation_error_when_git_is_missing(self) -> None:
+        def raise_missing_git(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "git")
+
+        with patch.object(workflow_observations.subprocess, "run", side_effect=raise_missing_git):
+            with self.assertRaises(workflow_observations.ObservationError) as caught:
+                workflow_observations.currentCommit()
+
+        self.assertIn("pass --source-commit", str(caught.exception))
+
+    def test_validate_pr_changes_raises_observation_error_when_git_is_missing(self) -> None:
+        def raise_missing_git(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "git")
+
+        with patch.object(workflow_observations.subprocess, "run", side_effect=raise_missing_git):
+            with self.assertRaises(workflow_observations.ObservationError) as caught:
+                workflow_observations.validatePrChanges(Path("planning/workflow_observations"), "main")
+
+        self.assertIn("git executable not found on PATH", str(caught.exception))
 
 
 if __name__ == "__main__":

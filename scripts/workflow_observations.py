@@ -497,13 +497,18 @@ def validatePrChanges(root: Path, baseRef: str) -> list[str]:
         return ["--base must be a non-empty git ref"]
 
     rootPath = gitPathForRoot(root)
-    result = subprocess.run(
-        ["git", "diff", "--name-status", "--no-renames", baseRef],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-status", "--no-renames", baseRef],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise ObservationError("git executable not found on PATH; cannot inspect ledger diff") from exc
+    except OSError as exc:
+        raise ObservationError(f"could not execute git diff for ledger inspection: {exc}") from exc
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip() or "unknown git diff failure"
         raise ObservationError(f"could not inspect ledger diff from {baseRef}: {message}")
@@ -568,13 +573,16 @@ def validateDuplicateCycles(resolutions: dict[str, LoadedResolution]) -> list[st
 
 
 def currentCommit() -> str:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except OSError as exc:
+        raise ObservationError("could not determine source commit; pass --source-commit") from exc
     text = result.stdout.strip().lower()
     if result.returncode == 0 and COMMIT_PATTERN.match(text):
         return text
