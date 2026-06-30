@@ -733,15 +733,19 @@ bool CPlayerFightController::control(std::shared_ptr<CCreature> me, std::shared_
 }
 
 void CPlayerFightController::end(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
-    if (!me || !me->getMap() || !me->getMap()->getGame()) {
+    // Idempotent teardown: an already-closed/absent panel is a clean no-op.
+    auto panel = fightPanel;
+    fightPanel = nullptr;
+    if (!panel) {
         return;
     }
-    vstd::if_not_null(me->getMap()->getGame()->getGui(), [&](auto gui) {
-        if (fightPanel) {
-            fightPanel->close();
-            fightPanel = nullptr;
-        }
-    });
+    // close() detaches the panel from CGui through its own parent chain (getTopParent),
+    // not through me/opponent/map, so it stays safe when the player is gone, the map
+    // object was removed, the GUI was destroyed, or the active map has advanced past the
+    // encounter (the same staleness hasCancelledContext()/the deferred guards tolerate).
+    // Clearing fightPanel before this call keeps the member null on every path, including
+    // if close() throws.
+    panel->close();
 }
 
 bool CPlayerFightController::isCancelled(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
