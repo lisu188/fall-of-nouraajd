@@ -53,6 +53,12 @@ constexpr SDL_Color MINIMAP_CREATURE{255, 0, 0, 255};
 constexpr SDL_Color MINIMAP_OBJECT{255, 170, 0, 255};
 constexpr SDL_Color MINIMAP_VIEWPORT{255, 255, 255, 255};
 constexpr long long MAX_MINIMAP_DEFAULT_CELLS = 100'000;
+// Maximum width/height (in map cells) the minimap will honour for a single level. Map metadata
+// (xBound/yBound) and sparse object/tile coordinates are attacker-controllable and may be extreme or
+// overflow-prone, so any level extent beyond this is rejected (fail closed -> bounded placeholder)
+// before it can drive iteration, scaling, or pixel/texture dimension math. Matches the established
+// MAX_TMX_LAYER_CELLS guard convention in CLoader.cpp.
+constexpr long long MAX_MINIMAP_LEVEL_EXTENT = 100'000;
 
 struct LevelBounds {
     int minX = 0;
@@ -132,11 +138,27 @@ void include_coords(LevelBounds &bounds, bool &hasBounds, Coords coords) {
     bounds.maxY = std::max(bounds.maxY, coords.y);
 }
 
+// Rejects level extents whose width/height overflow or exceed MAX_MINIMAP_LEVEL_EXTENT. All arithmetic
+// is performed in long long so attacker-extreme int bounds (e.g. INT_MAX maxX with a negative minX)
+// cannot trigger signed-overflow UB before the bound check runs.
+bool bounds_within_limits(const LevelBounds &bounds) {
+    if (bounds.maxX < bounds.minX || bounds.maxY < bounds.minY) {
+        return false;
+    }
+    const long long width = static_cast<long long>(bounds.maxX) - bounds.minX + 1;
+    const long long height = static_cast<long long>(bounds.maxY) - bounds.minY + 1;
+    return width > 0 && height > 0 && width <= MAX_MINIMAP_LEVEL_EXTENT && height <= MAX_MINIMAP_LEVEL_EXTENT;
+}
+
 std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, int z) {
     const auto xBounds = map->getXBounds();
     const auto yBounds = map->getYBounds();
     if (vstd::ctn(xBounds, z) && vstd::ctn(yBounds, z)) {
-        return LevelBounds{0, 0, xBounds.at(z), yBounds.at(z)};
+        const LevelBounds metadataBounds{0, 0, xBounds.at(z), yBounds.at(z)};
+        if (!bounds_within_limits(metadataBounds)) {
+            return std::nullopt;
+        }
+        return metadataBounds;
     }
 
     LevelBounds bounds;
@@ -157,12 +179,21 @@ std::optional<LevelBounds> get_level_bounds(const std::shared_ptr<CMap> &map, in
     if (!hasBounds) {
         return std::nullopt;
     }
+    // Sparse player/object/tile coordinates may span an enormous (or overflow-prone) range; fail closed
+    // rather than iterating/scaling over that empty space.
+    if (!bounds_within_limits(bounds)) {
+        return std::nullopt;
+    }
     return bounds;
 }
 
 MinimapScale make_scale(std::shared_ptr<SDL_Rect> rect, LevelBounds bounds) {
-    const int levelWidth = std::max(1, bounds.maxX - bounds.minX + 1);
-    const int levelHeight = std::max(1, bounds.maxY - bounds.minY + 1);
+    // Compute extents in long long to avoid signed-overflow UB, then clamp to MAX_MINIMAP_LEVEL_EXTENT.
+    // get_level_bounds already rejects out-of-range extents, so this is defence in depth for direct callers.
+    const long long rawWidth = static_cast<long long>(bounds.maxX) - bounds.minX + 1;
+    const long long rawHeight = static_cast<long long>(bounds.maxY) - bounds.minY + 1;
+    const int levelWidth = static_cast<int>(std::clamp<long long>(rawWidth, 1, MAX_MINIMAP_LEVEL_EXTENT));
+    const int levelHeight = static_cast<int>(std::clamp<long long>(rawHeight, 1, MAX_MINIMAP_LEVEL_EXTENT));
     const double scale =
         std::min(rect->w / static_cast<double>(levelWidth), rect->h / static_cast<double>(levelHeight));
     const int drawW = std::max(1, static_cast<int>(std::floor(levelWidth * scale)));

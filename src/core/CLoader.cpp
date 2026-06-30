@@ -463,8 +463,12 @@ void apply_tile_layer_metadata(const std::shared_ptr<CMap> &map, const json &lay
     if (layerProperties.count("outOfBounds")) {
         out_of_bounds_tiles[level] = read_string_property(layerProperties, "outOfBounds", "MountainTile");
     }
-    x_bounds[level] = std::max(0, read_int_property(layerProperties, "xBound", 0));
-    y_bounds[level] = std::max(0, read_int_property(layerProperties, "yBound", 0));
+    // Map xBound/yBound metadata is attacker-authorable; clamp the per-axis extent so downstream
+    // consumers (notably minimap rendering) cannot be driven to iterate/allocate over enormous or
+    // overflow-prone level dimensions. The cap mirrors the per-layer MAX_TMX_LAYER_CELLS guard.
+    constexpr int MAX_LEVEL_BOUND = MAX_TMX_LAYER_CELLS - 1;
+    x_bounds[level] = std::clamp(read_int_property(layerProperties, "xBound", 0), 0, MAX_LEVEL_BOUND);
+    y_bounds[level] = std::clamp(read_int_property(layerProperties, "yBound", 0), 0, MAX_LEVEL_BOUND);
     wrap_x[level] = read_bool_property(layerProperties, "wrapX") ? 1 : 0;
     wrap_y[level] = read_bool_property(layerProperties, "wrapY") ? 1 : 0;
 
