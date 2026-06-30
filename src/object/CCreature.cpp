@@ -371,6 +371,30 @@ void CCreature::addAction(std::shared_ptr<CInteraction> action) {
     if (!action) {
         return;
     }
+    // Action merge contract (docs/design/creature_archetypes.md, "Creature action
+    // merge contract"): actions are composed in precedence order and deduplicated by
+    // configured identity. The identity key is the action `typeId`, falling back to
+    // `name` only when `typeId` is empty. A later (more specific) source overrides an
+    // earlier one, so duplicate actions (e.g. a second `Attack`) collapse to a single
+    // entry and do not accumulate, while unique concrete overrides are preserved.
+    auto sameAction = [&action](const std::shared_ptr<CInteraction> &candidate) {
+        if (!candidate) {
+            return false;
+        }
+        const std::string &candidateTypeId = candidate->getTypeId();
+        const std::string &actionTypeId = action->getTypeId();
+        if (!candidateTypeId.empty() || !actionTypeId.empty()) {
+            return candidateTypeId == actionTypeId;
+        }
+        return candidate->getName() == action->getName();
+    };
+    auto existing = std::find_if(actions.begin(), actions.end(), sameAction);
+    if (existing != actions.end()) {
+        if (CGameObject::sameInstance(*existing, action)) {
+            return;
+        }
+        actions.erase(existing);
+    }
     actions.insert(action);
     signal("interactionsChanged");
 }

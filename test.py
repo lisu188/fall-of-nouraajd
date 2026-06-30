@@ -1157,8 +1157,14 @@ def count_player_objects(game_map):
 
 
 def transition_source_map_snapshot(game_map):
+    # A scene transition detaches the active player from the source map and
+    # transfers it to the destination map (see CSceneManager::performMapChange and
+    # the CMap player-transfer unit tests). That detachment is the expected outcome
+    # of the transition, not source-map corruption, so the preservation invariant is
+    # measured over the source map's non-player objects.
+    non_player_objects = sum(1 for obj in game_map.getObjects() if not (hasattr(obj, "isPlayer") and obj.isPlayer()))
     return {
-        "object_count": len(game_map.getObjects()),
+        "object_count": non_player_objects,
         "origin": game_map.getStringProperty("transitionOrigin"),
         "turn": game_map.getTurn(),
     }

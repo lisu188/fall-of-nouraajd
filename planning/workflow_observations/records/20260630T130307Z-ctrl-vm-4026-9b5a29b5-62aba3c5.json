@@ -1,0 +1,40 @@
+{
+  "affectedPaths": [
+    "planning/fall_of_nouraajd_creature_archetype_jira_plan.xlsx"
+  ],
+  "category": "queue_lease",
+  "controllerId": "ctrl-vm-4026-9b5a29b5",
+  "createdAtUtc": "2026-06-30T13:03:07Z",
+  "details": "The creature-archetype planning workbook (planning/fall_of_nouraajd_creature_archetype_jira_plan.xlsx) encodes sequential substory chains whose later substories have an EMPTY Dependencies field despite a real prerequisite on earlier substories. The aggregate shortlist therefore treats prerequisite-blocked rows as status-and-dependency eligible and selects them.\n\nConfirmed examples (controller ctrl-vm-4026-9b5a29b5):\n- [EPIC_02][STORY_02][SUBSTORY_03]Register and bind CCreatureClass: empty Dependencies, but CCreatureClass does not exist in src/ and its prerequisite SS01 (Create creature class files) and SS02 (Implement class getters) are NOT_STARTED. Claimed then BLOCKED (PR #961).\n- [EPIC_01][STORY_02][SUBSTORY_05]Commit deterministic baseline fixture: empty Dependencies, but it commits a fixture aggregating the SS01-SS04 baseline captures, all of which are NOT_STARTED/IN_PROGRESS. Not claimed.\n\nBy contrast, feasible foundational rows in the same workbook (e.g. [EPIC_01][STORY_04][SUBSTORY_02] action precedence, [EPIC_02][STORY_05][SUBSTORY_01] getEffectiveInteractions) were implemented normally.\n\nImpact: controllers waste a claim+block cycle per prerequisite-blocked row and risk dispatching workers against non-existent prerequisites. The mechanical shortlist cannot distinguish these from genuinely-eligible work because the dependency is not encoded.\n\nSuggested fix: encode the intra-story SSn->SSn+1 (and cross-story foundation) dependencies in the creature-archetype workbook Dependencies column so the shortlist excludes prerequisite-blocked substories, OR add a controller-side guard that treats an unbuilt referenced type/prerequisite substory as ineligible.\n",
+  "evidence": [
+    {
+      "blockedExamples": [
+        {
+          "action": "BLOCKED PR #961",
+          "issue": "[EPIC_02][STORY_02][SUBSTORY_03]Register and bind CCreatureClass",
+          "reason": "CCreatureClass absent; SS01/SS02 NOT_STARTED"
+        },
+        {
+          "action": "not claimed",
+          "issue": "[EPIC_01][STORY_02][SUBSTORY_05]Commit deterministic baseline fixture",
+          "reason": "SS01-SS04 baseline captures NOT_STARTED"
+        }
+      ],
+      "discoveredBy": "ctrl-vm-4026-9b5a29b5",
+      "feasibleExamples": [
+        "[EPIC_01][STORY_04][SUBSTORY_02]Approve action precedence and dedupe",
+        "[EPIC_02][STORY_05][SUBSTORY_01]Add getEffectiveInteractions"
+      ],
+      "workbook": "planning/fall_of_nouraajd_creature_archetype_jira_plan.xlsx"
+    }
+  ],
+  "fingerprint": "creature archetype workbook missing intra-story substory dependency encoding",
+  "id": "20260630T130307Z-ctrl-vm-4026-9b5a29b5-62aba3c5",
+  "impact": "Mechanical shortlist selects prerequisite-blocked substories; controllers waste claim+block cycles and risk dispatching against non-existent prerequisites",
+  "phase": "dispatch",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "medium",
+  "sourceCommit": "43b4a7afdeeda463974f543053d91e248635ead1",
+  "summary": "Creature-archetype workbook substory chains have empty Dependencies, so the shortlist selects prerequisite-blocked rows"
+}
