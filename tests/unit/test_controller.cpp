@@ -536,6 +536,74 @@ void test_player_fight_controller_start_is_idempotent_and_guards_invalid_encount
                 "fight controller should refuse to start without a GUI");
 }
 
+void test_player_fight_controller_end_is_idempotent_and_guards_invalid_encounters() {
+    auto gui = std::make_shared<CGui>();
+    auto game = fight_panel_game(gui);
+    auto map = game->getMap();
+
+    auto attacker = map_creature(game, "unitEndAttacker", Coords(0, 0, 0));
+    auto opponent = map_creature(game, "unitEndOpponent", Coords(1, 0, 0));
+
+    auto controller = std::make_shared<CPlayerFightController>();
+    attacker->setFightController(controller);
+
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "starting a fight should add exactly one fight panel to the GUI");
+
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending a fight should remove the fight panel from the GUI");
+
+    // A second end() must be a clean no-op: no panel remains and nothing crashes.
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending a fight twice should leave no panel under the GUI");
+
+    // end() before any start() (no panel) is a no-op.
+    auto freshController = std::make_shared<CPlayerFightController>();
+    freshController->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending without a started fight should be a no-op");
+
+    // end() must clear the panel even when the player is missing.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "restarting a fight should re-add the panel");
+    controller->end(nullptr, opponent);
+    expect_true(count_fight_panels(gui) == 0,
+                "ending with a missing player should still remove the panel from the GUI");
+    controller->end(nullptr, opponent);
+    expect_true(count_fight_panels(gui) == 0, "ending twice with a missing player should leave no panel");
+
+    // end() must clear the panel even after the player's map object was removed.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "restarting a fight should re-add the panel");
+    map->removeObject(attacker);
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0,
+                "ending after the player object was removed from the map should still remove the panel");
+    map->addObject(attacker);
+
+    // end() must clear the panel even when the active game map has advanced past the encounter.
+    controller->start(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 1, "restarting a fight should re-add the panel");
+    auto pendingMap = std::make_shared<CMap>();
+    pendingMap->setGame(game);
+    game->setMap(pendingMap);
+    controller->end(attacker, opponent);
+    expect_true(count_fight_panels(gui) == 0,
+                "ending after the active map advanced past the encounter should still remove the panel");
+    game->setMap(map);
+
+    // end() must not crash when the GUI/game backing the controller is gone.
+    auto guiless = std::make_shared<CGame>();
+    auto guiless_map = std::make_shared<CMap>();
+    guiless->setMap(guiless_map);
+    guiless_map->setGame(guiless);
+    auto guiless_attacker = map_creature(guiless, "unitEndNoGuiAttacker", Coords(0, 0, 0));
+    auto guiless_opponent = map_creature(guiless, "unitEndNoGuiOpponent", Coords(1, 0, 0));
+    auto guiless_controller = std::make_shared<CPlayerFightController>();
+    guiless_controller->start(guiless_attacker, guiless_opponent);
+    guiless_controller->end(guiless_attacker, guiless_opponent);
+    guiless_controller->end(guiless_attacker, guiless_opponent);
+}
+
 void test_monster_fight_controller_uses_mana_item_when_mana_is_low() {
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
@@ -579,6 +647,7 @@ int main() {
     test_target_controller_flow_field_invalidates_when_cross_level_edge_is_added();
     test_fight_controller_guard_paths_and_fallbacks();
     test_player_fight_controller_start_is_idempotent_and_guards_invalid_encounters();
+    test_player_fight_controller_end_is_idempotent_and_guards_invalid_encounters();
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
 
     return finish_tests();
