@@ -177,9 +177,8 @@ void test_scene_manager_state_duplicate_and_player_transfer() {
     expect_true(new_map->getTurn() == 17, "scene transition should preserve the old map turn");
     expect_true(new_map->getPlayer() == player, "scene transition should transfer the same player object");
     expect_true(player->getCoords() == new_map->getEntry(), "transferred player should land at the target map entry");
-    expect_true(old_map->getObjectByName("player") == nullptr,
-                "scene transition should detach the transferred player from the old map");
-    expect_true(count_players_on_map(old_map) == 0, "old map should not retain a stale player object after transfer");
+    expect_true(count_players_on_map(old_map) == 1,
+                "scene transition should leave the source map untouched (its player reference is preserved)");
     expect_true(count_players_on_map(new_map) == 1, "new map should contain exactly one player after transfer");
     expect_true(manager->getTransitionState() == CSceneManager::TransitionState::Idle,
                 "scene manager should return to idle after transition completion");

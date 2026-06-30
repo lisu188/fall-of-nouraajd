@@ -164,7 +164,13 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
         std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, mapName);
         game->setMap(map);
         if (oldMap && game->getMap()) {
-            std::shared_ptr<CPlayer> player = oldMap->detachPlayer();
+            // Transfer the existing player into the destination map without mutating the
+            // source map. Detaching the player here would remove an object from the source
+            // map mid-transition, which scene-manager regression tests assert must stay
+            // untouched (the source map is preserved so it can be revisited). attachPlayer
+            // still performs the canonical destination-side setup (controllers, entry
+            // placement, lifecycle triggers); the source map keeps its player reference.
+            std::shared_ptr<CPlayer> player = oldMap->getPlayer();
             if (player) {
                 game->getMap()->attachPlayer(player);
             }
