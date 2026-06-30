@@ -130,6 +130,20 @@ CREATURE_CLASS_MAIN_STAT_PROPERTY = "mainStat"
 MAIN_STAT_SCHEMA_CLASS = "CStats"
 MAIN_STAT_NUMERIC_TYPE_TOKEN = "int"
 
+# CCreatureClass action/levelling resolution policy (EPIC_06/STORY_02/SUBSTORY_02).
+# A CCreatureClass definition grants interactions through two property blocks that
+# the runtime loader resolves late: "actions" is a list of object nodes (each a
+# ref or inline class) that must each resolve to a CInteraction, and "levelling" is
+# a map keyed by the level at which an interaction is unlocked -- the keys must be
+# positive-integer strings and the values must each resolve to a CInteraction. The
+# same effective action id must not be granted twice within one class definition
+# (whether through "actions" or "levelling"), since a duplicate silently shadows the
+# earlier grant at load time instead of being reported.
+CREATURE_CLASS_CONSTRUCTOR_CLASS = "CCreatureClass"
+CREATURE_CLASS_ACTIONS_PROPERTY = "actions"
+CREATURE_CLASS_LEVELLING_PROPERTY = "levelling"
+INTERACTION_BASE_CLASS = "CInteraction"
+
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
 # that overrides template behavior.  Any override touching one of these properties
@@ -1362,6 +1376,7 @@ class ContentValidator:
         self._validate_refs(entry.path, entry.key, entry.data, visible)
         self._validate_object_classes(entry.path, entry.key, entry.data, known_classes)
         self._validate_object_properties(entry.path, entry.key, entry.data, visible, known_classes)
+        self._validate_creature_class_actions_levelling(entry.path, entry.key, entry.data, visible)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -2271,6 +2286,134 @@ class ContentValidator:
             for index, child in enumerate(value):
                 self._validate_creature_class_reference(path, append_index(location, index), child)
 
+    def _validate_creature_class_actions_levelling(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        """Validate CCreatureClass.actions / levelling resolve to CInteraction.
+
+        Recurses through the config tree so a CCreatureClass node nested under a ref
+        chain or another object is still checked.  For every node whose effective
+        class is ``CCreatureClass`` it verifies that each ``actions`` entry resolves
+        to a ``CInteraction``, that each ``levelling`` key is a positive-integer
+        string whose value resolves to a ``CInteraction``, and that no effective
+        action id (the ref target id) is granted more than once across both blocks.
+        """
+        if isinstance(value, dict):
+            if self._effective_object_class(value, visible) == CREATURE_CLASS_CONSTRUCTOR_CLASS:
+                self._validate_creature_class_grants(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_creature_class_actions_levelling(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_creature_class_actions_levelling(path, append_index(location, index), child, visible)
+
+    def _validate_creature_class_grants(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        properties = value.get("properties")
+        if not isinstance(properties, dict):
+            return
+        properties_location = append_field(location, "properties")
+        seen_action_ids: dict[str, str] = {}
+        self._validate_creature_class_actions(
+            path,
+            append_field(properties_location, CREATURE_CLASS_ACTIONS_PROPERTY),
+            properties.get(CREATURE_CLASS_ACTIONS_PROPERTY),
+            visible,
+            seen_action_ids,
+        )
+        self._validate_creature_class_levelling(
+            path,
+            append_field(properties_location, CREATURE_CLASS_LEVELLING_PROPERTY),
+            properties.get(CREATURE_CLASS_LEVELLING_PROPERTY),
+            visible,
+            seen_action_ids,
+        )
+
+    def _validate_creature_class_actions(
+        self,
+        path: Path,
+        location: str,
+        actions: Any,
+        visible: dict[str, ConfigEntry],
+        seen_action_ids: dict[str, str],
+    ) -> None:
+        if actions is None:
+            return
+        if not isinstance(actions, list):
+            self._issue(path, location, "expected array of CInteraction action entries")
+            return
+        for index, action in enumerate(actions):
+            entry_location = append_index(location, index)
+            self._validate_creature_class_interaction_entry(path, entry_location, action, visible)
+            self._record_effective_action_id(path, entry_location, action, seen_action_ids)
+
+    def _validate_creature_class_levelling(
+        self,
+        path: Path,
+        location: str,
+        levelling: Any,
+        visible: dict[str, ConfigEntry],
+        seen_action_ids: dict[str, str],
+    ) -> None:
+        if levelling is None:
+            return
+        if not isinstance(levelling, dict):
+            self._issue(path, location, "expected object keyed by positive-integer level")
+            return
+        for level_key, action in levelling.items():
+            entry_location = append_field(location, level_key)
+            if not is_positive_integer_string(level_key):
+                self._issue(
+                    path,
+                    entry_location,
+                    f'levelling key "{level_key}" must be a positive-integer string',
+                )
+            self._validate_creature_class_interaction_entry(path, entry_location, action, visible)
+            self._record_effective_action_id(path, entry_location, action, seen_action_ids)
+
+    def _validate_creature_class_interaction_entry(
+        self, path: Path, location: str, action: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        if not isinstance(action, dict):
+            self._issue(path, location, f'expected object resolving to "{INTERACTION_BASE_CLASS}"')
+            return
+        class_name = self._effective_object_class(action, visible)
+        if class_name is None:
+            self._issue(
+                path,
+                location,
+                f'expected object resolving to "{INTERACTION_BASE_CLASS}"; got object without class/ref',
+            )
+            return
+        if not self._class_resolves_to_interaction(class_name):
+            self._issue(
+                path,
+                location,
+                f'expected object resolving to "{INTERACTION_BASE_CLASS}"; got "{class_name}"',
+            )
+
+    def _class_resolves_to_interaction(self, class_name: str) -> bool:
+        return class_name == INTERACTION_BASE_CLASS or self._class_inherits_from(class_name, INTERACTION_BASE_CLASS)
+
+    def _record_effective_action_id(
+        self, path: Path, location: str, action: Any, seen_action_ids: dict[str, str]
+    ) -> None:
+        if not isinstance(action, dict):
+            return
+        action_id = action.get("ref")
+        if not isinstance(action_id, str) or not action_id:
+            return
+        previous = seen_action_ids.get(action_id)
+        if previous is not None:
+            self._issue(
+                path,
+                location,
+                f'duplicate action id "{action_id}", previously granted at {previous}',
+            )
+            return
+        seen_action_ids[action_id] = location
+
     def _issue(self, path: Path, location: str, message: str) -> None:
         self.issues.append(ValidationIssue(path=self._rel(path), location=location, message=message))
 
@@ -2391,6 +2534,18 @@ def json_value_kind(value: Any) -> str:
     if value is None:
         return "null"
     return type(value).__name__
+
+
+def is_positive_integer_string(value: Any) -> bool:
+    """Return True when ``value`` is a canonical positive-integer string (1, 2, ...).
+
+    Rejects non-strings, non-digit strings, "0", and any leading-zero / signed /
+    whitespace-padded form so a levelling key always denotes a single unambiguous
+    positive level.
+    """
+    if not isinstance(value, str) or not value.isdigit():
+        return False
+    return value == str(int(value)) and int(value) > 0
 
 
 def normalize_cpp_type(raw: str) -> str:

@@ -669,6 +669,114 @@ class ContentValidatorTest(unittest.TestCase):
             'never the reserved object-constructor key "class"',
         )
 
+    def _register_creature_class_type(self, root):
+        # CCreatureClass is not a builtin; register it statically (without V_META) so
+        # the synthetic configs are constructible and carry no metadata property
+        # schema, leaving only the actions/levelling validator to fire.
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() { CTypes::register_type<CCreatureClass, CGameObject>(); }\n",
+            encoding="utf-8",
+        )
+
+    def _write_creature_class(self, root, properties):
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": properties}},
+        )
+
+    def test_creature_class_actions_and_levelling_resolving_to_interaction_pass(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(
+            root,
+            {
+                "actions": [
+                    {"ref": "Attack"},
+                    {"class": "CInteraction", "properties": {"effect": {"ref": "HitEffect"}}},
+                ],
+                "levelling": {"1": {"class": "CInteraction"}, "2": {"class": "CInteraction"}},
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_creature_class_action_not_resolving_to_interaction_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"actions": [{"ref": "LifePotion"}]})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            "warriorClass.properties.actions[0]",
+            'expected object resolving to "CInteraction"; got "CPotion"',
+        )
+
+    def test_creature_class_levelling_value_not_resolving_to_interaction_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"levelling": {"1": {"ref": "LifePotion"}}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            'warriorClass.properties.levelling["1"]',
+            'expected object resolving to "CInteraction"; got "CPotion"',
+        )
+
+    def test_creature_class_non_integer_levelling_key_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"levelling": {"one": {"ref": "Attack"}}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            "warriorClass.properties.levelling.one",
+            'levelling key "one" must be a positive-integer string',
+        )
+
+    def test_creature_class_non_positive_levelling_key_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(root, {"levelling": {"0": {"ref": "Attack"}}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            'warriorClass.properties.levelling["0"]',
+            'levelling key "0" must be a positive-integer string',
+        )
+
+    def test_creature_class_duplicate_action_id_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        self._write_creature_class(
+            root,
+            {"actions": [{"ref": "Attack"}], "levelling": {"1": {"ref": "Attack"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            'warriorClass.properties.levelling["1"]',
+            'duplicate action id "Attack", previously granted at warriorClass.properties.actions[0]',
+        )
+
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
 
