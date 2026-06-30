@@ -280,13 +280,18 @@ def evaluatePrState(prPayload: dict[str, Any]) -> CheckEvaluation | None:
 
 
 def runGhJson(command: Sequence[str]) -> Any:
-    result = subprocess.run(
-        list(command),
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            list(command),
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise PollError("gh CLI not found on PATH; cannot poll GitHub checks") from exc
+    except OSError as exc:
+        raise PollError(f"{' '.join(command)} could not be executed: {exc}") from exc
     if result.returncode != 0:
         raise PollError(result.stderr.strip() or result.stdout.strip() or f"{' '.join(command)} failed")
     try:
@@ -316,13 +321,18 @@ def runGhPrView(pr: str, repo: str | None) -> dict[str, Any]:
 
 def runGhPrFiles(pr: str, repo: str | None) -> tuple[str, ...]:
     command = ghCommandWithRepo(["gh", "pr", "diff", pr, "--name-only"], repo)
-    result = subprocess.run(
-        command,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise PollError("gh CLI not found on PATH; cannot poll GitHub checks") from exc
+    except OSError as exc:
+        raise PollError(f"{' '.join(command)} could not be executed: {exc}") from exc
     if result.returncode != 0:
         raise PollError(result.stderr.strip() or result.stdout.strip() or f"{' '.join(command)} failed")
     return tuple(line.strip() for line in result.stdout.splitlines() if line.strip())
