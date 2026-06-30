@@ -891,9 +891,18 @@ std::shared_ptr<CStats> CCreature::buildLegacyStats() {
     // compatibility contract"): for a creature with no race and no creatureClass
     // (every creature today) this composes the legacy stat block exactly.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
-    // Main stat: creatureClass.baseStats.mainStat first (extension point), then the
-    // legacy creature.baseStats.mainStat fallback below.
-    ret->setMainStat(getBaseStats()->getMainStat());
+    // Main stat selection (class-first, authoritative): the composed block's mainStat is a
+    // *selected* (not accumulated) field -- CStats::addBonus copies only numeric properties, so
+    // the std::string mainStat must be assigned explicitly. When the creature has a composed
+    // creatureClass that declares a main stat, that class main stat is AUTHORITATIVE and wins
+    // over the legacy/race creature.baseStats main stat. A legacy creature with no class -- or a
+    // class with an empty main stat -- falls back to the legacy creature.baseStats.mainStat
+    // exactly, preserving the no-archetype path (EPIC_02/STORY_04/SUBSTORY_03).
+    std::string composedMainStat = getBaseStats()->getMainStat();
+    if (creatureClass && !creatureClass->getMainStat().empty()) {
+        composedMainStat = creatureClass->getMainStat();
+    }
+    ret->setMainStat(composedMainStat);
     // 1-2. race / creature-class baseStats: extension point (nothing to add yet).
     // 3. creature.baseStats (legacy concrete base).
     ret->addBonus(getBaseStats());
