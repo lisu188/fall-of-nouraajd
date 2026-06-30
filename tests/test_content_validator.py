@@ -834,6 +834,61 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertEqual([], [str(issue) for issue in issues])
 
+    def test_given_bad_quest_transition_when_running_standard_validation_path_then_reported_as_error(self):
+        # Regression for E07/S01/SS04: the quest-state-transition validator must run in
+        # the NORMAL validation path (validate_repo -> ContentValidator.validate ->
+        # _validate_map_context), not only via a direct helper call. A synthetic map with
+        # an unreachable terminal state must be caught by the default end-to-end run and
+        # surfaced as a standard ValidationIssue error.
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    self._set_state("main", "active")
+
+                def isCompleted(self):
+                    return self.get_state("main") == "unreachable"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        unreachable_message = (
+            'terminal state "unreachable" is unreachable: it is neither the default nor a transition target'
+        )
+
+        # The default end-to-end run (the exact entrypoint scripts/validate_content.py
+        # invokes) must report the bad transition; it is not gated behind a runtime-only test.
+        end_to_end_issues = validate_repo(root)
+        self.assertIssueContains(end_to_end_issues, "res/maps/broken/script.py", 'quest "main"', unreachable_message)
+
+        # ContentValidator.validate() (which main()/validate_repo() call) must produce the
+        # same error, and the quest validator must stay wired into _validate_map_context so
+        # a future refactor cannot silently drop it from the standard path.
+        validate_issues = ContentValidator(root).validate()
+        self.assertTrue(
+            any(unreachable_message in str(issue) for issue in validate_issues),
+            "quest-state-transition validator did not run inside ContentValidator.validate()",
+        )
+        self.assertTrue(
+            hasattr(ContentValidator, "_validate_quest_state_transitions"),
+            "quest-state-transition validator helper is missing",
+        )
+
+        # Pin the wiring: _validate_map_context must invoke the quest-state validator so it
+        # always runs after map config, dialog JSON, map.json, and script.py are loaded.
+        import inspect
+
+        map_context_source = inspect.getsource(ContentValidator._validate_map_context)
+        self.assertIn("_validate_quest_state_transitions", map_context_source)
+
     def test_given_script_granted_quest_id_missing_from_config_when_validating_then_reports_unknown_quest(self):
         root = self.make_fixture()
         write_property_hygiene_script(
