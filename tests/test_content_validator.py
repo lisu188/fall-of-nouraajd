@@ -75,6 +75,107 @@ class ContentValidatorTest(unittest.TestCase):
             "previously defined at layers[1].objects[0]",
         )
 
+    def _declare_map_assets(self, root, assets):
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["assets"] = assets
+        write_json(map_path, map_data)
+        return map_path
+
+    def _make_asset_files(self, root):
+        map_dir = root / "res/maps/broken"
+        (map_dir / "images").mkdir(parents=True, exist_ok=True)
+        (map_dir / "images/portrait.png").write_text("png")
+        (map_dir / "frames").mkdir(parents=True, exist_ok=True)
+        (map_dir / "frames/0.png").write_text("png")
+        (map_dir / "sprites").mkdir(parents=True, exist_ok=True)
+        (map_dir / "sprites/0.png").write_text("png")
+        (map_dir / "anim").mkdir(parents=True, exist_ok=True)
+        (map_dir / "anim/walk.png").write_text("png")
+
+    def test_map_assets_valid_declarations_pass_validation(self):
+        root = self.make_fixture()
+        self._make_asset_files(root)
+        self._declare_map_assets(
+            root,
+            [
+                {"path": "images/portrait.png", "kind": "file"},
+                {"path": "frames", "kind": "directory"},
+                {"path": "anim/walk", "kind": "animationRoot"},
+                {"path": "sprites", "kind": "animationRoot"},
+                {"path": "hero.combat.idle", "kind": "logicalId"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_map_assets_non_array_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(root, {"path": "images/portrait.png", "kind": "file"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/maps/broken/map.json", "assets", "expected array")
+
+    def test_map_assets_unsafe_path_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(root, [{"path": "../escape.png", "kind": "file"}])
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/maps/broken/map.json", "assets[0].path", "safe relative path")
+
+    def test_map_assets_missing_target_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(
+            root,
+            [
+                {"path": "images/missing.png", "kind": "file"},
+                {"path": "nodir", "kind": "directory"},
+                {"path": "anim/none", "kind": "animationRoot"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "assets[0].path", "declared file asset not found: images/missing.png")
+        self.assertIssueContains(issues, "assets[1].path", "declared directory asset not found: nodir")
+        self.assertIssueContains(issues, "assets[2].path", "animation root resolves to neither")
+
+    def test_map_assets_invalid_entry_shape_is_flagged(self):
+        root = self.make_fixture()
+        self._make_asset_files(root)
+        self._declare_map_assets(
+            root,
+            [
+                "notanobject",
+                {"kind": "file"},
+                {"path": "images/portrait.png", "kind": "sprite"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "assets[0]", "expected object with 'path' and 'kind'")
+        self.assertIssueContains(issues, "assets[1].path", "expected non-empty string")
+        self.assertIssueContains(issues, "assets[2].kind", "expected one of")
+
+    def test_map_assets_duplicate_path_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(
+            root,
+            [
+                {"path": "shared.id", "kind": "logicalId"},
+                {"path": "shared.id", "kind": "logicalId"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "assets[1].path", "duplicate asset declaration: shared.id")
+
     def test_unreachable_dialog_state_reports_dialog_and_state(self):
         root = self.make_fixture()
         dialog_path = root / "res/maps/broken/dialog.json"
