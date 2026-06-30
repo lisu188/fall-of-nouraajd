@@ -93,6 +93,13 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     if (button == SDL_BUTTON_RIGHT) {
         return invokeRightClickCallback(gui, index, object);
     }
+    // Command/interaction lists are non-draggable: a left mouse-down must never start a
+    // drag session or capture the pointer; it only runs the normal click callback so
+    // pointer motion never suppresses the click and first/second click semantics hold.
+    if (!dragEnabled) {
+        invokeCallback(gui, index, object);
+        return true;
+    }
     if (gui && !dragStart.empty()) {
         if (invokeDragStart(gui, index, object)) {
             auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
@@ -481,6 +488,13 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
             }
             if (button == SDL_BUTTON_LEFT) {
                 const bool deferSourceCallback = self->invokeSelect(gui, itemIndex, object);
+                // Command/interaction lists are non-draggable: never start a drag session,
+                // capture the pointer, or defer the source callback. The normal click
+                // callback always fires so first-click-select / second-click-confirm works.
+                if (!self->dragEnabled) {
+                    self->invokeCallback(gui, itemIndex, object);
+                    return true;
+                }
                 bool dragStarted = false;
                 if (auto source = sourceGraphic.lock()) {
                     auto rect = source->getLayout() ? source->getLayout()->getRect(source) : CUtil::rect(0, 0, 0, 0);
@@ -766,6 +780,10 @@ void CListView::setTileSize(int _tileSize) { tileSize = std::clamp(_tileSize, 1,
 bool CListView::getAllowOversize() { return allowOversize; }
 
 void CListView::setAllowOversize(bool _allowOversize) { allowOversize = _allowOversize; }
+
+bool CListView::getDragEnabled() { return dragEnabled; }
+
+void CListView::setDragEnabled(bool _dragEnabled) { dragEnabled = _dragEnabled; }
 
 bool CListView::getShowEmpty() { return showEmpty; }
 
