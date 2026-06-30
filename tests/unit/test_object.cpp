@@ -654,6 +654,66 @@ void test_creature_archetype_identity_accessors_use_fallbacks() {
                 "archetype class label should fall back through archetype class id to name when nothing else is set");
 }
 
+void test_creature_effective_interactions_compose_and_dedupe_sources() {
+    auto creature = std::make_shared<CCreature>();
+    creature->setLevel(2);
+
+    // Innate / class action exposed through a levelling unlock at level 1.
+    auto innate_strike = std::make_shared<CInteraction>();
+    innate_strike->setTypeId("strike");
+    innate_strike->setName("levelling-strike");
+
+    // A levelling unlock gated to a higher level than the creature has reached.
+    auto future_unlock = std::make_shared<CInteraction>();
+    future_unlock->setTypeId("ultimate");
+    future_unlock->setName("levelling-ultimate");
+
+    // A levelling unlock keyed by name only (no typeId) at an unlocked level.
+    auto named_unlock = std::make_shared<CInteraction>();
+    named_unlock->setName("ward");
+
+    CInteractionMap levelling;
+    levelling["1"] = innate_strike;
+    levelling["5"] = future_unlock;
+    levelling["2"] = named_unlock;
+    creature->setLevelling(levelling);
+
+    // Concrete action overriding the innate "strike" (same typeId, different
+    // instance) plus a unique concrete action.
+    auto concrete_strike = std::make_shared<CInteraction>();
+    concrete_strike->setTypeId("strike");
+    concrete_strike->setName("concrete-strike");
+    creature->addAction(concrete_strike);
+
+    auto unique_action = std::make_shared<CInteraction>();
+    unique_action->setTypeId("dash");
+    unique_action->setName("concrete-dash");
+    creature->addAction(unique_action);
+
+    auto effective = creature->getEffectiveInteractions();
+
+    auto contains = [&effective](const std::shared_ptr<CInteraction> &action) {
+        return effective.find(action) != effective.end();
+    };
+    auto count_with_type = [&effective](const std::string &typeId) {
+        return std::count_if(effective.begin(), effective.end(),
+                             [&typeId](const auto &action) { return action && action->getTypeId() == typeId; });
+    };
+
+    expect_true(effective.size() == 3, "effective interactions should expose strike, ward and dash exactly once each");
+    expect_true(count_with_type("strike") == 1,
+                "a typeId duplicated across innate and concrete sources should appear only once");
+    expect_true(contains(concrete_strike) && !contains(innate_strike),
+                "concrete actions should override duplicate innate/level-unlocked actions of the same typeId");
+    expect_true(contains(unique_action), "unique concrete actions should be present in the effective interaction set");
+    expect_true(contains(named_unlock),
+                "level-unlocked actions at or below the current level should be exposed (name-keyed dedupe)");
+    expect_true(!contains(future_unlock), "level unlocks above the current level should not yet be exposed");
+
+    // getInteractions() delegates to the composed, de-duplicated set.
+    expect_true(creature->getInteractions() == effective,
+                "getInteractions should delegate to the effective, de-duplicated interaction set");
+}
 void test_creature_action_merge_dedupes_by_type_id() {
     // Pins the approved creature action merge contract
     // (docs/design/creature_archetypes.md, "Creature action merge contract"):
@@ -966,6 +1026,7 @@ int main() {
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_creature_archetype_identity_accessors_use_fallbacks();
+    test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_action_merge_dedupes_by_type_id();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
