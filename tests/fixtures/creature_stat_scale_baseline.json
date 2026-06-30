@@ -180,12 +180,12 @@
       "baseStats": {
         "agility": 10,
         "crit": 20,
-        "dmgMax": 21,
-        "dmgMin": 17,
+        "dmgMax": 16,
+        "dmgMin": 12,
         "hit": 80,
         "intelligence": 10,
         "mainStat": "strength",
-        "stamina": 10,
+        "stamina": 7,
         "strength": 10
       },
       "class": "CCreature",
