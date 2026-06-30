@@ -1357,6 +1357,20 @@ class EngineMcpServer:
                     "simulation_run capture_gui_screenshot returns screenshot data inline; file paths are not allowed",
                 )
 
+        # Reject extreme per-action iteration counts before starting the game or
+        # executing any loop. runSimulation/runSteps re-validate as a safety net,
+        # but enforcing it here surfaces a structured error and guarantees no
+        # engine work happens for an over-budget payload.
+        try:
+            game_simulation.validateSteps(steps)
+        except game_simulation.SimulationError as exc:
+            error_payload = exc.asDict()
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
         try:
             structured = game_simulation.runSimulation(
                 self.game_module,

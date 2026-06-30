@@ -20,6 +20,40 @@ import struct
 import zlib
 from pathlib import Path
 
+# Per-action iteration limits.
+#
+# These bound every attacker-controlled iteration count that feeds a loop in a
+# simulation step, so a single step with an extreme value (e.g. turns=10**9)
+# cannot spin the engine before any step cap applies. They are deliberately
+# generous enough for legitimate walkthroughs while staying well below anything
+# that would burn CPU. Each entry maps an action field name to (minimum,
+# maximum) inclusive bounds; a minimum of 0 permits a no-op count.
+MAX_STEP_TURNS = 1000
+MAX_STEP_PUMP_TIMES = 1000
+MAX_STEP_PUMP_ITERATIONS = 5000
+MAX_STEP_MOVE_TURNS = 1000
+
+# Cumulative iteration budget across an entire ``runSteps`` invocation. Even if
+# every individual field is within its per-field limit, the sum of the declared
+# worst-case iteration counts across all steps may not exceed this budget. This
+# prevents a long sequence of in-bounds steps (or nested/repeated actions) from
+# multiplying into an unbounded amount of work.
+MAX_SIMULATION_ITERATION_BUDGET = 20000
+
+# Map each simulation action to the iteration fields it consumes, the default
+# used when the field is absent, and the per-field ceiling. ``min_value`` is the
+# smallest accepted value (0 means a no-op count is allowed).
+_ACTION_ITERATION_FIELDS = {
+    "advance_turns": [("turns", 1, 0, MAX_STEP_TURNS)],
+    "pump_events": [
+        ("times", 1, 0, MAX_STEP_PUMP_TIMES),
+        ("max_iterations", 100, 0, MAX_STEP_PUMP_ITERATIONS),
+    ],
+    "move_to_coords": [("max_turns", 24, 0, MAX_STEP_MOVE_TURNS)],
+    "move_to_object": [("max_turns", 24, 0, MAX_STEP_MOVE_TURNS)],
+    "interact_object": [("max_turns", 24, 0, MAX_STEP_MOVE_TURNS)],
+}
+
 
 class SimulationError(RuntimeError):
     def __init__(self, step, message, state=None):
@@ -37,14 +71,79 @@ class SimulationError(RuntimeError):
         }
 
 
+def _validateIterationField(index, action, field, value, default, min_value, max_value):
+    """Validate one attacker-controlled iteration count.
+
+    Returns the bounded integer value (the value, or ``default`` when absent).
+    Raises :class:`SimulationError` for non-integer, out-of-range, or negative
+    inputs, identifying the offending step index and field. Booleans are
+    rejected explicitly because ``bool`` is an ``int`` subclass and would
+    otherwise silently pass as 0/1.
+    """
+    if value is None:
+        return default
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise SimulationError(
+            f"{index}:{action}",
+            f"`{field}` must be an integer, got {type(value).__name__}.",
+        )
+    if value < min_value:
+        raise SimulationError(
+            f"{index}:{action}",
+            f"`{field}` must be >= {min_value}, got {value}.",
+        )
+    if value > max_value:
+        raise SimulationError(
+            f"{index}:{action}",
+            f"`{field}` exceeds the per-action limit of {max_value}, got {value}.",
+        )
+    return value
+
+
+def validateSteps(steps):
+    """Validate every per-action iteration count before any loop executes.
+
+    Bounds each attacker-controlled count against its per-field limit and
+    enforces a cumulative iteration budget across the whole sequence so that a
+    long run of in-bounds steps cannot multiply into unbounded work. Raises
+    :class:`SimulationError` identifying the offending step index and field.
+    Steps are validated in declaration order; because every step is validated
+    exactly once here, nested or repeated actions cannot bypass or multiply the
+    budget.
+    """
+    total_budget = 0
+    for index, step in enumerate(steps, start=1):
+        if not isinstance(step, dict):
+            # Defer non-dict handling to runStep, which raises a precise error.
+            continue
+        action = step.get("action")
+        fields = _ACTION_ITERATION_FIELDS.get(action)
+        if not fields:
+            continue
+        for field, default, min_value, max_value in fields:
+            bounded = _validateIterationField(index, action, field, step.get(field), default, min_value, max_value)
+            total_budget += bounded
+            if total_budget > MAX_SIMULATION_ITERATION_BUDGET:
+                raise SimulationError(
+                    f"{index}:{action}",
+                    (
+                        "cumulative iteration budget of "
+                        f"{MAX_SIMULATION_ITERATION_BUDGET} exhausted at field `{field}`."
+                    ),
+                )
+    return True
+
+
 def runSimulation(game_module, map_name, player_class="Warrior", load_gui=False, steps=None):
+    steps = steps or []
+    validateSteps(steps)
     simulation = GameSimulation.startGame(
         game_module,
         map_name,
         player_class=player_class,
         load_gui=load_gui,
     )
-    return simulation.runSteps(steps or [])
+    return simulation.runSteps(steps)
 
 
 class GameSimulation:
@@ -83,8 +182,10 @@ class GameSimulation:
 
     def pumpEvents(self, times=1, drain=False, max_iterations=100):
         loop = self.gameModule.event_loop.instance()
-        minimum_iterations = max(int(times), 0)
-        max_iterations = max(int(max_iterations), minimum_iterations)
+        # Clamp defensively: validateSteps rejects out-of-range counts before the
+        # step loop runs, but direct callers may still pass raw values here.
+        minimum_iterations = min(max(int(times), 0), MAX_STEP_PUMP_TIMES)
+        max_iterations = min(max(int(max_iterations), minimum_iterations), MAX_STEP_PUMP_ITERATIONS)
         iterations = 0
         for _ in range(minimum_iterations):
             loop.run()
@@ -95,7 +196,7 @@ class GameSimulation:
         return {"pumped": iterations, "drain": bool(drain), "turn": self.gameMap.getTurn()}
 
     def advanceTurns(self, turns):
-        turns = max(int(turns), 0)
+        turns = min(max(int(turns), 0), MAX_STEP_TURNS)
         for _ in range(turns):
             self.gameMap.move()
             self.pumpEvents(1)
@@ -115,6 +216,9 @@ class GameSimulation:
         ]
 
     def moveToCoords(self, x, y, z=0, max_turns=24, mode="path"):
+        # Clamp defensively: validateSteps bounds max_turns before the step loop
+        # runs, but direct callers may still pass raw values here.
+        max_turns = min(max(int(max_turns), 0), MAX_STEP_MOVE_TURNS)
         coords = self.gameModule.Coords(int(x), int(y), int(z))
         start = self.coordsDict(self.player.getCoords())
         if mode == "direct":
@@ -332,6 +436,7 @@ class GameSimulation:
         return info
 
     def runSteps(self, steps):
+        validateSteps(steps)
         records = []
         for index, step in enumerate(steps, start=1):
             records.append(self.runStep(step, index))
