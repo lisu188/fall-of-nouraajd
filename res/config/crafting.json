@@ -14,7 +14,7 @@
             { "item": "LesserManaPotion", "count": 2 }
         ],
         "output": { "item": "ManaPotion", "count": 1 },
-        "gold": 20,
+        "gold": 640,
         "successChance": 95
     },
     "craft_town_portal_scroll": {
