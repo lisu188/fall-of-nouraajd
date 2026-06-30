@@ -168,6 +168,10 @@ class CMap : public CGameObject {
 
     Coords normalizeCoords(Coords coords) const;
 
+    // Returns true when the coordinate falls inside the configured map extents for its level.
+    // Levels without explicit bounds are treated as in-bounds (unbounded sandbox maps).
+    bool isWithinBounds(Coords coords) const;
+
     std::vector<Coords> getAdjacentCoords(Coords coords, bool includeSelf = false) const;
 
     Coords getShortestDelta(Coords from, Coords to) const;
