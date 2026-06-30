@@ -838,7 +838,9 @@ void CCreature::removeQuestItem(std::shared_ptr<CItem> item) { removeItem(item, 
 
 void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) { removeItem(item, true); }
 
-std::shared_ptr<CStats> CCreature::getStats() {
+std::shared_ptr<CStats> CCreature::getStats() { return buildLegacyStats(); }
+
+std::shared_ptr<CStats> CCreature::buildLegacyStats() {
     // Stat precedence contract (docs/design/creature_archetypes.md, "Creature stat
     // precedence contract"): effective stats are composed least- to most-specific:
     //   1. race.baseStats             -- extension point (no backing object yet)
