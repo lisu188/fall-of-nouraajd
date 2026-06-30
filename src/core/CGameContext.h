@@ -18,19 +18,48 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <unordered_map>
 
 #include "core/CGlobal.h"
 
 class CGame;
 class CGuiHandler;
 class CConfigurationProvider;
+class CMap;
 class CObjectHandler;
 class CResourcesProvider;
 class CRngHandler;
 class CScriptHandler;
 class CSlotConfig;
+
+// Context-owned cache of loaded maps that should outlive a single transition. Sessions are keyed by
+// map name plus an optional instance id so multiple live copies of the same map can be retained. The
+// store only retains and hands back maps; it does not change transition semantics on its own.
+class CMapSessionStore {
+  public:
+    static std::string makeKey(const std::string &mapName, const std::string &instanceId = "");
+
+    void put(const std::string &mapName, const std::string &instanceId, const std::shared_ptr<CMap> &map);
+
+    void put(const std::shared_ptr<CMap> &map, const std::string &instanceId = "");
+
+    std::shared_ptr<CMap> get(const std::string &mapName, const std::string &instanceId = "") const;
+
+    bool contains(const std::string &mapName, const std::string &instanceId = "") const;
+
+    bool evict(const std::string &mapName, const std::string &instanceId = "");
+
+    void clear();
+
+    std::size_t size() const;
+
+  private:
+    std::unordered_map<std::string, std::shared_ptr<CMap>> sessions;
+};
 
 class CGameContext {
     friend class CGame;
@@ -53,6 +82,8 @@ class CGameContext {
     std::shared_ptr<CResourcesProvider> getResourcesProvider();
 
     std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
+
+    std::shared_ptr<CMapSessionStore> getMapSessionStore();
 
     bool isActive() const;
 
@@ -78,6 +109,7 @@ class CGameContext {
     std::shared_ptr<CRngHandler> rngHandler;
     std::shared_ptr<CResourcesProvider> resourcesProvider;
     std::shared_ptr<CConfigurationProvider> configurationProvider;
+    std::shared_ptr<CMapSessionStore> mapSessionStore;
     vstd::lazy<CSlotConfig> slotConfiguration;
     std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;

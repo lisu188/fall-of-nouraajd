@@ -3003,6 +3003,66 @@ def assert_nouraajd_save_load_roundtrip(test_case, game, game_map, prefix, save_
     return loaded_game, loaded_map, loaded_player, after
 
 
+def save_state_summary(
+    game_map,
+    player,
+    *,
+    map_bool_flags=(),
+    map_numeric_flags=(),
+    inventory_items=(),
+    object_names=(),
+    object_prefixes=(),
+):
+    """Reusable normalized summary of the live state that must survive a save/reload unchanged.
+
+    Captures the stable fields shared by every save-affecting fixture -- map name and turn, the
+    scene transition state, player identity/position/gold, inventory counts, active and completed
+    quests, selected map flags, named-object presence, and spawned-name prefix counts -- so a new
+    fixture can round-trip with just the flag/item/object keys it cares about. The result is
+    normalized for order-independent comparison. The owning game instance (for the scene transition
+    state) is resolved from the map, so callers pass the live map and player rather than the module.
+    """
+    return normalize_save_snapshot(
+        {
+            "map": game_map.mapName,
+            "turn": game_map.getTurn(),
+            "transition_state": game_map.getGame().getSceneManager().getTransitionStateName(),
+            "player": {
+                "type": player.getType(),
+                "typeId": player.getTypeId(),
+                "coords": coords_tuple(player.getCoords()),
+                "gold": player.getGold(),
+            },
+            "items": player_item_counts(player, inventory_items),
+            "active_quests": quest_names(player),
+            "completed_quests": completed_quest_names(player),
+            "map_bool_flags": {flag: game_map.getBoolProperty(flag) for flag in map_bool_flags},
+            "map_numeric_flags": {flag: game_map.getNumericProperty(flag) for flag in map_numeric_flags},
+            "objects": named_object_presence(game_map, object_names),
+            "object_prefix_counts": named_object_prefix_counts(game_map, object_prefixes),
+        }
+    )
+
+
+def assert_save_load_roundtrip(test_case, game, game_map, prefix, save_paths=None, **summary_kwargs):
+    """Summarize live state, save, reload, and assert every stable field round-trips unchanged.
+
+    Appends the produced save path to ``save_paths`` (when given) so callers can clean it up, and
+    returns ``(loaded_game, loaded_map, loaded_player, summary)`` for fixture-specific assertions on
+    the reloaded state.
+    """
+    before = save_state_summary(game_map, game_map.getPlayer(), **summary_kwargs)
+    save_path, loaded_game, loaded_map, loaded_player = save_load_roundtrip(game, game_map, prefix)
+    if save_paths is not None:
+        save_paths.append(save_path)
+    after = save_state_summary(loaded_map, loaded_player, **summary_kwargs)
+
+    test_case.assertEqual(before, after)
+    test_case.assertIsNotNone(get_player_controller(loaded_player))
+    test_case.assertIsNotNone(loaded_player.getFightController())
+    return loaded_game, loaded_map, loaded_player, after
+
+
 def find_map_object_definition(map_name, object_name):
     map_data = load_map_data(map_name)
     for layer in map_data.get("layers", []):
@@ -15184,6 +15244,47 @@ class GameTest(unittest.TestCase):
                     "initial": initial["quest_states"],
                     "mid": mid["quest_states"],
                     "late": late["quest_states"],
+                    "save_count": len(save_paths),
+                },
+                sort_keys=True,
+            )
+        finally:
+            for save_path in save_paths:
+                save_path.unlink(missing_ok=True)
+
+    @game_test
+    def test_save_state_summary_round_trips_through_save_load(self):
+        game = load_game_module()
+        save_paths = []
+
+        try:
+            g, game_map, player = load_game_map_with_player("nouraajd")
+            player.addGold(250)
+            player.addItem("letterFromRolf")
+            player.addQuest("rolfQuest")
+
+            g, game_map, player, summary = assert_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "save_state_summary_roundtrip",
+                save_paths,
+                inventory_items=("letterFromRolf",),
+                object_names=("cave1",),
+            )
+
+            self.assertEqual("nouraajd", summary["map"])
+            self.assertEqual("Warrior", summary["player"]["typeId"])
+            self.assertGreaterEqual(summary["player"]["gold"], 250)
+            self.assertGreaterEqual(summary["items"]["letterFromRolf"], 1)
+            self.assertIn("rolfQuest", summary["active_quests"])
+            self.assertTrue(summary["objects"]["cave1"])
+
+            return True, json.dumps(
+                {
+                    "map": summary["map"],
+                    "gold": summary["player"]["gold"],
+                    "active_quests": summary["active_quests"],
                     "save_count": len(save_paths),
                 },
                 sort_keys=True,
