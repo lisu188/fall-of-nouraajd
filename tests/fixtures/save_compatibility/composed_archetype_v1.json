@@ -25,14 +25,32 @@
           "class": "CCreature",
           "properties": {
             "creatureClass": {
-              "ref": "warriorClass"
+              "class": "CCreatureClass",
+              "properties": {
+                "baseStats": {
+                  "class": "CStats",
+                  "properties": {
+                    "strength": 9
+                  }
+                },
+                "mainStat": "strength"
+              }
             },
             "name": "composedCompanion",
             "posx": 6,
             "posy": 9,
             "posz": 0,
             "race": {
-              "ref": "humanRace"
+              "class": "CCreatureRace",
+              "properties": {
+                "baseStats": {
+                  "class": "CStats",
+                  "properties": {
+                    "strength": 7
+                  }
+                },
+                "creatureType": "humanoid"
+              }
             },
             "typeId": "composedCompanionTemplate"
           }

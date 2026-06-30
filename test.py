@@ -824,12 +824,15 @@ class SaveFixtureTest(unittest.TestCase):
         # definition through CCreature's "race"/"creatureClass" V_PROPERTY pointers
         # (src/object/CCreature.h: V_PROPERTY(..., race, ...) and
         # V_PROPERTY(..., creatureClass, ...) over std::shared_ptr<CCreatureRace> /
-        # std::shared_ptr<CCreatureClass>). The references are persisted as forward-declared
-        # object refs ({"ref": "..."}) -- the same persisted shape object_deserialize() resolves
-        # (src/core/CSerialization.cpp: CJsonUtil::isRef -> ObjectHandler::createObject) and
-        # identical to how the legacy siege fixture persists its item ref. This loads the fixture
-        # through the suite's normal save-decode path (save_snapshot + the snapshot accessors) and
-        # pins that the composed creature exposes both archetype refs under their exact names.
+        # std::shared_ptr<CCreatureClass>). The archetype definitions are persisted INLINE as
+        # full {"class","properties"} sub-objects -- the same self-contained shape object_serialize
+        # emits and object_deserialize class-name-constructs (src/core/CSerialization.cpp:
+        # CJsonUtil::isType -> ObjectHandler::getType) -- so the native loader needs no external
+        # res/config archetype content to resolve them. The inline property keys are the exact
+        # V_PROPERTY names proven by the CCreatureRace/CCreatureClass round-trip tests in
+        # tests/unit/test_core.cpp (race: creatureType + baseStats; class: mainStat + baseStats;
+        # CStats.strength). This loads the fixture through the suite's normal save-decode path
+        # (save_snapshot + the snapshot accessors) and pins the composed archetype shape.
         fixture_path = SAVE_FIXTURE_DIR / "composed_archetype_v1.json"
         self.assertTrue(fixture_path.is_file(), fixture_path)
         document = json.loads(fixture_path.read_text(encoding="utf-8"))
@@ -845,21 +848,22 @@ class SaveFixtureTest(unittest.TestCase):
         self.assertNotIn("race", player)
         self.assertNotIn("creatureClass", player)
 
-        # The composed companion carries the two archetype references under the exact property
-        # names CCreature serializes ("race" / "creatureClass"), each a forward-declared ref.
+        # The composed companion carries the two archetype definitions under the exact property
+        # names CCreature serializes ("race" / "creatureClass"), each a self-contained inline
+        # {"class","properties"} object the loader can construct without external content.
         companion = snapshot_object_properties(snapshot, "composedCompanion")
         self.assertEqual("composedCompanionTemplate", companion.get("typeId"))
 
         race = companion.get("race")
         creature_class = companion.get("creatureClass")
-        self.assertIsInstance(race, dict, "race must persist as a forward-declared object ref")
-        self.assertIsInstance(creature_class, dict, "creatureClass must persist as a forward-declared object ref")
-        # Forward-declared ref shape: a single "ref" string key, which object_deserialize
-        # resolves via ObjectHandler::createObject (CSerialization.cpp / CJsonUtil::isRef).
-        self.assertEqual(["ref"], list(race.keys()))
-        self.assertEqual(["ref"], list(creature_class.keys()))
-        self.assertEqual("humanRace", race["ref"])
-        self.assertEqual("warriorClass", creature_class["ref"])
+        self.assertIsInstance(race, dict, "race must persist as an inline archetype object")
+        self.assertIsInstance(creature_class, dict, "creatureClass must persist as an inline archetype object")
+        # Inline class shape: a class-name + properties construct (CJsonUtil::isType ->
+        # ObjectHandler::getType), so no res/config archetype content is required to resolve it.
+        self.assertEqual("CCreatureRace", race.get("class"))
+        self.assertEqual("CCreatureClass", creature_class.get("class"))
+        self.assertEqual("humanoid", race.get("properties", {}).get("creatureType"))
+        self.assertEqual("strength", creature_class.get("properties", {}).get("mainStat"))
 
         # The fixture must validate through the published immutable summary like every other
         # save-compatibility fixture, so the composed shape is pinned end to end.
