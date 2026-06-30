@@ -1687,6 +1687,68 @@ void test_post_combat_player_multi_opponent_cell_returns_to_origin() {
                 "afterMove should clear the pending move origin after a multi-opponent encounter");
 }
 
+void test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta),
+                "post-combat victory cache fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatVictoryCacheFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    // The coordinate cache must follow the committed final position atomically: the victorious
+    // player is indexed back at its origin and is never left registered in the contested cell, and
+    // the defeated opponent is purged from that cell.
+    expect_true(map->getObjectsAtCoords(origin).contains(player),
+                "the victorious player should be indexed at its origin in the coordinate cache");
+    expect_true(!map->getObjectsAtCoords(hostile_cell).contains(player),
+                "the victorious player must not remain indexed in the hostile cell");
+    expect_true(!map->getObjectsAtCoords(hostile_cell).contains(hostile),
+                "the defeated opponent should be removed from the hostile-cell cache");
+    expect_true(map->getObjectByName(player->getName()) == player,
+                "the player should still resolve by name after returning to its origin");
+}
+
+void test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta),
+                "post-combat cancellation cache fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatCancellingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatCancelCacheFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    // A cancelled/stalled encounter restores the origin without disturbing the survived opponent:
+    // the player is indexed at its origin, never in the contested cell, and the still-living foe
+    // remains indexed in that cell.
+    expect_true(map->getObjectsAtCoords(origin).contains(player),
+                "a cancelled-encounter player should be indexed at its origin in the coordinate cache");
+    expect_true(!map->getObjectsAtCoords(hostile_cell).contains(player),
+                "a cancelled-encounter player must not remain indexed in the hostile cell");
+    expect_true(map->getObjectsAtCoords(hostile_cell).contains(hostile),
+                "the surviving opponent should stay indexed in its cell after a cancelled encounter");
+    expect_true(player->isAlive() && hostile->isAlive(),
+                "a cancelled encounter should leave both combatants alive and correctly indexed");
+}
+
 } // namespace
 
 int main() {
@@ -1724,6 +1786,8 @@ int main() {
     test_post_combat_player_defeat_skips_further_movement();
     test_post_combat_player_cancellation_returns_to_origin();
     test_post_combat_player_multi_opponent_cell_returns_to_origin();
+    test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell();
+    test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present();
 
     return finish_tests();
 }
