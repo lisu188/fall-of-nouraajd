@@ -601,6 +601,189 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertEqual([], [str(issue) for issue in issues])
 
+    def test_given_default_for_undeclared_quest_key_when_validating_then_reports_missing_declaration(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked", "ghost": "not_started"}
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "ghost"',
+            'quest default "not_started" references undeclared quest key "ghost" (missing from QUEST_KEYS)',
+        )
+
+    def test_given_transition_target_for_undeclared_quest_key_when_validating_then_reports_missing_declaration(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    self._set_state("ghost", "active")
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "ghost"',
+            'transition target "active" writes undeclared quest key "ghost" (missing from QUEST_KEYS)',
+        )
+
+    def test_given_state_read_for_undeclared_quest_key_when_validating_then_reports_missing_declaration(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def check(self):
+                    return self.get_state("ghost") == "active"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "ghost"',
+            'state read "active" references undeclared quest key "ghost" (missing from QUEST_KEYS)',
+        )
+
+    def test_given_unreachable_terminal_state_when_validating_then_reports_unreachable_terminal(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    self._set_state("main", "active")
+
+                def isCompleted(self):
+                    return self.get_state("main") == "finished"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'quest "main"',
+            'terminal state "finished" is unreachable: it is neither the default nor a transition target',
+        )
+
+    def test_given_reachable_quest_state_machine_when_validating_then_accepts_transitions(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+                def advance(self):
+                    if self.get_state("main") == "locked":
+                        self._set_state("main", "active")
+                    if self.get_state("main") == "active":
+                        self._set_state("main", "finished")
+
+                def isCompleted(self):
+                    return self.get_state("main") == "finished"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_given_default_terminal_state_when_validating_then_treats_default_as_reachable(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "resolved"}
+
+                def isCompleted(self):
+                    return self.get_state("main") == "resolved"
+
+            @register(context)
+            class StartEvent(CEvent):
+                pass
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_given_script_granted_quest_id_missing_from_config_when_validating_then_reports_unknown_quest(self):
+        root = self.make_fixture()
+        write_property_hygiene_script(
+            root / "res/maps/broken/script.py",
+            """
+            class QuestSystem(QuestStateStore):
+                QUEST_KEYS = {"main": "quest_state_main"}
+                QUEST_DEFAULTS = {"main": "locked"}
+
+            @register(context)
+            class StartEvent(CEvent):
+                def onEnter(self, event):
+                    event.getCause().addQuest("phantomQuest")
+            """,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'addQuest("phantomQuest")',
+            'unknown quest id "phantomQuest"',
+        )
+
     def test_creature_archetype_naming_policy_accepts_conforming_ids(self):
         root = self.make_fixture()
         write_json(

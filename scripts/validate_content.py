@@ -1364,6 +1364,7 @@ class ContentValidator:
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
         self._validate_script_property_hygiene(context)
+        self._validate_quest_state_transitions(context)
 
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)
@@ -2212,6 +2213,67 @@ class ContentValidator:
                 continue
             valid_flags.add(flag.name)
         return valid_flags
+
+    def _validate_quest_state_transitions(self, context: MapContext) -> None:
+        """Validate the state machine declared by a map script's quest-state usage.
+
+        Builds on the quest-state collection produced by ScriptAnalyzer (QUEST_KEYS,
+        QUEST_DEFAULTS, _set_state/state_in writes and reads, and terminal completion
+        checks). A quest key is "declared" when QUEST_KEYS maps it to a storage key.
+        The rules enforced are:
+
+        * every QUEST_DEFAULTS default references a declared quest key;
+        * every transition target (a _set_state write) belongs to a declared quest key;
+        * every state read (a get_state comparison or state_in) belongs to a declared
+          quest key;
+        * every terminal completion state is reachable from a default -- i.e. it is the
+          default state itself or a state assigned by some transition write. A terminal
+          state that is never the default and never written can never be entered, so the
+          completion check it guards can never fire.
+
+        Undeclared keys are detected because any get_state/_set_state/state_in reference
+        records a ScriptQuestStateUsage entry whose storage_key stays None when the key
+        is absent from QUEST_KEYS.
+        """
+        info = context.script_info
+        if not info:
+            return
+        for quest_key in sorted(info.quest_states):
+            usage = info.quest_states[quest_key]
+            declared = bool(usage.storage_key)
+            location = f'quest "{quest_key}"'
+            if usage.default_state is not None and not declared:
+                self._issue(
+                    info.path,
+                    location,
+                    f'quest default "{usage.default_state}" references undeclared quest key "{quest_key}" '
+                    "(missing from QUEST_KEYS)",
+                )
+            if not declared:
+                for state in sorted(usage.written_states):
+                    self._issue(
+                        info.path,
+                        location,
+                        f'transition target "{state}" writes undeclared quest key "{quest_key}" '
+                        "(missing from QUEST_KEYS)",
+                    )
+                for state in sorted(usage.read_states):
+                    self._issue(
+                        info.path,
+                        location,
+                        f'state read "{state}" references undeclared quest key "{quest_key}" '
+                        "(missing from QUEST_KEYS)",
+                    )
+                continue
+            reachable = set(usage.written_states)
+            if usage.default_state is not None:
+                reachable.add(usage.default_state)
+            for state in sorted(usage.terminal_check_states - reachable):
+                self._issue(
+                    info.path,
+                    location,
+                    f'terminal state "{state}" is unreachable: it is neither the default nor a transition target',
+                )
 
     def _first_property_access(self, info: ScriptInfo, property_name: str) -> ScriptPropertyAccess | None:
         accesses = [
