@@ -775,6 +775,86 @@ class ContentValidatorTest(unittest.TestCase):
             'unknown property "bogus" for class "CPropertyDerived"',
         )
 
+    def test_creature_class_main_stat_numeric_stat_passes(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["WarriorClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": "strength"},
+        }
+        write_json(config_path, config)
+
+        validator = ContentValidator(root)
+        validator._collect_engine_classes()
+
+        self.assertEqual({"strength", "agility", "intelligence"}, validator._numeric_main_stat_names())
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_class_main_stat_typo_reports_class_path(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["WarriorClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": "strenght"},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "WarriorClass.properties.mainStat",
+            'property "mainStat" for class "CCreatureClass" value "strenght" is not a numeric CStats property',
+            "expected one of agility, intelligence, strength",
+        )
+
+    def test_creature_class_main_stat_non_numeric_stat_reports_class_path(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        # "mainStat" itself is a std::string CStats property -- present but non-numeric.
+        config["MageClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": "mainStat"},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "MageClass.properties.mainStat",
+            'property "mainStat" for class "CCreatureClass" value "mainStat" is not a numeric CStats property',
+        )
+
+    def test_creature_class_main_stat_empty_reports_class_path(self):
+        root = self.make_fixture()
+        self.write_creature_class_main_stat_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["EmptyClass"] = {
+            "class": "CCreatureClass",
+            "properties": {"mainStat": ""},
+        }
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "EmptyClass.properties.mainStat",
+            'property "mainStat" for class "CCreatureClass" expected a non-empty numeric CStats property name; '
+            "got string",
+        )
+
     def test_cpp_property_schema_reports_scalar_type_mismatches(self):
         root = self.make_fixture()
         self.write_property_schema_fixture(root)
@@ -1304,6 +1384,49 @@ class ContentValidatorTest(unittest.TestCase):
         manifest = root / "scripts/type_registration_exclusions.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
         write_json(manifest, {"exclusions": exclusions})
+
+    def write_creature_class_main_stat_fixture(self, root):
+        """Declare synthetic CStats + CCreatureClass metadata for mainStat checks.
+
+        CCreatureClass does not exist on real content, so the validator is vacuously
+        satisfied there; these synthetic headers let the test exercise the forward
+        guard.  CStats mirrors src/core/CStats.h closely enough to drive the numeric
+        property derivation: a couple of int stats plus the std::string mainStat.
+        """
+        header = root / "src/object/CCreatureClassFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                        V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CStats {
+                    V_META(CStats, CGameObject,
+                        V_PROPERTY(CStats, int, strength, getStrength, setStrength),
+                        V_PROPERTY(CStats, int, agility, getAgility, setAgility),
+                        V_PROPERTY(CStats, int, intelligence, getIntelligence, setIntelligence),
+                        V_PROPERTY(CStats, std::string, mainStat, getMainStat, setMainStat))
+                };
+
+                class CCreatureClass {
+                    V_META(CCreatureClass, CGameObject,
+                        V_PROPERTY(CCreatureClass, std::string, mainStat, getMainStat, setMainStat))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CCreatureClassTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerCreatureClassTypes() {
+                    CTypes::register_type<CStats, CGameObject>();
+                    CTypes::register_type<CCreatureClass, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
 
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
