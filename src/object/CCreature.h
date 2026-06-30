@@ -293,6 +293,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     void takeDamage(int i);
 
+    std::shared_ptr<CStats> buildLegacyStats();
+
     std::shared_ptr<CInteraction> getLevelAction();
 
     bool npc = false;
