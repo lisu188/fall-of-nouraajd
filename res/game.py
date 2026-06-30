@@ -44,6 +44,35 @@ def claim_once(owner, property_name):
     return True
 
 
+def remove_runtime_actors(game_map, names=(), prefixes=()):
+    """Idempotently remove runtime actor objects from a map.
+
+    Objects are matched by exact name (``names``) or by an explicitly reviewed
+    name prefix (``prefixes``). Objects whose names merely overlap a target name
+    are preserved unless a prefix that matches them was explicitly passed, so a
+    similar but non-matching actor is never collateral. The helper tolerates
+    actors that are already gone and returns the number of objects removed.
+    """
+    name_set = frozenset(name for name in names if name)
+    prefix_tuple = tuple(prefix for prefix in prefixes if prefix)
+    if not name_set and not prefix_tuple:
+        return 0
+
+    def _matches(obj):
+        name = obj.getName()
+        if not name:
+            return False
+        if name in name_set:
+            return True
+        return bool(prefix_tuple) and name.startswith(prefix_tuple)
+
+    doomed = []
+    game_map.forObjects(doomed.append, _matches)
+    for obj in doomed:
+        game_map.removeObject(obj)
+    return len(doomed)
+
+
 def playtest_object_ref(obj):
     if obj is None:
         return None
