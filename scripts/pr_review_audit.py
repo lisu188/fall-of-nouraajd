@@ -297,7 +297,15 @@ def checkSummary(record: dict[str, Any]) -> CheckSummary:
         return summary or CheckSummary(state="unknown")
 
     if isinstance(rawChecks, dict):
-        rawChecks = firstValue(rawChecks, "nodes", "items", "checks", default=())
+        nested = firstValue(rawChecks, "nodes", "items", "checks", default=None)
+        if nested is None:
+            # An object-shaped rollup with no nested check collection may carry the
+            # aggregate state directly (e.g. {"state": "SUCCESS"}); interpret it the
+            # same way as the checkRollup fallback instead of dropping it to unknown.
+            summary = summaryFromRollup(rawChecks)
+            if summary is not None:
+                return summary
+        rawChecks = nested if nested is not None else ()
     if isinstance(rawChecks, str) or not isinstance(rawChecks, Iterable):
         rawChecks = [rawChecks]
 

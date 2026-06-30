@@ -245,6 +245,33 @@ class PrReviewAuditTest(unittest.TestCase):
         self.assertEqual("success", review["checkState"])
         self.assertEqual([], review["failedChecks"])
 
+    def test_object_shaped_status_check_rollup_resolves_aggregate_state(self) -> None:
+        review = self.classify(
+            {
+                "number": 121,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": {"state": "SUCCESS"},
+            }
+        )
+
+        self.assertEqual("success", review["checkState"])
+        self.assertEqual([], review["failedChecks"])
+        self.assertNotIn("check rollup is missing or unrecognized", review.get("blockers", []))
+
+    def test_object_shaped_status_check_rollup_reports_failure(self) -> None:
+        review = self.classify(
+            {
+                "number": 122,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "UNKNOWN",
+                "statusCheckRollup": {"state": "FAILURE"},
+            }
+        )
+
+        self.assertEqual("failure", review["checkState"])
+        self.assertEqual("failing_ci", review["actionCategory"])
+
     def test_newer_duplicate_check_success_replaces_older_cancelled_attempt(self) -> None:
         review = self.classify(
             {
