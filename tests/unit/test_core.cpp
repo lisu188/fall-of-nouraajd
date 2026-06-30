@@ -26,7 +26,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSaveFormat.h"
-#include "core/CController.h"
 #include "core/CSerialization.h"
 #include "core/CScript.h"
 #include "core/CStats.h"
@@ -2234,48 +2233,66 @@ void test_levelup_composed_path_unlocks_via_effective_interactions_without_seria
 //     stay derived through composition, exactly as the composed levelUp path
 //     guarantees, so a clone cannot start accumulating them as permanent actions.
 //
-// Harness: the minimal in-process object-handler harness (no loaded map), mirroring
-// the archetype metadata round-trip tests above. The source creature is kept
-// deliberately minimal -- only archetype refs plus scalar fields, with NO nested
-// `levelling`/`actions` maps on the CREATURE itself -- so the clone's deep-copy
-// path has no fragile creature-level sub-objects whose null deserialization could
-// segfault. The one nested level unlock lives inside the creatureClass archetype
-// (a plain CInteraction that deep-copies cleanly), and getLevelAction() is never
-// invoked, so the null-subobject clone crash is avoided. Every type the creature
-// serializes through (CStats from its base stats, CController from the lazy
-// getController default, CInteraction for the class unlock) is registered so the
-// round-trip resolves instead of silently dropping fields.
+// Harness: a REAL loaded game (CGameLoader::loadGame + startGame "empty"), the same
+// bootstrap the creature stat/action baseline tests above use. This loads the full
+// native plugin so EVERY type a CCreature serializes through -- its `actions`/
+// `effects`/`items` (std::set<...>) collections, `controller`/`fightController`,
+// `equipped`/`levelling` maps, baseStats/levelStats -- has a registered serializer.
+// A bare hand-built CCreature in a partial harness leaves some of those property
+// types without a serializer ("No serializer for property: actions /
+// fightController"), which serializes to malformed JSON and crashes the clone
+// round-trip on MSVC (0xc0000409). Sourcing a fully-formed engine creature makes
+// the serialize step total, so the clone round-trips cleanly on every platform.
+//
+// The concrete creature is obtained via createObject for a registered CCreature
+// subtype; the archetype references are then attached inline (plain
+// CCreatureRace/CCreatureClass definitions) so the creature is composed, and the
+// one nested level unlock lives inside the creatureClass archetype (composition
+// source), never on the creature's own `actions`. getLevelAction() is never
+// invoked, so the historical null-subobject clone crash is also avoided.
 void test_creature_clone_preserves_composed_archetypes() {
-    auto game = std::make_shared<CGame>();
-    register_archetype_type<CCreature, CMapObject, CGameObject>(game);
-    register_archetype_type<CCreatureRace, CGameObject>(game);
-    register_archetype_type<CCreatureClass, CGameObject>(game);
-    register_archetype_type<CStats, CGameObject>(game);
-    register_archetype_type<CController, CGameObject>(game);
-    register_archetype_type<CInteraction, CGameObject>(game);
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGame(game, "empty");
 
-    // Race archetype definition: identity carried by its creatureType.
-    auto race = std::make_shared<CCreatureRace>();
+    // A fully-formed engine creature of the first registered concrete CCreature
+    // subtype: every property type it serializes through is registered by the
+    // loaded native plugin, so the clone round-trip is total (no missing serializer).
+    auto subtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(!subtypes.empty(), "a normally loaded game registers concrete CCreature subtypes to clone");
+    std::sort(subtypes.begin(), subtypes.end());
+    std::shared_ptr<CCreature> source;
+    for (const auto &type : subtypes) {
+        source = game->createObject<CCreature>(type);
+        if (source) {
+            break;
+        }
+    }
+    expect_true(source != nullptr, "a registered CCreature subtype constructs a concrete creature to clone");
+
+    // Archetype definitions attached inline. Race identity is its creatureType;
+    // class identity is its mainStat. The class also carries a level-keyed unlock
+    // that exists ONLY on the archetype (composition source), never folded into the
+    // creature's own concrete actions.
+    auto race = game->createObject<CCreatureRace>("CCreatureRace");
+    expect_true(race != nullptr, "CCreatureRace is registered and constructs in the loaded game");
     race->setCreatureType("humanoid");
 
-    // Class archetype definition: identity carried by its mainStat, plus a
-    // level-keyed unlock that exists ONLY on the archetype (composition source),
-    // never folded into the creature's own actions.
-    auto classUnlock = std::make_shared<CInteraction>();
+    auto classUnlock = game->createObject<CInteraction>("CInteraction");
+    expect_true(classUnlock != nullptr, "CInteraction is registered and constructs in the loaded game");
     classUnlock->setTypeId("warriorCleave");
-    auto klass = std::make_shared<CCreatureClass>();
+    auto klass = game->createObject<CCreatureClass>("CCreatureClass");
+    expect_true(klass != nullptr, "CCreatureClass is registered and constructs in the loaded game");
     klass->setMainStat("strength");
     klass->setLevelling({{"1", classUnlock}});
 
-    auto source = std::make_shared<CCreature>();
-    source->setGame(game);
     source->setName("composedSource");
     source->setRace(race);
     source->setCreatureClass(klass);
     source->setLevel(3);
     source->setHp(11);
     source->setGold(5);
-    // Minimal by design: no creature-level levelling/actions to deep-copy.
+    // The unlock lives on the archetype, not on the creature's own actions.
+    source->setActions({});
     expect_true(source->usesArchetypeComposition(), "the source creature is composed (has race + creatureClass)");
     expect_true(source->getActions().empty(), "the source creature starts with no concrete actions");
 
