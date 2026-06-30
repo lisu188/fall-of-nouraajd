@@ -726,7 +726,23 @@ void CCreature::afterMove() {
     map->forObjectsAtCoords(arrival, fightAction, fightPred);
     if (!opponents.empty()) {
         const auto result = CFightHandler::fightManyResult(self, opponents);
-        if (result.outcome != CFightOutcome::AttackerVictory || !moverStillAtArrival()) {
+        // Post-combat position policy. The fight ran because the mover stepped into a
+        // hostile cell. If the attacker was defeated or otherwise removed it already left
+        // the arrival square, so there is nothing more to do. For the player every
+        // resolved encounter (victory, cancellation or stall) restores the pre-step origin
+        // via the non-hook relocation helper, so the player never lingers inside the
+        // hostile cell and onStep/onEnter never fire there. Non-player movers keep the
+        // legacy behaviour: only a victory lets them stay and continue onto onStep/onEnter.
+        if (!moverStillAtArrival()) {
+            return;
+        }
+        if (self->isPlayer()) {
+            if (pendingMoveOrigin.has_value()) {
+                self->relocateWithoutMoveHooks(*pendingMoveOrigin);
+            }
+            return;
+        }
+        if (result.outcome != CFightOutcome::AttackerVictory) {
             return;
         }
     }

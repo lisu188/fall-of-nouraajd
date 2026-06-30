@@ -505,6 +505,59 @@ class ObjectChangedProbe : public CGameObject {
     std::vector<Coords> objectChangedCoords;
 };
 
+// Drives the attacker's side of a step-combat encounter to a deterministic outcome so the
+// post-combat position policy in CCreature::afterMove can be exercised without real RNG.
+class PostCombatKillingFightController : public CFightController {
+  public:
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> opponent) override {
+        if (opponent) {
+            opponent->setHp(0);
+        }
+        return true;
+    }
+};
+
+class PostCombatSelfDefeatFightController : public CFightController {
+  public:
+    bool control(std::shared_ptr<CCreature> actor, std::shared_ptr<CCreature>) override {
+        if (actor) {
+            actor->setHp(0);
+        }
+        return true;
+    }
+};
+
+class PostCombatCancellingFightController : public CFightController {
+  public:
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return false; }
+
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
+};
+
+// Finds a walkable origin square that has at least one walkable orthogonal neighbour, returning
+// the origin together with the single-step delta that reaches that neighbour.
+bool find_walkable_step(const std::shared_ptr<CMap> &map, Coords &origin, Coords &delta) {
+    for (const auto &[z, bounds] : map->getBounds()) {
+        for (int y = 0; y <= bounds.second; ++y) {
+            for (int x = 0; x <= bounds.first; ++x) {
+                Coords candidate(x, y, z);
+                if (!map->canStep(candidate)) {
+                    continue;
+                }
+                for (const auto &step : {EAST, WEST, SOUTH, NORTH}) {
+                    Coords target = map->normalizeCoords(candidate + step);
+                    if (target != candidate && map->canStep(target)) {
+                        origin = candidate;
+                        delta = step;
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 std::shared_ptr<CStats> creature_stats() {
     auto stats = std::make_shared<CStats>();
     stats->setMainStat("intelligence");
@@ -527,6 +580,23 @@ std::shared_ptr<CCreature> test_creature(const std::shared_ptr<CGame> &game, con
     creature->setPosZ(coords.z);
     creature->setHp(creature->getHpMax());
     return creature;
+}
+
+std::shared_ptr<CCreature> add_post_combat_hostile(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                   Coords coords) {
+    auto hostile = std::make_shared<CCreature>();
+    hostile->setName(name);
+    hostile->setGame(game);
+    hostile->setBaseStats(creature_stats());
+    hostile->setLevel(1);
+    hostile->setHp(hostile->getHpMax());
+    hostile->setFightController(std::make_shared<CFightController>());
+    hostile->setPosX(coords.x);
+    hostile->setPosY(coords.y);
+    hostile->setPosZ(coords.z);
+    game->getMap()->addObject(hostile);
+    hostile->setHp(hostile->getHpMax());
+    return hostile;
 }
 
 void test_map_move_ignores_controller_future_after_transition_generation_changes() {
@@ -1508,6 +1578,115 @@ void test_map_move_blocks_new_turn_while_transition_pending() {
     expect_true(map->getTurn() == turn_before, "the old map should not advance a turn while a transition is pending");
 }
 
+void test_post_combat_player_victory_returns_to_origin() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta), "post-combat victory fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatVictoryFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "winning a step-into fight should return the player to the pre-step origin");
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "victorious player should never remain inside the hostile cell");
+    expect_true(!hostile->isAlive(), "the defeated opponent should be removed from the encounter");
+    expect_true(!player->getPendingMoveOrigin().has_value(),
+                "afterMove should clear the pending move origin once the encounter is resolved");
+}
+
+void test_post_combat_player_defeat_skips_further_movement() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta), "post-combat defeat fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatSelfDefeatFightController>());
+    add_post_combat_hostile(game, "postCombatDefeatFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+    pump_event_loop_iterations();
+
+    // The defeated player is removed and then respawned at the map entry by the player
+    // onDestroy trigger, so the post-combat policy must skip its own movement work.
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "a defeated attacker must never be left standing inside the hostile cell");
+    expect_true(map->normalizeCoords(player->getCoords()) == map->normalizeCoords(map->getEntry()),
+                "a defeated player should respawn at the map entry rather than the hostile cell");
+    expect_true(!player->getPendingMoveOrigin().has_value(),
+                "afterMove should clear the pending move origin even when the attacker is defeated");
+}
+
+void test_post_combat_player_cancellation_returns_to_origin() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta), "post-combat cancellation fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatCancellingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatCancelFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "cancelling a step-into fight should return the player to the pre-step origin");
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "a cancelled or stalled encounter must never leave the player inside the hostile cell");
+    expect_true(player->isAlive() && hostile->isAlive(), "a cancelled encounter should leave both combatants alive");
+    expect_true(!player->getPendingMoveOrigin().has_value(),
+                "afterMove should clear the pending move origin after a cancelled encounter");
+}
+
+void test_post_combat_player_multi_opponent_cell_returns_to_origin() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta),
+                "post-combat multi-opponent fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+    auto first = add_post_combat_hostile(game, "postCombatMultiFoeA", hostile_cell);
+    auto second = add_post_combat_hostile(game, "postCombatMultiFoeB", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "clearing a multi-opponent cell should still return the player to the pre-step origin");
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "the player must not remain in a cleared multi-opponent cell");
+    expect_true(!first->isAlive() && !second->isAlive(),
+                "every opponent sharing the hostile cell should be defeated before the move resolves");
+    expect_true(!player->getPendingMoveOrigin().has_value(),
+                "afterMove should clear the pending move origin after a multi-opponent encounter");
+}
+
 } // namespace
 
 int main() {
@@ -1541,6 +1720,10 @@ int main() {
     test_map_session_store_put_get_evict_and_ownership();
     test_game_context_owns_a_map_session_store();
     test_map_move_blocks_new_turn_while_transition_pending();
+    test_post_combat_player_victory_returns_to_origin();
+    test_post_combat_player_defeat_skips_further_movement();
+    test_post_combat_player_cancellation_returns_to_origin();
+    test_post_combat_player_multi_opponent_cell_returns_to_origin();
 
     return finish_tests();
 }
