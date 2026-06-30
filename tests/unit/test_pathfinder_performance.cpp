@@ -538,9 +538,87 @@ void testMapMovementCostLookupDoesNotMaterializeSparseDefaultTiles() {
                        static_cast<long long>(initial_navigation_revision));
 }
 
+void testEnvelopeBudgetBoundsUnreachableGoalInOpenPlane() {
+    // Models a request against a sparse / effectively unbounded map: the goal is passable but sealed
+    // off by an impassable ring, while every other coordinate on the plane is open. Without an
+    // envelope budget the A* frontier would flood the open complement outward from the start
+    // indefinitely (capped only by the 1,000,000-node ceiling). The goal-relative envelope keeps the
+    // explored region proportional to the start->goal span, so the search fails safely after
+    // exploring a bounded neighborhood.
+    const Coords start(0, 0, 0);
+    const Coords goal(64, 0, 0);
+    CallbackCounters counters;
+
+    auto can_step = [&counters, goal](const Coords &coords) {
+        ++counters.canStep;
+        if (coords.z != 0) {
+            return false;
+        }
+        // Impassable ring (Chebyshev radius 3) seals the otherwise-passable goal so the frontier can
+        // never reach it; nothing but the envelope bounds the outward expansion.
+        const int chebyshev = std::max(std::abs(coords.x - goal.x), std::abs(coords.y - goal.y));
+        return chebyshev != 3;
+    };
+    auto waypoint = [&counters](const Coords &coords) { return noWaypoint(counters, coords); };
+    auto neighbors = [&counters](const Coords &coords) { return countedDefaultNeighbors(counters, coords); };
+    auto distance = [&counters](const Coords &from, const Coords &to) { return manhattanDistance(counters, from, to); };
+    auto step_cost = [&counters](const Coords &from, const Coords &to) { return countedUnitCost(counters, from, to); };
+
+    const auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, step_cost);
+
+    // Goal is impassable, so the pathfinder fails safely with just the start.
+    expectMetricEquals("envelope open-plane path length", static_cast<long long>(path.size()), 1);
+    expect_true(!path.empty() && path.front() == start,
+                "envelope open-plane path returns start metric=1 baseline=1 threshold=1");
+    // The explored frontier is bounded by the envelope (4 * manhattan(start, goal) + 256 = 512 here),
+    // which limits coordinates to a finite disc; the resulting canStep calls stay far below the
+    // 1,000,000-node visit ceiling, proving the envelope (not the global cap) bounded the search.
+    const long long envelope = 4 * (std::abs(goal.x - start.x) + std::abs(goal.y - start.y)) + 256;
+    // Upper bound on distinct probed coordinates: the L1 disc of radius (envelope + 1) (one ring of
+    // out-of-envelope neighbors may still be probed before being discarded).
+    const long long radius = envelope + 1;
+    const long long max_cells = 2 * radius * radius + 2 * radius + 1;
+    expectMetricAtMost("envelope open-plane canStep calls", counters.canStep, max_cells, max_cells);
+    expect_true(counters.canStep < 1'000'000,
+                "envelope open-plane stays below global node cap metric=1 baseline=1 threshold=1");
+}
+
+void testEnvelopeBudgetPreservesReachableNavigation() {
+    // A legitimate goal that requires a detour around a wall must still be found: the envelope is
+    // generous relative to the start->goal separation, so normal navigation is unaffected.
+    constexpr int width = 40;
+    constexpr int height = 40;
+    constexpr int wall_x = 20;
+    constexpr int gap_y = height - 1;
+    const Coords start(0, 0, 0);
+    const Coords goal(width - 1, 0, 0);
+    CallbackCounters counters;
+
+    auto can_step = [&counters](const Coords &coords) {
+        ++counters.canStep;
+        if (!bounded(coords, width, height)) {
+            return false;
+        }
+        // Vertical wall at wall_x with a single gap at the far edge forces a long but bounded detour.
+        return !(coords.x == wall_x && coords.y != gap_y);
+    };
+    auto waypoint = [&counters](const Coords &coords) { return noWaypoint(counters, coords); };
+    auto neighbors = [&counters](const Coords &coords) { return countedDefaultNeighbors(counters, coords); };
+    auto distance = [&counters](const Coords &from, const Coords &to) { return manhattanDistance(counters, from, to); };
+    auto step_cost = [&counters](const Coords &from, const Coords &to) { return countedUnitCost(counters, from, to); };
+
+    const auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, step_cost);
+
+    expect_true(!path.empty() && path.back() == goal, "envelope detour reaches goal metric=1 baseline=1 threshold=1");
+    expect_true(path.size() > static_cast<std::size_t>(width),
+                "envelope detour path is longer than the direct distance metric=1 baseline=1 threshold=1");
+}
+
 } // namespace
 
 void run_pathfinder_performance_tests() {
+    testEnvelopeBudgetBoundsUnreachableGoalInOpenPlane();
+    testEnvelopeBudgetPreservesReachableNavigation();
     testLargeBoundedOpenGrid();
     testCorridorMazeBound();
     testUnreachableBoundedGoal();

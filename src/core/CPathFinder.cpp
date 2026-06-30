@@ -20,12 +20,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <queue>
 
 namespace {
 constexpr std::size_t MAX_PATHFINDER_VISITED = 1'000'000;
 constexpr int MAX_PATH_DUMP_PIXELS = 4'000'000;
+// Resource budgets that keep an A* search bounded even when callers (e.g. an MCP client) request a
+// goal over sparse or effectively unbounded coordinate space. They are intentionally generous so
+// normal navigation stays unaffected, while still failing safely on pathological inputs.
+constexpr int MAX_PATH_LENGTH = 100'000;
+constexpr long long PATHFINDER_ENVELOPE_FACTOR = 4;
+constexpr long long PATHFINDER_ENVELOPE_MARGIN = 256;
+
+inline long long manhattanSpan(const Coords &a, const Coords &b) {
+    return static_cast<long long>(std::abs(static_cast<long long>(a.x) - b.x)) +
+           std::abs(static_cast<long long>(a.y) - b.y) + std::abs(static_cast<long long>(a.z) - b.z);
+}
+
+// Maximum Manhattan distance from the start that a candidate node may have before it is discarded.
+// Scales with the start->goal separation so legitimate detours remain reachable, while preventing
+// the frontier from expanding indefinitely away from the goal corridor.
+inline long long envelopeBudget(const Coords &start, const Coords &goal) {
+    return PATHFINDER_ENVELOPE_FACTOR * manhattanSpan(start, goal) + PATHFINDER_ENVELOPE_MARGIN;
+}
+
+inline bool withinEnvelope(const Coords &start, const Coords &candidate, long long budget) {
+    return manhattanSpan(start, candidate) <= budget;
+}
 using Values = std::shared_ptr<std::unordered_map<Coords, int>>;
 
 struct QueueNode {
@@ -159,6 +182,10 @@ std::vector<Coords> buildPath(const Coords &start, const Coords &goal,
     Coords current = goal;
     while (current != start) {
         path.push_back(current);
+        if (static_cast<int>(path.size()) > MAX_PATH_LENGTH) {
+            vstd::logger::warning("A* path reconstruction exceeded maximum path length");
+            return {start};
+        }
         current = previous.at(current);
     }
     std::reverse(path.begin(), path.end());
@@ -181,6 +208,8 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const CanStep &canS
     std::unordered_map<Coords, Coords> previous;
     AStarQueue frontier;
 
+    const long long envelope = envelopeBudget(start, goal);
+
     bestCost[start] = 0;
     frontier.push({estimateCost(distance, start, goal), 0, start});
 
@@ -202,6 +231,9 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const CanStep &canS
 
         forEachCandidate(current.coords, waypoint, neighbors, [&](Coords next) {
             if (next != goal && !passability.canStepAt(next)) {
+                return;
+            }
+            if (next != goal && !withinEnvelope(start, next, envelope)) {
                 return;
             }
 
@@ -234,6 +266,8 @@ Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, cons
     std::unordered_map<Coords, int> bestCost;
     NextStepQueue frontier;
 
+    const long long envelope = envelopeBudget(start, goal);
+
     bestCost[start] = 0;
     frontier.push({estimateCost(distance, start, goal), 0, start, start});
 
@@ -255,6 +289,9 @@ Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, cons
 
         forEachCandidate(current.coords, waypoint, neighbors, [&](Coords next) {
             if (next != goal && !passability.canStepAt(next)) {
+                return;
+            }
+            if (next != goal && !withinEnvelope(start, next, envelope)) {
                 return;
             }
 
