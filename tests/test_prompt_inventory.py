@@ -72,6 +72,37 @@ class PromptInventoryTest(unittest.TestCase):
         self.assertIn("merge_policy_blocked", combined)
         self.assertIn("explicit alternate merge authorization", combined)
 
+    def test_implementation_pr_auto_merge_is_not_an_unconditional_default(self) -> None:
+        # Implementation-PR auto-merge must require explicit, repo-verified authorization. Guard against
+        # regression to the old opt-out wording that forced auto-merge unless the user opted out, and require
+        # the four-state authorization vocabulary to remain documented somewhere in the workflow text.
+        banned_patterns = {
+            r"--auto\s+--squash`?\s+unless\s+the\s+user\s+explicitly\s+asks\s+not\s+to": (
+                "implementation-PR auto-merge must not be framed as an opt-out default"
+            ),
+            r"run\s+`gh\s+pr\s+merge\s+<pr_number>\s+--auto\s+--squash`\s+unless": (
+                "implementation-PR auto-merge must not be framed as an opt-out default"
+            ),
+        }
+        for path in WORKFLOW_TEXT_PATHS:
+            text = path.read_text(encoding="utf-8").lower()
+            for pattern, reason in banned_patterns.items():
+                with self.subTest(path=path.relative_to(REPO_ROOT), pattern=pattern):
+                    self.assertIsNone(re.search(pattern, text), reason)
+
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in WORKFLOW_TEXT_PATHS).lower()
+        self.assertIn(
+            "auto-merge for implementation prs is not an unconditional default",
+            combined,
+            "implementation-PR auto-merge must be documented as requiring explicit, repo-verified authorization",
+        )
+        for state in ("allowed", "user-authorized", "disallowed", "unknown"):
+            self.assertIn(
+                state,
+                combined,
+                f"the implementation-PR auto-merge authorization state '{state}' must remain documented",
+            )
+
     def test_queue_controller_observation_policy_is_direct_and_append_only(self) -> None:
         combined = "\n".join(path.read_text(encoding="utf-8") for path in OBSERVATION_POLICY_TEXT_PATHS).lower()
 

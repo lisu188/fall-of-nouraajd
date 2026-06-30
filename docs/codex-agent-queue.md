@@ -384,7 +384,12 @@ its `coverage` step somewhere in the selected build workflow run, currently in t
 poller auto-adds this step for coverage-relevant PR paths. Additional release, MCP gameplay, manual, or issue-specific
 validation is needed only when the task targets that surface or the user
 requests it.
-Do not enable auto-merge until CI-polled validation passes when it is the only full-validation evidence.
+Do not enable auto-merge until CI-polled validation passes when it is the only full-validation evidence. Auto-merge for
+implementation PRs is not an unconditional default: after the required evidence is present, resolve the authorization
+state per the `AGENTS.md` pull request merge policy (allowed / user-authorized / disallowed / unknown) using the
+repository merge policy and branch protection signals, and enable `gh pr merge --auto --squash` only when the state is
+allowed or user-authorized. When it is disallowed or unknown, leave the implementation PR open and report the blocker
+instead of auto-merging.
 
 Workbook-only queue-state PRs that update only `planning/fall_of_nouraajd_issue_proposals.xlsx` are different from
 implementation PRs. After reviewing that the diff is XLSX-only and running `python3 scripts/issue_queue.py validate`,
