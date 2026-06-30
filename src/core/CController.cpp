@@ -657,25 +657,41 @@ std::shared_ptr<CCreature> CFightController::selectOpponent(std::shared_ptr<CCre
 
 void CPlayerFightController::start(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     cancelled = false;
-    fightPanel = nullptr;
+    // Discard any stale panel through its teardown path so its children are removed
+    // from CGui instead of leaking when the shared_ptr is overwritten below.
+    if (fightPanel) {
+        fightPanel->close();
+        fightPanel = nullptr;
+    }
     encounterMap.reset();
     controlledCreature.reset();
     encounterGeneration = 0;
     hasEncounterGeneration = false;
-    if (!me || !me->getMap() || !me->getMap()->getGame()) {
+    if (!me || !opponent || !me->getMap() || !me->getMap()->getGame()) {
         cancelled = true;
         return;
     }
-    encounterMap = me->getMap();
-    controlledCreature = me;
-    auto context = me->getMap()->getGame()->getContext();
-    encounterGeneration = context->captureTransitionGeneration();
-    hasEncounterGeneration = true;
-    auto gui = me->getMap()->getGame()->getGui();
+    auto map = me->getMap();
+    // Refuse to bind a panel to an opponent that is not present on the encounter map.
+    // Use the same runtime-identity presence semantics the engine uses for combat
+    // participants (CCreature step-combat predicate / CFightHandler is_registered_on_map);
+    // a strict shared_ptr/game-map equality check would reject legitimate engine-initiated
+    // fights (e.g. restored instances after save-load, or combat that resolves on the
+    // source map while a scene transition to a new game map is pending).
+    if (!CGameObject::sameRuntimeIdentity(map->getObjectByName(opponent->getName()), opponent)) {
+        cancelled = true;
+        return;
+    }
+    auto gui = map->getGame()->getGui();
     if (!gui) {
         cancelled = true;
         return;
     }
+    encounterMap = map;
+    controlledCreature = me;
+    auto context = map->getGame()->getContext();
+    encounterGeneration = context->captureTransitionGeneration();
+    hasEncounterGeneration = true;
     fightPanel = me->getGame()->createObject<CGameFightPanel>("fightPanel");
     fightPanel->resetCancellation();
     fightPanel->setEnemies({opponent});
