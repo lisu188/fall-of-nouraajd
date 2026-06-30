@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CMapGraphicsObject.h"
 #include "handler/CRngHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureRace.h"
 #include "object/CPlayer.h"
 #include "plugin/CPluginAbi.h"
 #include <pybind11/eval.h>
@@ -1027,22 +1028,45 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &gam
 
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
                                                        std::string player) {
+    return loadNewMapWithPlayer(game, name, std::move(player), std::string());
+}
+
+std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                       std::string player, const std::string &raceId) {
     std::shared_ptr<CMap> map = loadNewMap(game, name);
-    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
     map->setPlayer(ptr);
 
     return map;
 }
 
 // TODO: move to map, set player as well as triggers
-std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player) {
+std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player,
+                                                  const std::string &raceId) {
     auto ptr = game->createObject<CPlayer>(std::move(player));
+
+    // An empty raceId means "no override": preserve the template's default race so the existing
+    // three-argument loaders behave exactly as before. A non-empty raceId is resolved against the
+    // object handler; because no race content ships in the repo yet, an unknown id resolves to a
+    // null CCreatureRace, which we deliberately ignore rather than attach (and never crash on).
+    if (ptr && !raceId.empty()) {
+        ptr->setRaceId(raceId);
+        if (auto race = game->createObject<CCreatureRace>(raceId)) {
+            ptr->setRace(std::move(race));
+        }
+    }
+
     return ptr;
 }
 
 std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
+    return loadRandomMapWithPlayer(game, std::move(player), std::string());
+}
+
+std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                                          const std::string &raceId) {
     std::shared_ptr<CMap> map = CRandomMapGenerator::loadRandomMap(game);
-    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
     map->setPlayer(ptr);
     return map;
 }
@@ -1221,11 +1245,21 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
 }
 
 void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player) {
-    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player)));
+    startGameWithPlayer(game, file, std::move(player), std::string());
+}
+
+void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player,
+                                      const std::string &raceId) {
+    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player), raceId));
 }
 
 void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
-    game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player)));
+    startRandomGameWithPlayer(game, std::move(player), std::string());
+}
+
+void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                            const std::string &raceId) {
+    game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player), raceId));
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {

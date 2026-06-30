@@ -29,7 +29,13 @@ class CMapLoader {
     static std::shared_ptr<CMap> loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
                                                       std::string player);
 
+    static std::shared_ptr<CMap> loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                      std::string player, const std::string &raceId);
+
     static std::shared_ptr<CMap> loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player);
+
+    static std::shared_ptr<CMap> loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                                         const std::string &raceId);
 
     static std::shared_ptr<CMap> loadNewMap(const std::shared_ptr<CGame> &game, const std::string &name);
 
@@ -45,7 +51,8 @@ class CMapLoader {
 
     static void handleObjectLayer(const std::shared_ptr<CMap> &map, const json &layer);
 
-    static std::shared_ptr<CPlayer> createPlayer(const std::shared_ptr<CGame> &game, std::string &player);
+    static std::shared_ptr<CPlayer> createPlayer(const std::shared_ptr<CGame> &game, std::string &player,
+                                                 const std::string &raceId);
 };
 
 class CGameLoader {
@@ -54,7 +61,13 @@ class CGameLoader {
 
     static void startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player);
 
+    static void startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player,
+                                    const std::string &raceId);
+
     static void startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player);
+
+    static void startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                          const std::string &raceId);
 
     static void startGame(const std::shared_ptr<CGame> &game, const std::string &file);
 

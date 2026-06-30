@@ -386,10 +386,8 @@ void test_scene_manager_transition_preserves_player_archetypes() {
     pump_event_loop_iterations();
     auto ritual_map = game->getMap();
     expect_true(ritual_map->getMapName() == "ritual", "first transition should reach the ritual map");
-    expect_true(ritual_map->getPlayer() == player,
-                "first transition should preserve the same player instance");
-    expect_true(player->getRace() == race,
-                "first transition should preserve the player's race archetype reference");
+    expect_true(ritual_map->getPlayer() == player, "first transition should preserve the same player instance");
+    expect_true(player->getRace() == race, "first transition should preserve the player's race archetype reference");
     expect_true(player->getCreatureClass() == klass,
                 "first transition should preserve the player's creatureClass archetype reference");
     expect_true(player->usesArchetypeComposition(),
@@ -400,10 +398,8 @@ void test_scene_manager_transition_preserves_player_archetypes() {
     pump_event_loop_iterations();
     auto siege_map = game->getMap();
     expect_true(siege_map->getMapName() == "siege", "second transition should reach the siege map");
-    expect_true(siege_map->getPlayer() == player,
-                "second transition should preserve the same player instance");
-    expect_true(player->getRace() == race,
-                "second transition should preserve the player's race archetype reference");
+    expect_true(siege_map->getPlayer() == player, "second transition should preserve the same player instance");
+    expect_true(player->getRace() == race, "second transition should preserve the player's race archetype reference");
     expect_true(player->getCreatureClass() == klass,
                 "second transition should preserve the player's creatureClass archetype reference");
 
@@ -1687,7 +1683,7 @@ void test_map_add_object_fills_hp_and_mana_from_composed_stats() {
 
     auto stats = std::make_shared<CStats>();
     stats->setMainStat("intelligence");
-    stats->setStamina(6);     // hpMax = 6 * 7 = 42
+    stats->setStamina(6);      // hpMax = 6 * 7 = 42
     stats->setIntelligence(4); // manaMax = 4 * 7 = 28
 
     auto creature = std::make_shared<CCreature>();
@@ -1723,7 +1719,7 @@ void test_set_base_stats_preserves_current_hp_and_mana() {
 
     auto stats = std::make_shared<CStats>();
     stats->setMainStat("intelligence");
-    stats->setStamina(10);     // hpMax = 70
+    stats->setStamina(10);      // hpMax = 70
     stats->setIntelligence(10); // manaMax = 70
 
     auto creature = std::make_shared<CCreature>();
@@ -1741,7 +1737,7 @@ void test_set_base_stats_preserves_current_hp_and_mana() {
     // Reassigning a higher-stat block raises the maxima but must not refill current pools.
     auto higherStats = std::make_shared<CStats>();
     higherStats->setMainStat("intelligence");
-    higherStats->setStamina(20);     // hpMax = 140
+    higherStats->setStamina(20);      // hpMax = 140
     higherStats->setIntelligence(20); // manaMax = 140
     creature->setBaseStats(higherStats);
 
@@ -1754,7 +1750,7 @@ void test_set_base_stats_preserves_current_hp_and_mana() {
     // setBaseStats must not clamp current HP/mana outside heal/addMana paths.
     auto lowerStats = std::make_shared<CStats>();
     lowerStats->setMainStat("intelligence");
-    lowerStats->setStamina(2);     // hpMax = 14
+    lowerStats->setStamina(2);      // hpMax = 14
     lowerStats->setIntelligence(1); // manaMax = 7
     creature->setBaseStats(lowerStats);
 
@@ -1823,12 +1819,11 @@ void test_post_combat_player_defeat_skips_further_movement() {
 // deterministic, order-stable vector so two effective-stat snapshots can be compared element by
 // element. Uses the concrete CStats getters directly so the snapshot needs no reflection plumbing.
 std::vector<int> capture_player_effective_stats(const std::shared_ptr<CStats> &stats) {
-    return {stats->getStrength(),  stats->getAgility(),       stats->getStamina(),
-            stats->getIntelligence(), stats->getArmor(),      stats->getBlock(),
-            stats->getDmgMin(),    stats->getDmgMax(),        stats->getAttack(),
-            stats->getHit(),       stats->getCrit(),          stats->getFireResist(),
-            stats->getFrostResist(), stats->getNormalResist(), stats->getThunderResist(),
-            stats->getShadowResist(), stats->getDamage()};
+    return {stats->getStrength(),    stats->getAgility(),      stats->getStamina(),       stats->getIntelligence(),
+            stats->getArmor(),       stats->getBlock(),        stats->getDmgMin(),        stats->getDmgMax(),
+            stats->getAttack(),      stats->getHit(),          stats->getCrit(),          stats->getFireResist(),
+            stats->getFrostResist(), stats->getNormalResist(), stats->getThunderResist(), stats->getShadowResist(),
+            stats->getDamage()};
 }
 
 // EPIC_03/STORY_04/SUBSTORY_02: preserve archetypes through defeat recovery.
@@ -1889,24 +1884,20 @@ void test_post_combat_defeat_recovery_preserves_player_archetypes() {
                 "the recovered player should respawn at the map entry");
 
     // Archetype reference fields preserved exactly (same pointers, not fallbacks).
-    expect_true(player->getRace() == race,
-                "defeat recovery must preserve the player's race reference exactly");
+    expect_true(player->getRace() == race, "defeat recovery must preserve the player's race reference exactly");
     expect_true(player->getCreatureClass() == klass,
                 "defeat recovery must preserve the player's creatureClass reference exactly");
-    expect_true(player->usesArchetypeComposition(),
-                "the recovered player should still use archetype composition");
+    expect_true(player->usesArchetypeComposition(), "the recovered player should still use archetype composition");
 
     // Class/race identity IDs unchanged.
     expect_true(player->getRaceId() == race_id_before && player->getRaceId() == "preserve-defeat-race",
                 "defeat recovery must preserve the player's race ID exactly");
-    expect_true(player->getPlayerClassId() == class_id_before &&
-                    player->getPlayerClassId() == "preserve-defeat-class",
+    expect_true(player->getPlayerClassId() == class_id_before && player->getPlayerClassId() == "preserve-defeat-class",
                 "defeat recovery must preserve the player's class ID exactly");
 
     // Effective stats unchanged across the defeat->recovery cycle.
     const auto stats_after = capture_player_effective_stats(player->getStats());
-    expect_true(stats_after == stats_before,
-                "defeat recovery must preserve every effective stat value exactly");
+    expect_true(stats_after == stats_before, "defeat recovery must preserve every effective stat value exactly");
     expect_true(player->getStats()->getMainValue() == main_value_before,
                 "defeat recovery must preserve the player's effective main stat value exactly");
 }
@@ -2130,9 +2121,56 @@ void test_post_combat_player_suppresses_destination_visit_events() {
 
 } // namespace
 
+// Race-aware loader overloads ([EPIC_04][STORY_04][SUBSTORY_01]). The new four-argument loaders
+// thread a raceId to the player; the legacy three-argument loaders are now thin wrappers that pass
+// "no race override". Because no race content ships in the repo yet, the empty/absent-raceId path
+// is the normal path and must behave identically to the legacy call and never crash.
+void test_loader_race_overloads_preserve_default_and_attach_race() {
+    // Legacy three-argument path: template's default race, no raceId override.
+    auto legacy_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(legacy_game, "test", "Warrior");
+    auto legacy_player = legacy_game->getMap()->getPlayer();
+    expect_true(legacy_player != nullptr, "legacy three-argument startGameWithPlayer should attach a player");
+    const std::string default_race_id = legacy_player->getRaceId();
+    expect_true(legacy_player->getRace() == nullptr,
+                "legacy three-argument loader should not attach a CCreatureRace (no override)");
+
+    // New four-argument path with an empty raceId must behave identically to the legacy path:
+    // same default race id, no race object attached, no crash.
+    auto empty_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(empty_game, "test", "Warrior", std::string());
+    auto empty_player = empty_game->getMap()->getPlayer();
+    expect_true(empty_player != nullptr, "four-argument loader with empty raceId should attach a player");
+    expect_true(empty_player->getRaceId() == default_race_id,
+                "empty raceId override must preserve the template's default race id");
+    expect_true(empty_player->getRace() == nullptr, "empty raceId override must not attach a CCreatureRace");
+
+    // New four-argument path with an unknown raceId: the id is recorded on the player, but because
+    // no such race content exists the resolved CCreatureRace is null and is deliberately not
+    // attached. The key acceptance is that this does not crash.
+    auto race_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(race_game, "test", "Warrior", "nonexistent-race");
+    auto race_player = race_game->getMap()->getPlayer();
+    expect_true(race_player != nullptr, "four-argument loader with a raceId should still attach a player");
+    expect_true(race_player->getRaceId() == "nonexistent-race",
+                "a non-empty raceId override should be recorded on the player");
+    expect_true(race_player->getRace() == nullptr,
+                "an unknown raceId should resolve to a null race and not be attached (no crash)");
+
+    // The random-map four-argument overload with an empty raceId must also load without crashing.
+    auto random_game = CGameLoader::loadGame();
+    CGameLoader::startRandomGameWithPlayer(random_game, "Warrior", std::string());
+    auto random_player = random_game->getMap()->getPlayer();
+    expect_true(random_player != nullptr,
+                "four-argument startRandomGameWithPlayer with empty raceId should attach a player");
+    expect_true(random_player->getRaceId() == default_race_id,
+                "random-map empty raceId override must preserve the template's default race id");
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_loader_race_overloads_preserve_default_and_attach_race();
     test_scene_manager_state_duplicate_and_player_transfer();
     test_game_change_map_duplicate_requests_commit_once();
     test_scene_manager_transition_generation_start_and_commit();
