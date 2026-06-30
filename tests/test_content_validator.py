@@ -268,6 +268,68 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertIn(("map", "MAIN_TURN", "setNumericProperty"), property_writes)
         self.assertIn(("player", "skill_flag", "setBoolProperty"), property_writes)
 
+    def test_script_analyzer_inventories_runtime_spawned_creatures(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            textwrap.dedent("""
+                def load(self, context):
+                    from game import CTrigger
+                    from game import register
+
+                    NAME_PREFIX = "wave"
+
+                    def spawn_quest_actors(game, game_map):
+                        leader = game.createObject("CultLeader")
+                        leader.setStringProperty("name", "cultLeaderQuest")
+                        game_map.addObject(leader)
+
+                        controller = game.createObject("CTargetController")
+                        controller.setTarget("player")
+
+                        for index in range(3):
+                            mob = game.createObject("Cultist")
+                            mob.setStringProperty("name", f"{NAME_PREFIX}{index}")
+                            game_map.addObject(mob)
+
+                        game_map.addObjectByName("siegePritz", game_map.getCoords())
+                """).lstrip(),
+            encoding="utf-8",
+        )
+        info = ContentValidator(root)._parse_script(script_path)
+        self.assertIsNotNone(info)
+        if info is None:
+            return
+
+        spawns = {(c.spawn_call, c.template, c.runtime_name) for c in info.spawned_creatures}
+
+        # createObject template ids are recorded with their literal post-spawn names.
+        self.assertIn(("createObject", "CultLeader", "cultLeaderQuest"), spawns)
+        # createObject without a name write stays anonymous (controllers, etc.).
+        self.assertIn(("createObject", "CTargetController", None), spawns)
+        # A computed (f-string) name is NOT inferred -- only literal names are kept.
+        self.assertIn(("createObject", "Cultist", None), spawns)
+        # addObjectByName spawns are anonymous: template preserved, no runtime name.
+        self.assertIn(("addObjectByName", "siegePritz", None), spawns)
+
+        # Template ids and runtime names are tracked separately so a migration can
+        # preserve both for the trigger validators that special-case quest actors.
+        templates = {c.template for c in info.spawned_creatures}
+        runtime_names = {c.runtime_name for c in info.spawned_creatures if c.runtime_name is not None}
+        self.assertEqual({"CultLeader", "CTargetController", "Cultist", "siegePritz"}, templates)
+        self.assertEqual({"cultLeaderQuest"}, runtime_names)
+
+    def test_script_analyzer_inventories_real_quest_creature_spawns(self):
+        # Names must come from real script source, never from design docs.
+        info = ContentValidator(REPO_ROOT)._parse_script(REPO_ROOT / "res/maps/nouraajd/script.py")
+        self.assertIsNotNone(info)
+        if info is None:
+            return
+        named = {c.template: c.runtime_name for c in info.spawned_creatures if c.runtime_name is not None}
+        self.assertEqual("cultLeaderQuest", named.get("CultLeader"))
+        self.assertEqual("gooby1", named.get("gooby"))
+        self.assertEqual("amuletGoblin", named.get("goblinThief"))
+
     def test_given_player_bool_read_without_default_when_validating_then_reports_uninitialized_property(self):
         root = self.make_fixture()
         write_property_hygiene_script(
