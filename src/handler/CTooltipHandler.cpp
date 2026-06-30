@@ -22,7 +22,6 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
     std::string tooltip = object->getLabel();
     vstd::add_line(tooltip, object->getDescription());
     if (object->meta()->inherits("CItem")) {
-        vstd::add_line(tooltip, object->getDescription());
         auto bonus = vstd::cast<CItem>(object)->getBonus();
         bonus->meta()->for_all_properties(bonus, [&](auto prop) {
             // TODO: move to meta
