@@ -4,8 +4,9 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts import ci_change_classifier
 
@@ -106,6 +107,18 @@ class CiChangeClassifierTest(unittest.TestCase):
             self.assertFalse(payload["nativeNeeded"])
             values = dict(line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())
             self.assertEqual({"coverage-needed": "false", "native-needed": "false"}, values)
+
+    def test_main_returns_clean_error_when_git_executable_is_missing(self) -> None:
+        def raise_missing_git(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "git")
+
+        stderr = io.StringIO()
+        with patch.object(ci_change_classifier.subprocess, "run", side_effect=raise_missing_git):
+            with redirect_stderr(stderr):
+                exitCode = ci_change_classifier.main(["--base", "a", "--head", "b"])
+
+        self.assertEqual(2, exitCode)
+        self.assertIn("git executable not found on PATH", stderr.getvalue())
 
     def test_build_workflow_uses_classifier_outputs_for_native_routing(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
