@@ -115,12 +115,15 @@ def apply_recipe(game_instance, player, recipe):
     if not gold_status["ok"]:
         return gold_status
 
+    # Pay the cost before rolling so a failed craft still consumes its
+    # reagents (and gold); otherwise success_chance would be a free retry.
+    # The preconditions above guarantee the player can afford both paths.
+    remove_required_items(player, recipe["inputs"])
+    deduct_gold(player, recipe["gold"])
+
     success_chance = max(0, min(100, recipe.get("success_chance", 100)))
     if success_chance < 100 and randint(1, 100) > success_chance:
         return _status(False, "failed")
-
-    remove_required_items(player, recipe["inputs"])
-    deduct_gold(player, recipe["gold"])
 
     create_reward_objects(game_instance, player, recipe["outputs"])
     return _status(True)
