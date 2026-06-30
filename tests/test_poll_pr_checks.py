@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -558,6 +558,38 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertIn("already merged", evaluation.message)
         run_list.assert_called_once_with("abc123", "build.yml", None)
         sleep.assert_called_once_with(30)
+
+    def test_run_gh_json_reports_missing_cli_as_poll_error(self) -> None:
+        def raise_missing_gh(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "gh")
+
+        with patch.object(poll_pr_checks.subprocess, "run", side_effect=raise_missing_gh):
+            with self.assertRaises(poll_pr_checks.PollError) as caught:
+                poll_pr_checks.runGhJson(["gh", "pr", "view", "1"])
+
+        self.assertIn("gh CLI not found on PATH", str(caught.exception))
+
+    def test_run_gh_pr_files_reports_missing_cli_as_poll_error(self) -> None:
+        def raise_missing_gh(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "gh")
+
+        with patch.object(poll_pr_checks.subprocess, "run", side_effect=raise_missing_gh):
+            with self.assertRaises(poll_pr_checks.PollError) as caught:
+                poll_pr_checks.runGhPrFiles("1", None)
+
+        self.assertIn("gh CLI not found on PATH", str(caught.exception))
+
+    def test_main_exits_cleanly_when_gh_cli_is_missing(self) -> None:
+        def raise_missing_gh(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "gh")
+
+        stderr = io.StringIO()
+        with patch.object(poll_pr_checks.subprocess, "run", side_effect=raise_missing_gh):
+            with redirect_stderr(stderr):
+                exit_code = poll_pr_checks.main(["1"])
+
+        self.assertEqual(3, exit_code)
+        self.assertIn("gh CLI not found on PATH", stderr.getvalue())
 
 
 if __name__ == "__main__":
