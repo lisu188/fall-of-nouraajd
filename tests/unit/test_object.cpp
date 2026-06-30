@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CAnimation.h"
 #include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
@@ -782,6 +783,54 @@ void test_creature_stat_precedence_orders_sources_and_main_stat() {
                 "removing the effects source should remove exactly its contribution from the composed stat");
 }
 
+void test_creature_class_main_stat_is_authoritative_over_race() {
+    // [EPIC_02][STORY_04][SUBSTORY_03] Make creatureClass authoritative for mainStat.
+    // When a creature has a composed creatureClass declaring a main stat, that class main stat
+    // is AUTHORITATIVE for the composed block (buildLegacyStats selects -- not accumulates --
+    // mainStat), overriding the legacy/race creature.baseStats main stat. A creature with no
+    // class, or a class with an empty main stat, falls back to the legacy base main stat
+    // exactly, so the no-archetype path is unchanged.
+    auto creature = std::make_shared<CCreature>();
+
+    // Legacy/race base declares a CONFLICTING main stat (strength) with distinct numeric
+    // values so the selected stat is observable through getMainValue().
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("strength");
+    base->setStrength(3);
+    base->setIntelligence(11);
+    creature->setBaseStats(base);
+
+    // No class: composed main stat falls back to the legacy base main stat.
+    expect_true(creature->getStats()->getMainStat() == "strength",
+                "with no creatureClass the composed main stat falls back to the legacy base main stat");
+    expect_true(creature->getStats()->getMainValue() == 3,
+                "the legacy fallback main value reads strength (3)");
+
+    // Attach a creatureClass declaring intelligence as its main stat: class wins.
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    creature->setCreatureClass(klass);
+
+    auto composed = creature->getStats();
+    expect_true(composed->getMainStat() == "intelligence",
+                "creatureClass main stat is authoritative over the conflicting legacy/race main stat");
+    expect_true(composed->getMainValue() == 11,
+                "the composed main value reads the class-selected stat (intelligence=11)");
+    expect_true(creature->getManaMax() == 11 * 7,
+                "mana max derives from the class-authoritative main stat (getMainValue*7)");
+
+    // A class that declares no main stat must not override the legacy fallback.
+    auto emptyClass = std::make_shared<CCreatureClass>();
+    creature->setCreatureClass(emptyClass);
+    expect_true(creature->getStats()->getMainStat() == "strength",
+                "a creatureClass with an empty main stat preserves the legacy base main stat");
+
+    // Clearing the class restores the no-archetype legacy path exactly.
+    creature->setCreatureClass(nullptr);
+    expect_true(creature->getStats()->getMainStat() == "strength",
+                "clearing the creatureClass restores the legacy no-archetype main stat selection");
+}
+
 void test_creature_archetype_identity_accessors_use_fallbacks() {
     auto creature = std::make_shared<CCreature>();
 
@@ -1454,6 +1503,7 @@ int main() {
     test_creature_inventory_equipment_and_ratio_helpers();
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();
+    test_creature_class_main_stat_is_authoritative_over_race();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_action_merge_dedupes_by_type_id();
