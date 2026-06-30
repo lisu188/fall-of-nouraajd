@@ -777,6 +777,132 @@ class ContentValidatorTest(unittest.TestCase):
             'duplicate action id "Attack", previously granted at warriorClass.properties.actions[0]',
         )
 
+    def test_archetype_id_as_map_object_type_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"][0]["type"] = "warriorClass"
+        write_json(map_path, map_data)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            "layers[1].objects[0].type",
+            'object type "warriorClass" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_archetype_id_as_tile_type_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"class": "CCreatureRace", "properties": {"label": "Human"}}},
+        )
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["tilesets"][0]["tileproperties"] = {"0": {"type": "humanRace"}}
+        map_data["layers"][0]["data"] = [1, 0, 0, 0]
+        write_json(map_path, map_data)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            "layers[0].data[0]",
+            'tile type "humanRace" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_archetype_id_as_add_object_by_name_target_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getMap().addObjectByName("warriorClass", None)',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'addObjectByName("warriorClass")',
+            'object ref or class "warriorClass" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_archetype_id_as_create_object_target_is_rejected(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("warriorClass")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'createObject("warriorClass")',
+            'object ref or class "warriorClass" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_concrete_creature_spawn_alongside_archetype_definitions_passes(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"class": "CCreatureRace", "properties": {"label": "Human"}}},
+        )
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "warriorClass"}, "label": "Goblin"},
+                }
+            },
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("Goblin")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        archetype_issues = [str(issue) for issue in issues if "creature archetype definition" in str(issue)]
+        self.assertEqual([], archetype_issues)
+
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
 

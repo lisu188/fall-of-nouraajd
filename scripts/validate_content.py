@@ -144,6 +144,19 @@ CREATURE_CLASS_ACTIONS_PROPERTY = "actions"
 CREATURE_CLASS_LEVELLING_PROPERTY = "levelling"
 INTERACTION_BASE_CLASS = "CInteraction"
 
+# Archetype-definition base classes (EPIC_06/STORY_04/SUBSTORY_02).
+# CCreatureRace and CCreatureClass configs are *referenced definitions* (a race or
+# class template carried by a creature via the "creatureClass"/race reference
+# property), never actors that can be instantiated onto a map or spawned at
+# runtime.  Any config whose effective engine class is one of these -- or which is
+# declared in the dedicated archetype config files -- must therefore be rejected
+# when used as a concrete spawn target: map object types, map tile types, and
+# createObject/addObjectByName script calls.
+CREATURE_RACE_BASE_CLASS = "CCreatureRace"
+CREATURE_CLASS_BASE_CLASS = "CCreatureClass"
+CREATURE_ARCHETYPE_BASE_CLASSES = (CREATURE_RACE_BASE_CLASS, CREATURE_CLASS_BASE_CLASS)
+CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG)
+
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
 # that overrides template behavior.  Any override touching one of these properties
@@ -1343,12 +1356,13 @@ class ContentValidator:
     def _validate_map_context(self, context: MapContext) -> None:
         visible = self._visible_entries(context)
         known_classes = self._known_classes(context)
+        archetype_ids = self._archetype_definition_ids(visible)
         for entry in context.config_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_top_level_ref_cycles(context, visible)
-        self._validate_map_json(context, visible, known_classes)
+        self._validate_map_json(context, visible, known_classes, archetype_ids)
         self._validate_dialogs(context, visible)
-        self._validate_script_refs(context, visible, known_classes)
+        self._validate_script_refs(context, visible, known_classes, archetype_ids)
         self._validate_script_property_hygiene(context)
 
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
@@ -1757,7 +1771,13 @@ class ContentValidator:
                     break
                 current = next_entry
 
-    def _validate_map_json(self, context: MapContext, visible: dict[str, ConfigEntry], known_classes: set[str]) -> None:
+    def _validate_map_json(
+        self,
+        context: MapContext,
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+        archetype_ids: set[str],
+    ) -> None:
         data = context.map_data
         if not isinstance(data, dict):
             self._issue(context.map_path, "$", "expected top-level JSON object")
@@ -1777,10 +1797,10 @@ class ContentValidator:
             layer_type = layer.get("type")
             if layer_type == "tilelayer":
                 self._validate_tile_layer(
-                    context, layer, layer_location, width, height, tile_types, visible, known_classes
+                    context, layer, layer_location, width, height, tile_types, visible, known_classes, archetype_ids
                 )
             elif layer_type == "objectgroup":
-                self._validate_object_layer(context, layer, layer_location, visible, known_classes)
+                self._validate_object_layer(context, layer, layer_location, visible, known_classes, archetype_ids)
 
     def _validate_tile_layer(
         self,
@@ -1792,6 +1812,7 @@ class ContentValidator:
         tile_types: dict[int, str],
         visible: dict[str, ConfigEntry],
         known_classes: set[str],
+        archetype_ids: set[str],
     ) -> None:
         data = layer.get("data")
         if not isinstance(data, list):
@@ -1816,6 +1837,10 @@ class ContentValidator:
                     f"{location}.data[{index}]",
                     f"tile id {tile_id} has no tilesets[0].tileproperties[{tile_id - 1}].type",
                 )
+            elif self._reject_archetype_spawn_target(
+                context.map_path, f"{location}.data[{index}]", tile_type, "tile type", archetype_ids
+            ):
+                continue
             elif (
                 tile_type not in visible
                 and tile_type not in known_classes
@@ -1834,6 +1859,7 @@ class ContentValidator:
         location: str,
         visible: dict[str, ConfigEntry],
         known_classes: set[str],
+        archetype_ids: set[str],
     ) -> None:
         objects = layer.get("objects")
         if not isinstance(objects, list):
@@ -1860,6 +1886,10 @@ class ContentValidator:
             object_type = obj.get("type")
             if not isinstance(object_type, str) or not object_type:
                 self._issue(context.map_path, f"{object_location}.type", "expected non-empty object type")
+            elif self._reject_archetype_spawn_target(
+                context.map_path, f"{object_location}.type", object_type, "object type", archetype_ids
+            ):
+                pass
             elif (
                 object_type not in visible
                 and object_type not in known_classes
@@ -2052,7 +2082,11 @@ class ContentValidator:
             )
 
     def _validate_script_refs(
-        self, context: MapContext, visible: dict[str, ConfigEntry], known_classes: set[str]
+        self,
+        context: MapContext,
+        visible: dict[str, ConfigEntry],
+        known_classes: set[str],
+        archetype_ids: set[str],
     ) -> None:
         if not context.script_info:
             return
@@ -2060,6 +2094,10 @@ class ContentValidator:
         object_names = context.placed_names | context.script_info.named_objects | {"player"}
         for call in context.script_info.calls:
             if call.name in SCRIPT_REF_CALLS:
+                if self._reject_archetype_spawn_target(
+                    context.script_info.path, call.location, call.value, "object ref or class", archetype_ids
+                ):
+                    continue
                 if (
                     call.value not in visible
                     and call.value not in known_classes
@@ -2427,6 +2465,57 @@ class ContentValidator:
         has_ref = "ref" in value
         has_class = "class" in value
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
+
+    def _archetype_definition_ids(self, visible: dict[str, ConfigEntry]) -> set[str]:
+        """Resolve config ids that name a CCreatureRace/CCreatureClass *definition*.
+
+        An id is an archetype definition when its effective engine class (following
+        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES or inherits from
+        one, or when it is a top-level entry declared in the dedicated archetype
+        config files (creature_races.json / creature_classes.json).  Such ids are
+        referenced definitions, not actors, so using them as a concrete spawn target
+        is rejected.  Resolution is purely structural -- never from id name strings.
+        """
+        archetype_ids: set[str] = set()
+        for key, entry in visible.items():
+            if not isinstance(entry.data, dict):
+                continue
+            if self._is_archetype_definition_node(entry.data, visible) or self._is_archetype_definition_config(
+                entry.path
+            ):
+                archetype_ids.add(key)
+        return archetype_ids
+
+    def _is_archetype_definition_node(self, value: dict[str, Any], visible: dict[str, ConfigEntry]) -> bool:
+        class_name = self._effective_object_class(value, visible)
+        if not isinstance(class_name, str):
+            return False
+        return class_name in CREATURE_ARCHETYPE_BASE_CLASSES or any(
+            self._class_inherits_from(class_name, base) for base in CREATURE_ARCHETYPE_BASE_CLASSES
+        )
+
+    def _is_archetype_definition_config(self, path: Path) -> bool:
+        return self._rel(path) in {
+            (Path("res") / "config" / name).as_posix() for name in CREATURE_ARCHETYPE_DEFINITION_CONFIGS
+        }
+
+    def _reject_archetype_spawn_target(
+        self, path: Path, location: str, name: str, label: str, archetype_ids: set[str]
+    ) -> bool:
+        """Emit an issue when ``name`` is an archetype definition used as a spawn target.
+
+        Returns True when the name was rejected so callers can skip the regular
+        unknown-reference diagnostic.
+        """
+        if name not in archetype_ids:
+            return False
+        self._issue(
+            path,
+            location,
+            f'{label} "{name}" is a creature archetype definition '
+            f"(CCreatureRace/CCreatureClass) and cannot be used as a concrete spawn target",
+        )
+        return True
 
     def _class_reference_message(self, class_name: str, label: str) -> str:
         exclusion = self.registration_exclusions.get(class_name)
