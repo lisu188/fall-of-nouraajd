@@ -115,6 +115,21 @@ CREATURE_ARCHETYPE_ID_SUFFIXES = {
     CREATURE_CLASSES_CONFIG: CREATURE_CLASS_ID_SUFFIX,
 }
 
+# CCreatureClass.mainStat validation (EPIC_06/STORY_02/SUBSTORY_01).
+# A creature class archetype names the stat it scales from via the "mainStat"
+# property, which the engine resolves at runtime through CStats::getMainValue ->
+# CStats::getNumericProperty(mainStat).  That lookup only succeeds when the value
+# names one of CStats' numeric (int) metadata properties; a typo such as
+# "strenght" would silently resolve to 0 main value at runtime.  The allowed names
+# are derived from the live CStats metadata schema (the int-typed properties), never
+# hard-coded, so the check stays in lockstep with src/core/CStats.h.  CCreatureClass
+# configs do not exist on the current content, so this validator is forward-guarding
+# and vacuously satisfied until such archetypes are authored.
+CREATURE_CLASS_OBJECT_CLASS = "CCreatureClass"
+CREATURE_CLASS_MAIN_STAT_PROPERTY = "mainStat"
+MAIN_STAT_SCHEMA_CLASS = "CStats"
+MAIN_STAT_NUMERIC_TYPE_TOKEN = "int"
+
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
 # that overrides template behavior.  Any override touching one of these properties
@@ -1456,6 +1471,72 @@ class ContentValidator:
                     append_field(properties_location, property_name),
                     f'unknown property "{property_name}" for class "{class_name}"',
                 )
+        self._validate_creature_class_main_stat(path, properties_location, class_name, properties)
+
+    def _validate_creature_class_main_stat(
+        self,
+        path: Path,
+        properties_location: str,
+        class_name: str,
+        properties: dict[str, Any],
+    ) -> None:
+        """Verify a CCreatureClass.mainStat names a numeric CStats property.
+
+        The engine resolves a creature class's main stat through
+        ``CStats::getNumericProperty(mainStat)`` (CStats::getMainValue), so a
+        non-empty ``mainStat`` must name one of CStats' numeric (int) metadata
+        properties.  Empty, non-string, or typo values (e.g. "strenght") would
+        resolve to a zero main value at runtime, so they are rejected here with the
+        exact class config location.  The allowed names are derived from the live
+        CStats metadata schema, so this stays in lockstep with src/core/CStats.h.
+        ``CCreatureClass`` archetypes do not exist on current content, so this check
+        is vacuously satisfied (forward-guarding) until they are authored.
+        """
+        if class_name != CREATURE_CLASS_OBJECT_CLASS and not self._class_inherits_from(
+            class_name, CREATURE_CLASS_OBJECT_CLASS
+        ):
+            return
+        if CREATURE_CLASS_MAIN_STAT_PROPERTY not in properties:
+            return
+        main_stat = properties[CREATURE_CLASS_MAIN_STAT_PROPERTY]
+        main_stat_location = append_field(properties_location, CREATURE_CLASS_MAIN_STAT_PROPERTY)
+        if not isinstance(main_stat, str) or not main_stat:
+            self._issue(
+                path,
+                main_stat_location,
+                f'property "{CREATURE_CLASS_MAIN_STAT_PROPERTY}" for class "{class_name}" '
+                f"expected a non-empty numeric {MAIN_STAT_SCHEMA_CLASS} property name; "
+                f"got {json_value_kind(main_stat)}",
+            )
+            return
+        allowed_stats = self._numeric_main_stat_names()
+        if allowed_stats is None:
+            return
+        if main_stat not in allowed_stats:
+            self._issue(
+                path,
+                main_stat_location,
+                f'property "{CREATURE_CLASS_MAIN_STAT_PROPERTY}" for class "{class_name}" '
+                f'value "{main_stat}" is not a numeric {MAIN_STAT_SCHEMA_CLASS} property; '
+                f"expected one of {', '.join(sorted(allowed_stats))}",
+            )
+
+    def _numeric_main_stat_names(self) -> set[str] | None:
+        """Return CStats' numeric (int) metadata property names, or None if absent.
+
+        Derived from the live CStats metadata schema so the allowed set never drifts
+        from src/core/CStats.h.  Returns None when CStats metadata is unavailable
+        (e.g. before the native sources exist), leaving the check inert rather than
+        guessing a stat set.
+        """
+        property_schema = self._metadata_property_schema(MAIN_STAT_SCHEMA_CLASS)
+        if not property_schema:
+            return None
+        return {
+            cpp_property.name
+            for cpp_property in property_schema.values()
+            if cpp_property.type_token == MAIN_STAT_NUMERIC_TYPE_TOKEN
+        }
 
     def _effective_object_class(
         self, value: dict[str, Any], visible: dict[str, ConfigEntry], seen_refs: set[str] | None = None
