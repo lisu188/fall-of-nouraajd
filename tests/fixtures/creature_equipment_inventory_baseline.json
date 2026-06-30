@@ -1,0 +1,85 @@
+{
+  "_description": "Baseline of starter equipment and inventory for every concrete creature template in res/config/monsters.json. Equipped maps a slot id to a single item typeId; inventory maps an item typeId to its multiplicity (count). This baseline protects the rule that starter gear stays attached to the concrete creature/player-class templates (not moved into class definitions) and that each item is attached exactly once. Player-class templates (class CPlayer) carry the starter gear; concrete CCreature monster templates currently carry no equipment or inventory. Regenerated and verified by tests/test_creature_equipment_inventory_baseline.py against the authoritative config.",
+  "_source": "res/config/monsters.json",
+  "_slots": {
+    "0": "RightHand (CWeapon)",
+    "3": "Chest (CArmor)"
+  },
+  "templates": {
+    "Assasin": {
+      "class": "CPlayer",
+      "equipped": {
+        "0": "Dagger",
+        "3": "LeatherArmor"
+      },
+      "inventory": {}
+    },
+    "CultLeader": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
+    "Cultist": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
+    "GoblinThief": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
+    "Gooby": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
+    "Inquisitor": {
+      "class": "CPlayer",
+      "equipped": {
+        "0": "Sword",
+        "3": "Robe"
+      },
+      "inventory": {}
+    },
+    "OctoBogz": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
+    "Pritz": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
+    "PritzMage": {
+      "class": "CCreature",
+      "equipped": {},
+      "inventory": {}
+    },
+    "Sorcerer": {
+      "class": "CPlayer",
+      "equipped": {
+        "0": "Staff",
+        "3": "Robe"
+      },
+      "inventory": {}
+    },
+    "Warrior": {
+      "class": "CPlayer",
+      "equipped": {
+        "0": "Sword",
+        "3": "PlateArmor"
+      },
+      "inventory": {}
+    },
+    "Wayfarer": {
+      "class": "CPlayer",
+      "equipped": {
+        "0": "ShortSword",
+        "3": "LeatherArmor"
+      },
+      "inventory": {}
+    }
+  }
+}
