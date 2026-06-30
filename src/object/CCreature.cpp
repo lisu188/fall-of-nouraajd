@@ -573,18 +573,31 @@ std::shared_ptr<CArmor> CCreature::getArmor() { return vstd::cast<CArmor>(getIte
 
 // TODO: get rid of this, calculate level automatically
 void CCreature::levelUp() {
-    // Legacy fallback compatibility contract (docs/design/creature_archetypes.md,
-    // "Legacy fallback compatibility contract"): a creature with no race and no
-    // creatureClass uses this legacy level-up path exactly -- increment level and
-    // apply the concrete template's own `levelling` unlock (getLevelAction). No
-    // race/class-driven growth or progression participates, because those archetype
-    // objects (CCreatureRace / CCreatureClass) do not exist yet. Any future
-    // archetype level growth must slot in without altering this no-archetype path.
     level++;
-    // TODO: dynamic action calculation
-    addAction(getLevelAction());
-    heal(0);
-    addMana(0);
+    if (usesArchetypeComposition()) {
+        // Composed level-up path (creature carries a race and/or creatureClass).
+        // Class-derived level unlocks are NOT mutated/serialized into the creature's
+        // own `actions` set: getEffectiveInteractions already surfaces every
+        // `levelling` entry whose unlock level is at or below the current level
+        // (src/object/CCreature.cpp getEffectiveInteractions, the unlockLevel <= level
+        // gate). Raising `level` therefore changes the derived interaction set on its
+        // own, so we only signal `interactionsChanged` for observers to re-query the
+        // composed set -- no duplicate serialized actions accumulate across level-ups.
+        signal("interactionsChanged");
+        heal(0);
+        addMana(0);
+    } else {
+        // Legacy fallback compatibility contract (docs/design/creature_archetypes.md,
+        // "Legacy fallback compatibility contract"): a creature with no race and no
+        // creatureClass uses this legacy level-up path exactly -- increment level and
+        // apply the concrete template's own `levelling` unlock (getLevelAction) by
+        // folding it into `actions`. This preserves the historical behavior where the
+        // unlock is serialized into the creature's own action set.
+        // TODO: dynamic action calculation
+        addAction(getLevelAction());
+        heal(0);
+        addMana(0);
+    }
     if (level > 1) {
         vstd::logger::debug(to_string(), "is now level:", level);
     }
