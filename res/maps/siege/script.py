@@ -8,6 +8,7 @@ def load(self, context):
     from game import trigger
     from game import randint
     from game import logger
+    from game import claim_once
 
     SPAWN_POINTS = ("spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4")
 
@@ -58,12 +59,14 @@ def load(self, context):
             return "Pritz mages carry extra wands; defeat them if you run out."
 
         def onComplete(self):
-            player = self.getGame().getMap().getPlayer()
-            if self.getGame().getMap().getBoolProperty("siege_reward_claimed"):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            # Claim-first: claim the campaign reward before granting gold or marking completion so a
+            # repeated completion cannot pay the 500 gold twice.
+            if not claim_once(game_map, "siege_reward_claimed"):
                 return
             player.addGold(500)
-            self.getGame().getMap().setBoolProperty("siege_reward_claimed", True)
-            self.getGame().getMap().setBoolProperty("campaign_completed", True)
+            game_map.setBoolProperty("campaign_completed", True)
             self.getGame().getGuiHandler().showMessage("The last breach is sealed. Nouraajd survives the night.")
 
     @register(context)

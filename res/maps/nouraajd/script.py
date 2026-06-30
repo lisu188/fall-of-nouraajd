@@ -8,6 +8,7 @@ def load(self, context):
     from game import LegacyBoolFlag
     from game import PlayerQuestRegistry
     from game import QuestStateStore
+    from game import claim_once
     from game import ensure_quest
     from game import register, trigger
 
@@ -431,9 +432,10 @@ def load(self, context):
 
         def onComplete(self):
             game_map = self.getGame().getMap()
-            if not game_map.getBoolProperty("GOOBY_REWARD_CLAIMED"):
+            # Claim-first: set the claim flag before granting so a repeated dialog/trigger run cannot
+            # grant the gold twice.
+            if claim_once(game_map, "GOOBY_REWARD_CLAIMED"):
                 game_map.getPlayer().addGold(MAIN_QUEST_GOLD_REWARD)
-                game_map.setBoolProperty("GOOBY_REWARD_CLAIMED", True)
             self.getGame().getGuiHandler().showMessage("Gooby lies butchered, and weary townsfolk dare a ragged cheer.")
 
     @register(context)
@@ -561,12 +563,13 @@ def load(self, context):
         def onComplete(self):
             game = self.getGame()
             game_map = game.getMap()
-            if game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"):
+            # Claim-first: claim the reward before handing out gold and the item so the payout
+            # cannot repeat if onComplete runs again.
+            if not claim_once(game_map, "OCTOBOGZ_REWARD_CLAIMED"):
                 return
             player = game_map.getPlayer()
             player.addGold(1000)
             player.addItem("ShadowBlade")
-            game_map.setBoolProperty("OCTOBOGZ_REWARD_CLAIMED", True)
             game.getGuiHandler().showMessage("The refugees press 1000 gold and the Shadow Blade into your hands.")
 
     @register(context)
