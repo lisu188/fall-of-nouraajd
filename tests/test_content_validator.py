@@ -960,6 +960,124 @@ class ContentValidatorTest(unittest.TestCase):
             'duplicate action id "Attack", previously granted at warriorClass.properties.actions[0]',
         )
 
+    def _write_creature_with_creature_class(self, root, creature_class_value):
+        # A concrete CCreature carrying its class template through the "creatureClass"
+        # *property* (never the top-level constructor key "class").  CCreatureClass is
+        # registered statically so the definition is constructible.
+        self._register_creature_class_type(root)
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": creature_class_value, "label": "Goblin"},
+                }
+            },
+        )
+
+    def test_creature_class_property_resolving_to_creature_class_passes(self):
+        root = self.make_fixture()
+        self._write_creature_with_creature_class(root, {"ref": "warriorClass"})
+
+        issues = validate_repo(root)
+
+        creature_class_issues = [
+            str(issue) for issue in issues if "creatureClass" in str(issue) and "Goblin" in str(issue)
+        ]
+        self.assertEqual([], creature_class_issues)
+
+    def test_creature_class_property_inline_creature_class_passes(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {
+                        "creatureClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}},
+                        "label": "Goblin",
+                    },
+                }
+            },
+        )
+
+        issues = validate_repo(root)
+
+        creature_class_issues = [
+            str(issue) for issue in issues if "creatureClass" in str(issue) and "Goblin" in str(issue)
+        ]
+        self.assertEqual([], creature_class_issues)
+
+    def test_creature_class_property_missing_reference_is_reported(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "Goblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "ghostClass"}, "label": "Goblin"},
+                }
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/monsters.json",
+            "Goblin.properties.creatureClass",
+            'property "creatureClass" expected an object resolving to "CCreatureClass"; '
+            "reference does not resolve to a known config",
+        )
+
+    def test_creature_class_property_wrong_target_class_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_with_creature_class(root, {"ref": "LifePotion"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/monsters.json",
+            "Goblin.properties.creatureClass",
+            'property "creatureClass" expected an object resolving to "CCreatureClass"; got "CPotion"',
+        )
+
+    def test_creature_class_property_wrong_typed_value_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_with_creature_class(root, "warriorClass")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/monsters.json",
+            "Goblin.properties.creatureClass",
+            'property "creatureClass" expected an object resolving to "CCreatureClass"; got string',
+        )
+
+    def test_creature_top_level_class_key_is_not_mistaken_for_creature_class_property(self):
+        root = self.make_fixture()
+        self._register_creature_class_type(root)
+        # The creature's top-level "class": "CCreature" constructor key must never be
+        # treated as the "creatureClass" reference property: a creature that omits the
+        # property is vacuously satisfied and emits no creatureClass diagnostic.
+        write_json(
+            root / "res/config/monsters.json",
+            {"Goblin": {"class": "CCreature", "properties": {"label": "Goblin"}}},
+        )
+
+        issues = validate_repo(root)
+
+        creature_class_issues = [str(issue) for issue in issues if "creatureClass" in str(issue)]
+        self.assertEqual([], creature_class_issues)
+
     def test_archetype_id_as_map_object_type_is_rejected(self):
         root = self.make_fixture()
         write_json(
