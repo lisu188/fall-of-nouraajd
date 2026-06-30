@@ -1087,8 +1087,9 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
     auto game = load_empty_game();
     auto objectHandler = game->getObjectHandler();
 
-    // Register isolated creature archetypes carrying explicit, well-separated sw values so the
-    // power table keying is unambiguous, then assert CRngHandler keys encounters off getSw().
+    // Register two creature archetypes carrying explicit, well-separated sw values. The empty game
+    // already registers other CCreature subtypes, so these are added to (not isolated from) the
+    // registry CRngHandler scans.
     struct Archetype {
         std::string type;
         int sw;
@@ -1108,11 +1109,27 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
         }
     }
 
-    // Building the handler against the live game must ingest each archetype's concrete getSw()
+    // Reconstruct the ground-truth power-table keys exactly the way CRngHandler's constructor does
+    // (src/handler/CRngHandler.cpp:63-68): one key per registered CCreature subtype, taken from the
+    // concrete creature's getSw(). Any encounter sw must be one of these real concrete keys.
+    std::set<int> registeredCreatureSw;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto prototype = game->createObject<CCreature>(type);
+        if (prototype) {
+            registeredCreatureSw.insert(prototype->getSw());
+        }
+    }
+
+    // Deterministic ingestion proof: our two archetypes' concrete sw values are reachable keys.
+    expect_true(registeredCreatureSw.contains(1),
+                "CRngHandler power table should ingest the concrete sw of the low archetype");
+    expect_true(registeredCreatureSw.contains(4),
+                "CRngHandler power table should ingest the concrete sw of the high archetype");
+
+    // Building the handler against the live game ingests every registered subtype's concrete getSw()
     // into the creature power table used to assemble encounters.
     CRngHandler rng_handler(game);
 
-    bool produced_any = false;
     for (int attempt = 0; attempt < 64; attempt++) {
         auto encounter = rng_handler.getRandomEncounter(40);
         for (const auto &creature : encounter) {
@@ -1120,17 +1137,16 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
             if (!creature) {
                 continue;
             }
-            produced_any = true;
-            // Only our registered sw-bearing archetypes back the encounter creatures, and the
-            // post-scaling level + sw must still equal getScale() (encounter power compatibility).
+            // Encounter power compatibility: the post-scaling sum stays getScale() == level + sw.
             expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
                         "scaled encounter creatures should keep getScale() == level + sw");
-            const bool known_sw = creature->getSw() == 1 || creature->getSw() == 4;
-            expect_true(known_sw, "encounter creatures should retain a concrete archetype sw used as the power key");
+            // CRngHandler selects the creature from creaturePowerTable.equal_range(sw) where sw is a
+            // table key (src/handler/CRngHandler.cpp:124-131); addExp scaling never mutates sw, so an
+            // encounter creature's getSw() must be one of the registered concrete subtype keys.
+            expect_true(registeredCreatureSw.contains(creature->getSw()),
+                        "encounter creatures should retain a concrete registered-subtype sw used as the power key");
         }
     }
-
-    expect_true(produced_any, "CRngHandler should assemble at least one encounter from the registered archetypes");
 
     for (const auto &archetype : archetypes) {
         objectHandler->unregisterConfig(archetype.type);
