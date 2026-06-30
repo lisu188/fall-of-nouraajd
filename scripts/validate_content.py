@@ -2385,13 +2385,13 @@ class ContentValidator:
         archetype migration cannot quietly drop them:
 
         * The carrier still carries AMULET_QUEST_ITEM as quest-instance inventory --
-          i.e. its effective "items" (resolving ``ref`` inheritance) reference the
-          quest item by ref or by a node whose resolved "name" is the quest item.
-          Reported against ``<carrier>.properties.items`` so the migration can see the
-          item must stay on the instance rather than move to a race/class template.
+            i.e. its effective "items" (resolving ``ref`` inheritance) reference the
+            quest item by ref or by a node whose resolved "name" is the quest item.
+            Reported against ``<carrier>.properties.items`` so the migration can see the
+            item must stay on the instance rather than move to a race/class template.
         * The map script spawns the carrier under AMULET_RUNTIME_ACTOR_NAME and that
-          name is recognized as a resolvable map object (the completion path resolves
-          it via getObjectByName).  Reported against the spawning script.
+            name is recognized as a resolvable map object (the completion path resolves
+            it via getObjectByName).  Reported against the spawning script.
         """
         carrier_entry = context.config_entries.get(AMULET_CARRIER_CONFIG)
         if carrier_entry is None:
@@ -2602,11 +2602,11 @@ class ContentValidator:
         * every QUEST_DEFAULTS default references a declared quest key;
         * every transition target (a _set_state write) belongs to a declared quest key;
         * every state read (a get_state comparison or state_in) belongs to a declared
-          quest key;
+            quest key;
         * every terminal completion state is reachable from a default -- i.e. it is the
-          default state itself or a state assigned by some transition write. A terminal
-          state that is never the default and never written can never be entered, so the
-          completion check it guards can never fire.
+            default state itself or a state assigned by some transition write. A terminal
+            state that is never the default and never written can never be entered, so the
+            completion check it guards can never fire.
 
         Undeclared keys are detected because any get_state/_set_state/state_in reference
         records a ScriptQuestStateUsage entry whose storage_key stays None when the key
