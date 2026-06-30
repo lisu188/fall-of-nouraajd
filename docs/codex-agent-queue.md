@@ -472,6 +472,37 @@ python3 scripts/issue_queue.py list --status BLOCKED --json
 python3 scripts/issue_queue.py show --issue "$ISSUE_NAME"
 ```
 
+## Proposing new issues
+
+`propose` appends a new `NOT_STARTED` issue (for example an autonomously
+discovered bug) directly into the canonical workbook under the same lock and
+atomic-save path as every other mutation. The `Epic #`, `Story #`, and
+`Substory #` columns are derived from the bracketed `Issue Name`, and the row
+is validated transactionally: it is only persisted when the resulting queue
+still passes `validate`, so a malformed proposal can never corrupt the backlog.
+Duplicate issue names and unknown dependencies are rejected without writing.
+
+```bash
+python3 scripts/issue_queue.py propose \
+  --issue-name "[EPIC_09][STORY_01][SUBSTORY_01]Fix null deref in CFightHandler when target dies mid-swing" \
+  --epic-title "Autonomously Discovered Bugs" \
+  --story-title "Combat crash bugs" \
+  --substory-title "Null deref when target dies mid-swing" \
+  --priority P1 \
+  --issue-type Bug \
+  --component Combat \
+  --target-file src/handler/CFightHandler.cpp \
+  --target-file src/handler/CFightHandler.h \
+  --description "CFightHandler::resolve dereferences target after onDeath may have freed it." \
+  --acceptance "No crash when the target dies mid-resolution; a regression test reproduces and guards it." \
+  --validation "ctest --test-dir cmake-build-release -R controller_unit_tests" \
+  --source-url "https://github.com/lisu188/fall-of-nouraajd/blob/main/src/handler/CFightHandler.cpp"
+```
+
+Pass `--dependencies` with one or more existing issue names (separated by `;`)
+when the fix must wait on other work; the `none` token and an empty value both
+mean "no dependencies". Real dependency names must already exist in the queue.
+
 ## Operating constraints
 
 - Do not keep the XLSX open in desktop Excel/LibreOffice while agents are mutating it, especially on Windows; those programs may prevent atomic replacement.
