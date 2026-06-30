@@ -19,9 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CGameContext.h"
+#include "core/CJson.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
+#include "core/CTypes.h"
 #include "gui/CGui.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/panel/CGameFightPanel.h"
@@ -438,6 +440,17 @@ std::shared_ptr<CGame> fight_panel_game(const std::shared_ptr<CGui> &gui) {
     game->setGui(gui);
     map->setGame(game);
     gui->setGame(game);
+    // CPlayerFightController::start() builds the panel via createObject<CGameFightPanel>("fightPanel").
+    // The real game resolves that name through res/config/panels.json; without it, the object handler
+    // falls back to class-name construction of "fightPanel" (not a registered class) and returns null,
+    // crashing start(). Register a minimal class-only config so a real, child-less panel is created
+    // (no JSON child views => no texture/renderer work during setEnemies()/refreshEncounterViews()).
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto fightPanelConfig = std::make_shared<json>();
+    (*fightPanelConfig)["class"] = "CGameFightPanel";
+    game->getObjectHandler()->registerConfig("fightPanel", fightPanelConfig);
     return game;
 }
 
