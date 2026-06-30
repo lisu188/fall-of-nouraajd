@@ -495,6 +495,29 @@ IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS = {
             "objects": [{"name": "spawnPoint1", "typeId": "SiegeSpawnPoint"}],
         },
     },
+    "composed_archetype_v1": {
+        "primary": "composed_archetype_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "composed",
+            "turn": 18,
+            "description": "immutable composed archetype fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [5, 9, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [{"name": "composedCompanion", "typeId": "composedCompanionTemplate"}],
+        },
+    },
 }
 
 
@@ -541,6 +564,14 @@ def snapshot_player_properties(snapshot):
         if obj.get("class") == "CPlayer" or properties.get("name") == "player":
             return properties
     raise AssertionError("Save snapshot does not contain a canonical player object.")
+
+
+def snapshot_object_properties(snapshot, name):
+    for obj in snapshot.get("properties", {}).get("objects", []):
+        properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        if properties.get("name") == name:
+            return properties
+    raise AssertionError(f"Save snapshot does not contain an object named {name!r}.")
 
 
 def fixture_quest_ids(quests):
@@ -786,6 +817,58 @@ class SaveFixtureTest(unittest.TestCase):
         # (CCreatureRace/CCreatureClass are not created on main). The archetype-specific
         # "quests survive alongside archetype pointers" assertion is deferred until those fields
         # land. This test's durable value is the legacy quest-serialization baseline above.
+
+    def test_composed_archetype_fixture_loads_with_race_and_creature_class(self):
+        # [EPIC_03][STORY_03][SUBSTORY_02] First archetype-aware save shape. The composed
+        # fixture carries a CCreature that references a race and a creatureClass archetype
+        # definition through CCreature's "race"/"creatureClass" V_PROPERTY pointers
+        # (src/object/CCreature.h: V_PROPERTY(..., race, ...) and
+        # V_PROPERTY(..., creatureClass, ...) over std::shared_ptr<CCreatureRace> /
+        # std::shared_ptr<CCreatureClass>). The references are persisted as forward-declared
+        # object refs ({"ref": "..."}) -- the same persisted shape object_deserialize() resolves
+        # (src/core/CSerialization.cpp: CJsonUtil::isRef -> ObjectHandler::createObject) and
+        # identical to how the legacy siege fixture persists its item ref. This loads the fixture
+        # through the suite's normal save-decode path (save_snapshot + the snapshot accessors) and
+        # pins that the composed creature exposes both archetype refs under their exact names.
+        fixture_path = SAVE_FIXTURE_DIR / "composed_archetype_v1.json"
+        self.assertTrue(fixture_path.is_file(), fixture_path)
+        document = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        # Decode through the normal versioned-save envelope, exactly like every other fixture.
+        assert_save_envelope(self, document, "composed")
+        snapshot = save_snapshot(document)
+
+        # The legacy player keeps loading through the established CPlayer path unchanged: it is
+        # a plain Warrior with no archetype identity fields, so back-compat is preserved.
+        player = snapshot_player_properties(snapshot)
+        self.assertEqual("Warrior", player.get("typeId"))
+        self.assertNotIn("race", player)
+        self.assertNotIn("creatureClass", player)
+
+        # The composed companion carries the two archetype references under the exact property
+        # names CCreature serializes ("race" / "creatureClass"), each a forward-declared ref.
+        companion = snapshot_object_properties(snapshot, "composedCompanion")
+        self.assertEqual("composedCompanionTemplate", companion.get("typeId"))
+
+        race = companion.get("race")
+        creature_class = companion.get("creatureClass")
+        self.assertIsInstance(race, dict, "race must persist as a forward-declared object ref")
+        self.assertIsInstance(creature_class, dict, "creatureClass must persist as a forward-declared object ref")
+        # Forward-declared ref shape: a single "ref" string key, which object_deserialize
+        # resolves via ObjectHandler::createObject (CSerialization.cpp / CJsonUtil::isRef).
+        self.assertEqual(["ref"], list(race.keys()))
+        self.assertEqual(["ref"], list(creature_class.keys()))
+        self.assertEqual("humanRace", race["ref"])
+        self.assertEqual("warriorClass", creature_class["ref"])
+
+        # The fixture must validate through the published immutable summary like every other
+        # save-compatibility fixture, so the composed shape is pinned end to end.
+        expected = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["composed_archetype_v1"]["summary"]
+        self.assertEqual(expected, save_fixture_summary(document))
+        self.assertEqual(
+            [{"name": "composedCompanion", "typeId": "composedCompanionTemplate"}],
+            expected["objects"],
+        )
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
