@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CMap.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
 #include "core/CSlotConfig.h"
@@ -100,6 +101,51 @@ std::shared_ptr<CConfigurationProvider> CGameContext::getConfigurationProvider()
     return configurationProvider;
 }
 
+std::shared_ptr<CMapSessionStore> CGameContext::getMapSessionStore() {
+    requireActiveService("CMapSessionStore");
+    if (!mapSessionStore) {
+        mapSessionStore = std::make_shared<CMapSessionStore>();
+    }
+    return mapSessionStore;
+}
+
+std::string CMapSessionStore::makeKey(const std::string &mapName, const std::string &instanceId) {
+    // Length-prefix the map name so distinct (mapName, instanceId) pairs never collide.
+    return std::to_string(mapName.size()) + ":" + mapName + ":" + instanceId;
+}
+
+void CMapSessionStore::put(const std::string &mapName, const std::string &instanceId,
+                           const std::shared_ptr<CMap> &map) {
+    if (!map) {
+        return;
+    }
+    sessions[makeKey(mapName, instanceId)] = map;
+}
+
+void CMapSessionStore::put(const std::shared_ptr<CMap> &map, const std::string &instanceId) {
+    if (!map) {
+        return;
+    }
+    put(map->getMapName(), instanceId, map);
+}
+
+std::shared_ptr<CMap> CMapSessionStore::get(const std::string &mapName, const std::string &instanceId) const {
+    auto it = sessions.find(makeKey(mapName, instanceId));
+    return it != sessions.end() ? it->second : nullptr;
+}
+
+bool CMapSessionStore::contains(const std::string &mapName, const std::string &instanceId) const {
+    return sessions.find(makeKey(mapName, instanceId)) != sessions.end();
+}
+
+bool CMapSessionStore::evict(const std::string &mapName, const std::string &instanceId) {
+    return sessions.erase(makeKey(mapName, instanceId)) > 0;
+}
+
+void CMapSessionStore::clear() { sessions.clear(); }
+
+std::size_t CMapSessionStore::size() const { return sessions.size(); }
+
 bool CGameContext::isActive() const { return active.load(std::memory_order_acquire); }
 
 void CGameContext::shutdown() {
@@ -128,6 +174,10 @@ void CGameContext::shutdown(CGame *owner) {
         scriptHandler->releaseState();
     }
     slotConfiguration.clear();
+    if (mapSessionStore) {
+        mapSessionStore->clear();
+    }
+    mapSessionStore.reset();
     configurationProvider.reset();
     resourcesProvider.reset();
     scriptHandler.reset();
