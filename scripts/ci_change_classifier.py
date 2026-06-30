@@ -63,6 +63,7 @@ LIGHTWEIGHT_PATH_PATTERNS = (
     "tests/test_ci_change_classifier.py",
     "tests/test_content_validator.py",
     "tests/test_controller_resource_audit.py",
+    "tests/test_coverage_report.py",
     "tests/test_issue_queue.py",
     "tests/test_poll_pr_checks.py",
     "tests/test_pr_review_audit.py",
@@ -158,6 +159,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             paths.extend(changedPaths(args.base, args.head))
         except subprocess.CalledProcessError as exc:
             print(f"ci_change_classifier: git diff failed: {exc.stderr.strip()}", file=sys.stderr)
+            return 2
+        except FileNotFoundError:
+            print("ci_change_classifier: git executable not found on PATH", file=sys.stderr)
+            return 2
+        except OSError as exc:
+            print(f"ci_change_classifier: git diff could not be executed: {exc}", file=sys.stderr)
             return 2
     if args.paths_from_stdin:
         paths.extend(sys.stdin.read().splitlines())
