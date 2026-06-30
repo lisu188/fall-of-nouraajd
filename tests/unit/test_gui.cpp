@@ -23,24 +23,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
+#include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CGameGraphicsObject.h"
+#include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
 #include "gui/panel/CListView.h"
 #include "handler/CObjectHandler.h"
+#include "object/CCreature.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
 
+#include <chrono>
+#include <limits>
 #include <utility>
 
 namespace {
@@ -660,6 +666,118 @@ std::shared_ptr<CStats> player_stats() {
     return stats;
 }
 
+struct MinimapHarness {
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CPlayer> player;
+};
+
+MinimapHarness make_minimap_harness() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    MinimapHarness harness;
+    harness.game = std::make_shared<CGame>();
+    harness.map = std::make_shared<CMap>();
+    harness.gui = std::make_shared<CGui>();
+    harness.player = std::make_shared<CPlayer>();
+
+    harness.game->setMap(harness.map);
+    harness.game->setGui(harness.gui);
+    harness.map->setGame(harness.game);
+    harness.gui->setGame(harness.game);
+
+    harness.player->setGame(harness.game);
+    harness.player->setBaseStats(player_stats());
+    harness.player->setHp(harness.player->getHpMax());
+    harness.map->setPlayer(harness.player);
+    return harness;
+}
+
+// Renders the minimap once and asserts the call returns (the pre-fix bug could iterate/scale over
+// attacker-extreme or overflow-prone level extents). Returns elapsed milliseconds for liveness checks.
+double render_minimap_once(const MinimapHarness &harness) {
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    auto rect = CUtil::rect(0, 0, 128, 128);
+    const auto start = std::chrono::steady_clock::now();
+    minimap->renderObject(harness.gui, rect, 0);
+    const auto end = std::chrono::steady_clock::now();
+    return std::chrono::duration<double, std::milli>(end - start).count();
+}
+
+// Liveness budget: a bounded/fail-closed minimap render must complete near-instantly. The unbounded
+// path would iterate billions of cells, so a generous wall-clock cap reliably catches a regression
+// without flaking on slow CI.
+constexpr double MINIMAP_RENDER_BUDGET_MS = 2000.0;
+
+void test_minimap_bounds_extreme_metadata_fails_closed() {
+    auto harness = make_minimap_harness();
+    // Attacker-extreme xBound/yBound metadata (post-loader clamp these would already be smaller, but the
+    // minimap must defend independently of the loader).
+    harness.map->setXBounds({{0, std::numeric_limits<int>::max()}});
+    harness.map->setYBounds({{0, std::numeric_limits<int>::max()}});
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should fail closed on extreme metadata bounds instead of iterating to INT_MAX");
+}
+
+void test_minimap_bounds_overflow_prone_extents_fail_closed() {
+    auto harness = make_minimap_harness();
+    // maxX = INT_MAX combined with a negative-spanning min would overflow int extent arithmetic.
+    harness.map->setEntryX(-1000);
+    harness.map->setEntryY(-1000);
+    harness.player->moveTo(-1000, -1000, 0);
+    harness.map->setXBounds({{0, std::numeric_limits<int>::max()}});
+    harness.map->setYBounds({{0, std::numeric_limits<int>::max()}});
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should fail closed on overflow-prone level extents without signed-overflow UB");
+}
+
+void test_minimap_bounds_sparse_coordinates_fail_closed() {
+    auto harness = make_minimap_harness();
+    // No metadata bounds -> bounds are derived from sparse coordinates. A single far-flung tile must not
+    // expand iteration/scaling over the enormous empty span between the player and that tile.
+    harness.map->setXBounds({});
+    harness.map->setYBounds({});
+    harness.map->addTile(std::make_shared<CTile>(), 50'000'000, 50'000'000, 0);
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should fail closed on sparse far-flung coordinates instead of iterating empty space");
+}
+
+void test_minimap_bounds_negative_sparse_coordinates_render() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({});
+    harness.map->setYBounds({});
+    // A compact cluster including negative coordinates must still render (regression: clamping must not
+    // reject legitimately small negative-origin levels).
+    harness.map->addTile(std::make_shared<CTile>(), -5, -5, 0);
+    harness.map->addTile(std::make_shared<CTile>(), -3, -2, 0);
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS,
+                "minimap should render a small negative-origin level without failing closed");
+}
+
+void test_minimap_bounds_normal_map_renders() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({{0, 32}});
+    harness.map->setYBounds({{0, 32}});
+    harness.map->setDefaultTiles({{0, "GrassTile"}});
+    harness.map->addTile(std::make_shared<CTile>(), 4, 4, 0);
+    harness.map->addTile(std::make_shared<CTile>(), 10, 12, 0);
+    auto creature = std::make_shared<CCreature>();
+    harness.map->addObject(creature, Coords(6, 6, 0));
+
+    const double elapsed = render_minimap_once(harness);
+    expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
+}
+
 void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -1170,6 +1288,11 @@ int main() {
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
+    test_minimap_bounds_extreme_metadata_fails_closed();
+    test_minimap_bounds_overflow_prone_extents_fail_closed();
+    test_minimap_bounds_sparse_coordinates_fail_closed();
+    test_minimap_bounds_negative_sparse_coordinates_render();
+    test_minimap_bounds_normal_map_renders();
 
     return finish_tests();
 }
