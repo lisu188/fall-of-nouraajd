@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
+#include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
 #include "object/CMarket.h"
@@ -653,6 +654,141 @@ void test_creature_archetype_identity_accessors_use_fallbacks() {
                 "archetype class label should fall back through archetype class id to name when nothing else is set");
 }
 
+void test_creature_effective_interactions_compose_and_dedupe_sources() {
+    auto creature = std::make_shared<CCreature>();
+    creature->setLevel(2);
+
+    // Innate / class action exposed through a levelling unlock at level 1.
+    auto innate_strike = std::make_shared<CInteraction>();
+    innate_strike->setTypeId("strike");
+    innate_strike->setName("levelling-strike");
+
+    // A levelling unlock gated to a higher level than the creature has reached.
+    auto future_unlock = std::make_shared<CInteraction>();
+    future_unlock->setTypeId("ultimate");
+    future_unlock->setName("levelling-ultimate");
+
+    // A levelling unlock keyed by name only (no typeId) at an unlocked level.
+    auto named_unlock = std::make_shared<CInteraction>();
+    named_unlock->setName("ward");
+
+    CInteractionMap levelling;
+    levelling["1"] = innate_strike;
+    levelling["5"] = future_unlock;
+    levelling["2"] = named_unlock;
+    creature->setLevelling(levelling);
+
+    // Concrete action overriding the innate "strike" (same typeId, different
+    // instance) plus a unique concrete action.
+    auto concrete_strike = std::make_shared<CInteraction>();
+    concrete_strike->setTypeId("strike");
+    concrete_strike->setName("concrete-strike");
+    creature->addAction(concrete_strike);
+
+    auto unique_action = std::make_shared<CInteraction>();
+    unique_action->setTypeId("dash");
+    unique_action->setName("concrete-dash");
+    creature->addAction(unique_action);
+
+    auto effective = creature->getEffectiveInteractions();
+
+    auto contains = [&effective](const std::shared_ptr<CInteraction> &action) {
+        return effective.find(action) != effective.end();
+    };
+    auto count_with_type = [&effective](const std::string &typeId) {
+        return std::count_if(effective.begin(), effective.end(),
+                             [&typeId](const auto &action) { return action && action->getTypeId() == typeId; });
+    };
+
+    expect_true(effective.size() == 3, "effective interactions should expose strike, ward and dash exactly once each");
+    expect_true(count_with_type("strike") == 1,
+                "a typeId duplicated across innate and concrete sources should appear only once");
+    expect_true(contains(concrete_strike) && !contains(innate_strike),
+                "concrete actions should override duplicate innate/level-unlocked actions of the same typeId");
+    expect_true(contains(unique_action), "unique concrete actions should be present in the effective interaction set");
+    expect_true(contains(named_unlock),
+                "level-unlocked actions at or below the current level should be exposed (name-keyed dedupe)");
+    expect_true(!contains(future_unlock), "level unlocks above the current level should not yet be exposed");
+
+    // getInteractions() delegates to the composed, de-duplicated set.
+    expect_true(creature->getInteractions() == effective,
+                "getInteractions should delegate to the effective, de-duplicated interaction set");
+}
+void test_creature_action_merge_dedupes_by_type_id() {
+    // Pins the approved creature action merge contract
+    // (docs/design/creature_archetypes.md, "Creature action merge contract"):
+    // actions are composed in precedence order (race innate -> class starting ->
+    // class level unlocks -> concrete template) and deduplicated by `typeId`
+    // (falling back to `name` only when `typeId` is empty), last/most-specific wins.
+    auto creature = std::make_shared<CCreature>();
+
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    // (1) race innate: a generic Attack and a race-only ability.
+    auto raceAttack = interaction("Attack", "raceAttack");
+    auto raceClaw = interaction("Claw", "raceClaw");
+    // (2) class starting: a duplicate Attack (same typeId, different instance/name).
+    auto classAttack = interaction("Attack", "classAttack");
+    // (3) class level unlock: a unique unlock.
+    auto levelStrike = interaction("Strike", "levelStrike");
+    // (4) concrete template: the most specific Attack override plus a unique action.
+    auto concreteAttack = interaction("Attack", "concreteAttack");
+    auto concreteFinisher = interaction("Finisher", "concreteFinisher");
+
+    creature->addAction(raceAttack);
+    creature->addAction(raceClaw);
+    creature->addAction(classAttack);
+    creature->addAction(levelStrike);
+    creature->addAction(concreteAttack);
+    creature->addAction(concreteFinisher);
+
+    const auto actions = creature->getActions();
+
+    auto withTypeId = [&actions](const std::string &typeId) {
+        std::vector<std::shared_ptr<CInteraction>> matches;
+        for (const auto &action : actions) {
+            if (action && action->getTypeId() == typeId) {
+                matches.push_back(action);
+            }
+        }
+        return matches;
+    };
+
+    expect_true(withTypeId("Attack").size() == 1,
+                "duplicate Attack actions from race/class/concrete sources should collapse to a single entry");
+    expect_true(!withTypeId("Attack").empty() && withTypeId("Attack").front() == concreteAttack,
+                "the last/most-specific source should win for a deduplicated action typeId");
+    expect_true(actions.contains(raceClaw) && actions.contains(levelStrike) && actions.contains(concreteFinisher),
+                "unique actions from each source should be preserved through the merge");
+    expect_true(!actions.contains(raceAttack) && !actions.contains(classAttack),
+                "earlier Attack definitions should be replaced by the more specific source");
+    expect_true(actions.size() == 4, "the merged action set should keep one Attack plus the three unique actions");
+
+    // Re-adding the exact same instance is idempotent and does not duplicate.
+    creature->addAction(concreteAttack);
+    expect_true(creature->getActions().size() == 4, "re-adding the same action instance should be idempotent");
+
+    // typeId-empty actions fall back to name for dedupe.
+    auto namedCreature = std::make_shared<CCreature>();
+    auto firstWander = interaction("", "Wander");
+    auto secondWander = interaction("", "Wander");
+    auto patrol = interaction("", "Patrol");
+    namedCreature->addAction(firstWander);
+    namedCreature->addAction(secondWander);
+    namedCreature->addAction(patrol);
+    const auto namedActions = namedCreature->getActions();
+    expect_true(namedActions.size() == 2,
+                "actions without a typeId should deduplicate by name (last wins) and keep distinct names");
+    expect_true(namedActions.contains(secondWander) && !namedActions.contains(firstWander),
+                "the later name-keyed action should replace the earlier one when typeId is empty");
+}
+
 void test_game_object_comparator_and_identity_sets_document_current_semantics() {
     std::shared_ptr<CGameObject> null_object;
     auto object = std::make_shared<CGameObject>();
@@ -916,6 +1052,8 @@ int main() {
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_creature_archetype_identity_accessors_use_fallbacks();
+    test_creature_effective_interactions_compose_and_dedupe_sources();
+    test_creature_action_merge_dedupes_by_type_id();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
 
