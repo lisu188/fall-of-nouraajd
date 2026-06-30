@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSaveFormat.h"
+#include "core/CController.h"
 #include "core/CSerialization.h"
 #include "core/CScript.h"
 #include "core/CStats.h"
@@ -2208,6 +2209,119 @@ void test_levelup_composed_path_unlocks_via_effective_interactions_without_seria
                 "repeated composed level-ups expose the unlock exactly once (no permanent duplicates)");
 }
 
+// EPIC_03/STORY_04/SUBSTORY_03: preserve archetypes when cloning creatures.
+//
+// A composed creature carries archetype-definition references (race and/or
+// creatureClass; usesArchetypeComposition() is true). Cloning runs through
+// CObjectHandler::_clone (src/handler/CObjectHandler.cpp): it serializes the
+// creature to JSON, deserializes a fresh CGameObject, and assigns it a freshly
+// generated unique name (CSerialization::generateName). CGameObject::clone<T>()
+// is the public entry point and dispatches to that handler path.
+//
+// This pins that the clone of a composed creature:
+//   * still uses archetype composition and exposes the SAME archetype DEFINITION
+//     (the race's creatureType and the creatureClass's mainStat -- the identity a
+//     race/class carries) -- the archetype is preserved, not dropped or swapped;
+//   * carries the archetype as an independent runtime object: the engine deep-
+//     copies every nested pointer property on clone, so the clone owns distinct
+//     race/creatureClass instances. Mutating the clone's archetype must not write
+//     back through to the source's archetype (no unintended shared mutable state);
+//   * receives a generated unique name distinct from the source's name;
+//   * keeps scalar runtime state independent (mutating the clone's level/hp/gold
+//     does not disturb the source);
+//   * does NOT duplicate the level-derived class unlock (the creatureClass
+//     levelling entry) into the clone's concrete `actions` set -- level unlocks
+//     stay derived through composition, exactly as the composed levelUp path
+//     guarantees, so a clone cannot start accumulating them as permanent actions.
+//
+// Harness: the minimal in-process object-handler harness (no loaded map), mirroring
+// the archetype metadata round-trip tests above. The source creature is kept
+// deliberately minimal -- only archetype refs plus scalar fields, with NO nested
+// `levelling`/`actions` maps on the CREATURE itself -- so the clone's deep-copy
+// path has no fragile creature-level sub-objects whose null deserialization could
+// segfault. The one nested level unlock lives inside the creatureClass archetype
+// (a plain CInteraction that deep-copies cleanly), and getLevelAction() is never
+// invoked, so the null-subobject clone crash is avoided. Every type the creature
+// serializes through (CStats from its base stats, CController from the lazy
+// getController default, CInteraction for the class unlock) is registered so the
+// round-trip resolves instead of silently dropping fields.
+void test_creature_clone_preserves_composed_archetypes() {
+    auto game = std::make_shared<CGame>();
+    register_archetype_type<CCreature, CMapObject, CGameObject>(game);
+    register_archetype_type<CCreatureRace, CGameObject>(game);
+    register_archetype_type<CCreatureClass, CGameObject>(game);
+    register_archetype_type<CStats, CGameObject>(game);
+    register_archetype_type<CController, CGameObject>(game);
+    register_archetype_type<CInteraction, CGameObject>(game);
+
+    // Race archetype definition: identity carried by its creatureType.
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+
+    // Class archetype definition: identity carried by its mainStat, plus a
+    // level-keyed unlock that exists ONLY on the archetype (composition source),
+    // never folded into the creature's own actions.
+    auto classUnlock = std::make_shared<CInteraction>();
+    classUnlock->setTypeId("warriorCleave");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+    klass->setLevelling({{"1", classUnlock}});
+
+    auto source = std::make_shared<CCreature>();
+    source->setGame(game);
+    source->setName("composedSource");
+    source->setRace(race);
+    source->setCreatureClass(klass);
+    source->setLevel(3);
+    source->setHp(11);
+    source->setGold(5);
+    // Minimal by design: no creature-level levelling/actions to deep-copy.
+    expect_true(source->usesArchetypeComposition(), "the source creature is composed (has race + creatureClass)");
+    expect_true(source->getActions().empty(), "the source creature starts with no concrete actions");
+
+    auto clone = source->clone<CCreature>();
+    drain_event_loop();
+
+    expect_true(clone != nullptr, "cloning a composed creature yields a CCreature instance");
+    expect_true(clone != source, "the clone is a distinct object from the source");
+
+    // Archetype preserved: composition flag and archetype definition identity carry
+    // across the clone.
+    expect_true(clone->usesArchetypeComposition(), "the clone remains a composed creature after cloning");
+    expect_true(clone->getRace() != nullptr && clone->getCreatureClass() != nullptr,
+                "the clone retains both archetype references");
+    expect_true(clone->getRace()->getCreatureType() == "humanoid",
+                "the clone's race archetype keeps the same definition (creatureType)");
+    expect_true(clone->getCreatureClass()->getMainStat() == "strength",
+                "the clone's creatureClass archetype keeps the same definition (mainStat)");
+
+    // Generated unique name distinct from the source.
+    expect_true(!clone->getName().empty(), "the clone receives a generated name");
+    expect_true(clone->getName() != source->getName(), "the clone's generated name is distinct from the source's");
+
+    // Level-derived class unlock is NOT duplicated into the clone's concrete
+    // actions -- it stays a composition-derived definition, not a stored action.
+    expect_true(clone->getActions().empty(),
+                "cloning does not fold the class-level unlock into the clone's concrete actions");
+
+    // The clone owns independent archetype instances: the engine deep-copies nested
+    // pointer properties, so mutating the clone's archetype must not leak back into
+    // the source's archetype definition.
+    clone->getRace()->setCreatureType("undead");
+    expect_true(source->getRace()->getCreatureType() == "humanoid",
+                "mutating the clone's race archetype does not write back to the source's race");
+    clone->getCreatureClass()->setMainStat("intelligence");
+    expect_true(source->getCreatureClass()->getMainStat() == "strength",
+                "mutating the clone's creatureClass archetype does not write back to the source's class");
+
+    // Scalar runtime state is independent across the clone boundary.
+    clone->setLevel(99);
+    clone->setHp(1);
+    clone->setGold(42);
+    expect_true(source->getLevel() == 3 && source->getHp() == 11 && source->getGold() == 5,
+                "mutating the clone's scalar state leaves the source unchanged");
+}
+
 } // namespace
 
 int main() {
@@ -2263,6 +2377,7 @@ int main() {
     test_archetype_types_are_registered_with_type_system();
     test_levelup_legacy_path_serializes_unlock_into_actions();
     test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
+    test_creature_clone_preserves_composed_archetypes();
 
     return finish_tests();
 }
