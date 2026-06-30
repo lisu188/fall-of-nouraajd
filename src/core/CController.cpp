@@ -164,6 +164,10 @@ bool creature_can_follow_step(const std::shared_ptr<CMap> &map, const std::share
     return target != current && map->canStep(target) && contains_navigation_neighbor(map, current, target);
 }
 
+int movement_step_cost(const std::shared_ptr<CMap> &map, const Coords &, const Coords &to) {
+    return map ? map->lookupMovementCost(to) : 1;
+}
+
 std::shared_ptr<TargetFlowField> build_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
                                                          std::uint64_t revision) {
     auto field = std::make_shared<TargetFlowField>();
@@ -198,7 +202,7 @@ std::shared_ptr<TargetFlowField> build_target_flow_field(const std::shared_ptr<C
                 continue;
             }
 
-            const int nextCost = current.cost + 1;
+            const int nextCost = current.cost + movement_step_cost(map, previous, current.coords);
             auto previousCost = costs.find(previous);
             if (previousCost == costs.end() || nextCost < previousCost->second) {
                 costs[previous] = nextCost;
@@ -368,7 +372,8 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
                         creature->getCoords(), candidate, [map](const Coords &c) { return map->canStep(c); },
                         [](auto) -> std::optional<Coords> { return std::nullopt; },
                         [map](const Coords &coords) { return map->getNavigationNeighbors(coords); },
-                        [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); });
+                        [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); },
+                        [map](const Coords &from, const Coords &to) { return movement_step_cost(map, from, to); });
                     self->currentStep = 0;
                     break;
                 }
@@ -625,7 +630,8 @@ std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> pl
         player->getCoords(), *target, [player](Coords coords) { return player->getMap()->canStep(coords); },
         [](auto) -> std::optional<Coords> { return std::nullopt; },
         [player](const Coords &coords) { return player->getMap()->getNavigationNeighbors(coords); },
-        [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); });
+        [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); },
+        [player](const Coords &from, const Coords &to) { return movement_step_cost(player->getMap(), from, to); });
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {

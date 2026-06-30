@@ -784,7 +784,8 @@ void CMap::dumpPaths(std::string path) {
         currentPlayer->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
         [](auto) -> std::optional<Coords> { return std::nullopt; },
         [this](auto coords) { return this->getNavigationNeighbors(coords); },
-        [this](auto from, auto to) { return this->getDistance(from, to); });
+        [this](auto from, auto to) { return this->getDistance(from, to); },
+        [this](auto, auto to) { return this->lookupMovementCost(to); });
 }
 
 std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {
