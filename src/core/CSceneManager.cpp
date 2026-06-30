@@ -164,7 +164,12 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
         std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, mapName);
         game->setMap(map);
         if (oldMap && game->getMap()) {
-            std::shared_ptr<CPlayer> player = oldMap->detachPlayer();
+            // Preserve the source map's object list across the transition so it remains a stable
+            // historical snapshot (see the *_preserves_source_map regressions): read the player
+            // without stripping it from the old map, and transfer active ownership to the
+            // destination via attachPlayer (which sets owningMap, controllers, and the canonical
+            // player on the new map). detachPlayer() remains available as an explicit API.
+            std::shared_ptr<CPlayer> player = oldMap->getPlayer();
             if (player) {
                 game->getMap()->attachPlayer(player);
             }
