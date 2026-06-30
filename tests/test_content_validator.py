@@ -24,7 +24,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.validate_content import ContentValidator, ScriptPropertyHygieneAllowance, validate_repo
+from scripts.validate_content import (
+    ContentValidator,
+    ScriptPropertyHygieneAllowance,
+    inventory_creature_overrides,
+    validate_repo,
+)
 
 
 class ContentValidatorTest(unittest.TestCase):
@@ -263,6 +268,68 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertIn(("map", "MAIN_TURN", "setNumericProperty"), property_writes)
         self.assertIn(("player", "skill_flag", "setBoolProperty"), property_writes)
 
+    def test_script_analyzer_inventories_runtime_spawned_creatures(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            textwrap.dedent("""
+                def load(self, context):
+                    from game import CTrigger
+                    from game import register
+
+                    NAME_PREFIX = "wave"
+
+                    def spawn_quest_actors(game, game_map):
+                        leader = game.createObject("CultLeader")
+                        leader.setStringProperty("name", "cultLeaderQuest")
+                        game_map.addObject(leader)
+
+                        controller = game.createObject("CTargetController")
+                        controller.setTarget("player")
+
+                        for index in range(3):
+                            mob = game.createObject("Cultist")
+                            mob.setStringProperty("name", f"{NAME_PREFIX}{index}")
+                            game_map.addObject(mob)
+
+                        game_map.addObjectByName("siegePritz", game_map.getCoords())
+                """).lstrip(),
+            encoding="utf-8",
+        )
+        info = ContentValidator(root)._parse_script(script_path)
+        self.assertIsNotNone(info)
+        if info is None:
+            return
+
+        spawns = {(c.spawn_call, c.template, c.runtime_name) for c in info.spawned_creatures}
+
+        # createObject template ids are recorded with their literal post-spawn names.
+        self.assertIn(("createObject", "CultLeader", "cultLeaderQuest"), spawns)
+        # createObject without a name write stays anonymous (controllers, etc.).
+        self.assertIn(("createObject", "CTargetController", None), spawns)
+        # A computed (f-string) name is NOT inferred -- only literal names are kept.
+        self.assertIn(("createObject", "Cultist", None), spawns)
+        # addObjectByName spawns are anonymous: template preserved, no runtime name.
+        self.assertIn(("addObjectByName", "siegePritz", None), spawns)
+
+        # Template ids and runtime names are tracked separately so a migration can
+        # preserve both for the trigger validators that special-case quest actors.
+        templates = {c.template for c in info.spawned_creatures}
+        runtime_names = {c.runtime_name for c in info.spawned_creatures if c.runtime_name is not None}
+        self.assertEqual({"CultLeader", "CTargetController", "Cultist", "siegePritz"}, templates)
+        self.assertEqual({"cultLeaderQuest"}, runtime_names)
+
+    def test_script_analyzer_inventories_real_quest_creature_spawns(self):
+        # Names must come from real script source, never from design docs.
+        info = ContentValidator(REPO_ROOT)._parse_script(REPO_ROOT / "res/maps/nouraajd/script.py")
+        self.assertIsNotNone(info)
+        if info is None:
+            return
+        named = {c.template: c.runtime_name for c in info.spawned_creatures if c.runtime_name is not None}
+        self.assertEqual("cultLeaderQuest", named.get("CultLeader"))
+        self.assertEqual("gooby1", named.get("gooby"))
+        self.assertEqual("amuletGoblin", named.get("goblinThief"))
+
     def test_given_player_bool_read_without_default_when_validating_then_reports_uninitialized_property(self):
         root = self.make_fixture()
         write_property_hygiene_script(
@@ -459,6 +526,74 @@ class ContentValidatorTest(unittest.TestCase):
         issues = ContentValidator(root, property_hygiene_allowlist=(allowance,)).validate()
 
         self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_creature_archetype_naming_policy_accepts_conforming_ids(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"properties": {"creatureClass": {"ref": "warriorClass"}}}},
+        )
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"properties": {"label": "Warrior"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_creature_race_id_without_race_suffix_is_reported(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"human": {"properties": {"label": "Human"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "human",
+            'creature_races.json template id "human" must end with "Race"',
+        )
+
+    def test_creature_class_id_without_class_suffix_is_reported(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warrior": {"properties": {"label": "Warrior"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            "warrior",
+            'creature_classes.json template id "warrior" must end with "Class"',
+        )
+
+    def test_creature_class_reference_via_reserved_class_key_is_reported(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"properties": {"class": {"ref": "warriorClass"}}}},
+        )
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"properties": {"label": "Warrior"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.class",
+            'class reference must use property "creatureClass"',
+            'never the reserved object-constructor key "class"',
+        )
 
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
@@ -1283,6 +1418,94 @@ def read_json(path):
 
 def write_json(path, data):
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+class CreatureOverrideInventoryTest(unittest.TestCase):
+    def test_repo_inventory_lists_known_map_local_overrides(self):
+        overrides = {
+            (override.path, override.location): override for override in inventory_creature_overrides(REPO_ROOT)
+        }
+
+        siege_mage = overrides[("res/maps/siege/config.json", "siegePritzMage")]
+        self.assertEqual("PritzMage", siege_mage.template)
+        self.assertEqual(("controller", "affiliation", "items"), siege_mage.properties)
+
+        nested_pritz = overrides[("res/maps/nouraajd/config.json", "cave1.properties.monster")]
+        self.assertEqual("cave1", nested_pritz.key)
+        self.assertEqual("Pritz", nested_pritz.template)
+        self.assertEqual(("controller", "affiliation"), nested_pritz.properties)
+
+        anchor = overrides[("res/maps/ritual/config.json", "ritualAnchorNorth.properties.monster")]
+        self.assertEqual("Cultist", anchor.template)
+        self.assertEqual(("controller",), anchor.properties)
+
+    def test_inventory_detects_nested_overrides_and_ignores_non_creatures(self):
+        root = self.make_creature_fixture()
+
+        overrides = inventory_creature_overrides(root)
+        by_location = {override.location: override for override in overrides}
+
+        self.assertIn("townGuard", by_location)
+        self.assertEqual("Soldier", by_location["townGuard"].template)
+        self.assertEqual(("controller", "items"), by_location["townGuard"].properties)
+
+        self.assertIn("spawner.properties.monster", by_location)
+        self.assertEqual(("affiliation",), by_location["spawner.properties.monster"].properties)
+
+        # A creature ref that overrides no watched property and a non-creature ref are excluded.
+        self.assertNotIn("plainSoldier", by_location)
+        self.assertNotIn("loot", by_location)
+
+    def make_creature_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "res/plugins").mkdir(parents=True)
+        (root / "res/maps/keep").mkdir(parents=True)
+
+        write_json(
+            root / "res/config/monsters.json",
+            {"Soldier": {"class": "CCreature", "properties": {"animation": "images/monsters/soldier"}}},
+        )
+        write_json(
+            root / "res/config/items.json",
+            {"Sword": {"class": "CItem"}},
+        )
+        write_json(
+            root / "res/config/buildings.json",
+            {"Spawner": {"class": "CBuilding"}},
+        )
+        write_json(
+            root / "res/maps/keep/map.json",
+            {
+                "type": "map",
+                "width": 1,
+                "height": 1,
+                "layers": [{"type": "tilelayer", "width": 1, "height": 1, "data": [0]}],
+                "tilesets": [{"firstgid": 1, "tileproperties": {}}],
+                "nextobjectid": 1,
+            },
+        )
+        write_json(
+            root / "res/maps/keep/config.json",
+            {
+                "townGuard": {
+                    "ref": "Soldier",
+                    "properties": {
+                        "controller": {"class": "CTargetController", "properties": {"target": "player"}},
+                        "items": [{"ref": "Sword"}],
+                    },
+                },
+                "plainSoldier": {"ref": "Soldier", "properties": {"message": "Just passing through."}},
+                "loot": {"ref": "Sword", "properties": {"animation": "images/item"}},
+                "spawner": {
+                    "ref": "Spawner",
+                    "properties": {"monster": {"ref": "Soldier", "properties": {"affiliation": "keep"}}},
+                },
+            },
+        )
+        return root
 
 
 if __name__ == "__main__":

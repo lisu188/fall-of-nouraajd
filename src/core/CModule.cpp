@@ -1005,7 +1005,15 @@ void init_game_module(py::module_ &m) {
         .def("removeItem", removeItem,
              "Remove the first inventory item matching predicate(item). Optional second arg allows quest removal.")
         .def("removeQuestItem", removeQuestItem, "Remove first matching quest item predicate from inventory.")
-        .def("countItems", &CCreature::countItems, "Count inventory items by type id.");
+        .def("countItems", &CCreature::countItems, "Count inventory items by type id.")
+        .def("getArchetypeRaceId", &CCreature::getArchetypeRaceId,
+             "Return the creature archetype race identity id (configured type id, falling back to name).")
+        .def("getArchetypeClassId", &CCreature::getArchetypeClassId,
+             "Return the creature archetype class identity id (configured type id, falling back to name).")
+        .def("getArchetypeRaceLabel", &CCreature::getArchetypeRaceLabel,
+             "Return the creature archetype race display label (label, falling back to the archetype race id).")
+        .def("getArchetypeClassLabel", &CCreature::getArchetypeClassLabel,
+             "Return the creature archetype class display label (label, falling back to the archetype class id).");
 
     py::class_<CPlayer, CCreature, std::shared_ptr<CPlayer>>(m, "CPlayer", "Player-controlled creature.")
         .def("addQuest", &CPlayer::addQuest, "Add a quest to the player quest log.")

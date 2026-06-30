@@ -1157,8 +1157,14 @@ def count_player_objects(game_map):
 
 
 def transition_source_map_snapshot(game_map):
+    # A scene transition detaches the active player from the source map and
+    # transfers it to the destination map (see CSceneManager::performMapChange and
+    # the CMap player-transfer unit tests). That detachment is the expected outcome
+    # of the transition, not source-map corruption, so the preservation invariant is
+    # measured over the source map's non-player objects.
+    non_player_objects = sum(1 for obj in game_map.getObjects() if not (hasattr(obj, "isPlayer") and obj.isPlayer()))
     return {
-        "object_count": len(game_map.getObjects()),
+        "object_count": non_player_objects,
         "origin": game_map.getStringProperty("transitionOrigin"),
         "turn": game_map.getTurn(),
     }
@@ -18196,6 +18202,126 @@ class McpServerTest(unittest.TestCase):
         self.assertNotIn("NativeLike.append", server.exports)
         self.assertNotIn("set_logger_sink", server.exports)
         self.assertEqual(server.exports["CGameLoader.loadGame"].source, "game.CGameLoader")
+
+    def _make_pathfinding_stub_handles(self, server, *, x_bounds=None, y_bounds=None, passable=True):
+        """Register fake controller/player/map handles that mimic the engine pathfinding surface.
+
+        Returns the controller stub so tests can assert whether setTarget was actually invoked.
+        """
+
+        class StubCoords:
+            def __init__(self, x, y, z=0):
+                self.x = x
+                self.y = y
+                self.z = z
+
+        class StubMap:
+            def getXBounds(self):
+                return dict(x_bounds) if x_bounds is not None else {}
+
+            def getYBounds(self):
+                return dict(y_bounds) if y_bounds is not None else {}
+
+            def canStep(self, coords):
+                return passable
+
+        class StubPlayer:
+            def __init__(self, game_map):
+                self._map = game_map
+
+            def getMap(self):
+                return self._map
+
+        class CPlayerController:  # name matters: gates allowlist via MCP_ALLOWED_HANDLE_METHODS
+            def __init__(self):
+                self.calls = []
+
+            def setTarget(self, player, target):
+                self.calls.append((player, target))
+                return None
+
+        game_map = StubMap()
+        player = StubPlayer(game_map)
+        controller = CPlayerController()
+        server.handles["ctrl"] = controller
+        server.handles["player"] = player
+        return controller, StubCoords
+
+    def test_engine_handle_call_rejects_out_of_bounds_set_target(self):
+        server = self.make_stub_server()
+        controller, StubCoords = self._make_pathfinding_stub_handles(
+            server, x_bounds={0: 63}, y_bounds={0: 63}
+        )
+        server.handles["coords"] = StubCoords(5000, 5000, 0)
+
+        result = server._engine_handle_call(
+            {
+                "handle": "ctrl",
+                "method": "setTarget",
+                "args": [{"__handle__": "player"}, {"__handle__": "coords"}],
+            }
+        )
+        self.assertTrue(result["isError"])
+        self.assertIn("outside map extents", result["structuredContent"]["error"])
+        self.assertEqual(controller.calls, [])  # pathfinder was never invoked
+
+    def test_engine_handle_call_rejects_extreme_magnitude_set_target(self):
+        server = self.make_stub_server()
+        controller, StubCoords = self._make_pathfinding_stub_handles(server)  # unbounded/sparse map
+        server.handles["coords"] = StubCoords(50_000_000, -50_000_000, 0)
+
+        result = server._engine_handle_call(
+            {
+                "handle": "ctrl",
+                "method": "setTarget",
+                "args": [{"__handle__": "player"}, {"__handle__": "coords"}],
+            }
+        )
+        self.assertTrue(result["isError"])
+        self.assertIn("maximum allowed", result["structuredContent"]["error"])
+        self.assertEqual(controller.calls, [])
+
+    def test_engine_handle_call_rejects_impassable_set_target(self):
+        server = self.make_stub_server()
+        controller, StubCoords = self._make_pathfinding_stub_handles(
+            server, x_bounds={0: 63}, y_bounds={0: 63}, passable=False
+        )
+        server.handles["coords"] = StubCoords(10, 10, 0)
+
+        result = server._engine_handle_call(
+            {
+                "handle": "ctrl",
+                "method": "setTarget",
+                "args": [{"__handle__": "player"}, {"__handle__": "coords"}],
+            }
+        )
+        self.assertTrue(result["isError"])
+        self.assertIn("not a passable tile", result["structuredContent"]["error"])
+        self.assertEqual(controller.calls, [])
+
+    def test_engine_handle_call_allows_in_bounds_set_target(self):
+        server = self.make_stub_server()
+        controller, StubCoords = self._make_pathfinding_stub_handles(
+            server, x_bounds={0: 63}, y_bounds={0: 63}, passable=True
+        )
+        coords = StubCoords(12, 8, 0)
+        server.handles["coords"] = coords
+
+        result = server._engine_handle_call(
+            {
+                "handle": "ctrl",
+                "method": "setTarget",
+                "args": [{"__handle__": "player"}, {"__handle__": "coords"}],
+            }
+        )
+        self.assertFalse(result["isError"])
+        self.assertEqual(len(controller.calls), 1)  # normal navigation still reaches the engine
+        self.assertIs(controller.calls[0][1], coords)
+
+    def test_validate_pathfinding_call_ignores_non_pathfinding_methods(self):
+        server = self.make_stub_server()
+        # A non-pathfinding method is never gated, regardless of arguments.
+        self.assertIsNone(server._validate_pathfinding_call(object(), "getName", [], {}))
 
     def test_export_module_includes_pybind_class_methods(self):
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)

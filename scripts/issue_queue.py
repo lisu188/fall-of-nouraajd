@@ -98,7 +98,9 @@ WORKFLOW_HEADERS = (
 )
 ALL_HEADERS = REQUIRED_HEADERS + WORKFLOW_HEADERS
 ISSUE_NAME_PATTERN = re.compile(r"^\[EPIC_\d{2}\]\[STORY_\d{2}\]\[SUBSTORY_\d{2}\].+")
+ISSUE_NAME_TOKENS = re.compile(r"^\[(EPIC_\d{2})\]\[(STORY_\d{2})\]\[(SUBSTORY_\d{2})\](.+)$")
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
+VALID_PRIORITIES = ("P0", "P1", "P2")
 DEFAULT_RECLAIM_AGE_MINUTES = 240
 DEFAULT_HEARTBEAT_INTERVAL_MINUTES = DEFAULT_RECLAIM_AGE_MINUTES // 2
 DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR = 4
@@ -1514,6 +1516,128 @@ def claimTask(
             state.workbook.close()
 
 
+def proposeTask(
+    workbookPath: Path,
+    *,
+    issueName: str,
+    epicTitle: str,
+    storyTitle: str,
+    substoryTitle: str,
+    priority: str,
+    component: str,
+    targetFiles: Sequence[str],
+    issueType: str = "Bug",
+    dependencies: str = "None",
+    description: str = "",
+    acceptance: str = "",
+    validation: str = "",
+    sourceUrls: Sequence[str] = (),
+    sprint: str = "None",
+    lockTimeoutSeconds: float = 30.0,
+) -> dict[str, Any]:
+    """Append a new NOT_STARTED issue row to the canonical workbook.
+
+    The row is validated transactionally: it is only persisted when the
+    resulting queue still passes ``validateQueueState`` so a malformed proposal
+    can never corrupt the backlog.
+    """
+
+    issueName = issueName.strip()
+    tokens = ISSUE_NAME_TOKENS.match(issueName)
+    if not tokens:
+        raise QueueError(
+            "Issue name must match [EPIC_NN][STORY_NN][SUBSTORY_NN]<title>, got: " + (issueName or "<empty>")
+        )
+    priority = priority.strip().upper()
+    if priority not in VALID_PRIORITIES:
+        raise QueueError(f"--priority must be one of {', '.join(VALID_PRIORITIES)}, got {priority or '<empty>'}")
+    requiredText = {
+        "--epic-title": epicTitle,
+        "--story-title": storyTitle,
+        "--substory-title": substoryTitle,
+        "--component": component,
+    }
+    for label, value in requiredText.items():
+        if not str(value or "").strip():
+            raise QueueError(f"{label} must be non-empty")
+    targets = [line.strip() for line in targetFiles if str(line or "").strip()]
+    if not targets:
+        raise QueueError("--target-file must be provided at least once")
+    urls = [line.strip() for line in sourceUrls if str(line or "").strip()]
+    # The workbook stores "no dependencies" as an empty cell; the literal token
+    # "None" is normalized away so it is not treated as an unknown dependency.
+    deps = [
+        token.strip()
+        for token in re.split(r"[;\n]+", str(dependencies or ""))
+        if token.strip() and token.strip().lower() != "none"
+    ]
+
+    epicNumber, storyNumber, substoryNumber, _title = tokens.groups()
+
+    with WorkbookLock(workbookPath, lockTimeoutSeconds):
+        state = loadQueue(workbookPath, writable=True)
+        try:
+            ensureWorkflowSchema(state)
+            state = refreshTasks(state)
+            now = utcNow()
+            errors, _ = validateQueueState(state, now=now)
+            if errors:
+                raise QueueError("Queue validation failed before propose:\n- " + "\n- ".join(errors))
+
+            duplicate = next((task for task in state.tasks if task.issueName == issueName), None)
+            if duplicate is not None:
+                raise QueueError(f"Issue name already exists at row {duplicate.row}: {issueName}")
+
+            newRow = state.sheet.maxRow + 1
+            cells: dict[str, Any] = {
+                "Issue Name": issueName,
+                "Epic #": epicNumber,
+                "Epic Title": epicTitle.strip(),
+                "Story #": storyNumber,
+                "Story Title": storyTitle.strip(),
+                "Substory #": substoryNumber,
+                "Substory Title": substoryTitle.strip(),
+                "Priority": priority,
+                "Issue Type": (issueType or "Bug").strip() or "Bug",
+                "Component": component.strip(),
+                "Dependencies": "\n".join(deps) if deps else None,
+                "Target Files / Modules": "\n".join(targets),
+                "Technical Code-Level Description": (description or "").strip(),
+                "Acceptance Criteria": (acceptance or "").strip(),
+                "Validation / Tests": (validation or "").strip(),
+                "Source URLs": "\n".join(urls) if urls else None,
+                "Status": STATUS_NOT_STARTED,
+                "Owner": "",
+                "Sprint": (sprint or "").strip() or None,
+                "Claim ID": "",
+                "Claimed At UTC": None,
+                "Updated At UTC": None,
+                "Lease Until UTC": None,
+                "Completed At UTC": None,
+                "Progress %": 0,
+                "Last Note": "",
+                "Result Summary": "",
+                "Validation Results": "",
+                "Attempt": 0,
+            }
+            for header, value in cells.items():
+                setValue(state, newRow, header, value)
+
+            state = refreshTasks(state)
+            postErrors, postWarnings = validateQueueState(state, now=now)
+            if postErrors:
+                raise QueueError("Proposed row would invalidate the queue:\n- " + "\n- ".join(postErrors))
+
+            atomicSave(state, workbookPath)
+            state = refreshTasks(state)
+            proposed = taskByName(state, issueName)
+            payload = taskPayload(proposed, state=state, now=now)
+            payload.update({"proposed": True, "row": proposed.row, "warnings": postWarnings})
+            return payload
+        finally:
+            state.workbook.close()
+
+
 def requireClaim(state: QueueState, issueName: str, claimId: str, owner: str) -> TaskRecord:
     task = taskByName(state, issueName)
     actualClaim = str(task.values.get("Claim ID") or "").strip()
@@ -1836,6 +1960,34 @@ def buildParser() -> argparse.ArgumentParser:
     validateParser = subparsers.add_parser("validate", help="Validate queue schema and state invariants")
     addCommonArguments(validateParser)
 
+    proposeParser = subparsers.add_parser(
+        "propose", help="Append a new NOT_STARTED issue (e.g. an autonomously discovered bug)"
+    )
+    addCommonArguments(proposeParser)
+    proposeParser.add_argument(
+        "--issue-name", required=True, help="[EPIC_NN][STORY_NN][SUBSTORY_NN]<title>"
+    )
+    proposeParser.add_argument("--epic-title", required=True)
+    proposeParser.add_argument("--story-title", required=True)
+    proposeParser.add_argument("--substory-title", required=True)
+    proposeParser.add_argument("--priority", required=True, help="P0, P1, or P2")
+    proposeParser.add_argument("--component", required=True)
+    proposeParser.add_argument(
+        "--target-file", action="append", default=[], help="Target file/module; may be repeated"
+    )
+    proposeParser.add_argument("--issue-type", default="Bug")
+    proposeParser.add_argument("--dependencies", default="None")
+    proposeParser.add_argument("--description")
+    proposeParser.add_argument("--description-file")
+    proposeParser.add_argument("--acceptance")
+    proposeParser.add_argument("--acceptance-file")
+    proposeParser.add_argument("--validation")
+    proposeParser.add_argument("--validation-file")
+    proposeParser.add_argument(
+        "--source-url", action="append", default=[], help="Evidence/source URL; may be repeated"
+    )
+    proposeParser.add_argument("--sprint", default="None")
+
     listParser = subparsers.add_parser("list", help="List tasks")
     addCommonArguments(listParser)
     listParser.add_argument("--status", action="append", default=[])
@@ -2006,6 +2158,32 @@ def main(argv: Sequence[str] | None = None) -> int:
                 state.workbook.close()
             printJson({"workbook": str(workbookPath), "errors": errors, "warnings": warnings})
             return 1 if errors else 0
+
+        if args.command == "propose":
+            description = readTextOption(args.description, args.description_file, "description")
+            acceptance = readTextOption(args.acceptance, args.acceptance_file, "acceptance")
+            validation = readTextOption(args.validation, args.validation_file, "validation")
+            printJson(
+                proposeTask(
+                    workbookPath,
+                    issueName=args.issue_name,
+                    epicTitle=args.epic_title,
+                    storyTitle=args.story_title,
+                    substoryTitle=args.substory_title,
+                    priority=args.priority,
+                    component=args.component,
+                    targetFiles=args.target_file,
+                    issueType=args.issue_type,
+                    dependencies=args.dependencies,
+                    description=description,
+                    acceptance=acceptance,
+                    validation=validation,
+                    sourceUrls=args.source_url,
+                    sprint=args.sprint,
+                    lockTimeoutSeconds=args.lock_timeout_seconds,
+                )
+            )
+            return 0
 
         if args.command in {"list", "show", "next", "shortlist", "prompt"}:
             state = loadQueue(workbookPath, writable=False)

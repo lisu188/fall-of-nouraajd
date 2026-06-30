@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts import issue_queue, workflow_observations
 
@@ -707,6 +708,54 @@ class WorkflowObservationsTest(unittest.TestCase):
         self.assertEqual(0, exitCode, stderr)
         self.assertEqual([], json.loads(stdout)["errors"])
 
+    def test_validate_base_ignores_files_merged_after_branch_point(self) -> None:
+        def rev_parse(repo: Path, ref: str) -> str:
+            return subprocess.run(
+                ["git", "rev-parse", ref], cwd=repo, check=True, stdout=subprocess.PIPE, text=True
+            ).stdout.strip()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "repo"
+            repo.mkdir()
+            self.run_git(repo, ["init"])
+            self.run_git(repo, ["config", "user.email", "test@example.invalid"])
+            self.run_git(repo, ["config", "user.name", "Workflow Test"])
+            (repo / "scripts").mkdir()
+            (repo / "scripts" / "placeholder.py").write_text("print('base')\n", encoding="utf-8")
+            self.run_git(repo, ["add", "scripts/placeholder.py"])
+            self.run_git(repo, ["commit", "-m", "base"])
+            base_sha = rev_parse(repo, "HEAD")
+
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(repo)
+                # The PR branch adds a single ledger-only record.
+                self.run_git(repo, ["checkout", "-b", "pr"])
+                added = self.observation_payload("20260620T150300Z-ctrl-test-44444444")
+                self.write_record(Path("planning/workflow_observations"), added)
+                self.run_git(
+                    repo, ["add", f"planning/workflow_observations/records/{added['id']}.json"]
+                )
+                self.run_git(repo, ["commit", "-m", "ledger record"])
+
+                # The base branch advances with an unrelated file merged after the branch point.
+                self.run_git(repo, ["checkout", base_sha])
+                (repo / "scripts" / "other.py").write_text("print('concurrent')\n", encoding="utf-8")
+                self.run_git(repo, ["add", "scripts/other.py"])
+                self.run_git(repo, ["commit", "-m", "concurrent merge on base"])
+                advanced_base = rev_parse(repo, "HEAD")
+
+                self.run_git(repo, ["checkout", "pr"])
+                exitCode, stdout, stderr = self.run_cli(
+                    ["validate", "--root", "planning/workflow_observations", "--base", advanced_base]
+                )
+            finally:
+                os.chdir(old_cwd)
+
+        # The concurrently merged scripts/other.py must not be swept into the ledger diff.
+        self.assertEqual(0, exitCode, stderr)
+        self.assertEqual([], json.loads(stdout)["errors"])
+
     def test_workflow_ledger_operations_preserve_xlsx_bytes_and_queue_compatibility(self) -> None:
         workbook = REPO_ROOT / issue_queue.DEFAULT_WORKBOOK
         before = workbook.read_bytes()
@@ -747,6 +796,26 @@ class WorkflowObservationsTest(unittest.TestCase):
             issue_queue.loadQueue(workbook)
 
         self.assertEqual(before, workbook.read_bytes())
+
+    def test_current_commit_raises_observation_error_when_git_is_missing(self) -> None:
+        def raise_missing_git(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "git")
+
+        with patch.object(workflow_observations.subprocess, "run", side_effect=raise_missing_git):
+            with self.assertRaises(workflow_observations.ObservationError) as caught:
+                workflow_observations.currentCommit()
+
+        self.assertIn("pass --source-commit", str(caught.exception))
+
+    def test_validate_pr_changes_raises_observation_error_when_git_is_missing(self) -> None:
+        def raise_missing_git(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "git")
+
+        with patch.object(workflow_observations.subprocess, "run", side_effect=raise_missing_git):
+            with self.assertRaises(workflow_observations.ObservationError) as caught:
+                workflow_observations.validatePrChanges(Path("planning/workflow_observations"), "main")
+
+        self.assertIn("git executable not found on PATH", str(caught.exception))
 
 
 if __name__ == "__main__":
