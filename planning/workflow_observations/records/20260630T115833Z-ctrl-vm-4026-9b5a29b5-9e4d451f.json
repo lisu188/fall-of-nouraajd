@@ -1,0 +1,32 @@
+{
+  "affectedPaths": [
+    ".github/workflows/apply-multi-workbook-workflow.yml"
+  ],
+  "category": "ci",
+  "controllerId": "ctrl-vm-4026-9b5a29b5",
+  "createdAtUtc": "2026-06-30T11:58:33Z",
+  "details": "origin/main shipped a failing test: tests.security.test_configure_supply_chain.test_temporary_multi_workbook_apply_artifacts_are_removed asserted that .github/workflows/apply-multi-workbook-workflow.yml and .github/multi-workbook-payload/ must not exist, but both were present on main. These temporary multi-workbook apply artifacts were removed by PR #855 (commit 7f485ce9 \"Remove stale multi-workbook apply workflow\") and then re-introduced by PR #817 (commit c67495b3 \"[codex] Complete multi-workbook queue workflow\"), the most recent commit touching the file.\n\nBecause the supply-chain test runs inside the build workflow's linux and windows jobs, EVERY pull request that merged current main inherited this failure. Multiple in-flight native implementation PRs (controller ctrl-vm-4026-9b5a29b5 slots for issues #675, fight-panel idempotency, archetype identity, and CI-authority hardening) showed red linux/windows jobs that were misattributed to their own changes for several CI rounds before the shared root cause was isolated by running the test against a clean origin/main checkout locally.\n\nRepaired by removing the re-added artifacts in PR #942 (merged db9b4ec). After removal the supply-chain suite passes 10/10 and the native branches were rebased onto the fixed main.\n",
+  "evidence": [
+    {
+      "discoveredBy": "ctrl-vm-4026-9b5a29b5",
+      "failingTest": "tests.security.test_configure_supply_chain.test_temporary_multi_workbook_apply_artifacts_are_removed",
+      "impact": "all PRs merging main failed native linux/windows jobs; misattributed across multiple CI rounds",
+      "presentArtifacts": [
+        ".github/workflows/apply-multi-workbook-workflow.yml",
+        ".github/multi-workbook-payload/"
+      ],
+      "reintroducedByPr": 817,
+      "removedByPr": 855,
+      "repairPr": 942
+    }
+  ],
+  "fingerprint": "main red reintroduced multi-workbook apply artifact fails supply-chain test",
+  "id": "20260630T115833Z-ctrl-vm-4026-9b5a29b5-9e4d451f",
+  "impact": "Every PR merging main inherited a failing supply-chain test; native CI failures were misattributed to PR changes across multiple rounds",
+  "phase": "validation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "db9b4ec8499a7010165ee936b2d358a7c178db1f",
+  "summary": "main shipped red: re-added multi-workbook apply artifacts fail supply-chain test and block all native PRs"
+}
