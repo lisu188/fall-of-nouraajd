@@ -107,6 +107,31 @@ CREATURE_ARCHETYPE_ID_SUFFIXES = {
     CREATURE_CLASSES_CONFIG: CREATURE_CLASS_ID_SUFFIX,
 }
 
+# Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
+# Map config files reference creature templates via "ref" plus a "properties" block
+# that overrides template behavior.  Any override touching one of these properties
+# carries map-local behavior (Pritz controllers, quest-item carriers, npc dressing)
+# that a later template migration must preserve rather than flatten.  The native
+# CCreature template spells "stats" as the baseStats/levelStats pair and "labels"
+# as the singular "label" key, so both spellings are watched here.
+CREATURE_BASE_CLASS = "CCreature"
+CREATURE_OVERRIDE_PROPERTIES = (
+    "baseStats",
+    "levelStats",
+    "stats",
+    "actions",
+    "controller",
+    "fightController",
+    "affiliation",
+    "items",
+    "equipped",
+    "sw",
+    "animation",
+    "npc",
+    "label",
+    "labels",
+)
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -123,6 +148,27 @@ class ConfigEntry:
     key: str
     data: Any
     path: Path
+
+
+@dataclass(frozen=True)
+class CreatureOverride:
+    path: str
+    key: str
+    location: str
+    template: str
+    properties: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "path": self.path,
+            "key": self.key,
+            "location": self.location,
+            "template": self.template,
+            "properties": list(self.properties),
+        }
+
+    def __str__(self) -> str:
+        return f"{self.path}: {self.location}: ref \"{self.template}\" overrides {', '.join(self.properties)}"
 
 
 @dataclass(frozen=True)
@@ -157,6 +203,31 @@ class ScriptCall:
     @property
     def location(self) -> str:
         call = f'{self.name}("{self.value}")'
+        return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
+
+
+@dataclass
+class SpawnedCreature:
+    """A creature template spawned at runtime via createObject/addObjectByName.
+
+    ``template`` is the literal template id passed to the spawn call. ``runtime_name``
+    is the post-spawn object name assigned through ``setStringProperty("name", ...)``
+    when that name is a string literal, or ``None`` when the spawn stays anonymous or
+    the name is computed (e.g. an f-string). These are recorded separately so the
+    migration preserves both template ids and runtime names, which trigger validators
+    special-case for runtime-spawned quest actors. Nothing here is inferred from design
+    docs -- only literal values present in the script source are captured.
+    """
+
+    template: str
+    spawn_call: str
+    lineno: int
+    context: str
+    runtime_name: str | None = None
+
+    @property
+    def location(self) -> str:
+        call = f'{self.spawn_call}("{self.template}")'
         return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
 
 
@@ -268,6 +339,7 @@ class ScriptInfo:
     property_writes: list[ScriptPropertyAccess] = field(default_factory=list)
     trigger_targets: list[ScriptCall] = field(default_factory=list)
     named_objects: set[str] = field(default_factory=set)
+    spawned_creatures: list[SpawnedCreature] = field(default_factory=list)
 
 
 @dataclass
@@ -289,6 +361,10 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self._function_stack: list[str] = []
         self._state_alias_stack: list[dict[str, str]] = []
         self._string_values_stack: list[dict[str, set[str]]] = []
+        # Maps a local variable name to the SpawnedCreature it was assigned from
+        # (via createObject) so a later setStringProperty("name", ...) on that
+        # variable can attach the runtime name. Scoped per function body.
+        self._spawn_vars_stack: list[dict[str, SpawnedCreature]] = []
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
@@ -309,8 +385,10 @@ class ScriptAnalyzer(ast.NodeVisitor):
         self._function_stack.append(node.name)
         self._state_alias_stack.append({})
         self._string_values_stack.append({})
+        self._spawn_vars_stack.append({})
         for child in node.body:
             self.visit(child)
+        self._spawn_vars_stack.pop()
         self._string_values_stack.pop()
         self._state_alias_stack.pop()
         self._function_stack.pop()
@@ -321,12 +399,14 @@ class ScriptAnalyzer(ast.NodeVisitor):
     def visit_Assign(self, node: ast.Assign) -> Any:
         self._record_class_constant_assignment(node)
         self._record_local_assignment(node.targets, node.value)
+        self._record_spawn_assignment(node.targets, node.value)
         self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> Any:
         if node.value is not None:
             self._record_class_constant_assignment(node)
             self._record_local_assignment([node.target], node.value)
+            self._record_spawn_assignment([node.target], node.value)
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> Any:
@@ -334,6 +414,8 @@ class ScriptAnalyzer(ast.NodeVisitor):
         if name:
             self._record_script_call(name, node)
             self._record_named_object(name, node)
+            self._record_anonymous_spawn(name, node)
+            self._record_runtime_spawn_name(name, node)
             self._record_quest_state_call(name, node)
             self._record_property_access(name, node)
         self.generic_visit(node)
@@ -367,6 +449,79 @@ class ScriptAnalyzer(ast.NodeVisitor):
             value = string_literal(node.args[1])
             if key == "name" and value:
                 self.info.named_objects.add(value)
+
+    def _record_anonymous_spawn(self, name: str, node: ast.Call) -> None:
+        """Record addObjectByName("template", ...) spawns, which are anonymous.
+
+        addObjectByName instantiates a template directly on the map without binding
+        a Python variable, so there is never a runtime name to attach.
+        """
+        if name != "addObjectByName":
+            return
+        template = first_string_arg(node)
+        if template is None:
+            return
+        self.info.spawned_creatures.append(
+            SpawnedCreature(
+                template=template,
+                spawn_call=name,
+                lineno=node.lineno,
+                context=self._context,
+                runtime_name=None,
+            )
+        )
+
+    def _record_spawn_assignment(self, targets: list[ast.expr], value: ast.AST) -> None:
+        """Track ``var = ...createObject("template")`` so a later name write can attach.
+
+        Records the SpawnedCreature immediately (template id) and remembers the local
+        variable; the runtime name is filled in when a subsequent
+        ``var.setStringProperty("name", literal)`` is seen in the same function scope.
+        """
+        if not self._spawn_vars_stack:
+            return
+        spawn_vars = self._spawn_vars_stack[-1]
+        template = self._created_object_template(value)
+        for target in targets:
+            target_name = assigned_name(target)
+            if target_name is None:
+                continue
+            if template is None:
+                spawn_vars.pop(target_name, None)
+                continue
+            creature = SpawnedCreature(
+                template=template,
+                spawn_call="createObject",
+                lineno=getattr(value, "lineno", 0),
+                context=self._context,
+                runtime_name=None,
+            )
+            self.info.spawned_creatures.append(creature)
+            spawn_vars[target_name] = creature
+
+    def _record_runtime_spawn_name(self, name: str, node: ast.Call) -> None:
+        """Attach a literal runtime name to a tracked createObject spawn variable."""
+        if name != "setStringProperty" or len(node.args) < 2:
+            return
+        if string_literal(node.args[0]) != "name":
+            return
+        runtime_name = string_literal(node.args[1])
+        if runtime_name is None:
+            return
+        receiver = node.func.value if isinstance(node.func, ast.Attribute) else None
+        receiver_name = assigned_name(receiver) if receiver is not None else None
+        if receiver_name is None or not self._spawn_vars_stack:
+            return
+        for spawn_vars in reversed(self._spawn_vars_stack):
+            creature = spawn_vars.get(receiver_name)
+            if creature is not None and creature.runtime_name is None:
+                creature.runtime_name = runtime_name
+                return
+
+    def _created_object_template(self, node: ast.AST) -> str | None:
+        if isinstance(node, ast.Call) and call_name(node.func) == "createObject":
+            return first_string_arg(node)
+        return None
 
     def _record_class_constant_assignment(self, node: ast.Assign | ast.AnnAssign) -> None:
         if not self._class_stack:
@@ -727,6 +882,64 @@ class ContentValidator:
         for context in self.map_contexts:
             self._validate_map_context(context)
         return sorted(self.issues, key=lambda issue: (issue.path, issue.location, issue.message))
+
+    def inventory_creature_overrides(self) -> list[CreatureOverride]:
+        """Enumerate every map-local creature reference that overrides template behavior.
+
+        This shares the class-resolution machinery used by validation but does not
+        emit validation issues or affect exit status; it is a read-only report used
+        to guard a later creature-template migration against losing map-local
+        behavior (controllers, quest-item carriers, npc dressing).
+        """
+        self._collect_engine_classes()
+        self._collect_plugin_classes()
+        self._load_global_configs()
+        self._load_maps()
+        overrides: list[CreatureOverride] = []
+        for context in self.map_contexts:
+            visible = self._visible_entries(context)
+            for entry in context.config_entries.values():
+                self._collect_creature_overrides(entry.path, entry.key, entry.key, entry.data, visible, overrides)
+        return sorted(overrides, key=lambda override: (override.path, override.location))
+
+    def _collect_creature_overrides(
+        self,
+        path: Path,
+        key: str,
+        location: str,
+        value: Any,
+        visible: dict[str, ConfigEntry],
+        overrides: list[CreatureOverride],
+    ) -> None:
+        if isinstance(value, dict):
+            properties = value.get("properties")
+            if isinstance(value.get("ref"), str) and isinstance(properties, dict) and self._is_creature_node(value, visible):
+                overridden = tuple(name for name in CREATURE_OVERRIDE_PROPERTIES if name in properties)
+                if overridden:
+                    overrides.append(
+                        CreatureOverride(
+                            path=self._rel(path),
+                            key=key,
+                            location=location,
+                            template=value["ref"],
+                            properties=overridden,
+                        )
+                    )
+            for child_key, child in value.items():
+                self._collect_creature_overrides(
+                    path, key, append_field(location, child_key), child, visible, overrides
+                )
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._collect_creature_overrides(path, key, append_index(location, index), child, visible, overrides)
+
+    def _is_creature_node(self, value: dict[str, Any], visible: dict[str, ConfigEntry]) -> bool:
+        class_name = self._effective_object_class(value, visible)
+        if not isinstance(class_name, str):
+            return False
+        if class_name == CREATURE_BASE_CLASS:
+            return True
+        return self._class_inherits_from(class_name, CREATURE_BASE_CLASS)
 
     def _collect_engine_classes(self) -> None:
         source_roots = [self.repo_root / "src"]
@@ -2227,10 +2440,25 @@ def validate_repo(repo_root: Path | str) -> list[ValidationIssue]:
     return ContentValidator(Path(repo_root)).validate()
 
 
+def inventory_creature_overrides(repo_root: Path | str) -> list[CreatureOverride]:
+    return ContentValidator(Path(repo_root)).inventory_creature_overrides()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate game JSON resources and literal script refs.")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument(
+        "--report-creature-overrides",
+        action="store_true",
+        help="Print the map-local creature override inventory as JSON and exit without validating.",
+    )
     args = parser.parse_args(argv)
+
+    if args.report_creature_overrides:
+        overrides = inventory_creature_overrides(args.repo_root)
+        json.dump([override.as_dict() for override in overrides], sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
 
     issues = validate_repo(args.repo_root)
     if issues:
