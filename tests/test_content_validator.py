@@ -2330,6 +2330,116 @@ class ContentValidatorTest(unittest.TestCase):
             "expected a non-empty string; got string",
         )
 
+    def test_amulet_quest_carrier_and_runtime_actor_pass_validation(self):
+        root = self.make_amulet_fixture()
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_amulet_quest_item_removed_from_carrier_is_reported(self):
+        root = self.make_amulet_fixture()
+        config_path = root / "res/maps/amulet/config.json"
+        config = read_json(config_path)
+        # Simulate the migration moving the quest item off the thief carrier (e.g. onto a
+        # shared GoblinRace/thief class template) by dropping it from the carrier items.
+        config["goblinThief"]["properties"]["items"] = []
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/amulet/config.json",
+            "goblinThief.properties.items",
+            'must carry quest item "preciousAmulet" as instance inventory',
+        )
+
+    def test_amulet_quest_runtime_actor_name_broken_is_reported(self):
+        root = self.make_amulet_fixture()
+        script_path = root / "res/maps/amulet/script.py"
+        # Break only the runtime name assigned to the spawned carrier.
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace('"amuletGoblin"', '"strayGoblin"'),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/amulet/script.py",
+            'createObject("goblinThief")',
+            'runtime actor name "amuletGoblin" must be assigned to a spawned "goblinThief"',
+        )
+
+    def test_amulet_quest_guard_is_load_bearing(self):
+        # Removing the registration must make the broken-item fixture stop being rejected,
+        # proving the guard (not some sibling rule) is what catches the violation.
+        root = self.make_amulet_fixture()
+        config_path = root / "res/maps/amulet/config.json"
+        config = read_json(config_path)
+        config["goblinThief"]["properties"]["items"] = []
+        write_json(config_path, config)
+
+        validator = ContentValidator(root)
+        validator._validate_amulet_quest_actor = lambda *args, **kwargs: None
+        issue_text = "\n".join(str(issue) for issue in validator.validate())
+
+        self.assertNotIn('must carry quest item "preciousAmulet"', issue_text)
+
+    def make_amulet_fixture(self):
+        root = self.make_fixture()
+        (root / "res/maps/amulet").mkdir(parents=True)
+        write_json(
+            root / "res/config/items.json",
+            {
+                "LifePotion": {"class": "CPotion"},
+                "HitEffect": {"class": "CEffect"},
+                "Attack": {"class": "CInteraction", "properties": {"effect": {"ref": "HitEffect"}}},
+                "GoblinThief": {"class": "CCreature"},
+                "preciousAmulet": {"class": "CItem", "properties": {"name": "preciousAmulet"}},
+            },
+        )
+        write_json(
+            root / "res/maps/amulet/map.json",
+            {
+                "type": "map",
+                "width": 2,
+                "height": 2,
+                "layers": [
+                    {"type": "tilelayer", "width": 2, "height": 2, "data": [0, 0, 0, 0]},
+                    {
+                        "type": "objectgroup",
+                        "objects": [
+                            {
+                                "id": 1,
+                                "name": "start",
+                                "type": "AmuletEvent",
+                                "x": 0,
+                                "y": 0,
+                                "width": 1,
+                                "height": 1,
+                            }
+                        ],
+                    },
+                ],
+                "tilesets": [{"firstgid": 1, "tileproperties": {}}],
+                "nextobjectid": 2,
+            },
+        )
+        write_json(
+            root / "res/maps/amulet/config.json",
+            {
+                "goblinThief": {
+                    "ref": "GoblinThief",
+                    "properties": {"items": [{"ref": "preciousAmulet"}]},
+                },
+            },
+        )
+        write_amulet_script(root / "res/maps/amulet/script.py")
+        return root
+
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
         for substring in substrings:
@@ -2476,6 +2586,31 @@ def write_script(path, script_quest, script_map):
                 @trigger(context, "onEnter", "start")
                 class StartTrigger(CEvent):
                     pass
+            """).lstrip(),
+        encoding="utf-8",
+    )
+
+
+def write_amulet_script(path):
+    path.write_text(
+        textwrap.dedent("""
+            def load(self, context):
+                from game import CEvent
+                from game import register
+
+                @register(context)
+                class AmuletEvent(CEvent):
+                    def onEnter(self, event):
+                        game = self.getGame()
+                        game_map = game.getMap()
+                        goblin = game.createObject("goblinThief")
+                        goblin.setStringProperty("name", "amuletGoblin")
+                        game_map.addObject(goblin)
+
+                    def complete(self):
+                        amulet_goblin = self.getMap().getObjectByName("amuletGoblin")
+                        if amulet_goblin:
+                            self.getMap().removeObject(amulet_goblin)
             """).lstrip(),
         encoding="utf-8",
     )
