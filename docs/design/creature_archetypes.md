@@ -277,3 +277,63 @@ authoring. The id itself is policy-valid; only the lore label is pending.
   untracked/uncopied resource.
 - Classes (roles) and races (species) are independent axes. A future template
   may carry both a race family id and a `creatureClass` id.
+
+---
+
+# Creature action merge contract
+
+Status: Approved (design + engine). Scope: pins the order in which a creature's
+actions are composed from its archetype sources and how duplicate actions are
+deduplicated, so the upcoming race/class archetype authoring (EPIC_02) and the
+existing concrete monster templates compose a single, stable action set instead
+of accumulating duplicates.
+
+## Precedence order
+
+A creature's available actions are composed by merging, in this order, from
+least specific to most specific:
+
+1. **Race innate actions** — actions every member of the race always has.
+2. **Class starting actions** — actions granted by the creature's class at
+   creation.
+3. **Class level unlocks** — actions unlocked as the creature gains levels
+   (today expressed by the `levelling` map, applied via `levelUp`).
+4. **Concrete-template actions** — actions declared on the concrete template /
+   spawn (the most specific source).
+
+Sources are applied in that sequence, so a later (more specific) source is the
+"winner" when two sources contribute the same action.
+
+## Deduplication key (last/most-specific wins)
+
+Actions are deduplicated by configured identity:
+
+- the dedupe key is the action **`typeId`**;
+- when `typeId` is empty, it falls back to the action **`name`**.
+
+When a later source contributes an action whose key matches one already present,
+the earlier action is replaced by the later one (last/most-specific wins). The
+relative order of unrelated, surviving actions is otherwise preserved
+(stable merge). Consequences:
+
+- duplicate generic actions (e.g. two `Attack` definitions arriving from a race
+  source and again from a concrete template, common after archetype migration)
+  collapse to a **single** `Attack` entry rather than accumulating;
+- a unique concrete override (an action a more specific source defines that no
+  earlier source provided) is **preserved**;
+- an action redefined by a more specific source replaces the earlier definition
+  rather than coexisting with it.
+
+This key matches the engine's existing configured-identity semantics
+(`CGameObject::sameConfiguredType` / `name_comparator`, which prefer a matching
+`typeId` and fall back to type/name only when `typeId` is empty).
+
+## Where this is enforced and tested
+
+The merge primitive every source funnels through is
+`CCreature::addAction` (`src/object/CCreature.cpp`): `setActions` composes the
+set by calling `addAction` per entry, and level unlocks call it via `levelUp`.
+`addAction` deduplicates by the key above and keeps the last-added (more
+specific) action. This contract is pinned by the native regression test
+`test_creature_action_merge_dedupes_by_type_id` in
+`tests/unit/test_object.cpp`.
