@@ -135,3 +135,145 @@ is resolved.
   an untracked/uncopied resource.
 - Player-class templates (`Assasin`, `Sorcerer`, `Warrior`, `Inquisitor`,
   `Wayfarer`) are out of scope for creature races.
+
+---
+
+# Creature Class IDs: Reusable Combat-Role Taxonomy
+
+Status: Approved taxonomy (design). Scope: defines reusable creature **class
+ids** that represent a learned **combat role / progression** (e.g. caster,
+front-line bruiser, rogue), to be consumed by the later `res/config/creature_classes.json`
+authoring work (EPIC_02). This section **extends** the race-family taxonomy
+above; it does not rewrite or contradict it.
+
+A **class is orthogonal to a race**: a race is *what a creature is* (species /
+lineage), a class is *what role it has learned to fight as*. Two creatures of
+different races can share a class (a Pritz mage and a human cultist can both be
+`mageClass`), and a single race can contain members of several classes.
+
+This taxonomy is design-only. It does **not** create any runtime config and does
+**not** rename any concrete template id in `res/config/monsters.json`.
+
+## Naming policy (classes)
+
+Per the creature-archetype naming policy enforced by
+`scripts/validate_content.py` (`CREATURE_CLASS_ID_SUFFIX = "Class"`,
+`CREATURE_CLASS_REFERENCE_PROPERTY = "creatureClass"`), every class id:
+
+- uses lowerCamelCase, and
+- ends with the suffix `Class` (e.g. `mageClass`).
+
+The JSON property that *references* a class from a template is `creatureClass`,
+never the reserved object-constructor key `class`.
+
+Concrete template ids in `res/config/monsters.json` are **unchanged** by this
+taxonomy. Existing player templates (`Sorcerer`, `Warrior`, `Assasin`,
+`Inquisitor`, `Wayfarer`) remain class-bearing concrete templates with their ids
+preserved; the reusable class ids below describe the *role* each one already
+embodies and do not replace those templates.
+
+## How existing templates express a role (source evidence)
+
+Roles are grounded in each template's `mainStat` and its `levelling` ability set
+in `res/config/monsters.json`:
+
+- **Caster / mage role** — `mainStat: intelligence`; learns offensive spells.
+  `Sorcerer` (`MagicMissile`, `FrostBolt`, `ShadowBolt`, `ChaosBlast`, ...),
+  `PritzMage` (`MagicMissile`, `FrostBolt`).
+- **Front-line bruiser role** — `mainStat: strength`; learns strikes / sustain.
+  `Warrior` (`Strike`, `Barrier`, `BloodThirst`, `DeathStrike`),
+  plus the strength-based melee monsters `Gooby`, `OctoBogz`, `Pritz`.
+- **Rogue / thief role** — `mainStat: agility`; learns stealth / poison / mark
+  abilities. `Assasin` (`SneakAttack`, `Mutilation`, `LethalPoison`,
+  `Backstab`), `Wayfarer` (`WayfarersStride`, `SneakAttack`, `SmugglersMark`,
+  `Backstab`), and the agility-flavoured `GoblinThief` (its `label` is
+  "Goblin Thief").
+- **Holy / inquisitor martial role** — `mainStat: intelligence` but melee-armed
+  (`Sword` + `Robe`); a hybrid sword-and-faith fighter. `Inquisitor`
+  (`ExposeCorruption`, `Strike`, `SanctifiedWard`, `Barrier`).
+- **Cult role** — `Cultist` / `CultLeader` are deployed as the ritual cult
+  (see the race-family section). As a *combat role* they fight as low-tier melee
+  (`mainStat: strength`, basic attacks; `CultLeader` is the elite variant). The
+  role "cultist" here is a thematic faction-fighter, distinct from the
+  unresolved *race* question for these templates (see below).
+
+## Approved class taxonomy
+
+| Class id | Combat role | Primary stat | Maps to existing templates |
+| --- | --- | --- | --- |
+| `mageClass` | Spell caster (ranged magical damage) | intelligence | `Sorcerer` (player), `PritzMage` |
+| `bruteClass` | Front-line melee bruiser | strength | `Warrior` (player), `Gooby`, `OctoBogz`, `Pritz` |
+| `thiefClass` | Rogue / stealth striker | agility | `Assasin` (player), `Wayfarer` (player), `GoblinThief` |
+| `martialClass` | Sword-and-faith hybrid fighter (holy martial) | intelligence (melee-armed) | `Inquisitor` (player) |
+| `cultistClass` | Faction melee fighter / ritual cultist | strength | `Cultist`, `CultLeader` (elite variant) |
+
+Every proposed class id ends with the required `Class` suffix and is
+lowerCamelCase. All twelve concrete templates have a role mapping.
+
+### Proposed classes summary
+
+- `mageClass` — caster; `Sorcerer`, `PritzMage`.
+- `bruteClass` — strength melee; `Warrior`, `Gooby`, `OctoBogz`, `Pritz`.
+- `thiefClass` — agility rogue; `Assasin`, `Wayfarer`, `GoblinThief`.
+- `martialClass` — holy martial hybrid; `Inquisitor`.
+- `cultistClass` — ritual cult fighter; `Cultist`, `CultLeader`.
+
+## Acceptance: no class id duplicates a concrete template id
+
+Concrete top-level template ids in `res/config/monsters.json` are:
+`Assasin`, `Gooby`, `OctoBogz`, `Pritz`, `PritzMage`, `Sorcerer`, `Warrior`,
+`Cultist`, `CultLeader`, `GoblinThief`, `Inquisitor`, `Wayfarer`.
+
+None of these template ids end with `Class`, and none equal any approved class
+id above (`mageClass`, `bruteClass`, `thiefClass`, `martialClass`,
+`cultistClass`). The suffix policy makes collision structurally impossible:
+template ids are PascalCase concrete names, class ids are lowerCamelCase ending
+in `Class`. **No class id duplicates any concrete template id.**
+
+## Class vs the Cultist/CultLeader race blocker
+
+The race-family section leaves `Cultist` / `CultLeader` **UNRESOLVED** at the
+*race* level (blocker CRA-1: is "cult" a biological race or a human faction, and
+how to handle the NPC reuse of `Cultist` for `questGiver` / `oldWoman`).
+
+Because **class is orthogonal to race**, `cultistClass` as a *combat role* is
+independent of CRA-1 and resolves cleanly: it describes how the hostile cult
+templates fight (low-tier melee, `CultLeader` elite), regardless of which race
+family they eventually land in. Assigning `cultistClass` does **not** require
+CRA-1 to be resolved, and does **not** pre-judge it.
+
+One consequence to flag for downstream: the NPC reuses of the `Cultist`
+template (`questGiver`, `oldWoman`, both `npc: true`) are not combatants, so a
+`creatureClass: cultistClass` reference, if added at the template level, would
+also attach to those NPCs. EPIC_02 authoring should attach class either per
+spawn or only to the hostile uses, OR re-point the NPC reuses to a neutral human
+template first (this is the same re-pointing question raised by CRA-1, item 2).
+Marked **UNRESOLVED-CLS-1** below; it does not block approving the class id list.
+
+## Unresolved class items
+
+### UNRESOLVED-CLS-1: Cultist template's NPC reuse vs `cultistClass`
+
+The `Cultist` template is reused as non-combat NPCs. Whether `cultistClass` is
+attached at template level (leaking onto NPCs) or only at hostile spawn sites is
+a downstream authoring decision tied to CRA-1; flagged here, not resolved.
+
+### UNRESOLVED-CLS-2: `martialClass` lore name needs human approval
+
+`martialClass` currently has exactly one member (`Inquisitor`) and is partly a
+catch-all for the "intelligence main stat but sword-armed holy fighter" shape.
+The role exists and is correct, but the *name* (`martialClass` vs e.g. a more
+lore-specific holy/inquisitor name) should be confirmed by design before runtime
+authoring. The id itself is policy-valid; only the lore label is pending.
+
+## Notes for downstream (EPIC_02) class work
+
+- This section is the source of truth for the template->class (role) mapping.
+  The later task that authors `res/config/creature_classes.json` should consume
+  the approved class ids above, reference them via the `creatureClass` property
+  (never `class`), and must add the new file to the root `CMakeLists.txt`
+  resource copy rules. The runtime config was intentionally **not** created here
+  (doc-only deliverable; class-config authoring is EPIC_02 work) to avoid an
+  untracked/uncopied resource.
+- Classes (roles) and races (species) are independent axes. A future template
+  may carry both a race family id and a `creatureClass` id.
