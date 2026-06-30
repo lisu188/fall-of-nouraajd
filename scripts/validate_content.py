@@ -319,6 +319,33 @@ class CreatureClassification:
 
 
 @dataclass(frozen=True)
+class UnmigratedCreature:
+    """A production CCreature/CPlayer config still missing race/creatureClass migration.
+
+    ``config_id`` is the global config key and ``path`` the file that declares it.
+    ``missing`` is the sorted tuple of archetype reference properties absent from the
+    config's ``properties`` block -- a subset of {"race", "creatureClass"}.  This is a
+    purely informational report (it never emits validation issues or affects exit
+    status); it drives one migration ticket per remaining creature family so a partial
+    archetype migration cannot ship silently.
+    """
+
+    config_id: str
+    path: str
+    missing: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "configId": self.config_id,
+            "path": self.path,
+            "missing": list(self.missing),
+        }
+
+    def __str__(self) -> str:
+        return f"{self.path}: {self.config_id}: missing {', '.join(self.missing)}"
+
+
+@dataclass(frozen=True)
 class RegistrationExclusionUse:
     path: str
     location: str
@@ -1087,6 +1114,47 @@ class ContentValidator:
             # the CCreature subtype enumeration that random-encounter code relies on.
             players_in_creature_enumeration=tuple(players),
         )
+
+    def report_unmigrated_creatures(self) -> list[UnmigratedCreature]:
+        """List production CCreature/CPlayer configs missing race and/or creatureClass.
+
+        Resolves each global config's effective engine class (following ``ref`` chains)
+        and selects those whose class is, or inherits from, ``CCreature`` -- which also
+        covers ``CPlayer`` templates since CPlayer derives from CCreature.  For each such
+        config it inspects the ``properties`` block for the archetype reference
+        properties ``race`` (CREATURE_RACE_PROPERTY) and ``creatureClass``
+        (CREATURE_CLASS_REFERENCE_PROPERTY) and records whichever are absent.  This is a
+        read-only report: it shares the validation class-resolution machinery but never
+        emits validation issues or changes exit status, so the normal validation run --
+        which today would flag every still-unmigrated creature -- stays green.  Results
+        are sorted by config id for deterministic output, and each missing-property list
+        is itself sorted ("creatureClass" before "race").
+        """
+        self._collect_engine_classes()
+        self._collect_plugin_classes()
+        self._load_global_configs()
+        visible = dict(self.global_entries)
+        unmigrated: list[UnmigratedCreature] = []
+        for key, entry in self.global_entries.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if not (class_name == CREATURE_BASE_CLASS or self._class_inherits_from(class_name, CREATURE_BASE_CLASS)):
+                continue
+            properties = entry.data.get("properties")
+            properties = properties if isinstance(properties, dict) else {}
+            missing = tuple(
+                sorted(
+                    name
+                    for name in (CREATURE_CLASS_REFERENCE_PROPERTY, CREATURE_RACE_PROPERTY)
+                    if name not in properties
+                )
+            )
+            if missing:
+                unmigrated.append(UnmigratedCreature(config_id=key, path=self._rel(entry.path), missing=missing))
+        return sorted(unmigrated, key=lambda creature: (creature.config_id, creature.path))
 
     def _collect_creature_overrides(
         self,
@@ -3344,6 +3412,10 @@ def classify_creature_templates(repo_root: Path | str) -> CreatureClassification
     return ContentValidator(Path(repo_root)).classify_creature_templates()
 
 
+def report_unmigrated_creatures(repo_root: Path | str) -> list[UnmigratedCreature]:
+    return ContentValidator(Path(repo_root)).report_unmigrated_creatures()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate game JSON resources and literal script refs.")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -3357,6 +3429,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print the metadata-derived player/monster classification as JSON and exit without validating.",
     )
+    parser.add_argument(
+        "--report-unmigrated",
+        action="store_true",
+        help=(
+            "Print the production CCreature/CPlayer configs still missing race and/or "
+            "creatureClass as JSON and exit without validating."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.report_creature_overrides:
@@ -3368,6 +3448,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.report_creature_classification:
         classification = classify_creature_templates(args.repo_root)
         json.dump(classification.as_dict(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    if args.report_unmigrated:
+        unmigrated = report_unmigrated_creatures(args.repo_root)
+        json.dump([creature.as_dict() for creature in unmigrated], sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
 

@@ -29,6 +29,7 @@ from scripts.validate_content import (
     ScriptPropertyHygieneAllowance,
     classify_creature_templates,
     inventory_creature_overrides,
+    report_unmigrated_creatures,
     validate_repo,
 )
 
@@ -2700,6 +2701,104 @@ class CreatureClassificationTest(unittest.TestCase):
             },
         )
         return root
+
+
+class UnmigratedCreatureReportTest(unittest.TestCase):
+    def make_unmigrated_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "src/object").mkdir(parents=True)
+
+        # Engine metadata: CPlayer derives from CCreature, mirroring src/object/CPlayer.h.
+        (root / "src/object/CCreatures.h").write_text(
+            textwrap.dedent("""
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                # Fully migrated creature: carries both archetype references.
+                "MigratedGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}, "creatureClass": {"ref": "BruteClass"}},
+                },
+                # Missing only the class reference.
+                "NoClassGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}},
+                },
+                # Missing only the race reference.
+                "NoRaceGoblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "BruteClass"}},
+                },
+                # Unmigrated creature: missing both (and no properties block at all path).
+                "LegacyGoblin": {"class": "CCreature", "properties": {"label": "Goblin"}},
+                # Player template (CPlayer inherits CCreature) -- also subject to migration.
+                "LegacyHero": {"class": "CPlayer", "properties": {"label": "Hero"}},
+                # Not a creature -- must never appear in the report.
+                "PlainItem": {"class": "CItem", "properties": {"label": "Sword"}},
+            },
+        )
+        return root
+
+    def test_report_lists_only_creatures_missing_archetype_references(self):
+        root = self.make_unmigrated_fixture()
+
+        report = report_unmigrated_creatures(root)
+        missing_by_id = {creature.config_id: creature.missing for creature in report}
+
+        self.assertEqual(
+            {
+                "NoClassGoblin": ("creatureClass",),
+                "NoRaceGoblin": ("race",),
+                "LegacyGoblin": ("creatureClass", "race"),
+                "LegacyHero": ("creatureClass", "race"),
+            },
+            missing_by_id,
+        )
+        # Fully migrated creatures and non-creatures never appear.
+        self.assertNotIn("MigratedGoblin", missing_by_id)
+        self.assertNotIn("PlainItem", missing_by_id)
+
+    def test_report_output_is_deterministically_sorted(self):
+        root = self.make_unmigrated_fixture()
+
+        report = report_unmigrated_creatures(root)
+
+        ids = [creature.config_id for creature in report]
+        self.assertEqual(sorted(ids), ids)
+        for creature in report:
+            self.assertEqual(sorted(creature.missing), list(creature.missing))
+            self.assertEqual("res/config/monsters.json", creature.path)
+
+    def test_report_does_not_affect_normal_validation(self):
+        # Every shipped creature is unmigrated today, yet the normal validation run
+        # must still pass -- the report is informational and shares no failing path.
+        self.assertEqual([], [str(issue) for issue in validate_repo(REPO_ROOT)])
+
+        report = report_unmigrated_creatures(REPO_ROOT)
+        # The report is non-empty on current content (nothing is migrated yet) and the
+        # production player templates surface as still needing migration.
+        self.assertTrue(report)
+        report_ids = {creature.config_id for creature in report}
+        for player in ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer"):
+            self.assertIn(player, report_ids)
+            self.assertEqual(("creatureClass", "race"), next(c.missing for c in report if c.config_id == player))
 
 
 if __name__ == "__main__":
