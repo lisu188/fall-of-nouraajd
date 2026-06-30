@@ -43,6 +43,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../handler/CHandler.h"
 #include "../handler/CRngHandler.h"
 #include "../object/CCreature.h"
+#include "../object/CCreatureClass.h"
 #include "../object/CCreatureRace.h"
 #include "../object/CDialog.h"
 #include "../object/CEffect.h"
@@ -353,6 +354,7 @@ void register_python_binding_type_metadata() {
     CTypes::register_type_metadata<CInteraction, CGameObject>();
     CTypes::register_type_metadata<CWrapper<CInteraction>, CInteraction, CGameObject>();
     CTypes::register_type_metadata<CCreatureRace, CGameObject>();
+    CTypes::register_type_metadata<CCreatureClass, CGameObject>();
     CTypes::register_type_metadata<CTile, CGameObject>();
     CTypes::register_type_metadata<CWrapper<CTile>, CTile, CGameObject>();
 
@@ -792,6 +794,22 @@ void init_game_module(py::module_ &m) {
         .def("isPlayerSelectable", &CCreatureRace::isPlayerSelectable,
              "Whether the race is offered at character creation.")
         .def("setPlayerSelectable", &CCreatureRace::setPlayerSelectable, "Set whether the race is player-selectable.");
+
+    py::class_<CCreatureClass, CGameObject, std::shared_ptr<CCreatureClass>>(
+        m, "CCreatureClass", "Creature class archetype definition (metadata only; not a spawnable creature).")
+        .def(py::init<>())
+        .def("getBaseStats", &CCreatureClass::getBaseStats, "Return the class's base stats.")
+        .def("setBaseStats", &CCreatureClass::setBaseStats, "Set the class's base stats (null becomes empty).")
+        .def("getLevelStats", &CCreatureClass::getLevelStats, "Return the class's per-level stat growth.")
+        .def("setLevelStats", &CCreatureClass::setLevelStats,
+             "Set the class's per-level stat growth (null becomes empty).")
+        .def("getActions", &CCreatureClass::getActions, "Return the class's starting actions.")
+        .def("setActions", &CCreatureClass::setActions, "Set the class's starting actions (nulls are dropped).")
+        .def("getLevelling", &CCreatureClass::getLevelling, "Return the level-keyed unlock map.")
+        .def("setLevelling", &CCreatureClass::setLevelling,
+             "Set the level-keyed unlock map (null entries are dropped).")
+        .def("getMainStat", &CCreatureClass::getMainStat, "Return the name of the class's main stat.")
+        .def("setMainStat", &CCreatureClass::setMainStat, "Set the name of the class's main stat.");
 
     auto ctile =
         py::class_<CTile, CWrapper<CTile>, std::shared_ptr<CTile>, CGameObject>(m, "CTile", "Base tile class.");
