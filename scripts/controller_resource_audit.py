@@ -389,13 +389,18 @@ def evaluateGitHealth(report: GitHealthReport) -> tuple[list[str], list[str]]:
 
 
 def runGhApiJson(path: str) -> dict[str, Any]:
-    result = subprocess.run(
-        ["gh", "api", path],
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["gh", "api", path],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("gh CLI not found on PATH; cannot query GitHub metadata") from exc
+    except OSError as exc:
+        raise RuntimeError(f"gh api {path} could not be executed: {exc}") from exc
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "gh api failed"
         raise RuntimeError(detail)

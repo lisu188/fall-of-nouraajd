@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from scripts import controller_resource_audit
@@ -605,6 +606,56 @@ detached
         self.assertEqual(0, payload["runTrees"]["total"])
         self.assertEqual(0, payload["runTrees"]["totalBytes"])
         self.assertFalse(payload["runTrees"]["sizesMeasured"])
+
+    def test_run_gh_api_json_reports_missing_cli_as_runtime_error(self) -> None:
+        def raise_missing_gh(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "gh")
+
+        with unittest.mock.patch.object(
+            controller_resource_audit.subprocess, "run", side_effect=raise_missing_gh
+        ):
+            with self.assertRaises(RuntimeError) as caught:
+                controller_resource_audit.runGhApiJson("repos/owner/repo")
+
+        self.assertIn("gh CLI not found on PATH", str(caught.exception))
+
+    def test_audit_branch_protection_degrades_when_gh_cli_is_missing(self) -> None:
+        def raise_missing_gh(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "gh")
+
+        with unittest.mock.patch.object(
+            controller_resource_audit.subprocess, "run", side_effect=raise_missing_gh
+        ):
+            report = controller_resource_audit.auditBranchProtection(
+                "owner/repo", "main", ("linux",)
+            )
+
+        self.assertIsNone(report.protected)
+        self.assertIn("gh CLI not found on PATH", report.error or "")
+        errors, warnings = controller_resource_audit.evaluateBranchProtection(report)
+        self.assertEqual([], errors)
+        self.assertTrue(
+            any("branch protection could not be inspected" in warning for warning in warnings),
+            warnings,
+        )
+
+    def test_audit_merge_policy_degrades_when_gh_cli_is_missing(self) -> None:
+        def raise_missing_gh(*_args: object, **_kwargs: object) -> None:
+            raise FileNotFoundError(2, "No such file or directory", "gh")
+
+        with unittest.mock.patch.object(
+            controller_resource_audit.subprocess, "run", side_effect=raise_missing_gh
+        ):
+            report = controller_resource_audit.auditMergePolicy("owner/repo")
+
+        self.assertIsNone(report.allowAutoMerge)
+        self.assertIn("gh CLI not found on PATH", report.error or "")
+        errors, warnings = controller_resource_audit.evaluateMergePolicy(report)
+        self.assertEqual([], errors)
+        self.assertTrue(
+            any("repository merge policy could not be inspected" in warning for warning in warnings),
+            warnings,
+        )
 
 
 if __name__ == "__main__":
