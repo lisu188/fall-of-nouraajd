@@ -14346,8 +14346,11 @@ class GameTest(unittest.TestCase):
         self.assertEqual("player", config_controller.get("properties", {}).get("target"))
         self.assertIn("quest", siege_config["magicWand"].get("properties", {}).get("tags", []))
 
+        # siegePritzMage is a MAP-LOCAL definition, not a globally-registered type: it only
+        # becomes instantiable after the siege map is loaded and registers its config types.
+        # (Same ordering the sibling siege tests rely on when calling g.createObject("siegePritz").)
         game = load_game_module()
-        g = game.CGameLoader.loadGame()
+        g, _game_map, _player = load_game_map_with_player("siege")
 
         mage = g.createObject("siegePritzMage")
         self.assertIsNotNone(mage)
