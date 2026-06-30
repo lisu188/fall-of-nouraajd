@@ -5562,7 +5562,11 @@ class GameTest(unittest.TestCase):
         assert player.countItems("LifePotion") >= 1
         assert player.getNumericProperty("gold") == base_gold - 20
 
-        # RNG failure leaves inventory and gold untouched
+        # RNG failure still consumes the reagents and recipe gold (a failed
+        # craft is a complete, atomic transaction that produces no output, so
+        # successChance is a real cost rather than a free retry). The recipe
+        # consumes 2 LifePotion and 45 gold; only the GreaterLifePotion output
+        # is withheld on failure.
         reset()
         player.setBoolProperty("CAN_BREW_GREATER_POTIONS", True)
         player.addItem("LifePotion")
@@ -5580,9 +5584,9 @@ class GameTest(unittest.TestCase):
             crafting.randint = original_randint
 
         assert not result["ok"] and result["reason"] == "failed"
-        assert player.countItems("LifePotion") == 2
+        assert player.countItems("LifePotion") == 0
         assert player.countItems("GreaterLifePotion") == 0
-        assert player.getNumericProperty("gold") == 200
+        assert player.getNumericProperty("gold") == 200 - 45
 
         return True, ""
 
