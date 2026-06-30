@@ -1178,10 +1178,8 @@ void test_rng_handler_excludes_archetype_definitions_from_encounters() {
     const std::string classDefId = "unitArchetypeClassDefinition";
     const std::string concreteCreatureId = "unitArchetypeConcreteCreature";
 
-    objectHandler->registerConfig(raceDefId,
-                                  CJsonUtil::from_string("{\"class\":\"CCreatureRace\"}", raceDefId));
-    objectHandler->registerConfig(classDefId,
-                                  CJsonUtil::from_string("{\"class\":\"CCreatureClass\"}", classDefId));
+    objectHandler->registerConfig(raceDefId, CJsonUtil::from_string("{\"class\":\"CCreatureRace\"}", raceDefId));
+    objectHandler->registerConfig(classDefId, CJsonUtil::from_string("{\"class\":\"CCreatureClass\"}", classDefId));
     // A genuine concrete creature so the enumeration / power table is provably non-empty
     // and we can show definitions are excluded while real creatures are included.
     objectHandler->registerConfig(concreteCreatureId, make_unit_creature_config(2));
@@ -1216,8 +1214,7 @@ void test_rng_handler_excludes_archetype_definitions_from_encounters() {
     // Every enumerated candidate must construct as a real CCreature -- definitions cannot.
     for (const std::string &type : creatureSubTypes) {
         auto candidate = game->createObject<CCreature>(type);
-        expect_true(candidate != nullptr,
-                    "every encounter candidate must construct as a concrete CCreature");
+        expect_true(candidate != nullptr, "every encounter candidate must construct as a concrete CCreature");
         if (candidate) {
             expect_true(candidate->meta()->inherits("CCreature"),
                         "every encounter candidate must inherit CCreature (no archetype definitions)");
@@ -1361,6 +1358,114 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
                 "the baseline power table should be able to assemble a non-empty encounter without crashing");
 }
 
+// [EPIC_05][STORY_07][SUBSTORY_03] Compare deterministic encounter outputs.
+//
+// Acceptance: "Encounter generation remains equivalent under stable candidate/power
+// constraints." The encounter RNG (vstd::rand -> a single time-seeded static
+// std::mt19937_64) exposes NO seeding hook, so an exact sampled SEQUENCE cannot be
+// pinned. Instead this guard pins the two things that ARE invariant of sampling order:
+// the candidate SET (which sw power-buckets an encounter creature may be drawn from)
+// and the power-budget constraint (the `it <= pow` filter in
+// src/handler/CRngHandler.cpp:118 / :124). These follow directly from the source and
+// must survive any future encounter-table refactor that keeps the same candidates and
+// power semantics.
+//
+// Source contract being pinned:
+//   * The constructor seeds creaturePowerTable with one entry per registered CCreature
+//     subtype, keyed on the concrete creature's getSw() (CRngHandler.cpp:63-69).
+//   * calculateRandomEncounter decomposes value via random_components and, for each
+//     component `pow`, only considers power-table keys with `sw <= pow`, where
+//     `pow <= value` (CRngHandler.cpp:116-124). So every assembled creature's sw key
+//     is <= clamp(value, 0, 1000).
+//   * Selection scales the creature with addExp(getExpForLevel(pow - sw)); addExp only
+//     mutates exp/level, never sw (src/object/CCreature.cpp:80-88), so the assembled
+//     creature's getSw() stays exactly the table key it was drawn from, and
+//     getScale() stays getLevel() + getSw() (CCreature.cpp:369).
+void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Two well-separated, deterministic power buckets added to the live registry. They
+    // are added to (not isolated from) whatever the configured game already registers.
+    const int kLowSw = 1;
+    const int kHighSw = 9;
+    const std::string lowId = "unitEncounterEquivLow";
+    const std::string highId = "unitEncounterEquivHigh";
+    objectHandler->registerConfig(lowId, make_unit_creature_config(kLowSw));
+    objectHandler->registerConfig(highId, make_unit_creature_config(kHighSw));
+
+    // Reconstruct the ground-truth creature power table EXACTLY as the constructor does
+    // (CRngHandler.cpp:63-69): one sw bucket per registered concrete subtype. This is the
+    // canonical "candidate set" the encounter generator is allowed to draw from.
+    std::set<int> eligibleSwBuckets;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        if (auto prototype = game->createObject<CCreature>(type)) {
+            eligibleSwBuckets.insert(prototype->getSw());
+        }
+    }
+    expect_true(eligibleSwBuckets.contains(kLowSw),
+                "the low archetype's sw must register as an eligible encounter power bucket");
+    expect_true(eligibleSwBuckets.contains(kHighSw),
+                "the high archetype's sw must register as an eligible encounter power bucket");
+
+    CRngHandler rng_handler(game);
+
+    // (1) Candidate-set equivalence at a full power budget: across many samples every
+    // assembled creature's sw must be a member of the eligible bucket set -- the
+    // generator must never invent an sw key outside the registered candidate set, and
+    // the post-scaling scale invariant must hold. Sampling order is irrelevant: this is a
+    // set-membership comparison, not a sequence comparison.
+    const int kFullBudget = 60;
+    bool producedFullEncounter = false;
+    for (int attempt = 0; attempt < 256; attempt++) {
+        for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
+            if (!creature) {
+                continue;
+            }
+            producedFullEncounter = true;
+            expect_true(eligibleSwBuckets.contains(creature->getSw()),
+                        "every encounter creature's sw must be drawn from a registered eligible power bucket");
+            expect_true(creature->getSw() <= kFullBudget,
+                        "every encounter creature's sw must respect the requested power budget");
+            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                        "scaled encounter creatures must keep getScale() == level + sw");
+        }
+    }
+    expect_true(producedFullEncounter,
+                "a full power budget should assemble at least one encounter from the eligible buckets");
+
+    // (2) Power-constraint equivalence under a TIGHT budget: with a budget strictly below
+    // the high bucket's sw, the `it <= pow` power filter provably excludes the high bucket
+    // for every component (pow <= value < kHighSw). So the high archetype must NEVER appear
+    // and every assembled creature's sw must be <= the tight budget. This is deterministic
+    // regardless of which low bucket the RNG happens to sample.
+    const int kTightBudget = kHighSw - 1; // 8: below the high bucket, so it is never eligible
+    for (int attempt = 0; attempt < 256; attempt++) {
+        for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
+            if (!creature) {
+                continue;
+            }
+            expect_true(creature->getSw() <= kTightBudget,
+                        "a tight power budget must exclude every bucket whose sw exceeds the budget");
+            expect_true(creature->getSw() != kHighSw,
+                        "the high power bucket must never be sampled when the budget is below its sw");
+            expect_true(creature->getType() != highId,
+                        "the high archetype must never be assembled under a sub-threshold power budget");
+        }
+    }
+
+    // (3) Empty-encounter equivalence: a clamped-to-zero (or non-positive) budget leaves
+    // random_components with nothing to decompose, so no candidate is ever drawn. This
+    // boundary is fully deterministic and order-independent.
+    expect_true(rng_handler.getRandomEncounter(0).empty(),
+                "a zero power budget must produce an empty encounter regardless of the candidate set");
+    expect_true(rng_handler.getRandomEncounter(-25).empty(),
+                "a non-positive power budget clamps to zero and must produce an empty encounter");
+
+    objectHandler->unregisterConfig(lowId);
+    objectHandler->unregisterConfig(highId);
+}
+
 // READ-ONLY source-of-truth inventory for later CCreature/CPlayer migration tickets
 // ([EPIC_01][STORY_01][SUBSTORY_01]). Loads a normally-configured game (CGameLoader::loadGame
 // registers every res/config CONFIG file -- including res/config/monsters.json -- via
@@ -1443,6 +1548,7 @@ int main() {
     test_rng_handler_builds_encounters_from_concrete_creature_sw();
     test_rng_handler_excludes_archetype_definitions_from_encounters();
     test_rng_handler_captures_encounter_power_and_scale_baseline();
+    test_rng_handler_encounter_candidates_stay_in_stable_power_buckets();
     test_creature_subtype_inventory_is_enumerable_on_loaded_game();
     test_event_handler_trigger_registration_uses_named_comparison_helpers();
     test_fight_handler_rejects_stale_and_cross_map_participants();
