@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <set>
 #include <string>
+#include <typeindex>
 #include <utility>
 #include <vector>
 
@@ -612,6 +613,107 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     expect_true(creature->getGold() == 20, "takeGold should subtract from creature gold");
 }
 
+void test_no_archetype_creature_stats_keep_legacy_composition() {
+    // Regression guard (EPIC_03/STORY_01/SUBSTORY_01): a creature with NO race/creatureClass
+    // archetype must keep the legacy stat composition computed in CCreature::getStats():
+    //   mainStat  = baseStats.mainStat
+    //   numerics  = baseStats + level * levelStats + sum(equipped item bonuses) + sum(effect bonuses)
+    // Since no archetype types exist yet, every creature is "no-archetype"; this captures today's
+    // behaviour as the legacy baseline and fails with a per-property diff if that composition changes.
+    auto creature = std::make_shared<CCreature>();
+
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence");
+    base->setStrength(10);
+    base->setAgility(4);
+    base->setStamina(7);
+    base->setIntelligence(12);
+    base->setArmor(3);
+    base->setBlock(2);
+    base->setDmgMin(5);
+    base->setDmgMax(9);
+    base->setAttack(6);
+    base->setHit(11);
+    base->setCrit(1);
+    base->setFireResist(8);
+    base->setFrostResist(0);
+    base->setNormalResist(2);
+    base->setThunderResist(4);
+    base->setShadowResist(6);
+    base->setDamage(13);
+    creature->setBaseStats(base);
+
+    auto level_stats = std::make_shared<CStats>();
+    level_stats->setStrength(2);
+    level_stats->setAgility(1);
+    level_stats->setStamina(3);
+    level_stats->setIntelligence(1);
+    level_stats->setArmor(1);
+    level_stats->setHit(1);
+    level_stats->setDamage(2);
+    creature->setLevelStats(level_stats);
+
+    const int level = 3;
+    creature->setLevel(level);
+
+    auto weapon_bonus = std::make_shared<CStats>();
+    weapon_bonus->setStrength(4);
+    weapon_bonus->setDmgMin(2);
+    weapon_bonus->setDmgMax(3);
+    weapon_bonus->setCrit(5);
+    auto weapon = std::make_shared<CItem>();
+    weapon->setBonus(weapon_bonus);
+
+    auto armor_bonus = std::make_shared<CStats>();
+    armor_bonus->setArmor(7);
+    armor_bonus->setBlock(3);
+    armor_bonus->setFrostResist(2);
+    auto armor_item = std::make_shared<CItem>();
+    armor_item->setBonus(armor_bonus);
+
+    auto empty_slot_item = std::shared_ptr<CItem>();
+    creature->setEquipped({{"0", weapon}, {"1", armor_item}, {"2", empty_slot_item}});
+
+    auto effect_bonus = std::make_shared<CStats>();
+    effect_bonus->setAgility(5);
+    effect_bonus->setHit(4);
+    effect_bonus->setShadowResist(1);
+    auto effect = std::make_shared<CEffect>();
+    effect->setBonus(effect_bonus);
+    creature->setEffects({effect});
+
+    // Independently recompute the expected legacy composition.
+    auto expected = std::make_shared<CStats>();
+    expected->setMainStat(base->getMainStat());
+    expected->addBonus(base);
+    for (int i = 0; i < level; ++i) {
+        expected->addBonus(level_stats);
+    }
+    expected->addBonus(weapon_bonus);
+    expected->addBonus(armor_bonus);
+    expected->addBonus(effect_bonus);
+
+    auto actual = creature->getStats();
+
+    expect_true(actual->getMainStat() == expected->getMainStat(),
+                "no-archetype creature getStats should keep baseStats mainStat");
+
+    actual->meta()->for_all_properties(actual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = actual->getProperty<int>(property->name());
+        int expected_value = expected->getProperty<int>(property->name());
+        if (actual_value != expected_value) {
+            std::cerr << "STAT DIFF [" << property->name() << "] expected " << expected_value << " but got "
+                      << actual_value << "\n";
+        }
+        expect_true(actual_value == expected_value,
+                    "no-archetype creature getStats should match legacy baseStats + level*levelStats + "
+                    "equipment + effects composition");
+    });
+}
+
 void test_game_object_comparator_and_identity_sets_document_current_semantics() {
     std::shared_ptr<CGameObject> null_object;
     auto object = std::make_shared<CGameObject>();
@@ -848,6 +950,7 @@ int main() {
     test_game_object_property_helpers_and_owned_tile_movement();
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
+    test_no_archetype_creature_stats_keep_legacy_composition();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
 
