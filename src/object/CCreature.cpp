@@ -752,3 +752,35 @@ std::shared_ptr<CStats> CCreature::getStats() {
     }
     return ret;
 }
+
+std::string CCreature::getRaceId() {
+    std::string typeId = getTypeId();
+    if (!typeId.empty()) {
+        return typeId;
+    }
+    return getName();
+}
+
+std::string CCreature::getCreatureClassId() {
+    std::string typeId = getTypeId();
+    if (!typeId.empty()) {
+        return typeId;
+    }
+    return getName();
+}
+
+std::string CCreature::getRaceLabel() {
+    std::string label = getLabel();
+    if (!label.empty()) {
+        return label;
+    }
+    return getRaceId();
+}
+
+std::string CCreature::getCreatureClassLabel() {
+    std::string label = getLabel();
+    if (!label.empty()) {
+        return label;
+    }
+    return getCreatureClassId();
+}
