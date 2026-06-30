@@ -2870,6 +2870,7 @@ NOURAAJD_MAP_BOOL_FLAGS = (
     "OCTOBOGZ_REWARD_CLAIMED",
     "AMULET_QUEST_STARTED",
     "AMULET_RETURNED",
+    "AMULET_REWARD_CLAIMED",
     "VICTOR_QUEST_STARTED",
     "VICTOR_COURTYARD_FOUND",
     "VICTOR_CULTISTS_SPAWNED",
@@ -2877,6 +2878,7 @@ NOURAAJD_MAP_BOOL_FLAGS = (
     "VICTOR_BAD_END",
     "VICTOR_HELP",
     "VICTOR_REWARD_CLAIMED",
+    "VICTOR_REWARD_GRANTED",
 )
 
 NOURAAJD_PLAYER_BOOL_FLAGS = (
@@ -12390,6 +12392,8 @@ class GameTest(unittest.TestCase):
             "victor_reward_once_guard": (
                 "player.addGold(500)" in script and 'getBoolProperty("VICTOR_REWARD_CLAIMED")' in script
             ),
+            "victor_reward_claim_first": 'claim_once(game_map, "VICTOR_REWARD_GRANTED")' in script,
+            "amulet_reward_claim_first": 'claim_once(game_map, "AMULET_REWARD_CLAIMED")' in script,
             "victor_dialog_coherent": (
                 courtyard_state is not None
                 and "already sacrificed" not in courtyard_state.get("properties", {}).get("text", "").lower()
@@ -13220,6 +13224,7 @@ class GameTest(unittest.TestCase):
             self.assertTrue(game_map.getBoolProperty("VICTOR_GOOD_END"))
             self.assertFalse(game_map.getBoolProperty("VICTOR_BAD_END"))
             self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"))
+            self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_GRANTED"))
             self.assertEqual(game_map.getNumericProperty("VICTOR_COURTYARD_TURN"), -1)
             self.assertIn("victorRewardDialog", captured["dialogs"])
             self.assertIn("victorMarket", captured["trades"])
@@ -13250,6 +13255,7 @@ class GameTest(unittest.TestCase):
             self.assertEqual(heal_amounts, [100])
             self.assertEqual(captured["dialogs"].count("victorRewardDialog"), 1)
             self.assertEqual(captured["trades"].count("victorMarket"), 1)
+            self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_GRANTED"))
 
             return True, json.dumps(
                 {
@@ -13379,6 +13385,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(player.getGold() - start_gold, 50)
         self.assertFalse(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
         self.assertTrue(game_map.getBoolProperty("AMULET_RETURNED"))
+        self.assertTrue(game_map.getBoolProperty("AMULET_REWARD_CLAIMED"))
         self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
         self.assertIsNone(game_map.getObjectByName("oldWoman"))
         assert_player_quest_state(self, player, "amuletQuest", completed=True)
@@ -13392,6 +13399,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(player.getGold() - start_gold, 50)
         self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
         self.assertTrue(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
+        self.assertTrue(game_map.getBoolProperty("AMULET_REWARD_CLAIMED"))
 
         return True, json.dumps(
             {
