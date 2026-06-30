@@ -152,7 +152,81 @@ void CCreature::removeItem(std::function<bool(std::shared_ptr<CItem>)> item_pred
 
 std::set<std::shared_ptr<CItem>> CCreature::getInInventory() { return items; }
 
-std::set<std::shared_ptr<CInteraction>> CCreature::getInteractions() { return actions; }
+std::set<std::shared_ptr<CInteraction>> CCreature::getInteractions() { return getEffectiveInteractions(); }
+
+std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
+    // Composes the creature's effective interaction set from every source that
+    // backs it today, de-duplicated so identical actions are never exposed
+    // twice. Dedupe key is the action typeId, falling back to its name when the
+    // typeId is empty (matching the identity rules CGameObject uses elsewhere).
+    //
+    // Precedence (lowest first, so later sources override earlier duplicates):
+    //   1. race actions          -- extension point (no backing object yet)
+    //   2. creature-class actions -- extension point (no backing object yet)
+    //   3. class level unlocks    -- levelling entries unlocked up to the
+    //                                current level (the model expresses class
+    //                                level unlocks through `levelling` today)
+    //   4. concrete own actions   -- the creature's own configured actions win
+    //
+    // Race / creature-class archetype objects (CCreatureClass) do not exist in
+    // the codebase yet, so there is nothing to pull their actions from. The
+    // ordered composition below is structured so those sources slot in ahead of
+    // the level unlocks once the archetype foundation lands, without changing
+    // the concrete-actions-win precedence.
+
+    std::vector<std::shared_ptr<CInteraction>> ordered;
+
+    auto dedupeKey = [](const std::shared_ptr<CInteraction> &action) -> std::string {
+        std::string typeId = action->getTypeId();
+        if (!typeId.empty()) {
+            return "T:" + typeId;
+        }
+        return "N:" + action->getName();
+    };
+
+    // 1-2. race / creature-class actions: extension point. Nothing to add until
+    //      the archetype foundation provides those objects.
+
+    // 3. class level unlocks: levelling entries unlocked up to the current
+    //    level. Keys are the level at which the entry unlocks (see
+    //    getLevelAction / levelUp).
+    for (const auto &[levelKey, action] : levelling) {
+        if (!action) {
+            continue;
+        }
+        int unlockLevel = 0;
+        try {
+            unlockLevel = std::stoi(levelKey);
+        } catch (...) {
+            // Non-numeric levelling keys are not level-gated unlocks; include
+            // them so no configured action is silently dropped.
+            unlockLevel = 0;
+        }
+        if (unlockLevel <= level) {
+            ordered.push_back(action);
+        }
+    }
+
+    // 4. concrete own actions: added last so they win duplicate-key conflicts.
+    for (const auto &action : actions) {
+        if (action) {
+            ordered.push_back(action);
+        }
+    }
+
+    // De-duplicate by key, keeping the last occurrence so higher-precedence
+    // sources (added later above) override lower-precedence duplicates.
+    std::map<std::string, std::shared_ptr<CInteraction>> byKey;
+    for (const auto &action : ordered) {
+        byKey[dedupeKey(action)] = action;
+    }
+
+    std::set<std::shared_ptr<CInteraction>> effective;
+    for (const auto &[key, action] : byKey) {
+        effective.insert(action);
+    }
+    return effective;
+}
 
 CItemMap CCreature::getEquipped() { return equipped; }
 
