@@ -405,6 +405,80 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertEqual("gooby1", named.get("gooby"))
         self.assertEqual("amuletGoblin", named.get("goblinThief"))
 
+    def test_real_gooby_quest_runtime_names_preserved(self):
+        # The real nouraajd chain (createObject("gooby") -> name "gooby1", onDestroy
+        # trigger on "gooby1") must satisfy the runtime-name preservation guard.
+        issues = validate_repo(REPO_ROOT)
+        gooby_issues = [str(issue) for issue in issues if "gooby" in str(issue).lower()]
+        self.assertEqual([], gooby_issues)
+
+    def test_renamed_gooby_template_breaks_chain(self):
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="goobyMonster",  # template renamed away from "gooby"
+            runtime="gooby1",
+            trigger_target="gooby1",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'no spawn of template "gooby" remains',
+        )
+
+    def test_renamed_gooby_runtime_name_breaks_chain(self):
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="gooby",
+            runtime="goobyAlive",  # runtime name renamed away from "gooby1"
+            trigger_target="goobyAlive",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'does not rename the runtime object to "gooby1"',
+        )
+
+    def test_gooby_runtime_name_without_trigger_breaks_chain(self):
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="gooby",
+            runtime="gooby1",
+            trigger_target=None,  # nothing recognizes "gooby1" anymore
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'no trigger recognizes "gooby1"',
+        )
+
+    def test_intact_gooby_chain_fixture_passes_guard(self):
+        # The synthetic chain, when intact, raises no Gooby preservation issue
+        # (proving the rule is load-bearing rather than always-failing).
+        root = self.make_fixture()
+        write_gooby_chain_script(
+            root / "res/maps/broken/script.py",
+            template="gooby",
+            runtime="gooby1",
+            trigger_target="gooby1",
+        )
+
+        issues = validate_repo(root)
+
+        gooby_issues = [str(issue) for issue in issues if "gooby" in str(issue).lower()]
+        self.assertEqual([], gooby_issues)
+
     def test_given_player_bool_read_without_default_when_validating_then_reports_uninitialized_property(self):
         root = self.make_fixture()
         write_property_hygiene_script(
@@ -2612,6 +2686,61 @@ def write_amulet_script(path):
                         if amulet_goblin:
                             self.getMap().removeObject(amulet_goblin)
             """).lstrip(),
+        encoding="utf-8",
+    )
+
+
+def write_gooby_chain_script(path, template, runtime, trigger_target):
+    """Write a script whose CaveTrigger spawns ``template`` and renames it to ``runtime``.
+
+    Mirrors the real nouraajd Gooby chain so the runtime-name preservation guard can be
+    exercised: a createObject spawn, a setStringProperty("name", ...) rename, and an
+    optional onDestroy trigger against ``trigger_target``.  The template config entry is
+    written alongside so unrelated ref checks stay quiet.  Pass ``trigger_target=None`` to
+    omit the recognizing trigger.
+    """
+    config_path = path.parent / "config.json"
+    config = read_json(config_path)
+    config[template] = {"class": "CCreature"}
+    write_json(config_path, config)
+
+    trigger_block = ""
+    if trigger_target is not None:
+        trigger_block = textwrap.dedent(f"""
+            @trigger(context, "onDestroy", "{trigger_target}")
+            class GoobyTrigger(CTrigger):
+                def trigger(self, obj, event):
+                    pass
+            """)
+    trigger_block = textwrap.indent(trigger_block.strip(), "    ")
+
+    path.write_text(
+        textwrap.dedent(f"""
+            def load(self, context):
+                from game import CEvent
+                from game import CQuest
+                from game import CTrigger
+                from game import register
+                from game import trigger
+
+                @register(context)
+                class StartEvent(CEvent):
+                    def onEnter(self, event):
+                        pass
+
+                @register(context)
+                class GoodQuest(CQuest):
+                    pass
+
+                @trigger(context, "onDestroy", "cave1")
+                class CaveTrigger(CTrigger):
+                    def trigger(self, obj, event):
+                        game = self.getGame()
+                        gooby = game.createObject("{template}")
+                        gooby.setStringProperty("name", "{runtime}")
+                        game.getMap().addObject(gooby)
+
+            """).lstrip() + trigger_block + "\n",
         encoding="utf-8",
     )
 

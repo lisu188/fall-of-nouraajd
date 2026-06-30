@@ -221,6 +221,21 @@ CREATURE_RACE_PROPERTY = "race"
 CREATURE_RACE_PLAYER_SELECTABLE_PROPERTY = "playerSelectable"
 CREATURE_RACE_LABEL_PROPERTY = "label"
 
+# Gooby quest runtime-name preservation (EPIC_05/STORY_03/SUBSTORY_02).
+# The Gooby hunt depends on a fixed spawn/rename chain in the nouraajd map script:
+# CaveTrigger spawns the template named GOOBY_TEMPLATE_NAME ("gooby") and immediately
+# renames the runtime object to GOOBY_RUNTIME_NAME ("gooby1") via
+# setStringProperty("name", "gooby1"); GoobyTrigger then fires onDestroy against the
+# runtime name "gooby1" and marks the main quest "gooby_slain".  Both names are
+# load-bearing constants that a template migration must NOT rename: if the template id
+# changed, createObject would spawn nothing; if the runtime name changed, the onDestroy
+# trigger and quest-completion flow could never recognize the slain creature.  This
+# guard fires only on a map that participates in the chain -- one that spawns the
+# "gooby" template or wires a trigger against the "gooby1" runtime name -- so unrelated
+# maps and synthetic fixtures stay unaffected, but the real chain is asserted whole.
+GOOBY_TEMPLATE_NAME = "gooby"
+GOOBY_RUNTIME_NAME = "gooby1"
+
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
 # that overrides template behavior.  Any override touching one of these properties
@@ -1515,6 +1530,7 @@ class ContentValidator:
         self._validate_map_json(context, visible, known_classes, archetype_ids)
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
+        self._validate_gooby_runtime_names(context)
         self._validate_script_property_hygiene(context)
         self._validate_quest_state_transitions(context)
         self._validate_amulet_quest_actor(context, visible)
@@ -2429,6 +2445,67 @@ class ContentValidator:
             if name == item_id:
                 return True
         return False
+
+    def _validate_gooby_runtime_names(self, context: MapContext) -> None:
+        """Assert the Gooby quest spawn/rename chain keeps its load-bearing names.
+
+        EPIC_05/STORY_03/SUBSTORY_02. The chain is: CaveTrigger
+        ``createObject("gooby")`` -> ``setStringProperty("name", "gooby1")``, and a
+        ``@trigger(..., "onDestroy", "gooby1")`` plus quest-completion flow that
+        recognizes the runtime name "gooby1".  A migration must preserve both the
+        template id "gooby" and the runtime name "gooby1"; renaming either silently
+        breaks the spawn, the onDestroy trigger, or quest completion.
+
+        The guard engages only on a map that already participates in the chain -- one
+        that spawns the "gooby" template, or that renames a spawn to "gooby1", or that
+        wires a trigger against the "gooby1" runtime name -- so unrelated maps and
+        synthetic fixtures stay unaffected.  Once engaged it requires the full chain:
+        a "gooby" template spawn that is renamed to "gooby1", and a trigger target
+        recognizing "gooby1".  Every diagnostic reports the script path so an author
+        sees exactly where the chain broke.
+        """
+        info = context.script_info
+        if not info:
+            return
+
+        gooby_template_spawns = [c for c in info.spawned_creatures if c.template == GOOBY_TEMPLATE_NAME]
+        renamed_to_runtime = [c for c in info.spawned_creatures if c.runtime_name == GOOBY_RUNTIME_NAME]
+        runtime_trigger_targets = [
+            t for t in info.trigger_targets if t.name == "trigger target" and t.value == GOOBY_RUNTIME_NAME
+        ]
+
+        # Engage only when this map participates in the Gooby chain in some form.
+        if not (gooby_template_spawns or renamed_to_runtime or runtime_trigger_targets):
+            return
+
+        chain_spawns = [c for c in gooby_template_spawns if c.runtime_name == GOOBY_RUNTIME_NAME]
+
+        if not gooby_template_spawns:
+            location = renamed_to_runtime[0].location if renamed_to_runtime else runtime_trigger_targets[0].location
+            self._issue(
+                info.path,
+                location,
+                f'Gooby quest chain references runtime name "{GOOBY_RUNTIME_NAME}" but no spawn of '
+                f'template "{GOOBY_TEMPLATE_NAME}" remains; the template name must not be renamed',
+            )
+            return
+
+        if not chain_spawns:
+            self._issue(
+                info.path,
+                gooby_template_spawns[0].location,
+                f'CaveTrigger spawns template "{GOOBY_TEMPLATE_NAME}" but does not rename the runtime '
+                f'object to "{GOOBY_RUNTIME_NAME}"; the runtime name must be preserved',
+            )
+            return
+
+        if not runtime_trigger_targets:
+            self._issue(
+                info.path,
+                chain_spawns[0].location,
+                f'runtime object "{GOOBY_RUNTIME_NAME}" is spawned from template "{GOOBY_TEMPLATE_NAME}" but no '
+                f'trigger recognizes "{GOOBY_RUNTIME_NAME}"; quest-completion flow must keep recognizing it',
+            )
 
     def _validate_script_property_hygiene(self, context: MapContext) -> None:
         info = context.script_info
