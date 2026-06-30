@@ -27,6 +27,7 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.validate_content import (
     ContentValidator,
     ScriptPropertyHygieneAllowance,
+    classify_creature_templates,
     inventory_creature_overrides,
     validate_repo,
 )
@@ -158,9 +159,7 @@ class ContentValidatorTest(unittest.TestCase):
 
         issues = validate_repo(root)
 
-        self.assertIssueContains(
-            issues, "properties.action", 'dialog action "valid action" is not a valid method name'
-        )
+        self.assertIssueContains(issues, "properties.action", 'dialog action "valid action" is not a valid method name')
         self.assertIssueContains(
             issues, "properties.condition", 'dialog condition "9condition" is not a valid method name'
         )
@@ -1578,6 +1577,102 @@ class CreatureOverrideInventoryTest(unittest.TestCase):
                     "ref": "Spawner",
                     "properties": {"monster": {"ref": "Soldier", "properties": {"affiliation": "keep"}}},
                 },
+            },
+        )
+        return root
+
+
+class CreatureClassificationTest(unittest.TestCase):
+    # Concrete player template ids shipped in res/config/monsters.json. These are
+    # the "class": "CPlayer" entries; the classification must derive playerhood from
+    # CPlayer metadata inheritance, never from these names.
+    EXPECTED_PLAYER_TEMPLATES = ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer")
+
+    def test_repo_classification_lists_concrete_player_templates_as_players(self):
+        classification = classify_creature_templates(REPO_ROOT)
+
+        for player in self.EXPECTED_PLAYER_TEMPLATES:
+            with self.subTest(player=player):
+                self.assertIn(player, classification.player_templates)
+                # A player template must never be silently treated as a monster.
+                self.assertNotIn(player, classification.monster_templates)
+
+    def test_repo_classification_separates_monsters_from_players(self):
+        classification = classify_creature_templates(REPO_ROOT)
+
+        self.assertEqual(set(self.EXPECTED_PLAYER_TEMPLATES), set(classification.player_templates))
+        self.assertTrue(classification.monster_templates)
+        # Known non-player creatures must land in the monster partition.
+        self.assertIn("Cultist", classification.monster_templates)
+        self.assertIn("Pritz", classification.monster_templates)
+        # Player and monster partitions are disjoint.
+        self.assertEqual(
+            set(),
+            set(classification.player_templates) & set(classification.monster_templates),
+        )
+
+    def test_player_templates_are_flagged_in_creature_enumeration(self):
+        # CPlayer inherits CCreature, so getAllSubTypes("CCreature") (used by the
+        # random-encounter table builder) enumerates every player template. The
+        # classification must surface exactly these so encounter code can exclude them.
+        classification = classify_creature_templates(REPO_ROOT)
+
+        self.assertEqual(
+            set(self.EXPECTED_PLAYER_TEMPLATES),
+            set(classification.players_in_creature_enumeration),
+        )
+        self.assertEqual(
+            set(classification.player_templates),
+            set(classification.players_in_creature_enumeration),
+        )
+
+    def test_classification_is_derived_from_metadata_inheritance_not_names(self):
+        # A creature template whose id looks like a monster but whose class is a
+        # CPlayer subclass must classify as a player; a player-sounding id on a plain
+        # CCreature must classify as a monster. This proves lineage, not naming, drives
+        # the decision.
+        root = self.make_classification_fixture()
+
+        classification = classify_creature_templates(root)
+
+        self.assertIn("grumpyOgre", classification.player_templates)
+        self.assertNotIn("grumpyOgre", classification.monster_templates)
+        self.assertIn("heroLookalike", classification.monster_templates)
+        self.assertNotIn("heroLookalike", classification.player_templates)
+        self.assertIn("grumpyOgre", classification.players_in_creature_enumeration)
+        self.assertNotIn("heroLookalike", classification.players_in_creature_enumeration)
+
+    def make_classification_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "src/object").mkdir(parents=True)
+
+        # Engine metadata: CPlayer derives from CCreature, mirroring src/object/CPlayer.h.
+        (root / "src/object/CCreatures.h").write_text(
+            textwrap.dedent("""
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                # Monster-sounding id, but a CPlayer subtype -> classified as player.
+                "grumpyOgre": {"class": "CPlayer", "properties": {"label": "Ogre"}},
+                # Hero-sounding id, but a plain CCreature -> classified as monster.
+                "heroLookalike": {"class": "CCreature", "properties": {"label": "Hero"}},
             },
         )
         return root
