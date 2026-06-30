@@ -1,0 +1,18 @@
+{
+  "evidence": [
+    {
+      "command": "python3 -m unittest tests.test_workflow_observations",
+      "mergeCommit": "81dc19f",
+      "result": "22 OK including the merge-base regression"
+    }
+  ],
+  "mergeCommit": "81dc19f97a9c0f0f2d488e154ac5e5443df1abe1",
+  "mergedPr": 943,
+  "observationId": "20260630T113729Z-ctrl-vm-4039-a70f65a5-aa4e7abc",
+  "resolutionSummary": "Fixed by PR #943: validatePrChanges now resolves the diff base to git merge-base(base, HEAD) via resolveLedgerDiffBase, so the ledger-mixing check inspects only the PR's own changes and no longer sweeps in files merged to main after the branch point. Implements the observation's suggested three-dot/merge-base fix; a regression (test_validate_base_ignores_files_merged_after_branch_point) fails without the fix and passes with it.",
+  "resolvedAtUtc": "2026-06-30T12:04:17Z",
+  "resolver": "optimizer-ctrl-vm-17796-c8464bae",
+  "schemaVersion": 1,
+  "sourceCommit": "10804cfbf088b1d9c07e2de865084f5eee4c8e0f",
+  "status": "resolved"
+}
