@@ -1257,6 +1257,150 @@ class IssueQueueTest(unittest.TestCase):
         with zipfile.ZipFile(self.workbook_path, "r") as archive:
             self.assertEqual(marker_value, archive.read(marker_name))
 
+    def test_propose_appends_not_started_bug_row_and_validates(self) -> None:
+        issue_name = "[EPIC_02][STORY_01][SUBSTORY_01]Fix null deref in resolver"
+        result = issue_queue.proposeTask(
+            self.workbook_path,
+            issueName=issue_name,
+            epicTitle="Discovered Bugs",
+            storyTitle="Crashes",
+            substoryTitle="Null deref in resolver",
+            priority="p1",
+            component="Combat",
+            targetFiles=["src/handler/CFightHandler.cpp", "src/handler/CFightHandler.h"],
+            description="Deref after free.",
+            acceptance="No crash; regression added.",
+            validation="python3 -m unittest tests.test_issue_queue",
+            sourceUrls=["https://github.com/lisu188/fall-of-nouraajd"],
+        )
+
+        self.assertTrue(result["proposed"])
+        self.assertEqual(issue_name, result["Issue Name"])
+        self.assertEqual(issue_queue.STATUS_NOT_STARTED, result["Status"])
+        self.assertEqual("P1", result["Priority"])
+
+        state = issue_queue.loadQueue(self.workbook_path)
+        errors, _ = issue_queue.validateQueueState(state)
+        self.assertEqual([], errors)
+        task = issue_queue.taskByName(state, issue_name)
+        self.assertEqual("EPIC_02", task.values["Epic #"])
+        self.assertEqual("STORY_01", task.values["Story #"])
+        self.assertEqual("SUBSTORY_01", task.values["Substory #"])
+        self.assertEqual("Bug", task.values["Issue Type"])
+        self.assertEqual({"src/handler/CFightHandler.cpp", "src/handler/CFightHandler.h"}, task.targetFiles)
+        self.assertEqual([], task.dependencies)
+        # A freshly proposed bug is immediately claimable.
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", issueName=issue_name)
+        self.assertTrue(claim["claimed"])
+
+    def test_propose_records_real_dependency(self) -> None:
+        result = issue_queue.proposeTask(
+            self.workbook_path,
+            issueName="[EPIC_02][STORY_01][SUBSTORY_02]Depends on existing issue",
+            epicTitle="Discovered Bugs",
+            storyTitle="Crashes",
+            substoryTitle="Depends",
+            priority="P2",
+            component="Combat",
+            targetFiles=["src/x.cpp"],
+            dependencies=f"none;{self.issue_b}",
+        )
+        # The "none" token is normalized away; the real dependency is retained.
+        self.assertEqual(self.issue_b, result["Dependencies"])
+        state = issue_queue.loadQueue(self.workbook_path)
+        task = issue_queue.taskByName(state, result["Issue Name"])
+        self.assertEqual([self.issue_b], task.dependencies)
+
+    def test_propose_rejects_duplicate_issue_name_without_writing(self) -> None:
+        before = self.workbook_path.read_bytes()
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.proposeTask(
+                self.workbook_path,
+                issueName=self.issue_a,
+                epicTitle="E",
+                storyTitle="S",
+                substoryTitle="SS",
+                priority="P1",
+                component="Combat",
+                targetFiles=["src/a.cpp"],
+            )
+        self.assertEqual(before, self.workbook_path.read_bytes())
+
+    def test_propose_rejects_unknown_dependency_transactionally(self) -> None:
+        before = self.workbook_path.read_bytes()
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.proposeTask(
+                self.workbook_path,
+                issueName="[EPIC_02][STORY_09][SUBSTORY_09]Bad dependency",
+                epicTitle="E",
+                storyTitle="S",
+                substoryTitle="SS",
+                priority="P1",
+                component="Combat",
+                targetFiles=["src/a.cpp"],
+                dependencies="[EPIC_99][STORY_99][SUBSTORY_99]missing",
+            )
+        self.assertEqual(before, self.workbook_path.read_bytes())
+
+    def test_propose_rejects_bad_name_priority_and_missing_target(self) -> None:
+        common = {
+            "epicTitle": "E",
+            "storyTitle": "S",
+            "substoryTitle": "SS",
+            "component": "Combat",
+        }
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.proposeTask(
+                self.workbook_path, issueName="not-a-pattern", priority="P1", targetFiles=["a.cpp"], **common
+            )
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.proposeTask(
+                self.workbook_path,
+                issueName="[EPIC_02][STORY_02][SUBSTORY_01]Bad priority",
+                priority="HIGH",
+                targetFiles=["a.cpp"],
+                **common,
+            )
+        with self.assertRaises(issue_queue.QueueError):
+            issue_queue.proposeTask(
+                self.workbook_path,
+                issueName="[EPIC_02][STORY_02][SUBSTORY_02]No targets",
+                priority="P1",
+                targetFiles=[],
+                **common,
+            )
+
+    def test_propose_cli_appends_row(self) -> None:
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = issue_queue.main(
+                [
+                    "propose",
+                    "--workbook",
+                    str(self.workbook_path),
+                    "--issue-name",
+                    "[EPIC_02][STORY_03][SUBSTORY_01]CLI proposed bug",
+                    "--epic-title",
+                    "Discovered Bugs",
+                    "--story-title",
+                    "Crashes",
+                    "--substory-title",
+                    "CLI proposed bug",
+                    "--priority",
+                    "P0",
+                    "--component",
+                    "Combat",
+                    "--target-file",
+                    "src/core/CGame.cpp",
+                ]
+            )
+        self.assertEqual(0, exit_code)
+        payload = json.loads(stdout.getvalue())
+        self.assertTrue(payload["proposed"])
+        state = issue_queue.loadQueue(self.workbook_path)
+        errors, _ = issue_queue.validateQueueState(state)
+        self.assertEqual([], errors)
+
 
 if __name__ == "__main__":
     unittest.main()
