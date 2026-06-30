@@ -1395,10 +1395,17 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     objectHandler->registerConfig(highId, make_unit_creature_config(kHighSw));
 
     // Reconstruct the ground-truth creature power table EXACTLY as the constructor does
-    // (CRngHandler.cpp:63-69): one sw bucket per registered concrete subtype. This is the
-    // canonical "candidate set" the encounter generator is allowed to draw from.
+    // (CRngHandler.cpp:63-78): one sw bucket per registered concrete subtype, EXCLUDING
+    // CPlayer-derived player templates. [EPIC_05][STORY_07][SUBSTORY_02] made the constructor skip
+    // any candidate whose resolved class meta()->inherits("CPlayer") (res/config/monsters.json
+    // registers real CPlayer templates such as Warrior/Sorcerer/Assasin), so the reconstructed
+    // candidate set must apply the same exclusion to stay consistent with the live table.
     std::set<int> eligibleSwBuckets;
     for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
         if (auto prototype = game->createObject<CCreature>(type)) {
             eligibleSwBuckets.insert(prototype->getSw());
         }
@@ -1464,6 +1471,154 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
 
     objectHandler->unregisterConfig(lowId);
     objectHandler->unregisterConfig(highId);
+}
+
+std::shared_ptr<json> make_unit_player_config(int sw) {
+    auto config = CJsonUtil::from_string("{\"class\":\"CPlayer\",\"properties\":{\"sw\":" + std::to_string(sw) + "}}",
+                                         "unitPlayerSwConfig");
+    expect_true(config != nullptr, "unit player sw config json should parse for the RNG player-exclusion test");
+    return config;
+}
+
+// [EPIC_05][STORY_07][SUBSTORY_02] Exclude player templates from random monster candidates.
+//
+// getAllSubTypes("CCreature") legitimately includes CPlayer templates because CPlayer inherits
+// CCreature (src/object/CPlayer.h:24, registered via register_type<CPlayer, CCreature, ...> in
+// src/plugin/NativePlugin.cpp). The CRngHandler constructor seeds creaturePowerTable from that
+// enumeration (src/handler/CRngHandler.cpp:63-78), so without a filter a player template could be
+// assembled into a random encounter. The fix skips any candidate whose resolved class
+// meta()->inherits("CPlayer") -- the same inheritance test getAllSubTypes applies for its CCreature
+// gate (src/handler/CObjectHandler.cpp:115) -- while leaving genuine monster candidates and their sw
+// power buckets unchanged. This regression registers a CPlayer template alongside two concrete
+// monster templates and asserts: (1) the player template is NEVER assembled across many samples,
+// (2) the monster templates still appear, and (3) the monster sw power buckets are unchanged.
+void test_rng_handler_excludes_player_templates_from_encounters() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    const std::string playerTemplateId = "unitPlayerTemplate";
+    const int kMonsterLowSw = 2;
+    const int kMonsterHighSw = 5;
+    const std::string monsterLowId = "unitPlayerExclusionMonsterLow";
+    const std::string monsterHighId = "unitPlayerExclusionMonsterHigh";
+
+    objectHandler->registerConfig(playerTemplateId, make_unit_player_config(3));
+    objectHandler->registerConfig(monsterLowId, make_unit_creature_config(kMonsterLowSw));
+    objectHandler->registerConfig(monsterHighId, make_unit_creature_config(kMonsterHighSw));
+
+    // Sanity: the player template config resolves to CPlayer and CPlayer inherits CCreature, so it
+    // is genuinely part of getAllSubTypes("CCreature") -- the exact reason it must be filtered out of
+    // the encounter candidate population rather than relying on it being absent.
+    expect_true(objectHandler->getClass(playerTemplateId) == "CPlayer",
+                "player template config should resolve to the CPlayer class");
+    if (auto playerProto = objectHandler->getType("CPlayer")) {
+        expect_true(playerProto->meta()->inherits("CCreature"),
+                    "CPlayer must inherit CCreature so the player template legitimately enters getAllSubTypes");
+        expect_true(playerProto->meta()->inherits("CPlayer"),
+                    "the CPlayer prototype must report inheriting CPlayer for the exclusion gate");
+    }
+
+    const std::vector<std::string> creatureSubTypes = objectHandler->getAllSubTypes("CCreature");
+    std::set<std::string> creatureSubTypeSet(creatureSubTypes.begin(), creatureSubTypes.end());
+    expect_true(creatureSubTypeSet.contains(playerTemplateId),
+                "getAllSubTypes(\"CCreature\") should still include the player template (CPlayer inherits CCreature)");
+    expect_true(creatureSubTypeSet.contains(monsterLowId),
+                "getAllSubTypes(\"CCreature\") should include the low monster template");
+    expect_true(creatureSubTypeSet.contains(monsterHighId),
+                "getAllSubTypes(\"CCreature\") should include the high monster template");
+
+    // Ground-truth monster power buckets: the sw of every NON-player concrete candidate, built the
+    // way the (fixed) constructor seeds creaturePowerTable -- i.e. excluding CPlayer-derived configs.
+    // The two registered monsters must contribute their sw buckets, and no player-only bucket may
+    // exist that is not also a monster bucket.
+    std::set<int> monsterSwBuckets;
+    for (const std::string &type : creatureSubTypes) {
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        if (auto prototype = game->createObject<CCreature>(type)) {
+            monsterSwBuckets.insert(prototype->getSw());
+        }
+    }
+    expect_true(monsterSwBuckets.contains(kMonsterLowSw),
+                "the low monster's sw must remain an eligible encounter power bucket");
+    expect_true(monsterSwBuckets.contains(kMonsterHighSw),
+                "the high monster's sw must remain an eligible encounter power bucket");
+
+    // The exclusive high-sw bucket guarantees a deterministic "monsters are still selected" proof:
+    // sw == kMonsterHighSw (5) is occupied ONLY by monsterHighId -- no real monsters.json template
+    // reaches that bucket (their sw is 1 or 2). So any encounter creature whose sw is kMonsterHighSw
+    // is provably the registered high monster, identified by its config key via getTypeId()
+    // (set in CObjectHandler::_createObject -- the class name lives in getType(), the config id in
+    // getTypeId(), src/handler/CObjectHandler.cpp:91).
+    expect_true(monsterSwBuckets.count(kMonsterHighSw) > 0,
+                "the exclusive high-sw bucket must belong solely to the registered high monster");
+    bool highBucketIsExclusive = true;
+    for (const std::string &type : creatureSubTypes) {
+        if (type == monsterHighId) {
+            continue;
+        }
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        if (auto prototype = game->createObject<CCreature>(type)) {
+            if (prototype->getSw() == kMonsterHighSw) {
+                highBucketIsExclusive = false;
+            }
+        }
+    }
+    expect_true(highBucketIsExclusive,
+                "no other monster template may share the high monster's sw bucket for the determinism proof");
+
+    CRngHandler rng_handler(game);
+
+    bool sawRegisteredMonster = false;
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 256; attempt++) {
+        for (const auto &creature : rng_handler.getRandomEncounter(60)) {
+            if (!creature) {
+                continue;
+            }
+            producedEncounter = true;
+
+            // (1) A player template must NEVER be assembled into a random encounter. The
+            // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
+            // never construct as a CPlayer-derived instance. getType() carries the resolved class
+            // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
+            expect_true(creature->getType() != "CPlayer",
+                        "random encounters must never select a CPlayer-classed template");
+            expect_true(!creature->meta()->inherits("CPlayer"),
+                        "no assembled encounter creature may be a CPlayer-derived player template");
+
+            // (3) Every assembled creature's sw must remain one of the unchanged monster power
+            // buckets -- the player filter must not perturb monster sw selection.
+            expect_true(monsterSwBuckets.contains(creature->getSw()),
+                        "encounter creatures must keep an unchanged registered monster sw power bucket");
+            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                        "scaled encounter creatures must keep getScale() == level + sw");
+
+            // (2) Genuine monster candidates are still selected. Any creature drawn from the
+            // exclusive high-sw bucket is provably the registered high monster; confirm its config
+            // id via getTypeId() (getType() is the class name "CCreature", not the config key).
+            if (creature->getSw() == kMonsterHighSw) {
+                expect_true(creature->getTypeId() == monsterHighId,
+                            "the exclusive high-sw bucket must only ever yield the registered high monster");
+                sawRegisteredMonster = true;
+            }
+        }
+    }
+
+    // (2) Genuine monster candidates are still selected after the player exclusion.
+    expect_true(producedEncounter,
+                "the handler should still assemble non-empty encounters after excluding player templates");
+    expect_true(sawRegisteredMonster,
+                "a registered monster template must still be selectable as an encounter candidate");
+
+    objectHandler->unregisterConfig(playerTemplateId);
+    objectHandler->unregisterConfig(monsterLowId);
+    objectHandler->unregisterConfig(monsterHighId);
 }
 
 // READ-ONLY source-of-truth inventory for later CCreature/CPlayer migration tickets
@@ -1547,6 +1702,7 @@ int main() {
     test_creature_scale_preserves_level_plus_sw_invariant();
     test_rng_handler_builds_encounters_from_concrete_creature_sw();
     test_rng_handler_excludes_archetype_definitions_from_encounters();
+    test_rng_handler_excludes_player_templates_from_encounters();
     test_rng_handler_captures_encounter_power_and_scale_baseline();
     test_rng_handler_encounter_candidates_stay_in_stable_power_buckets();
     test_creature_subtype_inventory_is_enumerable_on_loaded_game();
