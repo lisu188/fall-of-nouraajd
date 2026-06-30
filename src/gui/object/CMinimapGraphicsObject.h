@@ -32,5 +32,13 @@ class CMinimapGraphicsObject : public CGameGraphicsObject {
   public:
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
+    // The minimap is an opaque overlay rendered above the map layer. CGameGraphicsObject::event() only
+    // invokes these hooks once the event is already inside the minimap rectangle (or the object is modal)
+    // and the object is visible, so consuming here stops in-bounds pointer button / motion events from
+    // falling through to the underlying map/world UI. An event one pixel outside the rectangle is never
+    // routed here and still reaches the map; a hidden minimap is skipped before dispatch and consumes
+    // nothing.
     bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
+
+    bool mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int xrel, int yrel) override;
 };

@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CScript.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
@@ -837,6 +838,145 @@ void test_minimap_bounds_normal_map_renders() {
     expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
 }
 
+// Builds a GUI where a map-layer recorder and an overlapping minimap overlay share the same parent. The
+// minimap is pushed last so it has the higher priority and is visited first by CGameGraphicsObject::event(),
+// exactly like the live layer ordering. Synthetic SDL events dispatched through gui->event() then let us
+// count whether the underlying map layer was reached.
+struct MinimapClickHarness {
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<MouseEventRecorder> map;
+    std::shared_ptr<CMinimapGraphicsObject> minimap;
+};
+
+MinimapClickHarness make_minimap_click_harness() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    MinimapClickHarness harness;
+    harness.gui = std::make_shared<CGui>();
+
+    harness.map = std::make_shared<MouseEventRecorder>();
+    harness.map->setLayout(fixed_layout(0, 0, 200, 200));
+    harness.gui->pushChild(harness.map); // lower priority -> underlying layer
+
+    harness.minimap = std::make_shared<CMinimapGraphicsObject>();
+    harness.minimap->setLayout(fixed_layout(10, 10, 50, 50));
+    harness.gui->pushChild(harness.minimap); // higher priority -> overlay on top
+    return harness;
+}
+
+void test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel() {
+    // 1. A left button press strictly inside the minimap rectangle must be consumed by the overlay and must
+    //    NOT reach the underlying map layer.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 30;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "left click inside the minimap should be handled by the overlay");
+        expect_true(harness.map->button_count == 0,
+                    "left click inside the minimap should not reach the underlying map layer");
+    }
+
+    // 2. A right button press inside the minimap must be consumed the same way.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_RIGHT;
+        down.button.x = 30;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "right click inside the minimap should be handled by the overlay");
+        expect_true(harness.map->button_count == 0,
+                    "right click inside the minimap should not reach the underlying map layer");
+    }
+
+    // 3. Mouse motion inside the minimap must be consumed so hovering/dragging does not interact with the world.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event motion{};
+        motion.type = SDL_MOUSEMOTION;
+        motion.motion.x = 30;
+        motion.motion.y = 30;
+        motion.motion.xrel = 2;
+        motion.motion.yrel = 2;
+        expect_true(harness.gui->event(&motion), "motion inside the minimap should be handled by the overlay");
+        expect_true(harness.map->motion_count == 0,
+                    "motion inside the minimap should not reach the underlying map layer");
+    }
+
+    // 4. A click one pixel outside the minimap rectangle must still fall through to the map. CUtil::isIn uses
+    //    inclusive bounds, so the minimap rect (10,10,50,50) covers x/y in [10,60]; x = 61 is the first column
+    //    outside it.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 61;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "click outside the minimap should be handled by the map layer");
+        expect_true(harness.map->button_count == 1,
+                    "click one pixel outside the minimap should still reach the underlying map layer");
+    }
+
+    // 5. Wheel decision is explicit: the minimap deliberately does NOT override mouseWheelEvent, so a wheel
+    //    event over the minimap falls through to the map (map zoom keeps working under the cursor).
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event wheel{};
+        wheel.type = SDL_MOUSEWHEEL;
+        wheel.wheel.x = 0;
+        wheel.wheel.y = 1;
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+        wheel.wheel.mouseX = 30;
+        wheel.wheel.mouseY = 30;
+        expect_true(harness.gui->event(&wheel), "wheel over the minimap should be handled by the map layer");
+        expect_true(harness.map->wheel_count == 1,
+                    "wheel over the minimap should fall through to the underlying map layer (no wheel override)");
+#endif
+    }
+
+    // 6. A hidden minimap must consume nothing: a visible script that fails to resolve makes isVisible() false,
+    //    so event() short-circuits before any minimap hook and the click reaches the map.
+    {
+        auto harness = make_minimap_click_harness();
+        harness.minimap->setVisible(std::make_shared<CScript>());
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 30;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "click under a hidden minimap should be handled by the map layer");
+        expect_true(harness.map->button_count == 1, "a hidden minimap should consume nothing");
+    }
+
+    // 7. A modal panel still takes precedence: a higher-priority modal recorder pushed above the minimap
+    //    receives even out-of-its-bounds clicks before the minimap, so the minimap does not override modal
+    //    dispatch.
+    {
+        auto harness = make_minimap_click_harness();
+        auto modalPanel = std::make_shared<MouseEventRecorder>();
+        modalPanel->setLayout(fixed_layout(120, 120, 40, 40));
+        modalPanel->setModal(true);
+        harness.gui->pushChild(modalPanel); // highest priority
+
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 30; // inside the minimap rect, outside the modal panel rect
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "modal panel should consume the click");
+        expect_true(modalPanel->button_count == 1, "a modal panel should take precedence over the minimap overlay");
+        expect_true(harness.minimap->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0),
+                    "minimap mouseEvent should still report handled for in-bounds dispatch");
+        expect_true(harness.map->button_count == 0,
+                    "a modal panel should also stop the click before the underlying map layer");
+    }
+}
+
 void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -1411,6 +1551,7 @@ int main() {
     test_minimap_bounds_sparse_coordinates_fail_closed();
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
+    test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
 
     return finish_tests();
 }
