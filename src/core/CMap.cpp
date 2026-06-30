@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CPlaytestTrace.h"
+#include "core/CSceneManager.h"
 #include "core/CSerialization.h"
 #include "object/CItem.h"
 #include "object/CTrigger.h"
@@ -569,11 +570,19 @@ void CMap::move() {
         vstd::logger::fatal("Invalid move request");
     }
 
+    auto game = map->getGame();
+    // Do not begin a new movement/controller cycle once a map transition has been queued. The
+    // pending transition will swap the active map, so running another turn on the old map would
+    // only schedule controller futures whose results must then be discarded as stale.
+    if (auto sceneManager = game ? game->getSceneManager() : nullptr;
+        sceneManager && sceneManager->isTransitionPending()) {
+        return;
+    }
+
     map->moving = true;
 
     vstd::logger::debug("Turn:", map->turn);
 
-    auto game = map->getGame();
     auto transitionContext = game ? game->getContext() : nullptr;
     const auto expectedGeneration =
         transitionContext ? transitionContext->captureTransitionGeneration() : CGameContext::TransitionGeneration{0};

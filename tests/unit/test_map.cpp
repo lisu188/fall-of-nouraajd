@@ -1416,6 +1416,98 @@ void test_animation_provider_uses_dynamic_animation_for_directory_resources() {
                 "animation provider should use dynamic animations for directory resources");
 }
 
+void test_map_session_store_put_get_evict_and_ownership() {
+    CMapSessionStore store;
+    expect_true(store.size() == 0, "a new session store should be empty");
+
+    auto first = std::make_shared<CMap>();
+    first->setMapName("alpha");
+    auto second = std::make_shared<CMap>();
+    second->setMapName("alpha");
+    auto beta = std::make_shared<CMap>();
+    beta->setMapName("beta");
+
+    store.put(first);                     // alpha / default instance, key derived from the map name
+    store.put("alpha", "second", second); // alpha / explicit instance id
+    store.put(beta, "");
+
+    expect_true(store.size() == 3, "store should hold three distinct sessions");
+    expect_true(store.get("alpha") == first, "default-instance get should return the stored map");
+    expect_true(store.get("alpha", "second") == second, "instance get should return the per-instance map");
+    expect_true(store.get("beta") == beta, "named get should return the stored map");
+    expect_true(store.get("missing") == nullptr, "an absent session should resolve to null");
+    expect_true(store.contains("alpha", "second"), "contains should report a stored instance session");
+    expect_true(!store.contains("alpha", "third"), "contains should reject an unstored instance id");
+
+    // The store owns its cached maps: dropping every external reference keeps the map alive.
+    std::weak_ptr<CMap> weakBeta = beta;
+    beta.reset();
+    expect_true(!weakBeta.expired(), "store should retain ownership of cached maps");
+    expect_true(store.get("beta") != nullptr, "a retained map should still be retrievable");
+
+    expect_true(store.evict("alpha", "second"), "evict should report removing an existing session");
+    expect_true(!store.evict("alpha", "second"), "evicting an absent session should report false");
+    expect_true(store.get("alpha", "second") == nullptr, "an evicted session should no longer resolve");
+    expect_true(store.get("alpha") == first, "evicting one instance should not affect the default session");
+
+    auto replacement = std::make_shared<CMap>();
+    replacement->setMapName("alpha");
+    store.put(replacement);
+    expect_true(store.get("alpha") == replacement, "putting the same key should replace the cached map");
+
+    store.put(std::shared_ptr<CMap>(), "ignored");
+    expect_true(!store.contains("", "ignored"), "putting a null map should be ignored");
+
+    store.clear();
+    expect_true(store.size() == 0, "clear should drop every session");
+    expect_true(store.get("alpha") == nullptr, "a cleared store should resolve nothing");
+}
+
+void test_game_context_owns_a_map_session_store() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    auto store = context->getMapSessionStore();
+    expect_true(store != nullptr, "context should expose a map session store");
+    expect_true(context->getMapSessionStore() == store, "context should return the same store instance on each call");
+
+    auto cached = std::make_shared<CMap>();
+    cached->setMapName("cached");
+    store->put(cached);
+    expect_true(context->getMapSessionStore()->get("cached") == cached,
+                "context-owned store should retain maps across accessor calls");
+}
+
+class TurnCountingController : public CController {
+  public:
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        controlCalls++;
+        return vstd::later([creature]() { return creature->getCoords(); });
+    }
+
+    int controlCalls = 0;
+};
+
+void test_map_move_blocks_new_turn_while_transition_pending() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+
+    auto controller = std::make_shared<TurnCountingController>();
+    auto creature = test_creature(game, "transitionPendingWalker", ZERO, controller);
+    map->addObject(creature);
+
+    expect_true(game->getSceneManager()->requestMapChange(game, "ritual"),
+                "requesting a map change should be accepted while the scene manager is idle");
+    expect_true(game->getSceneManager()->isTransitionPending(),
+                "the scene manager should report a pending transition after the request");
+
+    const int turn_before = map->getTurn();
+    map->move();
+
+    expect_true(controller->controlCalls == 0, "no controller cycle should start while a transition is pending");
+    expect_true(map->getTurn() == turn_before, "the old map should not advance a turn while a transition is pending");
+}
+
 } // namespace
 
 int main() {
@@ -1446,6 +1538,9 @@ int main() {
     test_map_keeps_tiles_and_objects_separate_by_z();
     test_can_step_checks_default_tile_passability_without_materializing();
     test_animation_provider_uses_dynamic_animation_for_directory_resources();
+    test_map_session_store_put_get_evict_and_ownership();
+    test_game_context_owns_a_map_session_store();
+    test_map_move_blocks_new_turn_while_transition_pending();
 
     return finish_tests();
 }
