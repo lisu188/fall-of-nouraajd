@@ -1,0 +1,60 @@
+{
+  "affectedPaths": [
+    ".github/workflows/build.yml"
+  ],
+  "category": "ci",
+  "controllerId": "ctrl-vm-4039-a70f65a5",
+  "createdAtUtc": "2026-06-30T13:32:08Z",
+  "details": "Under sustained multi-controller fleet load, native+coverage build workflow runs stall indefinitely: the run stays status=in_progress while its updated_at timestamp freezes for 45+ minutes with no step/job progress, and the run never reaches a conclusion. Meanwhile lightweight PRs (workbook-only queue PRs, observation/resolution JSON, terminal-status PRs) that take the linux-fast path keep completing and merging, so main continues advancing.\n\nThis indicates GitHub Actions runner capacity for the heavy linux/windows/linux-coverage jobs is exhausted (or those jobs wedge) while the lighter linux-fast job still gets runners. The coverage job is the consistent long pole.\n\nImpact: validated native/coverage implementation PRs cannot reach a green conclusion and therefore cannot be merged, blocking terminal DONE publication and slot refill for every controller whose PRs require native+coverage validation. Re-triggering (rebase+push) produces fresh runs that also stall, so it does not help and adds load.\n\nThis is distinct from the earlier 'main build native test regressions' (now fixed) and 'main shipped red supply-chain' observations: those were deterministic test/content failures; this is a CI capacity/stall problem with no failing test — the runs simply do not progress.\n",
+  "evidence": [
+    {
+      "lightweightStillMerging": "workbook-only and observation/resolution PRs via linux-fast continued to merge (e.g. queue Complete #970)",
+      "longPole": "linux-coverage coverage step",
+      "observedStallMinutes": 45,
+      "priorStalledThenCancelled": [
+        2052,
+        2053,
+        2054,
+        2055
+      ],
+      "reTriggerHelps": false,
+      "stalledRuns": [
+        {
+          "pr": 920,
+          "run": 2080,
+          "status": "in_progress",
+          "updatedAtFrozen": "2026-06-30T13:18:37Z"
+        },
+        {
+          "pr": 924,
+          "run": 2084,
+          "status": "in_progress",
+          "updatedAtFrozen": "2026-06-30T13:19:31Z"
+        },
+        {
+          "pr": 926,
+          "run": 2082,
+          "status": "in_progress",
+          "updatedAtFrozen": "2026-06-30T13:19:37Z"
+        },
+        {
+          "pr": 932,
+          "run": 2081,
+          "status": "in_progress",
+          "updatedAtFrozen": "2026-06-30T13:20:27Z"
+        }
+      ],
+      "workflow": "build"
+    }
+  ],
+  "fingerprint": "native coverage build runs stall under fleet load while lightweight prs merge",
+  "id": "20260630T133208Z-ctrl-vm-4039-a70f65a5-1ef44303",
+  "impact": "Validated native/coverage implementation PRs cannot reach a green conclusion or merge, blocking terminal DONE publication and refill fleet-wide; re-triggering does not help and adds load.",
+  "phase": "validation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "8c6eea2e68c44225af414b96f7849546c3007b28",
+  "suggestedImprovement": "Investigate Actions runner capacity/concurrency for linux/windows/linux-coverage; consider a concurrency cap or coverage-job timeout+auto-retry, separating coverage onto its own runner pool, or making coverage non-blocking for test-only PRs so native test results can gate merges without waiting on a saturated coverage queue.",
+  "summary": "Native+coverage build runs stall indefinitely (updated_at frozen 45+ min) under fleet load while lightweight linux-fast PRs still merge, blocking native PR delivery"
+}
