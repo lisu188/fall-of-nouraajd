@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CWrapper.h"
 #include "handler/CObjectHandler.h"
+#include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
 #include "object/CDialog.h"
 #include "object/CMarket.h"
@@ -159,6 +160,9 @@ bool register_creatures(const NativePluginHostV1 *host) {
     // constructible while the class stays out of CCreature inheritance and the
     // random-encounter / getAllSubTypes("CCreature") enumeration.
     registered = register_type<CCreatureRace, CGameObject>(game) && registered;
+    // The creature class definition is likewise a CGameObject-derived archetype,
+    // not a CCreature, so it stays out of the encounter / subtype enumeration.
+    registered = register_type<CCreatureClass, CGameObject>(game) && registered;
     registered = register_type<CCreature, CMapObject, CGameObject>(game) && registered;
     registered = register_type<CPlayer, CCreature, CMapObject, CGameObject>(game) && registered;
     if (registered) {

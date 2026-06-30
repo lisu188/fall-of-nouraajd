@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
@@ -1843,6 +1844,80 @@ void test_creature_race_metadata_round_trip() {
                 "CCreatureRace must not be enumerated as a CCreature subtype");
 }
 
+// CCreatureClass mirrors CCreatureRace: a CGameObject-derived metadata definition.
+// This pins that it round-trips through CSerialization with base stats, per-level
+// stats, starting actions, the level-keyed unlock map, mainStat, and inherited
+// label/description intact (incl. the original level keys), deserializes back into
+// a CCreatureClass, that its setters are null-safe, and that it is not a CCreature
+// subtype.
+void test_creature_class_metadata_round_trip() {
+    CTypes::register_type_metadata<CCreatureClass, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CCreatureClass::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureClass>(); });
+    game->getObjectHandler()->registerType(CStats::static_meta()->name(), []() { return std::make_shared<CStats>(); });
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    auto baseStats = std::make_shared<CStats>();
+    baseStats->setStrength(9);
+    auto levelStats = std::make_shared<CStats>();
+    levelStats->setStrength(2);
+    auto startAction = std::make_shared<CInteraction>();
+    startAction->setTypeId("classStrike");
+    auto unlock = std::make_shared<CInteraction>();
+    unlock->setTypeId("classCleave");
+
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setGame(game);
+    klass->setBaseStats(baseStats);
+    klass->setLevelStats(levelStats);
+    klass->setActions({startAction});
+    klass->setLevelling({{"3", unlock}});
+    klass->setMainStat("strength");
+    klass->setLabel("Warrior");
+    klass->setDescription("Front-line martial role.");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(klass);
+    expect_true((*serialized)["class"].get<std::string>() == CCreatureClass::static_meta()->name(),
+                "a serialized CCreatureClass should keep its metadata class identity");
+
+    auto round_trip = std::dynamic_pointer_cast<CCreatureClass>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+
+    expect_true(round_trip != nullptr,
+                "a CCreatureClass should deserialize back into a CCreatureClass, not a creature or map object");
+    expect_true(round_trip->getMainStat() == "strength", "mainStat should survive the round-trip");
+    expect_true(round_trip->getLabel() == "Warrior", "inherited label should survive the round-trip");
+    expect_true(round_trip->getBaseStats() && round_trip->getBaseStats()->getStrength() == 9,
+                "base stats should survive the round-trip");
+    expect_true(round_trip->getLevelStats() && round_trip->getLevelStats()->getStrength() == 2,
+                "per-level stats should survive the round-trip");
+    expect_true(round_trip->getActions().size() == 1, "starting actions should survive the round-trip");
+    auto levelling = round_trip->getLevelling();
+    expect_true(levelling.size() == 1 && levelling.count("3") == 1 && levelling["3"] != nullptr,
+                "the levelling map should round-trip with its original level key and unlock");
+
+    // Null-safety: empty/null stats, null actions, and null-valued levelling entries.
+    auto bare = std::make_shared<CCreatureClass>();
+    bare->setBaseStats(nullptr);
+    bare->setLevelStats(nullptr);
+    expect_true(bare->getBaseStats() != nullptr && bare->getLevelStats() != nullptr,
+                "null baseStats/levelStats should normalize to empty CStats");
+    bare->setActions({nullptr});
+    expect_true(bare->getActions().empty(), "null actions should be filtered out");
+    bare->setLevelling({{"1", nullptr}});
+    expect_true(bare->getLevelling().empty(), "null-valued levelling entries should be filtered out");
+
+    auto creatureSubtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureClass::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "CCreatureClass must not be enumerated as a CCreature subtype");
+}
+
 } // namespace
 
 int main() {
@@ -1892,6 +1967,7 @@ int main() {
     test_creature_effective_stats_baseline_capture();
     test_creature_effective_actions_baseline_capture();
     test_creature_race_metadata_round_trip();
+    test_creature_class_metadata_round_trip();
 
     return finish_tests();
 }
