@@ -413,3 +413,86 @@ regression tests `test_no_archetype_creature_stats_keep_legacy_composition`
 (full per-property composition) and
 `test_creature_stat_precedence_orders_sources_and_main_stat` (override ordering
 and the class-then-legacy main-stat fallback) in `tests/unit/test_object.cpp`.
+
+---
+
+# Legacy fallback compatibility contract
+
+Status: Approved (design + engine). Scope: pins, as a **hard forward-compatibility
+rule**, the behavior of a creature that has **neither a race nor a
+`creatureClass`**. Such a creature uses the **current legacy stat and level-up
+paths exactly**, with no behavioral change of any kind. This protects existing
+saves, existing test fixtures, and any partial-migration state in which only some
+creatures have been given an archetype. It is the compatibility counterpart of the
+stat-precedence and action-merge contracts above: those define how archetype
+sources compose *when present*; this one defines what must happen when they are
+**absent**.
+
+## Approved hard rule
+
+For a creature with no race and no `creatureClass` (the **legacy creature**):
+
+1. **Stats** are composed **exactly** as the legacy path composes them today —
+   `creature.baseStats` (seeding `mainStat`), then `creature.levelStats` applied
+   once per level, then equipment bonuses, then effect bonuses. No race/class base
+   stats, no class level growth, and no class-supplied main stat participate,
+   because there are no such sources. The composed block is bit-for-bit the
+   pre-archetype result.
+2. **Level-up** runs the legacy path **exactly** — incrementing `level` and
+   applying the concrete template's own `levelling` unlock for that level. No
+   race- or class-driven level action, growth, or progression is introduced.
+3. **Main stat** resolves to the legacy `creature.baseStats.mainStat`. The
+   class-first selection rule never engages because there is no class.
+
+Because the race / `creatureClass` archetype objects (`CCreatureRace`,
+`CCreatureClass`) do **not exist in the codebase yet**, **every** creature is a
+legacy creature today, and this rule pins that observed behavior so that landing
+the archetype foundation cannot silently alter it.
+
+## Deserialization assigns no default race or class
+
+Deserialization (loading a creature from JSON config or from a save) **must not**
+assign a default race or `creatureClass`. A creature is a legacy creature unless
+its source data explicitly provides an archetype reference. Concretely:
+
+- The serialization/property contract for a creature is the `V_META` property
+  list on `CCreature` (`src/object/CCreature.h`). It declares the legacy stat and
+  progression fields (`baseStats`, `levelStats`, `levelling`, `level`, `exp`,
+  `equipped`, `items`, `effects`, ...) and declares **no** `race` and **no**
+  `creatureClass` property. A loaded creature therefore acquires neither, and any
+  archetype keys that may appear in future data are simply not bound onto a
+  legacy-shaped object.
+- No constructor, loader, or post-load step seeds a fallback/default archetype.
+  An old save or an un-migrated fixture round-trips to a legacy creature
+  unchanged.
+
+A **later migration may opt in** to assigning a race/class — but only explicitly,
+guarded, and version-gated. Absent such an explicit opt-in, the deserialized
+result is a legacy creature. This is a hard rule: a default archetype must never
+be introduced implicitly as a side effect of adding the archetype foundation.
+
+## Where this is grounded and enforced
+
+Grounded in the current legacy paths in `src/object/CCreature.cpp`:
+
+- **Stat composition** — `CCreature::getStats` (`src/object/CCreature.cpp:834`).
+  Positions 1, 2, and 4 (race base, class base, class level growth) are documented
+  extension points that contribute nothing today, so the function already produces
+  the exact legacy composition for a creature with no archetype.
+- **Level-up** — `CCreature::levelUp` (`src/object/CCreature.cpp:572`) and the
+  per-level unlock it applies, `CCreature::getLevelAction`
+  (`src/object/CCreature.cpp:100`), which reads only the concrete template's
+  `levelling` map.
+- **Deserialization** — the `V_META` property declaration on `CCreature`
+  (`src/object/CCreature.h:50`), which binds only the legacy fields and **no**
+  race/class property, so loading assigns no default archetype.
+
+When the archetype foundation lands, it must preserve this rule: the
+race/`creatureClass` sources may only ever *add* to a creature that explicitly
+declares them, and the no-archetype path must remain identical to today's legacy
+behavior. The stat side of "identical to legacy" is already pinned by the native
+regression test `test_no_archetype_creature_stats_keep_legacy_composition` in
+`tests/unit/test_object.cpp` (a creature with no archetype composes to the legacy
+stat block); the level-up and no-default-archetype guarantees here are pinned by
+this approved contract and must be covered by a regression test alongside any
+change that introduces the archetype objects.
