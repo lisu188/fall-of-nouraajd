@@ -9,6 +9,7 @@ def load(self, context):
     from game import PlayerQuestRegistry
     from game import QuestStateStore
     from game import claim_once
+    from game import remove_runtime_actors
     from game import ensure_quest
     from game import register, trigger
 
@@ -20,11 +21,7 @@ def load(self, context):
     MAIN_QUEST_GOLD_REWARD = 200
 
     def _clear_victor_encounter(game_map):
-        def should_remove(obj):
-            name = obj.getName()
-            return bool(name) and (name == "cultLeaderQuest" or name.startswith(VICTOR_CULTIST_PREFIX))
-
-        game_map.removeAll(should_remove)
+        remove_runtime_actors(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))
         game_map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
         game_map.setNumericProperty("VICTOR_CULTISTS_PLACED", 0)
 
@@ -978,7 +975,7 @@ def load(self, context):
                 quest_system = _quest_system_from(obj)
                 amulet_state = quest_system.get_state("amulet")
                 if amulet_state == "returned":
-                    game_map.removeObject(obj)
+                    remove_runtime_actors(game_map, names=("oldWoman",))
                     return
                 player = game_map.getPlayer()
                 if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
@@ -1023,12 +1020,7 @@ def load(self, context):
                 player.removeItem(lambda it: it.getName() == "preciousAmulet", True)
                 player.addGold(50)
                 quest_system.finish_amulet()
-                amulet_goblin = game_map.getObjectByName("amuletGoblin")
-                if amulet_goblin:
-                    game_map.removeObject(amulet_goblin)
-                old_woman = game_map.getObjectByName("oldWoman")
-                if old_woman:
-                    game_map.removeObject(old_woman)
+                remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))
                 game.getGuiHandler().showMessage(
                     "The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks."
                 )

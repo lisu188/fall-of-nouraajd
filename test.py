@@ -12401,6 +12401,23 @@ class GameTest(unittest.TestCase):
             ),
             "catacombs_uses_catacombs_image": config["catacombs"]["properties"].get("animation")
             == "images/buildings/catacombs",
+            "actor_cleanup_helper_imported": "from game import remove_runtime_actors" in script,
+            "victor_cleanup_uses_helper": (
+                'remove_runtime_actors(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))'
+                in script
+            ),
+            "amulet_cleanup_uses_helper": (
+                'remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))' in script
+            ),
+            "old_woman_cleanup_uses_helper": 'remove_runtime_actors(game_map, names=("oldWoman",))' in script,
+            "actor_cleanup_dedupes_removal": (
+                'game_map.getObjectByName("amuletGoblin")' not in script
+                and "game_map.removeObject(amulet_goblin)" not in script
+                and "game_map.removeObject(old_woman)" not in script
+            ),
+            "actor_cleanup_preserves_public_names": all(
+                token in script for token in ("cultLeaderQuest", "amuletGoblin", "oldWoman", "victorCultist")
+            ),
         }
 
         failed = sorted([name for name, ok in checks.items() if not ok])
@@ -12513,6 +12530,69 @@ class GameTest(unittest.TestCase):
                         lambda it: it.getName() == "holyRelic"
                     ),
                 },
+            }
+            return True, json.dumps(log, sort_keys=True)
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+
+    @game_test
+    def test_nouraajd_remove_runtime_actors_helper(self):
+        from game import remove_runtime_actors
+
+        game = load_game_module()
+        original_show_message = game.CGuiHandler.showMessage
+        try:
+            game.CGuiHandler.showMessage = lambda self, message: None
+            g, game_map, player = load_game_map_with_player("nouraajd")
+
+            def spawn(name):
+                obj = g.createObject("goblinThief")
+                obj.setStringProperty("name", name)
+                game_map.addObject(obj)
+                return obj
+
+            # Synthetic runtime actors so the scenario does not depend on map content:
+            # exact-name target, two prefix targets, plus deliberately overlapping names
+            # that must survive because they are neither exact matches nor prefix targets.
+            spawn("questBossActor")
+            spawn("questMinionAlpha")
+            spawn("questMinionBravo")
+            spawn("questBossActorEcho")
+            spawn("questAlly")
+
+            self.assertIsNotNone(game_map.getObjectByName("questBossActor"))
+
+            # Cleanup with actors present: exact name plus a reviewed prefix.
+            removed = remove_runtime_actors(game_map, names=("questBossActor",), prefixes=("questMinion",))
+            self.assertEqual(removed, 3)
+            self.assertIsNone(game_map.getObjectByName("questBossActor"))
+            self.assertIsNone(game_map.getObjectByName("questMinionAlpha"))
+            self.assertIsNone(game_map.getObjectByName("questMinionBravo"))
+            # Overlapping-but-non-matching names survive (exact match only, no matching prefix).
+            self.assertIsNotNone(game_map.getObjectByName("questBossActorEcho"))
+            self.assertIsNotNone(game_map.getObjectByName("questAlly"))
+
+            # Cleanup after the actors were already removed is an idempotent no-op.
+            removed_again = remove_runtime_actors(game_map, names=("questBossActor",), prefixes=("questMinion",))
+            self.assertEqual(removed_again, 0)
+
+            # An exact-name removal with no prefix must not touch an overlapping name.
+            spawn("loneActor")
+            spawn("loneActorTwin")
+            removed_lone = remove_runtime_actors(game_map, names=("loneActor",))
+            self.assertEqual(removed_lone, 1)
+            self.assertIsNone(game_map.getObjectByName("loneActor"))
+            self.assertIsNotNone(game_map.getObjectByName("loneActorTwin"))
+
+            # No targets requested is a no-op.
+            self.assertEqual(remove_runtime_actors(game_map), 0)
+
+            log = {
+                "removed": removed,
+                "removed_again": removed_again,
+                "removed_lone": removed_lone,
+                "echo_survives": game_map.getObjectByName("questBossActorEcho") is not None,
+                "twin_survives": game_map.getObjectByName("loneActorTwin") is not None,
             }
             return True, json.dumps(log, sort_keys=True)
         finally:
