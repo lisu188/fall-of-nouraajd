@@ -536,7 +536,7 @@
     "properties": {
       "name": "holyRelic",
       "animation": "images/skull",
-      "description": "A sanctified shard taken from the ruined chapel, the only tool that can cleanse the OctoBogz lair.",
+      "description": "A sanctified shard taken from the ruined chapel, blessed to purify the OctoBogz lair once the brood has fallen.",
       "tags": [
         "quest"
       ]
