@@ -30,6 +30,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CEventHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
 #include "object/CGameObject.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
@@ -350,6 +352,67 @@ void test_scene_manager_repeated_transitions_and_controller_usability() {
                 "second sequential scene transition should copy the updated turn");
     expect_true(game->getSceneManager()->getTransitionState() == CSceneManager::TransitionState::Idle,
                 "scene manager should remain reusable after sequential transitions");
+}
+
+// EPIC_03/STORY_04/SUBSTORY_01: scene/map transitions must preserve the same composed
+// player identity and archetypes. performMapChange (src/core/CSceneManager.cpp) moves the
+// existing player shared_ptr from the source map into the destination via
+// oldMap->getPlayer() -> getMap()->attachPlayer(player); it never reconstructs the player
+// or its archetype references, so the live race/creatureClass set directly on the player
+// object survives the test -> ritual -> siege transitions intact. This is a
+// characterization test asserting that contract.
+void test_scene_manager_transition_preserves_player_archetypes() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto player = game->getMap()->getPlayer();
+
+    // Compose an archetype identity directly on the live player object. setRace/
+    // setCreatureClass store the references on the creature (CCreature::setRace/
+    // setCreatureClass) and flip usesArchetypeComposition() on.
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+    player->setRace(race);
+    player->setCreatureClass(klass);
+
+    expect_true(player->usesArchetypeComposition(),
+                "player should use archetype composition once race/creatureClass are set");
+    expect_true(game->getMap()->getMapName() == "test", "archetype fixture should start on the test map");
+
+    // test -> ritual
+    game->getSceneManager()->requestMapChange(game, "ritual");
+    pump_event_loop_iterations();
+    auto ritual_map = game->getMap();
+    expect_true(ritual_map->getMapName() == "ritual", "first transition should reach the ritual map");
+    expect_true(ritual_map->getPlayer() == player,
+                "first transition should preserve the same player instance");
+    expect_true(player->getRace() == race,
+                "first transition should preserve the player's race archetype reference");
+    expect_true(player->getCreatureClass() == klass,
+                "first transition should preserve the player's creatureClass archetype reference");
+    expect_true(player->usesArchetypeComposition(),
+                "first transition should keep the player on the composed-identity path");
+
+    // ritual -> siege
+    game->getSceneManager()->requestMapChange(game, "siege");
+    pump_event_loop_iterations();
+    auto siege_map = game->getMap();
+    expect_true(siege_map->getMapName() == "siege", "second transition should reach the siege map");
+    expect_true(siege_map->getPlayer() == player,
+                "second transition should preserve the same player instance");
+    expect_true(player->getRace() == race,
+                "second transition should preserve the player's race archetype reference");
+    expect_true(player->getCreatureClass() == klass,
+                "second transition should preserve the player's creatureClass archetype reference");
+
+    // Composed identity (the archetype labels themselves) is unchanged across both hops.
+    expect_true(player->getRace()->getCreatureType() == "humanoid",
+                "the preserved race archetype should keep its composed creature type");
+    expect_true(player->getCreatureClass()->getMainStat() == "strength",
+                "the preserved creatureClass archetype should keep its composed main stat");
+    expect_true(player->usesArchetypeComposition(),
+                "the player should remain on the composed-identity path after both transitions");
 }
 
 void test_scene_manager_null_and_legacy_missing_target_behavior() {
@@ -1850,6 +1913,7 @@ int main() {
     test_scene_manager_stale_transition_generation_clears_pending_state();
     test_scene_manager_trace_rejections_and_completion();
     test_scene_manager_repeated_transitions_and_controller_usability();
+    test_scene_manager_transition_preserves_player_archetypes();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
     test_map_move_ignores_controller_future_after_transition_generation_changes();
