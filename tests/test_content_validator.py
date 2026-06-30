@@ -1204,6 +1204,124 @@ class ContentValidatorTest(unittest.TestCase):
         archetype_issues = [str(issue) for issue in issues if "creature archetype definition" in str(issue)]
         self.assertEqual([], archetype_issues)
 
+    def _register_creature_race_type(self, root):
+        # CCreatureRace is not a builtin; register it statically (without V_META) so the
+        # synthetic race configs are constructible and carry no metadata property schema,
+        # leaving only the label-uniqueness validator to fire.
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() { CTypes::register_type<CCreatureRace, CGameObject>(); }\n",
+            encoding="utf-8",
+        )
+
+    def test_distinct_player_selectable_race_labels_pass(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+                "elfRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Elf"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_duplicate_player_selectable_race_labels_are_reported(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+                "northernerRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace",
+            'player-selectable race selection label "Human" is not unique',
+            "it collides with northernerRace",
+        )
+        self.assertIssueContains(
+            issues,
+            "northernerRace",
+            "it collides with humanRace",
+        )
+
+    def test_player_selectable_race_without_label_collides_by_id(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        # One race carries an explicit label equal to the other's id; the label-less race
+        # falls back to its id "humanRace", so the two collide on the "humanRace" key.
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True},
+                },
+                "elfRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "humanRace"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace",
+            'player-selectable race selection label "humanRace" is not unique',
+            "it collides with elfRace",
+        )
+
+    def test_non_player_selectable_duplicate_race_labels_are_ignored(self):
+        root = self.make_fixture()
+        self._register_creature_race_type(root)
+        write_json(
+            root / "res/config/creature_races.json",
+            {
+                "humanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": True, "label": "Human"},
+                },
+                "spectralHumanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"playerSelectable": False, "label": "Human"},
+                },
+                "undeclaredHumanRace": {
+                    "class": "CCreatureRace",
+                    "properties": {"label": "Human"},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
 

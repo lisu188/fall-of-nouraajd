@@ -205,6 +205,22 @@ CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES
 # check is forward-guarding and vacuously satisfied until such configs are authored.
 CREATURE_RACE_PROPERTY = "race"
 
+# Player-selectable race label uniqueness (EPIC_06/STORY_03/SUBSTORY_02).
+# At character creation res/game.py turns the player-selectable race templates into a
+# label->id selection map exactly the way player_class_options builds the class map:
+#   label = race.getStringProperty("label") or race_id
+#   options[label] = race_id
+# The map is keyed by the display label (falling back to the template id when the race
+# carries no "label"), so two player-selectable races that resolve to the same label
+# would silently collapse to a single entry -- the second id overwrites the first and a
+# player picking that label can never reach the shadowed race.  This check enforces that
+# every player-selectable CCreatureRace's resolved label-or-id key is unique.  Only races
+# whose "playerSelectable" property resolves true participate; non-selectable races never
+# enter the selection map, so their labels are free to collide.  No CCreatureRace configs
+# exist on current content, so this is forward-guarding and vacuously satisfied today.
+CREATURE_RACE_PLAYER_SELECTABLE_PROPERTY = "playerSelectable"
+CREATURE_RACE_LABEL_PROPERTY = "label"
+
 # Map-local creature override inventory (EPIC_01/STORY_01/SUBSTORY_02).
 # Map config files reference creature templates via "ref" plus a "properties" block
 # that overrides template behavior.  Any override touching one of these properties
@@ -1400,6 +1416,7 @@ class ContentValidator:
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_crafting_refs()
         self._validate_creature_archetype_naming()
+        self._validate_duplicate_player_selectable_race_labels(visible)
 
     def _validate_map_context(self, context: MapContext) -> None:
         visible = self._visible_entries(context)
@@ -2511,6 +2528,81 @@ class ContentValidator:
         elif isinstance(value, list):
             for index, child in enumerate(value):
                 self._validate_creature_class_reference(path, append_index(location, index), child)
+
+    def _validate_duplicate_player_selectable_race_labels(self, visible: dict[str, ConfigEntry]) -> None:
+        """Reject duplicate selection labels among player-selectable CCreatureRace configs.
+
+        res/game.py builds the race-selection menu as a label->id map (mirroring
+        player_class_options): the key is the race's resolved "label" property, falling
+        back to its template id when no label is set, and the value is the template id.
+        Two player-selectable races sharing that key collapse to one menu entry, so the
+        second silently overwrites the first.  This enumerates every global config whose
+        effective class is (or inherits) CCreatureRace and whose resolved
+        "playerSelectable" property is true, keys each by label-or-id, and reports any key
+        claimed by more than one race -- naming the conflicting ids and their paths.
+        Non-player-selectable races are ignored because they never enter the menu.
+        """
+        labels: dict[str, list[ConfigEntry]] = {}
+        for key, entry in self.global_entries.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if not (
+                class_name == CREATURE_RACE_BASE_CLASS
+                or self._class_inherits_from(class_name, CREATURE_RACE_BASE_CLASS)
+            ):
+                continue
+            selectable = self._effective_property_value(entry.data, CREATURE_RACE_PLAYER_SELECTABLE_PROPERTY, visible)
+            if selectable is not True:
+                continue
+            label = self._effective_property_value(entry.data, CREATURE_RACE_LABEL_PROPERTY, visible)
+            selection_key = label if isinstance(label, str) and label else key
+            labels.setdefault(selection_key, []).append(entry)
+        for selection_key, entries in labels.items():
+            if len(entries) < 2:
+                continue
+            conflicting = sorted(entry.key for entry in entries)
+            for entry in sorted(entries, key=lambda candidate: candidate.key):
+                others = ", ".join(other for other in conflicting if other != entry.key)
+                self._issue(
+                    entry.path,
+                    entry.key,
+                    f'player-selectable race selection label "{selection_key}" is not unique; '
+                    f"it collides with {others} -- res/game.py maps a selected label back to a "
+                    f"single race id, so duplicate labels make the selection ambiguous",
+                )
+
+    def _effective_property_value(
+        self,
+        value: dict[str, Any],
+        property_name: str,
+        visible: dict[str, ConfigEntry],
+        seen_refs: set[str] | None = None,
+    ) -> Any:
+        """Resolve a property's effective value, honoring ``ref`` inheritance.
+
+        A config node may define properties inline or inherit them from a referenced
+        template via ``ref``; an inline ``properties`` value overrides the referenced
+        one.  Returns ``None`` when the property is absent (or the ref chain cycles or
+        dangles), mirroring how the runtime loader resolves overrides on top of a base
+        template.
+        """
+        properties = value.get("properties")
+        if isinstance(properties, dict) and property_name in properties:
+            return properties[property_name]
+        ref = value.get("ref")
+        if not isinstance(ref, str):
+            return None
+        seen = set(seen_refs or set())
+        if ref in seen:
+            return None
+        seen.add(ref)
+        ref_entry = visible.get(ref)
+        if ref_entry is None or not isinstance(ref_entry.data, dict):
+            return None
+        return self._effective_property_value(ref_entry.data, property_name, visible, seen)
 
     def _validate_creature_class_actions_levelling(
         self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
