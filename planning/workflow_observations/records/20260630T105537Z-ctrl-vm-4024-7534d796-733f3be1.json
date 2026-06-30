@@ -1,0 +1,82 @@
+{
+  "affectedPaths": [
+    ".github/workflows/build.yml",
+    "test.py",
+    "tests/unit/test_map.cpp"
+  ],
+  "category": "ci",
+  "controllerId": "ctrl-vm-4024-7534d796",
+  "createdAtUtc": "2026-06-30T10:55:37Z",
+  "details": "The GitHub Actions `build` workflow fails on every recent push to `main`, including commits that change no source at all (workbook-only XLSX claim/complete commits and docs-only commits). This is a pre-existing native-CI breakage on `main`, not a defect introduced by any individual PR. Because native/source/content PR merges require this workflow's `linux`, `windows-deps`, and `windows` jobs to pass, the breakage blocks ALL native PR delivery while lightweight docs/workflow-only PRs (required check = fast terminal `linux`) still merge.\n\nTwo distinct deterministic test regressions cause it (confirmed via run 28438161107 @ d3d7c404, a workbook-only no-op commit):\n\n1) linux job, step \"test (c++)\": ctest suite for_unit_tests.map_unit_tests fails. Failing case: \"move should interrupt creatures removed before their planned step is committed\". A creature removed from the map before its planned movement step is committed still completes its move; the interruption invariant is violated. Correctness bug in the map/movement subsystem.\n\n2) windows job, step \"test (python gameplay)\": test.py GameTest.test_scene_manager_transition_requested_during_combat_preserves_source_map (test.py:6345) fails: assertEqual on the transition source-map snapshot at turn 34 gets object_count=2, expected object_count=1. An extra object leaks into the scene-manager's combat->scene transition source map. State-isolation bug.\n\nBoth reproduce deterministically on clean runs (specific assertion values; not timeout/OOM/flake). They predate this controller's work and block native delivery of unrelated, validated PRs (e.g. #898 issue #674 loader hardening, #899 issue #672 MCP limits) plus force docs/build.yml PRs onto the native path.\n\nRecommended optimizer action: bisect the merged change that introduced each regression, fix the movement-interruption invariant (map_unit_tests) and the scene-manager transition source-map object leak (test_scene_manager_transition_requested_during_combat_preserves_source_map), and restore the build workflow to green so native PR delivery is unblocked across controllers.\n",
+  "evidence": [
+    {
+      "branch": "main",
+      "deterministic": true,
+      "exampleFailingRun": {
+        "headCommitType": "workbook-only-no-op",
+        "headSha": "d3d7c404",
+        "runId": 28438161107
+      },
+      "failingPushRunsOnMain": [
+        {
+          "change": "workbook-only",
+          "sha": "d3d7c404"
+        },
+        {
+          "change": "workbook-only",
+          "sha": "0f6a8331"
+        },
+        {
+          "change": "workbook-only",
+          "sha": "2f6d8bc6"
+        },
+        {
+          "change": "docs-only",
+          "sha": "40e385da"
+        },
+        {
+          "change": "python-scripts-tests-only",
+          "sha": "963dc580"
+        },
+        {
+          "change": "workbook-only",
+          "sha": "e705c92b"
+        }
+      ],
+      "failures": [
+        {
+          "case": "move should interrupt creatures removed before their planned step is committed",
+          "category": "code-bug-movement-interruption-invariant",
+          "job": "linux",
+          "step": "test (c++)",
+          "suite": "for_unit_tests.map_unit_tests"
+        },
+        {
+          "category": "code-bug-scene-transition-source-map-object-leak",
+          "expected": "object_count=1",
+          "job": "windows",
+          "location": "test.py:6345",
+          "observed": "object_count=2",
+          "step": "test (python gameplay)",
+          "test": "GameTest.test_scene_manager_transition_requested_during_combat_preserves_source_map",
+          "turn": 34
+        }
+      ],
+      "impactedPRsThisRun": [
+        898,
+        899,
+        903
+      ],
+      "workflow": "build"
+    }
+  ],
+  "fingerprint": "main build native failures map_unit_tests move-interrupt and scene_manager_transition source-map leak",
+  "id": "20260630T105537Z-ctrl-vm-4024-7534d796-733f3be1",
+  "impact": "Native/source/content PRs cannot pass required linux/windows checks; validated PRs (#898 issue #674, #899 issue #672) and docs/build.yml PRs are stalled across all controllers until main build is restored.",
+  "phase": "validation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "c1f573d470de0c141564834dbb6fc18c869fed0c",
+  "summary": "main build workflow fails on two deterministic native test regressions, blocking all native PR delivery"
+}
