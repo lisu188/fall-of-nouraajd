@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CEventHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CEvent.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
 #include "object/CGameObject.h"
@@ -596,6 +597,39 @@ class PostCombatCancellingFightController : public CFightController {
 
     bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
 };
+
+// Records onEnter/onLeave hooks fired at its cell with the causing creature's name. Being a CEvent
+// (CMapObject + CVisitable) and not a CCreature, it never satisfies the post-combat fight predicate,
+// so it can sit on the contested cell purely as a destination-event probe.
+class VisitEventProbe : public CEvent {
+  public:
+    void onEnter(std::shared_ptr<CGameEvent> event) override {
+        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+        enterCauses.push_back(caused && caused->getCause() ? caused->getCause()->getName() : std::string());
+    }
+
+    void onLeave(std::shared_ptr<CGameEvent> event) override {
+        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+        leaveCauses.push_back(caused && caused->getCause() ? caused->getCause()->getName() : std::string());
+    }
+
+    std::vector<std::string> enterCauses;
+    std::vector<std::string> leaveCauses;
+};
+
+// Places a VisitEventProbe at the requested cell so destination onEnter/onLeave dispatch can be
+// observed. Mirrors add_post_combat_hostile's positioning/registration sequence.
+std::shared_ptr<VisitEventProbe> add_visit_event_probe(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                       Coords coords) {
+    auto probe = std::make_shared<VisitEventProbe>();
+    probe->setName(name);
+    probe->setGame(game);
+    probe->setPosX(coords.x);
+    probe->setPosY(coords.y);
+    probe->setPosZ(coords.z);
+    game->getMap()->addObject(probe);
+    return probe;
+}
 
 // Finds a walkable origin square that has at least one walkable orthogonal neighbour, returning
 // the origin together with the single-step delta that reaches that neighbour.
@@ -2039,6 +2073,61 @@ void test_post_combat_player_path_stops_after_encounter() {
                 "the player must not re-enter the hostile cell after the path is interrupted");
 }
 
+void pick_isolated_step(const std::shared_ptr<CMap> &map, Coords &origin, Coords &hostileCell) {
+    origin = map->normalizeCoords(Coords(100, 100, 0));
+    hostileCell = map->normalizeCoords(origin + EAST);
+    expect_true(origin != hostileCell, "isolated-step fixture should resolve two distinct cells");
+    expect_true(map->canStep(origin), "isolated-step origin should be walkable");
+    expect_true(map->canStep(hostileCell), "isolated-step destination should be walkable");
+    expect_true(map->getObjectsAtCoords(origin).empty(),
+                "isolated-step origin should start free of cached map objects");
+    expect_true(map->getObjectsAtCoords(hostileCell).empty(),
+                "isolated-step destination should start free of cached map objects");
+}
+
+void test_post_combat_player_suppresses_destination_visit_events() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords hostile_cell = ZERO;
+    pick_isolated_step(map, origin, hostile_cell);
+    const Coords delta = map->getShortestDelta(origin, hostile_cell);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+
+    // An onLeave probe sits on the origin square the player vacates and an onEnter probe sits on
+    // the contested destination alongside the hostile that drives the fight. The isolated cells
+    // guarantee these probes are the only non-creature visitables involved.
+    auto originProbe = add_visit_event_probe(game, "postCombatLeaveProbe", origin);
+    auto destinationProbe = add_visit_event_probe(game, "postCombatEnterProbe", hostile_cell);
+    add_post_combat_hostile(game, "postCombatEventFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    // The move begins, so beforeMove fires onLeave exactly once at the origin (no duplicates) with
+    // the moving player as the cause.
+    expect_true((originProbe->leaveCauses == std::vector<std::string>{player->getName()}),
+                "beforeMove should fire onLeave exactly once at the vacated origin cell");
+
+    // Because the player resolves the encounter by returning to the origin, the contested
+    // destination's onEnter must never fire: a regression that committed the step and then ran the
+    // destination visitables would record one (or duplicate) onEnter here.
+    expect_true(destinationProbe->enterCauses.empty(),
+                "winning a step-into fight must not fire onEnter at the contested destination");
+    expect_true(destinationProbe->leaveCauses.empty(),
+                "the contested destination probe should not observe a stray onLeave");
+
+    // Returning to origin must not re-fire a destination-style onEnter on the origin probe either.
+    expect_true(originProbe->enterCauses.empty(),
+                "the non-hook return to origin must not dispatch a duplicate onEnter at the origin");
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "the player should resolve the suppressed-event encounter back at the origin");
+}
+
 } // namespace
 
 int main() {
@@ -2084,5 +2173,6 @@ int main() {
     test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present();
 
     test_post_combat_player_path_stops_after_encounter();
+    test_post_combat_player_suppresses_destination_visit_events();
     return finish_tests();
 }
