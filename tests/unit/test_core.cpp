@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CList.h"
+#include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPathFinder.h"
 #include "core/CPlaytestTrace.h"
@@ -27,15 +28,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CScript.h"
+#include "core/CStats.h"
 #include "core/CTags.h"
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "gui/CSdlResources.h"
 #include "object/CCreature.h"
+#include "object/CEffect.h"
 #include "object/CGameObject.h"
 #include "object/CItem.h"
 #include "test_harness.h"
 #include "vutil.h"
+
+#include <pybind11/embed.h>
 
 #include <algorithm>
 #include <atomic>
@@ -46,6 +51,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -1413,9 +1419,165 @@ void test_serialization_collection_and_error_helpers() {
         "strict map deserialization should reject malformed entries");
 }
 
+// EPIC_01/STORY_02/SUBSTORY_01: pre-migration characterization baseline.
+//
+// Instantiate every inventory-listed concrete CCreature subtype in a normally
+// loaded game, level it to the representative levels 1/2/4/6 via the existing
+// level API (CCreature::setLevel, which drives the per-level layering inside
+// CCreature::getStats, src/object/CCreature.cpp:826,834-874), and capture every
+// numeric CStats property (src/core/CStats.h:26-40) returned by getStats().
+//
+// The captured table is emitted to stdout as the reviewable baseline artifact so
+// a later archetype migration can diff against it: a regression names the exact
+// template id, level and stat key that changed.
+//
+// The asserts only encode invariants the current source guarantees, with no
+// hardcoded balance numbers:
+//   * full coverage   -- every subtype is captured at all four levels;
+//   * reproducibility -- capturing twice in-process yields identical tables;
+//   * layering law    -- getStats() composes baseStats + level*levelStats +
+//                        equipment + effects, so each captured numeric key equals
+//                        that exact linear recomposition of the configured stat
+//                        sources (CCreature::getStats loops `for i in 0..level`,
+//                        CStats::addBonus increments per-property,
+//                        src/core/CStats.cpp:96-102). Monotonicity is NOT
+//                        asserted: levelStats deltas may be negative in config,
+//                        so the engine does not guarantee non-decreasing stats.
+const std::vector<int> kBaselineLevels = {1, 2, 4, 6};
+
+std::vector<std::string> baseline_stat_keys() {
+    // Deterministic, sorted list of every numeric (int) CStats property name.
+    auto probe = std::make_shared<CStats>();
+    std::set<std::string> keys;
+    probe->meta()->for_all_properties(probe, [&](auto property) {
+        if (property->value_type() == std::type_index(typeid(int))) {
+            keys.insert(property->name());
+        }
+    });
+    return {keys.begin(), keys.end()};
+}
+
+std::map<std::string, int> capture_numeric_stats(const std::shared_ptr<CStats> &stats,
+                                                 const std::vector<std::string> &keys) {
+    std::map<std::string, int> values;
+    for (const auto &key : keys) {
+        values[key] = stats->getNumericProperty(key);
+    }
+    return values;
+}
+
+// Build the full deterministic baseline table, ordered by template id, then
+// level, then stat key. Returns the rendered text plus the structured values so
+// callers can both publish the artifact and assert on the numbers.
+std::string render_creature_stats_baseline(const std::shared_ptr<CGame> &game, const std::vector<std::string> &keys,
+                                           std::map<std::string, std::map<int, std::map<std::string, int>>> &out) {
+    out.clear();
+    std::vector<std::string> subtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    std::sort(subtypes.begin(), subtypes.end());
+
+    std::ostringstream table;
+    table << "creature-stats-baseline-v1\n";
+    for (const auto &type : subtypes) {
+        for (int level : kBaselineLevels) {
+            auto creature = game->createObject<CCreature>(type);
+            if (!creature) {
+                continue;
+            }
+            creature->setLevel(level);
+            auto values = capture_numeric_stats(creature->getStats(), keys);
+            out[type][level] = values;
+            for (const auto &key : keys) {
+                table << type << '\t' << level << '\t' << key << '\t' << values.at(key) << '\n';
+            }
+        }
+    }
+    return table.str();
+}
+
+void test_creature_effective_stats_baseline_capture() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGame(game, "empty");
+
+    const auto keys = baseline_stat_keys();
+    expect_true(!keys.empty(), "CStats should expose at least one numeric property to characterize");
+
+    std::map<std::string, std::map<int, std::map<std::string, int>>> first;
+    const std::string first_table = render_creature_stats_baseline(game, keys, first);
+
+    // Publish the reviewable baseline artifact on stdout.
+    std::cout << first_table;
+
+    std::vector<std::string> subtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(!subtypes.empty(), "a normally loaded game should register concrete CCreature subtypes");
+    expect_true(first.size() == subtypes.size(),
+                "baseline capture should cover every registered concrete CCreature subtype");
+
+    // Full coverage: every captured subtype carries all four representative
+    // levels and every numeric stat key at each level.
+    for (const auto &[type, levels] : first) {
+        expect_true(levels.size() == kBaselineLevels.size(),
+                    "each creature should be captured at all four representative levels");
+        for (int level : kBaselineLevels) {
+            auto levelIt = levels.find(level);
+            expect_true(levelIt != levels.end(), "each creature should be captured at every representative level");
+            if (levelIt != levels.end()) {
+                expect_true(levelIt->second.size() == keys.size(),
+                            "each captured level should record every numeric stat key");
+            }
+        }
+    }
+
+    // Reproducibility: capturing again in-process must yield an identical table.
+    std::map<std::string, std::map<int, std::map<std::string, int>>> second;
+    const std::string second_table = render_creature_stats_baseline(game, keys, second);
+    expect_true(second_table == first_table,
+                "capturing effective creature stats twice in-process should be byte-for-byte reproducible");
+
+    // Layering law: getStats() composes the effective stats least- to
+    // most-specific as baseStats + (level copies of) levelStats + equipment
+    // bonuses + effect bonuses (src/object/CCreature.cpp:834-874). Recompute that
+    // exact layering independently here so the captured numbers are proven to be
+    // the deterministic linear composition of the configured stat sources rather
+    // than any other path. Monotonicity is intentionally NOT asserted because
+    // levelStats deltas may be negative in config, so the engine does not promise
+    // non-decreasing stats across levels.
+    for (const auto &type : subtypes) {
+        auto creature = game->createObject<CCreature>(type);
+        if (!creature) {
+            continue;
+        }
+        for (int level : kBaselineLevels) {
+            auto expectedStats = std::make_shared<CStats>();
+            expectedStats->addBonus(creature->getBaseStats());
+            for (int i = 0; i < level; i++) {
+                expectedStats->addBonus(creature->getLevelStats());
+            }
+            for (auto [slot, item] : creature->getEquipped()) {
+                if (item) {
+                    expectedStats->addBonus(item->getBonus());
+                }
+            }
+            for (const auto &effect : creature->getEffects()) {
+                if (effect) {
+                    expectedStats->addBonus(effect->getBonus());
+                }
+            }
+            const auto expectedValues = capture_numeric_stats(expectedStats, keys);
+            const auto &captured = first.at(type).at(level);
+            for (const auto &key : keys) {
+                expect_true(captured.at(key) == expectedValues.at(key),
+                            "effective stat should equal the baseStats + level*levelStats + equipment + effects "
+                            "layering for the captured baseline");
+            }
+        }
+    }
+}
+
 } // namespace
 
 int main() {
+    pybind11::scoped_interpreter guard{};
+
     test_string_deserialization_preserves_empty_and_whitespace();
     test_string_deserialization_coerces_non_string_targets();
     test_happy_path_add_and_distance();
@@ -1457,6 +1619,7 @@ int main() {
     test_script_rejects_executable_expressions();
     test_save_format_codec_validation();
     test_serialization_collection_and_error_helpers();
+    test_creature_effective_stats_baseline_capture();
 
     return finish_tests();
 }
