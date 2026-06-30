@@ -930,66 +930,49 @@ void init_game_module(py::module_ &m) {
     py::class_<CGameLoader, std::shared_ptr<CGameLoader>>(m, "CGameLoader",
                                                           "Factory helpers for loading game sessions and maps.")
         .def("loadGame", &CGameLoader::loadGame, "Create and initialize a game instance.")
-        .def(
-            "startGameWithPlayer",
-            [](CGameLoader & /*self*/, const std::shared_ptr<CGame> &game, const std::string &file,
-               std::string player) { CGameLoader::startGameWithPlayer(game, file, std::move(player)); },
-            py::arg("game"), py::arg("file"), py::arg("player"),
-            "Start a map with a specific player template (template's default race).")
-        .def(
-            "startGameWithPlayer",
-            [](CGameLoader & /*self*/, const std::shared_ptr<CGame> &game, const std::string &file, std::string player,
-               const std::string &raceId) { CGameLoader::startGameWithPlayer(game, file, std::move(player), raceId); },
-            py::arg("game"), py::arg("file"), py::arg("player"), py::arg("raceId"),
-            "Start a map with a specific player template and race override.")
-        .def(
-            "startRandomGameWithPlayer",
-            [](CGameLoader & /*self*/, const std::shared_ptr<CGame> &game, std::string player) {
-                CGameLoader::startRandomGameWithPlayer(game, std::move(player));
-            },
-            py::arg("game"), py::arg("player"),
-            "Start a random map with a specific player template (template's default race).")
-        .def(
-            "startRandomGameWithPlayer",
-            [](CGameLoader & /*self*/, const std::shared_ptr<CGame> &game, std::string player,
-               const std::string &raceId) { CGameLoader::startRandomGameWithPlayer(game, std::move(player), raceId); },
-            py::arg("game"), py::arg("player"), py::arg("raceId"),
-            "Start a random map with a specific player template and race override.")
+        .def("startGameWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, const std::string &, std::string>(
+                 &CGameLoader::startGameWithPlayer),
+             py::arg("game"), py::arg("file"), py::arg("player"),
+             "Start a map with a specific player template (template's default race).")
+        .def("startGameWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, const std::string &, std::string, const std::string &>(
+                 &CGameLoader::startGameWithPlayer),
+             py::arg("game"), py::arg("file"), py::arg("player"), py::arg("raceId"),
+             "Start a map with a specific player template and race override.")
+        .def("startRandomGameWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, std::string>(&CGameLoader::startRandomGameWithPlayer),
+             py::arg("game"), py::arg("player"),
+             "Start a random map with a specific player template (template's default race).")
+        .def("startRandomGameWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, std::string, const std::string &>(
+                 &CGameLoader::startRandomGameWithPlayer),
+             py::arg("game"), py::arg("player"), py::arg("raceId"),
+             "Start a random map with a specific player template and race override.")
         .def("startGame", &CGameLoader::startGame, "Start a specific map with current player data.")
         .def("loadGui", &CGameLoader::loadGui, "Load and attach GUI objects for a game.")
         .def("loadSavedGame", &CGameLoader::loadSavedGame, "Load a saved game state from storage.");
 
     py::class_<CMapLoader, std::shared_ptr<CMapLoader>>(m, "CMapLoader", "Helpers for loading map resources.")
-        .def(
-            "loadNewMapWithPlayer",
-            [](CMapLoader & /*self*/, const std::shared_ptr<CGame> &game, const std::string &name, std::string player) {
-                return CMapLoader::loadNewMapWithPlayer(game, name, std::move(player));
-            },
-            py::arg("game"), py::arg("name"), py::arg("player"),
-            "Load a map and place a player template (template's default race).")
-        .def(
-            "loadNewMapWithPlayer",
-            [](CMapLoader & /*self*/, const std::shared_ptr<CGame> &game, const std::string &name, std::string player,
-               const std::string &raceId) {
-                return CMapLoader::loadNewMapWithPlayer(game, name, std::move(player), raceId);
-            },
-            py::arg("game"), py::arg("name"), py::arg("player"), py::arg("raceId"),
-            "Load a map and place a player template with a race override.")
-        .def(
-            "loadRandomMapWithPlayer",
-            [](CMapLoader & /*self*/, const std::shared_ptr<CGame> &game, std::string player) {
-                return CMapLoader::loadRandomMapWithPlayer(game, std::move(player));
-            },
-            py::arg("game"), py::arg("player"),
-            "Load a random map and place a player template (template's default race).")
-        .def(
-            "loadRandomMapWithPlayer",
-            [](CMapLoader & /*self*/, const std::shared_ptr<CGame> &game, std::string player,
-               const std::string &raceId) {
-                return CMapLoader::loadRandomMapWithPlayer(game, std::move(player), raceId);
-            },
-            py::arg("game"), py::arg("player"), py::arg("raceId"),
-            "Load a random map and place a player template with a race override.")
+        .def("loadNewMapWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, const std::string &, std::string>(
+                 &CMapLoader::loadNewMapWithPlayer),
+             py::arg("game"), py::arg("name"), py::arg("player"),
+             "Load a map and place a player template (template's default race).")
+        .def("loadNewMapWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, const std::string &, std::string, const std::string &>(
+                 &CMapLoader::loadNewMapWithPlayer),
+             py::arg("game"), py::arg("name"), py::arg("player"), py::arg("raceId"),
+             "Load a map and place a player template with a race override.")
+        .def("loadRandomMapWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, std::string>(&CMapLoader::loadRandomMapWithPlayer),
+             py::arg("game"), py::arg("player"),
+             "Load a random map and place a player template (template's default race).")
+        .def("loadRandomMapWithPlayer",
+             py::overload_cast<const std::shared_ptr<CGame> &, std::string, const std::string &>(
+                 &CMapLoader::loadRandomMapWithPlayer),
+             py::arg("game"), py::arg("player"), py::arg("raceId"),
+             "Load a random map and place a player template with a race override.")
         .def("loadNewMap", &CMapLoader::loadNewMap, "Load a map without changing the active player.")
         .def("save", &CMapLoader::save, "Save the current map state to a named save slot.");
 
