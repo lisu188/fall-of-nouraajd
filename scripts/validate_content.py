@@ -123,6 +123,17 @@ CREATURE_ARCHETYPE_ID_SUFFIXES = {
 # CCreature template spells "stats" as the baseStats/levelStats pair and "labels"
 # as the singular "label" key, so both spellings are watched here.
 CREATURE_BASE_CLASS = "CCreature"
+# Player vs monster classification (EPIC_01/STORY_01/SUBSTORY_04).
+# CPlayer derives from CCreature in engine metadata (src/object/CPlayer.h:
+# V_META(CPlayer, CCreature, ...)), so getAllSubTypes("CCreature") -- used by
+# CRngHandler to build the random-encounter creature table -- enumerates player
+# templates alongside true monsters.  Classification below is derived purely from
+# that metadata inheritance lineage (never from template-id name strings): a
+# template is a player when its resolved class inherits CPlayer, and a monster
+# when it inherits CCreature but not CPlayer.  The player templates that leak into
+# the CCreature enumeration are flagged so random-encounter code can explicitly
+# exclude them.
+PLAYER_BASE_CLASS = "CPlayer"
 CREATURE_OVERRIDE_PROPERTIES = (
     "baseStats",
     "levelStats",
@@ -177,6 +188,28 @@ class CreatureOverride:
 
     def __str__(self) -> str:
         return f"{self.path}: {self.location}: ref \"{self.template}\" overrides {', '.join(self.properties)}"
+
+
+@dataclass(frozen=True)
+class CreatureClassification:
+    """Metadata-inheritance partition of CCreature templates into players vs monsters.
+
+    Derived solely from engine class lineage (CPlayer derives from CCreature), not
+    from template-id naming heuristics.  ``players_in_creature_enumeration`` lists the
+    player templates that getAllSubTypes("CCreature") returns, so random-encounter
+    code can explicitly exclude them.
+    """
+
+    player_templates: tuple[str, ...]
+    monster_templates: tuple[str, ...]
+    players_in_creature_enumeration: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "playerTemplates": list(self.player_templates),
+            "monsterTemplates": list(self.monster_templates),
+            "playersInCreatureEnumeration": list(self.players_in_creature_enumeration),
+        }
 
 
 @dataclass(frozen=True)
@@ -910,6 +943,45 @@ class ContentValidator:
                 self._collect_creature_overrides(entry.path, entry.key, entry.key, entry.data, visible, overrides)
         return sorted(overrides, key=lambda override: (override.path, override.location))
 
+    def classify_creature_templates(self) -> CreatureClassification:
+        """Partition global CCreature templates into players vs monsters by metadata.
+
+        A template is classified by resolving its effective engine class (following
+        ``ref`` chains) and walking the C++ metadata inheritance lineage: it is a
+        player when the class inherits ``CPlayer`` and a (non-player) monster when it
+        inherits ``CCreature`` but not ``CPlayer``.  No template-id name strings are
+        consulted.  Player templates that fall inside the broader CCreature lineage --
+        i.e. those that getAllSubTypes("CCreature") would enumerate for random
+        encounters -- are also reported separately so encounter code can exclude them.
+        """
+        self._collect_engine_classes()
+        self._collect_plugin_classes()
+        self._load_global_configs()
+        visible = dict(self.global_entries)
+        players: list[str] = []
+        monsters: list[str] = []
+        for key, entry in self.global_entries.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if not (class_name == CREATURE_BASE_CLASS or self._class_inherits_from(class_name, CREATURE_BASE_CLASS)):
+                continue
+            if self._class_inherits_from(class_name, PLAYER_BASE_CLASS):
+                players.append(key)
+            else:
+                monsters.append(key)
+        players.sort()
+        monsters.sort()
+        return CreatureClassification(
+            player_templates=tuple(players),
+            monster_templates=tuple(monsters),
+            # CPlayer inherits CCreature, so every player template is also returned by
+            # the CCreature subtype enumeration that random-encounter code relies on.
+            players_in_creature_enumeration=tuple(players),
+        )
+
     def _collect_creature_overrides(
         self,
         path: Path,
@@ -921,7 +993,11 @@ class ContentValidator:
     ) -> None:
         if isinstance(value, dict):
             properties = value.get("properties")
-            if isinstance(value.get("ref"), str) and isinstance(properties, dict) and self._is_creature_node(value, visible):
+            if (
+                isinstance(value.get("ref"), str)
+                and isinstance(properties, dict)
+                and self._is_creature_node(value, visible)
+            ):
                 overridden = tuple(name for name in CREATURE_OVERRIDE_PROPERTIES if name in properties)
                 if overridden:
                     overrides.append(
@@ -2476,6 +2552,10 @@ def inventory_creature_overrides(repo_root: Path | str) -> list[CreatureOverride
     return ContentValidator(Path(repo_root)).inventory_creature_overrides()
 
 
+def classify_creature_templates(repo_root: Path | str) -> CreatureClassification:
+    return ContentValidator(Path(repo_root)).classify_creature_templates()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate game JSON resources and literal script refs.")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -2484,11 +2564,22 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print the map-local creature override inventory as JSON and exit without validating.",
     )
+    parser.add_argument(
+        "--report-creature-classification",
+        action="store_true",
+        help="Print the metadata-derived player/monster classification as JSON and exit without validating.",
+    )
     args = parser.parse_args(argv)
 
     if args.report_creature_overrides:
         overrides = inventory_creature_overrides(args.repo_root)
         json.dump([override.as_dict() for override in overrides], sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    if args.report_creature_classification:
+        classification = classify_creature_templates(args.repo_root)
+        json.dump(classification.as_dict(), sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
 
