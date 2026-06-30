@@ -525,10 +525,10 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
     }
     auto animation = game->createObject<CAnimation>("CAnimation");
     auto animationPath = object->getAnimation();
-    const auto resolvedAnimationPath = CResourcesProvider::getInstance()->getPath(animationPath);
+    const auto resolvedAnimationPath = game->getResourcesProvider()->getPath(animationPath);
     if (!resolvedAnimationPath.empty() && std::filesystem::is_directory(resolvedAnimationPath)) {
         animation = game->createObject<CDynamicAnimation>("CDynamicAnimation");
-    } else if (std::filesystem::is_regular_file(CResourcesProvider::getInstance()->getPath(animationPath + ".png"))) {
+    } else if (std::filesystem::is_regular_file(game->getResourcesProvider()->getPath(animationPath + ".png"))) {
         animation = custom ? game->createObject<CAnimation>("CCustomAnimation")
                            : game->createObject<CStaticAnimation>("CStaticAnimation");
     } else {

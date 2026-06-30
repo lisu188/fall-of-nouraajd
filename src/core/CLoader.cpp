@@ -1305,7 +1305,7 @@ bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::st
         return false;
     }
     try {
-        std::string code = CResourcesProvider::getInstance()->load(path);
+        std::string code = game->getResourcesProvider()->load(path);
         pybind11::dict plugin_namespace;
         plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();
         plugin_namespace["__file__"] = path;
@@ -1398,7 +1398,7 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
         }
     }
 
-    for (const std::string &script : CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
+    for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN)) {
         if (!loadedPythonPlugins.contains(script)) {
             loadedAll = loadPlugin(game, script) && loadedAll;
         }
