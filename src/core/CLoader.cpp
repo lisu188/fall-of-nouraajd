@@ -901,29 +901,47 @@ void collect_saved_quest(const json &quest, CSavedQuestRefs &refs) {
     }
 }
 
-void collect_saved_quest_refs(const json &node, CSavedQuestRefs &refs) {
-    if (node.is_object()) {
-        if (node.contains("properties") && node["properties"].is_object()) {
-            const json &properties = node["properties"];
-            for (const char *journalProperty : {"quests", "completedQuests"}) {
-                if (!properties.contains(journalProperty) || !properties[journalProperty].is_array()) {
-                    continue;
-                }
-                for (const auto &quest : properties[journalProperty]) {
-                    collect_saved_quest(quest, refs);
+void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs) {
+    // Iterative traversal with an explicit work stack instead of recursion. The save document has
+    // already been structurally bounded by CSaveFormat::validateDocumentStructure (depth, node
+    // count, container fan-out) before this runs, but keeping the walk non-recursive removes the
+    // stack-exhaustion vector entirely and is defended again here by the same node-count ceiling.
+    std::vector<const json *> pending;
+    pending.push_back(&root);
+    std::size_t visited = 0;
+
+    while (!pending.empty()) {
+        const json *node = pending.back();
+        pending.pop_back();
+
+        if (++visited > CSaveFormat::MAX_DOCUMENT_NODES) {
+            vstd::logger::warning("Aborting saved quest reference traversal: node count exceeded");
+            return;
+        }
+
+        if (node->is_object()) {
+            if (node->contains("properties") && (*node)["properties"].is_object()) {
+                const json &properties = (*node)["properties"];
+                for (const char *journalProperty : {"quests", "completedQuests"}) {
+                    if (!properties.contains(journalProperty) || !properties[journalProperty].is_array()) {
+                        continue;
+                    }
+                    for (const auto &quest : properties[journalProperty]) {
+                        collect_saved_quest(quest, refs);
+                    }
                 }
             }
+            for (const auto &[key, value] : node->items()) {
+                (void)key;
+                pending.push_back(&value);
+            }
+            continue;
         }
-        for (const auto &[key, value] : node.items()) {
-            (void)key;
-            collect_saved_quest_refs(value, refs);
-        }
-        return;
-    }
 
-    if (node.is_array()) {
-        for (const auto &value : node) {
-            collect_saved_quest_refs(value, refs);
+        if (node->is_array()) {
+            for (const auto &value : *node) {
+                pending.push_back(&value);
+            }
         }
     }
 }

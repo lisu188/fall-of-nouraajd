@@ -25,6 +25,16 @@ inline constexpr const char *FORMAT = "fall-of-nouraajd-save";
 inline constexpr int SCHEMA_VERSION = 1;
 inline constexpr const char *BACKUP_SUFFIX = ".bak";
 
+// Structural limits applied to a decoded save document before any reference traversal or strict
+// deserialization runs. They bound the stack depth, total work, and per-container fan-out that a
+// crafted save can force, protecting both the recursive quest-reference traversal in CLoader and
+// the strict CSerialization pass from stack exhaustion / excessive CPU. The values are far above
+// any legitimate save (authored saves observed at depth <= 9 with tens of nodes) while still
+// rejecting pathological inputs. The depth bound is the primary anti-stack-exhaustion control.
+inline constexpr std::size_t MAX_DOCUMENT_DEPTH = 200;
+inline constexpr std::size_t MAX_DOCUMENT_NODES = 8'000'000;
+inline constexpr std::size_t MAX_CONTAINER_ENTRIES = 1'000'000;
+
 enum class Encoding { Versioned, Legacy };
 
 struct DecodedDocument {
@@ -32,6 +42,11 @@ struct DecodedDocument {
     std::string mapName;
     Encoding encoding = Encoding::Versioned;
 };
+
+// Iteratively walks a parsed save document and reports the first structural-bound violation
+// (depth, total node count, or per-container fan-out). Returns std::nullopt when the document is
+// within bounds. Never recurses, so it cannot itself exhaust the stack on adversarial input.
+std::optional<std::string> validateDocumentStructure(const json &document);
 
 bool isValidMapName(const std::string &mapName);
 
