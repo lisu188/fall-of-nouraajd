@@ -407,7 +407,7 @@ class PollPrChecksTest(unittest.TestCase):
 
         with (
             patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
-            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("scripts/poll_pr_checks.py",)),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("scripts/pr_review_audit.py",)),
             patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
             patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
         ):
@@ -558,6 +558,175 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertIn("already merged", evaluation.message)
         run_list.assert_called_once_with("abc123", "build.yml", None)
         sleep.assert_called_once_with(30)
+
+    def test_verify_run_identity_blocks_head_sha_mismatch(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run["headSha"] = "deadbeef"
+
+        failure = poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml")
+
+        self.assertIsNotNone(failure)
+        self.assertTrue(failure.failed)
+        self.assertIn("does not match PR head SHA", failure.message)
+
+    def test_verify_run_identity_blocks_missing_head_sha(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run.pop("headSha")
+
+        failure = poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml")
+
+        self.assertIsNotNone(failure)
+        self.assertTrue(failure.failed)
+        self.assertIn("no head SHA", failure.message)
+
+    def test_verify_run_identity_blocks_non_pull_request_event(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run["event"] = "workflow_dispatch"
+
+        failure = poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml")
+
+        self.assertIsNotNone(failure)
+        self.assertTrue(failure.failed)
+        self.assertIn("workflow_dispatch", failure.message)
+
+    def test_verify_run_identity_blocks_wrong_workflow_name(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run["workflowName"] = "lint-only"
+
+        failure = poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml")
+
+        self.assertIsNotNone(failure)
+        self.assertTrue(failure.failed)
+        self.assertIn("ambiguous check identity", failure.message)
+
+    def test_verify_run_identity_passes_pull_request_run_for_head(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run["event"] = "pull_request"
+
+        self.assertIsNone(poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml"))
+
+    def test_evaluate_run_blocks_ambiguous_duplicate_job_identity(self) -> None:
+        evaluation = poll_pr_checks.evaluateRun(
+            self.runPayload(
+                [
+                    self.jobPayload(name="linux"),
+                    self.jobPayload(name="linux", conclusion="failure"),
+                ]
+            ),
+            ["linux"],
+            [],
+        )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("ambiguous required job identity: linux", evaluation.message)
+
+    def test_poll_checks_blocks_run_whose_head_does_not_match_pr_head(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        # The run list returned the head SHA, but the fetched run payload reports a
+        # different commit: the poller must refuse to trust it rather than pass.
+        spoofed_run = self.runPayload([self.jobPayload(name="linux")])
+        spoofed_run["headSha"] = "spoofed0"
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("docs/testing.md",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=spoofed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("does not match PR head SHA", evaluation.message)
+
+    def test_poll_checks_authority_change_cannot_drop_native_or_coverage(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        # The caller narrowed to --check linux, and the edited classifier would
+        # classify the poller change as lightweight, but the windows job failed.
+        # Authority enforcement must still require windows and block the merge.
+        completed_run = self.runPayload(
+            [
+                self.jobPayload(name="linux"),
+                self.jobPayload(
+                    name="linux-coverage",
+                    steps=[{"name": "coverage", "status": "completed", "conclusion": "success"}],
+                ),
+                self.jobPayload(name="windows-deps"),
+                self.jobPayload(name="windows", conclusion="failure"),
+            ]
+        )
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("scripts/poll_pr_checks.py",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("windows=FAILURE", evaluation.message)
+
+    def test_poll_checks_authority_change_requires_coverage_step(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        # An authority change whose run skipped coverage must fail closed even
+        # though every selected job succeeded.
+        completed_run = self.runPayload(
+            [
+                self.jobPayload(name="linux"),
+                self.jobPayload(name="windows-deps"),
+                self.jobPayload(name="windows"),
+            ]
+        )
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=(".github/workflows/build.yml",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=None,
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.failed)
+        self.assertEqual(("coverage",), evaluation.missingSteps)
 
     def test_run_gh_json_reports_missing_cli_as_poll_error(self) -> None:
         def raise_missing_gh(*_args: object, **_kwargs: object) -> None:

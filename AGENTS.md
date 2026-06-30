@@ -333,6 +333,22 @@ When CI polling supplies the full validation evidence, wait for the selected che
 If GitHub merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and
 continue from the merged state.
 
+### CI validation authority for workflow/poller/classifier changes
+
+A pull request must not be able to weaken its own required validation. The poller binds required checks to the PR head:
+`scripts/poll_pr_checks.py` only trusts a build workflow run whose recorded head SHA matches the PR head SHA, whose
+triggering event is `pull_request`, and whose workflow identity matches; a head-SHA mismatch, a non-`pull_request` event,
+a missing/ambiguous run identity, or a required job name that resolves to more than one job all fail closed and block the
+merge instead of passing. Coverage is tied to a stable `coverage` step identity, not to a relabeled or skipped step.
+
+Changes that touch the validation-authority files — `.github/workflows/build.yml`, `scripts/poll_pr_checks.py`, and
+`scripts/ci_change_classifier.py` — cannot self-classify as lightweight. `scripts/ci_change_classifier.py` marks them as
+an authority change (`authority-change=true`, `human-review-required=true`) and forces strict native + coverage
+validation regardless of the edited logic, and the poller forces the strict `linux`/`windows-deps`/`windows` job set plus
+the `coverage` step even when `--check` narrowed the requested jobs. A PR editing the routing/poller/classifier therefore
+cannot drop required native/coverage checks by relabeling, skipping, or re-routing. Such changes additionally require
+explicit human review before merge; do not auto-merge an authority change on PR-controlled logic alone.
+
 Windows Release equivalent:
 
 ```bat

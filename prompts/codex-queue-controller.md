@@ -539,6 +539,14 @@ surface or the user requests it. Record focused local checks, skipped local heav
 commands, CI job names, conclusions, URLs, and the exact PR head separately. If CI polling supplies the full validation
 evidence, do not enable auto-merge until the selected check(s) have passed.
 
+The poller binds required checks to the PR head SHA, the `pull_request` event, and a stable job/workflow identity:
+head-SHA mismatch, a non-`pull_request` run, missing/ambiguous run or job identity, or a relabeled/skipped `coverage`
+step all fail closed and block the merge. PRs that edit the validation-authority files — `.github/workflows/build.yml`,
+`scripts/poll_pr_checks.py`, or `scripts/ci_change_classifier.py` — are flagged `authority-change`/`human-review-required`
+and forced onto the strict native + coverage path regardless of `--check`/`--require-step`, so they cannot self-classify
+as lightweight or skip required validation. Do not auto-merge an authority change on PR-controlled logic alone; require
+explicit human review.
+
 Workers and standby subagents may perform lightweight source inspection and prepare summaries while heavy validation runs.
 Do not dispatch additional implementation work when doing so would leave active workers unpollable. Empty implementation
 slots should be filled until at least eight issues are active unless status/dependency eligibility, missing worker

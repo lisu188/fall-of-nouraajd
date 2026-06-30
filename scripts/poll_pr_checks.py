@@ -24,6 +24,9 @@ DEFAULT_INTERVAL_SECONDS = 30
 DEFAULT_TIMEOUT_SECONDS = 7200
 SUCCESS_CONCLUSION = "SUCCESS"
 COVERAGE_STEP = "coverage"
+# Event the required build workflow run must have been triggered by. A run that
+# was not triggered by the pull request itself cannot vouch for the PR head.
+REQUIRED_EVENT = "pull_request"
 
 
 @dataclass(frozen=True)
@@ -96,6 +99,71 @@ def runStatus(runPayload: dict[str, Any]) -> str:
     return normalizeStatus(runPayload.get("status"))
 
 
+def runEvent(runPayload: dict[str, Any]) -> str:
+    return str(runPayload.get("event") or "").strip().lower()
+
+
+def verifyRunIdentity(
+    runPayload: dict[str, Any],
+    headSha: str,
+    workflow: str,
+) -> CheckEvaluation | None:
+    """Fail-closed check that a fetched run actually belongs to this PR head.
+
+    The run is only trusted to vouch for required validation when its own
+    recorded head SHA matches the PR head, it was triggered by the pull_request
+    event, and (when reported) it is the expected workflow. Any mismatch or
+    missing/ambiguous identity must block the merge rather than pass silently.
+    """
+    run_head = str(runPayload.get("headSha") or "")
+    if not run_head:
+        return CheckEvaluation(
+            state="failure",
+            jobs=(),
+            missingJobs=(),
+            missingSteps=(),
+            message="workflow run has no head SHA; cannot bind run to PR head",
+        )
+    if run_head != headSha:
+        return CheckEvaluation(
+            state="failure",
+            jobs=(),
+            missingJobs=(),
+            missingSteps=(),
+            message=(
+                f"workflow run head SHA {run_head} does not match PR head SHA {headSha}; "
+                "refusing to trust a run for a different commit"
+            ),
+        )
+    event = runEvent(runPayload)
+    if event and event != REQUIRED_EVENT:
+        return CheckEvaluation(
+            state="failure",
+            jobs=(),
+            missingJobs=(),
+            missingSteps=(),
+            message=(
+                f"workflow run was triggered by '{event}', not '{REQUIRED_EVENT}'; "
+                "required validation must come from the pull_request run"
+            ),
+        )
+    workflow_name = str(runPayload.get("workflowName") or "").strip()
+    expected_name = workflow[:-4] if workflow.endswith(".yml") else workflow
+    if workflow_name and "/" not in workflow and "." not in expected_name:
+        if workflow_name.lower() != expected_name.lower():
+            return CheckEvaluation(
+                state="failure",
+                jobs=(),
+                missingJobs=(),
+                missingSteps=(),
+                message=(
+                    f"workflow run '{workflow_name}' does not match required workflow "
+                    f"'{expected_name}'; ambiguous check identity blocks merge"
+                ),
+            )
+    return None
+
+
 def selectRunForHead(runs: Sequence[dict[str, Any]], headSha: str) -> dict[str, Any] | None:
     for run in runs:
         if str(run.get("headSha") or "") == headSha:
@@ -122,6 +190,28 @@ def defaultJobsForChangedFiles(paths: Sequence[str]) -> tuple[str, ...]:
     return DEFAULT_LIGHTWEIGHT_JOBS
 
 
+def changedFilesAreAuthorityChange(paths: Sequence[str]) -> bool:
+    """Whether the PR edits the workflow/poller/classifier validation authority."""
+    return classifyPaths(paths).authorityChange
+
+
+def enforceAuthorityRequirements(
+    requiredJobs: Sequence[str],
+    requiredSteps: Sequence[str],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Force the strict native + coverage requirement set for authority changes.
+
+    When a PR modifies the routing/poller/classifier files, the required checks
+    are taken from this fixed rule and cannot be narrowed by PR-supplied
+    ``--check``/``--require-step`` selections. The strict native jobs and the
+    coverage step are always required, so a PR cannot relabel or skip its way out
+    of validation by editing the logic that decides what is required.
+    """
+    jobs = tuple(dict.fromkeys((*requiredJobs, *DEFAULT_NATIVE_JOBS)))
+    steps = appendUniqueStep(tuple(requiredSteps), COVERAGE_STEP)
+    return jobs, steps
+
+
 def appendUniqueStep(steps: Sequence[str], step: str) -> tuple[str, ...]:
     normalized = tuple(steps)
     if step in normalized:
@@ -144,17 +234,34 @@ def evaluateRun(
         )
 
     all_jobs = jobsFromRunPayload(runPayload)
-    jobs_by_name = {job.name: job for job in all_jobs}
+    jobs_by_name: dict[str, list[JobRun]] = {}
+    for job in all_jobs:
+        jobs_by_name.setdefault(job.name, []).append(job)
     selected_jobs: list[JobRun] = []
     missing_jobs: list[str] = []
     missing_steps: list[str] = []
+    ambiguous_jobs: list[str] = []
 
     for name in requiredJobs:
-        job = jobs_by_name.get(name)
-        if job is None:
+        matches = jobs_by_name.get(name, [])
+        if not matches:
             missing_jobs.append(name)
+        elif len(matches) > 1:
+            # A required check name that resolves to multiple jobs has ambiguous
+            # identity: we cannot tell which job is the protected one, so we must
+            # block rather than trust an arbitrary pick.
+            ambiguous_jobs.append(name)
         else:
-            selected_jobs.append(job)
+            selected_jobs.append(matches[0])
+
+    if ambiguous_jobs:
+        return CheckEvaluation(
+            state="failure",
+            jobs=tuple(selected_jobs),
+            missingJobs=(),
+            missingSteps=(),
+            message=f"ambiguous required job identity: {', '.join(ambiguous_jobs)}",
+        )
 
     if missing_jobs:
         return CheckEvaluation(
@@ -365,7 +472,7 @@ def runGhRunList(headSha: str, workflow: str, repo: str | None) -> list[dict[str
 
 def runGhRunView(runId: object, repo: str | None) -> dict[str, Any]:
     command = ghCommandWithRepo(
-        ["gh", "run", "view", str(runId), "--json", "jobs,status,conclusion,url,headSha,workflowName"],
+        ["gh", "run", "view", str(runId), "--json", "jobs,status,conclusion,url,headSha,workflowName,event"],
         repo,
     )
     payload = runGhJson(command)
@@ -430,17 +537,29 @@ def pollChecks(
     head_sha = str(pr_payload["headRefOid"])
     effective_steps = tuple(requiredSteps)
     changed_files: tuple[str, ...] = ()
-    if requiredJobs is None or (autoRequireCoverage and COVERAGE_STEP not in effective_steps):
+    # Always inspect the changed files when coverage auto-requirement is enabled so
+    # that authority changes can be detected even when --check narrowed the jobs.
+    if requiredJobs is None or autoRequireCoverage:
         changed_files = runGhPrFiles(pr, repo)
     effective_jobs = tuple(requiredJobs) if requiredJobs is not None else defaultJobsForChangedFiles(changed_files)
     if autoRequireCoverage and COVERAGE_STEP not in effective_steps:
         if changedFilesRequireCoverage(changed_files):
             effective_steps = appendUniqueStep(effective_steps, COVERAGE_STEP)
+    # Validation authority for the routing/poller/classifier files is taken from a
+    # fixed rule, not from the (PR-controlled) edited logic. Such a PR cannot drop
+    # required native/coverage checks by narrowing --check or relabeling steps.
+    if autoRequireCoverage and changedFilesAreAuthorityChange(changed_files):
+        effective_jobs, effective_steps = enforceAuthorityRequirements(effective_jobs, effective_steps)
 
     while True:
         runs = runGhRunList(head_sha, workflow, repo)
         run_summary = selectRunForHead(runs, head_sha)
         run_payload = runGhRunView(run_summary["databaseId"], repo) if run_summary else None
+        if run_payload is not None:
+            identity_failure = verifyRunIdentity(run_payload, head_sha, workflow)
+            if identity_failure is not None:
+                printEvaluation(pr_payload, run_payload, identity_failure, effective_steps)
+                return identity_failure
         evaluation = evaluateRun(run_payload, effective_jobs, effective_steps)
         printEvaluation(pr_payload, run_payload, evaluation, effective_steps)
         if evaluation.succeeded or evaluation.failed:
