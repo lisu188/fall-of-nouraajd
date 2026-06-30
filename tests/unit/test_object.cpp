@@ -36,6 +36,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "test_harness.h"
 #include "vutil.h"
 
+#include <pybind11/embed.h>
+
+#include <cstdlib>
 #include <limits>
 #include <map>
 #include <memory>
@@ -1260,12 +1263,96 @@ void test_signal_slots_fail_closed_on_bad_config() {
                 "a valid signal slot should still fire even when sibling slots fail closed");
 }
 
+// Characterization tests for bug-finder candidates that source review judged NOT to be bugs.
+// They lock in the current (correct) behavior; if any candidate were actually a defect, the
+// corresponding assertion would fail instead of pass.
+
+void test_effect_applies_for_exactly_its_duration_without_underflow() {
+    auto effect = std::make_shared<CEffect>();
+    effect->setDuration(3);
+    expect_true(effect->getTimeLeft() == 3, "effect timeLeft should initialize to its duration");
+    expect_true(effect->getTimeTotal() == 3, "effect timeTotal should initialize to its duration");
+
+    // apply() ignores its creature argument; it runs onEffect() and decrements timeLeft.
+    for (int tick = 1; tick <= 3; ++tick) {
+        effect->apply(nullptr);
+    }
+    expect_true(effect->getTimeLeft() == 0, "effect should be spent after exactly duration applications");
+    expect_true(effect->getTimeTotal() == 3, "effect timeTotal should be preserved across applications");
+
+    // Applying a spent effect must be a no-op and must never drive timeLeft below zero.
+    effect->apply(nullptr);
+    effect->apply(nullptr);
+    expect_true(effect->getTimeLeft() == 0, "applying a spent effect must not drive timeLeft negative");
+}
+
+void test_creature_get_dmg_hit_chance_is_not_inverted() {
+    srand(20260630u); // deterministic dice sequence for this characterization
+
+    auto make_combatant = [](int hit, int attack) {
+        auto stats = std::make_shared<CStats>();
+        stats->setMainStat("intelligence");
+        stats->setHit(hit);
+        stats->setAttack(attack);
+        stats->setCrit(0);   // disable critical doubling
+        stats->setDmgMin(5); // fixed damage so a connecting swing always yields exactly 5
+        stats->setDmgMax(5);
+        stats->setDamage(0);
+        auto creature = std::make_shared<CCreature>();
+        creature->setBaseStats(stats);
+        creature->setLevelStats(std::make_shared<CStats>());
+        creature->setLevel(0); // getStats() == baseStats: no level/equipment/effect bonuses
+        return creature;
+    };
+
+    const int iterations = 300;
+
+    // Boundary: hit=100 with no attack penalty connects on every swing.
+    auto alwaysHit = make_combatant(100, 0);
+    int alwaysHitConnects = 0;
+    for (int i = 0; i < iterations; ++i) {
+        if (alwaysHit->getDmg() > 0) {
+            ++alwaysHitConnects;
+        }
+    }
+    expect_true(alwaysHitConnects == iterations, "hit=100 should connect on every swing (returns damage, never 0)");
+
+    // Boundary: hit=0 with no attack bonus misses every swing.
+    auto alwaysMiss = make_combatant(0, 0);
+    int alwaysMissConnects = 0;
+    for (int i = 0; i < iterations; ++i) {
+        if (alwaysMiss->getDmg() > 0) {
+            ++alwaysMissConnects;
+        }
+    }
+    expect_true(alwaysMissConnects == 0, "hit=0 should miss every swing (returns 0)");
+
+    // Direction: at a fixed hit chance, MORE attack must increase (not invert) hit frequency.
+    auto lowAttack = make_combatant(50, 0);
+    auto highAttack = make_combatant(50, 100);
+    int lowConnects = 0;
+    int highConnects = 0;
+    for (int i = 0; i < iterations; ++i) {
+        if (lowAttack->getDmg() > 0) {
+            ++lowConnects;
+        }
+        if (highAttack->getDmg() > 0) {
+            ++highConnects;
+        }
+    }
+    expect_true(highConnects > lowConnects, "higher attack must increase, not invert, hit frequency");
+    expect_true(highConnects == iterations, "attack=100 fully offsets a 0-99 dice roll, so every swing connects");
+}
+
 } // namespace
 
 int main() {
+    pybind11::scoped_interpreter guard{};
     test_signal_slots_fail_closed_on_bad_config();
     test_dynamic_property_cannot_spoof_typed_engine_signal();
     test_typed_engine_signal_still_fires_directly();
+    test_effect_applies_for_exactly_its_duration_without_underflow();
+    test_creature_get_dmg_hit_chance_is_not_inverted();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
