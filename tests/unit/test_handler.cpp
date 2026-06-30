@@ -1156,6 +1156,100 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
     }
 }
 
+// [EPIC_05][STORY_07][SUBSTORY_01] Random encounter candidates must contain only
+// concrete spawnable creatures: race/class *archetype definitions* must never enter
+// the CRngHandler creature power table. CCreatureRace/CCreatureClass are registered as
+// CGameObject-derived definitions (src/plugin/NativePlugin.cpp:162-165), so
+// getAllSubTypes("CCreature") -- which only returns a type whose resolved class
+// meta()->inherits("CCreature") (src/handler/CObjectHandler.cpp:114-117) -- must exclude
+// them. The CRngHandler constructor seeds creaturePowerTable solely from that
+// enumeration (src/handler/CRngHandler.cpp:63-69), so a definition absent from the
+// enumeration provably cannot become an encounter candidate. This regression registers
+// definition configs alongside a real concrete creature and pins both: the definitions
+// are excluded from the enumeration, while the concrete creature is included and the
+// handler still assembles encounters made only of concrete creatures.
+void test_rng_handler_excludes_archetype_definitions_from_encounters() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // Configured archetype-definition entries: their declared class is the
+    // CGameObject-derived definition type, NOT CCreature.
+    const std::string raceDefId = "unitArchetypeRaceDefinition";
+    const std::string classDefId = "unitArchetypeClassDefinition";
+    const std::string concreteCreatureId = "unitArchetypeConcreteCreature";
+
+    objectHandler->registerConfig(raceDefId,
+                                  CJsonUtil::from_string("{\"class\":\"CCreatureRace\"}", raceDefId));
+    objectHandler->registerConfig(classDefId,
+                                  CJsonUtil::from_string("{\"class\":\"CCreatureClass\"}", classDefId));
+    // A genuine concrete creature so the enumeration / power table is provably non-empty
+    // and we can show definitions are excluded while real creatures are included.
+    objectHandler->registerConfig(concreteCreatureId, make_unit_creature_config(2));
+
+    // Sanity: the definition configs resolve to their CGameObject-derived definition
+    // classes, which do NOT inherit CCreature -- the exact gate getAllSubTypes applies.
+    expect_true(objectHandler->getClass(raceDefId) == "CCreatureRace",
+                "race definition config should resolve to the CCreatureRace definition class");
+    expect_true(objectHandler->getClass(classDefId) == "CCreatureClass",
+                "class definition config should resolve to the CCreatureClass definition class");
+    if (auto raceProto = objectHandler->getType("CCreatureRace")) {
+        expect_true(!raceProto->meta()->inherits("CCreature"),
+                    "CCreatureRace definition must not inherit CCreature so it stays out of encounters");
+    }
+    if (auto classProto = objectHandler->getType("CCreatureClass")) {
+        expect_true(!classProto->meta()->inherits("CCreature"),
+                    "CCreatureClass definition must not inherit CCreature so it stays out of encounters");
+    }
+
+    // The encounter enumeration (and therefore creaturePowerTable, which is seeded only
+    // from it) must exclude the definitions and include the concrete creature.
+    const std::vector<std::string> creatureSubTypes = objectHandler->getAllSubTypes("CCreature");
+    std::set<std::string> creatureSubTypeSet(creatureSubTypes.begin(), creatureSubTypes.end());
+
+    expect_true(!creatureSubTypeSet.contains(raceDefId),
+                "getAllSubTypes(\"CCreature\") must exclude race archetype-definition entries");
+    expect_true(!creatureSubTypeSet.contains(classDefId),
+                "getAllSubTypes(\"CCreature\") must exclude class archetype-definition entries");
+    expect_true(creatureSubTypeSet.contains(concreteCreatureId),
+                "getAllSubTypes(\"CCreature\") must include the concrete spawnable creature");
+
+    // Every enumerated candidate must construct as a real CCreature -- definitions cannot.
+    for (const std::string &type : creatureSubTypes) {
+        auto candidate = game->createObject<CCreature>(type);
+        expect_true(candidate != nullptr,
+                    "every encounter candidate must construct as a concrete CCreature");
+        if (candidate) {
+            expect_true(candidate->meta()->inherits("CCreature"),
+                        "every encounter candidate must inherit CCreature (no archetype definitions)");
+        }
+    }
+
+    // Build the live handler: it seeds creaturePowerTable from the enumeration above, so
+    // no definition can have entered it. Assembled encounters must be only real creatures.
+    CRngHandler rng_handler(game);
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 64; attempt++) {
+        auto encounter = rng_handler.getRandomEncounter(40);
+        for (const auto &creature : encounter) {
+            expect_true(creature != nullptr, "encounter creatures should be non-null");
+            if (!creature) {
+                continue;
+            }
+            producedEncounter = true;
+            expect_true(creature->meta()->inherits("CCreature"),
+                        "every assembled encounter creature must be a concrete CCreature");
+            expect_true(creature->getType() != "CCreatureRace" && creature->getType() != "CCreatureClass",
+                        "archetype definition types must never be assembled into an encounter");
+        }
+    }
+    expect_true(producedEncounter,
+                "the handler should assemble a non-empty encounter from the concrete creature population");
+
+    objectHandler->unregisterConfig(raceDefId);
+    objectHandler->unregisterConfig(classDefId);
+    objectHandler->unregisterConfig(concreteCreatureId);
+}
+
 void test_rng_handler_captures_encounter_power_and_scale_baseline() {
     // EPIC_01/STORY_02/SUBSTORY_04 pre-migration baseline.
     //
@@ -1347,6 +1441,7 @@ int main() {
     test_handler_constructors_are_covered_by_native_tests();
     test_creature_scale_preserves_level_plus_sw_invariant();
     test_rng_handler_builds_encounters_from_concrete_creature_sw();
+    test_rng_handler_excludes_archetype_definitions_from_encounters();
     test_rng_handler_captures_encounter_power_and_scale_baseline();
     test_creature_subtype_inventory_is_enumerable_on_loaded_game();
     test_event_handler_trigger_registration_uses_named_comparison_helpers();
