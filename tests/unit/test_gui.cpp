@@ -245,6 +245,22 @@ class DragCallbackPanel : public CGamePanel {
     bool allow_drop = true;
 };
 
+// Parent that exposes valid reflective widget callbacks plus a private one, used
+// to prove config-driven CWidget render/click dispatch fails closed on bad names.
+class WidgetCallbackPanel : public CGamePanel {
+    V_META(WidgetCallbackPanel, CGamePanel,
+           V_METHOD(WidgetCallbackPanel, renderWidget, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(WidgetCallbackPanel, clickWidget, void, std::shared_ptr<CGui>))
+
+  public:
+    void renderWidget(std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int) { ++renders; }
+
+    void clickWidget(std::shared_ptr<CGui>) { ++clicks; }
+
+    int renders = 0;
+    int clicks = 0;
+};
+
 void drain_event_loop() {
     auto loop = vstd::event_loop<>::instance();
     for (int i = 0; i < 5; ++i) {
@@ -287,6 +303,7 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     CTypes::register_type_metadata<RefreshCountingListView, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
                                    CGameObject>();
     CTypes::register_type_metadata<DragCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
+    CTypes::register_type_metadata<WidgetCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
 
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
@@ -1140,6 +1157,63 @@ void test_render_context_rejects_null_texture_and_copies_valid_texture() {
     expect_true(stats.failedCopies == 0, "render context should not count failed copies for valid smoke path");
 }
 
+void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto panel = std::make_shared<WidgetCallbackPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    gui->pushChild(panel);
+
+    auto widget = std::make_shared<CWidget>();
+    widget->setLayout(fixed_layout(0, 0, 100, 80));
+    panel->addChild(widget);
+
+    auto rect = std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 100, 80});
+
+    auto left_click = [&](const std::shared_ptr<CWidget> &w) {
+        w->mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 1, 1);
+        w->mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 1, 1);
+    };
+
+    // Missing reflective method: render must no-op without crashing.
+    widget->setRender("missingRenderCallback");
+    widget->renderObject(gui, rect, 0);
+    expect_true(panel->renders == 0, "missing widget render callback should no-op and fail closed");
+
+    // Missing reflective method on a click action: must no-op without crashing.
+    widget->setClick("missingClickCallback");
+    left_click(widget);
+    expect_true(panel->clicks == 0, "missing widget click callback should no-op and fail closed");
+
+    // Empty names are skipped entirely before dispatch.
+    widget->setRender("");
+    widget->setClick("");
+    widget->renderObject(gui, rect, 0);
+    left_click(widget);
+    expect_true(panel->renders == 0 && panel->clicks == 0, "empty widget callback names should be skipped");
+
+    // The dispatch entry point / unregistered private names are not valid
+    // reflective targets and must also fail closed rather than crash.
+    widget->setRender("_privateRender");
+    widget->setClick("invokeAction");
+    widget->renderObject(gui, rect, 0);
+    left_click(widget);
+    expect_true(panel->renders == 0 && panel->clicks == 0,
+                "private / meta widget callback names should fail closed and never dispatch");
+
+    // Valid config-driven callbacks must keep working unchanged.
+    widget->setRender("renderWidget");
+    widget->renderObject(gui, rect, 0);
+    expect_true(panel->renders == 1, "valid widget render callback should still fire");
+
+    widget->setClick("clickWidget");
+    left_click(widget);
+    expect_true(panel->clicks == 1, "valid widget click callback should still fire");
+}
+
 } // namespace
 
 int main() {
@@ -1147,6 +1221,7 @@ int main() {
 
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
     test_widget_ignores_unarmed_non_left_clicks();
+    test_widget_reflective_callbacks_fail_closed_on_bad_config();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();

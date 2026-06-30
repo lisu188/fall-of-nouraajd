@@ -93,6 +93,14 @@ REVIEWED_DYNAMIC_PROPERTY_PREFIXES = {
 PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
 TYPE_REGISTRATION_EXCLUSIONS_PATH = Path("scripts/type_registration_exclusions.json")
 
+# Reflective dialog action/condition dispatch fails closed at runtime
+# (res/game.py CDialog._get_public_callback): a config-driven callback name is
+# rejected unless it is a public identifier that is not the dispatch entry point
+# itself. Names rejected here would silently no-op (actions) or evaluate to false
+# (conditions, hiding a guarded option) at runtime, so flag them at validation
+# time instead of letting authors ship a callback that can never fire.
+DIALOG_CALLBACK_DISPATCH_METHODS = {"invokeAction", "invokeCondition"}
+
 # Creature archetype naming and compatibility policy (EPIC_01/STORY_03/SUBSTORY_04).
 # Race template ids end with "Race", class template ids end with "Class", and the
 # class reference is carried by the JSON property "creatureClass" -- never the bare
@@ -1835,6 +1843,30 @@ class ContentValidator:
             return
         if not isinstance(method, str):
             self._issue(path, location, f"expected string dialog {method_kind}")
+            return
+        # Mirror the runtime fail-closed contract (res/game.py
+        # CDialog._get_public_callback): empty / non-identifier / private
+        # (leading underscore, dunder) / dispatch-entry-point names are rejected
+        # reflectively, so such a config callback can never run.
+        if not method:
+            self._issue(path, location, f"empty dialog {method_kind} name")
+            return
+        if not method.isidentifier():
+            self._issue(path, location, f'dialog {method_kind} "{method}" is not a valid method name')
+            return
+        if method.startswith("_"):
+            self._issue(
+                path,
+                location,
+                f'dialog {method_kind} "{method}" is private and is rejected by the reflective dispatch',
+            )
+            return
+        if method in DIALOG_CALLBACK_DISPATCH_METHODS:
+            self._issue(
+                path,
+                location,
+                f'dialog {method_kind} "{method}" is the reflective dispatch entry point and cannot be a callback',
+            )
             return
         if not isinstance(dialog_class, str):
             self._issue(path, location, f'dialog {method_kind} "{method}" has no dialog class')

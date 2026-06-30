@@ -874,9 +874,35 @@ void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
                 "equivalentValue should reject unsupported cyclic object-reference graphs safely");
 }
 
+void test_signal_slots_fail_closed_on_bad_config() {
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+
+    auto object = std::make_shared<CGameObject>();
+    auto valid_probe = std::make_shared<PropertyChangeProbe>();
+    auto broken_probe = std::make_shared<PropertyChangeProbe>();
+
+    // A config-driven slot that names a method which is not a valid reflective
+    // target (missing / private / dispatch-meta) must not crash the event loop,
+    // and must not starve a valid slot connected to the same signal.
+    object->connect("propertyChanged", broken_probe, "missingSlotCallback");
+    object->connect("propertyChanged", broken_probe, "_privateSlot");
+    object->connect("propertyChanged", broken_probe, "invokeAction");
+    object->connect("propertyChanged", broken_probe, "");
+    object->connect("propertyChanged", valid_probe, "onPropertyChanged");
+
+    object->notifyPropertyChanged("threat");
+    drain_event_loop();
+
+    expect_true(broken_probe->changedProperties.empty(),
+                "invalid signal slot callbacks should no-op and fail closed instead of crashing");
+    expect_true(valid_probe->changedProperties.contains("threat"),
+                "a valid signal slot should still fire even when sibling slots fail closed");
+}
+
 } // namespace
 
 int main() {
+    test_signal_slots_fail_closed_on_bad_config();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
