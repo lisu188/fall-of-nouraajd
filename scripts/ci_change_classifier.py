@@ -75,6 +75,7 @@ LIGHTWEIGHT_PATH_PATTERNS = (
     "tests/test_ci_change_classifier.py",
     "tests/test_content_validator.py",
     "tests/test_controller_resource_audit.py",
+    "tests/test_coverage_report.py",
     "tests/test_issue_queue.py",
     "tests/test_poll_pr_checks.py",
     "tests/test_pr_review_audit.py",

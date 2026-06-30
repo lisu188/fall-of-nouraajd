@@ -32,6 +32,13 @@ class CiChangeClassifierTest(unittest.TestCase):
         self.assertEqual((), classification.nativeReasons)
         self.assertIn("scripts/pr_review_audit.py", classification.paths)
 
+    def test_coverage_report_unit_test_routes_as_lightweight(self) -> None:
+        classification = self.classify("tests/test_coverage_report.py")
+
+        self.assertFalse(classification.nativeNeeded)
+        self.assertFalse(classification.coverageNeeded)
+        self.assertEqual((), classification.nativeReasons)
+
     def test_workflow_observation_ledger_json_does_not_need_native_validation(self) -> None:
         classification = self.classify(
             "planning/workflow_observations/records/20260621T120000Z-controller-example-1234abcd.json",
