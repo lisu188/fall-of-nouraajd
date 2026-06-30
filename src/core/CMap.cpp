@@ -879,6 +879,8 @@ bool CMap::isOutOfBounds(Coords coords) const {
            (coords.x < 0 || coords.y < 0 || coords.x > xBounds.at(coords.z) || coords.y > yBounds.at(coords.z));
 }
 
+bool CMap::isWithinBounds(Coords coords) const { return !isOutOfBounds(normalizeCoords(coords)); }
+
 std::string CMap::fallbackTileType(Coords coords) const {
     if (isOutOfBounds(coords)) {
         return vstd::ctn(outOfBoundsTiles, coords.z) && !outOfBoundsTiles.at(coords.z).empty()
