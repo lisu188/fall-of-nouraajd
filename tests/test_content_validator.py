@@ -460,6 +460,74 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertEqual([], [str(issue) for issue in issues])
 
+    def test_creature_archetype_naming_policy_accepts_conforming_ids(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"properties": {"creatureClass": {"ref": "warriorClass"}}}},
+        )
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"properties": {"label": "Warrior"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_creature_race_id_without_race_suffix_is_reported(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"human": {"properties": {"label": "Human"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "human",
+            'creature_races.json template id "human" must end with "Race"',
+        )
+
+    def test_creature_class_id_without_class_suffix_is_reported(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warrior": {"properties": {"label": "Warrior"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_classes.json",
+            "warrior",
+            'creature_classes.json template id "warrior" must end with "Class"',
+        )
+
+    def test_creature_class_reference_via_reserved_class_key_is_reported(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"properties": {"class": {"ref": "warriorClass"}}}},
+        )
+        write_json(
+            root / "res/config/creature_classes.json",
+            {"warriorClass": {"properties": {"label": "Warrior"}}},
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.class",
+            'class reference must use property "creatureClass"',
+            'never the reserved object-constructor key "class"',
+        )
+
     def test_invalid_transition_targets_report_map_name(self):
         root = self.make_fixture(script_map="missingMap")
 

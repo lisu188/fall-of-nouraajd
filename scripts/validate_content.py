@@ -93,6 +93,20 @@ REVIEWED_DYNAMIC_PROPERTY_PREFIXES = {
 PYTHON_REGISTRATION_DECORATORS = {"register", "trigger"}
 TYPE_REGISTRATION_EXCLUSIONS_PATH = Path("scripts/type_registration_exclusions.json")
 
+# Creature archetype naming and compatibility policy (EPIC_01/STORY_03/SUBSTORY_04).
+# Race template ids end with "Race", class template ids end with "Class", and the
+# class reference is carried by the JSON property "creatureClass" -- never the bare
+# "class" key, which is reserved as the object-constructor key.
+CREATURE_RACES_CONFIG = "creature_races.json"
+CREATURE_CLASSES_CONFIG = "creature_classes.json"
+CREATURE_RACE_ID_SUFFIX = "Race"
+CREATURE_CLASS_ID_SUFFIX = "Class"
+CREATURE_CLASS_REFERENCE_PROPERTY = "creatureClass"
+CREATURE_ARCHETYPE_ID_SUFFIXES = {
+    CREATURE_RACES_CONFIG: CREATURE_RACE_ID_SUFFIX,
+    CREATURE_CLASSES_CONFIG: CREATURE_CLASS_ID_SUFFIX,
+}
+
 
 @dataclass(frozen=True)
 class ValidationIssue:
@@ -998,6 +1012,7 @@ class ContentValidator:
         for entry in self.global_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_crafting_refs()
+        self._validate_creature_archetype_naming()
 
     def _validate_map_context(self, context: MapContext) -> None:
         visible = self._visible_entries(context)
@@ -1821,6 +1836,38 @@ class ContentValidator:
             if isinstance(station_id, str):
                 station_ids.add(station_id)
         return station_ids
+
+    def _validate_creature_archetype_naming(self) -> None:
+        config_dir = self.repo_root / "res" / "config"
+        for filename, suffix in CREATURE_ARCHETYPE_ID_SUFFIXES.items():
+            path = config_dir / filename
+            data = self.global_files.get(path)
+            if not isinstance(data, dict):
+                continue
+            for template_id, entry in data.items():
+                if isinstance(template_id, str) and not template_id.endswith(suffix):
+                    self._issue(
+                        path,
+                        template_id,
+                        f'{filename} template id "{template_id}" must end with "{suffix}"',
+                    )
+                self._validate_creature_class_reference(path, template_id, entry)
+
+    def _validate_creature_class_reference(self, path: Path, location: str, value: Any) -> None:
+        if isinstance(value, dict):
+            properties = value.get("properties")
+            if isinstance(properties, dict) and "class" in properties:
+                self._issue(
+                    path,
+                    f"{append_field(location, 'properties')}.class",
+                    f'class reference must use property "{CREATURE_CLASS_REFERENCE_PROPERTY}", '
+                    f'never the reserved object-constructor key "class"',
+                )
+            for key, child in value.items():
+                self._validate_creature_class_reference(path, append_field(location, key), child)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_creature_class_reference(path, append_index(location, index), child)
 
     def _issue(self, path: Path, location: str, message: str) -> None:
         self.issues.append(ValidationIssue(path=self._rel(path), location=location, message=message))
