@@ -2009,6 +2009,50 @@ class ContentValidatorTest(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def write_creature_race_stats_fixture(self, root):
+        """Declare synthetic CStats metadata + register CCreatureRace for stat/action/type checks.
+
+        CCreatureRace does not exist on real content, so the validator is vacuously
+        satisfied there; this fixture exercises the forward guard for the
+        baseStats/actions/creatureType/subtypes validator.  CStats carries V_META
+        mirroring src/core/CStats.h closely enough to drive the baseStats key
+        derivation.  CCreatureRace is registered statically WITHOUT V_META so the
+        synthetic configs are constructible and recognised as race definitions while
+        carrying no metadata property schema -- leaving only the race-field validator
+        (not the generic property-schema validator) to fire on its baseStats/actions/
+        creatureType/subtypes fields.  Kept separate from write_creature_race_fixture
+        (which backs the race-resolution tests) so the two helpers do not shadow.
+        """
+        header = root / "src/object/CCreatureRaceStatsFixture.h"
+        header.parent.mkdir(parents=True, exist_ok=True)
+        header.write_text(
+            textwrap.dedent("""
+                class CGameObject {
+                    V_META(CGameObject, vstd::meta::empty,
+                        V_PROPERTY(CGameObject, std::string, name, getName, setName))
+                };
+
+                class CStats {
+                    V_META(CStats, CGameObject,
+                        V_PROPERTY(CStats, int, strength, getStrength, setStrength),
+                        V_PROPERTY(CStats, int, agility, getAgility, setAgility),
+                        V_PROPERTY(CStats, int, intelligence, getIntelligence, setIntelligence),
+                        V_PROPERTY(CStats, std::string, mainStat, getMainStat, setMainStat))
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        type_registration = root / "src/object/CCreatureRaceStatsTypeRegistration.cpp"
+        type_registration.write_text(
+            textwrap.dedent("""
+                void registerCreatureRaceStatsTypes() {
+                    CTypes::register_type<CStats, CGameObject>();
+                    CTypes::register_type<CCreatureRace, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
     def test_creature_race_ref_to_creature_race_passes(self):
         root = self.make_fixture()
         self.write_creature_race_fixture(root)
@@ -2085,6 +2129,86 @@ class ContentValidatorTest(unittest.TestCase):
             "res/maps/broken/config.json",
             "Townsfolk.properties.race",
             'property "race" for class "CCreature" expected object inheriting from ' '"CCreatureRace"; got string',
+        )
+
+    def _write_creature_race(self, root, properties):
+        write_json(
+            root / "res/config/creature_races.json",
+            {"humanRace": {"class": "CCreatureRace", "properties": properties}},
+        )
+
+    def test_creature_race_valid_base_stats_actions_and_types_pass(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(
+            root,
+            {
+                "baseStats": {"strength": 5, "agility": 3, "mainStat": "strength"},
+                "actions": [
+                    {"ref": "Attack"},
+                    {"class": "CInteraction", "properties": {"effect": {"ref": "HitEffect"}}},
+                ],
+                "creatureType": "humanoid",
+                "subtypes": ["human", "noble"],
+            },
+        )
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_race_unknown_base_stats_key_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"baseStats": {"strenght": 5}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.baseStats.strenght",
+            '"strenght" is not a CStats property; expected one of agility, intelligence, mainStat, name, strength',
+        )
+
+    def test_creature_race_action_not_resolving_to_interaction_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"actions": [{"ref": "LifePotion"}]})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.actions[0]",
+            'expected object resolving to "CInteraction"; got "CPotion"',
+        )
+
+    def test_creature_race_empty_creature_type_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"creatureType": ""})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.creatureType",
+            '"creatureType" expected a non-empty string; got string',
+        )
+
+    def test_creature_race_empty_subtype_string_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"subtypes": ["human", ""]})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.subtypes[1]",
+            "expected a non-empty string; got string",
         )
 
     def assertIssueContains(self, issues, *substrings):
