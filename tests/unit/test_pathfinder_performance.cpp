@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "object/CTile.h"
 #include "test_harness.h"
 
 #include <algorithm>
@@ -617,6 +618,151 @@ void testEnvelopeBudgetPreservesReachableNavigation() {
                 "envelope detour path is longer than the direct distance metric=1 baseline=1 threshold=1");
 }
 
+std::shared_ptr<CTile> makeWeightedTile(const std::shared_ptr<CGame> &game, int movementCost) {
+    auto tile = std::make_shared<CTile>();
+    tile->setGame(game);
+    tile->setCanStep(true);
+    tile->setTileType("weightedTile");
+    tile->setMovementCost(movementCost);
+    return tile;
+}
+
+// Builds a fully materialized width x height open map whose row-0 band [bandStartX, bandEndX] carries
+// the supplied (expensive) movement cost; every other tile has cost 1. Returns the game so callers keep
+// the shared owners alive while the map is in use.
+std::shared_ptr<CGame> buildWeightedBandMap(int width, int height, int bandStartX, int bandEndX,
+                                            int bandCost, std::shared_ptr<CMap> &outMap) {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, width - 1}});
+    map->setYBounds({{0, height - 1}});
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const bool inBand = (y == 0 && x >= bandStartX && x <= bandEndX);
+            map->addTile(makeWeightedTile(game, inBand ? bandCost : 1), x, y, 0);
+        }
+    }
+    outMap = map;
+    return game;
+}
+
+// Regression: pin the concrete movement-cost values the CMap / CTile API produces, including the
+// documented std::max(1, ...) floor, the default-cost-1 for unmaterialized coordinates, and the fact
+// that findPath fed with CMap::lookupMovementCost as its StepCost deterministically routes around an
+// expensive band instead of crossing it.
+void testMapMovementCostRegressionPinsTileWeightsAndRouting() {
+    constexpr int width = 6;
+    constexpr int height = 3;
+    constexpr int band_cost = 30;
+    std::shared_ptr<CMap> map;
+    [[maybe_unused]] auto game = buildWeightedBandMap(width, height, 1, width - 2, band_cost, map);
+
+    // Per-tile weights are pinned exactly through both the materializing and lookup accessors.
+    expectMetricEquals("regression default tile cost", static_cast<long long>(map->getMovementCost(0, 0, 0)), 1);
+    expectMetricEquals("regression band tile cost", static_cast<long long>(map->getMovementCost(2, 0, 0)),
+                       band_cost);
+    expectMetricEquals("regression lookup band tile cost",
+                       static_cast<long long>(map->lookupMovementCost(Coords(3, 0, 0))), band_cost);
+    expectMetricEquals("regression off-band tile cost",
+                       static_cast<long long>(map->getMovementCost(Coords(2, 1, 0))), 1);
+
+    // The std::max(1, ...) floor: a tile configured below 1 still reports 1.
+    if (auto tile = map->getTile(Coords(0, 0, 0))) {
+        tile->setMovementCost(-5);
+        expectMetricEquals("regression movement-cost floor clamps to 1",
+                           static_cast<long long>(map->getMovementCost(0, 0, 0)), 1);
+        tile->setMovementCost(1);
+    } else {
+        expect_true(false, "regression expected a materialized tile at the origin");
+    }
+
+    // Deterministic routing: with lookupMovementCost as the StepCost, the cheapest path leaves row 0,
+    // crosses on the cheap rows, and rejoins at the goal rather than paying the expensive band.
+    const Coords start(0, 0, 0);
+    const Coords goal(width - 1, 0, 0);
+    auto can_step = [map](const Coords &coords) { return map->canStep(coords); };
+    auto waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
+    auto neighbors = [map](const Coords &coords) { return map->getNavigationNeighbors(coords); };
+    auto distance = [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); };
+    auto step_cost = [map](const Coords &from, const Coords &to) { return map->lookupMovementCost(to); };
+
+    const auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, step_cost);
+
+    expect_true(!path.empty() && path.back() == goal,
+                "regression weighted path reaches goal metric=1 baseline=1 threshold=1");
+    expect_true(!path.empty() && path.front() != Coords(1, 0, 0),
+                "regression weighted path does not step onto the expensive band first");
+    // Sum the StepCost over the produced path and confirm it is far below the cost of plowing straight
+    // through the band ((width - 2) expensive crossings would cost ~ (width - 2) * band_cost).
+    long long traversed_cost = 0;
+    for (const auto &cell : path) {
+        traversed_cost += map->lookupMovementCost(cell);
+    }
+    const long long straight_band_cost = static_cast<long long>(width - 2) * band_cost;
+    expect_true(traversed_cost < straight_band_cost,
+                "regression detour total cost is cheaper than crossing the band metric=1 baseline=1 threshold=1");
+    // No path cell sits inside the expensive interior band (x in [1, width-2]) on row 0.
+    bool crosses_band = false;
+    for (const auto &cell : path) {
+        if (cell.z == 0 && cell.y == 0 && cell.x >= 1 && cell.x <= width - 2) {
+            crosses_band = true;
+        }
+    }
+    expect_true(!crosses_band, "regression path avoids the expensive interior band metric=1 baseline=1 threshold=1");
+}
+
+// Bounded performance guard: running findPath with the real CMap::lookupMovementCost StepCost across a
+// larger weighted map must keep its probing work within a generous, deterministic ceiling. This mirrors
+// the call-count work-bound idiom used throughout this file (no wall-clock timing, so it is stable on
+// shared CI runners) while exercising the movement-cost path consumers end to end.
+void testMovementCostPathStaysWithinWorkBound() {
+    constexpr int width = 64;
+    constexpr int height = 16;
+    constexpr int band_cost = 50;
+    constexpr int total_cells = width * height;
+    std::shared_ptr<CMap> map;
+    [[maybe_unused]] auto game = buildWeightedBandMap(width, height, 1, width - 2, band_cost, map);
+
+    const Coords start(0, 0, 0);
+    const Coords goal(width - 1, 0, 0);
+
+    CallbackCounters counters;
+    auto can_step = [&counters, map](const Coords &coords) {
+        ++counters.canStep;
+        ++counters.canStepByCoord[coords];
+        return map->canStep(coords);
+    };
+    auto waypoint = [&counters](const Coords &coords) { return noWaypoint(counters, coords); };
+    auto neighbors = [&counters, map](const Coords &coords) {
+        ++counters.neighbors;
+        return map->getNavigationNeighbors(coords);
+    };
+    auto distance = [&counters, map](const Coords &from, const Coords &to) {
+        ++counters.distance;
+        return map->getDistance(from, to);
+    };
+    auto step_cost = [&counters, map](const Coords &, const Coords &to) {
+        ++counters.stepCost;
+        return map->lookupMovementCost(to);
+    };
+
+    const auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, step_cost);
+
+    expect_true(!path.empty() && path.back() == goal,
+                "perf-bound weighted path reaches goal metric=1 baseline=1 threshold=1");
+    // A* over a band-weighted plane only explores a neighborhood proportional to the map; bound the work
+    // generously at a small multiple of the materialized cell count so the guard is not flaky but still
+    // catches a regression that floods the frontier.
+    expectMetricAtMost("perf-bound canStep calls", counters.canStep, total_cells * 4, total_cells * 8);
+    expectMetricAtMost("perf-bound stepCost calls", counters.stepCost, total_cells * 4, total_cells * 8);
+    expectMetricAtMost("perf-bound neighbor calls", counters.neighbors, total_cells, total_cells * 4);
+    expectMetricAtMost("perf-bound distance calls", counters.distance, total_cells * 4, total_cells * 8);
+    expect_true(counters.canStep < 1'000'000,
+                "perf-bound stays below global node cap metric=1 baseline=1 threshold=1");
+}
+
 } // namespace
 
 void run_pathfinder_performance_tests() {
@@ -632,4 +778,6 @@ void run_pathfinder_performance_tests() {
     testRepeatedAsyncFindNextStep();
     testMultiSizeScaling();
     testMapMovementCostLookupDoesNotMaterializeSparseDefaultTiles();
+    testMapMovementCostRegressionPinsTileWeightsAndRouting();
+    testMovementCostPathStaysWithinWorkBound();
 }
