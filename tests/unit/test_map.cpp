@@ -1508,6 +1508,96 @@ void test_map_move_blocks_new_turn_while_transition_pending() {
     expect_true(map->getTurn() == turn_before, "the old map should not advance a turn while a transition is pending");
 }
 
+void test_map_add_object_fills_hp_and_mana_from_composed_stats() {
+    // addObject initializes a freshly spawned (level 0) creature's runtime HP/mana
+    // from the composed stat block (CCreature::getStats -> buildLegacyStats), via the
+    // heal(0)/addMana(0) full-fill paths. getHpMax derives from composed stamina * 7
+    // and getManaMax from the composed main-stat value * 7.
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setStamina(6);     // hpMax = 6 * 7 = 42
+    stats->setIntelligence(4); // manaMax = 4 * 7 = 28
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setName("composedSpawn");
+    creature->setGame(game);
+    creature->setBaseStats(stats);
+    // Spawned with empty runtime pools; addObject should fill them from composed stats.
+    creature->setHp(0);
+    creature->setMana(0);
+
+    expect_true(creature->getLevel() == 0, "fixture creature should spawn at level 0");
+    expect_true(creature->getHpMax() == 42, "composed hpMax should derive from composed stamina * 7");
+    expect_true(creature->getManaMax() == 28, "composed manaMax should derive from composed main-stat value * 7");
+
+    map->addObject(creature);
+
+    expect_true(creature->getHp() == creature->getHpMax(),
+                "addObject should fill a fresh creature's HP to the composed maximum");
+    expect_true(creature->getHp() == 42, "addObject HP fill should use the composed stamina-derived maximum");
+    expect_true(creature->getMana() == creature->getManaMax(),
+                "addObject should fill a fresh creature's mana to the composed maximum");
+    expect_true(creature->getMana() == 28, "addObject mana fill should use the composed main-stat-derived maximum");
+}
+
+void test_set_base_stats_preserves_current_hp_and_mana() {
+    // Assigning the composed stat source (setBaseStats) must not silently refill or
+    // reduce the creature's current HP/mana outside the explicit heal/addMana paths,
+    // even when the new stats change the derived maxima.
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setStamina(10);     // hpMax = 70
+    stats->setIntelligence(10); // manaMax = 70
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setName("statReassignTarget");
+    creature->setGame(game);
+    creature->setBaseStats(stats);
+    map->addObject(creature);
+
+    // Spend some HP/mana so current values sit below the maxima.
+    creature->setHp(25);
+    creature->setMana(15);
+    expect_true(creature->getHp() == 25, "fixture HP should be reduced below maximum before stat reassignment");
+    expect_true(creature->getMana() == 15, "fixture mana should be reduced below maximum before stat reassignment");
+
+    // Reassigning a higher-stat block raises the maxima but must not refill current pools.
+    auto higherStats = std::make_shared<CStats>();
+    higherStats->setMainStat("intelligence");
+    higherStats->setStamina(20);     // hpMax = 140
+    higherStats->setIntelligence(20); // manaMax = 140
+    creature->setBaseStats(higherStats);
+
+    expect_true(creature->getHpMax() == 140, "setBaseStats should raise hpMax through composed stamina");
+    expect_true(creature->getManaMax() == 140, "setBaseStats should raise manaMax through composed main stat");
+    expect_true(creature->getHp() == 25, "setBaseStats should not refill current HP when the maximum increases");
+    expect_true(creature->getMana() == 15, "setBaseStats should not refill current mana when the maximum increases");
+
+    // Reassigning a lower-stat block shrinks the maxima below current pools, but
+    // setBaseStats must not clamp current HP/mana outside heal/addMana paths.
+    auto lowerStats = std::make_shared<CStats>();
+    lowerStats->setMainStat("intelligence");
+    lowerStats->setStamina(2);     // hpMax = 14
+    lowerStats->setIntelligence(1); // manaMax = 7
+    creature->setBaseStats(lowerStats);
+
+    expect_true(creature->getHpMax() == 14, "setBaseStats should lower hpMax through composed stamina");
+    expect_true(creature->getManaMax() == 7, "setBaseStats should lower manaMax through composed main stat");
+    expect_true(creature->getHp() == 25, "setBaseStats should not reduce current HP when the maximum drops below it");
+    expect_true(creature->getMana() == 15,
+                "setBaseStats should not reduce current mana when the maximum drops below it");
+}
+
 } // namespace
 
 int main() {
@@ -1541,6 +1631,8 @@ int main() {
     test_map_session_store_put_get_evict_and_ownership();
     test_game_context_owns_a_map_session_store();
     test_map_move_blocks_new_turn_while_transition_pending();
+    test_map_add_object_fills_hp_and_mana_from_composed_stats();
+    test_set_base_stats_preserves_current_hp_and_mana();
 
     return finish_tests();
 }
