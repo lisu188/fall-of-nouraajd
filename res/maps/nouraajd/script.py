@@ -955,6 +955,12 @@ def load(self, context):
                 return
             if game_map.getBoolProperty("VICTOR_REWARD_CLAIMED") or game_map.getBoolProperty("VICTOR_GOOD_END"):
                 return
+            # Claim-first: claim the Victor payout before handing out gold, healing, the reward dialog
+            # and the one-time vendor panel so a re-entered trigger cannot grant the reward twice.
+            # VICTOR_REWARD_CLAIMED is a state-derived legacy flag, so a dedicated non-derived key is
+            # used for the claim to avoid sync_legacy_flags overwriting the guard.
+            if not claim_once(game_map, "VICTOR_REWARD_GRANTED"):
+                return
             player = game.getMap().getPlayer()
             player.addGold(500)
             player.healProc(100)
@@ -1009,6 +1015,11 @@ def load(self, context):
             if quest_system.get_state("amulet") != "active":
                 return
             if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
+                # Claim-first: claim the amulet return reward before consuming the amulet, paying the
+                # gold and cleaning up the quest actors so a re-run cannot grant it twice. AMULET_RETURNED
+                # is a state-derived legacy flag, so a dedicated non-derived key backs the claim.
+                if not claim_once(game_map, "AMULET_REWARD_CLAIMED"):
+                    return
                 player.removeItem(lambda it: it.getName() == "preciousAmulet", True)
                 player.addGold(50)
                 quest_system.finish_amulet()
