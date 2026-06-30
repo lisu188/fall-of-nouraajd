@@ -41,6 +41,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <SDL.h>
 #include <pybind11/embed.h>
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -1266,6 +1267,77 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
                 "the baseline power table should be able to assemble a non-empty encounter without crashing");
 }
 
+// READ-ONLY source-of-truth inventory for later CCreature/CPlayer migration tickets
+// ([EPIC_01][STORY_01][SUBSTORY_01]). Loads a normally-configured game (CGameLoader::loadGame
+// registers every res/config CONFIG file -- including res/config/monsters.json -- via
+// initConfigurations, and loads global plugins via initScriptHandler; see
+// src/core/CLoader.cpp:1191-1199,1230-1244) and enumerates the concrete CCreature subtypes exactly
+// as the engine sees them. For each concrete id it records the resolved class name from
+// CObjectHandler::getClass (src/handler/CObjectHandler.cpp:122-131) and whether that class resolves
+// to CPlayer or plain CCreature using the same meta()->inherits(...) test that
+// CObjectHandler::getAllSubTypes itself applies (src/handler/CObjectHandler.cpp:104-120). The
+// inventory is emitted to stdout (the captured source-of-truth artifact) and asserted to be
+// produced on a loaded game without crashing. This test excludes no ids and mutates no config.
+void test_creature_subtype_inventory_is_enumerable_on_loaded_game() {
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    // getAllSubTypes("CCreature") returns every registered subtype whose configured class inherits
+    // CCreature; because CPlayer inherits CCreature (src/object/CPlayer.h:24), player templates are
+    // legitimately part of this set and must be classified, not excluded.
+    std::vector<std::string> subTypes = objectHandler->getAllSubTypes("CCreature");
+
+    // Deterministic, ordered inventory: sort the concrete ids so the captured list is stable across
+    // runs / unordered-registry iteration. We intentionally do not de-duplicate or filter.
+    std::sort(subTypes.begin(), subTypes.end());
+
+    expect_true(!subTypes.empty(),
+                "loaded game should expose at least one concrete CCreature subtype for the inventory");
+
+    struct InventoryEntry {
+        std::string id;
+        std::string resolvedClass;
+        bool resolvesToPlayer = false;
+        bool resolvesToCreature = false;
+    };
+    std::vector<InventoryEntry> inventory;
+    inventory.reserve(subTypes.size());
+
+    std::cout << "[creature-subtype-inventory] CCreature subtypes on loaded game: " << subTypes.size() << "\n";
+
+    for (const std::string &type : subTypes) {
+        InventoryEntry entry;
+        entry.id = type;
+        entry.resolvedClass = objectHandler->getClass(type);
+
+        // Classify via the type prototype's meta inheritance, mirroring getAllSubTypes' own check.
+        // A type already present in this list inherits CCreature by construction; whether it ALSO
+        // inherits CPlayer distinguishes player templates from plain creatures. Fall back to the
+        // resolved class name when no prototype is registered for the class so the row is still
+        // emitted (no id is silently dropped).
+        if (auto prototype = objectHandler->getType(entry.resolvedClass)) {
+            entry.resolvesToPlayer = prototype->meta()->inherits("CPlayer");
+            entry.resolvesToCreature = prototype->meta()->inherits("CCreature");
+        } else {
+            entry.resolvesToPlayer = (entry.resolvedClass == "CPlayer");
+            entry.resolvesToCreature = true;
+        }
+
+        expect_true(!entry.resolvedClass.empty(),
+                    "every enumerated CCreature subtype should resolve to a non-empty class name");
+        expect_true(entry.resolvesToCreature, "every enumerated CCreature subtype should classify as a CCreature");
+
+        const char *classification = entry.resolvesToPlayer ? "CPlayer" : "CCreature";
+        std::cout << "[creature-subtype-inventory]   id=" << entry.id << " class=" << entry.resolvedClass
+                  << " resolvesTo=" << classification << "\n";
+
+        inventory.push_back(std::move(entry));
+    }
+
+    expect_true(inventory.size() == subTypes.size(),
+                "inventory should record exactly one row per enumerated CCreature subtype id");
+}
+
 } // namespace
 
 int main() {
@@ -1276,6 +1348,7 @@ int main() {
     test_creature_scale_preserves_level_plus_sw_invariant();
     test_rng_handler_builds_encounters_from_concrete_creature_sw();
     test_rng_handler_captures_encounter_power_and_scale_baseline();
+    test_creature_subtype_inventory_is_enumerable_on_loaded_game();
     test_event_handler_trigger_registration_uses_named_comparison_helpers();
     test_fight_handler_rejects_stale_and_cross_map_participants();
     test_fight_handler_attributes_lethal_effects_to_valid_casters();
