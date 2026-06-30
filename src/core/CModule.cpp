@@ -1006,14 +1006,14 @@ void init_game_module(py::module_ &m) {
              "Remove the first inventory item matching predicate(item). Optional second arg allows quest removal.")
         .def("removeQuestItem", removeQuestItem, "Remove first matching quest item predicate from inventory.")
         .def("countItems", &CCreature::countItems, "Count inventory items by type id.")
-        .def("getRaceId", &CCreature::getRaceId,
-             "Return the creature race identity id (configured type id, falling back to name).")
-        .def("getCreatureClassId", &CCreature::getCreatureClassId,
-             "Return the creature class identity id (configured type id, falling back to name).")
-        .def("getRaceLabel", &CCreature::getRaceLabel,
-             "Return the creature race display label (label, falling back to the race id).")
-        .def("getCreatureClassLabel", &CCreature::getCreatureClassLabel,
-             "Return the creature class display label (label, falling back to the creature class id).");
+        .def("getArchetypeRaceId", &CCreature::getArchetypeRaceId,
+             "Return the creature archetype race identity id (configured type id, falling back to name).")
+        .def("getArchetypeClassId", &CCreature::getArchetypeClassId,
+             "Return the creature archetype class identity id (configured type id, falling back to name).")
+        .def("getArchetypeRaceLabel", &CCreature::getArchetypeRaceLabel,
+             "Return the creature archetype race display label (label, falling back to the archetype race id).")
+        .def("getArchetypeClassLabel", &CCreature::getArchetypeClassLabel,
+             "Return the creature archetype class display label (label, falling back to the archetype class id).");
 
     py::class_<CPlayer, CCreature, std::shared_ptr<CPlayer>>(m, "CPlayer", "Player-controlled creature.")
         .def("addQuest", &CPlayer::addQuest, "Add a quest to the player quest log.")

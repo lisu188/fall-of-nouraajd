@@ -254,13 +254,13 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     std::shared_ptr<CStats> getStats();
 
-    std::string getRaceId();
+    std::string getArchetypeRaceId();
 
-    std::string getCreatureClassId();
+    std::string getArchetypeClassId();
 
-    std::string getRaceLabel();
+    std::string getArchetypeRaceLabel();
 
-    std::string getCreatureClassLabel();
+    std::string getArchetypeClassLabel();
 
   protected:
     virtual void levelUp();

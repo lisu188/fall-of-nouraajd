@@ -618,37 +618,39 @@ void test_creature_archetype_identity_accessors_use_fallbacks() {
     creature->setTypeId("Pritz");
     creature->setName("pritz_instance_1");
     creature->setLabel("Pritz Footsoldier");
-    expect_true(creature->getRaceId() == "Pritz", "race id should prefer the configured type id");
-    expect_true(creature->getCreatureClassId() == "Pritz", "creature class id should prefer the configured type id");
-    expect_true(creature->getRaceLabel() == "Pritz Footsoldier", "race label should prefer the configured label");
-    expect_true(creature->getCreatureClassLabel() == "Pritz Footsoldier",
-                "creature class label should prefer the configured label");
+    expect_true(creature->getArchetypeRaceId() == "Pritz", "archetype race id should prefer the configured type id");
+    expect_true(creature->getArchetypeClassId() == "Pritz", "archetype class id should prefer the configured type id");
+    expect_true(creature->getArchetypeRaceLabel() == "Pritz Footsoldier",
+                "archetype race label should prefer the configured label");
+    expect_true(creature->getArchetypeClassLabel() == "Pritz Footsoldier",
+                "archetype class label should prefer the configured label");
 
     auto without_type = std::make_shared<CCreature>();
     without_type->setName("nameless_horror");
     without_type->setLabel("Nameless Horror");
-    expect_true(without_type->getRaceId() == "nameless_horror",
-                "race id should fall back to name when type id is empty");
-    expect_true(without_type->getCreatureClassId() == "nameless_horror",
-                "creature class id should fall back to name when type id is empty");
-    expect_true(without_type->getRaceLabel() == "Nameless Horror",
-                "race label should prefer label even without a type id");
-    expect_true(without_type->getCreatureClassLabel() == "Nameless Horror",
-                "creature class label should prefer label even without a type id");
+    expect_true(without_type->getArchetypeRaceId() == "nameless_horror",
+                "archetype race id should fall back to name when type id is empty");
+    expect_true(without_type->getArchetypeClassId() == "nameless_horror",
+                "archetype class id should fall back to name when type id is empty");
+    expect_true(without_type->getArchetypeRaceLabel() == "Nameless Horror",
+                "archetype race label should prefer label even without a type id");
+    expect_true(without_type->getArchetypeClassLabel() == "Nameless Horror",
+                "archetype class label should prefer label even without a type id");
 
     auto identity_only = std::make_shared<CCreature>();
     identity_only->setTypeId("Gooby");
     identity_only->setName("the_dreaded_gooby");
-    expect_true(identity_only->getRaceLabel() == "Gooby", "race label should fall back to race id when label is empty");
-    expect_true(identity_only->getCreatureClassLabel() == "Gooby",
-                "creature class label should fall back to creature class id when label is empty");
+    expect_true(identity_only->getArchetypeRaceLabel() == "Gooby",
+                "archetype race label should fall back to archetype race id when label is empty");
+    expect_true(identity_only->getArchetypeClassLabel() == "Gooby",
+                "archetype class label should fall back to archetype class id when label is empty");
 
     auto bare = std::make_shared<CCreature>();
     bare->setName("lonely_actor");
-    expect_true(bare->getRaceLabel() == "lonely_actor",
-                "race label should fall back through race id to name when nothing else is set");
-    expect_true(bare->getCreatureClassLabel() == "lonely_actor",
-                "creature class label should fall back through creature class id to name when nothing else is set");
+    expect_true(bare->getArchetypeRaceLabel() == "lonely_actor",
+                "archetype race label should fall back through archetype race id to name when nothing else is set");
+    expect_true(bare->getArchetypeClassLabel() == "lonely_actor",
+                "archetype class label should fall back through archetype class id to name when nothing else is set");
 }
 
 void test_game_object_comparator_and_identity_sets_document_current_semantics() {

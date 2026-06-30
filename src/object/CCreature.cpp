@@ -753,7 +753,7 @@ std::shared_ptr<CStats> CCreature::getStats() {
     return ret;
 }
 
-std::string CCreature::getRaceId() {
+std::string CCreature::getArchetypeRaceId() {
     std::string typeId = getTypeId();
     if (!typeId.empty()) {
         return typeId;
@@ -761,7 +761,7 @@ std::string CCreature::getRaceId() {
     return getName();
 }
 
-std::string CCreature::getCreatureClassId() {
+std::string CCreature::getArchetypeClassId() {
     std::string typeId = getTypeId();
     if (!typeId.empty()) {
         return typeId;
@@ -769,18 +769,18 @@ std::string CCreature::getCreatureClassId() {
     return getName();
 }
 
-std::string CCreature::getRaceLabel() {
+std::string CCreature::getArchetypeRaceLabel() {
     std::string label = getLabel();
     if (!label.empty()) {
         return label;
     }
-    return getRaceId();
+    return getArchetypeRaceId();
 }
 
-std::string CCreature::getCreatureClassLabel() {
+std::string CCreature::getArchetypeClassLabel() {
     std::string label = getLabel();
     if (!label.empty()) {
         return label;
     }
-    return getCreatureClassId();
+    return getArchetypeClassId();
 }
