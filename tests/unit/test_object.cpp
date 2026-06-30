@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CTypes.h"
 #include "gui/CAnimation.h"
+#include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
@@ -70,6 +71,60 @@ class PropertyChangeEmitter : public CGameObject {
   public:
     void recordChangedProperty(const std::string &property_name) { recordDirectPropertyChanged(property_name); }
 };
+
+size_t count_substring(const std::string &haystack, const std::string &needle) {
+    if (needle.empty()) {
+        return 0;
+    }
+    size_t count = 0;
+    size_t pos = 0;
+    while ((pos = haystack.find(needle, pos)) != std::string::npos) {
+        ++count;
+        pos += needle.size();
+    }
+    return count;
+}
+
+void test_tooltip_handler_builds_labels_descriptions_and_item_bonuses() {
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CItem, CMapObject, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+
+    auto plain = std::make_shared<CGameObject>();
+    plain->setType("CGameObject");
+    plain->setLabel("Ancient Rune");
+    plain->setDescription("It hums faintly.");
+
+    auto plain_tooltip = CTooltipHandler::buildTooltip(plain);
+    expect_true(plain_tooltip.find("Ancient Rune") != std::string::npos, "tooltip should include the object label");
+    expect_true(plain_tooltip.find("It hums faintly.") != std::string::npos,
+                "tooltip should include the object description");
+    expect_true(plain_tooltip.find("Ancient Rune") < plain_tooltip.find("It hums faintly."),
+                "tooltip should list the label before the description");
+    expect_true(count_substring(plain_tooltip, "It hums faintly.") == 1,
+                "non-item tooltips should include the description exactly once");
+
+    auto item = std::make_shared<CItem>();
+    item->setType("CItem");
+    item->setLabel("Mossblade");
+    item->setDescription("A blade wrapped in moss.");
+
+    auto bonus = std::make_shared<CStats>();
+    bonus->setStrength(5);
+    bonus->setCrit(-3);
+    bonus->setAgility(0);
+    item->setBonus(bonus);
+
+    auto item_tooltip = CTooltipHandler::buildTooltip(item);
+    expect_true(item_tooltip.find("Mossblade") != std::string::npos, "item tooltip should include the item label");
+    expect_true(item_tooltip.find(": 5") != std::string::npos,
+                "item tooltip should list positive integer bonuses with their value");
+    expect_true(item_tooltip.find("-3") == std::string::npos,
+                "item tooltip should hide non-positive bonuses such as negative crit");
+    expect_true(count_substring(item_tooltip, "A blade wrapped in moss.") == 1,
+                "item tooltips should include the description exactly once after deduplication");
+}
 
 void drain_event_loop() {
     auto loop = vstd::event_loop<>::instance();
@@ -781,6 +836,7 @@ void test_game_object_named_comparison_helpers_cover_explicit_semantics() {
 } // namespace
 
 int main() {
+    test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
     test_player_quest_setters_filter_nulls_and_skip_duplicates();
