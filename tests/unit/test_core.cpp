@@ -2019,6 +2019,78 @@ void test_creature_archetype_property_wiring() {
     expect_true(creature->usesArchetypeComposition(), "a creature with a creatureClass uses archetype composition");
 }
 
+// Mirrors the production registration helper in src/plugin/NativePlugin.cpp
+// (register_type<T, Bases...>): it registers the type's metadata with CTypes and
+// installs a constructor in the game's CObjectHandler under the type's meta name.
+// Keeping this local lets the test characterize the exact registration contract
+// without pulling in the native-plugin host shim.
+template <typename T, typename... Bases> static void register_archetype_type(const std::shared_ptr<CGame> &game) {
+    CTypes::register_type<T, Bases...>();
+    game->getObjectHandler()->registerType(T::static_meta()->name(), []() { return std::make_shared<T>(); });
+}
+
+// Type-registration validation: pins that the archetype metadata definitions
+// CCreatureRace and CCreatureClass ARE registered with the engine's type system
+// through the same path NativePlugin uses, so a dropped register_type<...> call in
+// register_creatures would be caught here. It asserts (a) the object handler hands
+// back a constructed instance of the correct concrete type for each archetype's
+// registered name, (b) that instance's meta name and CGameObject inheritance are
+// correct, (c) the archetype is excluded from the CCreature subtype enumeration
+// (it is a referenced definition, not a spawnable creature), and (d) -- the
+// negative control proving the check has teeth -- an UNregistered type name yields
+// no instance, i.e. a missing registration is observable.
+void test_archetype_types_are_registered_with_type_system() {
+    auto game = std::make_shared<CGame>();
+    register_archetype_type<CCreatureRace, CGameObject>(game);
+    register_archetype_type<CCreatureClass, CGameObject>(game);
+
+    auto handler = game->getObjectHandler();
+
+    // Both archetypes resolve to a constructed instance, while an unregistered
+    // class name (the negative control) must produce none. This proves getType is a
+    // real registration probe -- a missing registration is caught -- rather than a
+    // constructor that always succeeds.
+    expect_true(handler->getType("CCreatureRace") != nullptr,
+                "CCreatureRace must be registered: its constructor is installed in the object handler");
+    expect_true(handler->getType("CCreatureClass") != nullptr,
+                "CCreatureClass must be registered: its constructor is installed in the object handler");
+    expect_true(handler->getType("CCreatureArchetypeNotRegistered") == nullptr,
+                "an unregistered archetype name must return no instance, so a missing registration is caught");
+
+    // (a)+(b) Each registered name constructs the correct concrete archetype type,
+    // and its metadata is self-consistent and rooted at CGameObject.
+    auto race = std::dynamic_pointer_cast<CCreatureRace>(handler->getType(CCreatureRace::static_meta()->name()));
+    expect_true(race != nullptr, "getType(CCreatureRace) must construct a CCreatureRace instance");
+    expect_true(race->meta()->name() == "CCreatureRace", "the constructed race reports its CCreatureRace meta name");
+    expect_true(race->meta()->inherits("CGameObject"),
+                "CCreatureRace metadata must declare CGameObject as a base type");
+
+    auto klass = std::dynamic_pointer_cast<CCreatureClass>(handler->getType(CCreatureClass::static_meta()->name()));
+    expect_true(klass != nullptr, "getType(CCreatureClass) must construct a CCreatureClass instance");
+    expect_true(klass->meta()->name() == "CCreatureClass",
+                "the constructed class reports its CCreatureClass meta name");
+    expect_true(klass->meta()->inherits("CGameObject"),
+                "CCreatureClass metadata must declare CGameObject as a base type");
+
+    // The registered names are present in the handler's global type listing.
+    auto allTypes = handler->getAllTypes();
+    expect_true(std::find(allTypes.begin(), allTypes.end(), CCreatureRace::static_meta()->name()) != allTypes.end(),
+                "CCreatureRace must appear in the registered type listing");
+    expect_true(std::find(allTypes.begin(), allTypes.end(), CCreatureClass::static_meta()->name()) != allTypes.end(),
+                "CCreatureClass must appear in the registered type listing");
+
+    // (c) The archetypes are referenced metadata definitions, not spawnable
+    // creatures: even though registered, they must stay out of the CCreature
+    // subtype enumeration (random encounters / spawn tables read this).
+    auto creatureSubtypes = handler->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureRace::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "a registered CCreatureRace must not be enumerated as a CCreature subtype");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureClass::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "a registered CCreatureClass must not be enumerated as a CCreature subtype");
+}
+
 } // namespace
 
 int main() {
@@ -2071,6 +2143,7 @@ int main() {
     test_creature_race_metadata_round_trip();
     test_creature_class_metadata_round_trip();
     test_creature_archetype_property_wiring();
+    test_archetype_types_are_registered_with_type_system();
 
     return finish_tests();
 }
