@@ -1,0 +1,717 @@
+{
+  "meta": {
+    "purpose": "Prompt catalog for generating the unique sprites flagged by the codebase art audit.",
+    "provider": "openai:gpt-image-1",
+    "request_defaults": {
+      "model": "gpt-image-1",
+      "size": "1024x1024",
+      "background": "transparent",
+      "quality": "high",
+      "n": 1
+    },
+    "post_processing": [
+      "ensure RGBA transparent background (gpt-image-1 background=transparent, else rembg)",
+      "autocrop to content",
+      "keep 1024x1024 (npc portraits may downscale to 512)",
+      "slight desaturate/contrast to match the grim palette"
+    ],
+    "wiring_after_generation": [
+      "drop each PNG at its target_path",
+      "set each listed object's config `animation` to the entry's `animation` value",
+      "add a configure_file(res/images/<path> images/<path> COPYONLY) line in CMakeLists.txt for each new file",
+      "run python3 scripts/validate_content.py to confirm no object points at a missing image"
+    ],
+    "style_suffix_monster_item": "grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow",
+    "style_suffix_npc": "grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border",
+    "style_suffix_structure": "dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border",
+    "count": 57
+  },
+  "objects": [
+    {
+      "id": "thenameless",
+      "kind": "boss",
+      "for_objects": [
+        "theNameless (vhulmarn)"
+      ],
+      "borrows_now": "images/monsters/gooby",
+      "target_path": "res/images/monsters/thenameless.png",
+      "animation": "images/monsters/thenameless",
+      "size": "1024x1024",
+      "prompt": "a colossal amorphous Lovecraftian shoggoth rising from a black tarn, glistening protoplasm studded with countless eyes and half-formed mouths, dripping brine \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "thecrawlingchaos",
+      "kind": "boss",
+      "for_objects": [
+        "theCrawlingChaos (kadath)"
+      ],
+      "borrows_now": "images/monsters/gooby",
+      "target_path": "res/images/monsters/thecrawlingchaos.png",
+      "animation": "images/monsters/thecrawlingchaos",
+      "size": "1024x1024",
+      "prompt": "Nyarlathotep the Crawling Chaos, a tall dark pharaonic figure with a pleasant ancient face coming apart into writhing shadow and starless void, onyx regalia \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "thebarrowwarlord",
+      "kind": "boss",
+      "for_objects": [
+        "theBarrowWarlord (sunderedmarch)"
+      ],
+      "borrows_now": "images/monsters/gooby",
+      "target_path": "res/images/monsters/thebarrowwarlord.png",
+      "animation": "images/monsters/thebarrowwarlord",
+      "size": "1024x1024",
+      "prompt": "a towering crowned undead barrow-warlord in corroded battle-plate, black-iron grave-crown, wielding a notched greatsword, grave-dirt and cold blue witch-fire \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "theninefoldking",
+      "kind": "boss",
+      "for_objects": [
+        "theNinefoldKing (ninemarches)"
+      ],
+      "borrows_now": "images/monsters/gooby",
+      "target_path": "res/images/monsters/theninefoldking.png",
+      "animation": "images/monsters/theninefoldking",
+      "size": "1024x1024",
+      "prompt": "the Crowned God, a colossal risen dead god-king wearing nine nested black-iron circlets set with plague-pearls, enthroned in cyclopean ruin, aura of grave-cold majesty \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "tidehierophant",
+      "kind": "elite",
+      "for_objects": [
+        "tideHierophant (vhulmarn)"
+      ],
+      "borrows_now": "images/monsters/cult_leader",
+      "target_path": "res/images/monsters/tidehierophant.png",
+      "animation": "images/monsters/tidehierophant",
+      "size": "1024x1024",
+      "prompt": "a drowned Deep-One high priest of Dagon, fish-frog humanoid in barnacled golden vestments and a tall tiara of exotic gold, webbed clawed hands, wet grey-green skin \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "highpriestofleng",
+      "kind": "elite",
+      "for_objects": [
+        "highPriestOfLeng (kadath)"
+      ],
+      "borrows_now": "images/monsters/cult_leader",
+      "target_path": "res/images/monsters/highpriestofleng.png",
+      "animation": "images/monsters/highpriestofleng",
+      "size": "1024x1024",
+      "prompt": "the High-Priest Not To Be Described, a robed figure of the plateau of Leng in a wide yellow silk mask and turban that hides something wrong, holding a bone crook \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "barrowknight",
+      "kind": "elite",
+      "for_objects": [
+        "barrowKnight (sunderedmarch)",
+        "barrowKnight (ninemarches)"
+      ],
+      "borrows_now": "images/monsters/cult_leader",
+      "target_path": "res/images/monsters/barrowknight.png",
+      "animation": "images/monsters/barrowknight",
+      "size": "1024x1024",
+      "prompt": "an undead barrow-knight in dented ancient plate armor over withered grave-flesh, tattered heraldic tabard, sword and shield, cold blue eye-light in the helm \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "citadelpriest",
+      "kind": "elite",
+      "for_objects": [
+        "citadelPriest / citadelGuard (ninemarches)"
+      ],
+      "borrows_now": "images/monsters/cult_leader",
+      "target_path": "res/images/monsters/citadelpriest.png",
+      "animation": "images/monsters/citadelpriest",
+      "size": "1024x1024",
+      "prompt": "a priest of the Ninefold Crowning in black-and-ash cult robes, spiral brand of Marumi Baso, holding a grave-crown aloft, gaunt fanatic face \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "deepspawn",
+      "kind": "monster",
+      "for_objects": [
+        "deepSpawn (vhulmarn, ninemarches)"
+      ],
+      "borrows_now": "images/monsters/octobogz",
+      "target_path": "res/images/monsters/deepspawn.png",
+      "animation": "images/monsters/deepspawn",
+      "size": "1024x1024",
+      "prompt": "a Deep-One drone, hunched fish-frog humanoid with bulging unblinking eyes, gills, webbed claws and slick grey-green scales, dripping seawater \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "nightgaunt",
+      "kind": "monster",
+      "for_objects": [
+        "nightGaunt (kadath)"
+      ],
+      "borrows_now": "images/monsters/octobogz",
+      "target_path": "res/images/monsters/nightgaunt.png",
+      "animation": "images/monsters/nightgaunt",
+      "size": "1024x1024",
+      "prompt": "a Lovecraftian night-gaunt, faceless smooth black rubbery humanoid with bat wings, barbed tail and clawed hands, silent and cold \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "fenghoul",
+      "kind": "monster",
+      "for_objects": [
+        "fenGhoul (sunderedmarch, ninemarches)"
+      ],
+      "borrows_now": "images/monsters/octobogz",
+      "target_path": "res/images/monsters/fenghoul.png",
+      "animation": "images/monsters/fenghoul",
+      "size": "1024x1024",
+      "prompt": "a plague-fen ghoul, drowned soldier-corpse risen from a mire, waterlogged rotting flesh, tattered uniform, weed-tangled, reaching with grey hands \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "lengman",
+      "kind": "monster",
+      "for_objects": [
+        "lengMan (kadath)"
+      ],
+      "borrows_now": "images/monsters/cultist",
+      "target_path": "res/images/monsters/lengman.png",
+      "animation": "images/monsters/lengman",
+      "size": "1024x1024",
+      "prompt": "an almost-human man of Leng, turbaned and masked in yellow silk, hooved feet and horns hidden under robes, unsettling wrongness \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "ashcultist",
+      "kind": "monster",
+      "for_objects": [
+        "ashCultist (ninemarches)"
+      ],
+      "borrows_now": "images/monsters/cultist",
+      "target_path": "res/images/monsters/ashcultist.png",
+      "animation": "images/monsters/ashcultist",
+      "size": "1024x1024",
+      "prompt": "an ash-smeared plague-cultist of Marumi Baso in charred grey robes, spiral brand, ember-lit censer, gaunt zealot \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "plaguecultist",
+      "kind": "monster",
+      "for_objects": [
+        "plagueCultist (sunderedmarch)"
+      ],
+      "borrows_now": "images/monsters/cultist",
+      "target_path": "res/images/monsters/plaguecultist.png",
+      "animation": "images/monsters/plaguecultist",
+      "size": "1024x1024",
+      "prompt": "a plague-cultist in stained bandage-wrappings and a beaked plague-doctor mask, spiral cult brand, rusty blade \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "drownedhybrid",
+      "kind": "monster",
+      "for_objects": [
+        "drownedHybrid (vhulmarn)"
+      ],
+      "borrows_now": "images/monsters/cultist",
+      "target_path": "res/images/monsters/drownedhybrid.png",
+      "animation": "images/monsters/drownedhybrid",
+      "size": "1024x1024",
+      "prompt": "a half-turned Innsmouth-look hybrid townsman, human face with bulging fishlike eyes and gill-slits, sagging wet skin, a townsman's coat over changing flesh \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "coldhorror",
+      "kind": "monster",
+      "for_objects": [
+        "coldHorror (ninemarches)"
+      ],
+      "borrows_now": "images/monsters/goblin_thief",
+      "target_path": "res/images/monsters/coldhorror.png",
+      "animation": "images/monsters/coldhorror",
+      "size": "1024x1024",
+      "prompt": "a cold-reach horror, gangling frost-rimed creature of the snow waste, pale hide, too-long limbs, breath of ice \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "lengspider",
+      "kind": "monster",
+      "for_objects": [
+        "lengSpider (kadath)"
+      ],
+      "borrows_now": "images/monsters/pritz",
+      "target_path": "res/images/monsters/lengspider.png",
+      "animation": "images/monsters/lengspider",
+      "size": "1024x1024",
+      "prompt": "a giant pale purple Spider of Leng, bloated venom-dripping arachnid with too many eyes clambering down a cold crag \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "elderthing",
+      "kind": "monster",
+      "for_objects": [
+        "elderThing (kadath)"
+      ],
+      "borrows_now": "images/monsters/pritzmage",
+      "target_path": "res/images/monsters/elderthing.png",
+      "animation": "images/monsters/elderthing",
+      "size": "1024x1024",
+      "prompt": "an Elder Thing from At the Mountains of Madness, barrel-shaped star-headed being with five ridged wings, feathery arms and starfish head, ancient and alien \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "marchraider",
+      "kind": "monster",
+      "for_objects": [
+        "fieldRaider (ninemarches)",
+        "marchRaider (sunderedmarch)"
+      ],
+      "borrows_now": "images/monsters/pritz",
+      "target_path": "res/images/monsters/marchraider.png",
+      "animation": "images/monsters/marchraider",
+      "size": "1024x1024",
+      "prompt": "a ragged human march-raider brigand in patched leather and a rusted helm, wielding a notched cleaver, desperate and cruel \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "ninefoldcrown",
+      "kind": "item",
+      "for_objects": [
+        "ninefoldCrown (ninemarches)"
+      ],
+      "borrows_now": "images/items/helmets/crownofnightmares",
+      "target_path": "res/images/items/helmets/ninefoldcrown.png",
+      "animation": "images/items/helmets/ninefoldcrown",
+      "size": "1024x1024",
+      "prompt": "the Ninefold Crown, a grave-crown of nine nested black-iron circlets set with pale plague-pearls, cold and cursed, floating item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "barrowcrown",
+      "kind": "item",
+      "for_objects": [
+        "barrowCrown (sunderedmarch)"
+      ],
+      "borrows_now": "images/items/helmets/crownofnightmares",
+      "target_path": "res/images/items/helmets/barrowcrown.png",
+      "animation": "images/items/helmets/barrowcrown",
+      "size": "1024x1024",
+      "prompt": "the Crown of the Barrow-Warlord, a corroded black-iron war-crown set with plague-pearls and grave-dirt, cursed item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "tiaraofthedrownedtithe",
+      "kind": "item",
+      "for_objects": [
+        "tiaraOfTheDrownedTithe (vhulmarn)"
+      ],
+      "borrows_now": "images/items/helmets/crownofnightmares",
+      "target_path": "res/images/items/helmets/tiaraofthedrownedtithe.png",
+      "animation": "images/items/helmets/tiaraofthedrownedtithe",
+      "size": "1024x1024",
+      "prompt": "a Deep-One gold tiara of the Esoteric Order of Dagon, alien exotic goldwork encrusted with barnacles and pearls, cold and cursed, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "onyxsignet",
+      "kind": "item",
+      "for_objects": [
+        "onyxSignetOfNyarlathotep (kadath)"
+      ],
+      "borrows_now": "images/items/helmets/crownofnightmares",
+      "target_path": "res/images/items/helmets/onyxsignet.png",
+      "animation": "images/items/helmets/onyxsignet",
+      "size": "1024x1024",
+      "prompt": "the Onyx Signet of the Crawling Chaos, a black onyx circlet pressed with the seal of Nyarlathotep, radiating outer-void cold, cursed item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "morriganescharm",
+      "kind": "item",
+      "for_objects": [
+        "morriganesCharm (ninemarches)"
+      ],
+      "borrows_now": "images/items/helmets/crownofnightmares",
+      "target_path": "res/images/items/helmets/morriganescharm.png",
+      "animation": "images/items/helmets/morriganescharm",
+      "size": "1024x1024",
+      "prompt": "Morrigane's fen-charm, a witch's circlet of bog-oak, silver, and a single seeing green stone, protective not cursed, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "reaverblade",
+      "kind": "item",
+      "for_objects": [
+        "reaverBlade (sunderedmarch)"
+      ],
+      "borrows_now": "images/items/weapons/bladeofdarkdreams",
+      "target_path": "res/images/items/weapons/reaverblade.png",
+      "animation": "images/items/weapons/reaverblade",
+      "size": "1024x1024",
+      "prompt": "the Reaver of the March, a notched heavy cavalry saber, ash-blackened but keen, worn leather grip, weapon item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "corvynsblade",
+      "kind": "item",
+      "for_objects": [
+        "corvynsBlade (ninemarches)"
+      ],
+      "borrows_now": "images/items/weapons/shadowblade",
+      "target_path": "res/images/items/weapons/corvynsblade.png",
+      "animation": "images/items/weapons/corvynsblade",
+      "size": "1024x1024",
+      "prompt": "Corvyn's Turncoat Blade, a lean black sellsword's longsword with a scarred crossguard and a faint bloodstain, weapon item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "aegisofhalda",
+      "kind": "item",
+      "for_objects": [
+        "aegisOfHalda (ninemarches)"
+      ],
+      "borrows_now": "images/items/armors/platearmor",
+      "target_path": "res/images/items/armors/aegisofhalda.png",
+      "animation": "images/items/armors/aegisofhalda",
+      "size": "1024x1024",
+      "prompt": "the Aegis of Ser Halda, a dented but proud suit of oath-plate armor with a faded heraldic sigil, steadfast steel, armor item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "ironkey",
+      "kind": "item",
+      "for_objects": [
+        "ironKey (ninemarches, sunderedmarch)"
+      ],
+      "borrows_now": "images/item",
+      "target_path": "res/images/items/keys/ironkey.png",
+      "animation": "images/items/keys/ironkey",
+      "size": "1024x1024",
+      "prompt": "a long cold iron key as long as a forearm, heavy antique ward, march-gate key, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "bonekey",
+      "kind": "item",
+      "for_objects": [
+        "boneKey (ninemarches)"
+      ],
+      "borrows_now": "images/item",
+      "target_path": "res/images/items/keys/bonekey.png",
+      "animation": "images/items/keys/bonekey",
+      "size": "1024x1024",
+      "prompt": "a key carved from a march-lord's yellowed thighbone, rune-scratched, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "brasskey",
+      "kind": "item",
+      "for_objects": [
+        "brassKey (ninemarches)"
+      ],
+      "borrows_now": "images/item",
+      "target_path": "res/images/items/keys/brasskey.png",
+      "animation": "images/items/keys/brasskey",
+      "size": "1024x1024",
+      "prompt": "a green-corroded ornate brass key with a spiral bow, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "warbanner",
+      "kind": "item",
+      "for_objects": [
+        "warBanner (sunderedmarch)"
+      ],
+      "borrows_now": "images/item",
+      "target_path": "res/images/items/warbanner.png",
+      "animation": "images/items/warbanner",
+      "size": "1024x1024",
+      "prompt": "a rotted furled war-banner on a broken pole, drowned names sewn along its tattered hem, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "fenreliquary",
+      "kind": "item",
+      "for_objects": [
+        "fenRelic (sunderedmarch companion)"
+      ],
+      "borrows_now": "images/item",
+      "target_path": "res/images/items/fenreliquary.png",
+      "animation": "images/items/fenreliquary",
+      "size": "1024x1024",
+      "prompt": "a fen-drowned family reliquary, tarnished silver box strung with weed and a single wet pearl, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "sellswordseal",
+      "kind": "item",
+      "for_objects": [
+        "ashRelic (ninemarches companion)"
+      ],
+      "borrows_now": "images/item",
+      "target_path": "res/images/items/sellswordseal.png",
+      "animation": "images/items/sellswordseal",
+      "size": "1024x1024",
+      "prompt": "a mercenary company's signet seal, a scorched brass sigil-stamp on a chain, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "raiderledger",
+      "kind": "item",
+      "for_objects": [
+        "banditLedger (ninemarches)"
+      ],
+      "borrows_now": "images/items/scroll",
+      "target_path": "res/images/items/raiderledger.png",
+      "animation": "images/items/raiderledger",
+      "size": "1024x1024",
+      "prompt": "a raider's blood-stained leather ledger crammed with names, worn and dog-eared, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "preciousamulet",
+      "kind": "item",
+      "for_objects": [
+        "preciousAmulet (nouraajd)"
+      ],
+      "borrows_now": "images/item",
+      "target_path": "res/images/items/preciousamulet.png",
+      "animation": "images/items/preciousamulet",
+      "size": "1024x1024",
+      "prompt": "a weathered family talisman amulet on a worn cord, tarnished silver with a faded prayer-engraving, item icon \u2014 grim painterly dark-fantasy video-game sprite, single subject centered and filling the frame, dramatic low-key chiaroscuro lighting with cold rim-light, muted desaturated ash-and-iron palette, highly detailed, ominous, plain fully transparent background, no text, no logo, no border, no ground shadow"
+    },
+    {
+      "id": "serhalda",
+      "kind": "npc",
+      "for_objects": [
+        "companionKnight = Ser Halda (ninemarches)"
+      ],
+      "borrows_now": "images/npc/questGiver",
+      "target_path": "res/images/npc/serhalda.png",
+      "animation": "images/npc/serhalda",
+      "size": "1024x1024",
+      "prompt": "Ser Halda, a weary disgraced woman knight in dented oath-plate, close-cropped grey-streaked hair, hard honest scarred face \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "morrigane",
+      "kind": "npc",
+      "for_objects": [
+        "companionWitch = Morrigane (ninemarches)"
+      ],
+      "borrows_now": "images/npc/oldWoman",
+      "target_path": "res/images/npc/morrigane.png",
+      "animation": "images/npc/morrigane",
+      "size": "1024x1024",
+      "prompt": "Morrigane, a young fen-witch in mud-hemmed robes and bog-oak charms, dark hair, pale watchful face, cauldron-smoke \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "corvyn",
+      "kind": "npc",
+      "for_objects": [
+        "companionSellsword = Corvyn (ninemarches)"
+      ],
+      "borrows_now": "images/npc/questGiver",
+      "target_path": "res/images/npc/corvyn.png",
+      "animation": "images/npc/corvyn",
+      "size": "1024x1024",
+      "prompt": "Corvyn, a lean turncoat sellsword with a scarred cynical grin, stubble, worn leathers, a black blade over his shoulder \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "wardenofgravewatch",
+      "kind": "npc",
+      "for_objects": [
+        "mayorHall = Warden (ninemarches)"
+      ],
+      "borrows_now": "images/npc/questGiver",
+      "target_path": "res/images/npc/wardenofgravewatch.png",
+      "animation": "images/npc/wardenofgravewatch",
+      "size": "1024x1024",
+      "prompt": "the Warden of Gravewatch, a stern middle-aged frontier commander in a worn officer's coat, map-pins and grey hair, tired authority \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "tavernkeeper",
+      "kind": "npc",
+      "for_objects": [
+        "gravewatchTavern (ninemarches)"
+      ],
+      "borrows_now": "images/npc/oldWoman",
+      "target_path": "res/images/npc/tavernkeeper.png",
+      "animation": "images/npc/tavernkeeper",
+      "size": "1024x1024",
+      "prompt": "a weathered frontier tavern-keeper woman drying a tankard, apron, knowing eyes, low lamplight \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "seerofthepyre",
+      "kind": "npc",
+      "for_objects": [
+        "seerHut = the Seer (sunderedmarch)"
+      ],
+      "borrows_now": "images/npc/questGiver",
+      "target_path": "res/images/npc/seerofthepyre.png",
+      "animation": "images/npc/seerofthepyre",
+      "size": "1024x1024",
+      "prompt": "the Seer of the Pyre-Waste, a veiled soothsayer wreathed in ash-smoke with a set of tooth-weighted scales, hidden face \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "oldtollman",
+      "kind": "npc",
+      "for_objects": [
+        "oldTollman (vhulmarn)"
+      ],
+      "borrows_now": "images/npc/questGiver",
+      "target_path": "res/images/npc/oldtollman.png",
+      "animation": "images/npc/oldtollman",
+      "size": "1024x1024",
+      "prompt": "the old drunk tollman, a wind-burned coastal prophet clutching a black bottle, refusing to look at the sea, haunted eyes \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "frozendreamer",
+      "kind": "npc",
+      "for_objects": [
+        "dreamerGuide (kadath)"
+      ],
+      "borrows_now": "images/npc/questGiver",
+      "target_path": "res/images/npc/frozendreamer.png",
+      "animation": "images/npc/frozendreamer",
+      "size": "1024x1024",
+      "prompt": "a frozen dreamer wrapped in steaming furs on the cold waste, frost-white staring eyes, a guide half-lost to dream \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "markedwidow",
+      "kind": "npc",
+      "for_objects": [
+        "markedWidow (vhulmarn)"
+      ],
+      "borrows_now": "images/npc/oldWoman",
+      "target_path": "res/images/npc/markedwidow.png",
+      "animation": "images/npc/markedwidow",
+      "size": "1024x1024",
+      "prompt": "a half-turned widow in a mourning shawl, human face beginning to show the Innsmouth look, too-wide eyes, unnaturally still \u2014 grim dark-fantasy character portrait, head and shoulders, weathered realistic features, moody low-key lighting, muted palette, painterly, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "obelisk",
+      "kind": "structure",
+      "for_objects": [
+        "all obelisks (ninemarches, sunderedmarch)"
+      ],
+      "borrows_now": "images/ambient/gravestone_cluster",
+      "target_path": "res/images/structures/obelisk.png",
+      "animation": "images/structures/obelisk",
+      "size": "1024x1024",
+      "prompt": "a tall weathered black basalt obelisk carved with glowing barrow-sigils, standing on cracked ground \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "marchgate",
+      "kind": "structure",
+      "for_objects": [
+        "ironGate/boneGate/brassGate, borderGate"
+      ],
+      "borrows_now": "images/misc/closed_door",
+      "target_path": "res/images/structures/marchgate.png",
+      "animation": "images/structures/marchgate",
+      "size": "1024x1024",
+      "prompt": "a barred iron march-gate set in a stone pass, heavy padlocked portcullis, grim and impassable \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "monolith",
+      "kind": "structure",
+      "for_objects": [
+        "all monoliths (ninemarches, sunderedmarch)"
+      ],
+      "borrows_now": "images/ambient/stone_well",
+      "target_path": "res/images/structures/monolith.png",
+      "animation": "images/structures/monolith",
+      "size": "1024x1024",
+      "prompt": "a twinned monolith of polished black volcanic glass humming with teleport-energy, faint runes \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "digsite",
+      "kind": "structure",
+      "for_objects": [
+        "digSite (ninemarches, sunderedmarch)"
+      ],
+      "borrows_now": "images/ambient/rubble_and_skulls",
+      "target_path": "res/images/structures/digsite.png",
+      "animation": "images/structures/digsite",
+      "size": "1024x1024",
+      "prompt": "a fresh grave-dig in cursed ground, overturned barrow-earth, protruding bones and a half-unearthed crown, spades \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "keymastercache",
+      "kind": "structure",
+      "for_objects": [
+        "keymaster caches"
+      ],
+      "borrows_now": "images/misc/chest",
+      "target_path": "res/images/structures/keymastercache.png",
+      "animation": "images/structures/keymastercache",
+      "size": "1024x1024",
+      "prompt": "a dead March-Keeper's cache, a corpse-clutched iron chest with a ring of keys spilling out \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "relichcache",
+      "kind": "structure",
+      "for_objects": [
+        "item/banner/artifact caches"
+      ],
+      "borrows_now": "images/misc/chest",
+      "target_path": "res/images/structures/relichcache.png",
+      "animation": "images/structures/relichcache",
+      "size": "1024x1024",
+      "prompt": "a guarded treasure cache, an ancient iron-bound chest half-buried in ash and bone \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "learningstone",
+      "kind": "structure",
+      "for_objects": [
+        "learningStone (ninemarches, sunderedmarch)"
+      ],
+      "borrows_now": "images/ambient/stone_shrine",
+      "target_path": "res/images/structures/learningstone.png",
+      "animation": "images/structures/learningstone",
+      "size": "1024x1024",
+      "prompt": "a weathered standing learning-stone cut with old campaign drill-marks and faint glowing runes \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "witchhut",
+      "kind": "structure",
+      "for_objects": [
+        "witchHut (ninemarches)"
+      ],
+      "borrows_now": "images/ambient/campfire_cauldron",
+      "target_path": "res/images/structures/witchhut.png",
+      "animation": "images/structures/witchhut",
+      "size": "1024x1024",
+      "prompt": "a crooked fen witch-hut on stilts over black water, glowing cauldron-smoke, hung charms \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "goldmine",
+      "kind": "structure",
+      "for_objects": [
+        "goldMine (ninemarches)"
+      ],
+      "borrows_now": "images/buildings/cave",
+      "target_path": "res/images/structures/goldmine.png",
+      "animation": "images/structures/goldmine",
+      "size": "1024x1024",
+      "prompt": "a grim grave-gold mine entrance in a cliff, timber shoring, ore-cart and skulls, cult-worked \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "tidebell",
+      "kind": "structure",
+      "for_objects": [
+        "tideBell (vhulmarn)"
+      ],
+      "borrows_now": "images/ambient/street_lantern",
+      "target_path": "res/images/structures/tidebell.png",
+      "animation": "images/structures/tidebell",
+      "size": "1024x1024",
+      "prompt": "a drowned bell hung over a causeway, tarred black rope trailing into dark water \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "onyxthrone",
+      "kind": "structure",
+      "for_objects": [
+        "onyxThrone (kadath)"
+      ],
+      "borrows_now": "images/ambient/brazier",
+      "target_path": "res/images/structures/onyxthrone.png",
+      "animation": "images/structures/onyxthrone",
+      "size": "1024x1024",
+      "prompt": "an empty onyx throne of the Great Ones atop Kadath, black stone, cold and waiting \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "dreamgate",
+      "kind": "structure",
+      "for_objects": [
+        "dreamGate (kadath)"
+      ],
+      "borrows_now": "images/ambient/stone_shrine",
+      "target_path": "res/images/structures/dreamgate.png",
+      "animation": "images/structures/dreamgate",
+      "size": "1024x1024",
+      "prompt": "a ring of standing stones framing a shimmering gate into deeper dream, cold light \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    },
+    {
+      "id": "altarthreshold",
+      "kind": "structure",
+      "for_objects": [
+        "altarThreshold (vhulmarn)"
+      ],
+      "borrows_now": "images/ambient/stone_shrine",
+      "target_path": "res/images/structures/altarthreshold.png",
+      "animation": "images/structures/altarthreshold",
+      "size": "1024x1024",
+      "prompt": "a cyclopean drowned altar of the Order of Dagon offering a cold gold tiara, non-euclidean stone \u2014 dark-fantasy map structure sprite seen from a 3/4 top-down angle so it sits on a tile map, single object centered, weathered and grim, moody lighting, plain fully transparent background, no text, no border"
+    }
+  ]
+}
