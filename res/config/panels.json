@@ -31,6 +31,8 @@
         "class": "CMapStringString",
         "properties": {
           "values": {
+            "Class": "getPlayerClassId",
+            "Race": "getRaceId",
             "Level": "getLevel",
             "Experience": "getExp",
             "Gold": "getGold",
