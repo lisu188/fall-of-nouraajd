@@ -1033,8 +1033,16 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGa
 
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
                                                        std::string player, const std::string &raceId) {
-    std::shared_ptr<CMap> map = loadNewMap(game, name);
+    // Validate the player template and (for a non-empty raceId) the race BEFORE loadNewMap replaces
+    // the active map. If the race id cannot be resolved, keep the current map untouched and return it
+    // so the caller's setMap re-set is a no-op instead of attaching a partial player onto a new map.
     std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
+    if (!ptr) {
+        vstd::logger::warning("Keeping the active map unchanged; player could not be created for:", name);
+        return game->getMap();
+    }
+
+    std::shared_ptr<CMap> map = loadNewMap(game, name);
     map->setPlayer(ptr);
 
     return map;
@@ -1043,17 +1051,24 @@ std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGa
 // TODO: move to map, set player as well as triggers
 std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player,
                                                   const std::string &raceId) {
-    auto ptr = game->createObject<CPlayer>(std::move(player));
-
-    // An empty raceId means "no override": preserve the template's default race so the existing
-    // three-argument loaders behave exactly as before. A non-empty raceId is resolved against the
-    // object handler; because no race content ships in the repo yet, an unknown id resolves to a
-    // null CCreatureRace, which we deliberately ignore rather than attach (and never crash on).
-    if (ptr && !raceId.empty()) {
-        ptr->setRaceId(raceId);
-        if (auto race = game->createObject<CCreatureRace>(raceId)) {
-            ptr->setRace(std::move(race));
+    // Resolve and type-check the requested race BEFORE the caller replaces the active map. An empty
+    // raceId means "no override": preserve the template's default race so the existing three-argument
+    // loaders behave exactly as before. A non-empty raceId must resolve to a CCreatureRace; if it
+    // does not (unknown id or an id that maps to a non-race object), we log the exact id and return
+    // null so the caller can abort without switching maps or attaching a partial player.
+    std::shared_ptr<CCreatureRace> race;
+    if (!raceId.empty()) {
+        race = game->createObject<CCreatureRace>(raceId);
+        if (!race) {
+            vstd::logger::warning("Rejected player creation for unresolved race id:", raceId);
+            return nullptr;
         }
+    }
+
+    auto ptr = game->createObject<CPlayer>(std::move(player));
+    if (ptr && race) {
+        ptr->setRaceId(raceId);
+        ptr->setRace(std::move(race));
     }
 
     return ptr;
@@ -1065,8 +1080,15 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<
 
 std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
                                                           const std::string &raceId) {
-    std::shared_ptr<CMap> map = CRandomMapGenerator::loadRandomMap(game);
+    // Validate the player template and (for a non-empty raceId) the race before generating and
+    // installing the random map. On an unresolved race id, keep the current map untouched.
     std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
+    if (!ptr) {
+        vstd::logger::warning("Keeping the active map unchanged; player could not be created for random map");
+        return game->getMap();
+    }
+
+    std::shared_ptr<CMap> map = CRandomMapGenerator::loadRandomMap(game);
     map->setPlayer(ptr);
     return map;
 }
