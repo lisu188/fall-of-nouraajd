@@ -6,5 +6,13 @@
       "subtypes": [],
       "playerSelectable": false
     }
+  },
+  "octoBogzRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "octoBogz",
+      "subtypes": [],
+      "playerSelectable": false
+    }
   }
 }
