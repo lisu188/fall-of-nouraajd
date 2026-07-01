@@ -31,6 +31,7 @@ from scripts.validate_content import (
     classify_creature_templates,
     inventory_creature_overrides,
     report_unmigrated_creatures,
+    tile_types_by_id,
     validate_repo,
 )
 
@@ -3374,6 +3375,215 @@ class RequiredProductionArchetypeTest(unittest.TestCase):
 
         self.assertIn("LegacyGoblin.properties.race", flagged)
         self.assertIn("LegacyGoblin.properties.creatureClass", flagged)
+
+
+class NouraajdCatacombsContentTest(unittest.TestCase):
+    """Content-level guards for the relocated, dedicated-art catacombs entrance.
+
+    These checks run without the native _game module: they operate purely on the
+    JSON map/config plus the pure-Python passability rules mirrored from
+    res/config/tiles.json and CMap::canStep (a tile is steppable when no blocking
+    object occupies it AND the underlying tile type is steppable).
+    """
+
+    MAP_DIR = REPO_ROOT / "res/maps/nouraajd"
+    TILE_SIZE = 32
+
+    @classmethod
+    def setUpClass(cls):
+        cls.map_data = read_json(cls.MAP_DIR / "map.json")
+        cls.config = read_json(cls.MAP_DIR / "config.json")
+        cls.tiles = read_json(REPO_ROOT / "res/config/tiles.json")
+        cls.script = (cls.MAP_DIR / "script.py").read_text(encoding="utf-8")
+
+        # tile-type -> canStep, from tiles.json
+        cls.tile_can_step = {
+            entry["properties"]["tileType"]: bool(entry["properties"].get("canStep", True))
+            for entry in cls.tiles.values()
+            if isinstance(entry, dict) and "tileType" in entry.get("properties", {})
+        }
+        # local-tile-id -> tile type (Tiled tileproperties keys are 0-based local ids;
+        # map data stores gid = local_id + firstgid).
+        cls.tile_types = tile_types_by_id(cls.map_data)
+        cls.firstgid = cls.map_data["tilesets"][0].get("firstgid", 1)
+        cls.width = cls.map_data["width"]
+        cls.height = cls.map_data["height"]
+        tile_layers = [L for L in cls.map_data["layers"] if L.get("type") == "tilelayer"]
+        cls.tile_data = tile_layers[0]["data"]
+
+        cls.objects = []
+        for layer in cls.map_data["layers"]:
+            if layer.get("type") == "objectgroup":
+                for obj in layer.get("objects", []):
+                    tx = obj["x"] // cls.TILE_SIZE
+                    ty = obj["y"] // cls.TILE_SIZE
+                    cls.objects.append((tx, ty, obj))
+
+        # Object entries whose config resolves to canStep:true do not block movement.
+        # Everything else (caves, catacombs, buildings, walls) blocks its tile.
+        cls.non_blocking_types = {"StartEvent"}
+
+    # --- helpers -------------------------------------------------------------
+    def _config_can_step(self, type_name):
+        entry = self.config.get(type_name)
+        if not isinstance(entry, dict):
+            return False
+        props = entry.get("properties", {})
+        if isinstance(props, dict) and props.get("canStep") is True:
+            return True
+        return False
+
+    def _gid_at(self, tx, ty):
+        if 0 <= tx < self.width and 0 <= ty < self.height:
+            return self.tile_data[ty * self.width + tx]
+        return 0
+
+    def _tile_type_at(self, tx, ty):
+        gid = self._gid_at(tx, ty)
+        if gid == 0:
+            return None
+        return self.tile_types.get(gid - self.firstgid)
+
+    def _tile_steppable(self, tx, ty):
+        tile_type = self._tile_type_at(tx, ty)
+        if tile_type is None:
+            return False
+        return self.tile_can_step.get(tile_type, True)
+
+    def _object_blocks(self, tx, ty):
+        for ox, oy, obj in self.objects:
+            if (ox, oy) != (tx, ty):
+                continue
+            type_name = obj.get("type", "")
+            if type_name.startswith("ambient"):
+                continue
+            if type_name in self.non_blocking_types:
+                continue
+            if self._config_can_step(type_name) or self._config_can_step(obj.get("name", "")):
+                continue
+            return True
+        return False
+
+    def _passable(self, tx, ty):
+        return self._tile_steppable(tx, ty) and not self._object_blocks(tx, ty)
+
+    def _reachable_tiles(self):
+        from collections import deque
+
+        starts = [(tx, ty) for tx, ty, obj in self.objects if obj.get("type") == "StartEvent"]
+        seen = set()
+        queue = deque()
+        for sx, sy in starts:
+            for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+                cell = (sx + dx, sy + dy)
+                if self._passable(*cell):
+                    seen.add(cell)
+                    queue.append(cell)
+        while queue:
+            x, y = queue.popleft()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                cell = (x + dx, y + dy)
+                if cell not in seen and self._passable(*cell):
+                    seen.add(cell)
+                    queue.append(cell)
+        return seen
+
+    def _catacombs_object(self):
+        matches = [obj for _, _, obj in self.objects if obj.get("name") == "catacombs"]
+        return matches
+
+    def _object_tile(self, name):
+        for tx, ty, obj in self.objects:
+            if obj.get("name") == name:
+                return tx, ty
+        return None
+
+    # --- tests ---------------------------------------------------------------
+    def test_catacombs_animation_uses_dedicated_asset(self):
+        """The catacombs config entry overrides Cave art with the dedicated asset,
+        and that asset file resolves on disk."""
+        entry = self.config["catacombs"]
+        self.assertEqual(entry.get("ref"), "Cave")
+        animation = entry["properties"]["animation"]
+        self.assertEqual(animation, "images/buildings/catacombs")
+        # Resolver appends .png to the extension-less animation key.
+        asset = REPO_ROOT / "res" / f"{animation}.png"
+        self.assertTrue(asset.is_file(), f"missing catacombs art: {asset}")
+
+    def test_base_cave_art_unchanged(self):
+        """cave1/cave2 must keep the shared Cave art -- no per-object animation
+        override that would divert them onto catacombs art."""
+        base_cave = read_json(REPO_ROOT / "res/config/buildings.json")["Cave"]
+        self.assertEqual(base_cave["properties"]["animation"], "images/buildings/cave")
+        for cave_name in ("cave1", "cave2"):
+            props = self.config[cave_name].get("properties", {})
+            self.assertNotIn(
+                "animation",
+                props,
+                f"{cave_name} must not override animation (would break shared Cave art)",
+            )
+
+    def test_exactly_one_catacombs_map_object(self):
+        matches = self._catacombs_object()
+        self.assertEqual(len(matches), 1, "expected exactly one map object named 'catacombs'")
+        obj = matches[0]
+        self.assertEqual(obj.get("type"), "catacombs")
+        self.assertTrue(obj.get("visible"))
+        self.assertEqual(obj.get("width"), self.TILE_SIZE)
+        self.assertEqual(obj.get("height"), self.TILE_SIZE)
+
+    def test_catacombs_relocated_away_from_cave1(self):
+        """The relocated entrance must be visually/geographically distinct from
+        cave1 (not clustered in the same NW cave maze)."""
+        catacombs = self._object_tile("catacombs")
+        cave1 = self._object_tile("cave1")
+        self.assertIsNotNone(catacombs)
+        self.assertIsNotNone(cave1)
+        manhattan = abs(catacombs[0] - cave1[0]) + abs(catacombs[1] - cave1[1])
+        self.assertGreater(
+            manhattan,
+            30,
+            f"catacombs {catacombs} too close to cave1 {cave1} (manhattan {manhattan})",
+        )
+
+    def test_catacombs_tile_unoccupied_by_other_objects(self):
+        cx, cy = self._object_tile("catacombs")
+        others = [
+            obj.get("name") or obj.get("type")
+            for tx, ty, obj in self.objects
+            if (tx, ty) == (cx, cy) and obj.get("name") != "catacombs"
+        ]
+        self.assertEqual(others, [], f"catacombs tile ({cx},{cy}) also occupied by {others}")
+
+    def test_catacombs_reachable_from_player_start(self):
+        """The player must be able to reach a tile adjacent to the catacombs to
+        destroy it (the underlying tile is steppable and at least one orthogonal
+        neighbour is reachable from the StartEvent spawn)."""
+        cx, cy = self._object_tile("catacombs")
+        self.assertTrue(
+            self._tile_steppable(cx, cy),
+            f"catacombs underlying tile ({cx},{cy}) is not a steppable tile type",
+        )
+        reachable = self._reachable_tiles()
+        adjacent = [
+            (cx + dx, cy + dy)
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            if (cx + dx, cy + dy) in reachable
+        ]
+        self.assertTrue(
+            adjacent,
+            f"no reachable tile adjacent to catacombs ({cx},{cy}); entrance is unreachable",
+        )
+
+    def test_catacombs_trigger_wiring_intact(self):
+        """Exactly one onDestroy trigger targets 'catacombs', grants holyRelic, and
+        marks the relic obtained for the Beren return chain."""
+        occurrences = self.script.count('@trigger(context, "onDestroy", "catacombs")')
+        self.assertEqual(occurrences, 1, "expected exactly one catacombs onDestroy trigger")
+        # holyRelic is granted and the beren_chain state advances in the same script.
+        self.assertIn('player.addItem("holyRelic")', self.script)
+        self.assertIn("mark_relic_obtained", self.script)
+        self.assertIn("holyRelic", self.config)
 
 
 if __name__ == "__main__":
