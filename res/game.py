@@ -144,6 +144,19 @@ def choose_player_class(g):
     return options.get(selection, selection)
 
 
+def choose_player_race(g):
+    # Offer the player-selectable races (CCreatureRace entries flagged
+    # playerSelectable). Returns the chosen race id, or "" when no race is
+    # selectable or the choice is cancelled -- an empty race id means "no
+    # override", so the player keeps its template's default race and the flow
+    # behaves exactly as before races were selectable.
+    options = player_race_options(g)
+    if not options:
+        return ""
+    selection = g.getGuiHandler().showSelection(list_string(g, sorted(options.keys())))
+    return options.get(selection, "")
+
+
 def new():
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
@@ -157,7 +170,8 @@ def new():
         if not map:
             return
         player = choose_player_class(g)
-        CGameLoader.startGameWithPlayer(g, map, player)
+        race = choose_player_race(g)
+        CGameLoader.startGameWithPlayer(g, map, player, race)
     elif selection == "LOAD":
         saves = CResourcesProvider.getInstance().getFiles("SAVE")
         if not saves:
@@ -169,7 +183,8 @@ def new():
         CGameLoader.loadSavedGame(g, save)
     elif selection == "RANDOM":
         player = choose_player_class(g)
-        CGameLoader.startRandomGameWithPlayer(g, player)
+        race = choose_player_race(g)
+        CGameLoader.startRandomGameWithPlayer(g, player, race)
     while event_loop.instance().run():
         pass
 
