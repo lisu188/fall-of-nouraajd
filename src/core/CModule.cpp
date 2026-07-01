@@ -389,6 +389,7 @@ void init_game_module(py::module_ &m) {
 
     py::enum_<CTag>(m, "CTag", "Canonical gameplay tag identifier.")
         .value("BUFF", CTag::Buff)
+        .value("CURSE", CTag::Curse)
         .value("CURSED", CTag::Cursed)
         .value("HEAL", CTag::Heal)
         .value("MANA", CTag::Mana)

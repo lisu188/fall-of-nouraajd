@@ -117,6 +117,7 @@ overloads), so typos fail loudly rather than silently doing nothing.
 | Tag      | Meaning |
 | -------- | ------- |
 | `buff`   | Effect/interaction is beneficial and self-targeted; the AI will not cast it at an enemy and skips it when picking an offensive action. |
+| `curse`  | Effect/interaction is harmful — the negative counterpart to `buff`. Non-buff effects already target the victim, so a `curse`-tagged effect lands on the enemy; the tag is a marker for content, AI targeting, and curse-cleansing/resistance mechanics. Note: this tags a harmful *effect*, distinct from `cursed`, which locks an *item* to its slot. |
 | `cursed` | Once equipped, the item is locked to its slot and cannot be unequipped or swapped out. The lock is enforced in `CCreature::equipItem` and mirrored in the inventory UI. Lift it (Baldur's Gate "remove curse") by clearing the tag — `removeTag(CTag::Cursed)` from an effect, interaction, or plugin — after which the item unequips normally. Any negative stats a cursed item imposes are ordinary content (its equipment bonuses / attached effect), not part of the tag itself. |
 | `heal`   | Consumable restores HP; monster AI will quaff it when hurt. |
 | `mana`   | Consumable restores mana; monster AI will quaff it when low. |

@@ -162,6 +162,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_map_walkthrough_ritual",
     "McpServerTest.test_stdio_map_walkthrough_siege",
     "McpServerTest.test_stdio_map_walkthrough_test",
+    "McpServerTest.test_stdio_map_walkthrough_vhulmarn",
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
@@ -177,6 +178,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
+    "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -184,6 +186,7 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_ritual": 20.0,
     "GameTest.test_map_walkthrough_siege": 15.0,
     "GameTest.test_map_walkthrough_test": 10.0,
+    "GameTest.test_map_walkthrough_vhulmarn": 15.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -4619,12 +4622,58 @@ def walkthrough_multilevel_map():
     }
 
 
+def walkthrough_vhulmarn_map():
+    g, game_map, player = load_game_map_with_player("vhulmarn")
+    for name in ("vhulmarnStart", "oldTollman", "tideBell", "altarThreshold"):
+        find_map_object_definition("vhulmarn", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("vhulmarn", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arriving on the shore grants the Drowned Tithe quest.
+    move_to_object("vhulmarnStart")
+    assert "drownedTitheQuest" in quest_names(player), "Arrival should grant the Drowned Tithe quest."
+
+    # The old tollman reveals what the town owed the deep.
+    g.createObject("tollmanDialog").hear_the_tithe()
+    assert game_map.getBoolProperty("tithe_heard"), "Hearing the tollman should record the tithe."
+
+    # Tolling the drowned bell raises Deep-Spawn from the tarn.
+    move_to_object("tideBell")
+    assert game_map.getBoolProperty("bell_tolled"), "The causeway bell should toll."
+
+    # The cyclopean altar yields the cursed tiara and wakes the colossal horror.
+    tiaras_before = player.countItems("tiaraOfTheDrownedTithe")
+    move_to_object("altarThreshold")
+    assert game_map.getBoolProperty("tithe_taken"), "Reaching the altar should take the tithe."
+    assert game_map.getBoolProperty("boss_woken"), "Taking the tiara should wake The Nameless."
+    assert player.countItems("tiaraOfTheDrownedTithe") == tiaras_before + 1, "The tiara should enter the inventory."
+    assert find_runtime_object(game_map, "theNamelessBoss") is not None, "The Nameless should rise on the altar."
+
+    player.checkQuests()
+    assert "drownedTitheQuest" in completed_quest_names(player), "The Drowned Tithe quest should complete."
+
+    return {
+        "map": "vhulmarn",
+        "tithe_heard": game_map.getBoolProperty("tithe_heard"),
+        "bell_tolled": game_map.getBoolProperty("bell_tolled"),
+        "tithe_taken": game_map.getBoolProperty("tithe_taken"),
+        "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "tiara_count": player.countItems("tiaraOfTheDrownedTithe"),
+        "boss_present": find_runtime_object(game_map, "theNamelessBoss") is not None,
+        "quest_completed": "drownedTitheQuest" in completed_quest_names(player),
+    }
+
+
 WALKTHROUGHS = {
     "multilevel": walkthrough_multilevel_map,
     "nouraajd": walkthrough_nouraajd_map,
     "ritual": walkthrough_ritual_map,
     "siege": walkthrough_siege_map,
     "test": walkthrough_test_map,
+    "vhulmarn": walkthrough_vhulmarn_map,
 }
 
 
@@ -13796,6 +13845,7 @@ class GameTest(unittest.TestCase):
             "wayfarer_condition_method": "def can_chart_wayfarer_route(self):" in script,
             "wayfarer_action_method": "def chart_wayfarer_route(self):" in script,
             "wayfarer_player_property": "wayfarer_routes" in script,
+            "wayfarer_condition_uses_class_id": 'player.getPlayerClassId() == "Wayfarer"' in script,
             "wayfarer_dialog_option": any(
                 option.get("properties", {}).get("condition") == "can_chart_wayfarer_route"
                 and option.get("properties", {}).get("action") == "chart_wayfarer_route"
@@ -13804,6 +13854,7 @@ class GameTest(unittest.TestCase):
             "inquisitor_condition_method": "def can_inspect_stained_glass(self):" in script,
             "inquisitor_action_method": "def inspect_stained_glass(self):" in script,
             "inquisitor_player_property": "inquisitor_clues" in script,
+            "inquisitor_condition_uses_class_id": 'player.getPlayerClassId() == "Inquisitor"' in script,
             "inquisitor_dialog_option": any(
                 option.get("properties", {}).get("condition") == "can_inspect_stained_glass"
                 and option.get("properties", {}).get("action") == "inspect_stained_glass"
@@ -13916,6 +13967,58 @@ class GameTest(unittest.TestCase):
                 "asked_about_girl": game_map.getBoolProperty("ASKED_ABOUT_GIRL"),
             }
 
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_class_dialogs_honor_player_class_id_over_type(self):
+        # After the identity migration, class-specific dialog routes gate on the player's class
+        # identity (playerClassId) rather than the raw type id. A player whose type id is not the
+        # class type but whose playerClassId names the class should unlock the route and accumulate
+        # its progression counter/flag; the raw type id alone must not unlock it beforehand.
+        cases = [
+            {
+                "class_id": "Wayfarer",
+                "dialog_type": "townHallDialog",
+                "condition": "can_chart_wayfarer_route",
+                "action": "chart_wayfarer_route",
+                "counter": "wayfarer_routes",
+                "flag": "charted_smuggler_route",
+            },
+            {
+                "class_id": "Inquisitor",
+                "dialog_type": "berenDialog",
+                "condition": "can_inspect_stained_glass",
+                "action": "inspect_stained_glass",
+                "counter": "inquisitor_clues",
+                "flag": "inspected_stained_glass",
+            },
+        ]
+        results = {}
+        for case in cases:
+            g, game_map, player = load_game_map_with_player("nouraajd", "Warrior")
+            dialog = g.createObject(case["dialog_type"])
+
+            # A plain Warrior type id must not unlock the class-specific route.
+            self.assertFalse(getattr(dialog, case["condition"])())
+
+            # Assigning the class identity unlocks it via getPlayerClassId().
+            player.setPlayerClassId(case["class_id"])
+            self.assertEqual(case["class_id"], player.getPlayerClassId())
+            self.assertTrue(getattr(dialog, case["condition"])())
+
+            getattr(dialog, case["action"])()
+            self.assertFalse(getattr(dialog, case["condition"])())
+            self.assertEqual(1, player.getNumericProperty(case["counter"]))
+            self.assertTrue(player.getBoolProperty(case["flag"]))
+
+            # Re-running the action after the flag is set is idempotent.
+            getattr(dialog, case["action"])()
+            self.assertEqual(1, player.getNumericProperty(case["counter"]))
+
+            results[case["class_id"]] = {
+                "counter": player.getNumericProperty(case["counter"]),
+                "flag": player.getBoolProperty(case["flag"]),
+            }
         return True, json.dumps(results, sort_keys=True)
 
     @game_test
@@ -14747,6 +14850,10 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_map_walkthrough_test(self):
         return execute_walkthrough("test")
+
+    @game_test
+    def test_map_walkthrough_vhulmarn(self):
+        return execute_walkthrough("vhulmarn")
 
     @game_test
     def test_all_maps_have_walkthroughs(self):
@@ -16211,6 +16318,183 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_player_progression_through_level_six_unlocks_once_per_class(self):
+        # [EPIC_04][STORY_05][SUBSTORY_02] Player progression through level six.
+        #
+        # Drives every class/race combination through levels one..six and pins the
+        # composition contract implemented in src/object/CCreature.cpp:
+        #   * class unlocks are the creature's `levelling` map, folded into the
+        #     effective action set as each unlock level is reached (levelUp ->
+        #     addAction(getLevelAction()); getEffectiveInteractions gates entries by
+        #     `unlockLevel <= level`). Each class unlock must appear EXACTLY ONCE
+        #     across the whole climb -- never missed, never duplicated.
+        #   * race actions are the creature's innate `actions` set; they are constant
+        #     across every level-up (they never move or duplicate as levels change).
+        #   * HP max / mana max derive from the composed stats
+        #     (CCreature::getStats -> buildLegacyStats = baseStats + level copies of
+        #     levelStats): getHpMax() == stamina * 7 and the mana ceiling ==
+        #     getStats().getMainValue() * 7, both recomputed independently here.
+        #
+        # The class/race matrix is registered as self-contained CCreature templates
+        # (the exact `registerConfigJson` + `{"ref": ...}` shape proven elsewhere in
+        # this suite), carrying a race innate-action set and a level-keyed class
+        # unlock map. No archetype definition object is attached, so the composed
+        # legacy path runs and the effective action set is observable through the
+        # bound getActions() accessor.
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        handler = g.getObjectHandler()
+
+        exp_for_level = lambda level: (level - 1) * level * 500
+
+        # Class matrix: each class contributes a main stat, per-level stat growth and a
+        # level-one..six unlock map. Unlock type ids are unique per class so a leaked
+        # unlock from another class would be caught immediately.
+        class_defs = {
+            "warrior": {
+                "mainStat": "strength",
+                "levelStats": {"strength": 3, "stamina": 2},
+                "unlocks": {str(level): f"ClassWarriorUnlock{level}" for level in range(1, 7)},
+            },
+            "sorcerer": {
+                "mainStat": "intelligence",
+                "levelStats": {"intelligence": 4, "stamina": 1},
+                "unlocks": {str(level): f"ClassSorcererUnlock{level}" for level in range(1, 7)},
+            },
+            "rogue": {
+                "mainStat": "agility",
+                "levelStats": {"agility": 3, "stamina": 2},
+                "unlocks": {str(level): f"ClassRogueUnlock{level}" for level in range(1, 7)},
+            },
+        }
+
+        # Race matrix: each race contributes a constant innate-action set plus a base
+        # stat block. Race action type ids are unique per race.
+        race_defs = {
+            "human": {
+                "baseStats": {"strength": 6, "agility": 6, "intelligence": 6, "stamina": 6},
+                "actions": ["RaceHumanInnateA", "RaceHumanInnateB"],
+            },
+            "elf": {
+                "baseStats": {"strength": 4, "agility": 8, "intelligence": 8, "stamina": 5},
+                "actions": ["RaceElfInnate"],
+            },
+            "dwarf": {
+                "baseStats": {"strength": 8, "agility": 4, "intelligence": 4, "stamina": 9},
+                "actions": ["RaceDwarfInnateA", "RaceDwarfInnateB", "RaceDwarfInnateC"],
+            },
+        }
+
+        # Register every interaction type referenced by the matrix as a plain
+        # CInteraction so the {"ref": ...} entries resolve and getTypeId() reports the
+        # registered id.
+        interaction_ids = set()
+        for cls in class_defs.values():
+            interaction_ids.update(cls["unlocks"].values())
+        for race in race_defs.values():
+            interaction_ids.update(race["actions"])
+        for interaction_id in sorted(interaction_ids):
+            handler.registerConfigJson(interaction_id, json.dumps({"class": "CInteraction"}))
+
+        summary = {}
+        for race_name, race in race_defs.items():
+            for class_name, cls in class_defs.items():
+                template = f"ProgressionMatrix_{race_name}_{class_name}"
+                base_stats = dict(race["baseStats"])
+                base_stats["mainStat"] = cls["mainStat"]
+                handler.registerConfigJson(
+                    template,
+                    json.dumps(
+                        {
+                            "class": "CCreature",
+                            "properties": {
+                                "baseStats": {"class": "CStats", "properties": base_stats},
+                                "levelStats": {"class": "CStats", "properties": dict(cls["levelStats"])},
+                                "actions": [{"ref": action_id} for action_id in race["actions"]],
+                                "levelling": {
+                                    level_key: {"ref": unlock_id} for level_key, unlock_id in cls["unlocks"].items()
+                                },
+                            },
+                        }
+                    ),
+                )
+
+                creature = g.createObject(template)
+                self.assertIsNotNone(creature, template)
+                self.assertEqual(0, creature.getLevel(), template)
+                # addExp is a no-op on a dead creature (CCreature::addExp guards on
+                # isAlive), so start the climb from full HP.
+                creature.setHp(creature.getHpMax())
+                self.assertTrue(creature.isAlive(), template)
+
+                race_action_ids = sorted(race["actions"])
+                # Race actions are present from the start and never change or duplicate.
+                self.assertEqual(
+                    race_action_ids,
+                    sorted(action.getTypeId() for action in creature.getActions()),
+                    f"{template}: initial race actions",
+                )
+
+                base_main = base_stats[cls["mainStat"]]
+                base_stamina = base_stats["stamina"]
+                unlock_growth = cls["levelStats"]
+
+                seen_unlocks = []
+                for level in range(1, 7):
+                    needed = exp_for_level(level) - creature.getNumericProperty("exp")
+                    self.assertGreater(needed, 0, f"{template}: exp step to level {level}")
+                    creature.addExp(needed)
+                    self.assertEqual(level, creature.getLevel(), f"{template}: reached level {level}")
+
+                    seen_unlocks.append(cls["unlocks"][str(level)])
+                    expected_action_ids = sorted(race_action_ids + seen_unlocks)
+                    actual_action_ids = sorted(action.getTypeId() for action in creature.getActions())
+
+                    # Exactly-once contract: the sorted list must match the expected
+                    # set with no duplicates and no missing entries. len() equality
+                    # against the de-duplicated set catches any doubled unlock.
+                    self.assertEqual(
+                        expected_action_ids,
+                        actual_action_ids,
+                        f"{template}: effective actions at level {level}",
+                    )
+                    self.assertEqual(
+                        len(actual_action_ids),
+                        len(set(actual_action_ids)),
+                        f"{template}: duplicate action at level {level}",
+                    )
+                    # Race actions stay constant across the entire climb.
+                    self.assertEqual(
+                        race_action_ids,
+                        sorted(action_id for action_id in actual_action_ids if action_id in set(race_action_ids)),
+                        f"{template}: race actions constant at level {level}",
+                    )
+
+                    # HP and mana ceilings track the composed stats exactly.
+                    stats = creature.getStats()
+                    expected_stamina = base_stamina + level * unlock_growth.get("stamina", 0)
+                    expected_main = base_main + level * unlock_growth.get(cls["mainStat"], 0)
+                    self.assertEqual(expected_stamina, stats.getNumericProperty("stamina"), template)
+                    self.assertEqual(cls["mainStat"], stats.getStringProperty("mainStat"), template)
+                    self.assertEqual(expected_main, stats.getMainValue(), template)
+                    self.assertEqual(expected_stamina * 7, creature.getHpMax(), f"{template}: hp max at level {level}")
+                    self.assertEqual(expected_main * 7, stats.getMainValue() * 7, f"{template}: mana ceiling at level {level}")
+
+                # Every class unlock appeared, once each, and race actions were untouched.
+                self.assertEqual(sorted(cls["unlocks"].values()), sorted(seen_unlocks), template)
+                summary[template] = {
+                    "raceActions": race_action_ids,
+                    "classUnlocks": sorted(cls["unlocks"].values()),
+                    "finalLevel": creature.getLevel(),
+                    "finalHpMax": creature.getHpMax(),
+                    "finalManaMax": creature.getStats().getMainValue() * 7,
+                }
+
+        return True, json.dumps(summary, sort_keys=True)
 
 
 class ConsoleEventIsolationTest(unittest.TestCase):
@@ -18945,6 +19229,7 @@ class McpServerTest(unittest.TestCase):
         "ritual": "_mcp_walkthrough_ritual",
         "siege": "_mcp_walkthrough_siege",
         "test": "_mcp_walkthrough_test",
+        "vhulmarn": "_mcp_walkthrough_vhulmarn",
     }
 
     def make_stub_server(self):
@@ -19659,6 +19944,9 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_test(self):
         self._assert_mcp_walkthrough("test")
 
+    def test_stdio_map_walkthrough_vhulmarn(self):
+        self._assert_mcp_walkthrough("vhulmarn")
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -20082,6 +20370,43 @@ class McpServerTest(unittest.TestCase):
             "teleporter_from": [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0],
             "teleporter_to": after_teleport,
             "ground_hole_exit": after_ground_hole,
+        }
+
+    def _mcp_walkthrough_vhulmarn(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "vhulmarn")
+        for name in ("vhulmarnStart", "tideBell", "altarThreshold"):
+            find_map_object_definition("vhulmarn", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the quest; the bell raises Deep-Spawn; the altar yields the cursed tiara.
+        step_onto("vhulmarnStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        step_onto("tideBell")
+        self.assertTrue(map_bool("bell_tolled"))
+        step_onto("altarThreshold")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+
+        self.assertTrue(map_bool("tithe_taken"))
+        self.assertTrue(map_bool("boss_woken"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        has_tiara = self._serialized_inventory_has(player_data, "tiaraOfTheDrownedTithe")
+        self.assertTrue(has_tiara)
+        return {
+            "map": "vhulmarn",
+            "bell_tolled": map_bool("bell_tolled"),
+            "tithe_taken": map_bool("tithe_taken"),
+            "boss_woken": map_bool("boss_woken"),
+            "has_tiara": has_tiara,
+            "quests": self._serialized_quest_ids(player_data),
         }
 
     def _mcp_walkthrough_multilevel(self, session):
@@ -20584,8 +20909,14 @@ def test_group_timeout_seconds(test_names, timings=None):
     # to complete self-heals the cached timings, after which both shard balancing and
     # this timeout become accurate. Genuine hangs remain bounded by the job-level
     # timeout configured in the workflow.
-    headroom = 240 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 120
-    return max(180, int(duration_hint * multiplier) + headroom)
+    # The floor and headroom are deliberately generous: on a cold cache the balancer
+    # can still concentrate the genuinely-slow tests onto one shard (their default
+    # weights understate reality), so that shard must be allowed to run to completion
+    # at least once to record real timings that fix the balance on the next run. A
+    # single observed cold-cache shard needed >320s, so the floor is set well above
+    # that. Genuine hangs remain bounded by the job-level timeout in the workflow.
+    headroom = 420 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 300
+    return max(600, int(duration_hint * multiplier) + headroom)
 
 
 def run_test_subprocess(test_names, shard_name, extra_env=None):
@@ -20696,15 +21027,26 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
         if return_code != 0:
             failures.append(("xvfb-long", return_code))
 
+    # Persist whatever timings the workers recorded, even when a shard failed or
+    # timed out. Each worker writes its own timings only after it finishes, so a
+    # shard killed on timeout contributes nothing -- but the shards that DID finish
+    # recorded real per-test durations. Writing them unconditionally lets the cached
+    # timings self-heal after a single run: the next run weights those tests
+    # accurately, so the balancer stops concentrating the genuinely-slow tests onto
+    # one shard and stops under-sizing that shard's timeout. Writing only on overall
+    # success meant one slow shard discarded every other shard's real timings and the
+    # cold-cache under-estimate was reproduced on every retry.
+    combined_timings = {}
+    for timings_path in (TEST_OUTPUT_DIR / "workers").glob("*/test-timings.json"):
+        combined_timings.update(load_test_timings(timings_path))
+    if combined_timings:
+        write_test_timings(TEST_TIMINGS_FILE, combined_timings)
+
     if failures:
         for shard_name, return_code in failures:
             print(f"[test shard {shard_name}] failed with exit code {return_code}", file=sys.stderr, flush=True)
         return 1
 
-    combined_timings = {}
-    for timings_path in (TEST_OUTPUT_DIR / "workers").glob("*/test-timings.json"):
-        combined_timings.update(load_test_timings(timings_path))
-    write_test_timings(TEST_TIMINGS_FILE, combined_timings)
     return 0
 
 
