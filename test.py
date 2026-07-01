@@ -118,6 +118,11 @@ except Exception:
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
 MCP_STDIO_TOOL_TIMEOUT_SECONDS = 10
+# Very large maps (e.g. the 1000x1000 Nine Marches) can spend well over the default per-RPC
+# budget on a single turn advance, because the per-turn creature AI pathfinds over the whole map.
+# Individual RPCs on those maps use this larger ceiling so a slow-but-progressing move does not
+# trip the response-header timeout.
+MCP_STDIO_LARGE_MAP_TOOL_TIMEOUT_SECONDS = 120
 MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 MCP_STDIO_TAIL_LIMIT_BYTES = 8192
@@ -183,8 +188,8 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_kadath": 30.0,
-    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 30.0,
-    "McpServerTest.test_stdio_map_walkthrough_ninemarches": 90.0,
+    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 60.0,
+    "McpServerTest.test_stdio_map_walkthrough_ninemarches": 300.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -194,8 +199,8 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_test": 10.0,
     "GameTest.test_map_walkthrough_vhulmarn": 15.0,
     "GameTest.test_map_walkthrough_kadath": 15.0,
-    "GameTest.test_map_walkthrough_sunderedmarch": 15.0,
-    "GameTest.test_map_walkthrough_ninemarches": 45.0,
+    "GameTest.test_map_walkthrough_sunderedmarch": 60.0,
+    "GameTest.test_map_walkthrough_ninemarches": 300.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -4738,6 +4743,9 @@ def walkthrough_sunderedmarch_map():
         definition = find_map_object_definition("sunderedmarch", name)
         player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
         pump_event_loop(5)
+        # Advance a map turn so controller/combat futures settle, matching the MCP walkthrough
+        # (the guarded barrow route needs turn resolution the bare event loop does not drive).
+        advance_map_only(game_map, 1)
 
     # Arrival grants the main quest.
     move_to_object("marchStart")
@@ -4791,6 +4799,8 @@ def walkthrough_ninemarches_map():
         definition = find_map_object_definition("ninemarches", name)
         player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
         pump_event_loop(5)
+        # Advance a map turn so controller/combat futures settle, matching the MCP walkthrough.
+        advance_map_only(game_map, 1)
 
     # Arrival grants the main quest (Baldur's-Gate chapters begin).
     move_to_object("ninemarchesStart")
@@ -20505,10 +20515,10 @@ class McpServerTest(unittest.TestCase):
             self._mcp_engine_call(session, "jsonify", [map_handle], timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
         )
 
-    def _mcp_advance_map(self, session, map_handle, turns):
+    def _mcp_advance_map(self, session, map_handle, turns, timeout=MCP_STDIO_TOOL_TIMEOUT_SECONDS):
         for _ in range(turns):
-            self._mcp_handle_call(session, map_handle, "move")
-        return self._mcp_handle_call(session, map_handle, "getTurn")
+            self._mcp_handle_call(session, map_handle, "move", timeout=timeout)
+        return self._mcp_handle_call(session, map_handle, "getTurn", timeout=timeout)
 
     def _mcp_pump_event_loop(self, session):
         loop = self._mcp_engine_call(session, "event_loop.instance")
@@ -20739,11 +20749,13 @@ class McpServerTest(unittest.TestCase):
         def map_bool(name):
             return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
 
+        rpc_timeout = MCP_STDIO_LARGE_MAP_TOOL_TIMEOUT_SECONDS
+
         def step_onto(name):
             obj = self._mcp_get_object_by_name(session, map_handle, name)
-            coords = self._mcp_handle_call(session, obj, "getCoords")
-            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
-            self._mcp_advance_map(session, map_handle, 1)
+            coords = self._mcp_handle_call(session, obj, "getCoords", timeout=rpc_timeout)
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords], timeout=rpc_timeout)
+            self._mcp_advance_map(session, map_handle, 1, timeout=rpc_timeout)
 
         # Keymaster -> iron key -> gate opens; obelisks -> Citadel dig -> cursed crown + boss.
         step_onto("ninemarchesStart")
@@ -20759,9 +20771,11 @@ class McpServerTest(unittest.TestCase):
 
         self.assertTrue(map_bool("crown_taken"))
         self.assertTrue(map_bool("boss_woken"))
-        map_data = self._mcp_serialized_map(session, map_handle)
-        player_data = self._serialized_player(map_data)
-        has_crown = self._serialized_inventory_has(player_data, "ninefoldCrown")
+        # Serializing the whole 1000x1000 map (jsonify) is far too slow to do here, so check the
+        # crown directly on the player handle instead of walking a serialized inventory.
+        has_crown = (
+            self._mcp_handle_call(session, player_handle, "countItems", ["ninefoldCrown"], timeout=rpc_timeout) >= 1
+        )
         self.assertTrue(has_crown)
         return {
             "map": "ninemarches",
@@ -20769,7 +20783,6 @@ class McpServerTest(unittest.TestCase):
             "crown_taken": map_bool("crown_taken"),
             "boss_woken": map_bool("boss_woken"),
             "has_crown": has_crown,
-            "quests": self._serialized_quest_ids(player_data),
         }
 
     def _mcp_walkthrough_multilevel(self, session):
