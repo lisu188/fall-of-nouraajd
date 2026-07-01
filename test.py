@@ -163,6 +163,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_map_walkthrough_siege",
     "McpServerTest.test_stdio_map_walkthrough_test",
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn",
+    "McpServerTest.test_stdio_map_walkthrough_kadath",
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
@@ -179,6 +180,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
+    "McpServerTest.test_stdio_map_walkthrough_kadath": 30.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -187,6 +189,7 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_siege": 15.0,
     "GameTest.test_map_walkthrough_test": 10.0,
     "GameTest.test_map_walkthrough_vhulmarn": 15.0,
+    "GameTest.test_map_walkthrough_kadath": 15.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -4667,7 +4670,53 @@ def walkthrough_vhulmarn_map():
     }
 
 
+def walkthrough_kadath_map():
+    g, game_map, player = load_game_map_with_player("kadath")
+    for name in ("kadathStart", "dreamerGuide", "dreamGate", "onyxThrone"):
+        find_map_object_definition("kadath", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("kadath", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arriving on the Cold Waste grants the Kadath ascent quest.
+    move_to_object("kadathStart")
+    assert "kadathAscentQuest" in quest_names(player), "Arrival should grant the Kadath ascent quest."
+
+    # The frozen dreamer reveals what waits on the throne.
+    g.createObject("dreamerDialog").hear_the_ascent()
+    assert game_map.getBoolProperty("ascent_heard"), "Hearing the dreamer should record the ascent."
+
+    # The dream gate deepens the dream and calls the Night-Gaunts.
+    move_to_object("dreamGate")
+    assert game_map.getBoolProperty("gate_opened"), "The dream gate should open."
+
+    # The onyx throne bestows the cursed signet and wakes the Crawling Chaos.
+    signets_before = player.countItems("onyxSignetOfNyarlathotep")
+    move_to_object("onyxThrone")
+    assert game_map.getBoolProperty("throne_taken"), "Reaching the throne should take the signet."
+    assert game_map.getBoolProperty("boss_woken"), "Taking the signet should wake the Crawling Chaos."
+    assert player.countItems("onyxSignetOfNyarlathotep") == signets_before + 1, "The signet should enter the inventory."
+    assert find_runtime_object(game_map, "theCrawlingChaosBoss") is not None, "Nyarlathotep should rise at the throne."
+
+    player.checkQuests()
+    assert "kadathAscentQuest" in completed_quest_names(player), "The Kadath ascent quest should complete."
+
+    return {
+        "map": "kadath",
+        "ascent_heard": game_map.getBoolProperty("ascent_heard"),
+        "gate_opened": game_map.getBoolProperty("gate_opened"),
+        "throne_taken": game_map.getBoolProperty("throne_taken"),
+        "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "signet_count": player.countItems("onyxSignetOfNyarlathotep"),
+        "boss_present": find_runtime_object(game_map, "theCrawlingChaosBoss") is not None,
+        "quest_completed": "kadathAscentQuest" in completed_quest_names(player),
+    }
+
+
 WALKTHROUGHS = {
+    "kadath": walkthrough_kadath_map,
     "multilevel": walkthrough_multilevel_map,
     "nouraajd": walkthrough_nouraajd_map,
     "ritual": walkthrough_ritual_map,
@@ -14856,6 +14905,10 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("vhulmarn")
 
     @game_test
+    def test_map_walkthrough_kadath(self):
+        return execute_walkthrough("kadath")
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -16482,7 +16535,9 @@ class GameTest(unittest.TestCase):
                     self.assertEqual(cls["mainStat"], stats.getStringProperty("mainStat"), template)
                     self.assertEqual(expected_main, stats.getMainValue(), template)
                     self.assertEqual(expected_stamina * 7, creature.getHpMax(), f"{template}: hp max at level {level}")
-                    self.assertEqual(expected_main * 7, stats.getMainValue() * 7, f"{template}: mana ceiling at level {level}")
+                    self.assertEqual(
+                        expected_main * 7, stats.getMainValue() * 7, f"{template}: mana ceiling at level {level}"
+                    )
 
                 # Every class unlock appeared, once each, and race actions were untouched.
                 self.assertEqual(sorted(cls["unlocks"].values()), sorted(seen_unlocks), template)
@@ -19230,6 +19285,7 @@ class McpServerTest(unittest.TestCase):
         "siege": "_mcp_walkthrough_siege",
         "test": "_mcp_walkthrough_test",
         "vhulmarn": "_mcp_walkthrough_vhulmarn",
+        "kadath": "_mcp_walkthrough_kadath",
     }
 
     def make_stub_server(self):
@@ -19947,6 +20003,9 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_vhulmarn(self):
         self._assert_mcp_walkthrough("vhulmarn")
 
+    def test_stdio_map_walkthrough_kadath(self):
+        self._assert_mcp_walkthrough("kadath")
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -20406,6 +20465,43 @@ class McpServerTest(unittest.TestCase):
             "tithe_taken": map_bool("tithe_taken"),
             "boss_woken": map_bool("boss_woken"),
             "has_tiara": has_tiara,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_kadath(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "kadath")
+        for name in ("kadathStart", "dreamGate", "onyxThrone"):
+            find_map_object_definition("kadath", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the quest; the gate calls the Night-Gaunts; the throne yields the cursed signet.
+        step_onto("kadathStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        step_onto("dreamGate")
+        self.assertTrue(map_bool("gate_opened"))
+        step_onto("onyxThrone")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+
+        self.assertTrue(map_bool("throne_taken"))
+        self.assertTrue(map_bool("boss_woken"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        has_signet = self._serialized_inventory_has(player_data, "onyxSignetOfNyarlathotep")
+        self.assertTrue(has_signet)
+        return {
+            "map": "kadath",
+            "gate_opened": map_bool("gate_opened"),
+            "throne_taken": map_bool("throne_taken"),
+            "boss_woken": map_bool("boss_woken"),
+            "has_signet": has_signet,
             "quests": self._serialized_quest_ids(player_data),
         }
 

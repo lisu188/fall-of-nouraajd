@@ -1,0 +1,139 @@
+{
+  "dreamerDialog": {
+    "class": "DreamerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "A dreamer sits wrapped in furs that steam faintly in the cold, eyes open but fixed on nothing near. 'Another climber,' he says, without turning. 'You'll want the road. Everyone wants the road. Sit a moment first, and let me tell you what waits at the top of it.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "CASTLE",
+                  "text": "What waits in the onyx castle?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "CASTLE",
+            "text": "'The Great Ones - the soft gods of earth's dream - are gone. They found a sunset city they loved and wandered off to live in it, and left their castle empty. But a dreamer who climbs to an empty throne is a summons. Their messenger keeps the appointment they abandoned. He wears a kind face and offers gifts.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "MESSENGER",
+                  "text": "Who is this messenger?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "MESSENGER",
+            "text": "'Nyarlathotep. The Crawling Chaos. Soul and messenger of the Other Gods, the only one of that blind company who walks and speaks and smiles. He will set a crown of onyx on your head and call it a reward, and you will thank him, and that is how he takes a dreamer down to the piping at the center of everything. Climb if you must. But do not accept the gift.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ACCEPT",
+                  "text": "I have to see the throne. Point me to the road.",
+                  "action": "hear_the_ascent"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACCEPT",
+            "text": "'North, always north, past the standing stones where the dream thins and the Night-Gaunts come to weigh you. When the warmth of the road tries to comfort you, remember it is bait.' He finally turns his frost-white eyes on you. 'And remember the way home is not a place. It is waking. Do not forget how.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "lengPriestDialog": {
+    "class": "LengPriestDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "A robed shape on the Plateau of Leng regards you from beneath a wide silk mask and a turban of yellowed cloth. When it speaks the voice is courteous, and the mask does not move at all. 'You are far from waking, dreamer. Will you take salt and bread with the folk of Leng before you climb?'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "REFUSE",
+                  "text": "I've heard what the folk of Leng put on their table. I'll pass."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "REFUSE",
+            "text": "'Wise. The last one who supped with us is supping still, in a fashion.' The mask tilts, and for an instant the turban shifts and you glimpse what the silk is hiding, and you very much wish you had not. 'Go up, then, little dreamer. Nyarlathotep keeps a warmer welcome than we do.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
