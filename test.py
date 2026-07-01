@@ -165,6 +165,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn",
     "McpServerTest.test_stdio_map_walkthrough_kadath",
     "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
+    "McpServerTest.test_stdio_map_walkthrough_ninemarches",
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
@@ -183,6 +184,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_kadath": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 30.0,
+    "McpServerTest.test_stdio_map_walkthrough_ninemarches": 90.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -193,6 +195,7 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_vhulmarn": 15.0,
     "GameTest.test_map_walkthrough_kadath": 15.0,
     "GameTest.test_map_walkthrough_sunderedmarch": 15.0,
+    "GameTest.test_map_walkthrough_ninemarches": 45.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -4778,8 +4781,79 @@ def walkthrough_sunderedmarch_map():
     }
 
 
+def walkthrough_ninemarches_map():
+    g, game_map, player = load_game_map_with_player("ninemarches")
+    obelisks = ("obeliskFields", "obeliskFen", "obeliskBarrows", "obeliskAsh", "obeliskCoast", "obeliskCold")
+    for name in ("ninemarchesStart", "ironKeyCache", "ironGateThreshold", "banditCache", "digSite") + obelisks:
+        find_map_object_definition("ninemarches", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("ninemarches", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the main quest (Baldur's-Gate chapters begin).
+    move_to_object("ninemarchesStart")
+    assert "ninemarchesQuest" in quest_names(player), "Arrival should grant the Nine Marches quest."
+    assert game_map.getNumericProperty("chapter") == 1, "The campaign should open on chapter 1."
+
+    # Heroes-3 keymaster + border gate: the iron key opens the inner pass.
+    move_to_object("ironKeyCache")
+    assert player.countItems("ironKey") >= 1, "The keymaster cache should grant the iron key."
+    assert find_runtime_object(game_map, "ironGate") is not None, "The iron gate should still bar the pass."
+    move_to_object("ironGateThreshold")
+    assert game_map.getBoolProperty("iron_gate_open"), "The iron key should open the gate."
+    assert find_runtime_object(game_map, "ironGate") is None, "The iron gate should be removed once opened."
+    assert game_map.getNumericProperty("chapter") >= 2, "Opening the gate should advance the chapter."
+
+    # Baldur's-Gate companion: quest -> recover the item -> recruit -> boon + reputation reactivity.
+    rep_before = player.getNumericProperty("reputation")
+    knight = g.createObject("knightDialog")
+    knight.start()
+    assert "haldaQuest" in quest_names(player), "Talking to Ser Halda should start her quest."
+    move_to_object("banditCache")
+    assert player.countItems("banditLedger") >= 1, "The bandit cache should grant the Raider Ledger."
+    knight.recruit()
+    assert game_map.getBoolProperty("halda_joined"), "Returning the ledger should recruit Ser Halda."
+    assert player.getNumericProperty("reputation") == rep_before + 2, "Recruiting a companion should raise reputation."
+    assert player.countItems("aegisOfHalda") >= 1, "Recruiting Ser Halda should grant her war-gift boon."
+
+    # Heroes-3 obelisk -> Grail hunt: read all six march-obelisks.
+    for obelisk in obelisks:
+        move_to_object(obelisk)
+    assert game_map.getNumericProperty("obelisks_read") == 6, "All six obelisks should be read."
+
+    # The Citadel dig yields the cursed Ninefold Crown and raises the Crowned God.
+    crowns_before = player.countItems("ninefoldCrown")
+    move_to_object("digSite")
+    assert game_map.getBoolProperty("crown_taken"), "The dig should unearth the crown once all obelisks are read."
+    assert game_map.getBoolProperty("boss_woken"), "Taking the crown should raise the Crowned God."
+    assert player.countItems("ninefoldCrown") == crowns_before + 1, "The Ninefold Crown should enter the inventory."
+    assert find_runtime_object(game_map, "theNinefoldKingBoss") is not None, "The Ninefold King should rise at the dig."
+    assert game_map.getNumericProperty("chapter") == 4, "The dig should advance to the final chapter."
+
+    player.checkQuests()
+    assert "ninemarchesQuest" in completed_quest_names(player), "The Nine Marches quest should complete."
+    assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
+
+    return {
+        "map": "ninemarches",
+        "chapter": game_map.getNumericProperty("chapter"),
+        "reputation": player.getNumericProperty("reputation"),
+        "iron_gate_open": game_map.getBoolProperty("iron_gate_open"),
+        "halda_joined": game_map.getBoolProperty("halda_joined"),
+        "obelisks_read": game_map.getNumericProperty("obelisks_read"),
+        "crown_taken": game_map.getBoolProperty("crown_taken"),
+        "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "crown_count": player.countItems("ninefoldCrown"),
+        "boss_present": find_runtime_object(game_map, "theNinefoldKingBoss") is not None,
+        "quest_completed": "ninemarchesQuest" in completed_quest_names(player),
+    }
+
+
 WALKTHROUGHS = {
     "kadath": walkthrough_kadath_map,
+    "ninemarches": walkthrough_ninemarches_map,
     "sunderedmarch": walkthrough_sunderedmarch_map,
     "multilevel": walkthrough_multilevel_map,
     "nouraajd": walkthrough_nouraajd_map,
@@ -14977,6 +15051,10 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("sunderedmarch")
 
     @game_test
+    def test_map_walkthrough_ninemarches(self):
+        return execute_walkthrough("ninemarches")
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -19355,6 +19433,7 @@ class McpServerTest(unittest.TestCase):
         "vhulmarn": "_mcp_walkthrough_vhulmarn",
         "kadath": "_mcp_walkthrough_kadath",
         "sunderedmarch": "_mcp_walkthrough_sunderedmarch",
+        "ninemarches": "_mcp_walkthrough_ninemarches",
     }
 
     def make_stub_server(self):
@@ -20078,6 +20157,9 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_sunderedmarch(self):
         self._assert_mcp_walkthrough("sunderedmarch")
 
+    def test_stdio_map_walkthrough_ninemarches(self):
+        self._assert_mcp_walkthrough("ninemarches")
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -20620,6 +20702,48 @@ class McpServerTest(unittest.TestCase):
         return {
             "map": "sunderedmarch",
             "gate_open": map_bool("gate_open"),
+            "crown_taken": map_bool("crown_taken"),
+            "boss_woken": map_bool("boss_woken"),
+            "has_crown": has_crown,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_ninemarches(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "ninemarches")
+        obelisks = ("obeliskFields", "obeliskFen", "obeliskBarrows", "obeliskAsh", "obeliskCoast", "obeliskCold")
+        for name in ("ninemarchesStart", "ironKeyCache", "ironGateThreshold", "digSite") + obelisks:
+            find_map_object_definition("ninemarches", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Keymaster -> iron key -> gate opens; obelisks -> Citadel dig -> cursed crown + boss.
+        step_onto("ninemarchesStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        step_onto("ironKeyCache")
+        step_onto("ironGateThreshold")
+        self.assertTrue(map_bool("iron_gate_open"))
+        for obelisk in obelisks:
+            step_onto(obelisk)
+        self.assertEqual(6, self._mcp_handle_call(session, map_handle, "getNumericProperty", ["obelisks_read"]))
+        step_onto("digSite")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+
+        self.assertTrue(map_bool("crown_taken"))
+        self.assertTrue(map_bool("boss_woken"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        has_crown = self._serialized_inventory_has(player_data, "ninefoldCrown")
+        self.assertTrue(has_crown)
+        return {
+            "map": "ninemarches",
+            "iron_gate_open": map_bool("iron_gate_open"),
             "crown_taken": map_bool("crown_taken"),
             "boss_woken": map_bool("boss_woken"),
             "has_crown": has_crown,
