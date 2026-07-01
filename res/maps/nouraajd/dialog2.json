@@ -58,7 +58,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_WHY",
-            "text": "Be careful. A cave out there seethes with OctoBogz—twisted things part octopus, part hare, all shadowcraft. They lash caravans with Abyssal Shadows and leave bones in the sand.",
+            "text": "Be careful. A cave out there seethes with OctoBogz—twisted things part octopus, part hare, all shadowcraft. They lash caravans with Abyssal Shadows and leave bones in the mire.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -83,7 +83,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ASK_ABOUT_OCTOBOGZ",
-            "text": "They're clever and quick, ambushing from stone and sand alike. Their tentacles strike far, and the Abyssal Shadows they fling strip the warmth from flesh.",
+            "text": "They're clever and quick, ambushing from reed and mud alike. Their tentacles strike far, and the Abyssal Shadows they fling strip the warmth from flesh.",
             "options": [
               {
                 "class": "CDialogOption",
@@ -127,7 +127,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Head east across the river. The cave is half-buried under boulders and sand; follow the guttural echoes and you'll find it.",
+            "text": "Head east across the river. The cave is half-sunk under boulders and silt; follow the guttural echoes and you'll find it.",
             "options": [
               {
                 "ref": "exitOption",
@@ -157,7 +157,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACTIVE_REMINDER",
-            "text": "You've already given us your word, and we've not forgotten it. The cave lies east across the river, half-buried under boulders and sand—follow the guttural echoes. Come back when the OctoBogz are ash.",
+            "text": "You've already given us your word, and we've not forgotten it. The cave lies east across the river, half-sunk under boulders and silt—follow the guttural echoes. Come back when the OctoBogz are ash.",
             "options": [
               {
                 "ref": "exitOption",
