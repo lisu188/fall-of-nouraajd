@@ -46,7 +46,16 @@
       "label": "Outlander",
       "creatureType": "human",
       "subtypes": ["outlander"],
-      "playerSelectable": true
+      "playerSelectable": true,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 2,
+          "agility": -1,
+          "intelligence": -2
+        }
+      }
     }
   }
 }
