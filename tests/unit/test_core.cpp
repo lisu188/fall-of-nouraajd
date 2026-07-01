@@ -1638,9 +1638,25 @@ void test_creature_effective_stats_baseline_capture() {
         if (!creature) {
             continue;
         }
+        auto race = creature->getRace();
+        auto creatureClass = creature->getCreatureClass();
         for (int level : kBaselineLevels) {
             auto expectedStats = std::make_shared<CStats>();
+            // race.baseStats then creatureClass.baseStats (null on legacy creatures,
+            // so the extra terms drop out and this reduces to the legacy layering).
+            if (race && race->getBaseStats()) {
+                expectedStats->addBonus(race->getBaseStats());
+            }
+            if (creatureClass && creatureClass->getBaseStats()) {
+                expectedStats->addBonus(creatureClass->getBaseStats());
+            }
             expectedStats->addBonus(creature->getBaseStats());
+            // creatureClass.levelStats per level, then creature.levelStats per level.
+            if (creatureClass && creatureClass->getLevelStats()) {
+                for (int i = 0; i < level; i++) {
+                    expectedStats->addBonus(creatureClass->getLevelStats());
+                }
+            }
             for (int i = 0; i < level; i++) {
                 expectedStats->addBonus(creature->getLevelStats());
             }
