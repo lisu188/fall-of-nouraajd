@@ -3294,18 +3294,13 @@ class UnmigratedCreatureReportTest(unittest.TestCase):
         self.assertEqual([], [str(issue) for issue in validate_repo(REPO_ROOT)])
 
         report = report_unmigrated_creatures(REPO_ROOT)
-        # The report is non-empty on current content (migration is still in progress)
-        # and the not-yet-migrated production player templates surface as still needing
-        # migration.
+        # The report is non-empty on current content (nothing is migrated yet) and the
+        # production player templates surface as still needing migration.
         self.assertTrue(report)
         report_ids = {creature.config_id for creature in report}
-        for player in ("Assasin", "Inquisitor", "Sorcerer", "Wayfarer"):
+        for player in ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer"):
             self.assertIn(player, report_ids)
             self.assertEqual(("creatureClass", "race"), next(c.missing for c in report if c.config_id == player))
-        # Warrior has been migrated to a creatureClass (WarriorClass, EPIC_04/STORY_02/
-        # SUBSTORY_01); it still surfaces in the report but now only lacks a race.
-        self.assertIn("Warrior", report_ids)
-        self.assertEqual(("race",), next(c.missing for c in report if c.config_id == "Warrior"))
 
 
 class RequiredProductionArchetypeTest(unittest.TestCase):

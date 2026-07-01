@@ -1,48 +1,4 @@
 {
-  "WarriorClass": {
-    "class": "CCreatureClass",
-    "properties": {
-      "mainStat": "strength",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "strength": 3,
-          "stamina": 2,
-          "agility": 2,
-          "intelligence": 1,
-          "hit": 3,
-          "crit": 1,
-          "dmgMin": 2,
-          "dmgMax": 3
-        }
-      },
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
-      "levelling": {
-        "1": {
-          "ref": "Strike"
-        },
-        "2": {
-          "ref": "Barrier"
-        },
-        "3": {
-          "ref": "BloodThirst"
-        },
-        "4": {
-          "ref": "Bloodlash"
-        },
-        "5": {
-          "ref": "DeathStrike"
-        },
-        "6": {
-          "ref": "DoubleAttack"
-        }
-      }
-    }
-  },
   "bruteClass": {
     "class": "CCreatureClass",
     "properties": {
