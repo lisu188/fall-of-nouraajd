@@ -116,6 +116,12 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "goobyRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
+      },
       "sw": 1
     }
   },
