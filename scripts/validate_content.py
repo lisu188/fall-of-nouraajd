@@ -165,6 +165,16 @@ CREATURE_CLASS_CONSTRUCTOR_CLASS = "CCreatureClass"
 CREATURE_CLASS_ACTIONS_PROPERTY = "actions"
 CREATURE_CLASS_LEVELLING_PROPERTY = "levelling"
 INTERACTION_BASE_CLASS = "CInteraction"
+# Explicit effect target routing (EPIC_06/STORY_01/SUBSTORY_03).  CInteraction routes
+# its effect to the caster when "selfTarget" is true; a legacy compatibility fallback
+# also routes a Buff-tagged effect to the caster even without selfTarget.  A caster-target
+# ability must therefore declare selfTarget explicitly rather than lean on the tag, so the
+# tag can go back to meaning only classification/stacking/UI/dispel.  This rule flags any
+# interaction whose resolved effect carries the Buff tag but does not set selfTarget true.
+INTERACTION_EFFECT_PROPERTY = "effect"
+INTERACTION_SELF_TARGET_PROPERTY = "selfTarget"
+EFFECT_TAGS_PROPERTY = "tags"
+BUFF_EFFECT_TAG = "buff"
 
 # CCreatureRace stat/action/type validation (EPIC_06/STORY_03/SUBSTORY_01).
 # A CCreatureRace definition carries the per-race template fields the engine merges
@@ -1797,6 +1807,7 @@ class ContentValidator:
         self._validate_creature_class_actions_levelling(entry.path, entry.key, entry.data, visible)
         self._validate_creature_class_property(entry.path, entry.key, entry.data, visible)
         self._validate_creature_race_definition(entry.path, entry.key, entry.data, visible)
+        self._validate_interaction_self_target(entry.path, entry.key, entry.data, visible)
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -3431,6 +3442,51 @@ class ContentValidator:
 
     def _class_resolves_to_interaction(self, class_name: str) -> bool:
         return class_name == INTERACTION_BASE_CLASS or self._class_inherits_from(class_name, INTERACTION_BASE_CLASS)
+
+    def _validate_interaction_self_target(
+        self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
+    ) -> None:
+        """Require caster-target interactions to declare selfTarget explicitly.
+
+        Recurses the config tree so an interaction nested under a ref chain or another
+        object is still checked.  For every node whose effective class resolves to
+        CInteraction, it resolves the interaction's ``effect`` (following ref chains) and
+        its effect tags: when the effect carries the Buff tag -- which historically routed
+        the effect back to the caster through the legacy tag-based fallback -- the
+        interaction must set ``selfTarget`` true so the routing is explicit rather than
+        inferred from the tag.  Interactions without an effect, or with a non-Buff effect,
+        are unaffected, and the Buff tag itself is preserved for classification.
+        """
+        if isinstance(value, dict):
+            if self._is_interaction_node(value, visible):
+                self._check_interaction_self_target(path, location, value, visible)
+            for key, child in value.items():
+                self._validate_interaction_self_target(path, append_field(location, key), child, visible)
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                self._validate_interaction_self_target(path, append_index(location, index), child, visible)
+
+    def _is_interaction_node(self, value: dict[str, Any], visible: dict[str, ConfigEntry]) -> bool:
+        class_name = self._effective_object_class(value, visible)
+        return isinstance(class_name, str) and self._class_resolves_to_interaction(class_name)
+
+    def _check_interaction_self_target(
+        self, path: Path, location: str, value: dict[str, Any], visible: dict[str, ConfigEntry]
+    ) -> None:
+        effect_value = self._effective_property_value(value, INTERACTION_EFFECT_PROPERTY, visible)
+        if not isinstance(effect_value, dict):
+            return
+        tags = self._effective_property_value(effect_value, EFFECT_TAGS_PROPERTY, visible)
+        if not (isinstance(tags, list) and BUFF_EFFECT_TAG in tags):
+            return
+        self_target = self._effective_property_value(value, INTERACTION_SELF_TARGET_PROPERTY, visible)
+        if self_target is not True:
+            self._issue(
+                path,
+                append_field(append_field(location, "properties"), INTERACTION_SELF_TARGET_PROPERTY),
+                f'interaction with a Buff-tagged effect must declare "selfTarget": true so caster '
+                f"targeting is explicit; it currently relies on the deprecated Buff-tag routing fallback",
+            )
 
     def _validate_creature_class_property(
         self, path: Path, location: str, value: Any, visible: dict[str, ConfigEntry]
