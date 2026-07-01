@@ -1066,6 +1066,9 @@ void init_game_module(py::module_ &m) {
         .def("setEffects", &CCreature::setEffects, "Replace active effects.")
         .def("getEffects", &CCreature::getEffects, "Return active effects.")
         .def("getActions", &CCreature::getActions, "Return available actions.")
+        .def("getInteractions", &CCreature::getInteractions,
+             "Return the effective (composed) interaction set, including archetype race/class actions and "
+             "level-gated class unlocks, deduplicated by identity.")
         .def("removeItem", removeItem,
              "Remove the first inventory item matching predicate(item). Optional second arg allows quest removal.")
         .def("removeQuestItem", removeQuestItem, "Remove first matching quest item predicate from inventory.")
