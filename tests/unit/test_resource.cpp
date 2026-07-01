@@ -27,7 +27,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <chrono>
-#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -277,30 +276,8 @@ void test_resource_plugin_trust_boundary_rejects_escapes() {
 
 } // namespace
 
-// Registers the engine's pybind bindings (CGame and friends) in the embedded
-// interpreter. The plugin-execution path exercised by the trust-boundary test
-// casts the live CGame into Python (CPluginLoader::loadPlugin ->
-// pybind11::cast(game)), which only works once init_game_module has run. That
-// initializer lives solely in the _game module, so we import it here. On Linux
-// this test binary and _game link the same shared game_core, so the imported
-// bindings register against the identical CGame type this binary uses. Also
-// preloads the json module so the sandbox import proxy can expose it. Best
-// effort: failure is logged but does not abort the suite (other tests do not
-// need the bindings).
-void register_engine_bindings() {
-    try {
-        pybind11::module_::import("sys").attr("path").attr("insert")(0, pybind11::str("."));
-        pybind11::module_::import("json");
-        pybind11::module_::import("_game");
-    } catch (const pybind11::error_already_set &exception) {
-        PyErr_Clear();
-        std::fprintf(stderr, "WARNING: could not import _game bindings for resource tests: %s\n", exception.what());
-    }
-}
-
 int main() {
     pybind11::scoped_interpreter guard{};
-    register_engine_bindings();
 
     test_resource_provider_paths_and_config_loader();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
