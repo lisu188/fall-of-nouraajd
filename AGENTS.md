@@ -615,6 +615,30 @@ Follow this workflow:
 
 Mismatched ids cause runtime loading or spawning failures.
 
+## Adding a creature race, class, or monster archetype
+
+The creature archetype model (races/classes composed onto concrete monster and
+player templates) is documented in `docs/design/creature_archetypes.md`; read its
+**Developer guide: adding a race, a class, or a monster** section before touching
+archetype content. Key rules:
+
+- Author races in `res/config/creature_races.json` (`CCreatureRace`), classes in
+  `res/config/creature_classes.json` (`CCreatureClass`), and assign them on
+  concrete templates in `res/config/monsters.json` via `{"ref": "..."}`. Both
+  archetype objects are already registered in `src/core/CModule.cpp`; new *ids*
+  need only JSON.
+- Follow the naming policy (suffix `Race` / `Class`, lowerCamelCase) and never let
+  a class id duplicate a concrete template id.
+- **Do not rename** concrete monster/player template ids, or any quest/dialog id.
+- **Do not make a race player-selectable or add a new player race/class.**
+  `CCreatureRace.playerSelectable` defaults to `false`; player-facing roster
+  changes are content-owner-gated and must not be inferred by an agent. Assigning
+  an existing archetype to a *monster* is fine.
+- Keep monster assignments baseline-preserving unless the task changes balance, and
+  regenerate `tests/fixtures/creature_stat_scale_baseline.json` if composed stats
+  change. New config files also need an explicit `configure_file` line in
+  `CMakeLists.txt` (see "Resource files and CMake").
+
 ## Dialogs
 
 To add dialog interaction for an item, NPC, or map object:
