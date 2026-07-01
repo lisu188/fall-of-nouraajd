@@ -70,9 +70,17 @@ class PythonPluginSandboxTest(unittest.TestCase):
     def test_resource_provider_rejects_absolute_and_parent_traversal_paths(self):
         self.assertIn("isSafeRelativeResourcePath", self.provider_source)
         self.assertIn("resourcePath.is_absolute()", self.provider_source)
-        self.assertIn('normalized.rfind("../", 0) != 0', self.provider_source)
-        self.assertIn('normalized.find("/../") == std::string::npos', self.provider_source)
+        self.assertIn('normalized.rfind("../", 0) == 0', self.provider_source)
+        self.assertIn('normalized.find("/../") != std::string::npos', self.provider_source)
         self.assertIn("Rejected unsafe resource path", self.provider_source)
+
+    def test_trust_boundary_model_is_documented(self):
+        doc = REPO_ROOT / "docs" / "design" / "plugin_trust_boundary.md"
+        self.assertTrue(doc.exists(), "trust boundary design doc must exist")
+        text = doc.read_text()
+        self.assertIn("authored repository content", text.lower())
+        self.assertIn("isWithinResourceRoot", text)
+        self.assertIn("is_allowed_python_plugin_path", text)
 
     def test_crafting_plugin_uses_resource_provider_instead_of_filesystem_paths(self):
         crafting_source = (REPO_ROOT / "res" / "plugins" / "crafting.py").read_text()
