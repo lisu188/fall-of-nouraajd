@@ -20560,8 +20560,14 @@ def test_group_timeout_seconds(test_names, timings=None):
     # to complete self-heals the cached timings, after which both shard balancing and
     # this timeout become accurate. Genuine hangs remain bounded by the job-level
     # timeout configured in the workflow.
-    headroom = 240 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 120
-    return max(180, int(duration_hint * multiplier) + headroom)
+    # The floor and headroom are deliberately generous: on a cold cache the balancer
+    # can still concentrate the genuinely-slow tests onto one shard (their default
+    # weights understate reality), so that shard must be allowed to run to completion
+    # at least once to record real timings that fix the balance on the next run. A
+    # single observed cold-cache shard needed >320s, so the floor is set well above
+    # that. Genuine hangs remain bounded by the job-level timeout in the workflow.
+    headroom = 420 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 300
+    return max(600, int(duration_hint * multiplier) + headroom)
 
 
 def run_test_subprocess(test_names, shard_name, extra_env=None):
@@ -20672,15 +20678,26 @@ def run_sharded_tests(test_names, jobs, *, allow_xvfb_sidecar=False):
         if return_code != 0:
             failures.append(("xvfb-long", return_code))
 
+    # Persist whatever timings the workers recorded, even when a shard failed or
+    # timed out. Each worker writes its own timings only after it finishes, so a
+    # shard killed on timeout contributes nothing -- but the shards that DID finish
+    # recorded real per-test durations. Writing them unconditionally lets the cached
+    # timings self-heal after a single run: the next run weights those tests
+    # accurately, so the balancer stops concentrating the genuinely-slow tests onto
+    # one shard and stops under-sizing that shard's timeout. Writing only on overall
+    # success meant one slow shard discarded every other shard's real timings and the
+    # cold-cache under-estimate was reproduced on every retry.
+    combined_timings = {}
+    for timings_path in (TEST_OUTPUT_DIR / "workers").glob("*/test-timings.json"):
+        combined_timings.update(load_test_timings(timings_path))
+    if combined_timings:
+        write_test_timings(TEST_TIMINGS_FILE, combined_timings)
+
     if failures:
         for shard_name, return_code in failures:
             print(f"[test shard {shard_name}] failed with exit code {return_code}", file=sys.stderr, flush=True)
         return 1
 
-    combined_timings = {}
-    for timings_path in (TEST_OUTPUT_DIR / "workers").glob("*/test-timings.json"):
-        combined_timings.update(load_test_timings(timings_path))
-    write_test_timings(TEST_TIMINGS_FILE, combined_timings)
     return 0
 
 
