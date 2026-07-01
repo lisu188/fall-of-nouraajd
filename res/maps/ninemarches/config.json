@@ -1,0 +1,195 @@
+{
+  "ninemarchesStart": {
+    "class": "StartEvent",
+    "properties": {
+      "text": "You set foot on the Nine Marches, the vast accursed continent east of Nouraajd. The plague-cult of Marumi Baso works toward the Ninefold Crowning - to raise a dead god by digging up its grave-crown from the Cyclopean Citadel at the heart of the world. From the crossroads town of Gravewatch, the marches spread out in every direction: the Reaved Fields, the Plague-Fen, the Barrowlands, the Ashmarch, the Drowned Coast, and the Cold Reach. Gather the keys, read the obelisks, and reach the Citadel before the cult crowns its king."
+    }
+  },
+  "gravewatchSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "GRAVEWATCH - crossroads of the Nine Marches. Roads: Fields (here), Fen (west), Barrows (north), Ashmarch (east), Cold Reach (far north), Drowned Coast (far south-east). Beware the deeper marches."
+    }
+  },
+  "citadelSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "THE CYCLOPEAN CITADEL - seat of the Ninefold Crowning. The grave-crown lies beneath. Read all six obelisks, or the ground will not give up its king."
+    }
+  },
+  "mayorHall": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {"class": "CNpcRandomController"},
+      "npc": true
+    }
+  },
+  "gravewatchTavern": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/oldWoman",
+      "controller": {"class": "CNpcRandomController"},
+      "npc": true
+    }
+  },
+  "companionKnight": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {"class": "CNpcRandomController"},
+      "npc": true
+    }
+  },
+  "companionWitch": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/oldWoman",
+      "controller": {"class": "CNpcRandomController"},
+      "npc": true
+    }
+  },
+  "companionSellsword": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {"class": "CNpcRandomController"},
+      "npc": true
+    }
+  },
+  "gravewatchMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        {"ref": "LifePotion"}, {"ref": "ManaPotion"}, {"ref": "GreaterLifePotion"},
+        {"ref": "LesserLifePotion"}, {"ref": "Scroll"}
+      ]
+    }
+  },
+  "gravewatchBarter": {
+    "ref": "Market",
+    "properties": {"animation": "images/buildings/market", "market": {"ref": "gravewatchMarket"}}
+  },
+  "gravewatchScribe": {
+    "ref": "ScribeDesk",
+    "properties": {"animation": "images/buildings/chapel"}
+  },
+  "learningStone": {
+    "class": "LearningStone",
+    "properties": {"animation": "images/ambient/stone_shrine", "canStep": true}
+  },
+  "witchHut": {
+    "class": "WitchHut",
+    "properties": {"animation": "images/ambient/campfire_cauldron", "canStep": true}
+  },
+  "goldMine": {
+    "class": "GoldMine",
+    "properties": {"animation": "images/buildings/cave", "canStep": true, "value": 400}
+  },
+  "ironKeyCache": {
+    "class": "KeymasterCache",
+    "properties": {"animation": "images/misc/chest", "canStep": true, "grants": "ironKey", "color": "iron"}
+  },
+  "boneKeyCache": {
+    "class": "KeymasterCache",
+    "properties": {"animation": "images/misc/chest", "canStep": true, "grants": "boneKey", "color": "bone"}
+  },
+  "brassKeyCache": {
+    "class": "KeymasterCache",
+    "properties": {"animation": "images/misc/chest", "canStep": true, "grants": "brassKey", "color": "brass"}
+  },
+  "ironGateThreshold": {
+    "class": "GateThreshold",
+    "properties": {"canStep": true, "key": "ironKey", "gate": "ironGate", "flag": "iron_gate_open", "chapter": 2}
+  },
+  "boneGateThreshold": {
+    "class": "GateThreshold",
+    "properties": {"canStep": true, "key": "boneKey", "gate": "boneGate", "flag": "bone_gate_open", "chapter": 3}
+  },
+  "brassGateThreshold": {
+    "class": "GateThreshold",
+    "properties": {"canStep": true, "key": "brassKey", "gate": "brassGate", "flag": "brass_gate_open", "chapter": 3}
+  },
+  "ironGate": {"ref": "brickWall", "properties": {"animation": "images/misc/closed_door"}},
+  "boneGate": {"ref": "brickWall", "properties": {"animation": "images/misc/closed_door"}},
+  "brassGate": {"ref": "brickWall", "properties": {"animation": "images/misc/closed_door"}},
+  "monolithHub": {"ref": "Teleporter", "properties": {"animation": "images/ambient/stone_well", "enabled": true, "exit": "monolithCoast"}},
+  "monolithCoast": {"ref": "Teleporter", "properties": {"animation": "images/ambient/stone_well", "enabled": true, "exit": "monolithHub"}},
+  "monolithAsh": {"ref": "Teleporter", "properties": {"animation": "images/ambient/stone_well", "enabled": true, "exit": "monolithCold"}},
+  "monolithCold": {"ref": "Teleporter", "properties": {"animation": "images/ambient/stone_well", "enabled": true, "exit": "monolithAsh"}},
+  "obeliskFields": {"class": "Obelisk", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Fields Obelisk: 'The crown lies six sigils deep. The first is cut in the muster-fields, where the Marches first bled.'"}},
+  "obeliskFen": {"class": "Obelisk", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Fen Obelisk: 'The second sigil drowns with the plague-dead. Read it while the water holds still.'"}},
+  "obeliskBarrows": {"class": "Obelisk", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Barrows Obelisk: 'The third sigil sleeps under the dead kings. Do not wake more than the sigil.'"}},
+  "obeliskAsh": {"class": "Obelisk", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Ashmarch Obelisk: 'The fourth sigil burns in the pyre-waste. The cult tends its ash for this very hour.'"}},
+  "obeliskCoast": {"class": "Obelisk", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Coast Obelisk: 'The fifth sigil drowned off the tithe-coast, in sight of a city of columns under the tarn.'"}},
+  "obeliskCold": {"class": "Obelisk", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Cold Obelisk: 'The sixth and last sigil freezes in the cold reach, cut by a hand that had already stopped being a hand.'"}},
+  "digSite": {"class": "DigSite", "properties": {"animation": "images/ambient/rubble_and_skulls", "canStep": true}},
+  "banditCache": {"class": "ItemCache", "properties": {"animation": "images/misc/chest", "canStep": true, "grants": "banditLedger"}},
+  "relicCache": {"class": "ItemCache", "properties": {"animation": "images/misc/chest", "canStep": true, "grants": "fenRelic"}},
+  "ashRelicCache": {"class": "ItemCache", "properties": {"animation": "images/misc/chest", "canStep": true, "grants": "ashRelic"}},
+  "fieldRaider": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/pritz", "fightController": {"class": "CMonsterFightController"}, "label": "Reaved Raider", "levelStats": {"class": "CStats", "properties": {"agility": 3, "crit": 2, "dmgMax": 4, "dmgMin": 3, "hit": 4, "intelligence": 1, "normalResist": 4, "stamina": 3, "strength": 4}}, "baseStats": {"class": "CStats", "properties": {"agility": 6, "crit": 10, "dmgMax": 11, "dmgMin": 8, "hit": 75, "intelligence": 4, "mainStat": "strength", "normalResist": 4, "stamina": 5, "strength": 6}}, "sw": 1}},
+  "fenGhoul": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/octobogz", "fightController": {"class": "CMonsterFightController"}, "label": "Plague-Ghoul", "levelStats": {"class": "CStats", "properties": {"agility": 3, "crit": 2, "dmgMax": 5, "dmgMin": 4, "hit": 4, "intelligence": 2, "normalResist": 6, "stamina": 4, "strength": 5}}, "baseStats": {"class": "CStats", "properties": {"agility": 6, "crit": 12, "dmgMax": 15, "dmgMin": 11, "hit": 78, "intelligence": 6, "mainStat": "strength", "normalResist": 7, "stamina": 7, "strength": 7}}, "sw": 2}},
+  "barrowKnight": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/cult_leader", "fightController": {"class": "CMonsterFightController"}, "label": "Barrow-Knight", "levelStats": {"class": "CStats", "properties": {"agility": 3, "crit": 3, "dmgMax": 8, "dmgMin": 6, "hit": 5, "intelligence": 4, "normalResist": 8, "stamina": 7, "strength": 7}}, "baseStats": {"class": "CStats", "properties": {"agility": 6, "crit": 16, "dmgMax": 26, "dmgMin": 20, "hit": 83, "intelligence": 7, "mainStat": "strength", "normalResist": 10, "stamina": 12, "strength": 10}}, "sw": 2}},
+  "ashCultist": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/cultist", "fightController": {"class": "CMonsterFightController"}, "label": "Ash-Cultist of Marumi Baso", "levelStats": {"class": "CStats", "properties": {"agility": 3, "crit": 3, "dmgMax": 6, "dmgMin": 4, "hit": 5, "intelligence": 4, "normalResist": 5, "stamina": 5, "strength": 6}}, "baseStats": {"class": "CStats", "properties": {"agility": 7, "crit": 14, "dmgMax": 20, "dmgMin": 15, "hit": 81, "intelligence": 9, "mainStat": "strength", "normalResist": 6, "stamina": 8, "strength": 8}}, "sw": 2}},
+  "deepSpawn": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/octobogz", "fightController": {"class": "CMonsterFightController"}, "label": "Tithe-Coast Deep-Spawn", "levelStats": {"class": "CStats", "properties": {"agility": 4, "crit": 3, "dmgMax": 7, "dmgMin": 5, "hit": 5, "intelligence": 3, "normalResist": 7, "stamina": 6, "strength": 7}}, "baseStats": {"class": "CStats", "properties": {"agility": 8, "crit": 16, "dmgMax": 24, "dmgMin": 18, "hit": 83, "intelligence": 6, "mainStat": "strength", "normalResist": 8, "stamina": 10, "strength": 9}}, "sw": 2}},
+  "coldHorror": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/goblin_thief", "fightController": {"class": "CMonsterFightController"}, "label": "Cold-Reach Horror", "levelStats": {"class": "CStats", "properties": {"agility": 5, "crit": 4, "dmgMax": 8, "dmgMin": 6, "hit": 6, "intelligence": 4, "normalResist": 8, "stamina": 7, "strength": 8}}, "baseStats": {"class": "CStats", "properties": {"agility": 10, "crit": 18, "dmgMax": 28, "dmgMin": 21, "hit": 85, "intelligence": 7, "mainStat": "agility", "normalResist": 9, "stamina": 11, "strength": 10}}, "sw": 2}},
+  "citadelPriest": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/cult_leader", "fightController": {"class": "CMonsterFightController"}, "label": "Priest of the Ninefold Crowning", "controller": {"class": "CTargetController", "properties": {"target": "player"}}, "levelStats": {"class": "CStats", "properties": {"agility": 3, "crit": 3, "dmgMax": 9, "dmgMin": 7, "hit": 5, "intelligence": 6, "normalResist": 9, "stamina": 8, "strength": 7}}, "baseStats": {"class": "CStats", "properties": {"agility": 7, "crit": 18, "dmgMax": 32, "dmgMin": 24, "hit": 85, "intelligence": 14, "mainStat": "intelligence", "normalResist": 11, "stamina": 13, "strength": 9}}, "sw": 2}},
+  "theNinefoldKing": {"class": "CCreature", "properties": {"actions": [{"ref": "Attack"}], "animation": "images/monsters/gooby", "fightController": {"class": "CMonsterFightController"}, "label": "The Crowned God, Ninefold King", "levelStats": {"class": "CStats", "properties": {"agility": 4, "crit": 4, "dmgMax": 15, "dmgMin": 11, "hit": 6, "intelligence": 6, "normalResist": 12, "stamina": 12, "strength": 10}}, "baseStats": {"class": "CStats", "properties": {"agility": 8, "crit": 22, "dmgMax": 54, "dmgMin": 38, "hit": 90, "intelligence": 14, "mainStat": "strength", "normalResist": 16, "stamina": 26, "strength": 16}}, "sw": 3}},
+  "citadelGuard": {"ref": "citadelPriest"},
+  "fieldsGuard": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "Reaved raiders boil up out of the muster-field graves.", "chance": "8", "monster": {"ref": "fieldRaider", "properties": {"affiliation": "marches", "controller": {"class": "CTargetController", "properties": {"target": "player"}}}}, "monsters": "5"}},
+  "fenGuard": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "The plague-fen splits and its drowned ghouls wade up.", "chance": "12", "monster": {"ref": "fenGhoul", "properties": {"affiliation": "marches", "controller": {"class": "CGroundController", "properties": {"tileType": "swamp"}}}}, "monsters": "7"}},
+  "barrowsGuard": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "The barrow honor-guard rises armed to keep the dead kings' crowns.", "chance": "10", "monster": {"ref": "barrowKnight", "properties": {"affiliation": "marches", "controller": {"class": "CTargetController", "properties": {"target": "player"}}}}, "monsters": "6"}},
+  "ashGuard": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "The ash-shrine cracks and the cult of Marumi Baso spills out chanting.", "chance": "12", "monster": {"ref": "ashCultist", "properties": {"affiliation": "marches", "controller": {"class": "CTargetController", "properties": {"target": "player"}}}}, "monsters": "7"}},
+  "coastGuard": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "The tithe-coast tarn bulges and Deep-Spawn rise dripping.", "chance": "12", "monster": {"ref": "deepSpawn", "properties": {"affiliation": "marches", "controller": {"class": "CTargetController", "properties": {"target": "player"}}}}, "monsters": "7"}},
+  "coldGuard": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "Out of the starless cold the horrors of the reach come wheeling down.", "chance": "12", "monster": {"ref": "coldHorror", "properties": {"affiliation": "marches", "controller": {"class": "CTargetController", "properties": {"target": "player"}}}}, "monsters": "8"}},
+  "citadelDwelling": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "The Citadel's crowning-guard forms up to defend the dig.", "chance": "10", "monster": {"ref": "citadelPriest", "properties": {"affiliation": "citadel", "controller": {"class": "CTargetController", "properties": {"target": "player"}}}}, "monsters": "6"}},
+  "wildEncounter": {"ref": "Cave", "properties": {"animation": "images/buildings/cave", "message": "The wild marches breed their own dead; a roving band falls on you.", "chance": "6", "monster": {"ref": "fenGhoul", "properties": {"affiliation": "wild", "controller": {"class": "CTargetController", "properties": {"target": "player"}}}}, "monsters": "4"}},
+  "chestFields": {"ref": "chest", "properties": {"value": 60}},
+  "chestFen": {"ref": "chest", "properties": {"value": 120}},
+  "chestBarrows": {"ref": "chest", "properties": {"value": 180}},
+  "chestAsh": {"ref": "chest", "properties": {"value": 220}},
+  "chestCoast": {"ref": "chest", "properties": {"value": 260}},
+  "chestCold": {"ref": "chest", "properties": {"value": 320}},
+  "ironKey": {"class": "CItem", "properties": {"name": "ironKey", "animation": "images/item", "label": "Iron March-Key", "description": "The cold iron key to the inner pass. First of the Keeper's three.", "tags": ["quest"]}},
+  "boneKey": {"class": "CItem", "properties": {"name": "boneKey", "animation": "images/item", "label": "Bone March-Key", "description": "A key carved from a march-lord's thighbone. It opens the east road to the Ashmarch.", "tags": ["quest"]}},
+  "brassKey": {"class": "CItem", "properties": {"name": "brassKey", "animation": "images/item", "label": "Brass March-Key", "description": "A green-corroded brass key. It opens the north road to the Cold Reach.", "tags": ["quest"]}},
+  "banditLedger": {"class": "CItem", "properties": {"name": "banditLedger", "animation": "images/items/scroll", "label": "Raider Ledger", "description": "A muster-field raider's ledger. Ser Halda has been hunting the names in it for a year.", "tags": ["quest"]}},
+  "fenRelic": {"class": "CItem", "properties": {"name": "fenRelic", "animation": "images/item", "label": "Drowned Reliquary", "description": "A fen-drowned reliquary the witch Morrigane needs to lay her sister's ghost.", "tags": ["quest"]}},
+  "ashRelic": {"class": "CItem", "properties": {"name": "ashRelic", "animation": "images/item", "label": "Sellsword's Seal", "description": "The signet of the company Corvyn deserted. He will want it back, one way or another.", "tags": ["quest"]}},
+  "aegisOfHalda": {"class": "CArmor", "properties": {"animation": "images/items/armors/platearmor", "label": "Aegis of Ser Halda", "description": "The oath-plate of Ser Halda, given when she joins your cause. Steadfast steel, no curse - only her word, which is harder.", "bonus": {"class": "CStats", "properties": {"armor": 240, "stamina": 14, "strength": 6, "normalResist": 6}}, "power": 15}},
+  "morriganesCharm": {"class": "CHelmet", "properties": {"animation": "images/items/helmets/crownofnightmares", "label": "Morrigane's Fen-Charm", "description": "The fen-witch's charm, freely given. It sharpens the mind against the marches' whispering dead.", "bonus": {"class": "CStats", "properties": {"intelligence": 14, "crit": 6, "normalResist": 5, "stamina": 4}}, "power": 14}},
+  "corvynsBlade": {"class": "CWeapon", "properties": {"animation": "images/items/weapons/shadowblade", "label": "Corvyn's Turncoat Blade", "description": "The sellsword Corvyn's blade, sworn to you now. It has changed sides before; it says it will not again.", "bonus": {"class": "CStats", "properties": {"agility": 12, "crit": 8, "dmgMax": 28, "dmgMin": 22, "strength": 8}}, "power": 14}},
+  "ninefoldCrown": {"class": "CHelmet", "properties": {"animation": "images/items/helmets/crownofnightmares", "label": "The Ninefold Crown", "description": "The grave-crown of a dead god, dug from the Cyclopean Citadel - nine circlets of black iron nested one in another, one for every march it will rule. It gifts a god's cold reach of mind, but it crowns whoever digs it up as the cult intends, and will not leave the brow until the curse is broken.", "power": 22, "tags": ["cursed", "quest"], "bonus": {"class": "CStats", "properties": {"agility": 6, "crit": 11, "intelligence": 20, "normalResist": -13, "stamina": -11, "strength": 5}}}},
+  "ninemarchesQuest": {"class": "NineMarchesQuest", "properties": {"description": "Cross the Nine Marches, read the six obelisks, and reach the Cyclopean Citadel before the cult crowns its god."}},
+  "haldaQuest": {"class": "HaldaQuest", "properties": {"description": "Recover the Raider Ledger for Ser Halda in the Reaved Fields."}},
+  "morriganeQuest": {"class": "MorriganeQuest", "properties": {"description": "Recover the Drowned Reliquary for the witch Morrigane in the Plague-Fen."}},
+  "corvynQuest": {"class": "CorvynQuest", "properties": {"description": "Recover the Sellsword's Seal for Corvyn in the Ashmarch."}},
+  "ambientGravewatchGate": {"ref": "signPost", "properties": {"animation": "images/ambient/broken_fence", "canStep": true, "text": "GRAVEWATCH GATE - the last town before the marches. Past here the dead outnumber the living nine to one, and gaining."}},
+  "ambientGravewatchLevy": {"ref": "signPost", "properties": {"animation": "images/ambient/notice_board", "canStep": true, "text": "LEVY ROLL - Gravewatch has called its muster three times. Three times the marches sent back only the tags."}},
+  "ambientGravewatchWard": {"ref": "signPost", "properties": {"animation": "images/ambient/brazier", "canStep": true, "text": "A ward-brazier kept burning at the crossroads. Its keepers swear it is the only thing the Cold Reach will not cross."}},
+  "ambientTavernRumor": {"ref": "signPost", "properties": {"animation": "images/ambient/wooden_bench", "canStep": true, "text": "TAVERN BOARD - drink, rumor, and hire. They say a knight, a witch, and a turncoat all wait in the marches for a cause worth their blade."}},
+  "ambientReputationPost": {"ref": "signPost", "properties": {"animation": "images/ambient/notice_board", "canStep": true, "text": "The marches keep a longer memory than any ledger. Every mercy and every theft is counted, and the counted are answered in kind."}},
+  "ambientFieldsMuster": {"ref": "signPost", "properties": {"animation": "images/ambient/supply_pile", "canStep": true, "text": "The Reaved Fields were a muster-ground once. Now the only thing that musters here rises at dusk and does not answer roll."}},
+  "ambientFieldsGraves": {"ref": "signPost", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Field-graves without markers, in rows too straight for grief. Someone buried the Marches' first host in a hurry, and in order."}},
+  "ambientFenPlague": {"ref": "signPost", "properties": {"animation": "images/ambient/broken_fence", "canStep": true, "text": "PLAGUE-FEN - the water lends out the drowned by night and takes fresh ones by day. Boil nothing you draw from here."}},
+  "ambientFenDrowned": {"ref": "signPost", "properties": {"animation": "images/ambient/stone_well", "canStep": true, "text": "A drowned barrow, capstone afloat. The fen keeps a reliquary down here, and a witch keeps asking for it back."}},
+  "ambientFenWitch": {"ref": "signPost", "properties": {"animation": "images/ambient/campfire_cauldron", "canStep": true, "text": "The fen-witch Morrigane trades charms for reliquaries and honesty. She is kinder than the marches deserve, and it costs her."}},
+  "ambientBarrowKings": {"ref": "signPost", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "Under the Barrowlands lie the crowned dead of nine marches, king atop warlord atop thief, each buried in the crown of the one below."}},
+  "ambientBarrowWarning": {"ref": "signPost", "properties": {"animation": "images/ambient/rubble_and_skulls", "canStep": true, "text": "BARROW WARNING - read the sigil and leave. Every barrow you open here is a soldier the cult does not have to raise itself."}},
+  "ambientObeliskCreed": {"ref": "signPost", "properties": {"animation": "images/ambient/notice_board", "canStep": true, "text": "Cult creed: six sigils, six marches, one crown. Read them all and the Citadel gives up its god. Read them all first, and so might you."}},
+  "ambientAshHeretics": {"ref": "signPost", "properties": {"animation": "images/ambient/brazier", "canStep": true, "text": "ASHMARCH - the cult of Marumi Baso burns its own here to feed the crowning-rite. The ash never settles; it is always looking for a wind."}},
+  "ambientAshMine": {"ref": "signPost", "properties": {"animation": "images/ambient/broken_cart", "canStep": true, "text": "A grave-gold mine, worked by the cult and guarded by the dead. Claim it if you can hold it; the marches pay in gold and in kind."}},
+  "ambientAshCult": {"ref": "signPost", "properties": {"animation": "images/ambient/stone_shrine", "canStep": true, "text": "The spiral of Marumi Baso, cut fresh on every ash-shrine. The cult was always going to end up at a god's grave."}},
+  "ambientCoastTithe": {"ref": "signPost", "properties": {"animation": "images/ambient/supply_pile", "canStep": true, "text": "TITHE-COAST - gold and get for the deep, and the deep keeps the rest. The drowned town of Vhul'Marn lies off this shore."}},
+  "ambientCoastDeep": {"ref": "signPost", "properties": {"animation": "images/ambient/hay_bales", "canStep": true, "text": "Grey-green scales on the tide-line, sloughed by things shaped enough like men to wear a drowned townsman's coat."}},
+  "ambientCoastYhaNthlei": {"ref": "signPost", "properties": {"animation": "images/ambient/stone_well", "canStep": true, "text": "A bottomless well. Pilgrims knelt here to whisper toward Y'ha-nthlei, the city of columns waiting under the tarn."}},
+  "ambientColdWaste": {"ref": "signPost", "properties": {"animation": "images/ambient/signpost", "canStep": true, "text": "COLD REACH - no fuel, no game, no mercy. Its road runs on north past the edge of the marches, into the cold waste of Kadath."}},
+  "ambientColdKadath": {"ref": "signPost", "properties": {"animation": "images/ambient/dead_tree", "canStep": true, "text": "The far north road ends at an onyx castle on unknown Kadath, where a dark messenger keeps an appointment the gods abandoned. Do not take his crown either."}},
+  "ambientColdNightGaunt": {"ref": "signPost", "properties": {"animation": "images/ambient/dead_tree", "canStep": true, "text": "Barbs and shed guano cake the north crags. Faceless things roost here. They do not harm you; they only carry you down to where the deeper things wait."}},
+  "ambientCitadelCrown": {"ref": "signPost", "properties": {"animation": "images/ambient/gravestone_cluster", "canStep": true, "text": "They say the Ninefold Crown makes a god of whoever digs it up. They do not say the god it makes is not you."}},
+  "ambientCitadelNinefold": {"ref": "signPost", "properties": {"animation": "images/ambient/rubble_and_skulls", "canStep": true, "text": "NINEFOLD CROWNING - nine marches, nine circlets, one grave. The cult has waited nine hundred years for a dreamer bold enough to do their digging."}},
+  "ambientMarumiBaso": {"ref": "signPost", "properties": {"animation": "images/ambient/brazier", "canStep": true, "text": "The spiral mark of Marumi Baso, scratched from Nouraajd to the Citadel's gate. Wherever the plague went, the cult went, and both were always coming here."}},
+  "ambientMonolithWarn": {"ref": "signPost", "properties": {"animation": "images/ambient/stone_well", "canStep": true, "text": "A twinned monolith of black glass. Step within and its far twin spits you out across the marches. Mind which twin is which; the deep marches are a long walk back."}},
+  "ambientKeymasterCreed": {"ref": "signPost", "properties": {"animation": "images/ambient/broken_cart", "canStep": true, "text": "The March Keeper kept every gate on one ring: iron, bone, and brass. He kept the ring on his own corpse. Look to the caches."}},
+  "ambientChapterOmen": {"ref": "signPost", "properties": {"animation": "images/ambient/notice_board", "canStep": true, "text": "The marches turn like a book: field and fen, barrow and ash, coast and cold, and the grave at the end of every chapter. You are somewhere in the middle of it now."}}
+}

@@ -1,0 +1,282 @@
+{
+  "mayorDialog": {
+    "class": "MayorDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The Warden of Gravewatch looks up from a map stuck through with too many black pins. 'Another blade for the marches,' she says. 'Or another grave-robber. The marches will sort out which.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "condition": "high_reputation", "nextStateId": "HIGH", "text": "(They cheer your name from here to the Cold Reach.)"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "low_reputation", "nextStateId": "LOW", "text": "(The watch keeps their hands near their hilts.)"}},
+              {"class": "CDialogOption", "properties": {"number": 2, "condition": "steady_reputation", "nextStateId": "STEADY", "text": "Tell me how the marches stand."}},
+              {"class": "CDialogOption", "properties": {"number": 3, "nextStateId": "LORE", "text": "What is the Ninefold Crowning?"}},
+              {"ref": "exitOption", "properties": {"number": 4}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "HIGH",
+            "text": "'The marches love you, and that buys more than gold out here. Doors open, prices fall, and the lost of the marches will follow a name they trust. Keep it clean and you may reach the Citadel with a war-band at your back.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LOW",
+            "text": "'Word runs ahead of you, and the word is not good. The marches remember every shrine you robbed and every oath you broke, and they answer in kind. Even the desperate think twice before they march with you now.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "STEADY",
+            "text": "'Six obelisks, three keys, six marches, and a grave at the heart of it. Read the obelisks, win the keys, and get to the Cyclopean Citadel before the cult digs up its god. And find the marches' lost - a knight, a witch, a turncoat - before you go.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LORE",
+            "text": "'Nine marches, nine circlets, one grave-crown. The cult of Marumi Baso means to dig it up and set it on a dead god's brow - or on the brow of whatever fool digs it up first. That is the Ninefold Crowning. Do not be the fool, if you can help it. Most cannot.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        }
+      ]
+    }
+  },
+  "tavernDialog": {
+    "class": "TavernDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The Gravewatch taproom is loud with soldiers who will not march and quiet with those who know they will. The keeper slides you a bitter beer. 'Rumors are free tonight,' she says. 'The hiring costs blood.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "nextStateId": "RUMORS", "text": "What's the word from the marches?"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "nextStateId": "HIRING", "text": "Who's for hire out there?"}},
+              {"ref": "exitOption", "properties": {"number": 2}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "RUMORS",
+            "text": "'The Keeper's three keys are still on his corpse, split across the marches. The obelisks sing louder every night. And the cult's ash-fires in the east have not gone out in a month. Whatever they are feeding it, there is a lot of it.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "HIRING",
+            "text": "'Three worth their salt, if you can find them and do right by them. A disgraced knight in the Reaved Fields, hunting a ledger of names. A fen-witch in the plague-mire, wanting a drowned reliquary back. And a turncoat sellsword in the Ashmarch, chasing his old company's seal. Help them and they will march with you - the marches watch who you keep company with.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        }
+      ]
+    }
+  },
+  "knightDialog": {
+    "class": "KnightDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "A tall woman in dented oath-plate stands over a raider's corpse in the Reaved Fields, reading a ledger she has clearly read a hundred times. 'Ser Halda,' she says, without looking up. 'Once of Gravewatch. Now of nowhere, until a certain accounting is settled.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "condition": "not_met", "nextStateId": "OFFER", "text": "What accounting, Ser Halda?"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I found your Raider Ledger. The names are yours."}},
+              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "How stands our cause, Ser Halda?"}},
+              {"class": "CDialogOption", "properties": {"number": 3, "condition": "has_left", "nextStateId": "GONE", "text": "Halda..."}},
+              {"ref": "exitOption", "properties": {"number": 4}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "OFFER",
+            "text": "'The raiders who broke the Marches' first muster carried a ledger of everyone they sold to the cult. It is out here in the fields, in a raider cache. Bring it to me, and my sword and my oath are yours to the Citadel and past it.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll bring you the ledger."}},
+              {"ref": "exitOption", "properties": {"number": 1}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACCEPTED",
+            "text": "'The cache is near the old muster-graves. The raiders left it guarded, as raiders do.' She closes her ledger. 'Come back with it, and I will close this one for good.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "JOINED",
+            "text": "Halda reads the ledger to its bitter end, then buckles her oath-plate onto your pack. 'The Aegis is yours. So am I. Where you march, I march - so long as you give the marches no new reason to curse your name.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LOYAL",
+            "text": "'Our cause stands as your name stands,' Halda says, watching you sidelong. 'Keep it clean and I keep my oath. Foul it badly enough and even I have a limit.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "GONE",
+            "text": "Ser Halda will not meet your eye. 'I gave you my oath and you spent it on things I will not name. Keep the Aegis. You clearly need the armor more than the honor.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        }
+      ]
+    }
+  },
+  "witchDialog": {
+    "class": "WitchDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "In a hut on stilts over the plague-fen, a young witch stirs a cauldron that shows faces. 'Morrigane,' she says. 'The fen tells me you are the sort who finishes things. I have a thing that wants finishing.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "condition": "not_met", "nextStateId": "OFFER", "text": "What is it you need finished?"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I recovered the Drowned Reliquary. Here."}},
+              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "How does the fen read our road, Morrigane?"}},
+              {"class": "CDialogOption", "properties": {"number": 3, "condition": "has_left", "nextStateId": "GONE", "text": "Morrigane..."}},
+              {"ref": "exitOption", "properties": {"number": 4}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "OFFER",
+            "text": "'My sister drowned in the fen with our family reliquary, and the fen will not give her rest until it is out of the water. Bring me the Drowned Reliquary, and my charms and my sight are yours all the way to the Citadel.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll bring the reliquary up."}},
+              {"ref": "exitOption", "properties": {"number": 1}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACCEPTED",
+            "text": "'It lies in a drowned barrow, west and down. A dead colonel keeps it company, and he does not like to share.' She stirs the faces under the water. 'Go gently. The fen is listening.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "JOINED",
+            "text": "Morrigane lays the reliquary in the fen and the water goes, at last, still. She presses a fen-charm into your hand. 'My sister rests, and I ride with you. The charm sharpens the mind against the marches' whispers - as I will, so long as you stay someone worth whispering to.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LOYAL",
+            "text": "'The fen reads your road going darker or brighter by the day,' Morrigane says. 'Keep to the light of it and I keep to you. Sink too far and even a witch has scruples.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "GONE",
+            "text": "Morrigane's cauldron shows you a face you no longer like. 'I laid one ghost to rest and watched you make a dozen more. Keep the charm. I want nothing of yours near me now.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        }
+      ]
+    }
+  },
+  "sellswordDialog": {
+    "class": "SellswordDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "A lean man cleans a black blade in the ash of the Pyre-Waste, sitting like he owns the ruin. 'Corvyn,' he says. 'Late of a company I would rather not name, since I left it in a hurry and it would like a word. You have the look of someone the marches are about to use up. I could help with that - for a price with my name on it.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "condition": "not_met", "nextStateId": "OFFER", "text": "Name your price, turncoat."}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I have your company's Seal. Take it."}},
+              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "Still with me, Corvyn?"}},
+              {"class": "CDialogOption", "properties": {"number": 3, "condition": "has_left", "nextStateId": "GONE", "text": "Corvyn..."}},
+              {"ref": "exitOption", "properties": {"number": 4}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "OFFER",
+            "text": "'My old company carries a signet seal that marks me a deserter. Get it off them - they camp in the Ashmarch cache - and I am your blade to the Citadel. I warn you fair: I have changed sides before. I do it for good reasons. Give me a good reason to stay and I will.'",
+            "options": [
+              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll get your seal."}},
+              {"ref": "exitOption", "properties": {"number": 1}}
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACCEPTED",
+            "text": "'The cache is deeper in the ash, well guarded. Bring the seal and my past is a closed account.' He grins, not kindly. 'I do like a closed account.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "JOINED",
+            "text": "Corvyn burns the seal in the ash and watches it curl. 'Clean. My blade is yours - the Turncoat Blade, and the hand that swings it.' He sheathes it. 'One warning: I signed on for a hard road with a hard traveler. Go soft and righteous on me and I will wonder why I bothered.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LOYAL",
+            "text": "'Still here,' Corvyn says, testing the blade's edge. 'You keep this road hard and interesting and I have no reason to leave. Get too clean and beloved and I start remembering I work for coin, not causes.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "GONE",
+            "text": "Corvyn is already shouldering his pack. 'You turned into a hero when I wasn't looking. Heroes get their sellswords killed for the story. Keep the blade - consider it severance.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
+        }
+      ]
+    }
+  }
+}
