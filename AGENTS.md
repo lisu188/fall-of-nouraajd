@@ -529,6 +529,17 @@ For screenshot or image artifacts produced by tests, verify at least:
 - the file is loadable or has expected dimensions/metadata;
 - deterministic baselines are compared when such baselines exist.
 
+### Screenshot regeneration and coverage
+
+Regenerate screenshots after every major UI change (layout, panels, widgets, rendering, or theming). Stale
+screenshots must not be left behind once the rendered result has changed.
+
+When regenerating, the screenshot set must cover, at minimum:
+
+- at least one screenshot showing each type of panel (see the panel definitions in `res/config/panels.json`);
+- at least one screenshot from each map — `nouraajd`, `ritual`, `siege`, `multilevel`, and `test` — plus one from a
+  randomly generated map.
+
 ## Code style
 
 General:
