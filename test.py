@@ -188,7 +188,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_kadath": 30.0,
-    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 60.0,
+    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_ninemarches": 300.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
@@ -199,8 +199,8 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_test": 10.0,
     "GameTest.test_map_walkthrough_vhulmarn": 15.0,
     "GameTest.test_map_walkthrough_kadath": 15.0,
-    "GameTest.test_map_walkthrough_sunderedmarch": 60.0,
-    "GameTest.test_map_walkthrough_ninemarches": 300.0,
+    "GameTest.test_map_walkthrough_sunderedmarch": 15.0,
+    "GameTest.test_map_walkthrough_ninemarches": 45.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -1314,7 +1314,10 @@ def game_test(f):
         success = result[0]
         log = result[1]
         (TEST_OUTPUT_DIR / f"{n}.json").write_text(str(log))
-        self.assertTrue(success)
+        # Surface the captured log (including any subprocess stdout/stderr traceback) in the
+        # assertion message so failures are diagnosable directly from the test output instead of
+        # only reporting "False is not true".
+        self.assertTrue(success, str(log)[:4000] if not success else None)
 
     return wrapper
 
@@ -4743,9 +4746,6 @@ def walkthrough_sunderedmarch_map():
         definition = find_map_object_definition("sunderedmarch", name)
         player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
         pump_event_loop(5)
-        # Advance a map turn so controller/combat futures settle, matching the MCP walkthrough
-        # (the guarded barrow route needs turn resolution the bare event loop does not drive).
-        advance_map_only(game_map, 1)
 
     # Arrival grants the main quest.
     move_to_object("marchStart")
@@ -4799,8 +4799,6 @@ def walkthrough_ninemarches_map():
         definition = find_map_object_definition("ninemarches", name)
         player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
         pump_event_loop(5)
-        # Advance a map turn so controller/combat futures settle, matching the MCP walkthrough.
-        advance_map_only(game_map, 1)
 
     # Arrival grants the main quest (Baldur's-Gate chapters begin).
     move_to_object("ninemarchesStart")
