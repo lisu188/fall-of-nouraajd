@@ -216,6 +216,68 @@ void test_load_game_creates_context_owned_providers() {
     expect_true(first_items != second_items, "separate game contexts should not share configuration provider caches");
 }
 
+void test_resource_plugin_trust_boundary_rejects_escapes() {
+    auto provider = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(provider->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before trust-boundary test");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto resourceRoot = itemsPath.parent_path().parent_path();
+
+    // Untrusted: absolute and parent-traversal resource reads must be rejected by the boundary.
+    expect_true(provider->getPath("/etc/passwd").empty(), "absolute resource paths must be rejected");
+    expect_true(provider->getPath("../config/items.json").empty(), "parent-traversal resource paths must be rejected");
+
+    // Untrusted: a symlink inside the resource root that points outside it must be rejected even
+    // though it lexically lives under the root, because getPath canonicalizes (follows symlinks)
+    // before checking containment.
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto outsideDir =
+        std::filesystem::temp_directory_path() / ("trust-boundary-outside-" + std::to_string(nonce));
+    std::error_code errorCode;
+    std::filesystem::create_directories(outsideDir, errorCode);
+    const auto outsideFile = outsideDir / "secret.json";
+    expect_true(write_text_file(outsideFile, R"({"secret":true})"), "out-of-root fixture should be written");
+
+    const std::string logicalLink = "config/trust_boundary_escape_" + std::to_string(nonce) + ".json";
+    const auto linkPath = resourceRoot / logicalLink;
+    std::filesystem::create_symlink(outsideFile, linkPath, errorCode);
+    if (!errorCode) {
+        expect_true(provider->getPath(logicalLink).empty(),
+                    "symlink escaping the resource root must be rejected by getPath");
+        expect_true(provider->load(logicalLink).empty(),
+                    "symlink escaping the resource root must not be readable through load");
+    }
+    std::filesystem::remove(linkPath, errorCode);
+    std::filesystem::remove_all(outsideDir, errorCode);
+
+    // Untrusted: Python plugin/script loads outside the trusted plugin/map roots must be refused
+    // before any code is executed.
+    auto game = CGameLoader::loadGame();
+    expect_true(!CPluginLoader::loadPlugin(game, "../evil.py"),
+                "parent-traversal plugin paths must be rejected before execution");
+    expect_true(!CPluginLoader::loadPlugin(game, "/tmp/evil.py"),
+                "absolute plugin paths must be rejected before execution");
+    expect_true(!CPluginLoader::loadPlugin(game, "config/items.json"),
+                "non-plugin resource paths must not be executed as plugins");
+    expect_true(!CPluginLoader::loadPlugin(game, "plugins/../../escape.py"),
+                "traversal that escapes the plugins root must be rejected");
+
+    // Trusted: an in-root plugin path under plugins/ is accepted and executed.
+    const std::string trustedPluginLogical = "plugins/trust_boundary_ok_" + std::to_string(nonce) + ".py";
+    const auto trustedPluginPath = resourceRoot / trustedPluginLogical;
+    const std::string trustedPluginBody = "_trust_boundary_loaded = []\n"
+                                          "def load(self, context):\n"
+                                          "    _trust_boundary_loaded.append(True)\n";
+    expect_true(write_text_file(trustedPluginPath, trustedPluginBody), "trusted plugin fixture should be written");
+    if (std::filesystem::exists(trustedPluginPath)) {
+        expect_true(CPluginLoader::loadPlugin(game, trustedPluginLogical),
+                    "trusted in-root plugin path must still load and execute");
+    }
+    std::filesystem::remove(trustedPluginPath, errorCode);
+}
+
 } // namespace
 
 int main() {
@@ -225,6 +287,7 @@ int main() {
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();
     test_load_game_creates_context_owned_providers();
+    test_resource_plugin_trust_boundary_rejects_escapes();
 
     return finish_tests();
 }
