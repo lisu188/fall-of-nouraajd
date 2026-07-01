@@ -192,6 +192,7 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
     "GameTest.test_map_walkthroughs": 20.0,
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
+    "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
     "GameTest.test_quest_journal_shows_objectives_rewards_and_hints": 12.0,
     "GameTest.test_generated_tiled_map_exercises_loader_metadata_and_objects": 10.0,
     "GameTest.test_fights": 8.0,
@@ -15961,6 +15962,155 @@ class GameTest(unittest.TestCase):
             "victor_bad_end": quest_state(game_map3, "victor"),
         }
         return True, json.dumps(log, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_oldwoman_questgiver_conversations_are_reliable(self):
+        # Regression guard for #630. oldWoman and questGiver drive their dialog through the
+        # onEnter trigger path in res/maps/nouraajd/script.py (OldWomanTrigger /
+        # QuestGiverTrigger), which only fires when the player steps onto the NPC's exact
+        # tile (see CCreature::afterMove -> forObjectsAtCoords(arrival, ...)). They used to
+        # carry CNpcRandomController, so both wandered up to five tiles per turn and the
+        # player could never deterministically reach the NPC's tile, leaving the
+        # conversation/dialog unreliable. res/maps/nouraajd/config.json now gives them the
+        # stationary base CController, so they stay on their authored tiles and the dialog
+        # reliably triggers. This test drives the real controller-based movement + onEnter
+        # trigger end to end rather than calling the dialog handlers directly.
+        game = load_game_module()
+
+        def quest_state(map_object, name):
+            return map_object.getStringProperty(f"quest_state_{name}")
+
+        original_show_dialog = game.CGuiHandler.showDialog
+        original_show_message = game.CGuiHandler.showMessage
+        shown_dialogs = []
+        shown_messages = []
+        try:
+
+            def capture_dialog(self, dialog):
+                shown_dialogs.append(dialog.getTypeId())
+
+            def capture_message(self, message):
+                shown_messages.append(message)
+
+            game.CGuiHandler.showDialog = capture_dialog
+            game.CGuiHandler.showMessage = capture_message
+
+            g, game_map, player = load_game_map_with_player("nouraajd")
+
+            old_woman = find_runtime_object(game_map, "oldWoman")
+            quest_giver = find_runtime_object(game_map, "questGiver")
+
+            # The fix: both NPCs are stationary. A wandering CNpcRandomController would
+            # make the approach non-deterministic, so guard the controller type directly.
+            self.assertEqual("CController", old_woman.getController().getType())
+            self.assertEqual("CController", quest_giver.getController().getType())
+            self.assertTrue(old_woman.isNpc())
+            self.assertTrue(quest_giver.isNpc())
+
+            # A stationary NPC keeps its authored tile across many AI turns; a wandering one
+            # would drift away, which is exactly why the conversation used to be unreliable.
+            old_woman_home = coords_tuple(old_woman.getCoords())
+            quest_giver_home = coords_tuple(quest_giver.getCoords())
+            for _ in range(8):
+                game_map.move()
+            self.assertEqual(old_woman_home, coords_tuple(old_woman.getCoords()))
+            self.assertEqual(quest_giver_home, coords_tuple(quest_giver.getCoords()))
+
+            def approach(npc):
+                # Reset the player next to the NPC and step onto its (stationary) tile so
+                # the onEnter trigger fires through the real event handler.
+                home = npc.getCoords()
+                start = find_adjacent_walkable_tile(game_map, home)
+                player.moveTo(start.x, start.y, start.z)
+                shown_dialogs.clear()
+                shown_messages.clear()
+                hp_before = player.getHp()
+                drive_player_to_target(game_map, player, home)
+                # Reaching the NPC's tile proves no combat started: a fight in
+                # CCreature::afterMove relocates the player back to its origin and skips
+                # onEnter entirely. NPC flag also excludes these two from the fight path.
+                self.assertEqual(coords_tuple(home), coords_tuple(player.getCoords()))
+                self.assertEqual(hp_before, player.getHp())
+                pump_event_loop(2)
+
+            # Initial old-woman quest dialog reliably opens (amulet not started).
+            self.assertEqual("not_started", quest_state(game_map, "amulet"))
+            approach(old_woman)
+            self.assertEqual(["questDialog"], shown_dialogs)
+            self.assertEqual([], shown_messages)
+
+            # questGiver reliably opens the OctoBogz dialog every approach.
+            approach(quest_giver)
+            self.assertEqual(["dialog"], shown_dialogs)
+
+            # Repeated approach of the questGiver stays reliable.
+            approach(quest_giver)
+            self.assertEqual(["dialog"], shown_dialogs)
+
+            # Start the amulet quest; an active reminder is shown, not a fresh quest dialog.
+            g.createObject("questDialog").start_amulet_quest()
+            self.assertEqual("active", quest_state(game_map, "amulet"))
+            approach(old_woman)
+            self.assertEqual([], shown_dialogs)
+            self.assertEqual(1, len(shown_messages))
+
+            # Carrying the amulet, approaching opens the return dialog reliably.
+            player.addItem("preciousAmulet")
+            approach(old_woman)
+            self.assertEqual(["questReturnDialog"], shown_dialogs)
+
+            # Complete the return once; the amulet is consumed and the quest is done.
+            g.createObject("questReturnDialog").complete_amulet_quest()
+            self.assertEqual("returned", quest_state(game_map, "amulet"))
+            self.assertEqual(0, player.countItems("preciousAmulet"))
+
+            # Save/load preserves the returned state, and a further approach removes the
+            # now-finished old woman rather than re-opening a dialog.
+            save_paths = []
+            _g, game_map, player, snapshot = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_conversation_reliability",
+                save_paths,
+                object_names=("oldWoman", "questGiver"),
+            )
+            self.assertEqual("returned", snapshot["quest_states"]["amulet"])
+            self.assertTrue(snapshot["objects"]["questGiver"])
+
+            reloaded_old_woman = game_map.getObjectByName("oldWoman")
+            if reloaded_old_woman is not None:
+                shown_dialogs.clear()
+                home = reloaded_old_woman.getCoords()
+                start = find_adjacent_walkable_tile(game_map, home)
+                player.moveTo(start.x, start.y, start.z)
+                drive_player_to_target(game_map, player, home)
+                pump_event_loop(2)
+                self.assertEqual([], shown_dialogs)
+                self.assertIsNone(game_map.getObjectByName("oldWoman"))
+
+            # questGiver still opens its dialog reliably after the amulet chain finishes.
+            reloaded_quest_giver = find_runtime_object(game_map, "questGiver")
+            self.assertEqual("CController", reloaded_quest_giver.getController().getType())
+            shown_dialogs.clear()
+            approach(reloaded_quest_giver)
+            self.assertEqual(["dialog"], shown_dialogs)
+
+            for save_path in save_paths:
+                if save_path.exists():
+                    save_path.unlink()
+        finally:
+            game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showMessage = original_show_message
+
+        return True, json.dumps(
+            {
+                "initial_dialog": "questDialog",
+                "questgiver_dialog": "dialog",
+                "amulet": "returned",
+            },
+            sort_keys=True,
+        )
 
 
 class ConsoleEventIsolationTest(unittest.TestCase):
