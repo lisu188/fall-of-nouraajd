@@ -511,6 +511,14 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
     vstd::fail_if(newItem && !getMap()->getGame()->getSlotConfiguration()->canFit(i, newItem),
                   "Tried to insert" + (newItem ? newItem->getType() : "null") + "into slot" + i);
 
+    // Cursed items cannot leave the slot they occupy: unequipping or swapping out a
+    // cursed item is refused until the curse is lifted (removeTag(CTag::Cursed)).
+    // Re-equipping the same instance is a no-op and stays allowed.
+    if (vstd::ctn(equipped, i) && equipped.at(i)->hasTag(CTag::Cursed) &&
+        !CGameObject::sameInstance(newItem, equipped.at(i))) {
+        return;
+    }
+
     if (vstd::ctn(equipped, i)) {
         std::shared_ptr<CItem> oldItem = equipped.at(i);
 
