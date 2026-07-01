@@ -2574,7 +2574,10 @@ class ContentValidatorTest(unittest.TestCase):
         self._write_creature_race(
             root,
             {
-                "baseStats": {"strength": 5, "agility": 3, "mainStat": "strength"},
+                "baseStats": {
+                    "class": "CStats",
+                    "properties": {"strength": 5, "agility": 3, "mainStat": "strength"},
+                },
                 "actions": [
                     {"ref": "Attack"},
                     {"class": "CInteraction", "properties": {"effect": {"ref": "HitEffect"}}},
@@ -2589,15 +2592,34 @@ class ContentValidatorTest(unittest.TestCase):
     def test_creature_race_unknown_base_stats_key_is_reported(self):
         root = self.make_fixture()
         self.write_creature_race_stats_fixture(root)
-        self._write_creature_race(root, {"baseStats": {"strenght": 5}})
+        self._write_creature_race(
+            root, {"baseStats": {"class": "CStats", "properties": {"strenght": 5}}}
+        )
 
         issues = validate_repo(root)
 
         self.assertIssueContains(
             issues,
             "res/config/creature_races.json",
-            "humanRace.properties.baseStats.strenght",
+            "humanRace.properties.baseStats.properties.strenght",
             '"strenght" is not a CStats property; expected one of agility, intelligence, mainStat, name, strength',
+        )
+
+    def test_creature_race_flat_base_stats_without_envelope_is_reported(self):
+        # A bare/flat stat map fails to deserialize under the engine's strict object envelope
+        # ({"class": "CStats", "properties": {...}}), so the validator must reject it up front
+        # rather than green-light content that crashes at load time.
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"baseStats": {"strength": 5}})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.baseStats",
+            "expected a CStats object node",
         )
 
     def test_creature_race_action_not_resolving_to_interaction_is_reported(self):
