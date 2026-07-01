@@ -42,9 +42,11 @@ std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> 
     return animation;
 }
 
-bool dragMoved(const CGui::DragSession &session) {
-    return std::abs(session.current.x - session.start.x) > 0 || std::abs(session.current.y - session.start.y) > 0;
-}
+// Single click-vs-drag decision for list drag handling. Delegates to the canonical
+// GUI movement-threshold rule (Chebyshev distance, boundary exclusive) so a drag is
+// only recognized once motion has actually crossed the threshold. Below-threshold
+// jitter therefore stays a click and never triggers a drop or cancel.
+bool dragMoved(const CGui::DragSession &session) { return CGui::isDragActive(session); }
 } // namespace
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {}
