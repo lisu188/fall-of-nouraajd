@@ -593,6 +593,19 @@ void test_tag_round_trip_and_ordering() {
         expect_true(CTags::fromString(text) == tag, "Tag conversion should round-trip between enum and string");
     }
 
+    // Curse is a canonical tag (the negative counterpart to Buff): it maps to "curse", round-trips,
+    // and is distinct from the other tags.
+    expect_true(CTags::toString(CTag::Curse) == "curse", "Curse should serialize to the canonical string \"curse\"");
+    expect_true(CTags::fromString("curse") == CTag::Curse, "\"curse\" should parse back to CTag::Curse");
+    expect_true(CTag::Curse != CTag::Buff, "Curse must be a distinct tag from Buff");
+    expect_true(std::find(CTags::all().begin(), CTags::all().end(), CTag::Curse) != CTags::all().end(),
+                "Curse should be enumerated among the canonical tags");
+
+    CTags curseTags;
+    curseTags.insert(CTag::Curse);
+    expect_true(curseTags.contains(CTag::Curse) && !curseTags.contains(CTag::Buff),
+                "A CTags set should track Curse independently of Buff");
+
     CTags tags;
     tags.insert(CTag::Quest);
     tags.insert(CTag::Buff);
