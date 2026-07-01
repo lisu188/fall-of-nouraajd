@@ -49,7 +49,37 @@ class CGui : public CGameGraphicsObject {
         std::shared_ptr<CGameGraphicsObject> proxyWidget;
         bool canceled = false;
         bool sourceCallbackDeferred = false;
+        // Latched once pointer motion first crosses the click-vs-drag movement
+        // threshold. While false the session is only a *candidate* drag: no proxy
+        // widget is rendered, drops are rejected, and the release is treated as a
+        // plain click. Once true it stays true for the lifetime of the session
+        // (a drag never demotes back to a click), even if the pointer later drifts
+        // back below the threshold. See CGui::dragThresholdCrossed for the rule.
+        bool dragActive = false;
     };
+
+    // Canonical click-versus-drag movement threshold, in pixels. This is the SINGLE
+    // source of truth reused by every click-vs-drag decision (proxy lifecycle,
+    // source-callback deferral, drop acceptance, and the mouse-up branch).
+    //
+    // Distance metric: Chebyshev (max-axis) distance, i.e. max(|dx|, |dy|).
+    // Boundary: EXCLUSIVE. A session is only promoted to an active drag once the
+    // Chebyshev distance is STRICTLY GREATER THAN the threshold. With a threshold of
+    // 4 this means: 0..4 px of motion on both axes stays a click; the first sample
+    // with |dx| >= 5 or |dy| >= 5 becomes a drag. Negative-axis motion is handled by
+    // the absolute values, and diagonal motion is governed by whichever axis is
+    // larger (so exactly-4/4 diagonal is still a click, 5/0 is a drag).
+    static constexpr int DRAG_MOVEMENT_THRESHOLD = 4;
+
+    // Returns true when the displacement between start and current already crosses
+    // the movement threshold (Chebyshev distance > DRAG_MOVEMENT_THRESHOLD).
+    static bool dragThresholdCrossed(const DragSession &session);
+
+    // Returns true when the session has been promoted to an active drag, i.e. its
+    // latched dragActive flag is set. Below-threshold candidate sessions return
+    // false. This is the accessor every non-CGui call site (e.g. CListView) must use
+    // to decide drag-vs-click, so the rule lives in exactly one place.
+    static bool isDragActive(const DragSession &session);
 
     using CGameGraphicsObject::render;
 

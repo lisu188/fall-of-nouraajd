@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGamePanel.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <string>
 
 namespace {
@@ -67,7 +68,10 @@ void removeDragProxyWidget(const std::shared_ptr<CGui> &gui, CGui::DragSession &
 }
 
 void syncDragProxyWidget(const std::shared_ptr<CGui> &gui, CGui::DragSession &session) {
-    if (!gui || !session.payload || session.canceled || session.acceptedTarget.lock()) {
+    // A candidate drag (below-threshold motion) must NOT render a proxy widget: the
+    // interaction is still a click until the movement threshold is crossed.
+    if (!gui || !session.payload || session.canceled || !CGui::isDragActive(session) ||
+        session.acceptedTarget.lock()) {
         removeDragProxyWidget(gui, session);
         return;
     }
@@ -275,9 +279,25 @@ void CGui::startDragSession(std::shared_ptr<CGameGraphicsObject> sourceWidget, s
     syncDragProxyWidget(this->ptr<CGui>(), *dragSession);
 }
 
+bool CGui::dragThresholdCrossed(const DragSession &session) {
+    const int dx = std::abs(session.current.x - session.start.x);
+    const int dy = std::abs(session.current.y - session.start.y);
+    // Chebyshev (max-axis) distance, boundary exclusive: promote to a drag only when
+    // motion strictly exceeds the threshold on either axis.
+    return std::max(dx, dy) > DRAG_MOVEMENT_THRESHOLD;
+}
+
+bool CGui::isDragActive(const DragSession &session) { return session.dragActive; }
+
 void CGui::updateDragSession(int currentX, int currentY) {
     if (dragSession) {
         dragSession->current = {currentX, currentY};
+        // Latch the active-drag state the moment motion first crosses the threshold.
+        // Once active it never demotes back to a candidate/click, matching standard
+        // click-vs-drag UX.
+        if (!dragSession->dragActive && dragThresholdCrossed(*dragSession)) {
+            dragSession->dragActive = true;
+        }
         syncDragProxyWidget(this->ptr<CGui>(), *dragSession);
     }
 }
