@@ -1853,6 +1853,46 @@ void test_creature_effective_actions_baseline_capture() {
     std::cout << "creature-actions-baseline-levelling-unlocks-observed\t" << templatesWithLevellingUnlock << '\n';
 }
 
+// CInteraction.selfTarget is a bool metadata property (default false). This pins
+// its default, that a configured value serializes through CSerialization and
+// survives a serialize/deserialize round-trip, and that JSON which omits the
+// property stays valid (deserializing to the false default).
+void test_interaction_self_target_property_round_trip() {
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    auto fresh = std::make_shared<CInteraction>();
+    expect_true(!fresh->getSelfTarget(), "selfTarget should default to false");
+
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setSelfTarget(true);
+    expect_true(action->getSelfTarget(), "setSelfTarget(true) should be reflected by getSelfTarget()");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(action);
+    expect_true((*serialized)["properties"].contains("selfTarget") &&
+                    (*serialized)["properties"]["selfTarget"].get<bool>(),
+                "a configured selfTarget should serialize as a true JSON property");
+
+    auto round_trip = std::dynamic_pointer_cast<CInteraction>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+    expect_true(round_trip != nullptr, "a CInteraction should deserialize back into a CInteraction");
+    expect_true(round_trip->getSelfTarget(), "selfTarget should survive a serialize/deserialize round-trip");
+
+    // JSON that omits selfTarget (e.g. existing content) must remain valid and keep the false default.
+    auto legacy = std::make_shared<json>(*serialized);
+    (*legacy)["properties"].erase("selfTarget");
+    expect_true(!(*legacy)["properties"].contains("selfTarget"),
+                "legacy fixture should omit the selfTarget property");
+    auto legacy_loaded = std::dynamic_pointer_cast<CInteraction>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, legacy));
+    expect_true(legacy_loaded && !legacy_loaded->getSelfTarget(),
+                "interaction JSON without selfTarget should deserialize to the false default");
+}
+
 // CCreatureRace is a CGameObject-derived metadata definition. This pins that it
 // round-trips through CSerialization with all of its metadata (base stats, innate
 // actions, creatureType, subtypes, playerSelectable, plus inherited label/
@@ -2388,6 +2428,7 @@ int main() {
     test_serialization_collection_and_error_helpers();
     test_creature_effective_stats_baseline_capture();
     test_creature_effective_actions_baseline_capture();
+    test_interaction_self_target_property_round_trip();
     test_creature_race_metadata_round_trip();
     test_creature_class_metadata_round_trip();
     test_creature_archetype_property_wiring();
