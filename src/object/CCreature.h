@@ -320,6 +320,11 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     std::shared_ptr<CStats> buildLegacyStats();
 
+    // Composed stat aggregate for archetype creatures (usesArchetypeComposition()).
+    // Folds race/class baseStats and per-level growth into the legacy base/level/
+    // equipment/effects order without mutating any source CStats.
+    std::shared_ptr<CStats> buildComposedStats();
+
     std::shared_ptr<CInteraction> getLevelAction();
 
     bool npc = false;

@@ -1885,8 +1885,7 @@ void test_interaction_self_target_property_round_trip() {
     // JSON that omits selfTarget (e.g. existing content) must remain valid and keep the false default.
     auto legacy = std::make_shared<json>(*serialized);
     (*legacy)["properties"].erase("selfTarget");
-    expect_true(!(*legacy)["properties"].contains("selfTarget"),
-                "legacy fixture should omit the selfTarget property");
+    expect_true(!(*legacy)["properties"].contains("selfTarget"), "legacy fixture should omit the selfTarget property");
     auto legacy_loaded = std::dynamic_pointer_cast<CInteraction>(
         CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, legacy));
     expect_true(legacy_loaded && !legacy_loaded->getSelfTarget(),
@@ -2379,6 +2378,73 @@ void test_creature_clone_preserves_composed_archetypes() {
                 "mutating the clone's scalar state leaves the source unchanged");
 }
 
+// Build a CStats with the four primary attributes set (the others stay zero).
+static std::shared_ptr<CStats> archetype_stats(int strength, int agility, int stamina, int intelligence) {
+    auto stats = std::make_shared<CStats>();
+    stats->setStrength(strength);
+    stats->setAgility(agility);
+    stats->setStamina(stamina);
+    stats->setIntelligence(intelligence);
+    return stats;
+}
+
+// getStats() on an archetype creature composes race/class/creature contributions in
+// the approved least- to most-specific order, each applied exactly once, building a
+// fresh aggregate without mutating any source CStats. Legacy creatures are unaffected
+// (covered separately by the existing legacy stat behavior).
+void test_creature_composed_stat_order() {
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(archetype_stats(/*str*/ 1, /*agi*/ 0, /*sta*/ 2, /*int*/ 0));
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setBaseStats(archetype_stats(0, 0, 3, 0));
+    klass->setLevelStats(archetype_stats(0, 0, 1, 0)); // per level
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(archetype_stats(10, 0, 4, 0));
+    creature->setLevelStats(archetype_stats(0, 0, 5, 0)); // per level
+    creature->setLevel(2);
+    creature->setRace(race);
+    creature->setCreatureClass(klass);
+
+    auto stats = creature->getStats();
+    // stamina = race 2 + class 3 + creature 4 + class-level 1*2 + creature-level 5*2 = 21.
+    expect_true(stats->getStamina() == 21,
+                "composed stamina folds race/class/creature base and per-level growth once each");
+    // strength has only the race (1) and creature (10) contributions.
+    expect_true(stats->getStrength() == 11, "composed strength sums race and creature base exactly once each");
+
+    // Repeated calls are pure: a second composition equals the first and the source
+    // CStats objects are never mutated by composing.
+    auto stats_again = creature->getStats();
+    expect_true(stats_again->getStamina() == 21, "repeated getStats() is stable for archetype creatures");
+    expect_true(race->getBaseStats()->getStamina() == 2, "composing does not mutate race.baseStats");
+    expect_true(klass->getBaseStats()->getStamina() == 3, "composing does not mutate creatureClass.baseStats");
+    expect_true(creature->getBaseStats()->getStamina() == 4, "composing does not mutate creature.baseStats");
+}
+
+// The composed main stat is a selected (not accumulated) field: the creatureClass is
+// authoritative when it names one, otherwise it falls back to creature.baseStats. The
+// composed path applies this itself because archetype creatures never run
+// buildLegacyStats().
+void test_creature_composed_main_stat_selection() {
+    auto creature = std::make_shared<CCreature>();
+    auto creatureStats = archetype_stats(0, 0, 0, 0);
+    creatureStats->setMainStat("strength");
+    creature->setBaseStats(creatureStats);
+
+    // A class naming a main stat wins over the creature.baseStats main stat.
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    creature->setCreatureClass(klass);
+    expect_true(creature->getStats()->getMainStat() == "intelligence",
+                "creatureClass main stat is authoritative in the composed path");
+
+    // A class with no main stat falls back to the creature.baseStats main stat.
+    creature->setCreatureClass(std::make_shared<CCreatureClass>());
+    expect_true(creature->getStats()->getMainStat() == "strength",
+                "an empty creatureClass main stat falls back to creature.baseStats");
+}
+
 } // namespace
 
 int main() {
@@ -2436,6 +2502,8 @@ int main() {
     test_levelup_legacy_path_serializes_unlock_into_actions();
     test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
     test_creature_clone_preserves_composed_archetypes();
+    test_creature_composed_stat_order();
+    test_creature_composed_main_stat_selection();
 
     return finish_tests();
 }

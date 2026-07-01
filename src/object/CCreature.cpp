@@ -870,7 +870,73 @@ void CCreature::removeQuestItem(std::shared_ptr<CItem> item) { removeItem(item, 
 
 void CCreature::removeQuestItem(std::function<bool(std::shared_ptr<CItem>)> item) { removeItem(item, true); }
 
-std::shared_ptr<CStats> CCreature::getStats() { return buildLegacyStats(); }
+std::shared_ptr<CStats> CCreature::getStats() {
+    // Branch on archetype presence so legacy creatures (race == null and
+    // creatureClass == null, i.e. every creature pre-migration) keep the exact
+    // legacy stat block, while archetype creatures get the composed aggregate.
+    return usesArchetypeComposition() ? buildComposedStats() : buildLegacyStats();
+}
+
+std::shared_ptr<CStats> CCreature::buildComposedStats() {
+    // Composed stat precedence (docs/design/creature_archetypes.md, "Creature stat
+    // precedence contract"), applied least- to most-specific into a fresh aggregate
+    // so no source CStats object is ever mutated:
+    //   1. race.baseStats
+    //   2. creatureClass.baseStats
+    //   3. creature.baseStats
+    //   4. creatureClass.levelStats per level
+    //   5. creature.levelStats per level
+    //   6. equipment bonuses
+    //   7. effect bonuses
+    // The equipment-then-effects tail keeps the same relative order as the legacy
+    // path. Each archetype reference is independently null-guarded: usesArchetype-
+    // Composition() only guarantees at least one of race / creatureClass is set.
+    std::shared_ptr<CStats> ret = std::make_shared<CStats>();
+    // Main stat is a *selected* (not accumulated) field, so it must be set explicitly
+    // (CStats::addBonus copies only numeric properties). The creatureClass is
+    // authoritative for it (E02/S04/SS03): a class that names a main stat wins over the
+    // legacy/race creature.baseStats main stat; with no class, or a class that leaves it
+    // empty, this falls back to the legacy creature.baseStats main stat. The composed
+    // path must apply this here because archetype creatures never run buildLegacyStats().
+    if (creatureClass && !creatureClass->getMainStat().empty()) {
+        ret->setMainStat(creatureClass->getMainStat());
+    } else {
+        ret->setMainStat(getBaseStats()->getMainStat());
+    }
+    // 1. race.baseStats.
+    if (race && race->getBaseStats()) {
+        ret->addBonus(race->getBaseStats());
+    }
+    // 2. creatureClass.baseStats.
+    if (creatureClass && creatureClass->getBaseStats()) {
+        ret->addBonus(creatureClass->getBaseStats());
+    }
+    // 3. creature.baseStats (concrete template's own base).
+    ret->addBonus(getBaseStats());
+    // 4. creatureClass.levelStats per level.
+    if (creatureClass && creatureClass->getLevelStats()) {
+        for (int i = 0; i < level; i++) {
+            ret->addBonus(creatureClass->getLevelStats());
+        }
+    }
+    // 5. creature.levelStats per level.
+    for (int i = 0; i < level; i++) {
+        ret->addBonus(getLevelStats());
+    }
+    // 6. equipment bonuses.
+    for (auto [slot, item] : getEquipped()) {
+        if (item) {
+            ret->addBonus(item->getBonus());
+        }
+    }
+    // 7. effect bonuses.
+    for (auto effect : getEffects()) {
+        if (effect) {
+            ret->addBonus(effect->getBonus());
+        }
+    }
+    return ret;
+}
 
 std::shared_ptr<CStats> CCreature::buildLegacyStats() {
     // Stat precedence contract (docs/design/creature_archetypes.md, "Creature stat
