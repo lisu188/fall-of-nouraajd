@@ -355,7 +355,6 @@ jobs:
       VCPKG_INSTALLED_DIR: ${{ github.workspace }}\vcpkg_installed\fast
       VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\cmake\triplets
       VCPKG_TARGET_TRIPLET: x64-windows-release
-      WINDOWS_FAST_TOOLS_DIR: ${{ runner.temp }}\windows-fast-tools\bin
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
       - name: Set up Python
@@ -418,9 +417,10 @@ jobs:
           $ErrorActionPreference = "Stop"
 
           # Trusted tools must live OUTSIDE the (possibly attacker-controlled) PR
-          # workspace so a committed tool shim can never be picked up. Refuse to
-          # proceed if the configured tools directory is inside the workspace.
-          $toolsDir = $env:WINDOWS_FAST_TOOLS_DIR
+          # workspace so a committed tool shim can never be picked up. The runner
+          # temp dir is outside the workspace; refuse to proceed if the resolved
+          # tools directory is ever inside the workspace anyway.
+          $toolsDir = Join-Path $env:RUNNER_TEMP "windows-fast-tools\bin"
           $workspaceFull = [System.IO.Path]::GetFullPath($env:GITHUB_WORKSPACE)
           $toolsDirFull = [System.IO.Path]::GetFullPath($toolsDir)
           if ($toolsDirFull.StartsWith($workspaceFull, [System.StringComparison]::OrdinalIgnoreCase)) {

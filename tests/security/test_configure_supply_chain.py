@@ -134,20 +134,28 @@ class ConfigureSupplyChainTest(unittest.TestCase):
 
     def test_windows_fast_tools_directory_is_outside_workspace(self):
         workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
-
-        # Trusted downloaded tools (sccache) must live outside the PR workspace so a
-        # workspace-committed tool shim can never be discovered or executed.
-        match = re.search(r"(?m)^\s*WINDOWS_FAST_TOOLS_DIR:\s*(?P<value>.+?)\s*$", workflow_text)
+        match = re.search(
+            r"(?ms)- &setup-windows-fast-tools\n.*?name: Set up Windows fast tools\n(?P<body>.*?)(?=^      - )",
+            workflow_text,
+        )
         self.assertIsNotNone(match)
-        value = match.group("value")
-        self.assertIn("runner.temp", value)
-        self.assertNotIn("github.workspace", value)
-        self.assertNotIn(".windows-tools", value)
+        body = match.group("body")
+
+        # Trusted downloaded tools (sccache) must live in the runner temp dir, which
+        # is outside the PR workspace, so a workspace-committed tool shim can never be
+        # discovered or executed. The `runner` context is not available in job-level
+        # `env:`, so the directory must be resolved from $env:RUNNER_TEMP in the step.
+        self.assertRegex(
+            body,
+            re.compile(r"""\$toolsDir\s*=\s*Join-Path\s+\$env:RUNNER_TEMP\s+["']windows-fast-tools"""),
+        )
+        self.assertNotIn(".windows-tools", body)
+        self.assertNotIn("Join-Path $env:GITHUB_WORKSPACE", body)
 
         # The setup step must fail closed if the tools dir is ever inside the workspace.
         self.assertIn(
             "Refusing to use a fast-tools directory inside the workspace",
-            workflow_text,
+            body,
         )
 
     def test_windows_sccache_is_hash_verified_unconditionally(self):
