@@ -12309,7 +12309,7 @@ class GameTest(unittest.TestCase):
 
         expected_tiles = {
             "cave1": (19, 10),
-            "catacombs": (22, 17),
+            "catacombs": (57, 103),
             "cave2": (166, 21),
             "nouraajdSign": (106, 110),
             "market1": (106, 111),
@@ -12384,7 +12384,7 @@ class GameTest(unittest.TestCase):
 
         expected_terrain = {
             (19, 10): 10,
-            (22, 17): 10,
+            (57, 103): 11,
             (166, 21): 7,
             (44, 106): road_gid,
             (105, 109): 11,
