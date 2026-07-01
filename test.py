@@ -13649,6 +13649,82 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_nouraajd_octobogz_rewards_and_cave_state_preserved(self):
+        # [EPIC_05][STORY_04][SUBSTORY_02] Regression guard: the race/class migration
+        # must not alter the OctoBogz cave monster template id or the reward item id,
+        # and the OctoBogz quest must still set the OTO/OCTO flags and grant the
+        # configured rewards exactly as before, for every player class.
+        config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+        script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
+
+        # Config-level invariants (independent of the loaded class): the cave2 lair
+        # spawns the "OctoBogz" creature template, and script.py grants "ShadowBlade".
+        cave2 = config["cave2"]["properties"]
+        self.assertEqual("OctoBogz", cave2["monster"]["ref"])
+        self.assertEqual("cave2", cave2["monster"]["properties"]["controller"]["properties"]["target"])
+        self.assertIn('player.addItem("ShadowBlade")', script)
+        self.assertIn("player.addGold(1000)", script)
+        self.assertIn('claim_once(game_map, "OCTOBOGZ_REWARD_CLAIMED")', script)
+
+        class_ids = ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer")
+        results = {}
+
+        for player_type in class_ids:
+            # Fresh load per class ensures the class/race migration path runs.
+            g, game_map, player = load_game_map_with_player("nouraajd", player_type)
+            self.assertEqual(player_type, player.getTypeId())
+
+            # The cave monster template id is not mutated by loading any class.
+            self.assertEqual(
+                "OctoBogz",
+                find_map_object_definition("nouraajd", "cave2").get("name") and cave2["monster"]["ref"],
+            )
+
+            travelers = g.createObject("dialog")
+            start_gold = player.getGold()
+            start_shadow_blades = player.countItems("ShadowBlade")
+
+            travelers.accept_quest()
+            self.assertEqual("active", game_map.getStringProperty("quest_state_octobogz_contract"))
+            self.assertIn("octoBogzQuest", quest_names(player))
+
+            # Return the relic first so the OCTO cleared flag is also exercised.
+            game_map.setBoolProperty("RELIC_RETURNED", True)
+            game_map.removeObjectByName("cave2")
+            player.checkQuests()
+
+            # OTO/OCTO flags are set exactly as before.
+            self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_SLAIN"))
+            self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_CLEARED"))
+            self.assertTrue(game_map.getBoolProperty("completed_octobogz"))
+            self.assertEqual("completed", game_map.getStringProperty("quest_state_octobogz_contract"))
+
+            # Configured rewards: 1000 gold and exactly one ShadowBlade.
+            self.assertEqual(start_gold + 1000, player.getGold())
+            self.assertEqual(start_shadow_blades + 1, player.countItems("ShadowBlade"))
+            self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+            assert_player_quest_state(self, player, "octoBogzQuest", completed=True)
+
+            # Re-running onComplete must not duplicate the reward (single claim).
+            quest = find_player_quest(player, "octoBogzQuest")
+            quest.onComplete()
+            self.assertEqual(start_gold + 1000, player.getGold())
+            self.assertEqual(start_shadow_blades + 1, player.countItems("ShadowBlade"))
+
+            results[player_type] = {
+                "cave2_monster_ref": cave2["monster"]["ref"],
+                "gold_delta": player.getGold() - start_gold,
+                "shadow_blades_delta": player.countItems("ShadowBlade") - start_shadow_blades,
+                "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
+                "octobogz_cleared": game_map.getBoolProperty("OCTOBOGZ_CLEARED"),
+                "completed_octobogz": game_map.getBoolProperty("completed_octobogz"),
+                "reward_claimed": game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"),
+                "quest_state_octobogz_contract": game_map.getStringProperty("quest_state_octobogz_contract"),
+            }
+
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
     def test_new_class_dialog_hooks(self):
         script = (REPO_ROOT / "res/maps/nouraajd/script.py").read_text()
         dialog = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog.json").read_text())
