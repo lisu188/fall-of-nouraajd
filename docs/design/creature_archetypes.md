@@ -571,3 +571,87 @@ regression test `test_no_archetype_creature_stats_keep_legacy_composition` in
 stat block); the level-up and no-default-archetype guarantees here are pinned by
 this approved contract and must be covered by a regression test alongside any
 change that introduces the archetype objects.
+
+# Developer guide: adding a race, a class, or a monster
+
+Status: Reference. Scope: the concrete, file-level steps for extending the
+archetype model, and the rules that must not be violated. This ties together the
+taxonomy and the contracts above into a checklist so a future agent adds content
+in the right places and does not reintroduce player-only class/race logic.
+
+## Where each thing lives
+
+| Thing | Authored in | Engine object | Notes |
+| --- | --- | --- | --- |
+| Race archetype | `res/config/creature_races.json` | `CCreatureRace` (`src/object/CCreatureRace.h`) | Metadata only; not a spawnable creature. Id ends with `Race`. |
+| Class archetype | `res/config/creature_classes.json` | `CCreatureClass` (`src/object/CCreatureClass.h`) | Metadata only. Id ends with `Class` and must not duplicate a concrete template id. |
+| Concrete monster | `res/config/monsters.json` | `CCreature` / `CPlayer` template | Keeps its own id; references a race/class by `{"ref": "..."}`. |
+
+Both archetype objects are registered as constructible types in
+`src/core/CModule.cpp` (`register_type_metadata<CCreatureRace, CGameObject>()` /
+`<CCreatureClass, CGameObject>()`, plus the pybind `class_` bindings). A new
+*field* on either object must be wired through its `V_META` property list and, if
+Python needs it, its pybind bindings — but adding a new *instance* (a new race or
+class id) needs no C++ change, only JSON.
+
+## Adding a monster archetype (race and/or class)
+
+1. **Add the race** to `res/config/creature_races.json` and/or the **class** to
+   `res/config/creature_classes.json`. Follow the naming policy: lowerCamelCase,
+   suffix `Race` / `Class`, and never let a class id equal a concrete template id.
+2. **Assign it** on the concrete template in `res/config/monsters.json` via a
+   `"race": {"ref": "<raceId>"}` and/or `"creatureClass": {"ref": "<classId>"}`
+   entry. Do **not** rename the concrete template id.
+3. **Keep monster assignments baseline-preserving** unless the task explicitly
+   changes balance: an identity-only archetype contributes no `baseStats`/`actions`
+   (a class may declare only a matching `mainStat`), so composed stats and actions
+   equal the pre-archetype legacy result. See the *Implementation status* table for
+   worked examples (e.g. `GoblinThief` → `thiefClass` is baseline-preserving because
+   its `agility` and `strength` are equal).
+4. **Regenerate the stat baseline fixture** when an assignment changes composed
+   stats: `tests/fixtures/creature_stat_scale_baseline.json` is config-derived and
+   guarded by `tests/test_creature_stat_scale_baseline.py`.
+
+## Staging is required (do not skip)
+
+`res/config/*.json` files are **not** globbed into the build — each is staged by an
+explicit `configure_file(res/config/<name>.json config/<name>.json)` line in
+`CMakeLists.txt` (see the block around lines 262–277, which already lists
+`creature_races.json` and `creature_classes.json`). If you introduce a **new**
+config file, add its `configure_file` line, or the engine will not load it at
+runtime and `createObject` will fall back to class-name construction — a failure
+that unit tests and `validate_content.py` do not catch but the gameplay
+walkthrough does.
+
+## What validation enforces
+
+`scripts/validate_content.py` (run `python3 scripts/validate_content.py
+--repo-root .`) already checks that:
+
+- every `CCreatureClass` `actions` / `levelling` entry resolves to a
+  `CInteraction`, and `levelling` keys are positive-integer strings;
+- map `script.py` player class checks reference a **known** class id
+  (`getPlayerClassId()` against config-derived ids);
+- only races whose `playerSelectable` property is true participate in player race
+  selection.
+
+Extend the validator (and `tests/test_content_validator.py`) when you add a new
+class/race invariant rather than relying on runtime discovery.
+
+## Rules that must not be violated
+
+- **Do not rename** concrete monster/player template ids in `monsters.json`, nor
+  any quest/dialog/object id. The archetype layer references templates; it never
+  renames them.
+- **Do not invent a player-selectable race.** `CCreatureRace.playerSelectable`
+  defaults to `false`; monster races are non-selectable. Making a race
+  player-selectable (or adding a new player race/class) is **content-owner-gated**
+  and must not be inferred by an agent — it requires explicit approval, because it
+  changes the player-facing new-game roster. Assigning an existing archetype to a
+  *monster* is not gated.
+- **Never assign a default archetype implicitly.** Per the *Legacy fallback
+  compatibility contract*, deserialization must not seed a race/`creatureClass`;
+  a creature is legacy unless its data explicitly declares one.
+- **Compose, don't special-case.** Stats and actions must flow through the
+  documented precedence/merge order (see the *stat precedence* and *action merge*
+  contracts), not through player-type or class-name branches in gameplay code.
