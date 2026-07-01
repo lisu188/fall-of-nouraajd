@@ -345,6 +345,13 @@ def load(self, context):
         ITEM = None
         BOON = None
         LEAVE_AT = -5
+        # Direction of the reputation break: most companions leave when your standing
+        # sinks to/below LEAVE_AT; a turncoat leaves when it rises to/above it instead.
+        LEAVE_WHEN_ABOVE = False
+        LEAVE_MESSAGE = (
+            "Your reputation in the marches has sunk past what your companion can stomach. They take their "
+            "leave - the war-gift stays, but their sword does not."
+        )
 
         def not_met(self):
             game_map = self.getGame().getMap()
@@ -380,15 +387,16 @@ def load(self, context):
             game_map.getPlayer().checkQuests()
 
         def banter(self):
-            # Baldur's-Gate-style reputation reactivity: a companion may leave if you sink too low.
+            # Baldur's-Gate-style reputation reactivity: a companion may leave if your
+            # standing drifts past what they can stomach. Most break when it sinks too low
+            # (LEAVE_WHEN_ABOVE is False); a turncoat breaks when you grow too righteous.
             game_map = self.getGame().getMap()
             if game_map.getBoolProperty(self.JOINED_FLAG) and not game_map.getBoolProperty(self.LEFT_FLAG):
-                if reputation(game_map) <= self.LEAVE_AT:
+                rep = reputation(game_map)
+                left = rep >= self.LEAVE_AT if self.LEAVE_WHEN_ABOVE else rep <= self.LEAVE_AT
+                if left:
                     game_map.setBoolProperty(self.LEFT_FLAG, True)
-                    self.getGame().getGuiHandler().showMessage(
-                        "Your reputation in the marches has sunk past what your companion can stomach. They take their "
-                        "leave - the war-gift stays, but their sword does not."
-                    )
+                    self.getGame().getGuiHandler().showMessage(self.LEAVE_MESSAGE)
 
     # Dialog action/condition callbacks are resolved on the exact registered class, so each
     # companion dialog re-declares the shared callbacks as thin delegates to the base logic.
@@ -460,7 +468,13 @@ def load(self, context):
         QUEST = "corvynQuest"
         ITEM = "ashRelic"
         BOON = "corvynsBlade"
-        LEAVE_AT = 5  # the turncoat leaves if you get too righteous for his taste
+        # The turncoat leaves if you get too righteous for his taste: break upward, not downward.
+        LEAVE_AT = 5
+        LEAVE_WHEN_ABOVE = True
+        LEAVE_MESSAGE = (
+            "You have grown too clean and beloved for the turncoat's taste. Corvyn remembers he works for "
+            "coin, not causes, and takes his leave - the war-gift stays, but his sword does not."
+        )
 
         def not_met(self):
             return CompanionDialog.not_met(self)
