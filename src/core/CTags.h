@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 enum class CTag {
     Buff,
     Curse,
+    Cursed,
     Heal,
     Mana,
     Quest,

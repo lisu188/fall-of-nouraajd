@@ -97,5 +97,69 @@
       "description": "Ballista cabling braided after the siege, now used to drag barricades through Victor's streets.",
       "power": 20
     }
+  },
+  "BigFistedBelt": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "strength": 18,
+          "stamina": 8,
+          "intelligence": -14,
+          "crit": -6
+        }
+      },
+      "label": "Big-Fisted Belt",
+      "description": "A giant's girdle of ballista cable and knuckle-bone. It swells the arms with brute siege-strength while dimming every clever thought to a dull growl, and locks about the waist until the curse is undone.",
+      "power": 13,
+      "tags": [
+        "cursed"
+      ]
+    }
+  },
+  "GlovesOfMisplacement": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "intelligence": 6,
+          "armor": 60,
+          "attack": -14,
+          "agility": -12
+        }
+      },
+      "label": "Gloves of Misplacement",
+      "description": "Supple assassin's gloves stitched with a mischief-rune that never sits still. They promise a scholar's poise but send every strike wide of its mark, and cannot be peeled away until a priest lifts the curse.",
+      "power": 11,
+      "tags": [
+        "cursed"
+      ]
+    }
+  },
+  "CrownOfOppositeAlignment": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "intelligence": 12,
+          "armor": 150,
+          "strength": -12,
+          "block": -10,
+          "shadowResist": -20
+        }
+      },
+      "label": "Crown of Opposite Alignment",
+      "description": "A chapel-bone circlet that whispers borrowed brilliance while turning the wearer's will against itself. Wisdom floods in as courage drains away, and the crown clamps to the skull until the curse is broken.",
+      "power": 15,
+      "tags": [
+        "cursed"
+      ]
+    }
   }
 }

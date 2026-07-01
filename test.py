@@ -11214,6 +11214,30 @@ class GameTest(unittest.TestCase):
             cleanup_save_slot(save_name)
 
     @game_test
+    def test_cursed_items_cannot_be_unequipped_until_curse_lifted(self):
+        game = load_game_module()
+        _g, _game_map, warrior = load_game_map_with_player("test", "Warrior")
+
+        armor = warrior.getItemAtSlot("3")
+        self.assertIsNotNone(armor, "warrior fixture should start with armor equipped in slot 3")
+
+        armor.addTag(game.CTag.CURSED)
+        self.assertTrue(armor.hasTag("cursed"))
+
+        # A cursed item is locked to its slot: attempting to unequip is a no-op.
+        warrior.unequipArmor()
+        locked = warrior.getItemAtSlot("3")
+        self.assertIsNotNone(locked, "cursed armor must not leave its slot while cursed")
+        self.assertTrue(locked.hasTag(game.CTag.CURSED))
+
+        # Lifting the curse (remove-curse) frees the item; it then unequips normally.
+        locked.removeTag(game.CTag.CURSED)
+        warrior.unequipArmor()
+        self.assertIsNone(warrior.getItemAtSlot("3"), "armor should unequip once the curse is lifted")
+
+        return True, json.dumps({"locked_while_cursed": True, "unequipped_after_lift": True}, sort_keys=True)
+
+    @game_test
     def test_missing_save_resource_directory_lists_empty(self):
         game = load_game_module()
         provider = game.CResourcesProvider.getInstance()

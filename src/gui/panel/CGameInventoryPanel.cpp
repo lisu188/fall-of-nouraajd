@@ -206,7 +206,9 @@ CListView::collection_pointer CGameInventoryPanel::equippedCollection(std::share
 void CGameInventoryPanel::equippedCallback(std::shared_ptr<CGui> gui, int index,
                                            std::shared_ptr<CGameObject> _newSelection) {
     auto newSelection = vstd::cast<CItem>(_newSelection);
-    if (newSelection && newSelection->hasTag(CTag::Quest)) {
+    // Quest and cursed items cannot be selected out of their equipped slot: quest items
+    // must not be dropped, and cursed items stay locked until the curse is lifted.
+    if (newSelection && (newSelection->hasTag(CTag::Quest) || newSelection->hasTag(CTag::Cursed))) {
         return;
     }
     std::string slotName = vstd::str(index);

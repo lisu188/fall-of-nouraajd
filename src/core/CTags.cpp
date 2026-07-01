@@ -26,9 +26,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace {
 using TagDefinition = std::pair<CTag, std::string_view>;
 
-const std::array<TagDefinition, 7> TAG_DEFINITIONS = {{
+const std::array<TagDefinition, 8> TAG_DEFINITIONS = {{
     {CTag::Buff, "buff"},
     {CTag::Curse, "curse"},
+    {CTag::Cursed, "cursed"},
     {CTag::Heal, "heal"},
     {CTag::Mana, "mana"},
     {CTag::Quest, "quest"},

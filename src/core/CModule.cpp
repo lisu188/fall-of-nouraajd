@@ -390,6 +390,7 @@ void init_game_module(py::module_ &m) {
     py::enum_<CTag>(m, "CTag", "Canonical gameplay tag identifier.")
         .value("BUFF", CTag::Buff)
         .value("CURSE", CTag::Curse)
+        .value("CURSED", CTag::Cursed)
         .value("HEAL", CTag::Heal)
         .value("MANA", CTag::Mana)
         .value("QUEST", CTag::Quest)
@@ -1028,6 +1029,7 @@ void init_game_module(py::module_ &m) {
         .def("hurt", hurtDmg, "Apply structured CDamage object.")
         .def("hurt", hurtFloat, "Apply damage value (float), rounded to int.")
         .def("getWeapon", &CCreature::getWeapon, "Return equipped weapon or None.")
+        .def("getItemAtSlot", &CCreature::getItemAtSlot, "Return the item equipped in the given slot, or None.")
         .def(
             "unequipArmor", [](CCreature &creature) { creature.setArmor(nullptr); }, "Unequip current armor item.")
         .def("getHpRatio", &CCreature::getHpRatio, "Return HP percentage (0-100).")

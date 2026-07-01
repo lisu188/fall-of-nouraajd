@@ -70,5 +70,26 @@
       "label": "Robe",
       "description": "Threadbare robe worn by Father Beren's acolytes, its hem darkened by incense soot and grave-dust."
     }
+  },
+  "ArmorOfMissileAttraction": {
+    "class": "CArmor",
+    "properties": {
+      "animation": "images/items/armors/platearmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 260,
+          "stamina": 6,
+          "block": -18,
+          "agility": -10
+        }
+      },
+      "label": "Armor of Missile Attraction",
+      "description": "Siege plate salvaged from Victor's walls, its steel humming with a hunger for flung iron. Every Pritscher bolt on the field bends toward the wearer, and the straps refuse every hand until the curse is broken.",
+      "power": 14,
+      "tags": [
+        "cursed"
+      ]
+    }
   }
 }

@@ -326,5 +326,28 @@
       "description": "Simple witchwood wand the chapel scribes use to kindle braziers and scorch Pritschers at need.",
       "power": 5
     }
+  },
+  "TheIronThorn": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/void",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "strength": 10,
+          "dmgMin": 28,
+          "dmgMax": 44,
+          "intelligence": -16,
+          "stamina": -12,
+          "agility": -8
+        }
+      },
+      "label": "The Iron Thorn",
+      "description": "A black barbed spike unearthed beneath Nouraajd's chapel. It sinks into the hand and will not come loose; the grip rots the mind to grave-cold silence until the curse is lifted.",
+      "power": 16,
+      "tags": [
+        "cursed"
+      ]
+    }
   }
 }
