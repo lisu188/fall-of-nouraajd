@@ -319,6 +319,7 @@ def load(self, context):
             game_map.incProperty("anchors_destroyed_count", 1)
             start_ritual(game_map)
             game_map.getGame().getGuiHandler().showMessage(object.getStringProperty("message"))
+            spawn_wave(game_map)
             update_anchor_progress(game_map)
 
     @trigger(context, "onDestroy", "ritualLeader")
