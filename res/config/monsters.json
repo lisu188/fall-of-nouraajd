@@ -171,6 +171,12 @@
           "strength": 10
         }
       },
+      "race": {
+        "ref": "octoBogzRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
+      },
       "sw": 2
     }
   },
