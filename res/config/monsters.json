@@ -297,11 +297,9 @@
   "Sorcerer": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "SorcererClass"
+      },
       "animation": "images/players/sorcerer",
       "equipped": {
         "0": {
@@ -316,45 +314,6 @@
       },
       "items": [],
       "label": "Sorcerer",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 2,
-          "crit": 1,
-          "dmgMax": 1,
-          "dmgMin": 1,
-          "hit": 1,
-          "intelligence": 3,
-          "stamina": 1,
-          "strength": 1
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "MagicMissile"
-        },
-        "10": {
-          "ref": "ChaosBlast"
-        },
-        "2": {
-          "ref": "AbyssalShadows"
-        },
-        "3": {
-          "ref": "FrostBolt"
-        },
-        "4": {
-          "ref": "EndlessPain"
-        },
-        "5": {
-          "ref": "ArmorOfEndlessWinter"
-        },
-        "7": {
-          "ref": "ShadowBolt"
-        },
-        "8": {
-          "ref": "Devour"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {

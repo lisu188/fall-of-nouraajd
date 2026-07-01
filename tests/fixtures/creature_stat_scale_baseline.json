@@ -277,26 +277,8 @@
         "strength": 5
       },
       "class": "CPlayer",
-      "levelStats": {
-        "agility": 2,
-        "crit": 1,
-        "dmgMax": 1,
-        "dmgMin": 1,
-        "hit": 1,
-        "intelligence": 3,
-        "stamina": 1,
-        "strength": 1
-      },
-      "levelling": {
-        "1": "MagicMissile",
-        "10": "ChaosBlast",
-        "2": "AbyssalShadows",
-        "3": "FrostBolt",
-        "4": "EndlessPain",
-        "5": "ArmorOfEndlessWinter",
-        "7": "ShadowBolt",
-        "8": "Devour"
-      }
+      "levelStats": {},
+      "levelling": {}
     },
     "Warrior": {
       "baseStats": {

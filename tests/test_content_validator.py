@@ -3299,13 +3299,15 @@ class UnmigratedCreatureReportTest(unittest.TestCase):
         # migration.
         self.assertTrue(report)
         report_ids = {creature.config_id for creature in report}
-        for player in ("Assasin", "Inquisitor", "Sorcerer", "Wayfarer"):
+        for player in ("Assasin", "Inquisitor", "Wayfarer"):
             self.assertIn(player, report_ids)
             self.assertEqual(("creatureClass", "race"), next(c.missing for c in report if c.config_id == player))
-        # Warrior has been migrated to a creatureClass (WarriorClass, EPIC_04/STORY_02/
-        # SUBSTORY_01); it still surfaces in the report but now only lacks a race.
-        self.assertIn("Warrior", report_ids)
-        self.assertEqual(("race",), next(c.missing for c in report if c.config_id == "Warrior"))
+        # Warrior and Sorcerer have been migrated to a creatureClass (WarriorClass /
+        # SorcererClass, EPIC_04/STORY_02/SUBSTORY_01–02); each still surfaces in the
+        # report but now only lacks a race.
+        for migrated in ("Warrior", "Sorcerer"):
+            self.assertIn(migrated, report_ids)
+            self.assertEqual(("race",), next(c.missing for c in report if c.config_id == migrated))
 
 
 class RequiredProductionArchetypeTest(unittest.TestCase):

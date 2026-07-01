@@ -54,5 +54,55 @@
         }
       }
     }
+  },
+  "SorcererClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "intelligence",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 3,
+          "hit": 1,
+          "crit": 1,
+          "dmgMin": 1,
+          "dmgMax": 1
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "MagicMissile"
+        },
+        "2": {
+          "ref": "AbyssalShadows"
+        },
+        "3": {
+          "ref": "FrostBolt"
+        },
+        "4": {
+          "ref": "EndlessPain"
+        },
+        "5": {
+          "ref": "ArmorOfEndlessWinter"
+        },
+        "7": {
+          "ref": "ShadowBolt"
+        },
+        "8": {
+          "ref": "Devour"
+        },
+        "10": {
+          "ref": "ChaosBlast"
+        }
+      }
+    }
   }
 }
