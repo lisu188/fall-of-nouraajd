@@ -34,9 +34,19 @@
   "humanRace": {
     "class": "CCreatureRace",
     "properties": {
+      "label": "Human",
       "creatureType": "human",
       "subtypes": [],
-      "playerSelectable": false
+      "playerSelectable": true
+    }
+  },
+  "outlanderRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "label": "Outlander",
+      "creatureType": "human",
+      "subtypes": ["outlander"],
+      "playerSelectable": true
     }
   }
 }
