@@ -4,5 +4,11 @@
     "properties": {
       "mainStat": "strength"
     }
+  },
+  "mageClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "intelligence"
+    }
   }
 }

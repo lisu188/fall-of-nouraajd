@@ -285,6 +285,12 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "pritzRace"
+      },
+      "creatureClass": {
+        "ref": "mageClass"
+      },
       "sw": 2
     }
   },
