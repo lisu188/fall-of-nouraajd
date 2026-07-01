@@ -16,11 +16,42 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CTooltipHandler.h"
+#include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
 #include "object/CItem.h"
+
+#include <set>
+#include <string>
+
+namespace {
+// Appends a single archetype line, skipping empty text and any description that
+// was already emitted (guards against duplicating the creature's own or the
+// other archetype's description).
+void add_archetype_line(std::string &tooltip, std::set<std::string> &seen, const std::string &line) {
+    if (line.empty() || !seen.insert(line).second) {
+        return;
+    }
+    vstd::add_line(tooltip, line);
+}
+} // namespace
 
 std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
     std::string tooltip = object->getLabel();
     vstd::add_line(tooltip, object->getDescription());
+    if (object->meta()->inherits("CCreature")) {
+        auto creature = vstd::cast<CCreature>(object);
+        std::set<std::string> seen;
+        seen.insert(object->getDescription());
+        if (auto race = creature->getRace()) {
+            add_archetype_line(tooltip, seen, race->getLabel());
+            add_archetype_line(tooltip, seen, race->getDescription());
+        }
+        if (auto creatureClass = creature->getCreatureClass()) {
+            add_archetype_line(tooltip, seen, creatureClass->getLabel());
+            add_archetype_line(tooltip, seen, creatureClass->getDescription());
+        }
+    }
     if (object->meta()->inherits("CItem")) {
         auto bonus = vstd::cast<CItem>(object)->getBonus();
         bonus->meta()->for_all_properties(bonus, [&](auto prop) {
