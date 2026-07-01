@@ -892,13 +892,17 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     // path. Each archetype reference is independently null-guarded: usesArchetype-
     // Composition() only guarantees at least one of race / creatureClass is set.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
-    // Main stat selection: this row (E02/S04/SS02) only establishes the numeric
-    // composition order. The main stat is taken from creature.baseStats here, exactly
-    // as the legacy path does (CStats::addBonus copies only numeric properties, so the
-    // aggregate main stat must be set explicitly). Making the creatureClass
-    // authoritative for the main stat is a separate refinement (E02/S04/SS03) layered
-    // onto this function.
-    ret->setMainStat(getBaseStats()->getMainStat());
+    // Main stat is a *selected* (not accumulated) field, so it must be set explicitly
+    // (CStats::addBonus copies only numeric properties). The creatureClass is
+    // authoritative for it (E02/S04/SS03): a class that names a main stat wins over the
+    // legacy/race creature.baseStats main stat; with no class, or a class that leaves it
+    // empty, this falls back to the legacy creature.baseStats main stat. The composed
+    // path must apply this here because archetype creatures never run buildLegacyStats().
+    if (creatureClass && !creatureClass->getMainStat().empty()) {
+        ret->setMainStat(creatureClass->getMainStat());
+    } else {
+        ret->setMainStat(getBaseStats()->getMainStat());
+    }
     // 1. race.baseStats.
     if (race && race->getBaseStats()) {
         ret->addBonus(race->getBaseStats());

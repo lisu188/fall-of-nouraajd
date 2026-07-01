@@ -2422,19 +2422,27 @@ void test_creature_composed_stat_order() {
     expect_true(creature->getBaseStats()->getStamina() == 4, "composing does not mutate creature.baseStats");
 }
 
-// The composed main stat is taken from creature.baseStats in this row (E02/S04/SS02),
-// mirroring the legacy path; creatureClass-authoritative main stat is a separate
-// refinement (E02/S04/SS03).
-void test_creature_composed_main_stat_defaults_to_creature_base() {
-    auto klass = std::make_shared<CCreatureClass>();
+// The composed main stat is a selected (not accumulated) field: the creatureClass is
+// authoritative when it names one, otherwise it falls back to creature.baseStats. The
+// composed path applies this itself because archetype creatures never run
+// buildLegacyStats().
+void test_creature_composed_main_stat_selection() {
     auto creature = std::make_shared<CCreature>();
     auto creatureStats = archetype_stats(0, 0, 0, 0);
     creatureStats->setMainStat("strength");
     creature->setBaseStats(creatureStats);
-    creature->setCreatureClass(klass);
 
+    // A class naming a main stat wins over the creature.baseStats main stat.
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    creature->setCreatureClass(klass);
+    expect_true(creature->getStats()->getMainStat() == "intelligence",
+                "creatureClass main stat is authoritative in the composed path");
+
+    // A class with no main stat falls back to the creature.baseStats main stat.
+    creature->setCreatureClass(std::make_shared<CCreatureClass>());
     expect_true(creature->getStats()->getMainStat() == "strength",
-                "composed main stat comes from creature.baseStats (class authority is SS03)");
+                "an empty creatureClass main stat falls back to creature.baseStats");
 }
 
 } // namespace
@@ -2495,7 +2503,7 @@ int main() {
     test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
     test_creature_clone_preserves_composed_archetypes();
     test_creature_composed_stat_order();
-    test_creature_composed_main_stat_defaults_to_creature_base();
+    test_creature_composed_main_stat_selection();
 
     return finish_tests();
 }
