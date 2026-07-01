@@ -162,6 +162,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_map_walkthrough_ritual",
     "McpServerTest.test_stdio_map_walkthrough_siege",
     "McpServerTest.test_stdio_map_walkthrough_test",
+    "McpServerTest.test_stdio_map_walkthrough_vhulmarn",
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
@@ -177,6 +178,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
+    "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -184,6 +186,7 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_ritual": 20.0,
     "GameTest.test_map_walkthrough_siege": 15.0,
     "GameTest.test_map_walkthrough_test": 10.0,
+    "GameTest.test_map_walkthrough_vhulmarn": 15.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -4529,12 +4532,58 @@ def walkthrough_multilevel_map():
     }
 
 
+def walkthrough_vhulmarn_map():
+    g, game_map, player = load_game_map_with_player("vhulmarn")
+    for name in ("vhulmarnStart", "oldTollman", "tideBell", "altarThreshold"):
+        find_map_object_definition("vhulmarn", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("vhulmarn", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arriving on the shore grants the Drowned Tithe quest.
+    move_to_object("vhulmarnStart")
+    assert "drownedTitheQuest" in quest_names(player), "Arrival should grant the Drowned Tithe quest."
+
+    # The old tollman reveals what the town owed the deep.
+    g.createObject("tollmanDialog").hear_the_tithe()
+    assert game_map.getBoolProperty("tithe_heard"), "Hearing the tollman should record the tithe."
+
+    # Tolling the drowned bell raises Deep-Spawn from the tarn.
+    move_to_object("tideBell")
+    assert game_map.getBoolProperty("bell_tolled"), "The causeway bell should toll."
+
+    # The cyclopean altar yields the cursed tiara and wakes the colossal horror.
+    tiaras_before = player.countItems("tiaraOfTheDrownedTithe")
+    move_to_object("altarThreshold")
+    assert game_map.getBoolProperty("tithe_taken"), "Reaching the altar should take the tithe."
+    assert game_map.getBoolProperty("boss_woken"), "Taking the tiara should wake The Nameless."
+    assert player.countItems("tiaraOfTheDrownedTithe") == tiaras_before + 1, "The tiara should enter the inventory."
+    assert find_runtime_object(game_map, "theNamelessBoss") is not None, "The Nameless should rise on the altar."
+
+    player.checkQuests()
+    assert "drownedTitheQuest" in completed_quest_names(player), "The Drowned Tithe quest should complete."
+
+    return {
+        "map": "vhulmarn",
+        "tithe_heard": game_map.getBoolProperty("tithe_heard"),
+        "bell_tolled": game_map.getBoolProperty("bell_tolled"),
+        "tithe_taken": game_map.getBoolProperty("tithe_taken"),
+        "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "tiara_count": player.countItems("tiaraOfTheDrownedTithe"),
+        "boss_present": find_runtime_object(game_map, "theNamelessBoss") is not None,
+        "quest_completed": "drownedTitheQuest" in completed_quest_names(player),
+    }
+
+
 WALKTHROUGHS = {
     "multilevel": walkthrough_multilevel_map,
     "nouraajd": walkthrough_nouraajd_map,
     "ritual": walkthrough_ritual_map,
     "siege": walkthrough_siege_map,
     "test": walkthrough_test_map,
+    "vhulmarn": walkthrough_vhulmarn_map,
 }
 
 
@@ -14420,6 +14469,10 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("test")
 
     @game_test
+    def test_map_walkthrough_vhulmarn(self):
+        return execute_walkthrough("vhulmarn")
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -18467,6 +18520,7 @@ class McpServerTest(unittest.TestCase):
         "ritual": "_mcp_walkthrough_ritual",
         "siege": "_mcp_walkthrough_siege",
         "test": "_mcp_walkthrough_test",
+        "vhulmarn": "_mcp_walkthrough_vhulmarn",
     }
 
     def make_stub_server(self):
@@ -19181,6 +19235,9 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_test(self):
         self._assert_mcp_walkthrough("test")
 
+    def test_stdio_map_walkthrough_vhulmarn(self):
+        self._assert_mcp_walkthrough("vhulmarn")
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -19604,6 +19661,43 @@ class McpServerTest(unittest.TestCase):
             "teleporter_from": [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0],
             "teleporter_to": after_teleport,
             "ground_hole_exit": after_ground_hole,
+        }
+
+    def _mcp_walkthrough_vhulmarn(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "vhulmarn")
+        for name in ("vhulmarnStart", "tideBell", "altarThreshold"):
+            find_map_object_definition("vhulmarn", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the quest; the bell raises Deep-Spawn; the altar yields the cursed tiara.
+        step_onto("vhulmarnStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        step_onto("tideBell")
+        self.assertTrue(map_bool("bell_tolled"))
+        step_onto("altarThreshold")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+
+        self.assertTrue(map_bool("tithe_taken"))
+        self.assertTrue(map_bool("boss_woken"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        has_tiara = self._serialized_inventory_has(player_data, "tiaraOfTheDrownedTithe")
+        self.assertTrue(has_tiara)
+        return {
+            "map": "vhulmarn",
+            "bell_tolled": map_bool("bell_tolled"),
+            "tithe_taken": map_bool("tithe_taken"),
+            "boss_woken": map_bool("boss_woken"),
+            "has_tiara": has_tiara,
+            "quests": self._serialized_quest_ids(player_data),
         }
 
     def _mcp_walkthrough_multilevel(self, session):

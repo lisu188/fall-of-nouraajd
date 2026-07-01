@@ -3196,7 +3196,7 @@
      "id": 1,
      "name": "vhulmarnStart",
      "rotation": 0,
-     "type": "StartEvent",
+     "type": "vhulmarnStart",
      "visible": true,
      "width": 32,
      "x": 896,
