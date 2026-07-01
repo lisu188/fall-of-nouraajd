@@ -1,0 +1,53 @@
+{
+  "affectedPaths": [
+    "res/config/creature_classes.json",
+    "tests/unit/test_resource.cpp"
+  ],
+  "category": "ci",
+  "controllerId": "ctrl-vm-31216-edb5360c",
+  "createdAtUtc": "2026-07-01T09:20:18Z",
+  "details": "Two workflow problems observed while landing the first monster archetype migration (row 67, GoobyRace):\n\n1) Main-wide native CI break in resource_unit_tests (pre-existing; not caused by content/config changes).\n   The ctest target for_unit_tests.resource_unit_tests fails with \"FAIL: trusted in-root plugin path must\n   still load and execute\": EVERY Python resource plugin fails to load with pybind errors\n   (\"Unable to convert call argument '1' to Python object\") and crafting.py with \"Allowed Python resource\n   plugin module is not initialized: json\". This reddens the native linux (and windows / linux-coverage)\n   jobs on effectively every code PR. Evidence: it failed identically on a config-only PR (row 67, whose\n   Gooby-hunt/Nouraajd quest GameTests all passed) and on unrelated code PR #1185 (getEffectiveInteractions),\n   which was merged to main with linux/windows/coverage red. linux appears non-required (PRs merge on\n   mergeable_state=unstable), so the break is being tolerated fleet-wide rather than fixed, which both masks\n   real regressions and forces every controller to hand-verify that its own failure is only this pre-existing\n   one before merging.\n\n2) Archetype class/race authoring churns hot shared greenfield files, causing repeated merge conflicts and a\n   revert. res/config/creature_classes.json and res/config/creature_races.json are created/edited by many\n   concurrent authoring rows (players r51-55, monsters r62/65/67/69/72). Landing row 67 hit add/add then\n   modify/delete conflicts across three rebases within ~30 min, including a full revert of the WarriorClass\n   extraction (#1192 reverted by #1197). The per-file contention plus an in-flight design revert make the\n   cluster unstable to integrate against.\n\nNotes for the optimizer:\n- Fix the resource-plugin sandbox / pybind binding so resource_unit_tests passes again, restoring a\n  meaningful native gate; until then controllers cannot distinguish new native regressions from this noise.\n- Serialize the race/class authoring rows (or split creature_classes.json / creature_races.json per family)\n  so concurrent migrations do not collide on one file; sequence player-class extraction vs monster role-class\n  creation deliberately given the WarriorClass revert.\n",
+  "evidence": [
+    {
+      "archetypeChurn": {
+        "conflictsDuringRow67Integration": [
+          "add/add creature_classes.json",
+          "modify/delete creature_classes.json after WarriorClass revert"
+        ],
+        "hotFiles": [
+          "res/config/creature_classes.json",
+          "res/config/creature_races.json"
+        ],
+        "landedFirstMonsterMigration": {
+          "mergeCommit": "a72022d",
+          "row": 67
+        },
+        "revert": "#1197 reverted #1192 (Extract WarriorClass)"
+      },
+      "resourceUnitTestsBreak": {
+        "affectedPRsObserved": [
+          "row67 impl #1191 (config-only; Gooby GameTests passed)",
+          "#1185 getEffectiveInteractions (merged to main with linux red)"
+        ],
+        "assertion": "trusted in-root plugin path must still load and execute",
+        "ctestTarget": "for_unit_tests.resource_unit_tests",
+        "failingJobs": [
+          84488716059,
+          84485102789
+        ],
+        "linuxRequired": false,
+        "symptom": "all Python plugins fail: 'Unable to convert call argument 1 to Python object'; crafting.py 'module is not initialized: json'"
+      }
+    }
+  ],
+  "fingerprint": "resource_unit_tests trusted plugin load fails mainwide archetype creature_classes races json churn conflicts",
+  "id": "20260701T092018Z-ctrl-vm-31216-edb5360c-b7b021fe",
+  "impact": "linux is non-required so the plugin-sandbox break is merged through fleet-wide, masking real native regressions and forcing per-PR manual triage; concurrent race/class authoring collides on two shared files, producing repeated merge conflicts and an extraction revert",
+  "phase": "merge",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "8bf04ac3ff39ebbf04f4a063647bfec76403bbef",
+  "suggestedImprovement": "Repair the Python resource-plugin pybind binding so resource_unit_tests passes and linux is a meaningful gate again; serialize or per-family split creature_classes.json/creature_races.json authoring to avoid concurrent-edit conflicts",
+  "summary": "resource_unit_tests fails main-wide (all Python plugins fail to load), reddening linux on every code PR; archetype creature_classes/races.json churn causes repeated merge conflicts"
+}
