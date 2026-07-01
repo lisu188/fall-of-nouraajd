@@ -14013,6 +14013,7 @@ class GameTest(unittest.TestCase):
             "warrior_condition_method": "def can_brace_gate(self):" in script,
             "warrior_action_method": "def brace_gate(self):" in script,
             "warrior_player_property": "warrior_barricades" in script and "braced_nouraajd_gate" in script,
+            "warrior_condition_uses_class_id": 'player.getPlayerClassId() == "Warrior"' in script,
             "warrior_dialog_option": any(
                 option.get("properties", {}).get("condition") == "can_brace_gate"
                 and option.get("properties", {}).get("action") == "brace_gate"
@@ -14022,6 +14023,7 @@ class GameTest(unittest.TestCase):
             "assasin_condition_method": "def can_shadow_robed_men(self):" in script,
             "assasin_action_method": "def shadow_robed_men(self):" in script,
             "assasin_player_property": "assasin_trails" in script and "shadowed_robed_men" in script,
+            "assasin_condition_uses_class_id": 'player.getPlayerClassId() == "Assasin"' in script,
             "assasin_dialog_option": tavern_cultist_options is not None
             and any(
                 option.get("properties", {}).get("condition") == "can_shadow_robed_men"
@@ -14050,6 +14052,7 @@ class GameTest(unittest.TestCase):
             "sorcerer_condition_method": "def can_decode_stained_glass_ward(self):" in script,
             "sorcerer_action_method": "def decode_stained_glass_ward(self):" in script,
             "sorcerer_player_property": "sorcerer_sigils" in script and "decoded_stained_glass_ward" in script,
+            "sorcerer_condition_uses_class_id": 'player.getPlayerClassId() == "Sorcerer"' in script,
             "sorcerer_dialog_option": any(
                 option.get("properties", {}).get("condition") == "can_decode_stained_glass_ward"
                 and option.get("properties", {}).get("action") == "decode_stained_glass_ward"
