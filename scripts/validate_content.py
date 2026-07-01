@@ -273,6 +273,15 @@ CREATURE_BASE_CLASS = "CCreature"
 # the CCreature enumeration are flagged so random-encounter code can explicitly
 # exclude them.
 PLAYER_BASE_CLASS = "CPlayer"
+# Class-identity checks (EPIC_06/STORY_03/SUBSTORY_05).  Map scripts gate
+# class-specific content on the player's class identity.  The migrated form
+# reads the explicit CPlayer "playerClassId" property (getPlayerClassId());
+# the legacy form compares the raw type id (getTypeId()).  getPlayerClassId()
+# falls back to getTypeId() when playerClassId is unset, so a player's valid
+# class ids are its explicit playerClassId (when present) and its config id.
+PLAYER_CLASS_ID_PROPERTY = "playerClassId"
+PLAYER_CLASS_ID_METHOD = "getPlayerClassId"
+LEGACY_CLASS_ID_METHOD = "getTypeId"
 CREATURE_OVERRIDE_PROPERTIES = (
     "baseStats",
     "levelStats",
@@ -417,6 +426,36 @@ class UnmigratedCreature:
 
 
 @dataclass(frozen=True)
+class LegacyClassCheck:
+    """A legacy getTypeId()-based player class check pending migration.
+
+    ``path`` is the script file, ``context`` the class/method location, ``lineno``
+    the source line, and ``class_id`` the player class id compared against.  This
+    is a purely informational migration report: it never emits validation issues
+    or affects exit status, so existing ``getTypeId()`` class checks keep working
+    during the compatibility phase while still being surfaced for migration to
+    ``getPlayerClassId()``.
+    """
+
+    path: str
+    context: str
+    lineno: int
+    class_id: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "path": self.path,
+            "context": self.context,
+            "lineno": self.lineno,
+            "classId": self.class_id,
+        }
+
+    def __str__(self) -> str:
+        location = f"{self.context}:{self.lineno}" if self.context else f"line {self.lineno}"
+        return f'{self.path}: {location}: getTypeId() == "{self.class_id}"'
+
+
+@dataclass(frozen=True)
 class RegistrationExclusionUse:
     path: str
     location: str
@@ -448,6 +487,31 @@ class ScriptCall:
     @property
     def location(self) -> str:
         call = f'{self.name}("{self.value}")'
+        return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
+
+
+@dataclass(frozen=True)
+class ScriptClassCheck:
+    """A literal player class-identity comparison found in a map script.
+
+    ``method`` is the class-id accessor being compared -- either the migrated
+    ``getPlayerClassId`` or the legacy ``getTypeId`` -- and ``class_id`` is the
+    string literal it is compared against.  ``receiver`` records the resolved
+    receiver kind ("player" for player receivers) so legacy ``getTypeId`` checks
+    can be scoped to player receivers, since ``getTypeId`` is a generic accessor
+    that legitimately compares non-player objects.  Only literal comparisons in
+    the script source are captured; nothing is inferred.
+    """
+
+    class_id: str
+    method: str
+    receiver: str
+    lineno: int
+    context: str
+
+    @property
+    def location(self) -> str:
+        call = f'{self.method}() == "{self.class_id}"'
         return f"{self.context}:{self.lineno} {call}" if self.context else f"line {self.lineno} {call}"
 
 
@@ -609,6 +673,7 @@ class ScriptInfo:
     trigger_targets: list[ScriptCall] = field(default_factory=list)
     named_objects: set[str] = field(default_factory=set)
     spawned_creatures: list[SpawnedCreature] = field(default_factory=list)
+    class_checks: list[ScriptClassCheck] = field(default_factory=list)
 
 
 @dataclass
@@ -691,6 +756,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
 
     def visit_Compare(self, node: ast.Compare) -> Any:
         self._record_quest_state_comparison(node, terminal=False)
+        self._record_class_check_comparison(node)
         self.generic_visit(node)
 
     def visit_Return(self, node: ast.Return) -> Any:
@@ -886,6 +952,49 @@ class ScriptAnalyzer(ast.NodeVisitor):
         usage.read_states.update(states)
         if terminal:
             usage.terminal_check_states.update(states)
+
+    def _record_class_check_comparison(self, node: ast.Compare) -> None:
+        operands = [node.left, *node.comparators]
+        for index, operator in enumerate(node.ops):
+            if not isinstance(operator, (ast.Eq, ast.NotEq, ast.In, ast.NotIn)):
+                continue
+            left = operands[index]
+            right = operands[index + 1]
+            self._record_class_check_pair(left, right)
+            self._record_class_check_pair(right, left)
+
+    def _record_class_check_pair(self, call_expr: ast.AST, value_expr: ast.AST) -> None:
+        detected = self._class_id_method_call(call_expr)
+        if detected is None:
+            return
+        method, receiver = detected
+        # getPlayerClassId is player-specific, so any comparison is a class check.
+        # getTypeId is a generic accessor, so only treat it as a legacy class check
+        # when it is called on a player receiver -- otherwise it is a normal object
+        # type comparison (monsters, items, ...) that must not be flagged.
+        if method == LEGACY_CLASS_ID_METHOD and receiver != "player":
+            return
+        for value in self._literal_string_values(value_expr):
+            self.info.class_checks.append(
+                ScriptClassCheck(
+                    class_id=value,
+                    method=method,
+                    receiver=receiver,
+                    lineno=getattr(call_expr, "lineno", 0),
+                    context=self._context,
+                )
+            )
+
+    def _class_id_method_call(self, node: ast.AST) -> tuple[str, str] | None:
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and not node.args
+            and not node.keywords
+            and node.func.attr in (PLAYER_CLASS_ID_METHOD, LEGACY_CLASS_ID_METHOD)
+        ):
+            return node.func.attr, self._receiver_kind(node.func.value)
+        return None
 
     def _record_terminal_state_checks(self, node: ast.AST) -> None:
         if isinstance(node, ast.Compare):
@@ -1275,6 +1384,42 @@ class ContentValidator:
                 unmigrated.append(UnmigratedCreature(config_id=key, path=self._rel(entry.path), missing=missing))
         return sorted(unmigrated, key=lambda creature: (creature.config_id, creature.path))
 
+    def report_legacy_class_checks(self) -> list[LegacyClassCheck]:
+        """List legacy getTypeId()-based player class checks still awaiting migration.
+
+        Loads maps and analyzes each map script for player class-identity comparisons,
+        selecting the legacy ``getTypeId()`` form whose literal names a real player
+        class id (i.e. one that should be rewritten as ``getPlayerClassId()``).  This
+        is a read-only migration report: it shares the validation machinery but never
+        emits validation issues or changes exit status, so existing getTypeId() class
+        checks keep validating green during the compatibility phase.  Results are
+        sorted for deterministic output.
+        """
+        self._collect_engine_classes()
+        self._collect_plugin_classes()
+        self._load_global_configs()
+        self._load_maps()
+        legacy: list[LegacyClassCheck] = []
+        for context in self.map_contexts:
+            script_info = context.script_info
+            if script_info is None or not script_info.class_checks:
+                continue
+            known_ids = self._known_player_class_ids(self._visible_entries(context))
+            for check in script_info.class_checks:
+                if check.method != LEGACY_CLASS_ID_METHOD:
+                    continue
+                if check.class_id not in known_ids:
+                    continue
+                legacy.append(
+                    LegacyClassCheck(
+                        path=self._rel(script_info.path),
+                        context=check.context,
+                        lineno=check.lineno,
+                        class_id=check.class_id,
+                    )
+                )
+        return sorted(legacy, key=lambda entry: (entry.path, entry.lineno, entry.class_id))
+
     def _collect_creature_overrides(
         self,
         path: Path,
@@ -1619,6 +1764,7 @@ class ContentValidator:
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
         self._validate_gooby_runtime_names(context)
+        self._validate_class_id_references(context, visible)
         self._validate_script_property_hygiene(context)
         self._validate_quest_state_transitions(context)
         self._validate_amulet_quest_actor(context, visible)
@@ -2612,6 +2758,62 @@ class ContentValidator:
                     self._issue(context.script_info.path, trigger.location, f'unknown trigger event "{trigger.value}"')
             elif trigger.name == "trigger target" and trigger.value not in object_names:
                 self._issue(context.script_info.path, trigger.location, f'unknown trigger target "{trigger.value}"')
+
+    def _known_player_class_ids(self, visible: dict[str, ConfigEntry]) -> set[str]:
+        """Resolve the set of valid player class ids from CPlayer config templates.
+
+        getPlayerClassId() returns a player's explicit "playerClassId" property when
+        set, otherwise its config/type id.  A class check literal is therefore valid
+        when it matches either the config id of a CPlayer template (resolving ``ref``
+        chains, like every other class resolution here) or that template's explicit
+        playerClassId override.  Derived purely from engine class lineage, never from
+        template-id name strings.
+        """
+        ids: set[str] = set()
+        for key, entry in visible.items():
+            if not isinstance(entry.data, dict):
+                continue
+            class_name = self._effective_object_class(entry.data, visible)
+            if not isinstance(class_name, str):
+                continue
+            if class_name != PLAYER_BASE_CLASS and not self._class_inherits_from(class_name, PLAYER_BASE_CLASS):
+                continue
+            ids.add(key)
+            explicit = self._effective_property_value(entry.data, PLAYER_CLASS_ID_PROPERTY, visible)
+            if isinstance(explicit, str) and explicit:
+                ids.add(explicit)
+        return ids
+
+    def _validate_class_id_references(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
+        """Reject class-specific script content that references an unknown class id.
+
+        A migrated ``getPlayerClassId() == "<id>"`` check must name a real player
+        class id (a CPlayer template's config id or explicit playerClassId), so new
+        class-specific content cannot silently gate on a class that does not exist.
+        Legacy ``getTypeId()``-based class checks are still allowed during the
+        compatibility phase (they are surfaced non-fatally by
+        report_legacy_class_checks); they are only flagged here when they compare a
+        player receiver against a real class id whose migrated accessor would be
+        getPlayerClassId -- and even then only as the informational report, never as a
+        blocking issue.
+        """
+        script_info = context.script_info
+        if script_info is None or not script_info.class_checks:
+            return
+        known_ids = self._known_player_class_ids(visible)
+        for check in script_info.class_checks:
+            if check.method != PLAYER_CLASS_ID_METHOD:
+                continue
+            if check.class_id not in known_ids:
+                self._issue(
+                    script_info.path,
+                    check.location,
+                    f'player class check references unknown class id "{check.class_id}"; '
+                    f"no CPlayer template declares it (known: {self._format_id_set(known_ids)})",
+                )
+
+    def _format_id_set(self, ids: set[str]) -> str:
+        return ", ".join(sorted(ids)) if ids else "<none>"
 
     def _validate_amulet_quest_actor(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
         """Guard that the amulet quest keeps its item carrier and runtime actor name.
@@ -3888,6 +4090,10 @@ def report_unmigrated_creatures(repo_root: Path | str) -> list[UnmigratedCreatur
     return ContentValidator(Path(repo_root)).report_unmigrated_creatures()
 
 
+def report_legacy_class_checks(repo_root: Path | str) -> list[LegacyClassCheck]:
+    return ContentValidator(Path(repo_root)).report_legacy_class_checks()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Validate game JSON resources and literal script refs.")
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
@@ -3909,6 +4115,14 @@ def main(argv: list[str] | None = None) -> int:
             "creatureClass as JSON and exit without validating."
         ),
     )
+    parser.add_argument(
+        "--report-legacy-class-checks",
+        action="store_true",
+        help=(
+            "Print the legacy getTypeId()-based player class checks still awaiting "
+            "migration to getPlayerClassId() as JSON and exit without validating."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.report_creature_overrides:
@@ -3926,6 +4140,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.report_unmigrated:
         unmigrated = report_unmigrated_creatures(args.repo_root)
         json.dump([creature.as_dict() for creature in unmigrated], sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return 0
+
+    if args.report_legacy_class_checks:
+        legacy = report_legacy_class_checks(args.repo_root)
+        json.dump([check.as_dict() for check in legacy], sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
 
