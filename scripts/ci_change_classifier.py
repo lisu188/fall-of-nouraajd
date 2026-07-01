@@ -152,9 +152,36 @@ def classifyPaths(paths: Sequence[str], *, forceNative: bool = False) -> ChangeC
     )
 
 
-def changedPaths(base: str, head: str) -> tuple[str, ...]:
+def resolveDiffBase(base: str, head: str) -> str:
+    """Resolve the changed-path diff base to the merge-base of ``base`` and ``head``.
+
+    On a pull request the build workflow passes the base *branch tip*
+    (``pull_request.base.sha``), which advances as other PRs merge into the base
+    branch. Diffing ``base..head`` directly then reports every file merged into
+    the base branch after this PR's branch point as changed, so a lightweight PR
+    is misclassified as native/coverage-needed and incurs unnecessary heavy CI.
+    Diffing from the merge-base restricts detection to the PR's own changes.
+    Falls back to ``base`` when no merge-base can be computed (for example an
+    unrelated or shallow history), preserving the previous behavior.
+    """
+
     result = subprocess.run(
-        ["git", "diff", "--name-only", base, head],
+        ["git", "merge-base", base, head],
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    mergeBase = result.stdout.strip()
+    if result.returncode == 0 and mergeBase:
+        return mergeBase
+    return base
+
+
+def changedPaths(base: str, head: str) -> tuple[str, ...]:
+    diffBase = resolveDiffBase(base, head)
+    result = subprocess.run(
+        ["git", "diff", "--name-only", diffBase, head],
         check=True,
         text=True,
         stdout=subprocess.PIPE,
