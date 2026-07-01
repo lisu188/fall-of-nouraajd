@@ -311,24 +311,8 @@
         "strength": 5
       },
       "class": "CPlayer",
-      "levelStats": {
-        "agility": 2,
-        "crit": 1,
-        "dmgMax": 3,
-        "dmgMin": 2,
-        "hit": 3,
-        "intelligence": 1,
-        "stamina": 2,
-        "strength": 3
-      },
-      "levelling": {
-        "1": "Strike",
-        "2": "Barrier",
-        "3": "BloodThirst",
-        "4": "Bloodlash",
-        "5": "DeathStrike",
-        "6": "DoubleAttack"
-      }
+      "levelStats": {},
+      "levelling": {}
     },
     "Wayfarer": {
       "baseStats": {
