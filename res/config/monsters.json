@@ -350,9 +350,11 @@
   "Warrior": {
     "class": "CPlayer",
     "properties": {
-      "creatureClass": {
-        "ref": "WarriorClass"
-      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
       "animation": "images/players/warrior",
       "equipped": {
         "0": {
@@ -367,6 +369,39 @@
       },
       "items": [],
       "label": "Warrior",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 3,
+          "intelligence": 1,
+          "stamina": 2,
+          "strength": 3
+        }
+      },
+      "levelling": {
+        "1": {
+          "ref": "Strike"
+        },
+        "2": {
+          "ref": "Barrier"
+        },
+        "3": {
+          "ref": "BloodThirst"
+        },
+        "4": {
+          "ref": "Bloodlash"
+        },
+        "5": {
+          "ref": "DeathStrike"
+        },
+        "6": {
+          "ref": "DoubleAttack"
+        }
+      },
       "baseStats": {
         "class": "CStats",
         "properties": {

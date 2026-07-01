@@ -1626,40 +1626,21 @@ void test_creature_effective_stats_baseline_capture() {
                 "capturing effective creature stats twice in-process should be byte-for-byte reproducible");
 
     // Layering law: getStats() composes the effective stats least- to
-    // most-specific. For a legacy creature (no race/creatureClass) that is
-    // baseStats + (level copies of) levelStats + equipment + effects; for an
-    // archetype creature it additionally folds the race/class baseStats and the
-    // class per-level growth ahead of the concrete template, matching
-    // buildComposedStats (src/object/CCreature.cpp). Recompute that exact layering
-    // independently here so the captured numbers are proven to be the deterministic
-    // linear composition of the configured stat sources rather than any other path.
-    // Each archetype reference is null on legacy creatures, so the extra terms drop
-    // out and this reduces to the legacy layering. Monotonicity is intentionally NOT
-    // asserted because levelStats deltas may be negative in config, so the engine
-    // does not promise non-decreasing stats across levels.
+    // most-specific as baseStats + (level copies of) levelStats + equipment
+    // bonuses + effect bonuses (src/object/CCreature.cpp:834-874). Recompute that
+    // exact layering independently here so the captured numbers are proven to be
+    // the deterministic linear composition of the configured stat sources rather
+    // than any other path. Monotonicity is intentionally NOT asserted because
+    // levelStats deltas may be negative in config, so the engine does not promise
+    // non-decreasing stats across levels.
     for (const auto &type : subtypes) {
         auto creature = game->createObject<CCreature>(type);
         if (!creature) {
             continue;
         }
-        auto race = creature->getRace();
-        auto creatureClass = creature->getCreatureClass();
         for (int level : kBaselineLevels) {
             auto expectedStats = std::make_shared<CStats>();
-            // race.baseStats then creatureClass.baseStats (null on legacy creatures).
-            if (race && race->getBaseStats()) {
-                expectedStats->addBonus(race->getBaseStats());
-            }
-            if (creatureClass && creatureClass->getBaseStats()) {
-                expectedStats->addBonus(creatureClass->getBaseStats());
-            }
             expectedStats->addBonus(creature->getBaseStats());
-            // creatureClass.levelStats per level, then creature.levelStats per level.
-            if (creatureClass && creatureClass->getLevelStats()) {
-                for (int i = 0; i < level; i++) {
-                    expectedStats->addBonus(creatureClass->getLevelStats());
-                }
-            }
             for (int i = 0; i < level; i++) {
                 expectedStats->addBonus(creature->getLevelStats());
             }
