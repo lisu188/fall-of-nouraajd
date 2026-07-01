@@ -1,0 +1,8 @@
+{
+  "bruteClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "strength"
+    }
+  }
+}
