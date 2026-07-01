@@ -338,6 +338,19 @@ specific) action. This contract is pinned by the native regression test
 `test_creature_action_merge_dedupes_by_type_id` in
 `tests/unit/test_object.cpp`.
 
+The four-source composition itself is implemented by
+`CCreature::getEffectiveInteractions` (`src/object/CCreature.cpp`), which folds
+the sources in precedence order — `race.actions`, then `creatureClass.actions`,
+then `creatureClass.levelling` (level-gated), then the concrete template's own
+`levelling` (level-gated) and `actions` — and deduplicates by the key above with
+last/most-specific winning. Each archetype reference is independently
+null-guarded, so a legacy creature with neither a race nor a `creatureClass`
+composes only its own concrete sources. This composition is pinned by
+`test_creature_effective_interactions_compose_archetype_sources` (race/class
+sources fold in at the documented positions, including the legacy no-archetype
+path) alongside `test_creature_effective_interactions_compose_and_dedupe_sources`
+in `tests/unit/test_object.cpp`.
+
 ---
 
 # Creature stat precedence contract
