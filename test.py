@@ -4818,6 +4818,22 @@ def walkthrough_ninemarches_map():
     assert player.getNumericProperty("reputation") == rep_before + 2, "Recruiting a companion should raise reputation."
     assert player.countItems("aegisOfHalda") >= 1, "Recruiting Ser Halda should grant her war-gift boon."
 
+    # Turncoat companion: Corvyn breaks the other way -- he leaves if you grow *too
+    # righteous*, not when your standing sinks. Regression guard for the inverted leave
+    # check that made him desert the moment he was recruited.
+    sellsword = g.createObject("sellswordDialog")
+    sellsword.start()
+    assert "corvynQuest" in quest_names(player), "Talking to Corvyn should start his quest."
+    player.addItem("ashRelic")
+    sellsword.recruit()
+    assert game_map.getBoolProperty("corvyn_joined"), "Returning the ash relic should recruit Corvyn."
+    player.setNumericProperty("reputation", 0)
+    sellsword.banter()
+    assert not game_map.getBoolProperty("corvyn_left"), "The turncoat must not desert at low reputation."
+    player.setNumericProperty("reputation", 5)
+    sellsword.banter()
+    assert game_map.getBoolProperty("corvyn_left"), "The turncoat should leave once you grow too righteous."
+
     # Heroes-3 obelisk -> Grail hunt: read all six march-obelisks.
     for obelisk in obelisks:
         move_to_object(obelisk)
