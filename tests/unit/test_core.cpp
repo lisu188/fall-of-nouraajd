@@ -105,7 +105,7 @@ class PropertyChangeProbe : public CGameObject {
     V_META(PropertyChangeProbe, CGameObject, V_METHOD(PropertyChangeProbe, onPropertyChanged, void, std::string),
            V_METHOD(PropertyChangeProbe, onPropertiesChanged, void, std::set<std::string>),
            V_METHOD(PropertyChangeProbe, onLabelChanged), V_METHOD(PropertyChangeProbe, onThreatChanged),
-           V_METHOD(PropertyChangeProbe, onInventoryChanged),
+           V_METHOD(PropertyChangeProbe, onInventoryChanged), V_METHOD(PropertyChangeProbe, onInteractionsChanged),
            V_METHOD(PropertyChangeProbe, onObjectChanged, void, Coords),
            V_METHOD(PropertyChangeProbe, onTileChanged, void, Coords))
 
@@ -122,6 +122,8 @@ class PropertyChangeProbe : public CGameObject {
 
     void onInventoryChanged() { ++inventory_changed_calls; }
 
+    void onInteractionsChanged() { ++interactions_changed_calls; }
+
     void onObjectChanged(Coords coords) { object_changed_coords.push_back(coords); }
 
     void onTileChanged(Coords coords) { tile_changed_coords.push_back(coords); }
@@ -133,6 +135,7 @@ class PropertyChangeProbe : public CGameObject {
     int label_changed_calls = 0;
     int threat_changed_calls = 0;
     int inventory_changed_calls = 0;
+    int interactions_changed_calls = 0;
 };
 
 class PrimitiveSerializationHolder : public CGameObject {
@@ -1850,6 +1853,46 @@ void test_creature_effective_actions_baseline_capture() {
     std::cout << "creature-actions-baseline-levelling-unlocks-observed\t" << templatesWithLevellingUnlock << '\n';
 }
 
+// CInteraction.selfTarget is a bool metadata property (default false). This pins
+// its default, that a configured value serializes through CSerialization and
+// survives a serialize/deserialize round-trip, and that JSON which omits the
+// property stays valid (deserializing to the false default).
+void test_interaction_self_target_property_round_trip() {
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    auto fresh = std::make_shared<CInteraction>();
+    expect_true(!fresh->getSelfTarget(), "selfTarget should default to false");
+
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setSelfTarget(true);
+    expect_true(action->getSelfTarget(), "setSelfTarget(true) should be reflected by getSelfTarget()");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(action);
+    expect_true((*serialized)["properties"].contains("selfTarget") &&
+                    (*serialized)["properties"]["selfTarget"].get<bool>(),
+                "a configured selfTarget should serialize as a true JSON property");
+
+    auto round_trip = std::dynamic_pointer_cast<CInteraction>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+    expect_true(round_trip != nullptr, "a CInteraction should deserialize back into a CInteraction");
+    expect_true(round_trip->getSelfTarget(), "selfTarget should survive a serialize/deserialize round-trip");
+
+    // JSON that omits selfTarget (e.g. existing content) must remain valid and keep the false default.
+    auto legacy = std::make_shared<json>(*serialized);
+    (*legacy)["properties"].erase("selfTarget");
+    expect_true(!(*legacy)["properties"].contains("selfTarget"),
+                "legacy fixture should omit the selfTarget property");
+    auto legacy_loaded = std::dynamic_pointer_cast<CInteraction>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, legacy));
+    expect_true(legacy_loaded && !legacy_loaded->getSelfTarget(),
+                "interaction JSON without selfTarget should deserialize to the false default");
+}
+
 // CCreatureRace is a CGameObject-derived metadata definition. This pins that it
 // round-trips through CSerialization with all of its metadata (base stats, innate
 // actions, creatureType, subtypes, playerSelectable, plus inherited label/
@@ -2019,6 +2062,323 @@ void test_creature_archetype_property_wiring() {
     expect_true(creature->usesArchetypeComposition(), "a creature with a creatureClass uses archetype composition");
 }
 
+// Mirrors the production registration helper in src/plugin/NativePlugin.cpp
+// (register_type<T, Bases...>): it registers the type's metadata with CTypes and
+// installs a constructor in the game's CObjectHandler under the type's meta name.
+// Keeping this local lets the test characterize the exact registration contract
+// without pulling in the native-plugin host shim.
+template <typename T, typename... Bases> static void register_archetype_type(const std::shared_ptr<CGame> &game) {
+    CTypes::register_type<T, Bases...>();
+    game->getObjectHandler()->registerType(T::static_meta()->name(), []() { return std::make_shared<T>(); });
+}
+
+// Type-registration validation: pins that the archetype metadata definitions
+// CCreatureRace and CCreatureClass ARE registered with the engine's type system
+// through the same path NativePlugin uses, so a dropped register_type<...> call in
+// register_creatures would be caught here. It asserts (a) the object handler hands
+// back a constructed instance of the correct concrete type for each archetype's
+// registered name, (b) that instance's meta name and CGameObject inheritance are
+// correct, (c) the archetype is excluded from the CCreature subtype enumeration
+// (it is a referenced definition, not a spawnable creature), and (d) -- the
+// negative control proving the check has teeth -- an UNregistered type name yields
+// no instance, i.e. a missing registration is observable.
+void test_archetype_types_are_registered_with_type_system() {
+    auto game = std::make_shared<CGame>();
+    register_archetype_type<CCreatureRace, CGameObject>(game);
+    register_archetype_type<CCreatureClass, CGameObject>(game);
+
+    auto handler = game->getObjectHandler();
+
+    // Both archetypes resolve to a constructed instance, while an unregistered
+    // class name (the negative control) must produce none. This proves getType is a
+    // real registration probe -- a missing registration is caught -- rather than a
+    // constructor that always succeeds.
+    expect_true(handler->getType("CCreatureRace") != nullptr,
+                "CCreatureRace must be registered: its constructor is installed in the object handler");
+    expect_true(handler->getType("CCreatureClass") != nullptr,
+                "CCreatureClass must be registered: its constructor is installed in the object handler");
+    expect_true(handler->getType("CCreatureArchetypeNotRegistered") == nullptr,
+                "an unregistered archetype name must return no instance, so a missing registration is caught");
+
+    // (a)+(b) Each registered name constructs the correct concrete archetype type,
+    // and its metadata is self-consistent and rooted at CGameObject.
+    auto race = std::dynamic_pointer_cast<CCreatureRace>(handler->getType(CCreatureRace::static_meta()->name()));
+    expect_true(race != nullptr, "getType(CCreatureRace) must construct a CCreatureRace instance");
+    expect_true(race->meta()->name() == "CCreatureRace", "the constructed race reports its CCreatureRace meta name");
+    expect_true(race->meta()->inherits("CGameObject"),
+                "CCreatureRace metadata must declare CGameObject as a base type");
+
+    auto klass = std::dynamic_pointer_cast<CCreatureClass>(handler->getType(CCreatureClass::static_meta()->name()));
+    expect_true(klass != nullptr, "getType(CCreatureClass) must construct a CCreatureClass instance");
+    expect_true(klass->meta()->name() == "CCreatureClass",
+                "the constructed class reports its CCreatureClass meta name");
+    expect_true(klass->meta()->inherits("CGameObject"),
+                "CCreatureClass metadata must declare CGameObject as a base type");
+
+    // The registered names are present in the handler's global type listing.
+    auto allTypes = handler->getAllTypes();
+    expect_true(std::find(allTypes.begin(), allTypes.end(), CCreatureRace::static_meta()->name()) != allTypes.end(),
+                "CCreatureRace must appear in the registered type listing");
+    expect_true(std::find(allTypes.begin(), allTypes.end(), CCreatureClass::static_meta()->name()) != allTypes.end(),
+                "CCreatureClass must appear in the registered type listing");
+
+    // (c) The archetypes are referenced metadata definitions, not spawnable
+    // creatures: even though registered, they must stay out of the CCreature
+    // subtype enumeration (random encounters / spawn tables read this).
+    auto creatureSubtypes = handler->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureRace::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "a registered CCreatureRace must not be enumerated as a CCreature subtype");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureClass::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "a registered CCreatureClass must not be enumerated as a CCreature subtype");
+}
+
+// EPIC_02/STORY_05/SUBSTORY_03: split legacy and composed levelUp paths.
+//
+// levelUp() (src/object/CCreature.cpp) now branches on usesArchetypeComposition():
+//   * Legacy (no race/creatureClass): increment level and fold the template's own
+//     `levelling` unlock for the new level into the serialized `actions` set via
+//     addAction(getLevelAction()) -- the historical behavior, unchanged.
+//   * Composed (race and/or creatureClass present): increment level and signal
+//     interactionsChanged so observers re-query getEffectiveInteractions, which
+//     already surfaces every `levelling` entry gated at or below the current level.
+//     The class-derived unlock is NOT mutated/serialized into `actions`, so it
+//     cannot accumulate as a permanent duplicate across repeated level-ups.
+//
+// levelUp() is protected; expose it through a minimal test subclass so the two
+// paths can be driven deterministically without the exp-curve/alive preconditions.
+class LevelUpProbeCreature : public CCreature {
+  public:
+    using CCreature::levelUp;
+};
+
+void test_levelup_legacy_path_serializes_unlock_into_actions() {
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    auto creature = std::make_shared<LevelUpProbeCreature>();
+    creature->setGame(game);
+    creature->setLevel(0);
+
+    // A levelling unlock keyed to the level the legacy creature is about to reach.
+    auto unlock = std::make_shared<CInteraction>();
+    unlock->setType(CInteraction::static_meta()->name());
+    unlock->setTypeId("legacyCleave");
+    unlock->setGame(game); // getLevelAction clones it, so the source needs a game
+    creature->setLevelling({{"1", unlock}});
+
+    expect_true(!creature->usesArchetypeComposition(),
+                "a creature with no race/creatureClass must take the legacy levelUp path");
+    expect_true(creature->getActions().empty(), "no actions are serialized before the first level-up");
+
+    creature->levelUp(); // 0 -> 1, folds in the level-1 levelling unlock
+
+    expect_true(creature->getLevel() == 1, "legacy levelUp increments the level");
+    auto actions = creature->getActions();
+    expect_true(actions.size() == 1, "legacy levelUp serializes the level unlock into the creature's own actions");
+    bool serialized_unlock = std::any_of(actions.begin(), actions.end(), [](const auto &action) {
+        return action && action->getTypeId() == "legacyCleave";
+    });
+    expect_true(serialized_unlock, "the serialized action is the cloned levelling unlock for the reached level");
+
+    // Re-leveling past the unlock level does not re-add it (addAction dedupe), so
+    // the legacy serialized set stays a single entry -- behavior is exactly as before.
+    creature->levelUp(); // 1 -> 2 (no level-2 unlock declared)
+    expect_true(creature->getLevel() == 2, "legacy levelUp keeps incrementing the level");
+    expect_true(creature->getActions().size() == 1,
+                "legacy levelUp past the unlock level keeps the serialized action set stable (no duplicates)");
+}
+
+void test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing() {
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto creature = std::make_shared<LevelUpProbeCreature>();
+    creature->setLevel(0);
+
+    // Mark the creature as composed by giving it a race archetype reference.
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+    creature->setRace(race);
+    expect_true(creature->usesArchetypeComposition(),
+                "a creature carrying a race archetype must take the composed levelUp path");
+
+    // A class-style level unlock gated to level 1, expressed through `levelling`.
+    auto unlock = std::make_shared<CInteraction>();
+    unlock->setTypeId("composedCleave");
+    creature->setLevelling({{"1", unlock}});
+
+    // Observe interactionsChanged so we can assert the composed path signals re-query.
+    CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
+    auto probe = std::make_shared<PropertyChangeProbe>();
+    creature->connect("interactionsChanged", probe, "onInteractionsChanged");
+
+    // Before reaching the unlock level the gate hides it (unlockLevel <= level is false).
+    expect_true(creature->getEffectiveInteractions().empty(),
+                "a composed level unlock above the current level is not yet exposed");
+
+    creature->levelUp(); // 0 -> 1
+    drain_event_loop();
+
+    expect_true(creature->getLevel() == 1, "composed levelUp increments the level");
+    expect_true(probe->interactions_changed_calls >= 1,
+                "composed levelUp signals interactionsChanged so observers re-query the effective set");
+    // The unlock is NOT serialized into the creature's own actions...
+    expect_true(creature->getActions().empty(),
+                "composed levelUp must not serialize class-derived unlocks into the creature's actions");
+    // ...but IS derived through getEffectiveInteractions once the level is reached.
+    auto effective = creature->getEffectiveInteractions();
+    bool derived_unlock = std::any_of(effective.begin(), effective.end(), [](const auto &action) {
+        return action && action->getTypeId() == "composedCleave";
+    });
+    expect_true(effective.size() == 1 && derived_unlock,
+                "the composed unlock is derived through getEffectiveInteractions, not stored in actions");
+
+    // Leveling again past the unlock level must not create permanent duplicate
+    // serialized actions: actions stays empty and the effective set stays a single
+    // entry (no accumulation).
+    creature->levelUp(); // 1 -> 2
+    drain_event_loop();
+    expect_true(creature->getActions().empty(), "repeated composed level-ups never accumulate serialized actions");
+    auto effective_after = creature->getEffectiveInteractions();
+    expect_true(effective_after.size() == 1,
+                "repeated composed level-ups expose the unlock exactly once (no permanent duplicates)");
+}
+
+// EPIC_03/STORY_04/SUBSTORY_03: preserve archetypes when cloning creatures.
+//
+// A composed creature carries archetype-definition references (race and/or
+// creatureClass; usesArchetypeComposition() is true). Cloning runs through
+// CObjectHandler::_clone (src/handler/CObjectHandler.cpp): it serializes the
+// creature to JSON, deserializes a fresh CGameObject, and assigns it a freshly
+// generated unique name (CSerialization::generateName). CGameObject::clone<T>()
+// is the public entry point and dispatches to that handler path.
+//
+// This pins that the clone of a composed creature:
+//   * still uses archetype composition and exposes the SAME archetype DEFINITION
+//     (the race's creatureType and the creatureClass's mainStat -- the identity a
+//     race/class carries) -- the archetype is preserved, not dropped or swapped;
+//   * carries the archetype as an independent runtime object: the engine deep-
+//     copies every nested pointer property on clone, so the clone owns distinct
+//     race/creatureClass instances. Mutating the clone's archetype must not write
+//     back through to the source's archetype (no unintended shared mutable state);
+//   * receives a generated unique name distinct from the source's name;
+//   * keeps scalar runtime state independent (mutating the clone's level/hp/gold
+//     does not disturb the source);
+//   * does NOT duplicate the level-derived class unlock (the creatureClass
+//     levelling entry) into the clone's concrete `actions` set -- level unlocks
+//     stay derived through composition, exactly as the composed levelUp path
+//     guarantees, so a clone cannot start accumulating them as permanent actions.
+//
+// Harness: a REAL loaded game (CGameLoader::loadGame + startGame "empty"), the same
+// bootstrap the creature stat/action baseline tests above use. This loads the full
+// native plugin so EVERY type a CCreature serializes through -- its `actions`/
+// `effects`/`items` (std::set<...>) collections, `controller`/`fightController`,
+// `equipped`/`levelling` maps, baseStats/levelStats -- has a registered serializer.
+// A bare hand-built CCreature in a partial harness leaves some of those property
+// types without a serializer ("No serializer for property: actions /
+// fightController"), which serializes to malformed JSON and crashes the clone
+// round-trip on MSVC (0xc0000409). Sourcing a fully-formed engine creature makes
+// the serialize step total, so the clone round-trips cleanly on every platform.
+//
+// The concrete creature is obtained via createObject for a registered CCreature
+// subtype; the archetype references are then attached inline (plain
+// CCreatureRace/CCreatureClass definitions) so the creature is composed, and the
+// one nested level unlock lives inside the creatureClass archetype (composition
+// source), never on the creature's own `actions`. getLevelAction() is never
+// invoked, so the historical null-subobject clone crash is also avoided.
+void test_creature_clone_preserves_composed_archetypes() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGame(game, "empty");
+
+    // A fully-formed engine creature of the first registered concrete CCreature
+    // subtype: every property type it serializes through is registered by the
+    // loaded native plugin, so the clone round-trip is total (no missing serializer).
+    auto subtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(!subtypes.empty(), "a normally loaded game registers concrete CCreature subtypes to clone");
+    std::sort(subtypes.begin(), subtypes.end());
+    std::shared_ptr<CCreature> source;
+    for (const auto &type : subtypes) {
+        source = game->createObject<CCreature>(type);
+        if (source) {
+            break;
+        }
+    }
+    expect_true(source != nullptr, "a registered CCreature subtype constructs a concrete creature to clone");
+
+    // Archetype definitions attached inline. Race identity is its creatureType;
+    // class identity is its mainStat. The class also carries a level-keyed unlock
+    // that exists ONLY on the archetype (composition source), never folded into the
+    // creature's own concrete actions.
+    auto race = game->createObject<CCreatureRace>("CCreatureRace");
+    expect_true(race != nullptr, "CCreatureRace is registered and constructs in the loaded game");
+    race->setCreatureType("humanoid");
+
+    auto classUnlock = game->createObject<CInteraction>("CInteraction");
+    expect_true(classUnlock != nullptr, "CInteraction is registered and constructs in the loaded game");
+    classUnlock->setTypeId("warriorCleave");
+    auto klass = game->createObject<CCreatureClass>("CCreatureClass");
+    expect_true(klass != nullptr, "CCreatureClass is registered and constructs in the loaded game");
+    klass->setMainStat("strength");
+    klass->setLevelling({{"1", classUnlock}});
+
+    source->setName("composedSource");
+    source->setRace(race);
+    source->setCreatureClass(klass);
+    source->setLevel(3);
+    source->setHp(11);
+    source->setGold(5);
+    // The unlock lives on the archetype, not on the creature's own actions.
+    source->setActions({});
+    expect_true(source->usesArchetypeComposition(), "the source creature is composed (has race + creatureClass)");
+    expect_true(source->getActions().empty(), "the source creature starts with no concrete actions");
+
+    auto clone = source->clone<CCreature>();
+    drain_event_loop();
+
+    expect_true(clone != nullptr, "cloning a composed creature yields a CCreature instance");
+    expect_true(clone != source, "the clone is a distinct object from the source");
+
+    // Archetype preserved: composition flag and archetype definition identity carry
+    // across the clone.
+    expect_true(clone->usesArchetypeComposition(), "the clone remains a composed creature after cloning");
+    expect_true(clone->getRace() != nullptr && clone->getCreatureClass() != nullptr,
+                "the clone retains both archetype references");
+    expect_true(clone->getRace()->getCreatureType() == "humanoid",
+                "the clone's race archetype keeps the same definition (creatureType)");
+    expect_true(clone->getCreatureClass()->getMainStat() == "strength",
+                "the clone's creatureClass archetype keeps the same definition (mainStat)");
+
+    // Generated unique name distinct from the source.
+    expect_true(!clone->getName().empty(), "the clone receives a generated name");
+    expect_true(clone->getName() != source->getName(), "the clone's generated name is distinct from the source's");
+
+    // Level-derived class unlock is NOT duplicated into the clone's concrete
+    // actions -- it stays a composition-derived definition, not a stored action.
+    expect_true(clone->getActions().empty(),
+                "cloning does not fold the class-level unlock into the clone's concrete actions");
+
+    // The clone owns independent archetype instances: the engine deep-copies nested
+    // pointer properties, so mutating the clone's archetype must not leak back into
+    // the source's archetype definition.
+    clone->getRace()->setCreatureType("undead");
+    expect_true(source->getRace()->getCreatureType() == "humanoid",
+                "mutating the clone's race archetype does not write back to the source's race");
+    clone->getCreatureClass()->setMainStat("intelligence");
+    expect_true(source->getCreatureClass()->getMainStat() == "strength",
+                "mutating the clone's creatureClass archetype does not write back to the source's class");
+
+    // Scalar runtime state is independent across the clone boundary.
+    clone->setLevel(99);
+    clone->setHp(1);
+    clone->setGold(42);
+    expect_true(source->getLevel() == 3 && source->getHp() == 11 && source->getGold() == 5,
+                "mutating the clone's scalar state leaves the source unchanged");
+}
+
 } // namespace
 
 int main() {
@@ -2068,9 +2428,14 @@ int main() {
     test_serialization_collection_and_error_helpers();
     test_creature_effective_stats_baseline_capture();
     test_creature_effective_actions_baseline_capture();
+    test_interaction_self_target_property_round_trip();
     test_creature_race_metadata_round_trip();
     test_creature_class_metadata_round_trip();
     test_creature_archetype_property_wiring();
+    test_archetype_types_are_registered_with_type_system();
+    test_levelup_legacy_path_serializes_unlock_into_actions();
+    test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
+    test_creature_clone_preserves_composed_archetypes();
 
     return finish_tests();
 }

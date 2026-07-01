@@ -192,6 +192,7 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
     "GameTest.test_map_walkthroughs": 20.0,
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
+    "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
     "GameTest.test_quest_journal_shows_objectives_rewards_and_hints": 12.0,
     "GameTest.test_generated_tiled_map_exercises_loader_metadata_and_objects": 10.0,
     "GameTest.test_fights": 8.0,
@@ -495,6 +496,29 @@ IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS = {
             "objects": [{"name": "spawnPoint1", "typeId": "SiegeSpawnPoint"}],
         },
     },
+    "composed_archetype_v1": {
+        "primary": "composed_archetype_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "composed",
+            "turn": 18,
+            "description": "immutable composed archetype fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [5, 9, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [{"name": "composedCompanion", "typeId": "composedCompanionTemplate"}],
+        },
+    },
 }
 
 
@@ -541,6 +565,14 @@ def snapshot_player_properties(snapshot):
         if obj.get("class") == "CPlayer" or properties.get("name") == "player":
             return properties
     raise AssertionError("Save snapshot does not contain a canonical player object.")
+
+
+def snapshot_object_properties(snapshot, name):
+    for obj in snapshot.get("properties", {}).get("objects", []):
+        properties = obj.get("properties", {}) if isinstance(obj, dict) else {}
+        if properties.get("name") == name:
+            return properties
+    raise AssertionError(f"Save snapshot does not contain an object named {name!r}.")
 
 
 def fixture_quest_ids(quests):
@@ -786,6 +818,62 @@ class SaveFixtureTest(unittest.TestCase):
         # (CCreatureRace/CCreatureClass are not created on main). The archetype-specific
         # "quests survive alongside archetype pointers" assertion is deferred until those fields
         # land. This test's durable value is the legacy quest-serialization baseline above.
+
+    def test_composed_archetype_fixture_loads_with_race_and_creature_class(self):
+        # [EPIC_03][STORY_03][SUBSTORY_02] First archetype-aware save shape. The composed
+        # fixture carries a CCreature that references a race and a creatureClass archetype
+        # definition through CCreature's "race"/"creatureClass" V_PROPERTY pointers
+        # (src/object/CCreature.h: V_PROPERTY(..., race, ...) and
+        # V_PROPERTY(..., creatureClass, ...) over std::shared_ptr<CCreatureRace> /
+        # std::shared_ptr<CCreatureClass>). The archetype definitions are persisted INLINE as
+        # full {"class","properties"} sub-objects -- the same self-contained shape object_serialize
+        # emits and object_deserialize class-name-constructs (src/core/CSerialization.cpp:
+        # CJsonUtil::isType -> ObjectHandler::getType) -- so the native loader needs no external
+        # res/config archetype content to resolve them. The inline property keys are the exact
+        # V_PROPERTY names proven by the CCreatureRace/CCreatureClass round-trip tests in
+        # tests/unit/test_core.cpp (race: creatureType + baseStats; class: mainStat + baseStats;
+        # CStats.strength). This loads the fixture through the suite's normal save-decode path
+        # (save_snapshot + the snapshot accessors) and pins the composed archetype shape.
+        fixture_path = SAVE_FIXTURE_DIR / "composed_archetype_v1.json"
+        self.assertTrue(fixture_path.is_file(), fixture_path)
+        document = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        # Decode through the normal versioned-save envelope, exactly like every other fixture.
+        assert_save_envelope(self, document, "composed")
+        snapshot = save_snapshot(document)
+
+        # The legacy player keeps loading through the established CPlayer path unchanged: it is
+        # a plain Warrior with no archetype identity fields, so back-compat is preserved.
+        player = snapshot_player_properties(snapshot)
+        self.assertEqual("Warrior", player.get("typeId"))
+        self.assertNotIn("race", player)
+        self.assertNotIn("creatureClass", player)
+
+        # The composed companion carries the two archetype definitions under the exact property
+        # names CCreature serializes ("race" / "creatureClass"), each a self-contained inline
+        # {"class","properties"} object the loader can construct without external content.
+        companion = snapshot_object_properties(snapshot, "composedCompanion")
+        self.assertEqual("composedCompanionTemplate", companion.get("typeId"))
+
+        race = companion.get("race")
+        creature_class = companion.get("creatureClass")
+        self.assertIsInstance(race, dict, "race must persist as an inline archetype object")
+        self.assertIsInstance(creature_class, dict, "creatureClass must persist as an inline archetype object")
+        # Inline class shape: a class-name + properties construct (CJsonUtil::isType ->
+        # ObjectHandler::getType), so no res/config archetype content is required to resolve it.
+        self.assertEqual("CCreatureRace", race.get("class"))
+        self.assertEqual("CCreatureClass", creature_class.get("class"))
+        self.assertEqual("humanoid", race.get("properties", {}).get("creatureType"))
+        self.assertEqual("strength", creature_class.get("properties", {}).get("mainStat"))
+
+        # The fixture must validate through the published immutable summary like every other
+        # save-compatibility fixture, so the composed shape is pinned end to end.
+        expected = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["composed_archetype_v1"]["summary"]
+        self.assertEqual(expected, save_fixture_summary(document))
+        self.assertEqual(
+            [{"name": "composedCompanion", "typeId": "composedCompanionTemplate"}],
+            expected["objects"],
+        )
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
@@ -2870,6 +2958,7 @@ NOURAAJD_MAP_BOOL_FLAGS = (
     "OCTOBOGZ_REWARD_CLAIMED",
     "AMULET_QUEST_STARTED",
     "AMULET_RETURNED",
+    "AMULET_REWARD_CLAIMED",
     "VICTOR_QUEST_STARTED",
     "VICTOR_COURTYARD_FOUND",
     "VICTOR_CULTISTS_SPAWNED",
@@ -2877,6 +2966,7 @@ NOURAAJD_MAP_BOOL_FLAGS = (
     "VICTOR_BAD_END",
     "VICTOR_HELP",
     "VICTOR_REWARD_CLAIMED",
+    "VICTOR_REWARD_GRANTED",
 )
 
 NOURAAJD_PLAYER_BOOL_FLAGS = (
@@ -5473,7 +5563,11 @@ class GameTest(unittest.TestCase):
         assert player.countItems("LifePotion") >= 1
         assert player.getNumericProperty("gold") == base_gold - 20
 
-        # RNG failure leaves inventory and gold untouched
+        # RNG failure still consumes the reagents and recipe gold (a failed
+        # craft is a complete, atomic transaction that produces no output, so
+        # successChance is a real cost rather than a free retry). The recipe
+        # consumes 2 LifePotion and 45 gold; only the GreaterLifePotion output
+        # is withheld on failure.
         reset()
         player.setBoolProperty("CAN_BREW_GREATER_POTIONS", True)
         player.addItem("LifePotion")
@@ -5491,9 +5585,9 @@ class GameTest(unittest.TestCase):
             crafting.randint = original_randint
 
         assert not result["ok"] and result["reason"] == "failed"
-        assert player.countItems("LifePotion") == 2
+        assert player.countItems("LifePotion") == 0
         assert player.countItems("GreaterLifePotion") == 0
-        assert player.getNumericProperty("gold") == 200
+        assert player.getNumericProperty("gold") == 200 - 45
 
         return True, ""
 
@@ -12215,7 +12309,7 @@ class GameTest(unittest.TestCase):
 
         expected_tiles = {
             "cave1": (19, 10),
-            "catacombs": (22, 17),
+            "catacombs": (57, 103),
             "cave2": (166, 21),
             "nouraajdSign": (106, 110),
             "market1": (106, 111),
@@ -12290,7 +12384,7 @@ class GameTest(unittest.TestCase):
 
         expected_terrain = {
             (19, 10): 10,
-            (22, 17): 10,
+            (57, 103): 11,
             (166, 21): 7,
             (44, 106): road_gid,
             (105, 109): 11,
@@ -12390,6 +12484,8 @@ class GameTest(unittest.TestCase):
             "victor_reward_once_guard": (
                 "player.addGold(500)" in script and 'getBoolProperty("VICTOR_REWARD_CLAIMED")' in script
             ),
+            "victor_reward_claim_first": 'claim_once(game_map, "VICTOR_REWARD_GRANTED")' in script,
+            "amulet_reward_claim_first": 'claim_once(game_map, "AMULET_REWARD_CLAIMED")' in script,
             "victor_dialog_coherent": (
                 courtyard_state is not None
                 and "already sacrificed" not in courtyard_state.get("properties", {}).get("text", "").lower()
@@ -12397,6 +12493,23 @@ class GameTest(unittest.TestCase):
             ),
             "catacombs_uses_catacombs_image": config["catacombs"]["properties"].get("animation")
             == "images/buildings/catacombs",
+            "actor_cleanup_helper_imported": "from game import remove_runtime_actors" in script,
+            "victor_cleanup_uses_helper": (
+                'remove_runtime_actors(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))'
+                in script
+            ),
+            "amulet_cleanup_uses_helper": (
+                'remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))' in script
+            ),
+            "old_woman_cleanup_uses_helper": 'remove_runtime_actors(game_map, names=("oldWoman",))' in script,
+            "actor_cleanup_dedupes_removal": (
+                'game_map.getObjectByName("amuletGoblin")' not in script
+                and "game_map.removeObject(amulet_goblin)" not in script
+                and "game_map.removeObject(old_woman)" not in script
+            ),
+            "actor_cleanup_preserves_public_names": all(
+                token in script for token in ("cultLeaderQuest", "amuletGoblin", "oldWoman", "victorCultist")
+            ),
         }
 
         failed = sorted([name for name, ok in checks.items() if not ok])
@@ -12509,6 +12622,69 @@ class GameTest(unittest.TestCase):
                         lambda it: it.getName() == "holyRelic"
                     ),
                 },
+            }
+            return True, json.dumps(log, sort_keys=True)
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+
+    @game_test
+    def test_nouraajd_remove_runtime_actors_helper(self):
+        from game import remove_runtime_actors
+
+        game = load_game_module()
+        original_show_message = game.CGuiHandler.showMessage
+        try:
+            game.CGuiHandler.showMessage = lambda self, message: None
+            g, game_map, player = load_game_map_with_player("nouraajd")
+
+            def spawn(name):
+                obj = g.createObject("goblinThief")
+                obj.setStringProperty("name", name)
+                game_map.addObject(obj)
+                return obj
+
+            # Synthetic runtime actors so the scenario does not depend on map content:
+            # exact-name target, two prefix targets, plus deliberately overlapping names
+            # that must survive because they are neither exact matches nor prefix targets.
+            spawn("questBossActor")
+            spawn("questMinionAlpha")
+            spawn("questMinionBravo")
+            spawn("questBossActorEcho")
+            spawn("questAlly")
+
+            self.assertIsNotNone(game_map.getObjectByName("questBossActor"))
+
+            # Cleanup with actors present: exact name plus a reviewed prefix.
+            removed = remove_runtime_actors(game_map, names=("questBossActor",), prefixes=("questMinion",))
+            self.assertEqual(removed, 3)
+            self.assertIsNone(game_map.getObjectByName("questBossActor"))
+            self.assertIsNone(game_map.getObjectByName("questMinionAlpha"))
+            self.assertIsNone(game_map.getObjectByName("questMinionBravo"))
+            # Overlapping-but-non-matching names survive (exact match only, no matching prefix).
+            self.assertIsNotNone(game_map.getObjectByName("questBossActorEcho"))
+            self.assertIsNotNone(game_map.getObjectByName("questAlly"))
+
+            # Cleanup after the actors were already removed is an idempotent no-op.
+            removed_again = remove_runtime_actors(game_map, names=("questBossActor",), prefixes=("questMinion",))
+            self.assertEqual(removed_again, 0)
+
+            # An exact-name removal with no prefix must not touch an overlapping name.
+            spawn("loneActor")
+            spawn("loneActorTwin")
+            removed_lone = remove_runtime_actors(game_map, names=("loneActor",))
+            self.assertEqual(removed_lone, 1)
+            self.assertIsNone(game_map.getObjectByName("loneActor"))
+            self.assertIsNotNone(game_map.getObjectByName("loneActorTwin"))
+
+            # No targets requested is a no-op.
+            self.assertEqual(remove_runtime_actors(game_map), 0)
+
+            log = {
+                "removed": removed,
+                "removed_again": removed_again,
+                "removed_lone": removed_lone,
+                "echo_survives": game_map.getObjectByName("questBossActorEcho") is not None,
+                "twin_survives": game_map.getObjectByName("loneActorTwin") is not None,
             }
             return True, json.dumps(log, sort_keys=True)
         finally:
@@ -13220,6 +13396,7 @@ class GameTest(unittest.TestCase):
             self.assertTrue(game_map.getBoolProperty("VICTOR_GOOD_END"))
             self.assertFalse(game_map.getBoolProperty("VICTOR_BAD_END"))
             self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_CLAIMED"))
+            self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_GRANTED"))
             self.assertEqual(game_map.getNumericProperty("VICTOR_COURTYARD_TURN"), -1)
             self.assertIn("victorRewardDialog", captured["dialogs"])
             self.assertIn("victorMarket", captured["trades"])
@@ -13250,6 +13427,7 @@ class GameTest(unittest.TestCase):
             self.assertEqual(heal_amounts, [100])
             self.assertEqual(captured["dialogs"].count("victorRewardDialog"), 1)
             self.assertEqual(captured["trades"].count("victorMarket"), 1)
+            self.assertTrue(game_map.getBoolProperty("VICTOR_REWARD_GRANTED"))
 
             return True, json.dumps(
                 {
@@ -13379,6 +13557,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(player.getGold() - start_gold, 50)
         self.assertFalse(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
         self.assertTrue(game_map.getBoolProperty("AMULET_RETURNED"))
+        self.assertTrue(game_map.getBoolProperty("AMULET_REWARD_CLAIMED"))
         self.assertIsNone(game_map.getObjectByName("amuletGoblin"))
         self.assertIsNone(game_map.getObjectByName("oldWoman"))
         assert_player_quest_state(self, player, "amuletQuest", completed=True)
@@ -13392,6 +13571,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(player.getGold() - start_gold, 50)
         self.assertEqual(game_map.getStringProperty("quest_state_amulet"), "returned")
         self.assertTrue(player.hasItem(lambda it: it.getName() == "preciousAmulet"))
+        self.assertTrue(game_map.getBoolProperty("AMULET_REWARD_CLAIMED"))
 
         return True, json.dumps(
             {
@@ -14149,6 +14329,55 @@ class GameTest(unittest.TestCase):
             self.assertEqual("images/misc/closed_door", spawn_states[name]["animation"])
 
         return True, json.dumps(spawn_states, sort_keys=True)
+
+    @game_test
+    def test_siege_pritz_mage_keeps_single_wand_and_player_controller(self):
+        # Regression guard for the upcoming creature-archetype migration: the siege
+        # mage must keep referencing PritzMage, carry exactly one quest magicWand in
+        # its own inventory (not promoted into a class/race definition), and target
+        # the player. See res/maps/siege/config.json (siegePritzMage / magicWand).
+        siege_config = json.loads((MAPS_DIR / "siege" / "config.json").read_text())
+
+        mage_config = siege_config["siegePritzMage"]
+        self.assertEqual("PritzMage", mage_config.get("ref"))
+        config_items = mage_config.get("properties", {}).get("items") or []
+        self.assertEqual(["magicWand"], [item.get("ref") for item in config_items])
+        config_controller = mage_config.get("properties", {}).get("controller", {})
+        self.assertEqual("CTargetController", config_controller.get("class"))
+        self.assertEqual("player", config_controller.get("properties", {}).get("target"))
+        self.assertIn("quest", siege_config["magicWand"].get("properties", {}).get("tags", []))
+
+        # siegePritzMage is a MAP-LOCAL definition, not a globally-registered type: it only
+        # becomes instantiable after the siege map is loaded and registers its config types.
+        # (Same ordering the sibling siege tests rely on when calling g.createObject("siegePritz").)
+        game = load_game_module()
+        g, _game_map, _player = load_game_map_with_player("siege")
+
+        mage = g.createObject("siegePritzMage")
+        self.assertIsNotNone(mage)
+
+        items = list(mage.getItems())
+        self.assertNotIn(None, items)
+        self.assertEqual(["magicWand"], sorted(item.getTypeId() for item in items))
+
+        mage_json = json.loads(game.jsonify(mage))
+        mage_properties = mage_json.get("properties", {})
+        spawned_items = mage_properties.get("items") or []
+        self.assertEqual(["magicWand"], sorted(item["properties"]["typeId"] for item in spawned_items))
+        spawned_controller = mage_properties.get("controller", {})
+        self.assertEqual("CTargetController", spawned_controller.get("class"))
+        self.assertEqual("player", spawned_controller.get("properties", {}).get("target"))
+
+        return True, json.dumps(
+            {
+                "ref": mage_config.get("ref"),
+                "config_wand_refs": [item.get("ref") for item in config_items],
+                "spawned_wand_type_ids": sorted(item.getTypeId() for item in items),
+                "controller_class": spawned_controller.get("class"),
+                "controller_target": spawned_controller.get("properties", {}).get("target"),
+            },
+            sort_keys=True,
+        )
 
     @game_test
     def test_siege_spawn_point_defers_blocking_sealed_occupied_gate(self):
@@ -15733,6 +15962,155 @@ class GameTest(unittest.TestCase):
             "victor_bad_end": quest_state(game_map3, "victor"),
         }
         return True, json.dumps(log, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_oldwoman_questgiver_conversations_are_reliable(self):
+        # Regression guard for #630. oldWoman and questGiver drive their dialog through the
+        # onEnter trigger path in res/maps/nouraajd/script.py (OldWomanTrigger /
+        # QuestGiverTrigger), which only fires when the player steps onto the NPC's exact
+        # tile (see CCreature::afterMove -> forObjectsAtCoords(arrival, ...)). They used to
+        # carry CNpcRandomController, so both wandered up to five tiles per turn and the
+        # player could never deterministically reach the NPC's tile, leaving the
+        # conversation/dialog unreliable. res/maps/nouraajd/config.json now gives them the
+        # stationary base CController, so they stay on their authored tiles and the dialog
+        # reliably triggers. This test drives the real controller-based movement + onEnter
+        # trigger end to end rather than calling the dialog handlers directly.
+        game = load_game_module()
+
+        def quest_state(map_object, name):
+            return map_object.getStringProperty(f"quest_state_{name}")
+
+        original_show_dialog = game.CGuiHandler.showDialog
+        original_show_message = game.CGuiHandler.showMessage
+        shown_dialogs = []
+        shown_messages = []
+        try:
+
+            def capture_dialog(self, dialog):
+                shown_dialogs.append(dialog.getTypeId())
+
+            def capture_message(self, message):
+                shown_messages.append(message)
+
+            game.CGuiHandler.showDialog = capture_dialog
+            game.CGuiHandler.showMessage = capture_message
+
+            g, game_map, player = load_game_map_with_player("nouraajd")
+
+            old_woman = find_runtime_object(game_map, "oldWoman")
+            quest_giver = find_runtime_object(game_map, "questGiver")
+
+            # The fix: both NPCs are stationary. A wandering CNpcRandomController would
+            # make the approach non-deterministic, so guard the controller type directly.
+            self.assertEqual("CController", old_woman.getController().getType())
+            self.assertEqual("CController", quest_giver.getController().getType())
+            self.assertTrue(old_woman.isNpc())
+            self.assertTrue(quest_giver.isNpc())
+
+            # A stationary NPC keeps its authored tile across many AI turns; a wandering one
+            # would drift away, which is exactly why the conversation used to be unreliable.
+            old_woman_home = coords_tuple(old_woman.getCoords())
+            quest_giver_home = coords_tuple(quest_giver.getCoords())
+            for _ in range(8):
+                game_map.move()
+            self.assertEqual(old_woman_home, coords_tuple(old_woman.getCoords()))
+            self.assertEqual(quest_giver_home, coords_tuple(quest_giver.getCoords()))
+
+            def approach(npc):
+                # Reset the player next to the NPC and step onto its (stationary) tile so
+                # the onEnter trigger fires through the real event handler.
+                home = npc.getCoords()
+                start = find_adjacent_walkable_tile(game_map, home)
+                player.moveTo(start.x, start.y, start.z)
+                shown_dialogs.clear()
+                shown_messages.clear()
+                hp_before = player.getHp()
+                drive_player_to_target(game_map, player, home)
+                # Reaching the NPC's tile proves no combat started: a fight in
+                # CCreature::afterMove relocates the player back to its origin and skips
+                # onEnter entirely. NPC flag also excludes these two from the fight path.
+                self.assertEqual(coords_tuple(home), coords_tuple(player.getCoords()))
+                self.assertEqual(hp_before, player.getHp())
+                pump_event_loop(2)
+
+            # Initial old-woman quest dialog reliably opens (amulet not started).
+            self.assertEqual("not_started", quest_state(game_map, "amulet"))
+            approach(old_woman)
+            self.assertEqual(["questDialog"], shown_dialogs)
+            self.assertEqual([], shown_messages)
+
+            # questGiver reliably opens the OctoBogz dialog every approach.
+            approach(quest_giver)
+            self.assertEqual(["dialog"], shown_dialogs)
+
+            # Repeated approach of the questGiver stays reliable.
+            approach(quest_giver)
+            self.assertEqual(["dialog"], shown_dialogs)
+
+            # Start the amulet quest; an active reminder is shown, not a fresh quest dialog.
+            g.createObject("questDialog").start_amulet_quest()
+            self.assertEqual("active", quest_state(game_map, "amulet"))
+            approach(old_woman)
+            self.assertEqual([], shown_dialogs)
+            self.assertEqual(1, len(shown_messages))
+
+            # Carrying the amulet, approaching opens the return dialog reliably.
+            player.addItem("preciousAmulet")
+            approach(old_woman)
+            self.assertEqual(["questReturnDialog"], shown_dialogs)
+
+            # Complete the return once; the amulet is consumed and the quest is done.
+            g.createObject("questReturnDialog").complete_amulet_quest()
+            self.assertEqual("returned", quest_state(game_map, "amulet"))
+            self.assertEqual(0, player.countItems("preciousAmulet"))
+
+            # Save/load preserves the returned state, and a further approach removes the
+            # now-finished old woman rather than re-opening a dialog.
+            save_paths = []
+            _g, game_map, player, snapshot = assert_nouraajd_save_load_roundtrip(
+                self,
+                game,
+                game_map,
+                "nouraajd_conversation_reliability",
+                save_paths,
+                object_names=("oldWoman", "questGiver"),
+            )
+            self.assertEqual("returned", snapshot["quest_states"]["amulet"])
+            self.assertTrue(snapshot["objects"]["questGiver"])
+
+            reloaded_old_woman = game_map.getObjectByName("oldWoman")
+            if reloaded_old_woman is not None:
+                shown_dialogs.clear()
+                home = reloaded_old_woman.getCoords()
+                start = find_adjacent_walkable_tile(game_map, home)
+                player.moveTo(start.x, start.y, start.z)
+                drive_player_to_target(game_map, player, home)
+                pump_event_loop(2)
+                self.assertEqual([], shown_dialogs)
+                self.assertIsNone(game_map.getObjectByName("oldWoman"))
+
+            # questGiver still opens its dialog reliably after the amulet chain finishes.
+            reloaded_quest_giver = find_runtime_object(game_map, "questGiver")
+            self.assertEqual("CController", reloaded_quest_giver.getController().getType())
+            shown_dialogs.clear()
+            approach(reloaded_quest_giver)
+            self.assertEqual(["dialog"], shown_dialogs)
+
+            for save_path in save_paths:
+                if save_path.exists():
+                    save_path.unlink()
+        finally:
+            game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showMessage = original_show_message
+
+        return True, json.dumps(
+            {
+                "initial_dialog": "questDialog",
+                "questgiver_dialog": "dialog",
+                "amulet": "returned",
+            },
+            sort_keys=True,
+        )
 
 
 class ConsoleEventIsolationTest(unittest.TestCase):

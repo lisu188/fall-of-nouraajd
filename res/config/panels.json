@@ -7,6 +7,7 @@
           "class": "CListView",
           "properties": {
             "collection": "interactionsCollection",
+            "dragEnabled": false,
             "layout": {
               "class": "CLayout",
               "properties": {
@@ -279,6 +280,7 @@
           "properties": {
             "callback": "interactionsCallback",
             "collection": "interactionsCollection",
+            "dragEnabled": false,
             "layout": {
               "class": "CLayout",
               "properties": {

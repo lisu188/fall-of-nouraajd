@@ -61,6 +61,16 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
     }
 
     for (const std::string &type : game->getObjectHandler()->getAllSubTypes("CCreature")) {
+        // getAllSubTypes("CCreature") also returns player templates because CPlayer inherits
+        // CCreature (src/object/CPlayer.h:24, registered via NativePlugin.cpp). Random encounters
+        // must never spawn a player template, so skip any candidate whose resolved class inherits
+        // CPlayer -- the same meta()->inherits(...) test getAllSubTypes itself applies for the
+        // CCreature gate (src/handler/CObjectHandler.cpp:115). Genuine monster candidates and their
+        // sw power buckets are untouched.
+        auto candidateClass = game->getObjectHandler()->getType(game->getObjectHandler()->getClass(type));
+        if (candidateClass && candidateClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
         std::shared_ptr<CCreature> creature = game->createObject<CCreature>(type);
         if (creature) {
             int power = creature->getSw();

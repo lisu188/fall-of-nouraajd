@@ -25,11 +25,13 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.validate_content import (
+    ArchetypeMigrationException,
     ContentValidator,
     ScriptPropertyHygieneAllowance,
     classify_creature_templates,
     inventory_creature_overrides,
     report_unmigrated_creatures,
+    tile_types_by_id,
     validate_repo,
 )
 
@@ -73,6 +75,107 @@ class ContentValidatorTest(unittest.TestCase):
             'duplicate object name "start"',
             "previously defined at layers[1].objects[0]",
         )
+
+    def _declare_map_assets(self, root, assets):
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["assets"] = assets
+        write_json(map_path, map_data)
+        return map_path
+
+    def _make_asset_files(self, root):
+        map_dir = root / "res/maps/broken"
+        (map_dir / "images").mkdir(parents=True, exist_ok=True)
+        (map_dir / "images/portrait.png").write_text("png")
+        (map_dir / "frames").mkdir(parents=True, exist_ok=True)
+        (map_dir / "frames/0.png").write_text("png")
+        (map_dir / "sprites").mkdir(parents=True, exist_ok=True)
+        (map_dir / "sprites/0.png").write_text("png")
+        (map_dir / "anim").mkdir(parents=True, exist_ok=True)
+        (map_dir / "anim/walk.png").write_text("png")
+
+    def test_map_assets_valid_declarations_pass_validation(self):
+        root = self.make_fixture()
+        self._make_asset_files(root)
+        self._declare_map_assets(
+            root,
+            [
+                {"path": "images/portrait.png", "kind": "file"},
+                {"path": "frames", "kind": "directory"},
+                {"path": "anim/walk", "kind": "animationRoot"},
+                {"path": "sprites", "kind": "animationRoot"},
+                {"path": "hero.combat.idle", "kind": "logicalId"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_map_assets_non_array_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(root, {"path": "images/portrait.png", "kind": "file"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/maps/broken/map.json", "assets", "expected array")
+
+    def test_map_assets_unsafe_path_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(root, [{"path": "../escape.png", "kind": "file"}])
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/maps/broken/map.json", "assets[0].path", "safe relative path")
+
+    def test_map_assets_missing_target_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(
+            root,
+            [
+                {"path": "images/missing.png", "kind": "file"},
+                {"path": "nodir", "kind": "directory"},
+                {"path": "anim/none", "kind": "animationRoot"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "assets[0].path", "declared file asset not found: images/missing.png")
+        self.assertIssueContains(issues, "assets[1].path", "declared directory asset not found: nodir")
+        self.assertIssueContains(issues, "assets[2].path", "animation root resolves to neither")
+
+    def test_map_assets_invalid_entry_shape_is_flagged(self):
+        root = self.make_fixture()
+        self._make_asset_files(root)
+        self._declare_map_assets(
+            root,
+            [
+                "notanobject",
+                {"kind": "file"},
+                {"path": "images/portrait.png", "kind": "sprite"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "assets[0]", "expected object with 'path' and 'kind'")
+        self.assertIssueContains(issues, "assets[1].path", "expected non-empty string")
+        self.assertIssueContains(issues, "assets[2].kind", "expected one of")
+
+    def test_map_assets_duplicate_path_is_flagged(self):
+        root = self.make_fixture()
+        self._declare_map_assets(
+            root,
+            [
+                {"path": "shared.id", "kind": "logicalId"},
+                {"path": "shared.id", "kind": "logicalId"},
+            ],
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "assets[1].path", "duplicate asset declaration: shared.id")
 
     def test_unreachable_dialog_state_reports_dialog_and_state(self):
         root = self.make_fixture()
@@ -3118,6 +3221,369 @@ class UnmigratedCreatureReportTest(unittest.TestCase):
         for player in ("Assasin", "Inquisitor", "Sorcerer", "Warrior", "Wayfarer"):
             self.assertIn(player, report_ids)
             self.assertEqual(("creatureClass", "race"), next(c.missing for c in report if c.config_id == player))
+
+
+class RequiredProductionArchetypeTest(unittest.TestCase):
+    """EPIC_06/STORY_04/SUBSTORY_01 -- required production archetypes after migration.
+
+    The enforcement rule is gated behind the migration-complete switch.  These tests
+    drive it with the switch explicitly ON over synthetic in-memory content (never the
+    real monsters.json) to prove it flags every production creature missing race/class
+    in one run, honors the reviewed exception manifest, and stays inert with the switch
+    OFF (the default that keeps current full validation green).
+    """
+
+    def make_archetype_fixture(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        root = Path(temp_dir.name)
+        (root / "res/config").mkdir(parents=True)
+        (root / "src/object").mkdir(parents=True)
+
+        # Engine metadata: CPlayer derives from CCreature, mirroring src/object/CPlayer.h.
+        (root / "src/object/CCreatures.h").write_text(
+            textwrap.dedent("""
+                class CMapObject {
+                    V_META(CMapObject, CGameObject, vstd::meta::empty())
+                };
+
+                class CCreature {
+                    V_META(CCreature, CMapObject, vstd::meta::empty())
+                };
+
+                class CPlayer {
+                    V_META(CPlayer, CCreature, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                # Fully migrated creature: declares both archetype references.
+                "MigratedGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}, "creatureClass": {"ref": "BruteClass"}},
+                },
+                # Missing only the class reference.
+                "NoClassGoblin": {
+                    "class": "CCreature",
+                    "properties": {"race": {"ref": "GoblinRace"}},
+                },
+                # Missing only the race reference.
+                "NoRaceGoblin": {
+                    "class": "CCreature",
+                    "properties": {"creatureClass": {"ref": "BruteClass"}},
+                },
+                # Unmigrated creature: missing both.
+                "LegacyGoblin": {"class": "CCreature", "properties": {"label": "Goblin"}},
+                # Player template (CPlayer inherits CCreature) -- also subject to the rule.
+                "LegacyHero": {"class": "CPlayer", "properties": {"label": "Hero"}},
+                # Not a creature -- must never be flagged.
+                "PlainItem": {"class": "CItem", "properties": {"label": "Sword"}},
+            },
+        )
+        return root
+
+    @staticmethod
+    def _archetype_locations(issues):
+        # Only the locations of this rule's diagnostics; the synthetic refs/labels in the
+        # fixture intentionally trip other validators (unknown ref/property), which are
+        # irrelevant to the required-archetype rule under test.
+        return {issue.location for issue in issues if "must declare archetype property" in str(issue)}
+
+    def test_switch_on_flags_all_production_creatures_missing_archetypes(self):
+        root = self.make_archetype_fixture()
+
+        issues = ContentValidator(root, archetype_migration_complete=True).validate()
+        flagged = self._archetype_locations(issues)
+
+        # Every missing archetype across every production creature is reported in ONE run,
+        # one issue per absent property at the exact "<id>.properties.<prop>" path.  The
+        # fully migrated creature and the non-creature never appear; CPlayer templates do
+        # (CPlayer inherits CCreature).
+        self.assertEqual(
+            {
+                "NoClassGoblin.properties.creatureClass",
+                "NoRaceGoblin.properties.race",
+                "LegacyGoblin.properties.race",
+                "LegacyGoblin.properties.creatureClass",
+                "LegacyHero.properties.race",
+                "LegacyHero.properties.creatureClass",
+            },
+            flagged,
+        )
+
+    def test_manifest_exempted_entry_is_not_flagged(self):
+        root = self.make_archetype_fixture()
+        exceptions = (
+            ArchetypeMigrationException(
+                path="res/config/monsters.json",
+                key="LegacyGoblin",
+                reason="Low-level test fixture exempted from archetype migration.",
+            ),
+        )
+
+        issues = ContentValidator(
+            root,
+            archetype_migration_complete=True,
+            archetype_migration_exceptions=exceptions,
+        ).validate()
+        flagged = self._archetype_locations(issues)
+
+        # The exact path+key exemption suppresses BOTH of LegacyGoblin's archetype
+        # diagnostics, while every other unmigrated creature is still flagged.
+        self.assertEqual(
+            {
+                "NoClassGoblin.properties.creatureClass",
+                "NoRaceGoblin.properties.race",
+                "LegacyHero.properties.race",
+                "LegacyHero.properties.creatureClass",
+            },
+            flagged,
+        )
+
+    def test_switch_off_is_inert_even_with_unmigrated_creatures(self):
+        root = self.make_archetype_fixture()
+
+        # Default constructor (switch defaults to ARCHETYPE_MIGRATION_COMPLETE == False).
+        default_issues = ContentValidator(root).validate()
+        explicit_off_issues = ContentValidator(root, archetype_migration_complete=False).validate()
+
+        for issues in (default_issues, explicit_off_issues):
+            archetype_issues = [str(issue) for issue in issues if "must declare archetype property" in str(issue)]
+            self.assertEqual([], archetype_issues)
+
+    def test_manifest_only_matches_exact_path_and_key(self):
+        root = self.make_archetype_fixture()
+        # A manifest entry whose key matches but whose path points at a different file
+        # must NOT suppress the diagnostic (exact path AND key are required).
+        exceptions = (
+            ArchetypeMigrationException(
+                path="res/config/other.json",
+                key="LegacyGoblin",
+                reason="Wrong file -- must not exempt the real LegacyGoblin.",
+            ),
+        )
+
+        issues = ContentValidator(
+            root,
+            archetype_migration_complete=True,
+            archetype_migration_exceptions=exceptions,
+        ).validate()
+        flagged = self._archetype_locations(issues)
+
+        self.assertIn("LegacyGoblin.properties.race", flagged)
+        self.assertIn("LegacyGoblin.properties.creatureClass", flagged)
+
+
+class NouraajdCatacombsContentTest(unittest.TestCase):
+    """Content-level guards for the relocated, dedicated-art catacombs entrance.
+
+    These checks run without the native _game module: they operate purely on the
+    JSON map/config plus the pure-Python passability rules mirrored from
+    res/config/tiles.json and CMap::canStep (a tile is steppable when no blocking
+    object occupies it AND the underlying tile type is steppable).
+    """
+
+    MAP_DIR = REPO_ROOT / "res/maps/nouraajd"
+    TILE_SIZE = 32
+
+    @classmethod
+    def setUpClass(cls):
+        cls.map_data = read_json(cls.MAP_DIR / "map.json")
+        cls.config = read_json(cls.MAP_DIR / "config.json")
+        cls.tiles = read_json(REPO_ROOT / "res/config/tiles.json")
+        cls.script = (cls.MAP_DIR / "script.py").read_text(encoding="utf-8")
+
+        # tile-type -> canStep, from tiles.json
+        cls.tile_can_step = {
+            entry["properties"]["tileType"]: bool(entry["properties"].get("canStep", True))
+            for entry in cls.tiles.values()
+            if isinstance(entry, dict) and "tileType" in entry.get("properties", {})
+        }
+        # local-tile-id -> tile type (Tiled tileproperties keys are 0-based local ids;
+        # map data stores gid = local_id + firstgid).
+        cls.tile_types = tile_types_by_id(cls.map_data)
+        cls.firstgid = cls.map_data["tilesets"][0].get("firstgid", 1)
+        cls.width = cls.map_data["width"]
+        cls.height = cls.map_data["height"]
+        tile_layers = [L for L in cls.map_data["layers"] if L.get("type") == "tilelayer"]
+        cls.tile_data = tile_layers[0]["data"]
+
+        cls.objects = []
+        for layer in cls.map_data["layers"]:
+            if layer.get("type") == "objectgroup":
+                for obj in layer.get("objects", []):
+                    tx = obj["x"] // cls.TILE_SIZE
+                    ty = obj["y"] // cls.TILE_SIZE
+                    cls.objects.append((tx, ty, obj))
+
+        # Object entries whose config resolves to canStep:true do not block movement.
+        # Everything else (caves, catacombs, buildings, walls) blocks its tile.
+        cls.non_blocking_types = {"StartEvent"}
+
+    # --- helpers -------------------------------------------------------------
+    def _config_can_step(self, type_name):
+        entry = self.config.get(type_name)
+        if not isinstance(entry, dict):
+            return False
+        props = entry.get("properties", {})
+        if isinstance(props, dict) and props.get("canStep") is True:
+            return True
+        return False
+
+    def _gid_at(self, tx, ty):
+        if 0 <= tx < self.width and 0 <= ty < self.height:
+            return self.tile_data[ty * self.width + tx]
+        return 0
+
+    def _tile_type_at(self, tx, ty):
+        gid = self._gid_at(tx, ty)
+        if gid == 0:
+            return None
+        return self.tile_types.get(gid - self.firstgid)
+
+    def _tile_steppable(self, tx, ty):
+        tile_type = self._tile_type_at(tx, ty)
+        if tile_type is None:
+            return False
+        return self.tile_can_step.get(tile_type, True)
+
+    def _object_blocks(self, tx, ty):
+        for ox, oy, obj in self.objects:
+            if (ox, oy) != (tx, ty):
+                continue
+            type_name = obj.get("type", "")
+            if type_name.startswith("ambient"):
+                continue
+            if type_name in self.non_blocking_types:
+                continue
+            if self._config_can_step(type_name) or self._config_can_step(obj.get("name", "")):
+                continue
+            return True
+        return False
+
+    def _passable(self, tx, ty):
+        return self._tile_steppable(tx, ty) and not self._object_blocks(tx, ty)
+
+    def _reachable_tiles(self):
+        from collections import deque
+
+        starts = [(tx, ty) for tx, ty, obj in self.objects if obj.get("type") == "StartEvent"]
+        seen = set()
+        queue = deque()
+        for sx, sy in starts:
+            for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+                cell = (sx + dx, sy + dy)
+                if self._passable(*cell):
+                    seen.add(cell)
+                    queue.append(cell)
+        while queue:
+            x, y = queue.popleft()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                cell = (x + dx, y + dy)
+                if cell not in seen and self._passable(*cell):
+                    seen.add(cell)
+                    queue.append(cell)
+        return seen
+
+    def _catacombs_object(self):
+        matches = [obj for _, _, obj in self.objects if obj.get("name") == "catacombs"]
+        return matches
+
+    def _object_tile(self, name):
+        for tx, ty, obj in self.objects:
+            if obj.get("name") == name:
+                return tx, ty
+        return None
+
+    # --- tests ---------------------------------------------------------------
+    def test_catacombs_animation_uses_dedicated_asset(self):
+        """The catacombs config entry overrides Cave art with the dedicated asset,
+        and that asset file resolves on disk."""
+        entry = self.config["catacombs"]
+        self.assertEqual(entry.get("ref"), "Cave")
+        animation = entry["properties"]["animation"]
+        self.assertEqual(animation, "images/buildings/catacombs")
+        # Resolver appends .png to the extension-less animation key.
+        asset = REPO_ROOT / "res" / f"{animation}.png"
+        self.assertTrue(asset.is_file(), f"missing catacombs art: {asset}")
+
+    def test_base_cave_art_unchanged(self):
+        """cave1/cave2 must keep the shared Cave art -- no per-object animation
+        override that would divert them onto catacombs art."""
+        base_cave = read_json(REPO_ROOT / "res/config/buildings.json")["Cave"]
+        self.assertEqual(base_cave["properties"]["animation"], "images/buildings/cave")
+        for cave_name in ("cave1", "cave2"):
+            props = self.config[cave_name].get("properties", {})
+            self.assertNotIn(
+                "animation",
+                props,
+                f"{cave_name} must not override animation (would break shared Cave art)",
+            )
+
+    def test_exactly_one_catacombs_map_object(self):
+        matches = self._catacombs_object()
+        self.assertEqual(len(matches), 1, "expected exactly one map object named 'catacombs'")
+        obj = matches[0]
+        self.assertEqual(obj.get("type"), "catacombs")
+        self.assertTrue(obj.get("visible"))
+        self.assertEqual(obj.get("width"), self.TILE_SIZE)
+        self.assertEqual(obj.get("height"), self.TILE_SIZE)
+
+    def test_catacombs_relocated_away_from_cave1(self):
+        """The relocated entrance must be visually/geographically distinct from
+        cave1 (not clustered in the same NW cave maze)."""
+        catacombs = self._object_tile("catacombs")
+        cave1 = self._object_tile("cave1")
+        self.assertIsNotNone(catacombs)
+        self.assertIsNotNone(cave1)
+        manhattan = abs(catacombs[0] - cave1[0]) + abs(catacombs[1] - cave1[1])
+        self.assertGreater(
+            manhattan,
+            30,
+            f"catacombs {catacombs} too close to cave1 {cave1} (manhattan {manhattan})",
+        )
+
+    def test_catacombs_tile_unoccupied_by_other_objects(self):
+        cx, cy = self._object_tile("catacombs")
+        others = [
+            obj.get("name") or obj.get("type")
+            for tx, ty, obj in self.objects
+            if (tx, ty) == (cx, cy) and obj.get("name") != "catacombs"
+        ]
+        self.assertEqual(others, [], f"catacombs tile ({cx},{cy}) also occupied by {others}")
+
+    def test_catacombs_reachable_from_player_start(self):
+        """The player must be able to reach a tile adjacent to the catacombs to
+        destroy it (the underlying tile is steppable and at least one orthogonal
+        neighbour is reachable from the StartEvent spawn)."""
+        cx, cy = self._object_tile("catacombs")
+        self.assertTrue(
+            self._tile_steppable(cx, cy),
+            f"catacombs underlying tile ({cx},{cy}) is not a steppable tile type",
+        )
+        reachable = self._reachable_tiles()
+        adjacent = [
+            (cx + dx, cy + dy)
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            if (cx + dx, cy + dy) in reachable
+        ]
+        self.assertTrue(
+            adjacent,
+            f"no reachable tile adjacent to catacombs ({cx},{cy}); entrance is unreachable",
+        )
+
+    def test_catacombs_trigger_wiring_intact(self):
+        """Exactly one onDestroy trigger targets 'catacombs', grants holyRelic, and
+        marks the relic obtained for the Beren return chain."""
+        occurrences = self.script.count('@trigger(context, "onDestroy", "catacombs")')
+        self.assertEqual(occurrences, 1, "expected exactly one catacombs onDestroy trigger")
+        # holyRelic is granted and the beren_chain state advances in the same script.
+        self.assertIn('player.addItem("holyRelic")', self.script)
+        self.assertIn("mark_relic_obtained", self.script)
+        self.assertIn("holyRelic", self.config)
 
 
 if __name__ == "__main__":

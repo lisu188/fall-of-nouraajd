@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CAnimation.h"
 #include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
@@ -782,6 +783,54 @@ void test_creature_stat_precedence_orders_sources_and_main_stat() {
                 "removing the effects source should remove exactly its contribution from the composed stat");
 }
 
+void test_creature_class_main_stat_is_authoritative_over_race() {
+    // [EPIC_02][STORY_04][SUBSTORY_03] Make creatureClass authoritative for mainStat.
+    // When a creature has a composed creatureClass declaring a main stat, that class main stat
+    // is AUTHORITATIVE for the composed block (buildLegacyStats selects -- not accumulates --
+    // mainStat), overriding the legacy/race creature.baseStats main stat. A creature with no
+    // class, or a class with an empty main stat, falls back to the legacy base main stat
+    // exactly, so the no-archetype path is unchanged.
+    auto creature = std::make_shared<CCreature>();
+
+    // Legacy/race base declares a CONFLICTING main stat (strength) with distinct numeric
+    // values so the selected stat is observable through getMainValue().
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("strength");
+    base->setStrength(3);
+    base->setIntelligence(11);
+    creature->setBaseStats(base);
+
+    // No class: composed main stat falls back to the legacy base main stat.
+    expect_true(creature->getStats()->getMainStat() == "strength",
+                "with no creatureClass the composed main stat falls back to the legacy base main stat");
+    expect_true(creature->getStats()->getMainValue() == 3,
+                "the legacy fallback main value reads strength (3)");
+
+    // Attach a creatureClass declaring intelligence as its main stat: class wins.
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    creature->setCreatureClass(klass);
+
+    auto composed = creature->getStats();
+    expect_true(composed->getMainStat() == "intelligence",
+                "creatureClass main stat is authoritative over the conflicting legacy/race main stat");
+    expect_true(composed->getMainValue() == 11,
+                "the composed main value reads the class-selected stat (intelligence=11)");
+    expect_true(creature->getManaMax() == 11 * 7,
+                "mana max derives from the class-authoritative main stat (getMainValue*7)");
+
+    // A class that declares no main stat must not override the legacy fallback.
+    auto emptyClass = std::make_shared<CCreatureClass>();
+    creature->setCreatureClass(emptyClass);
+    expect_true(creature->getStats()->getMainStat() == "strength",
+                "a creatureClass with an empty main stat preserves the legacy base main stat");
+
+    // Clearing the class restores the no-archetype legacy path exactly.
+    creature->setCreatureClass(nullptr);
+    expect_true(creature->getStats()->getMainStat() == "strength",
+                "clearing the creatureClass restores the legacy no-archetype main stat selection");
+}
+
 void test_creature_archetype_identity_accessors_use_fallbacks() {
     auto creature = std::make_shared<CCreature>();
 
@@ -956,6 +1005,65 @@ void test_creature_action_merge_dedupes_by_type_id() {
                 "actions without a typeId should deduplicate by name (last wins) and keep distinct names");
     expect_true(namedActions.contains(secondWander) && !namedActions.contains(firstWander),
                 "the later name-keyed action should replace the earlier one when typeId is empty");
+}
+
+void test_creature_duplicate_attack_from_race_and_class_collapses_to_single_identity() {
+    // [EPIC_02][STORY_05][SUBSTORY_02] Deduplicate actions by stable identity.
+    // Required validation: a duplicated `Attack` configured in BOTH the race
+    // source and the class source must collapse to a single effective action of
+    // stable identity (typeId, falling back to name), with the most-specific
+    // source winning -- not two `Attack` entries accumulating from the overlap.
+    //
+    // Race / class actions funnel into the creature through the approved merge
+    // primitive `CCreature::addAction` (docs/design/creature_archetypes.md,
+    // "Creature action merge contract": setActions composes the set by calling
+    // addAction per entry, applied least-specific -> most-specific). The
+    // composed, de-duplicated set is exposed via getEffectiveInteractions().
+    auto creature = std::make_shared<CCreature>();
+
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    // (1) Race source: an innate Attack plus a race-only ability.
+    auto raceAttack = interaction("Attack", "raceAttack");
+    auto raceClaw = interaction("Claw", "raceClaw");
+    // (2) Class source: a duplicate Attack (same typeId, different instance).
+    auto classAttack = interaction("Attack", "classAttack");
+
+    // Compose least-specific -> most-specific, exactly as setActions would when
+    // merging race then class sources.
+    creature->addAction(raceAttack);
+    creature->addAction(raceClaw);
+    creature->addAction(classAttack);
+
+    auto countTypeId = [](const std::set<std::shared_ptr<CInteraction>> &set, const std::string &typeId) {
+        return std::count_if(set.begin(), set.end(),
+                             [&typeId](const auto &action) { return action && action->getTypeId() == typeId; });
+    };
+
+    // Stored action set: one Attack (class wins) plus the unique race Claw.
+    const auto actions = creature->getActions();
+    expect_true(countTypeId(actions, "Attack") == 1,
+                "an Attack duplicated across race and class sources must collapse to a single entry");
+    expect_true(actions.contains(classAttack) && !actions.contains(raceAttack),
+                "the more-specific class Attack should win over the race Attack of the same typeId");
+    expect_true(actions.contains(raceClaw), "a unique race-only action should survive the merge");
+    expect_true(actions.size() == 2, "the merged set should hold exactly one Attack plus the unique Claw");
+
+    // Effective interaction set exposes the same single-identity, deterministic
+    // composition.
+    const auto effective = creature->getEffectiveInteractions();
+    expect_true(countTypeId(effective, "Attack") == 1,
+                "the effective interaction set must expose the deduplicated Attack exactly once");
+    expect_true(effective.find(classAttack) != effective.end() && effective.find(raceAttack) == effective.end(),
+                "getEffectiveInteractions should keep the most-specific Attack identity");
+    expect_true(effective.size() == 2,
+                "the effective interaction set should contain no duplicate action identity");
 }
 
 void test_no_archetype_creature_level_up_mutates_actions_via_levelling() {
@@ -1454,9 +1562,11 @@ int main() {
     test_creature_inventory_equipment_and_ratio_helpers();
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();
+    test_creature_class_main_stat_is_authoritative_over_race();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_action_merge_dedupes_by_type_id();
+    test_creature_duplicate_attack_from_race_and_class_collapses_to_single_identity();
     test_no_archetype_creature_level_up_mutates_actions_via_levelling();
     test_game_object_comparator_and_identity_sets_document_current_semantics();
     test_game_object_named_comparison_helpers_cover_explicit_semantics();
