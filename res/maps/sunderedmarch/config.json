@@ -1,0 +1,724 @@
+{
+  "marchStart": {
+    "class": "StartEvent",
+    "properties": {
+      "text": "You cross into the Sundered March, a war-broken borderland east of Nouraajd where three cursed dominions meet. A basalt road climbs north to a barred iron gate; beyond it the Barrow-Fen rots to the west and the Pyre-Waste smoulders to the east. Old warlords are buried under the central barrow, and the plague-cult of Marumi Baso means to crown one of them again. Take the key, take the passes, and take the crown before they do."
+    }
+  },
+  "marchSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "THE SUNDERED MARCH - vale south, fen west, waste east, barrow at the heart. The gate wants a key. The crown wants a bearer."
+    }
+  },
+  "valeMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        {
+          "ref": "LifePotion"
+        },
+        {
+          "ref": "ManaPotion"
+        },
+        {
+          "ref": "LesserLifePotion"
+        },
+        {
+          "ref": "Scroll"
+        }
+      ]
+    }
+  },
+  "valeBarter": {
+    "ref": "Market",
+    "properties": {
+      "animation": "images/buildings/market",
+      "market": {
+        "ref": "valeMarket"
+      }
+    }
+  },
+  "learningStone": {
+    "class": "LearningStone",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "A weather-worn learning stone, cut with the drill-marks of a hundred dead campaigns."
+    }
+  },
+  "monolithVale": {
+    "ref": "Teleporter",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "enabled": true,
+      "exit": "monolithPyre"
+    }
+  },
+  "monolithPyre": {
+    "ref": "Teleporter",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "enabled": true,
+      "exit": "monolithVale"
+    }
+  },
+  "obeliskVale": {
+    "class": "Obelisk",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Vale Obelisk: 'The crown lies three sigils deep. The first is cut here, where the muster-fields became a graveyard.'"
+    }
+  },
+  "obeliskBarrow": {
+    "class": "Obelisk",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Fen Obelisk: 'The second sigil drowns with the fen-dead. Read it, and the barrow ground grows soft.'"
+    }
+  },
+  "obeliskPyre": {
+    "class": "Obelisk",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Pyre Obelisk: 'The third sigil burns in the ash-waste. With all three read, the dig will give up its dead king.'"
+    }
+  },
+  "keymasterCache": {
+    "class": "KeymasterCache",
+    "properties": {
+      "animation": "images/misc/chest",
+      "canStep": true
+    }
+  },
+  "gateThreshold": {
+    "class": "GateThreshold",
+    "properties": {
+      "canStep": true
+    }
+  },
+  "borderGate": {
+    "ref": "brickWall",
+    "properties": {
+      "animation": "images/misc/closed_door"
+    }
+  },
+  "digSite": {
+    "class": "DigSite",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true
+    }
+  },
+  "bannerCache": {
+    "class": "BannerCache",
+    "properties": {
+      "animation": "images/misc/chest",
+      "canStep": true
+    }
+  },
+  "artifactCache": {
+    "class": "ArtifactCache",
+    "properties": {
+      "animation": "images/misc/chest",
+      "canStep": true
+    }
+  },
+  "seerHut": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "marchRaider": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/pritz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "March Raider",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 4,
+          "dmgMin": 3,
+          "hit": 4,
+          "intelligence": 1,
+          "normalResist": 4,
+          "stamina": 3,
+          "strength": 4
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 10,
+          "dmgMax": 12,
+          "dmgMin": 9,
+          "hit": 76,
+          "intelligence": 4,
+          "mainStat": "strength",
+          "normalResist": 4,
+          "stamina": 5,
+          "strength": 6
+        }
+      },
+      "sw": 1
+    }
+  },
+  "fenGhoul": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/octobogz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Fen-Ghoul",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 5,
+          "dmgMin": 4,
+          "hit": 4,
+          "intelligence": 2,
+          "normalResist": 6,
+          "stamina": 4,
+          "strength": 5
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 12,
+          "dmgMax": 16,
+          "dmgMin": 12,
+          "hit": 79,
+          "intelligence": 6,
+          "mainStat": "strength",
+          "normalResist": 7,
+          "stamina": 7,
+          "strength": 7
+        }
+      },
+      "sw": 2
+    }
+  },
+  "plagueCultist": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cultist",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Plague-Cultist of Marumi Baso",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 3,
+          "dmgMax": 6,
+          "dmgMin": 4,
+          "hit": 5,
+          "intelligence": 4,
+          "normalResist": 5,
+          "stamina": 5,
+          "strength": 6
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 7,
+          "crit": 14,
+          "dmgMax": 20,
+          "dmgMin": 15,
+          "hit": 81,
+          "intelligence": 9,
+          "mainStat": "strength",
+          "normalResist": 6,
+          "stamina": 8,
+          "strength": 8
+        }
+      },
+      "sw": 2
+    }
+  },
+  "barrowKnight": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cult_leader",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Barrow-Knight",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      },
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 3,
+          "dmgMax": 8,
+          "dmgMin": 6,
+          "hit": 5,
+          "intelligence": 4,
+          "normalResist": 8,
+          "stamina": 7,
+          "strength": 7
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 16,
+          "dmgMax": 26,
+          "dmgMin": 20,
+          "hit": 83,
+          "intelligence": 7,
+          "mainStat": "strength",
+          "normalResist": 10,
+          "stamina": 12,
+          "strength": 10
+        }
+      },
+      "sw": 2
+    }
+  },
+  "theBarrowWarlord": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/gooby",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "The Crowned Barrow-Warlord",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 4,
+          "crit": 4,
+          "dmgMax": 13,
+          "dmgMin": 10,
+          "hit": 6,
+          "intelligence": 5,
+          "normalResist": 11,
+          "stamina": 11,
+          "strength": 9
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 7,
+          "crit": 20,
+          "dmgMax": 48,
+          "dmgMin": 33,
+          "hit": 88,
+          "intelligence": 10,
+          "mainStat": "strength",
+          "normalResist": 14,
+          "stamina": 24,
+          "strength": 14
+        }
+      },
+      "sw": 3
+    }
+  },
+  "valeGuard": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The raiders' dugout collapses; a ragged March war-band boils out.",
+      "chance": "10",
+      "monster": {
+        "ref": "marchRaider",
+        "properties": {
+          "affiliation": "march",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "6"
+    }
+  },
+  "gateGuard": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The gate-watch tower falls; the Keeper's hirelings rush the pass.",
+      "chance": "10",
+      "monster": {
+        "ref": "marchRaider",
+        "properties": {
+          "affiliation": "march",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "8"
+    }
+  },
+  "fenGuard": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The fen-barrow splits and the drowned dead of the March wade up out of the mire.",
+      "chance": "12",
+      "monster": {
+        "ref": "fenGhoul",
+        "properties": {
+          "affiliation": "fen",
+          "controller": {
+            "class": "CGroundController",
+            "properties": {
+              "tileType": "swamp"
+            }
+          }
+        }
+      },
+      "monsters": "8"
+    }
+  },
+  "pyreGuard": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The ash-shrine cracks and the plague-cult of Marumi Baso spills out chanting.",
+      "chance": "12",
+      "monster": {
+        "ref": "plagueCultist",
+        "properties": {
+          "affiliation": "pyre",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "8"
+    }
+  },
+  "barrowGuard": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The barrow honor-guard rises fully armed to keep the dead king's crown.",
+      "chance": "10",
+      "monster": {
+        "ref": "barrowKnight",
+        "properties": {
+          "affiliation": "barrow",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "6"
+    }
+  },
+  "valeChest": {
+    "ref": "chest",
+    "properties": {
+      "value": 60
+    }
+  },
+  "fenChest": {
+    "ref": "chest",
+    "properties": {
+      "value": 120
+    }
+  },
+  "pyreChest": {
+    "ref": "chest",
+    "properties": {
+      "value": 150
+    }
+  },
+  "barrowChest": {
+    "ref": "chest",
+    "properties": {
+      "value": 200
+    }
+  },
+  "ironKey": {
+    "class": "CItem",
+    "properties": {
+      "name": "ironKey",
+      "animation": "images/item",
+      "label": "Keeper's Iron Key",
+      "description": "A cold iron key as long as a forearm, taken from the March Keeper's cache. It fits one gate: the barred pass to the barrow.",
+      "tags": [
+        "quest"
+      ]
+    }
+  },
+  "warBanner": {
+    "class": "CItem",
+    "properties": {
+      "name": "warBanner",
+      "animation": "images/item",
+      "label": "War-Banner of the March",
+      "description": "The rotted standard of the old March host, pulled from a fen-barrow. The Seer of the Pyre-Waste will pay dearly to read the names sewn along its hem.",
+      "tags": [
+        "quest"
+      ]
+    }
+  },
+  "reaverBlade": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/bladeofdarkdreams",
+      "label": "Reaver of the March",
+      "description": "A notched cavalry blade from the artifact-cache of the Pyre-Waste, still keen after a century of ash. No curse rides this steel - only the weight of everyone it has already killed.",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 10,
+          "crit": 7,
+          "dmgMax": 30,
+          "dmgMin": 24,
+          "strength": 9,
+          "stamina": 6
+        }
+      },
+      "power": 14
+    }
+  },
+  "barrowCrown": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "label": "Crown of the Barrow-Warlord",
+      "description": "The grave-crown of the dead king under the March, black iron set with plague-pearls. It gifts a warlord's command of mind and killing edge, but it crowns whoever digs it up as the cult intends, and it will not leave the brow until the curse is broken.",
+      "power": 19,
+      "tags": [
+        "cursed",
+        "quest"
+      ],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 9,
+          "intelligence": 16,
+          "normalResist": -11,
+          "stamina": -9,
+          "strength": 4
+        }
+      }
+    }
+  },
+  "sunderedMarchQuest": {
+    "class": "SunderedMarchQuest",
+    "properties": {
+      "description": "Claim the iron key, cross the barred pass, read the three obelisks, and unearth the crown beneath the barrow."
+    }
+  },
+  "seerHuntQuest": {
+    "class": "SeerHuntQuest",
+    "properties": {
+      "description": "Recover the War-Banner from the Barrow-Fen and bring it to the Seer of the Pyre-Waste."
+    }
+  },
+  "ambientValeMuster": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "MUSTER ROLL - every name struck through. The March called its levies twice; neither host came home to be counted."
+    }
+  },
+  "ambientValeGallows": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "A gallows-tree hung with old rope and older warnings. Deserters here were given to the fen, not the grave."
+    }
+  },
+  "ambientValeRefugees": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/supply_pile",
+      "canStep": true,
+      "text": "A refugee camp, long abandoned. They fled the plague east and the dead west, and met the cult in the middle."
+    }
+  },
+  "ambientKeymaster": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_cart",
+      "canStep": true,
+      "text": "The March Keeper kept every gate on one ring. He kept the last key on his own corpse; look to his cache."
+    }
+  },
+  "ambientGateWarning": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "BARRED PASS - the iron gate opens to the Keeper's key alone. Batter it and the peaks will answer for you."
+    }
+  },
+  "ambientMonolithWarn": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "canStep": true,
+      "text": "A twinned monolith of black glass. Step within and the far stone spits you out across the Sundered River. Mind you remember which is which."
+    }
+  },
+  "ambientBarrowKings": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Under this barrow lie the crowned dead of the March, king atop warlord atop thief, each buried with the one below's crown."
+    }
+  },
+  "ambientDigWarning": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "DIG WARNING - the ground gives up its king only to a reader of all three obelisks. To dig blind is to feed the barrow for nothing."
+    }
+  },
+  "ambientObeliskCreed": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "Cult creed: three sigils, three dominions, one crown. Read the vale, the fen, and the pyre, and the March will kneel again."
+    }
+  },
+  "ambientFenPlague": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "PLAGUE FEN - the water remembers every drowned soldier and lends them out by night. Boil nothing you draw from here."
+    }
+  },
+  "ambientFenDrowned": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "canStep": true,
+      "text": "A drowned barrow, its capstone floating. The fen keeps the War-Banner down here, wrapped around a colonel who won't let go."
+    }
+  },
+  "ambientBannerCreed": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/supply_pile",
+      "canStep": true,
+      "text": "Names sewn on the banner's hem in a dead hand: bring it whole to the Seer, and she will trade you a secret for a shroud."
+    }
+  },
+  "ambientPyreHeretics": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "PYRE-WASTE - the cult burns its own here to feed the crowning-rite. The ash never settles; it is always looking for a wind."
+    }
+  },
+  "ambientPyreAsh": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/campfire_cauldron",
+      "canStep": true,
+      "text": "An ash-shrine to Marumi Baso, patient in the smoke. Its cauldron is kept warm for the day a crowned king walks out of the barrow."
+    }
+  },
+  "ambientSeerRiddle": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "The Seer of the Pyre-Waste speaks only in trade: a banner for a boon, a corpse's name for a living one's fate."
+    }
+  },
+  "ambientCrownLegend": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "They say the crown makes a warlord of whoever digs it up. They do not say the warlord it makes is not you."
+    }
+  },
+  "ambientWarlordEpitaph": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "Epitaph, half-scoured: HERE LIES THE MARCH'S LAST KING, WHO WAS CROWNED TWICE - ONCE IN LIFE, AND ONCE, WORSE, AFTER."
+    }
+  },
+  "ambientMarumiBaso": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "The spiral mark of Marumi Baso, scratched fresh on every stone from Nouraajd to here. The cult was always going to end up at a barrow."
+    }
+  }
+}

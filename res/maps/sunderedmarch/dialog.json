@@ -1,0 +1,97 @@
+{
+  "seerDialog": {
+    "class": "SeerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "A Seer sits cross-legged in the ash, veiled in smoke, a set of scales beside her weighted with teeth. 'The Pyre-Waste trades in one coin only,' she says without looking up. 'A thing carried, for a thing known. What have you carried to me, soldier?'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "can_return_banner",
+                  "action": "finish_seer_hunt",
+                  "nextStateId": "THANKS",
+                  "text": "Lay the War-Banner of the March before her."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "condition": "not_yet_started",
+                  "nextStateId": "OFFER",
+                  "text": "Nothing yet. What is it you want carried?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 2
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "OFFER",
+            "text": "'A banner,' she says. 'The old War-Banner of the March, gone down into a fen-barrow with a colonel too proud to let it rot alone. Bring it whole, with the drowned names still legible on its hem, and I will read you a truth about the crown you are so eager to dig up. Refuse, and dig in ignorance - it is all one to the ash.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "action": "start_seer_hunt",
+                  "nextStateId": "ACCEPTED",
+                  "text": "I'll bring you the banner."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACCEPTED",
+            "text": "'West and down, into the plague-fen,' she says, turning back to her scales. 'The colonel will not give it up gently. Neither, in the end, will the crown.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "THANKS",
+            "text": "The smoke closes over the banner and the Seer is already looking east, toward the barrow. 'You have your gold and your potion,' she says. 'Now you have the truth as well, and I am sorry for it. Dig if you must, soldier. Only remember whose head the crown was cut to fit.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
