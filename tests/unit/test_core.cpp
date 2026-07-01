@@ -899,6 +899,57 @@ void test_nested_primitive_wrappers_serialize_direct_values_and_round_trip() {
                 "integer-key maps should skip empty and unparsable JSON object keys");
 }
 
+// Primitive collection properties must deserialize from BOTH the legacy object-config shape
+// ({"class": ..., "properties": {"values": ...}}) and the new flattened shape (a bare JSON
+// array/object), including a mix of the two shapes within a single object. This pins the
+// backward/forward-compatible loading contract so old saves/configs and newly flattened data
+// both load correctly.
+void test_primitive_wrappers_deserialize_legacy_object_and_flattened_forms() {
+    CTypes::register_type_metadata<PrimitiveSerializationHolder, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(PrimitiveSerializationHolder::static_meta()->name(),
+                                           []() { return std::make_shared<PrimitiveSerializationHolder>(); });
+    game->getObjectHandler()->registerType(CListString::static_meta()->name(),
+                                           []() { return std::make_shared<CListString>(); });
+    game->getObjectHandler()->registerType(CMapStringString::static_meta()->name(),
+                                           []() { return std::make_shared<CMapStringString>(); });
+
+    // Mixed nesting: a legacy object-shaped list property alongside a flattened map property.
+    auto legacy_list_flat_map = std::make_shared<json>();
+    (*legacy_list_flat_map)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*legacy_list_flat_map)["properties"]["listValues"]["class"] = CListString::static_meta()->name();
+    (*legacy_list_flat_map)["properties"]["listValues"]["properties"]["values"] = {"north", "south"};
+    (*legacy_list_flat_map)["properties"]["mapValues"] = {{"confirm", "enter"}};
+
+    auto mixed_a = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              legacy_list_flat_map));
+    expect_true(mixed_a && mixed_a->getListValues() &&
+                    mixed_a->getListValues()->getValues() == std::set<std::string>({"north", "south"}),
+                "a legacy object-shaped CListString property should still deserialize");
+    expect_true(mixed_a && mixed_a->getMapValues() &&
+                    mixed_a->getMapValues()->getValues() == std::map<std::string, std::string>({{"confirm", "enter"}}),
+                "a flattened CMapStringString property should deserialize alongside a legacy list");
+
+    // The opposite mix: a flattened list property alongside a legacy object-shaped map property.
+    auto flat_list_legacy_map = std::make_shared<json>();
+    (*flat_list_legacy_map)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*flat_list_legacy_map)["properties"]["listValues"] = {"east", "west"};
+    (*flat_list_legacy_map)["properties"]["mapValues"]["class"] = CMapStringString::static_meta()->name();
+    (*flat_list_legacy_map)["properties"]["mapValues"]["properties"]["values"] = {{"inventory", "i"}};
+
+    auto mixed_b = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                              flat_list_legacy_map));
+    expect_true(mixed_b && mixed_b->getListValues() &&
+                    mixed_b->getListValues()->getValues() == std::set<std::string>({"east", "west"}),
+                "a flattened CListString property should deserialize alongside a legacy map");
+    expect_true(mixed_b && mixed_b->getMapValues() &&
+                    mixed_b->getMapValues()->getValues() == std::map<std::string, std::string>({{"inventory", "i"}}),
+                "a legacy object-shaped CMapStringString property should still deserialize");
+}
+
 void test_nested_property_notification_batches_emit_one_deterministic_signal() {
     CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
 
@@ -2412,6 +2463,7 @@ int main() {
     test_map_domain_signals_emit_for_tile_and_object_changes();
     test_reviewed_value_wrappers_have_explicit_primitive_metadata();
     test_nested_primitive_wrappers_serialize_direct_values_and_round_trip();
+    test_primitive_wrappers_deserialize_legacy_object_and_flattened_forms();
     test_nested_property_notification_batches_emit_one_deterministic_signal();
     test_object_deserialization_batches_property_notifications();
     test_bulk_object_deserialization_notifications_stay_batched();
