@@ -42,9 +42,11 @@ std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> 
     return animation;
 }
 
-bool dragMoved(const CGui::DragSession &session) {
-    return std::abs(session.current.x - session.start.x) > 0 || std::abs(session.current.y - session.start.y) > 0;
-}
+// Single click-vs-drag decision for list drag handling. Delegates to the canonical
+// GUI movement-threshold rule (Chebyshev distance, boundary exclusive) so a drag is
+// only recognized once motion has actually crossed the threshold. Below-threshold
+// jitter therefore stays a click and never triggers a drop or cancel.
+bool dragMoved(const CGui::DragSession &session) { return CGui::isDragActive(session); }
 } // namespace
 
 void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {}
@@ -80,7 +82,13 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
         if (sourceList) {
             sourceList->notifySourceDragCancel(gui, session->sourceIndex, session->payload);
         }
-        return false;
+        // This whole branch runs only while a drag session is live (see the guard above), so the
+        // release terminates a gesture the drag machinery owns — consume it, exactly as the
+        // sourceIsSelf branch does. A below-threshold release is a click, not a drop: it performs
+        // no drop/validate (handled above) but must still be consumed rather than leak to other
+        // handlers. Before the click-vs-drag threshold, sub-pixel motion counted as a drag and this
+        // release was already consumed; preserve that.
+        return true;
     }
     if (type != SDL_MOUSEBUTTONDOWN || (button != SDL_BUTTON_LEFT && button != SDL_BUTTON_RIGHT)) {
         return true;

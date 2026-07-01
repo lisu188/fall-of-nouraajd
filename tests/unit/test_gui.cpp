@@ -1203,6 +1203,163 @@ void test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_o
     expect_true(!harness.gui->hasPointerCapture(), "panel removal during input must leave no dangling pointer capture");
 }
 
+void test_list_view_below_threshold_motion_stays_a_click_no_proxy_no_drop() {
+    // Deferred source callback path (select returns true) so the click is decided at
+    // release: below-threshold motion must fire the click callback exactly once and
+    // never spawn a proxy, drop, or drag-cancel.
+    auto harness = create_drag_list_harness();
+    harness.source->setSelect("");
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+
+    // Press starts a candidate drag session (drag-start deferred the click).
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "source press should be consumed");
+    expect_true(harness.gui->hasDragSession(), "press should create a candidate drag session");
+    expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->dragActive,
+                "a fresh session must be a candidate, not an active drag");
+    expect_true(harness.panel->source_clicks == 0, "drag-start should defer the click until release");
+
+    // Below-threshold motion (Chebyshev distance 4 <= threshold) keeps it a candidate.
+    harness.gui->updateDragSession(29, 29);
+    expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->dragActive,
+                "below-threshold motion must not promote the session to an active drag");
+
+    // Release below threshold: this is a click. The click callback fires exactly once,
+    // and no drag-cancel is reported.
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 29, 29),
+                "below-threshold release should be consumed");
+    expect_true(harness.panel->source_clicks == 1, "below-threshold release must fire the click callback exactly once");
+    expect_true(harness.panel->drag_cancels == 0, "below-threshold click must not report a drag cancel");
+    expect_true(harness.panel->drops == 0, "below-threshold click must not perform a drop");
+}
+
+void test_list_view_exact_boundary_is_a_click_above_boundary_is_a_drag() {
+    // Exact boundary (Chebyshev distance == threshold) is a click (exclusive boundary).
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(29, 29); // dx = dy = 4 (exact boundary)
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 29, 29);
+        expect_true(harness.panel->source_clicks == 1, "exact-boundary motion must stay a click and fire once");
+        expect_true(harness.panel->drag_cancels == 0, "exact-boundary click must not report a drag cancel");
+    }
+
+    // One pixel past the boundary is a drag; with no target the source drag is canceled
+    // and the click callback does not fire.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(30, 25); // dx = 5 (above boundary)
+        expect_true(harness.gui->getDragSession() && harness.gui->getDragSession()->dragActive,
+                    "above-boundary motion must promote the session to an active drag");
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 30, 25);
+        expect_true(harness.panel->drag_cancels == 1, "above-boundary release without a target must call drag-cancel");
+        expect_true(harness.panel->source_clicks == 0, "an active drag must not fire the click callback");
+    }
+}
+
+void test_list_view_negative_and_diagonal_motion_follow_the_rule() {
+    // Negative-axis motion above threshold is a drag.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        // Start away from the edge so a negative offset stays inside the widget.
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 40, 40);
+        harness.gui->updateDragSession(35, 40); // dx = -5
+        expect_true(harness.gui->getDragSession() && harness.gui->getDragSession()->dragActive,
+                    "negative-axis motion above threshold must become a drag");
+    }
+
+    // Diagonal 4/4 stays a click; diagonal 5/5 is a drag.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 20, 20);
+        harness.gui->updateDragSession(24, 24); // diagonal 4/4
+        expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->dragActive,
+                    "diagonal 4/4 motion must stay a click");
+        harness.gui->updateDragSession(25, 25); // diagonal 5/5
+        expect_true(harness.gui->getDragSession() && harness.gui->getDragSession()->dragActive,
+                    "diagonal 5/5 motion must become a drag");
+    }
+}
+
+void test_list_view_above_threshold_drop_is_accepted_below_threshold_is_not() {
+    // Above-threshold motion onto a valid target performs the drop.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        harness.target->setDragValidate("targetDragValidate");
+        harness.target->setDrop("targetDrop");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(125, 25); // well past the threshold, over the target
+        expect_true(harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                    "above-threshold drop should be consumed by the target");
+        expect_true(harness.panel->drops == 1, "above-threshold motion onto a target must drop exactly once");
+        expect_true(harness.panel->drag_cancels == 0, "an accepted drop must not cancel the source drag");
+    }
+
+    // Below-threshold motion must NOT be treated as a drop even if the release lands on
+    // the target rectangle: it is a click on the source.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        harness.target->setDragValidate("targetDragValidate");
+        harness.target->setDrop("targetDrop");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(27, 25); // dx = 2, below threshold
+        expect_true(harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                    "below-threshold release should still be consumed");
+        expect_true(harness.panel->drops == 0, "below-threshold motion must not perform a drop");
+        expect_true(harness.panel->drag_validations == 0, "below-threshold motion must not validate a drop target");
+    }
+}
+
+void test_list_view_below_threshold_candidate_panel_removal_leaves_no_session() {
+    // A candidate (below-threshold) session must be cleared correctly when the owning
+    // panel is removed before the threshold is ever crossed.
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    harness.gui->updateDragSession(26, 26); // below threshold: still a candidate
+    expect_true(harness.gui->hasDragSession() && !harness.gui->getDragSession()->dragActive,
+                "press + jitter should leave a candidate session before removal");
+
+    harness.gui->removeChild(harness.panel);
+    expect_true(!harness.gui->hasDragSession(),
+                "panel removal must clear a below-threshold candidate drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "panel removal must clear pointer capture for a candidate session");
+}
+
+void test_list_view_active_drag_panel_removal_leaves_no_session() {
+    // An active (above-threshold) drag session must also be cleared on panel removal.
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    harness.gui->updateDragSession(120, 25); // above threshold: active drag
+    expect_true(harness.gui->hasDragSession() && harness.gui->getDragSession()->dragActive,
+                "press + threshold-crossing motion should leave an active drag session");
+
+    harness.gui->removeChild(harness.panel);
+    expect_true(!harness.gui->hasDragSession(), "panel removal must clear an active drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "panel removal must clear pointer capture for an active session");
+}
+
 void test_panel_event_callbacks_stop_after_close() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -1638,6 +1795,12 @@ int main() {
     test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm();
     test_list_view_draggable_default_still_drags_after_non_draggable_change();
     test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_or_capture();
+    test_list_view_below_threshold_motion_stays_a_click_no_proxy_no_drop();
+    test_list_view_exact_boundary_is_a_click_above_boundary_is_a_drag();
+    test_list_view_negative_and_diagonal_motion_follow_the_rule();
+    test_list_view_above_threshold_drop_is_accepted_below_threshold_is_not();
+    test_list_view_below_threshold_candidate_panel_removal_leaves_no_session();
+    test_list_view_active_drag_panel_removal_leaves_no_session();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
     test_loader_gui_sessions_shutdown_stale_callbacks();
