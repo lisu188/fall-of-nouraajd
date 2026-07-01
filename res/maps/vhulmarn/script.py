@@ -17,7 +17,7 @@ def load(self, context):
         player.addQuest(quest_name)
 
     def quest_system_flags_default(game_map):
-        for flag in ("tithe_heard", "bell_tolled", "tithe_taken", "boss_woken", "widow_warned"):
+        for flag in ("tithe_heard", "bell_tolled", "tithe_taken", "boss_woken"):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
 
@@ -50,6 +50,12 @@ def load(self, context):
                 return
             game_map = self.getMap()
             game = game_map.getGame()
+            if game_map.getBoolProperty("bell_tolled"):
+                game.getGuiHandler().showMessage(
+                    "The bell's iron note still hangs over the tarn. It has been answered once; the deep does "
+                    "not need asking twice."
+                )
+                return
             game.getGuiHandler().showMessage(
                 "You toll the drowned bell. The note goes out flat across the tarn, and the tarn answers: "
                 "the water bulges, and Deep-Spawn rise dripping onto the causeway."
@@ -120,8 +126,7 @@ def load(self, context):
 
     @register(context)
     class WidowDialog(CDialog):
-        def mark_warned(self):
-            self.getGame().getMap().setBoolProperty("widow_warned", True)
+        pass
 
     @trigger(context, "onEnter", "oldTollman")
     class TollmanTrigger(CTrigger):
@@ -153,8 +158,6 @@ def load(self, context):
     @trigger(context, "onDestroy", "theNamelessBoss")
     class NamelessTrigger(CTrigger):
         def trigger(self, obj, event):
-            game_map = obj.getGame().getMap()
-            game_map.setBoolProperty("nameless_slain", True)
             obj.getGame().getGuiHandler().showMessage(
                 "The Nameless folds back into the tarn, and for one held breath the drowned bell will not ring. "
                 "It is not death. The deep is patient, and the stars will come right again."

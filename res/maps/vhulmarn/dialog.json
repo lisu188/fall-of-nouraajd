@@ -106,8 +106,7 @@
                 "properties": {
                   "number": 0,
                   "nextStateId": "WARN",
-                  "text": "What happened to the people of Vhul'Marn?",
-                  "action": "mark_warned"
+                  "text": "What happened to the people of Vhul'Marn?"
                 }
               },
               {
