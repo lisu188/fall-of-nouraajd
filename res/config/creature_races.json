@@ -1,0 +1,10 @@
+{
+  "goobyRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "gooby",
+      "subtypes": [],
+      "playerSelectable": false
+    }
+  }
+}
