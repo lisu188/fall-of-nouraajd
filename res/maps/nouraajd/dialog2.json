@@ -13,6 +13,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
+                  "condition": "contract_not_started",
                   "nextStateId": "ASK_WHY",
                   "text": "Aye. Why the warning?"
                 }
@@ -21,8 +22,33 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 1,
+                  "condition": "contract_not_started",
                   "nextStateId": "ASK_WHY",
                   "text": "I'm unsure. What troubles you?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "contract_active",
+                  "nextStateId": "ACTIVE_REMINDER",
+                  "text": "I'm still hunting the OctoBogz. Anything more I should know?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "condition": "contract_completed",
+                  "nextStateId": "COMPLETED_THANKS",
+                  "text": "The cave is quiet now. The OctoBogz are dead."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 4
                 }
               }
             ]
@@ -80,6 +106,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 0,
+                  "condition": "contract_not_started",
                   "nextStateId": "ACCEPT_QUEST",
                   "action": "accept_quest",
                   "text": "I'll see the cave purged of OctoBogz."
@@ -116,6 +143,36 @@
           "properties": {
             "stateId": "DECLINE_QUEST",
             "text": "Thank you for listening. May another blade take pity if you will not. Safe travels.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACTIVE_REMINDER",
+            "text": "You've already given us your word, and we've not forgotten it. The cave lies east across the river, half-buried under boulders and sand—follow the guttural echoes. Come back when the OctoBogz are ash.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "COMPLETED_THANKS",
+            "text": "Then it's true—the eastern road is safe again. You've done what none of us dared. The refugees will speak your name for years. Go in peace; our debt to you is paid in full.",
             "options": [
               {
                 "ref": "exitOption",

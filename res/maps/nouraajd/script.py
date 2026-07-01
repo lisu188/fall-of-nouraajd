@@ -926,10 +926,32 @@ def load(self, context):
 
     @register(context)
     class OctoBogzDialog(CDialog):
+        # QuestSystem.get_state("octobogz_contract") is the single authority for which
+        # branch of the dialog is shown. The verified states are "not_started", "active",
+        # and "completed"; each condition below maps one state to one ENTRY branch so the
+        # quest is only offered before it starts, merely acknowledged while active, and
+        # never re-offered once completed (even in the same session right after the reward
+        # is granted, since complete_octobogz_contract runs before this dialog re-opens).
+        def contract_not_started(self):
+            return _quest_system_from(self).get_state("octobogz_contract") == "not_started"
+
+        def contract_active(self):
+            return _quest_system_from(self).get_state("octobogz_contract") == "active"
+
+        def contract_completed(self):
+            return _quest_system_from(self).is_octobogz_contract_completed()
+
         def accept_quest(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
             quest_system = _quest_system_from(self)
+            # No state guard here: accept_quest must still process a "late" claim where the
+            # OctoBogz were cleared before the contract was formally accepted (state already
+            # "completed"), granting the outstanding reward exactly once. Re-entry is safe --
+            # activate_octobogz_contract only acts from "not_started" and the reward is
+            # protected by the OCTOBOGZ_REWARD_CLAIMED guard. Re-offering in normal play is
+            # prevented at the dialog layer: the OFFER_HELP accept option is gated by
+            # contract_not_started, so active/completed states never surface the offer.
             _grant_quest(player, "octoBogzQuest")
             quest_system.activate_octobogz_contract()
             if quest_system.is_octobogz_contract_completed():
