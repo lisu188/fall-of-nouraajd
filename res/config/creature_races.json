@@ -57,5 +57,41 @@
         }
       }
     }
+  },
+  "highlanderRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "label": "Highlander",
+      "creatureType": "human",
+      "subtypes": ["highlander"],
+      "playerSelectable": true,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 2,
+          "stamina": 1,
+          "agility": -1,
+          "intelligence": -2
+        }
+      }
+    }
+  },
+  "wandererRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "label": "Wanderer",
+      "creatureType": "human",
+      "subtypes": ["wanderer"],
+      "playerSelectable": true,
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "intelligence": 1,
+          "strength": -1,
+          "stamina": -2
+        }
+      }
+    }
   }
 }
