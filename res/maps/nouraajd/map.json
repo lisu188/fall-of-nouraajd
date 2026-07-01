@@ -40927,8 +40927,8 @@
           "name": "ambientGateTriageNotice",
           "type": "ambientGateTriageNotice",
           "width": 32,
-          "x": 3328,
-          "y": 3488
+          "x": 3584,
+          "y": 3456
         },
         {
           "height": 32,
@@ -40936,8 +40936,8 @@
           "name": "ambientGateBellRope",
           "type": "ambientGateBellRope",
           "width": 32,
-          "x": 3360,
-          "y": 3520
+          "x": 3264,
+          "y": 3456
         },
         {
           "height": 32,
@@ -40945,8 +40945,8 @@
           "name": "ambientRefugeeBundle",
           "type": "ambientRefugeeBundle",
           "width": 32,
-          "x": 3392,
-          "y": 3552
+          "x": 3328,
+          "y": 3648
         },
         {
           "height": 32,
@@ -40954,8 +40954,8 @@
           "name": "ambientMarketRationLedger",
           "type": "ambientMarketRationLedger",
           "width": 32,
-          "x": 3424,
-          "y": 3552
+          "x": 3520,
+          "y": 3616
         },
         {
           "height": 32,
@@ -40963,8 +40963,8 @@
           "name": "ambientCutWellRope",
           "type": "ambientCutWellRope",
           "width": 32,
-          "x": 3456,
-          "y": 3584
+          "x": 3616,
+          "y": 3552
         },
         {
           "height": 32,
@@ -40972,8 +40972,8 @@
           "name": "ambientScribeNotice",
           "type": "ambientScribeNotice",
           "width": 32,
-          "x": 3488,
-          "y": 3648
+          "x": 3232,
+          "y": 3584
         },
         {
           "height": 32,
@@ -40981,8 +40981,8 @@
           "name": "ambientTavernLastCall",
           "type": "ambientTavernLastCall",
           "width": 32,
-          "x": 1504,
-          "y": 3168
+          "x": 1536,
+          "y": 3104
         },
         {
           "height": 32,
@@ -40990,8 +40990,8 @@
           "name": "ambientVictorRibbon",
           "type": "ambientVictorRibbon",
           "width": 32,
-          "x": 1568,
-          "y": 3168
+          "x": 1600,
+          "y": 3104
         },
         {
           "height": 32,
@@ -40999,8 +40999,8 @@
           "name": "ambientTownHallPleaBoard",
           "type": "ambientTownHallPleaBoard",
           "width": 32,
-          "x": 1344,
-          "y": 3232
+          "x": 1312,
+          "y": 3200
         },
         {
           "height": 32,
@@ -41008,8 +41008,8 @@
           "name": "ambientMayorAshLedger",
           "type": "ambientMayorAshLedger",
           "width": 32,
-          "x": 1408,
-          "y": 3232
+          "x": 1280,
+          "y": 3296
         },
         {
           "height": 32,
@@ -41017,8 +41017,8 @@
           "name": "ambientChapelTallowShrine",
           "type": "ambientChapelTallowShrine",
           "width": 32,
-          "x": 1568,
-          "y": 3232
+          "x": 1632,
+          "y": 3200
         },
         {
           "height": 32,
@@ -41026,8 +41026,8 @@
           "name": "ambientChapelBoneBasin",
           "type": "ambientChapelBoneBasin",
           "width": 32,
-          "x": 1632,
-          "y": 3232
+          "x": 1696,
+          "y": 3264
         },
         {
           "height": 32,
@@ -41035,8 +41035,8 @@
           "name": "ambientStainedGlassPrayer",
           "type": "ambientStainedGlassPrayer",
           "width": 32,
-          "x": 1440,
-          "y": 3264
+          "x": 1632,
+          "y": 3328
         },
         {
           "height": 32,
@@ -41044,8 +41044,8 @@
           "name": "ambientAbandonedMarketStall",
           "type": "ambientAbandonedMarketStall",
           "width": 32,
-          "x": 1504,
-          "y": 3264
+          "x": 3072,
+          "y": 3584
         },
         {
           "height": 32,
@@ -41053,8 +41053,8 @@
           "name": "ambientCultDoorScratch",
           "type": "ambientCultDoorScratch",
           "width": 32,
-          "x": 1376,
-          "y": 3200
+          "x": 1344,
+          "y": 3136
         },
         {
           "height": 32,
@@ -41062,8 +41062,8 @@
           "name": "ambientWashedBloodCobble",
           "type": "ambientWashedBloodCobble",
           "width": 32,
-          "x": 1504,
-          "y": 3200
+          "x": 2112,
+          "y": 3520
         },
         {
           "height": 32,
@@ -41071,8 +41071,8 @@
           "name": "ambientPlagueHouseSeal",
           "type": "ambientPlagueHouseSeal",
           "width": 32,
-          "x": 1408,
-          "y": 3264
+          "x": 1184,
+          "y": 3392
         },
         {
           "height": 32,
@@ -41080,8 +41080,8 @@
           "name": "ambientMissingChildRibbon",
           "type": "ambientMissingChildRibbon",
           "width": 32,
-          "x": 1440,
-          "y": 3296
+          "x": 1664,
+          "y": 3424
         },
         {
           "height": 32,
@@ -41089,8 +41089,8 @@
           "name": "ambientBoardedNursery",
           "type": "ambientBoardedNursery",
           "width": 32,
-          "x": 1472,
-          "y": 3296
+          "x": 2432,
+          "y": 3552
         },
         {
           "height": 32,
@@ -41098,8 +41098,8 @@
           "name": "ambientOldQuarterChalk",
           "type": "ambientOldQuarterChalk",
           "width": 32,
-          "x": 1344,
-          "y": 3264
+          "x": 1184,
+          "y": 3232
         },
         {
           "height": 32,
@@ -41107,8 +41107,8 @@
           "name": "ambientNightBellWarning",
           "type": "ambientNightBellWarning",
           "width": 32,
-          "x": 1536,
-          "y": 3264
+          "x": 2752,
+          "y": 3520
         },
         {
           "height": 32,
@@ -41116,8 +41116,8 @@
           "name": "ambientCryptWarningNote",
           "type": "ambientCryptWarningNote",
           "width": 32,
-          "x": 1792,
-          "y": 3296
+          "x": 768,
+          "y": 480
         },
         {
           "height": 32,
@@ -41125,8 +41125,8 @@
           "name": "ambientRelicPilgrimBones",
           "type": "ambientRelicPilgrimBones",
           "width": 32,
-          "x": 1856,
-          "y": 3264
+          "x": 1216,
+          "y": 1920
         },
         {
           "height": 32,
@@ -41134,8 +41134,8 @@
           "name": "ambientPritzSkullPile",
           "type": "ambientPritzSkullPile",
           "width": 32,
-          "x": 992,
-          "y": 3552
+          "x": 896,
+          "y": 640
         },
         {
           "height": 32,
@@ -41144,7 +41144,7 @@
           "type": "ambientRatGnawedStandard",
           "width": 32,
           "x": 640,
-          "y": 320
+          "y": 288
         },
         {
           "height": 32,
@@ -41152,8 +41152,8 @@
           "name": "ambientRolfBootprints",
           "type": "ambientRolfBootprints",
           "width": 32,
-          "x": 608,
-          "y": 352
+          "x": 512,
+          "y": 416
         },
         {
           "height": 32,
@@ -41161,8 +41161,8 @@
           "name": "ambientSwampFisherWarning",
           "type": "ambientSwampFisherWarning",
           "width": 32,
-          "x": 3968,
-          "y": 3360
+          "x": 3904,
+          "y": 3296
         },
         {
           "height": 32,
@@ -41170,8 +41170,8 @@
           "name": "ambientOctobogzNet",
           "type": "ambientOctobogzNet",
           "width": 32,
-          "x": 4000,
-          "y": 3392
+          "x": 4288,
+          "y": 3200
         },
         {
           "height": 32,
@@ -41179,8 +41179,8 @@
           "name": "ambientMireLantern",
           "type": "ambientMireLantern",
           "width": 32,
-          "x": 4192,
-          "y": 3456
+          "x": 4096,
+          "y": 3520
         },
         {
           "height": 32,
@@ -41188,8 +41188,8 @@
           "name": "ambientSwampReturnScratch",
           "type": "ambientSwampReturnScratch",
           "width": 32,
-          "x": 4224,
-          "y": 3488
+          "x": 4480,
+          "y": 3072
         },
         {
           "height": 32,
@@ -41197,8 +41197,8 @@
           "name": "ambientOutskirtsDoorMark",
           "type": "ambientOutskirtsDoorMark",
           "width": 32,
-          "x": 4672,
-          "y": 2816
+          "x": 4800,
+          "y": 800
         },
         {
           "height": 32,
@@ -41206,8 +41206,8 @@
           "name": "ambientOldWomanPrayerBundle",
           "type": "ambientOldWomanPrayerBundle",
           "width": 32,
-          "x": 4640,
-          "y": 2848
+          "x": 5952,
+          "y": 256
         },
         {
           "height": 32,
@@ -41215,8 +41215,8 @@
           "name": "ambientRitualSealShard",
           "type": "ambientRitualSealShard",
           "width": 32,
-          "x": 3424,
-          "y": 3456
+          "x": 3456,
+          "y": 3392
         }
       ],
       "opacity": 1,
