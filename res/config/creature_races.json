@@ -14,5 +14,13 @@
       "subtypes": [],
       "playerSelectable": false
     }
+  },
+  "pritzRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "pritz",
+      "subtypes": [],
+      "playerSelectable": false
+    }
   }
 }
