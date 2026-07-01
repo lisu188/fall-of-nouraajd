@@ -46,14 +46,14 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
             if (effect->getLabel().empty()) {
                 effect->setLabel(getLabel());
             }
-            if (effect->hasTag(CTag::Buff)) {
+            if (effectRoutesToCaster(effect)) {
                 effect->setVictim(first);
                 first->addEffect(effect);
             } else if (second) {
                 effect->setVictim(second);
                 second->addEffect(effect);
             } else {
-                vstd::logger::warning("Skipping non-buff effect without target:", this->to_string());
+                vstd::logger::warning("Skipping opponent-target effect without target:", this->to_string());
             }
         }
     }
@@ -66,6 +66,17 @@ void CInteraction::setManaCost(int value) { manaCost = value; }
 bool CInteraction::getSelfTarget() const { return selfTarget; }
 
 void CInteraction::setSelfTarget(bool value) { selfTarget = value; }
+
+bool CInteraction::effectRoutesToCaster(const std::shared_ptr<CEffect> &effect) const {
+    // An explicit selfTarget always routes the effect to the caster, regardless of
+    // tags. Otherwise, preserve the legacy behavior where a Buff-tagged effect is a
+    // self-buff (compatibility fallback for configs authored before selfTarget); every
+    // other effect routes to the opponent.
+    if (selfTarget) {
+        return true;
+    }
+    return effect && effect->hasTag(CTag::Buff);
+}
 
 std::shared_ptr<CEffect> CInteraction::getEffect() const { return effect; }
 
