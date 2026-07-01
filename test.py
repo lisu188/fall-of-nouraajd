@@ -16241,6 +16241,183 @@ class GameTest(unittest.TestCase):
             sort_keys=True,
         )
 
+    @game_test
+    def test_player_progression_through_level_six_unlocks_once_per_class(self):
+        # [EPIC_04][STORY_05][SUBSTORY_02] Player progression through level six.
+        #
+        # Drives every class/race combination through levels one..six and pins the
+        # composition contract implemented in src/object/CCreature.cpp:
+        #   * class unlocks are the creature's `levelling` map, folded into the
+        #     effective action set as each unlock level is reached (levelUp ->
+        #     addAction(getLevelAction()); getEffectiveInteractions gates entries by
+        #     `unlockLevel <= level`). Each class unlock must appear EXACTLY ONCE
+        #     across the whole climb -- never missed, never duplicated.
+        #   * race actions are the creature's innate `actions` set; they are constant
+        #     across every level-up (they never move or duplicate as levels change).
+        #   * HP max / mana max derive from the composed stats
+        #     (CCreature::getStats -> buildLegacyStats = baseStats + level copies of
+        #     levelStats): getHpMax() == stamina * 7 and the mana ceiling ==
+        #     getStats().getMainValue() * 7, both recomputed independently here.
+        #
+        # The class/race matrix is registered as self-contained CCreature templates
+        # (the exact `registerConfigJson` + `{"ref": ...}` shape proven elsewhere in
+        # this suite), carrying a race innate-action set and a level-keyed class
+        # unlock map. No archetype definition object is attached, so the composed
+        # legacy path runs and the effective action set is observable through the
+        # bound getActions() accessor.
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+        handler = g.getObjectHandler()
+
+        exp_for_level = lambda level: (level - 1) * level * 500
+
+        # Class matrix: each class contributes a main stat, per-level stat growth and a
+        # level-one..six unlock map. Unlock type ids are unique per class so a leaked
+        # unlock from another class would be caught immediately.
+        class_defs = {
+            "warrior": {
+                "mainStat": "strength",
+                "levelStats": {"strength": 3, "stamina": 2},
+                "unlocks": {str(level): f"ClassWarriorUnlock{level}" for level in range(1, 7)},
+            },
+            "sorcerer": {
+                "mainStat": "intelligence",
+                "levelStats": {"intelligence": 4, "stamina": 1},
+                "unlocks": {str(level): f"ClassSorcererUnlock{level}" for level in range(1, 7)},
+            },
+            "rogue": {
+                "mainStat": "agility",
+                "levelStats": {"agility": 3, "stamina": 2},
+                "unlocks": {str(level): f"ClassRogueUnlock{level}" for level in range(1, 7)},
+            },
+        }
+
+        # Race matrix: each race contributes a constant innate-action set plus a base
+        # stat block. Race action type ids are unique per race.
+        race_defs = {
+            "human": {
+                "baseStats": {"strength": 6, "agility": 6, "intelligence": 6, "stamina": 6},
+                "actions": ["RaceHumanInnateA", "RaceHumanInnateB"],
+            },
+            "elf": {
+                "baseStats": {"strength": 4, "agility": 8, "intelligence": 8, "stamina": 5},
+                "actions": ["RaceElfInnate"],
+            },
+            "dwarf": {
+                "baseStats": {"strength": 8, "agility": 4, "intelligence": 4, "stamina": 9},
+                "actions": ["RaceDwarfInnateA", "RaceDwarfInnateB", "RaceDwarfInnateC"],
+            },
+        }
+
+        # Register every interaction type referenced by the matrix as a plain
+        # CInteraction so the {"ref": ...} entries resolve and getTypeId() reports the
+        # registered id.
+        interaction_ids = set()
+        for cls in class_defs.values():
+            interaction_ids.update(cls["unlocks"].values())
+        for race in race_defs.values():
+            interaction_ids.update(race["actions"])
+        for interaction_id in sorted(interaction_ids):
+            handler.registerConfigJson(interaction_id, json.dumps({"class": "CInteraction"}))
+
+        summary = {}
+        for race_name, race in race_defs.items():
+            for class_name, cls in class_defs.items():
+                template = f"ProgressionMatrix_{race_name}_{class_name}"
+                base_stats = dict(race["baseStats"])
+                base_stats["mainStat"] = cls["mainStat"]
+                handler.registerConfigJson(
+                    template,
+                    json.dumps(
+                        {
+                            "class": "CCreature",
+                            "properties": {
+                                "baseStats": {"class": "CStats", "properties": base_stats},
+                                "levelStats": {"class": "CStats", "properties": dict(cls["levelStats"])},
+                                "actions": [{"ref": action_id} for action_id in race["actions"]],
+                                "levelling": {
+                                    level_key: {"ref": unlock_id} for level_key, unlock_id in cls["unlocks"].items()
+                                },
+                            },
+                        }
+                    ),
+                )
+
+                creature = g.createObject(template)
+                self.assertIsNotNone(creature, template)
+                self.assertEqual(0, creature.getLevel(), template)
+                # addExp is a no-op on a dead creature (CCreature::addExp guards on
+                # isAlive), so start the climb from full HP.
+                creature.setHp(creature.getHpMax())
+                self.assertTrue(creature.isAlive(), template)
+
+                race_action_ids = sorted(race["actions"])
+                # Race actions are present from the start and never change or duplicate.
+                self.assertEqual(
+                    race_action_ids,
+                    sorted(action.getTypeId() for action in creature.getActions()),
+                    f"{template}: initial race actions",
+                )
+
+                base_main = base_stats[cls["mainStat"]]
+                base_stamina = base_stats["stamina"]
+                unlock_growth = cls["levelStats"]
+
+                seen_unlocks = []
+                for level in range(1, 7):
+                    needed = exp_for_level(level) - creature.getNumericProperty("exp")
+                    self.assertGreater(needed, 0, f"{template}: exp step to level {level}")
+                    creature.addExp(needed)
+                    self.assertEqual(level, creature.getLevel(), f"{template}: reached level {level}")
+
+                    seen_unlocks.append(cls["unlocks"][str(level)])
+                    expected_action_ids = sorted(race_action_ids + seen_unlocks)
+                    actual_action_ids = sorted(action.getTypeId() for action in creature.getActions())
+
+                    # Exactly-once contract: the sorted list must match the expected
+                    # set with no duplicates and no missing entries. len() equality
+                    # against the de-duplicated set catches any doubled unlock.
+                    self.assertEqual(
+                        expected_action_ids,
+                        actual_action_ids,
+                        f"{template}: effective actions at level {level}",
+                    )
+                    self.assertEqual(
+                        len(actual_action_ids),
+                        len(set(actual_action_ids)),
+                        f"{template}: duplicate action at level {level}",
+                    )
+                    # Race actions stay constant across the entire climb.
+                    self.assertEqual(
+                        race_action_ids,
+                        sorted(action_id for action_id in actual_action_ids if action_id in set(race_action_ids)),
+                        f"{template}: race actions constant at level {level}",
+                    )
+
+                    # HP and mana ceilings track the composed stats exactly.
+                    stats = creature.getStats()
+                    expected_stamina = base_stamina + level * unlock_growth.get("stamina", 0)
+                    expected_main = base_main + level * unlock_growth.get(cls["mainStat"], 0)
+                    self.assertEqual(expected_stamina, stats.getNumericProperty("stamina"), template)
+                    self.assertEqual(cls["mainStat"], stats.getStringProperty("mainStat"), template)
+                    self.assertEqual(expected_main, stats.getMainValue(), template)
+                    self.assertEqual(expected_stamina * 7, creature.getHpMax(), f"{template}: hp max at level {level}")
+                    self.assertEqual(expected_main * 7, stats.getMainValue() * 7, f"{template}: mana ceiling at level {level}")
+
+                # Every class unlock appeared, once each, and race actions were untouched.
+                self.assertEqual(sorted(cls["unlocks"].values()), sorted(seen_unlocks), template)
+                summary[template] = {
+                    "raceActions": race_action_ids,
+                    "classUnlocks": sorted(cls["unlocks"].values()),
+                    "finalLevel": creature.getLevel(),
+                    "finalHpMax": creature.getHpMax(),
+                    "finalManaMax": creature.getStats().getMainValue() * 7,
+                }
+
+        return True, json.dumps(summary, sort_keys=True)
+
 
 class ConsoleEventIsolationTest(unittest.TestCase):
     def test_console_key_history_in_fresh_process(self):
