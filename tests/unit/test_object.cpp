@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
@@ -932,6 +933,80 @@ void test_creature_effective_interactions_compose_and_dedupe_sources() {
     expect_true(creature->getInteractions() == effective,
                 "getInteractions should delegate to the effective, de-duplicated interaction set");
 }
+void test_creature_effective_interactions_compose_archetype_sources() {
+    // Pins that getEffectiveInteractions folds the race/class archetype sources
+    // into the composed set at the documented precedence positions
+    // (docs/design/creature_archetypes.md, "Creature action merge contract"):
+    //   1. race innate -> 2. class starting -> 3. class level unlocks ->
+    //   4. concrete template (own levelling then own actions), most-specific wins.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setLevel(2);
+
+    // (1) race innate: a generic Attack and a race-only ability.
+    auto raceAttack = interaction("Attack", "raceAttack");
+    auto raceClaw = interaction("Claw", "raceClaw");
+    auto race = std::make_shared<CCreatureRace>();
+    race->setActions({raceAttack, raceClaw});
+    creature->setRace(race);
+
+    // (2) class starting: a duplicate Attack overriding the race's Attack.
+    auto classAttack = interaction("Attack", "classAttack");
+    // (3) class level unlocks: one unlocked at the current level, one gated above it.
+    auto classStrike = interaction("Strike", "classStrike");
+    auto classUltimate = interaction("Ultimate", "classUltimate");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setActions({classAttack});
+    CInteractionMap classLevelling;
+    classLevelling["1"] = classStrike;
+    classLevelling["5"] = classUltimate;
+    klass->setLevelling(classLevelling);
+    creature->setCreatureClass(klass);
+
+    // (4) concrete template: the most specific Attack override plus a unique action.
+    auto concreteAttack = interaction("Attack", "concreteAttack");
+    auto concreteFinisher = interaction("Finisher", "concreteFinisher");
+    creature->addAction(concreteAttack);
+    creature->addAction(concreteFinisher);
+
+    auto effective = creature->getEffectiveInteractions();
+    auto contains = [&effective](const std::shared_ptr<CInteraction> &action) {
+        return effective.find(action) != effective.end();
+    };
+    auto count_with_type = [&effective](const std::string &typeId) {
+        return std::count_if(effective.begin(), effective.end(),
+                             [&typeId](const auto &action) { return action && action->getTypeId() == typeId; });
+    };
+
+    // Attack is defined by race, class and concrete sources; only the concrete
+    // (most-specific) definition survives, exactly once.
+    expect_true(count_with_type("Attack") == 1,
+                "Attack duplicated across race/class/concrete should collapse to one entry");
+    expect_true(contains(concreteAttack) && !contains(raceAttack) && !contains(classAttack),
+                "the concrete Attack should win over the race and class definitions");
+    // Unique actions from every source are preserved.
+    expect_true(contains(raceClaw), "race innate actions should be exposed in the composed set");
+    expect_true(contains(classStrike), "class level unlocks at/below current level should be exposed");
+    expect_true(contains(concreteFinisher), "unique concrete actions should be exposed");
+    // The class level unlock gated above the current level is withheld.
+    expect_true(!contains(classUltimate), "class level unlocks above the current level should not be exposed");
+    expect_true(effective.size() == 4,
+                "composed set should be Attack (concrete) + Claw + Strike + Finisher");
+
+    // Legacy creature (no race, no class) still composes only its own sources.
+    auto legacy = std::make_shared<CCreature>();
+    legacy->addAction(interaction("Attack", "legacyAttack"));
+    auto legacyEffective = legacy->getEffectiveInteractions();
+    expect_true(legacyEffective.size() == 1,
+                "a creature with no race/class should compose only its own actions");
+}
 void test_creature_action_merge_dedupes_by_type_id() {
     // Pins the approved creature action merge contract
     // (docs/design/creature_archetypes.md, "Creature action merge contract"):
@@ -1565,6 +1640,7 @@ int main() {
     test_creature_class_main_stat_is_authoritative_over_race();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
+    test_creature_effective_interactions_compose_archetype_sources();
     test_creature_action_merge_dedupes_by_type_id();
     test_creature_duplicate_attack_from_race_and_class_collapses_to_single_identity();
     test_no_archetype_creature_level_up_mutates_actions_via_levelling();

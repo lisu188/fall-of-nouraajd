@@ -159,23 +159,24 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getInteractions() { return ge
 
 std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
     // Composes the creature's effective interaction set from every source that
-    // backs it today, de-duplicated so identical actions are never exposed
-    // twice. Dedupe key is the action typeId, falling back to its name when the
-    // typeId is empty (matching the identity rules CGameObject uses elsewhere).
+    // backs it, de-duplicated so identical actions are never exposed twice.
+    // Dedupe key is the action typeId, falling back to its name when the typeId
+    // is empty (matching the identity rules CGameObject uses elsewhere).
     //
-    // Precedence (lowest first, so later sources override earlier duplicates):
-    //   1. race actions          -- extension point (no backing object yet)
-    //   2. creature-class actions -- extension point (no backing object yet)
-    //   3. class level unlocks    -- levelling entries unlocked up to the
-    //                                current level (the model expresses class
-    //                                level unlocks through `levelling` today)
-    //   4. concrete own actions   -- the creature's own configured actions win
+    // Precedence (docs/design/creature_archetypes.md, "Creature action merge
+    // contract"), lowest first so later sources override earlier duplicates:
+    //   1. race innate actions      -- race.actions (null on legacy creatures)
+    //   2. class starting actions   -- creatureClass.actions (null on legacy)
+    //   3. class level unlocks       -- creatureClass.levelling entries unlocked
+    //                                   up to the current level
+    //   4. concrete template         -- the creature's own levelling unlocks then
+    //                                   its own configured actions (most specific)
     //
-    // Race / creature-class archetype objects (CCreatureClass) do not exist in
-    // the codebase yet, so there is nothing to pull their actions from. The
-    // ordered composition below is structured so those sources slot in ahead of
-    // the level unlocks once the archetype foundation lands, without changing
-    // the concrete-actions-win precedence.
+    // The race / creatureClass archetype references are independently null: a
+    // legacy creature (neither set) contributes nothing from positions 1-3 and
+    // composes exactly the concrete-template sources, matching the legacy
+    // behavior. When present, archetype sources slot in ahead of the concrete
+    // template without changing the concrete-actions-win precedence.
 
     std::vector<std::shared_ptr<CInteraction>> ordered;
 
@@ -187,30 +188,51 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
         return "N:" + action->getName();
     };
 
-    // 1-2. race / creature-class actions: extension point. Nothing to add until
-    //      the archetype foundation provides those objects.
+    // Appends every levelling entry whose unlock level is at or below the current
+    // level. Keys are the level at which the entry unlocks (see getLevelAction /
+    // levelUp); a non-numeric key is treated as ungated so no configured action
+    // is silently dropped.
+    auto appendUnlockedLevelling = [&](const CInteractionMap &source) {
+        for (const auto &[levelKey, action] : source) {
+            if (!action) {
+                continue;
+            }
+            int unlockLevel = 0;
+            try {
+                unlockLevel = std::stoi(levelKey);
+            } catch (...) {
+                unlockLevel = 0;
+            }
+            if (unlockLevel <= level) {
+                ordered.push_back(action);
+            }
+        }
+    };
 
-    // 3. class level unlocks: levelling entries unlocked up to the current
-    //    level. Keys are the level at which the entry unlocks (see
-    //    getLevelAction / levelUp).
-    for (const auto &[levelKey, action] : levelling) {
-        if (!action) {
-            continue;
-        }
-        int unlockLevel = 0;
-        try {
-            unlockLevel = std::stoi(levelKey);
-        } catch (...) {
-            // Non-numeric levelling keys are not level-gated unlocks; include
-            // them so no configured action is silently dropped.
-            unlockLevel = 0;
-        }
-        if (unlockLevel <= level) {
-            ordered.push_back(action);
+    // 1. race innate actions.
+    if (race) {
+        for (const auto &action : race->getActions()) {
+            if (action) {
+                ordered.push_back(action);
+            }
         }
     }
 
-    // 4. concrete own actions: added last so they win duplicate-key conflicts.
+    // 2. class starting actions.
+    if (creatureClass) {
+        for (const auto &action : creatureClass->getActions()) {
+            if (action) {
+                ordered.push_back(action);
+            }
+        }
+        // 3. class level unlocks: the class's own levelling map, level-gated.
+        appendUnlockedLevelling(creatureClass->getLevelling());
+    }
+
+    // 4a. concrete template level unlocks: the creature's own levelling map.
+    appendUnlockedLevelling(levelling);
+
+    // 4b. concrete own actions: added last so they win duplicate-key conflicts.
     for (const auto &action : actions) {
         if (action) {
             ordered.push_back(action);
