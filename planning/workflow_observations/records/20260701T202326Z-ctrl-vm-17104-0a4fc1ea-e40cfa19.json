@@ -1,0 +1,47 @@
+{
+  "affectedPaths": [
+    ".github/workflows/build.yml"
+  ],
+  "category": "observability",
+  "controllerId": "ctrl-vm-17104-0a4fc1ea",
+  "createdAtUtc": "2026-07-01T20:23:26Z",
+  "details": "After reconciling the three abandoned stale claims (rows 21/22/25, dead\ncontrollers ctrl-vm-4024 / ctrl-vm-4026) back into the pool, the entire\nhighest-priority eligible tier (P0, 3 rows) is queue-\"CLEAN\" (no active\noverlaps, no unmet deps) yet none is safely advanceable by an autonomous,\nbuild-less controller:\n\n- r21 #669 \"Harden CI validation authority for workflow changes\" and\n  r25 #673 \"Harden Windows CI tool and vcpkg cache validation\" are\n  control-plane self-modification: their target files are the shared CI\n  merge-gate and controller governance themselves -- .github/workflows/build.yml,\n  AGENTS.md, scripts/poll_pr_checks.py, scripts/ci_change_classifier.py.\n  Every fleet controller and every in-flight worker PR (6 open at time of\n  writing) is gated by exactly these files. Rewriting them mid-run risks\n  breaking the CI gate for all concurrent PRs, and no single autonomous\n  controller can validate that blast radius.\n\n- r22 #670 \"Define and enforce the Python resource-plugin trust boundary\"\n  is native (src/core/CLoader.cpp + res/game.py sandbox). Its own validation\n  clause requires \"normal Nouraajd/plugin load tests\" to pass, but those are\n  red main-wide due to the unresolved resource_unit_tests plugin-load break\n  (previously recorded). A trust-boundary enforcement change cannot be\n  validated on a baseline where normal plugin loading already fails.\n\nNet: the queue is offering controllers their own control plane as P0\nimplementation work plus a security row gated on a pre-existing baseline\nbreak. The mechanical \"CLEAN\" shortlist flag does not capture either gate,\nso the auto-selection points controllers at structurally unclaimable work.\n",
+  "evidence": [
+    {
+      "context": "shortlist main 55626d0",
+      "highestPriority": "P0",
+      "staleClaims": 0,
+      "topEligible": 3
+    },
+    {
+      "gate": "control-plane self-modification",
+      "issue": "#669 Harden CI validation authority for workflow changes",
+      "row": 21,
+      "targetFiles": ".github/workflows/build.yml, AGENTS.md, scripts/ci_change_classifier.py, scripts/poll_pr_checks.py"
+    },
+    {
+      "gate": "control-plane / Windows-only CI infra, unvalidatable build-less",
+      "issue": "#673 Harden Windows CI tool and vcpkg cache validation",
+      "row": 25
+    },
+    {
+      "gate": "native CLoader.cpp + game.py; validation requires normal plugin-load tests which are red main-wide (resource_unit_tests break)",
+      "issue": "#670 Define and enforce the Python resource-plugin trust boundary",
+      "row": 22
+    },
+    {
+      "reclaimStaleDryRun": "none reclaimable",
+      "reconciliation": "rows 21/22/25 returned to pool via PRs #1236/#1257/#1258"
+    }
+  ],
+  "fingerprint": "p<n>-controlplane-selfmod-and-loader-gated-toptier",
+  "id": "20260701T202326Z-ctrl-vm-17104-0a4fc1ea-e40cfa19",
+  "impact": "Auto-selection points build-less controllers at structurally unadvanceable top-tier work; wasted claim/block cycles; P0 tier stalls until the baseline break is fixed or rows go to a privileged/supervised implementer",
+  "phase": "claim",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "medium",
+  "sourceCommit": "55626d0",
+  "suggestedImprovement": "Mark control-plane self-modification rows (build.yml/AGENTS.md/poller/classifier) and rows whose validation depends on a currently-red baseline as not-auto-selectable for autonomous controllers; route to a privileged/supervised lane; fix resource_unit_tests plugin-load break before #670",
+  "summary": "Top P0 tier is queue-CLEAN but unclaimable: 2 rows self-modify the shared CI gate/AGENTS.md, 1 is a native plugin trust-boundary gated on the main-wide resource_unit_tests break"
+}
