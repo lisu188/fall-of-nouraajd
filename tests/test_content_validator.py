@@ -3368,7 +3368,7 @@ def write_campaign_script(
                 from game import register
                 from game import trigger
 
-                import campaign
+                from game import campaign
 
                 {outcomes_line}
 
