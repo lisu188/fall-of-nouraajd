@@ -174,7 +174,16 @@ SERIAL_TEST_NAMES = {
     "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
     XVFB_GAMEPLAY_PARENT_TEST,
 }
-SERIAL_TEST_PREFIXES = ("McpServerTest.test_stdio_map_walkthrough_",)
+# The stdio map walkthroughs each spawn their own isolated mcp.py subprocess over
+# private stdin/stdout pipes (no shared ports, saves, or in-process state), so they
+# are safe to distribute across parallel shards. Forcing them into a single serial
+# shard instead made that shard the run's long pole: all of them ran sequentially
+# after every parallel shard had finished, and once the huge-map walkthroughs
+# (kadath/sunderedmarch 200x200, ninemarches 1000x1000) were added the serial shard
+# blew past its timeout and turned the whole gameplay gate red. Balancing them like
+# any other test lets the weight-aware packer spread the heavy maps across shards
+# and size each shard's timeout to its own load.
+SERIAL_TEST_PREFIXES = ()
 DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_multilevel": 25.0,
     "McpServerTest.test_stdio_map_walkthrough_nouraajd": 45.0,
@@ -182,9 +191,9 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
-    "McpServerTest.test_stdio_map_walkthrough_kadath": 30.0,
-    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 30.0,
-    "McpServerTest.test_stdio_map_walkthrough_ninemarches": 90.0,
+    "McpServerTest.test_stdio_map_walkthrough_kadath": 70.0,
+    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 70.0,
+    "McpServerTest.test_stdio_map_walkthrough_ninemarches": 200.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -193,9 +202,9 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_siege": 15.0,
     "GameTest.test_map_walkthrough_test": 10.0,
     "GameTest.test_map_walkthrough_vhulmarn": 15.0,
-    "GameTest.test_map_walkthrough_kadath": 15.0,
-    "GameTest.test_map_walkthrough_sunderedmarch": 15.0,
-    "GameTest.test_map_walkthrough_ninemarches": 45.0,
+    "GameTest.test_map_walkthrough_kadath": 35.0,
+    "GameTest.test_map_walkthrough_sunderedmarch": 35.0,
+    "GameTest.test_map_walkthrough_ninemarches": 120.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -949,6 +958,15 @@ class ProgressTextTestResult(unittest.TextTestResult):
     def _record_duration(self, test, duration):
         if duration is not None:
             self.test_durations[self._subprocess_name(test)] = duration
+            # Persist after every test when running as a shard worker so a shard that
+            # is later killed on timeout still leaves behind real durations for the
+            # tests it did finish. Timings were previously written only once, after
+            # the whole worker completed (ProgressTextTestRunner.run), so a worker
+            # killed mid-run recorded nothing -- perpetuating the cold-cache
+            # under-estimate that caused the timeout in the first place. Writing
+            # incrementally lets the cached timings self-heal after a single run.
+            if GAME_TEST_WORKER:
+                write_test_timings(TEST_TIMINGS_FILE, self.test_durations)
 
     def _write_progress(self, test, status, duration=None, detail=None):
         total = self.total_tests or "?"
@@ -19439,6 +19457,43 @@ class TestRunnerSuiteTest(unittest.TestCase):
             ],
             filter_test_names_by_suite(sample_names, "coverage-safe"),
         )
+
+    def test_stdio_map_walkthroughs_are_parallelizable(self):
+        # Each stdio walkthrough runs in its own isolated mcp.py subprocess, so it must
+        # be balanced across parallel shards rather than pinned to the single serial
+        # shard. Pinning them made that shard the run's long pole and it timed out once
+        # the huge maps were added, turning the gameplay gate red.
+        for map_name in McpServerTest.MCP_WALKTHROUGHS:
+            test_name = f"McpServerTest.test_stdio_map_walkthrough_{map_name}"
+            self.assertFalse(
+                is_serial_test_name(test_name),
+                f"{test_name} should be parallelizable, not forced onto the serial shard",
+            )
+        # The genuinely order-sensitive save-directory tests must stay serial.
+        self.assertTrue(
+            is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty")
+        )
+
+    def test_shard_balancer_spreads_huge_map_walkthroughs(self):
+        # With enough jobs the weight-aware packer must isolate the heavy maps onto
+        # separate shards so no single shard has to run more than one huge-map
+        # walkthrough back-to-back (which is what previously blew the shard timeout).
+        huge_maps = {
+            "McpServerTest.test_stdio_map_walkthrough_ninemarches",
+            "McpServerTest.test_stdio_map_walkthrough_kadath",
+            "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
+        }
+        stdio_walkthroughs = [
+            f"McpServerTest.test_stdio_map_walkthrough_{map_name}"
+            for map_name in McpServerTest.MCP_WALKTHROUGHS
+        ]
+        groups = shard_test_names(stdio_walkthroughs, jobs=4, timings=DEFAULT_TEST_DURATIONS)
+        for group in groups:
+            self.assertLessEqual(
+                len(huge_maps.intersection(group)),
+                1,
+                f"shard {group} bundles multiple huge-map walkthroughs",
+            )
 
     def test_suite_commands_are_documented_and_used_by_automation(self):
         build_workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
