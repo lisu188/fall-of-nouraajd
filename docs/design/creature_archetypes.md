@@ -24,17 +24,18 @@ so composed stats and actions equal the pre-archetype legacy result.
 | `OctoBogz` | `octoBogzRace` | `bruteClass` | Assigned |
 | `Pritz` | `pritzRace` | `bruteClass` | Assigned |
 | `PritzMage` | `pritzRace` | `mageClass` | Assigned |
-| `GoblinThief` | `goblinRace` | (deferred) | Race only |
+| `GoblinThief` | `goblinRace` | `thiefClass` | Assigned |
 | `Cultist` | `humanRace` | (deferred) | Race only (CRA-1 resolved) |
 | `CultLeader` | `humanRace` | (deferred) | Race only (CRA-1 resolved) |
 
 Notes:
 
-- **`GoblinThief` class deferred**: the taxonomy proposes `thiefClass` (agility),
-  but `GoblinThief`'s own `baseStats.mainStat` is `strength`, so a
-  `mainStat: agility` class would change its composed main stat. That is a
-  deliberate rebalance decision, not a baseline-preserving identity change, so
-  only the race is assigned for now.
+- **`GoblinThief` → `thiefClass`**: the taxonomy's rogue role. Although the
+  class selects `mainStat: agility` over `GoblinThief`'s own `strength`, this is
+  numerically baseline-preserving *for this creature*: its `agility` and
+  `strength` are equal at base (5 = 5) and in `levelStats` (2 = 2), and it wears
+  no equipment, so `getMainValue()` returns the identical value under either main
+  stat. Composed stats/actions therefore equal the legacy result.
 - **`Cultist`/`CultLeader` race resolved as `humanRace`**: CRA-1 is resolved in
   favor of the human-faction interpretation — "cult" is an affiliation, not a
   biological race, and every use of the `Cultist` template (hostile cultists and

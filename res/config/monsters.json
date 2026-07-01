@@ -507,6 +507,9 @@
       "race": {
         "ref": "goblinRace"
       },
+      "creatureClass": {
+        "ref": "thiefClass"
+      },
       "sw": 1
     }
   },

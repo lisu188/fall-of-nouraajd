@@ -104,5 +104,11 @@
         }
       }
     }
+  },
+  "thiefClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "agility"
+    }
   }
 }
