@@ -1359,8 +1359,10 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
     });
 }
 
+bool CPluginLoader::isTrustedPluginPath(const std::string &path) { return is_allowed_python_plugin_path(path); }
+
 bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path) {
-    if (!is_allowed_python_plugin_path(path)) {
+    if (!isTrustedPluginPath(path)) {
         vstd::logger::warning("Rejected Python plugin outside trusted resource plugin paths:", path);
         return false;
     }

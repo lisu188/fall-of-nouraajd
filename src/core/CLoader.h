@@ -87,6 +87,12 @@ class CGameLoader {
 
 class CPluginLoader {
   public:
+    // Returns whether a Python plugin path is inside the trusted resource plugin roots (under
+    // plugins/ or a map's script.py). This is the trust-boundary decision loadPlugin makes before
+    // executing any plugin code; it is exposed so the boundary can be tested without a full pybind
+    // runtime (the game_core unit-test binary has no _game bindings to execute plugins with).
+    static bool isTrustedPluginPath(const std::string &path);
+
     static bool loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path);
 
     static bool loadCppPlugin(const std::shared_ptr<CGame> &game, const std::string &type);
