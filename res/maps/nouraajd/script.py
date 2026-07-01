@@ -480,7 +480,7 @@ def load(self, context):
             return "Recover the holy relic from the catacombs and return it to Father Beren."
 
         def getReward(self):
-            return "Unlocks stronger alchemy recipes."
+            return "Unlocks greater potion brewing at the alchemy table."
 
         def getHint(self):
             return "The catacombs hide the relic Beren needs."
