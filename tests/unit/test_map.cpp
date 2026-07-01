@@ -2199,6 +2199,47 @@ void test_loader_invalid_race_leaves_active_map_unchanged() {
     expect_true(game->getMap()->getPlayer() != nullptr, "an empty raceId start should attach a player");
 }
 
+void test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_ids() {
+    // An archetype creature: the concrete spawn/template id lives on the creature
+    // itself, while the race/class ids come from the referenced archetype
+    // definitions. objectRef must record all three distinctly.
+    auto archetype_creature = std::make_shared<CCreature>();
+    archetype_creature->setTypeId("goblinRaider");
+    auto race = std::make_shared<CCreatureRace>();
+    race->setTypeId("goblin");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setTypeId("raider");
+    archetype_creature->setRace(race);
+    archetype_creature->setCreatureClass(klass);
+
+    json archetype_ref = CPlaytestTrace::objectRef(archetype_creature);
+    expect_true(archetype_ref.contains("typeId") && archetype_ref["typeId"].get<std::string>() == "goblinRaider",
+                "archetype creature trace should keep the concrete spawn/template id in typeId");
+    expect_true(archetype_ref.contains("id") && archetype_ref["id"].get<std::string>() == "goblinRaider",
+                "archetype creature trace should keep the concrete spawn id in id");
+    expect_true(archetype_ref.contains("raceId") && archetype_ref["raceId"].get<std::string>() == "goblin",
+                "archetype creature trace should record the race archetype id separately");
+    expect_true(archetype_ref.contains("classId") && archetype_ref["classId"].get<std::string>() == "raider",
+                "archetype creature trace should record the class archetype id separately");
+    expect_true(archetype_ref["raceId"].get<std::string>() != archetype_ref["typeId"].get<std::string>(),
+                "archetype race id must be distinct from the concrete spawn id");
+    expect_true(archetype_ref["classId"].get<std::string>() != archetype_ref["typeId"].get<std::string>(),
+                "archetype class id must be distinct from the concrete spawn id");
+
+    // A legacy (non-archetype) creature carries no race/class definition, so the
+    // additive fields must stay present but empty for backward compatibility.
+    auto legacy_creature = std::make_shared<CCreature>();
+    legacy_creature->setTypeId("wildBoar");
+
+    json legacy_ref = CPlaytestTrace::objectRef(legacy_creature);
+    expect_true(legacy_ref.contains("typeId") && legacy_ref["typeId"].get<std::string>() == "wildBoar",
+                "legacy creature trace should keep the concrete spawn/template id in typeId");
+    expect_true(legacy_ref.contains("raceId") && legacy_ref["raceId"].get<std::string>().empty(),
+                "legacy creature trace should leave the race id empty when no archetype is present");
+    expect_true(legacy_ref.contains("classId") && legacy_ref["classId"].get<std::string>().empty(),
+                "legacy creature trace should leave the class id empty when no archetype is present");
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
 
@@ -2245,5 +2286,6 @@ int main() {
 
     test_post_combat_player_path_stops_after_encounter();
     test_post_combat_player_suppresses_destination_visit_events();
+    test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_ids();
     return finish_tests();
 }
