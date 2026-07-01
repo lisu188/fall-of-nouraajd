@@ -1,0 +1,21 @@
+{
+  "human": {
+    "profileKind": "playerRace",
+    "label": "Human",
+    "baseStatContribution": {
+      "strength": 5,
+      "agility": 5,
+      "stamina": 5,
+      "intelligence": 5,
+      "hit": 75,
+      "crit": 10,
+      "dmgMin": 10,
+      "dmgMax": 12
+    },
+    "traits": ["humanoid"],
+    "resistances": {},
+    "visual": {
+      "animation": "images/players/warrior"
+    }
+  }
+}

@@ -177,6 +177,86 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertIssueContains(issues, "assets[1].path", "duplicate asset declaration: shared.id")
 
+    def _valid_class_profile(self):
+        return {
+            "warrior": {
+                "profileKind": "playerClass",
+                "label": "Warrior",
+                "actions": ["Attack"],
+                "levelling": {"1": "Strike", "2": "Barrier"},
+                "statContribution": {"strength": 3, "stamina": 2},
+                "startingEquipment": {"policy": "fixed", "slots": {"0": "Sword"}},
+            }
+        }
+
+    def _valid_race_profile(self):
+        return {
+            "human": {
+                "profileKind": "playerRace",
+                "label": "Human",
+                "baseStatContribution": {"strength": 5, "agility": 5},
+                "traits": ["humanoid"],
+                "resistances": {},
+                "visual": {"animation": "images/players/warrior"},
+            }
+        }
+
+    def test_class_and_race_profiles_valid_pass_validation(self):
+        root = self.make_fixture()
+        write_json(root / "res/config/classes.json", self._valid_class_profile())
+        write_json(root / "res/config/races.json", self._valid_race_profile())
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_class_profile_missing_and_mistyped_fields_are_flagged(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/classes.json",
+            {
+                "warrior": {
+                    "profileKind": "playerRace",
+                    "label": "",
+                    "actions": ["Attack", ""],
+                    "statContribution": {"strength": "high"},
+                    "startingEquipment": {"policy": "bogus"},
+                    "extra": 1,
+                }
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/config/classes.json", "warrior.profileKind", 'expected "playerClass"')
+        self.assertIssueContains(issues, "warrior.label", "expected non-empty string")
+        self.assertIssueContains(issues, "warrior.actions[1]", "expected non-empty string")
+        self.assertIssueContains(issues, "warrior.levelling", "expected object")
+        self.assertIssueContains(issues, "warrior.statContribution.strength", "expected integer")
+        self.assertIssueContains(issues, "warrior.startingEquipment.policy", "expected one of")
+        self.assertIssueContains(issues, "warrior", "unsupported profile keys: extra")
+
+    def test_race_profile_invalid_types_are_flagged(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/races.json",
+            {
+                "human": {
+                    "profileKind": "playerRace",
+                    "label": "Human",
+                    "baseStatContribution": {"strength": 1.5},
+                    "traits": ["ok", 2],
+                    "resistances": {"fire": True},
+                }
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/config/races.json", "human.baseStatContribution.strength", "expected integer")
+        self.assertIssueContains(issues, "human.traits[1]", "expected non-empty string")
+        self.assertIssueContains(issues, "human.resistances.fire", "expected integer")
+
     def test_unreachable_dialog_state_reports_dialog_and_state(self):
         root = self.make_fixture()
         dialog_path = root / "res/maps/broken/dialog.json"

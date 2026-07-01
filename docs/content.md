@@ -67,3 +67,41 @@ within it. The validator rejects a declaration when its `path`:
 
 A `path` may not be declared more than once within a single map's `assets`
 array.
+
+## Player class and race profiles (`res/config/classes.json`, `res/config/races.json`)
+
+Player **class** and **race** profiles are data-only config entries that describe
+the composable pieces of a player build. They are intentionally *not* engine
+object configs: each profile omits `class`/`ref`, so the engine's config loader
+skips them (they are read by higher-level class/race code, introduced
+separately). This keeps existing player templates in `res/config/monsters.json`
+working unchanged while the profiles are staged and validated.
+
+Both files are top-level JSON objects keyed by a profile id.
+
+### Class profile (`classes.json`)
+
+| Field              | Required | Type | Description |
+| ------------------ | -------- | ---- | ----------- |
+| `profileKind`      | yes      | string `"playerClass"` | Marks the entry as a class profile. |
+| `label`            | yes      | non-empty string | Display name. |
+| `actions`          | yes      | array of non-empty strings | Base action ids granted by the class. |
+| `levelling`        | yes      | object (level string → action id string) | Actions unlocked per level. |
+| `statContribution` | yes      | object (stat name → integer) | Per-level stat contribution of the class. |
+| `startingEquipment`| yes      | object | Starting equipment policy — see below. |
+
+`startingEquipment` requires a `policy` of `"fixed"` or `"none"`; when `"fixed"`
+it may carry a `slots` object mapping slot ids to item ids.
+
+### Race profile (`races.json`)
+
+| Field                  | Required | Type | Description |
+| ---------------------- | -------- | ---- | ----------- |
+| `profileKind`          | yes      | string `"playerRace"` | Marks the entry as a race profile. |
+| `label`                | yes      | non-empty string | Display name. |
+| `baseStatContribution` | yes      | object (stat name → integer) | Base stat contribution of the race. |
+| `traits`               | no       | array of non-empty strings | Race traits (distinct from canonical gameplay tags). |
+| `resistances`          | no       | object (name → integer) | Damage/effect resistances. |
+| `visual`               | no       | object | Optional visual variation (e.g. an `animation` root). |
+
+Unknown top-level keys in a profile are reported so typos are caught.
