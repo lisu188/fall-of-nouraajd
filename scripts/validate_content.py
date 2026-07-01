@@ -41,6 +41,24 @@ SCRIPT_REF_CALLS = {"createObject", "addObjectByName"}
 SCRIPT_ITEM_CALLS = {"addItem"}
 SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_grant_quest", "grant_quest"}
 SCRIPT_MAP_CALLS = {"changeMap"}
+# Campaign scenario completion reporting (res/campaign.py). Map scripts declare
+# the outcomes they can report in a literal CAMPAIGN_OUTCOMES tuple/list and
+# report one via campaign.complete_scenario(game, outcome, fallback_map=...);
+# campaign manifests under res/campaigns/ route outcomes to follow-up scenarios.
+SCRIPT_CAMPAIGN_COMPLETE_CALLS = {"complete_scenario"}
+SCRIPT_CAMPAIGN_OUTCOMES_CONSTANT = "CAMPAIGN_OUTCOMES"
+SCRIPT_CAMPAIGN_FALLBACK_KEYWORD = "fallback_map"
+CAMPAIGNS_DIR_NAME = "campaigns"
+CAMPAIGN_MANIFEST_NAME = "campaign.json"
+CAMPAIGN_FORMAT = "fall-of-nouraajd-campaign"
+CAMPAIGN_SCHEMA_VERSION = 1
+CAMPAIGN_MANIFEST_REQUIRED_KEYS = {"format", "schemaVersion", "campaignId", "title", "start", "scenarios"}
+CAMPAIGN_MANIFEST_KEYS = CAMPAIGN_MANIFEST_REQUIRED_KEYS | {"description", "completionText"}
+CAMPAIGN_SCENARIO_REQUIRED_KEYS = {"map", "title", "briefing", "next"}
+CAMPAIGN_SCENARIO_KEYS = CAMPAIGN_SCENARIO_REQUIRED_KEYS | {"epilogue", "carryover"}
+CAMPAIGN_CARRYOVER_GOLD_MAX = "gold_max"
+CAMPAIGN_CARRYOVER_ITEM_KEYS = ("items_allow", "items_deny")
+CAMPAIGN_CARRYOVER_KEYS = {CAMPAIGN_CARRYOVER_GOLD_MAX, *CAMPAIGN_CARRYOVER_ITEM_KEYS}
 SCRIPT_OBJECT_NAME_CALLS = {"getObjectByName", "removeObjectByName"}
 SCRIPT_PROPERTY_READ_CALLS = {"getBoolProperty", "getNumericProperty", "getStringProperty"}
 SCRIPT_PROPERTY_WRITE_CALLS = {"setBoolProperty", "setNumericProperty", "setStringProperty", "incProperty"}
@@ -684,6 +702,13 @@ class ScriptInfo:
     named_objects: set[str] = field(default_factory=set)
     spawned_creatures: list[SpawnedCreature] = field(default_factory=list)
     class_checks: list[ScriptClassCheck] = field(default_factory=list)
+    # None = the script declares no CAMPAIGN_OUTCOMES constant at all.
+    campaign_outcomes: set[str] | None = None
+    campaign_outcome_invalid_lines: list[int] = field(default_factory=list)
+    campaign_completions: list[ScriptCall] = field(default_factory=list)
+    campaign_completion_invalid_lines: list[int] = field(default_factory=list)
+    campaign_fallbacks: list[ScriptCall] = field(default_factory=list)
+    campaign_fallback_invalid_lines: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -696,6 +721,14 @@ class MapContext:
     config_files: dict[Path, Any]
     script_info: ScriptInfo | None
     placed_names: set[str] = field(default_factory=set)
+
+
+@dataclass
+class CampaignContext:
+    name: str
+    directory: Path
+    manifest_path: Path
+    data: Any
 
 
 class ScriptAnalyzer(ast.NodeVisitor):
@@ -742,6 +775,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign) -> Any:
         self._record_class_constant_assignment(node)
+        self._record_campaign_outcomes_assignment(node)
         self._record_local_assignment(node.targets, node.value)
         self._record_spawn_assignment(node.targets, node.value)
         self.generic_visit(node)
@@ -749,6 +783,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
     def visit_AnnAssign(self, node: ast.AnnAssign) -> Any:
         if node.value is not None:
             self._record_class_constant_assignment(node)
+            self._record_campaign_outcomes_assignment(node)
             self._record_local_assignment([node.target], node.value)
             self._record_spawn_assignment([node.target], node.value)
         self.generic_visit(node)
@@ -762,6 +797,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
             self._record_runtime_spawn_name(name, node)
             self._record_quest_state_call(name, node)
             self._record_property_access(name, node)
+            self._record_campaign_completion(name, node)
         self.generic_visit(node)
 
     def visit_Compare(self, node: ast.Compare) -> Any:
@@ -882,6 +918,55 @@ class ScriptAnalyzer(ast.NodeVisitor):
                 self._record_quest_defaults(value)
             elif name == "LEGACY_BOOL_FLAGS":
                 self._record_legacy_bool_flags(value, getattr(node, "lineno", 0))
+
+    def _record_campaign_outcomes_assignment(self, node: ast.Assign | ast.AnnAssign) -> None:
+        """Record CAMPAIGN_OUTCOMES declarations at any scope.
+
+        Map scripts declare the constant inside ``load()`` where it is
+        statically parseable, exactly like the quest-state constants."""
+        value = node.value
+        if value is None:
+            return
+        for target in assignment_targets(node):
+            if assigned_name(target) != SCRIPT_CAMPAIGN_OUTCOMES_CONSTANT:
+                continue
+            outcomes = literal_string_sequence(value)
+            if outcomes is None:
+                self.info.campaign_outcome_invalid_lines.append(node.lineno)
+                continue
+            existing = self.info.campaign_outcomes or set()
+            self.info.campaign_outcomes = existing | set(outcomes)
+
+    def _record_campaign_completion(self, name: str, node: ast.Call) -> None:
+        """Record campaign.complete_scenario(game, outcome, fallback_map=...) calls.
+
+        The outcome is the first positional string literal (the first argument
+        is the game object); fallback_map keeps the standalone-play map change
+        statically checkable the way changeMap literals are."""
+        if name not in SCRIPT_CAMPAIGN_COMPLETE_CALLS:
+            return
+        outcome = next((literal for arg in node.args if (literal := string_literal(arg)) is not None), None)
+        if outcome is None:
+            self.info.campaign_completion_invalid_lines.append(node.lineno)
+        else:
+            self.info.campaign_completions.append(
+                ScriptCall(name=name, value=outcome, lineno=node.lineno, context=self._context)
+            )
+        for keyword in node.keywords:
+            if keyword.arg != SCRIPT_CAMPAIGN_FALLBACK_KEYWORD:
+                continue
+            fallback = string_literal(keyword.value)
+            if fallback is not None:
+                self.info.campaign_fallbacks.append(
+                    ScriptCall(
+                        name=SCRIPT_CAMPAIGN_FALLBACK_KEYWORD,
+                        value=fallback,
+                        lineno=node.lineno,
+                        context=self._context,
+                    )
+                )
+            elif not (isinstance(keyword.value, ast.Constant) and keyword.value.value is None):
+                self.info.campaign_fallback_invalid_lines.append(node.lineno)
 
     def _record_local_assignment(self, targets: list[ast.expr], value: ast.AST) -> None:
         if not self._state_alias_stack or not self._string_values_stack:
@@ -1182,6 +1267,20 @@ def get_state_key(node: ast.AST) -> str | None:
     return None
 
 
+def literal_string_sequence(node: ast.AST) -> list[str] | None:
+    """The string elements of a literal tuple/list, or None when any element
+    (or the node itself) is not a plain string literal."""
+    if not isinstance(node, (ast.Tuple, ast.List)):
+        return None
+    values = []
+    for element in node.elts:
+        literal = string_literal(element)
+        if literal is None:
+            return None
+        values.append(literal)
+    return values
+
+
 def literal_string_dict(node: ast.AST) -> dict[str, str]:
     if not isinstance(node, ast.Dict):
         return {}
@@ -1259,6 +1358,7 @@ class ContentValidator:
         self.global_entries: dict[str, ConfigEntry] = {}
         self.global_files: dict[Path, Any] = {}
         self.map_contexts: list[MapContext] = []
+        self.campaign_contexts: list[CampaignContext] = []
         self.plugin_info: list[ScriptInfo] = []
         self.fallback_registered_classes: set[str] = set(BUILTIN_CLASSES)
         self.metadata_declared_classes: set[str] = set()
@@ -1290,9 +1390,11 @@ class ContentValidator:
         self._load_type_registration_exclusions()
         self._load_global_configs()
         self._load_maps()
+        self._load_campaigns()
         self._validate_global_configs()
         for context in self.map_contexts:
             self._validate_map_context(context)
+        self._validate_campaigns()
         return sorted(self.issues, key=lambda issue: (issue.path, issue.location, issue.message))
 
     def inventory_creature_overrides(self) -> list[CreatureOverride]:
@@ -1625,6 +1727,19 @@ class ContentValidator:
                 )
             )
 
+    def _load_campaigns(self) -> None:
+        campaigns_dir = self.repo_root / "res" / CAMPAIGNS_DIR_NAME
+        if not campaigns_dir.is_dir():
+            return
+        for directory in sorted(path for path in campaigns_dir.glob("*") if path.is_dir()):
+            manifest_path = directory / CAMPAIGN_MANIFEST_NAME
+            data = self._load_json(manifest_path)
+            if data is None:
+                continue
+            self.campaign_contexts.append(
+                CampaignContext(name=directory.name, directory=directory, manifest_path=manifest_path, data=data)
+            )
+
     def _merge_python_class_bases(self, info: ScriptInfo) -> None:
         for class_name, base_names in info.class_bases.items():
             self.python_class_bases.setdefault(class_name, set()).update(base_names)
@@ -1779,6 +1894,248 @@ class ContentValidator:
         self._validate_script_property_hygiene(context)
         self._validate_quest_state_transitions(context)
         self._validate_amulet_quest_actor(context, visible)
+        self._validate_campaign_script_usage(context)
+
+    def _validate_campaign_script_usage(self, context: MapContext) -> None:
+        """Check a map script's campaign declarations and completion reports.
+
+        Every complete_scenario outcome literal must be a declared
+        CAMPAIGN_OUTCOMES member, and every fallback_map literal must resolve
+        to an existing map (mirroring the changeMap target check it replaces).
+        """
+        info = context.script_info
+        if not info:
+            return
+        map_names = {map_context.name for map_context in self.map_contexts}
+        for lineno in info.campaign_outcome_invalid_lines:
+            self._issue(
+                info.path,
+                f"line {lineno}",
+                f"{SCRIPT_CAMPAIGN_OUTCOMES_CONSTANT} must be a literal tuple or list of outcome strings",
+            )
+        for lineno in info.campaign_completion_invalid_lines:
+            self._issue(info.path, f"line {lineno}", "complete_scenario outcome must be a string literal")
+        for lineno in info.campaign_fallback_invalid_lines:
+            self._issue(
+                info.path,
+                f"line {lineno}",
+                f"complete_scenario {SCRIPT_CAMPAIGN_FALLBACK_KEYWORD} must be a string literal or None",
+            )
+        for call in info.campaign_completions:
+            if info.campaign_outcomes is None:
+                self._issue(
+                    info.path,
+                    call.location,
+                    f"complete_scenario is used but the script declares no {SCRIPT_CAMPAIGN_OUTCOMES_CONSTANT}",
+                )
+            elif call.value not in info.campaign_outcomes:
+                self._issue(
+                    info.path,
+                    call.location,
+                    f'outcome "{call.value}" is not declared in {SCRIPT_CAMPAIGN_OUTCOMES_CONSTANT}',
+                )
+        for call in info.campaign_fallbacks:
+            if call.value not in map_names:
+                expected = f"res/maps/{call.value}/map.json"
+                self._issue(info.path, call.location, f"map transition target is missing {expected}")
+
+    def _validate_campaigns(self) -> None:
+        map_contexts_by_name = {map_context.name: map_context for map_context in self.map_contexts}
+        for context in self.campaign_contexts:
+            self._validate_campaign_manifest(context, map_contexts_by_name)
+
+    def _validate_campaign_manifest(
+        self, context: CampaignContext, map_contexts_by_name: dict[str, MapContext]
+    ) -> None:
+        path = context.manifest_path
+        data = context.data
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        for key in sorted(CAMPAIGN_MANIFEST_REQUIRED_KEYS - set(data)):
+            self._issue(path, "$", f'missing required key "{key}"')
+        for key in sorted(set(data) - CAMPAIGN_MANIFEST_KEYS):
+            self._issue(path, "$", f'unknown key "{key}"')
+        if "format" in data and data["format"] != CAMPAIGN_FORMAT:
+            self._issue(path, "$.format", f'expected "{CAMPAIGN_FORMAT}"')
+        if "schemaVersion" in data and data["schemaVersion"] != CAMPAIGN_SCHEMA_VERSION:
+            self._issue(path, "$.schemaVersion", f"expected {CAMPAIGN_SCHEMA_VERSION}")
+        if "campaignId" in data and data["campaignId"] != context.name:
+            self._issue(path, "$.campaignId", f'must match its directory name "{context.name}"')
+        for key in ("title", "description", "completionText"):
+            if key in data and not (isinstance(data[key], str) and data[key]):
+                self._issue(path, f"$.{key}", "must be a non-empty string")
+        scenarios = data.get("scenarios")
+        if "scenarios" in data and not (isinstance(scenarios, dict) and scenarios):
+            self._issue(path, "$.scenarios", "expected a non-empty object of scenarios")
+            return
+        if not isinstance(scenarios, dict):
+            return
+        start = data.get("start")
+        if "start" in data and (not isinstance(start, str) or start not in scenarios):
+            self._issue(path, "$.start", "must name a scenario in this campaign")
+            start = None
+        for scenario_id, scenario in scenarios.items():
+            self._validate_campaign_scenario(path, scenario_id, scenario, scenarios, map_contexts_by_name)
+        if isinstance(start, str) and start in scenarios:
+            self._validate_campaign_graph(path, start, scenarios)
+
+    def _validate_campaign_scenario(
+        self,
+        path: Path,
+        scenario_id: str,
+        scenario: Any,
+        scenarios: dict[str, Any],
+        map_contexts_by_name: dict[str, MapContext],
+    ) -> None:
+        location = f"$.scenarios.{scenario_id}"
+        if not isinstance(scenario, dict):
+            self._issue(path, location, "expected a scenario object")
+            return
+        for key in sorted(CAMPAIGN_SCENARIO_REQUIRED_KEYS - set(scenario)):
+            self._issue(path, location, f'missing required key "{key}"')
+        for key in sorted(set(scenario) - CAMPAIGN_SCENARIO_KEYS):
+            self._issue(path, location, f'unknown key "{key}"')
+        for key in ("map", "title", "briefing", "epilogue"):
+            if key in scenario and not (isinstance(scenario[key], str) and scenario[key]):
+                self._issue(path, f"{location}.{key}", "must be a non-empty string")
+        map_name = scenario.get("map")
+        map_context = map_contexts_by_name.get(map_name) if isinstance(map_name, str) else None
+        if isinstance(map_name, str) and map_name and map_context is None:
+            self._issue(path, f"{location}.map", f"map transition target is missing res/maps/{map_name}/map.json")
+        routes = scenario.get("next")
+        if "next" in scenario and not isinstance(routes, dict):
+            self._issue(path, f"{location}.next", "expected an object mapping outcome to scenario id")
+            routes = None
+        if isinstance(routes, dict):
+            for outcome, target in routes.items():
+                if not isinstance(target, str) or target not in scenarios:
+                    self._issue(path, f"{location}.next.{outcome}", "must name a scenario in this campaign")
+            self._validate_campaign_scenario_outcomes(path, location, map_name, map_context, routes)
+        self._validate_campaign_carryover(path, location, scenario.get("carryover"))
+
+    def _validate_campaign_scenario_outcomes(
+        self, path: Path, location: str, map_name: Any, map_context: MapContext | None, routes: dict[str, Any]
+    ) -> None:
+        """Cross-check manifest routing against the map script's declarations.
+
+        A non-terminal scenario must route only outcomes its map declares, and
+        must route *every* outcome the map's script can report — an unrouted
+        report would raise CampaignError at runtime. Terminal scenarios (empty
+        ``next``) complete the campaign on any reported outcome.
+        """
+        if map_context is None or not routes:
+            return
+        script_info = map_context.script_info
+        declared = script_info.campaign_outcomes if script_info else None
+        if declared is None:
+            self._issue(
+                path,
+                f"{location}.next",
+                f'map "{map_name}" script declares no {SCRIPT_CAMPAIGN_OUTCOMES_CONSTANT}'
+                " but this scenario routes outcomes",
+            )
+            return
+        for outcome in sorted(set(routes) - declared):
+            self._issue(
+                path,
+                f"{location}.next.{outcome}",
+                f"outcome is not declared in res/maps/{map_name}/script.py {SCRIPT_CAMPAIGN_OUTCOMES_CONSTANT}",
+            )
+        if script_info:
+            for call in script_info.campaign_completions:
+                if call.value not in routes:
+                    self._issue(
+                        path,
+                        f"{location}.next",
+                        f'map "{map_name}" can report outcome "{call.value}" ({call.location})'
+                        " which this non-terminal scenario does not route",
+                    )
+
+    def _validate_campaign_carryover(self, path: Path, location: str, carryover: Any) -> None:
+        if carryover is None:
+            return
+        if not isinstance(carryover, dict):
+            self._issue(path, f"{location}.carryover", "expected an object")
+            return
+        for key in sorted(set(carryover) - CAMPAIGN_CARRYOVER_KEYS):
+            self._issue(path, f"{location}.carryover", f'unknown carryover key "{key}"')
+        if all(key in carryover for key in CAMPAIGN_CARRYOVER_ITEM_KEYS):
+            allow, deny = CAMPAIGN_CARRYOVER_ITEM_KEYS
+            self._issue(path, f"{location}.carryover", f'may use "{allow}" or "{deny}", not both')
+        if CAMPAIGN_CARRYOVER_GOLD_MAX in carryover:
+            gold_max = carryover[CAMPAIGN_CARRYOVER_GOLD_MAX]
+            if not isinstance(gold_max, int) or isinstance(gold_max, bool) or gold_max < 0:
+                self._issue(
+                    path,
+                    f"{location}.carryover.{CAMPAIGN_CARRYOVER_GOLD_MAX}",
+                    "must be a non-negative integer",
+                )
+        for key in CAMPAIGN_CARRYOVER_ITEM_KEYS:
+            if key not in carryover:
+                continue
+            items = carryover[key]
+            if not isinstance(items, list) or not all(isinstance(item, str) and item for item in items):
+                self._issue(path, f"{location}.carryover.{key}", "must be a list of non-empty item ids")
+                continue
+            for item in items:
+                if item not in self.global_entries:
+                    self._issue(path, f"{location}.carryover.{key}", f'unknown item ref "{item}"')
+
+    def _validate_campaign_graph(self, path: Path, start: str, scenarios: dict[str, Any]) -> None:
+        """Reachability, acyclicity, and terminal checks for the scenario DAG.
+
+        Campaign transitions reload destination maps fresh (forward-only), so
+        the graph must be acyclic and every scenario reachable from ``start``,
+        with at least one reachable terminal scenario ending the campaign.
+        """
+
+        def edges(scenario_id: str) -> list[str]:
+            scenario = scenarios.get(scenario_id)
+            if not isinstance(scenario, dict):
+                return []
+            routes = scenario.get("next")
+            if not isinstance(routes, dict):
+                return []
+            return sorted({target for target in routes.values() if isinstance(target, str) and target in scenarios})
+
+        reachable: set[str] = set()
+        frontier = [start]
+        while frontier:
+            scenario_id = frontier.pop()
+            if scenario_id in reachable:
+                continue
+            reachable.add(scenario_id)
+            frontier.extend(edges(scenario_id))
+        for scenario_id in sorted(set(scenarios) - reachable):
+            self._issue(path, f"$.scenarios.{scenario_id}", 'unreachable from the campaign "start" scenario')
+
+        in_progress: set[str] = set()
+        finished: set[str] = set()
+        cycle_reported = False
+
+        def visit(scenario_id: str) -> None:
+            nonlocal cycle_reported
+            if scenario_id in finished or cycle_reported:
+                return
+            if scenario_id in in_progress:
+                self._issue(path, "$.scenarios", "campaign scenario graph must be acyclic (transitions are forward-only)")
+                cycle_reported = True
+                return
+            in_progress.add(scenario_id)
+            for target in edges(scenario_id):
+                visit(target)
+            in_progress.discard(scenario_id)
+            finished.add(scenario_id)
+
+        visit(start)
+
+        def is_terminal(scenario_id: str) -> bool:
+            scenario = scenarios.get(scenario_id)
+            return isinstance(scenario, dict) and scenario.get("next") == {}
+
+        if not cycle_reported and not any(is_terminal(scenario_id) for scenario_id in reachable):
+            self._issue(path, "$.scenarios", 'no reachable terminal scenario (a scenario with an empty "next")')
 
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)

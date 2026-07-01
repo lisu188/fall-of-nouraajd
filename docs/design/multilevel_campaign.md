@@ -1,11 +1,33 @@
 # Multilevel Campaign (Heroes III-style) — Design
 
-Status: **Design proposal.** No engine or content changes ship with this doc.
-It specifies a campaign system — an ordered, optionally branching sequence of
-scenario maps with hero carryover and briefings, in the spirit of Heroes of
-Might & Magic III campaigns — grounded in the mechanisms this engine already
-has. Every claim about current behavior below was verified against the code at
-the cited locations.
+Status: **Phase 1 implemented.** This doc specifies a campaign system — an
+ordered, optionally branching sequence of scenario maps with hero carryover
+and briefings, in the spirit of Heroes of Might & Magic III campaigns —
+grounded in the mechanisms this engine already has. Every claim about engine
+behavior below was verified against the code at the cited locations.
+
+Implementation notes (deltas from the proposal below):
+
+- Driver: `res/campaign.py`; shipped manifest:
+  `res/campaigns/fallOfNouraajd/campaign.json`; start menu gained a
+  `CAMPAIGN` option (`res/game.py new()`).
+- The player-side completion property is named `campaign_finished` (not
+  `campaign_completed` as sketched below) to stay distinct from the
+  pre-existing `campaign_completed` *map* bool the siege script sets.
+- Carryover v1 supports `gold_max`, `items_allow`, `items_deny`.
+  `reset_active_quests` was deferred — no shipped scenario needs it.
+- The ritual map declares only `CAMPAIGN_OUTCOMES = ("good_ending",)`: a lost
+  captive never calls `complete_scenario`, so the bad ending leaves the player
+  on the map exactly as standalone play does. The `siege_hard` branch shown in
+  the example manifest below remains illustrative, not shipped content.
+- Validation additions live in `scripts/validate_content.py`
+  (manifest schema, DAG reachability/acyclicity/terminal checks, outcome
+  cross-checks against `CAMPAIGN_OUTCOMES`, carryover item refs,
+  `complete_scenario`/`fallback_map` literal checks). Driver unit tests
+  (`tests/test_campaign_driver.py`, fake-based, no `_game`) and gameplay tests
+  (`test.py` `test_campaign_driver_routes_full_campaign_with_carryover`,
+  `test_campaign_state_survives_save_load`) cover the runtime; the
+  walkthrough test joined the CI full-route campaign gate.
 
 Terminology note: the existing `res/maps/multilevel/` map is **not** a
 campaign — it is a single map with multiple Z-levels connected by
