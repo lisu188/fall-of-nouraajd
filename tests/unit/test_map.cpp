@@ -2145,17 +2145,14 @@ void test_loader_race_overloads_preserve_default_and_attach_race() {
                 "empty raceId override must preserve the template's default race id");
     expect_true(empty_player->getRace() == nullptr, "empty raceId override must not attach a CCreatureRace");
 
-    // New four-argument path with an unknown raceId: the id is recorded on the player, but because
-    // no such race content exists the resolved CCreatureRace is null and is deliberately not
-    // attached. The key acceptance is that this does not crash.
+    // New four-argument path with an unknown raceId: the race is resolved and type-checked BEFORE
+    // the active map is replaced. Because no such race content exists, the resolved CCreatureRace is
+    // null, so the loader aborts without switching maps or attaching a partial player
+    // ([EPIC_04][STORY_04][SUBSTORY_02]). Starting from a fresh game leaves no active map.
     auto race_game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(race_game, "test", "Warrior", "nonexistent-race");
-    auto race_player = race_game->getMap()->getPlayer();
-    expect_true(race_player != nullptr, "four-argument loader with a raceId should still attach a player");
-    expect_true(race_player->getRaceId() == "nonexistent-race",
-                "a non-empty raceId override should be recorded on the player");
-    expect_true(race_player->getRace() == nullptr,
-                "an unknown raceId should resolve to a null race and not be attached (no crash)");
+    expect_true(race_game->getMap() == nullptr,
+                "an unknown raceId must abort before replacing the active map (no partial player)");
 
     // The random-map four-argument overload with an empty raceId must also load without crashing.
     auto random_game = CGameLoader::loadGame();
@@ -2167,10 +2164,46 @@ void test_loader_race_overloads_preserve_default_and_attach_race() {
                 "random-map empty raceId override must preserve the template's default race id");
 }
 
+// Validate race before replacing the active map ([EPIC_04][STORY_04][SUBSTORY_02]). A game is
+// already running on a map; attempting to (re)start with an invalid non-empty raceId must leave the
+// active map and its player completely unchanged -- no map switch, no partial player -- while a
+// subsequent start with an empty raceId still succeeds.
+void test_loader_invalid_race_leaves_active_map_unchanged() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+
+    auto original_map = game->getMap();
+    expect_true(original_map != nullptr, "the initial start should install an active map");
+    auto original_player = original_map->getPlayer();
+    expect_true(original_player != nullptr, "the initial start should attach a player");
+    original_map->setTurn(41);
+
+    // Attempt a start with an invalid (unknown, non-empty) raceId. The race cannot resolve to a
+    // CCreatureRace, so creation must abort before the active map is replaced.
+    CGameLoader::startGameWithPlayer(game, "ritual", "Warrior", "nonexistent-race");
+
+    expect_true(game->getMap() == original_map, "an invalid raceId must not replace the active map");
+    expect_true(game->getMap()->getMapName() == original_map->getMapName(),
+                "the active map name must be unchanged after a rejected invalid-race start");
+    expect_true(game->getMap()->getTurn() == 41,
+                "the active map state (turn) must be preserved after a rejected invalid-race start");
+    expect_true(original_map->getPlayer() == original_player,
+                "the original player must remain attached after a rejected invalid-race start");
+    expect_true(count_players_on_map(original_map) == 1,
+                "no partial player may be attached after a rejected invalid-race start");
+
+    // An empty raceId (no override) on the same running game still succeeds and switches maps.
+    CGameLoader::startGameWithPlayer(game, "ritual", "Warrior", std::string());
+    expect_true(game->getMap() != nullptr, "an empty raceId start should install a map");
+    expect_true(game->getMap()->getMapName() == "ritual", "an empty raceId start should switch to the requested map");
+    expect_true(game->getMap()->getPlayer() != nullptr, "an empty raceId start should attach a player");
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
 
     test_loader_race_overloads_preserve_default_and_attach_race();
+    test_loader_invalid_race_leaves_active_map_unchanged();
     test_scene_manager_state_duplicate_and_player_transfer();
     test_game_change_map_duplicate_requests_commit_once();
     test_scene_manager_transition_generation_start_and_commit();
