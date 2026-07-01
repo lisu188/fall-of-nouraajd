@@ -13821,6 +13821,7 @@ class GameTest(unittest.TestCase):
             "wayfarer_condition_method": "def can_chart_wayfarer_route(self):" in script,
             "wayfarer_action_method": "def chart_wayfarer_route(self):" in script,
             "wayfarer_player_property": "wayfarer_routes" in script,
+            "wayfarer_condition_uses_class_id": 'player.getPlayerClassId() == "Wayfarer"' in script,
             "wayfarer_dialog_option": any(
                 option.get("properties", {}).get("condition") == "can_chart_wayfarer_route"
                 and option.get("properties", {}).get("action") == "chart_wayfarer_route"
@@ -13829,6 +13830,7 @@ class GameTest(unittest.TestCase):
             "inquisitor_condition_method": "def can_inspect_stained_glass(self):" in script,
             "inquisitor_action_method": "def inspect_stained_glass(self):" in script,
             "inquisitor_player_property": "inquisitor_clues" in script,
+            "inquisitor_condition_uses_class_id": 'player.getPlayerClassId() == "Inquisitor"' in script,
             "inquisitor_dialog_option": any(
                 option.get("properties", {}).get("condition") == "can_inspect_stained_glass"
                 and option.get("properties", {}).get("action") == "inspect_stained_glass"
@@ -13941,6 +13943,58 @@ class GameTest(unittest.TestCase):
                 "asked_about_girl": game_map.getBoolProperty("ASKED_ABOUT_GIRL"),
             }
 
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_nouraajd_class_dialogs_honor_player_class_id_over_type(self):
+        # After the identity migration, class-specific dialog routes gate on the player's class
+        # identity (playerClassId) rather than the raw type id. A player whose type id is not the
+        # class type but whose playerClassId names the class should unlock the route and accumulate
+        # its progression counter/flag; the raw type id alone must not unlock it beforehand.
+        cases = [
+            {
+                "class_id": "Wayfarer",
+                "dialog_type": "townHallDialog",
+                "condition": "can_chart_wayfarer_route",
+                "action": "chart_wayfarer_route",
+                "counter": "wayfarer_routes",
+                "flag": "charted_smuggler_route",
+            },
+            {
+                "class_id": "Inquisitor",
+                "dialog_type": "berenDialog",
+                "condition": "can_inspect_stained_glass",
+                "action": "inspect_stained_glass",
+                "counter": "inquisitor_clues",
+                "flag": "inspected_stained_glass",
+            },
+        ]
+        results = {}
+        for case in cases:
+            g, game_map, player = load_game_map_with_player("nouraajd", "Warrior")
+            dialog = g.createObject(case["dialog_type"])
+
+            # A plain Warrior type id must not unlock the class-specific route.
+            self.assertFalse(getattr(dialog, case["condition"])())
+
+            # Assigning the class identity unlocks it via getPlayerClassId().
+            player.setPlayerClassId(case["class_id"])
+            self.assertEqual(case["class_id"], player.getPlayerClassId())
+            self.assertTrue(getattr(dialog, case["condition"])())
+
+            getattr(dialog, case["action"])()
+            self.assertFalse(getattr(dialog, case["condition"])())
+            self.assertEqual(1, player.getNumericProperty(case["counter"]))
+            self.assertTrue(player.getBoolProperty(case["flag"]))
+
+            # Re-running the action after the flag is set is idempotent.
+            getattr(dialog, case["action"])()
+            self.assertEqual(1, player.getNumericProperty(case["counter"]))
+
+            results[case["class_id"]] = {
+                "counter": player.getNumericProperty(case["counter"]),
+                "flag": player.getBoolProperty(case["flag"]),
+            }
         return True, json.dumps(results, sort_keys=True)
 
     @game_test
