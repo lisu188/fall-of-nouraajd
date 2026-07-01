@@ -747,7 +747,10 @@ def load(self, context):
 
         def can_chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getTypeId() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
+            # Gate on the class identity (playerClassId) rather than the raw type id; getPlayerClassId
+            # falls back to the type id for players saved before the identity model, so existing
+            # Wayfarer saves keep working while explicit class identities are honored.
+            return player.getPlayerClassId() == "Wayfarer" and not player.getBoolProperty("charted_smuggler_route")
 
         def chart_wayfarer_route(self):
             player = self.getGame().getMap().getPlayer()
@@ -839,7 +842,10 @@ def load(self, context):
 
         def can_inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getTypeId() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
+            # Gate on the class identity (playerClassId) with type-id fallback for pre-identity saves.
+            return player.getPlayerClassId() == "Inquisitor" and not player.getBoolProperty(
+                "inspected_stained_glass"
+            )
 
         def inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
