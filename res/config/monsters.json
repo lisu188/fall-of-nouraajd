@@ -2,11 +2,9 @@
   "Assasin": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "AssasinClass"
+      },
       "animation": "images/players/assasin",
       "equipped": {
         "0": {
@@ -21,39 +19,6 @@
       },
       "items": [],
       "label": "Assasin",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 3,
-          "crit": 2,
-          "dmgMax": 2,
-          "dmgMin": 1,
-          "hit": 3,
-          "intelligence": 2,
-          "stamina": 1,
-          "strength": 1
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "SneakAttack"
-        },
-        "2": {
-          "ref": "Mutilation"
-        },
-        "3": {
-          "ref": "LethalPoison"
-        },
-        "4": {
-          "ref": "Chloroform"
-        },
-        "5": {
-          "ref": "Stunner"
-        },
-        "6": {
-          "ref": "Backstab"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {
@@ -522,11 +487,9 @@
   "Inquisitor": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "InquisitorClass"
+      },
       "animation": "images/players/inquisitor",
       "equipped": {
         "0": {
@@ -541,39 +504,6 @@
       },
       "items": [],
       "label": "Inquisitor",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 1,
-          "crit": 1,
-          "dmgMax": 2,
-          "dmgMin": 1,
-          "hit": 2,
-          "intelligence": 2,
-          "stamina": 2,
-          "strength": 2
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "ExposeCorruption"
-        },
-        "2": {
-          "ref": "Strike"
-        },
-        "3": {
-          "ref": "SanctifiedWard"
-        },
-        "4": {
-          "ref": "FrostBolt"
-        },
-        "5": {
-          "ref": "Barrier"
-        },
-        "6": {
-          "ref": "EndlessPain"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {
@@ -593,11 +523,9 @@
   "Wayfarer": {
     "class": "CPlayer",
     "properties": {
-      "actions": [
-        {
-          "ref": "Attack"
-        }
-      ],
+      "creatureClass": {
+        "ref": "WayfarerClass"
+      },
       "animation": "images/players/wayfarer",
       "equipped": {
         "0": {
@@ -612,39 +540,6 @@
       },
       "items": [],
       "label": "Wayfarer",
-      "levelStats": {
-        "class": "CStats",
-        "properties": {
-          "agility": 3,
-          "crit": 1,
-          "dmgMax": 2,
-          "dmgMin": 1,
-          "hit": 3,
-          "intelligence": 1,
-          "stamina": 1,
-          "strength": 2
-        }
-      },
-      "levelling": {
-        "1": {
-          "ref": "WayfarersStride"
-        },
-        "2": {
-          "ref": "SneakAttack"
-        },
-        "3": {
-          "ref": "SmugglersMark"
-        },
-        "4": {
-          "ref": "DoubleAttack"
-        },
-        "5": {
-          "ref": "Backstab"
-        },
-        "6": {
-          "ref": "BloodThirst"
-        }
-      },
       "baseStats": {
         "class": "CStats",
         "properties": {
