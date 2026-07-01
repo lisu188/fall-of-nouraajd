@@ -20395,9 +20395,18 @@ def test_duration_weight(test_name, timings):
         return 10.0
     if "walkthrough" in test_name:
         return 8.0
+    # Scenario/simulation harnesses and full serialize/save-load round-trips drive
+    # many engine steps and are among the slowest gameplay tests. Without a recorded
+    # timing sample they would otherwise fall through to the generic default below
+    # and be packed onto a single shard, which both unbalances the shards and
+    # under-sizes that shard's timeout (derived from the summed weights).
+    if "scenario_harness" in test_name or "simulation_run" in test_name:
+        return 8.0
+    if "save_load" in test_name or "serialize_clone" in test_name:
+        return 4.0
     if test_name.startswith("McpServerTest."):
         return 6.0
-    return 1.0
+    return 2.5
 
 
 def is_serial_test_name(test_name):
@@ -20467,7 +20476,16 @@ def test_group_timeout_seconds(test_names, timings=None):
     timings = timings or {}
     duration_hint = sum(test_duration_weight(test_name, timings) for test_name in test_names)
     multiplier = 8 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 4
-    return max(30, int(duration_hint * multiplier))
+    # Add fixed headroom and a higher floor so a shard whose tests lack recorded
+    # timing samples (cold cache or newly added tests, weighted by the conservative
+    # defaults in test_duration_weight) is not killed before it can finish and write
+    # real timings. Timings are only persisted on a successful run, so a shard that
+    # is killed early perpetuates its own under-estimate on every retry; allowing it
+    # to complete self-heals the cached timings, after which both shard balancing and
+    # this timeout become accurate. Genuine hangs remain bounded by the job-level
+    # timeout configured in the workflow.
+    headroom = 240 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 120
+    return max(180, int(duration_hint * multiplier) + headroom)
 
 
 def run_test_subprocess(test_names, shard_name, extra_env=None):
