@@ -82,7 +82,13 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
         if (sourceList) {
             sourceList->notifySourceDragCancel(gui, session->sourceIndex, session->payload);
         }
-        return false;
+        // This whole branch runs only while a drag session is live (see the guard above), so the
+        // release terminates a gesture the drag machinery owns — consume it, exactly as the
+        // sourceIsSelf branch does. A below-threshold release is a click, not a drop: it performs
+        // no drop/validate (handled above) but must still be consumed rather than leak to other
+        // handlers. Before the click-vs-drag threshold, sub-pixel motion counted as a drag and this
+        // release was already consumed; preserve that.
+        return true;
     }
     if (type != SDL_MOUSEBUTTONDOWN || (button != SDL_BUTTON_LEFT && button != SDL_BUTTON_RIGHT)) {
         return true;
