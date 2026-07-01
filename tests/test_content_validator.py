@@ -341,6 +341,96 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertEqual([], [str(issue) for issue in issues])
         self.assertEqual([], report_legacy_class_checks(root))
 
+    def test_interaction_with_buff_effect_and_self_target_passes(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/combat.json",
+            {
+                "BuffFx": {"class": "CEffect", "properties": {"tags": ["buff"]}},
+                "SelfBuff": {
+                    "class": "CInteraction",
+                    "properties": {"effect": {"ref": "BuffFx"}, "selfTarget": True},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_interaction_with_buff_effect_without_self_target_is_flagged(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/combat.json",
+            {
+                "BuffFx": {"class": "CEffect", "properties": {"tags": ["buff"]}},
+                "LegacyBuff": {"class": "CInteraction", "properties": {"effect": {"ref": "BuffFx"}}},
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/combat.json",
+            "LegacyBuff.properties.selfTarget",
+            'must declare "selfTarget": true',
+        )
+
+    def test_interaction_inherits_self_target_through_ref(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/combat.json",
+            {
+                "BuffFx": {"class": "CEffect", "properties": {"tags": ["buff"]}},
+                "SelfBuff": {
+                    "class": "CInteraction",
+                    "properties": {"effect": {"ref": "BuffFx"}, "selfTarget": True},
+                },
+                "GrantedBuff": {"ref": "SelfBuff"},
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_interaction_with_non_buff_effect_needs_no_self_target(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/combat.json",
+            {
+                "PoisonFx": {"class": "CEffect", "properties": {"tags": ["stun"]}},
+                "Poison": {"class": "CInteraction", "properties": {"effect": {"ref": "PoisonFx"}}},
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_interaction_with_explicit_self_target_false_is_flagged(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/combat.json",
+            {
+                "BuffFx": {"class": "CEffect", "properties": {"tags": ["buff"]}},
+                "MislabeledBuff": {
+                    "class": "CInteraction",
+                    "properties": {"effect": {"ref": "BuffFx"}, "selfTarget": False},
+                },
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/combat.json",
+            "MislabeledBuff.properties.selfTarget",
+            'must declare "selfTarget": true',
+        )
+
     def test_unreachable_dialog_state_reports_dialog_and_state(self):
         root = self.make_fixture()
         dialog_path = root / "res/maps/broken/dialog.json"

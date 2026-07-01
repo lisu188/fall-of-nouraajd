@@ -18,7 +18,8 @@
         "ref": "ArmorOfEndlessWinterEffect"
       },
       "label": "Armor of Endless Winter",
-      "manaCost": 60
+      "manaCost": 60,
+      "selfTarget": true
     }
   },
   "Attack": {
@@ -47,7 +48,8 @@
         "ref": "BarrierEffect"
       },
       "label": "Barrier",
-      "manaCost": 17
+      "manaCost": 17,
+      "selfTarget": true
     }
   },
   "BloodThirst": {
@@ -225,7 +227,8 @@
         "ref": "SanctifiedWardEffect"
       },
       "label": "Sanctified Ward",
-      "manaCost": 22
+      "manaCost": 22,
+      "selfTarget": true
     }
   },
   "WayfarersStride": {
@@ -236,7 +239,8 @@
         "ref": "WayfarersStrideEffect"
       },
       "label": "Wayfarer's Stride",
-      "manaCost": 18
+      "manaCost": 18,
+      "selfTarget": true
     }
   },
   "SmugglersMark": {
