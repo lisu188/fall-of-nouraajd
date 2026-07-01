@@ -1,4 +1,3 @@
-//TODO: add exhaustive audit to ensure every runtime-instantiable V_META type is covered by static or plugin registration
 //TODO: weird fight bug after fight, player didnt return to position
 //TODO: drag & drop
 //TODO: resizing panels

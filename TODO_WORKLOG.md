@@ -554,3 +554,35 @@
     file is new
 - Blockers if unresolved: Manual review should confirm that future implementation issues treat this as a route-selection
   decision only and do not infer movement-point or turn-budget behavior from the stored `movementCost` field.
+
+## Batch 29
+- Location: `scripts/validate_content.py`, `scripts/type_registration_exclusions.json`,
+  `tests/test_content_validator.py`, `todo.txt`
+- Original TODO or summary: todo.txt row 1 asked to "add exhaustive audit to ensure every runtime-instantiable V_META
+  type is covered by static or plugin registration".
+- Status: implemented
+- What was changed: Added `ContentValidator._validate_type_registration_coverage()` (invoked from `validate()`), which
+  iterates every metadata-declared (`V_META`) engine type and flags any that is neither registered as constructible
+  content (fallback/static/native/Python registration) nor listed in `scripts/type_registration_exclusions.json`. The
+  audit surfaced one pre-existing gap -- `CCustomTrigger` was reflected but neither registered nor excluded -- so a
+  documented exclusion entry was added for it (`ownerModule: src/object/CTrigger`), recording that it is a C++-only
+  runtime trigger built via `std::make_shared<CCustomTrigger>(...)` in `src/core/CMap.cpp` whose only constructor takes a
+  `std::function`, giving it no default constructor and no by-name builder. Removed the addressed line from `todo.txt`
+  and added `TypeRegistrationCoverageAuditTest` (4 cases) to `tests/test_content_validator.py`.
+- Why the change is correct: A `V_META` type that is neither registered nor excluded is a latent hazard -- the loader can
+  be asked to build it by name from content and fails at runtime with no static warning, and the exclusion manifest
+  silently stops being authoritative. Registration for the audit is the raw union of the registered sets (exclusions are
+  not subtracted, unlike `_constructible_classes`), because a type may legitimately be both registered for serialization
+  and excluded from content instantiation, and either fact makes it accounted for. Confirmed via the validator's own
+  parsing machinery that exactly one reflected type (`CCustomTrigger`) was uncovered before the manifest addition, that
+  none of the excluded resource/handler infrastructure types are referenced by any `"class"` value under `res/`, and that
+  `CCustomTrigger` is constructed only from C++.
+- Validation performed:
+  - `python3 scripts/validate_content.py --repo-root .` -> `Content validation passed`
+  - `python3 -m unittest tests.test_content_validator` -> `Ran 143 tests`, `OK`
+  - Whitebox checks: audit reports zero coverage issues on the real repo, fires exactly once for an injected
+    metadata-only type (pointing at `scripts/type_registration_exclusions.json`), and stays silent for registered
+    (`CItem`) and excluded (`CCustomTrigger`) types.
+- Blockers if unresolved: None. The `_game` extension could not be built in this environment (the `vstd` and
+  `random-dungeon-generator` submodules are network-restricted), so C++ unit/gameplay suites were not run; this change is
+  Python-only content-validation tooling and its full test module passes.
