@@ -22,5 +22,13 @@
       "subtypes": [],
       "playerSelectable": false
     }
+  },
+  "goblinRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "goblin",
+      "subtypes": [],
+      "playerSelectable": false
+    }
   }
 }
