@@ -105,3 +105,25 @@ it may carry a `slots` object mapping slot ids to item ids.
 | `visual`               | no       | object | Optional visual variation (e.g. an `animation` root). |
 
 Unknown top-level keys in a profile are reported so typos are caught.
+
+## Gameplay tags (`"tags"`)
+
+Objects (items, effects, interactions, potions, …) may declare a `"tags"` array
+of canonical gameplay tags. The vocabulary is closed and defined in
+`src/core/CTags.h` (`enum class CTag`) — authoring an unlisted tag string is
+rejected at load time (and by the string `hasTag`/`addTag`/`removeTag`
+overloads), so typos fail loudly rather than silently doing nothing.
+
+| Tag      | Meaning |
+| -------- | ------- |
+| `buff`   | Effect/interaction is beneficial and self-targeted; the AI will not cast it at an enemy and skips it when picking an offensive action. |
+| `cursed` | Once equipped, the item is locked to its slot and cannot be unequipped or swapped out. The lock is enforced in `CCreature::equipItem` and mirrored in the inventory UI. Lift it (Baldur's Gate "remove curse") by clearing the tag — `removeTag(CTag::Cursed)` from an effect, interaction, or plugin — after which the item unequips normally. Any negative stats a cursed item imposes are ordinary content (its equipment bonuses / attached effect), not part of the tag itself. |
+| `heal`   | Consumable restores HP; monster AI will quaff it when hurt. |
+| `mana`   | Consumable restores mana; monster AI will quaff it when low. |
+| `quest`  | Quest item — players cannot drop it, and the inventory UI blocks unequipping it. |
+| `stun`   | Effect stuns its victim; a stunned creature skips its turn. |
+| `wand`   | Marks wand-type items for wand-specific handling. |
+
+Adding a tag touches four mirrored sites: the `CTag` enum (`src/core/CTags.h`),
+the `TAG_DEFINITIONS` table (`src/core/CTags.cpp`), the pybind `CTag` binding
+(`src/core/CModule.cpp`), and this table.
