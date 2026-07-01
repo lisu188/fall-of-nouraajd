@@ -30,5 +30,13 @@
       "subtypes": [],
       "playerSelectable": false
     }
+  },
+  "humanRace": {
+    "class": "CCreatureRace",
+    "properties": {
+      "creatureType": "human",
+      "subtypes": [],
+      "playerSelectable": false
+    }
   }
 }
