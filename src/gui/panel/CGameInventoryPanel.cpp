@@ -121,14 +121,23 @@ void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index
 
 bool CGameInventoryPanel::inventoryRightClickCallback(std::shared_ptr<CGui> gui, int index,
                                                       std::shared_ptr<CGameObject> _newSelection) {
-    auto newSelection = vstd::cast<CItem>(_newSelection);
-    if (!newSelection) {
+    auto item = usable_item(_newSelection);
+    auto player = inventory_player(gui);
+    if (!player || !item || !player->hasInInventory(item)) {
+        // Empty cell, non-item, quest item, or an item that no longer belongs to the
+        // player: reset any pending selection and let parents keep processing the click.
+        selectedEquipped.reset();
+        selectedInventory.reset();
+        refreshViews();
         return false;
     }
+    // Delegate use semantics (heal/mana full-resource guards, disposable consumption)
+    // to CCreature::useItem(); the GUI must not duplicate that logic.
+    player->useItem(item);
     selectedEquipped.reset();
     selectedInventory.reset();
     refreshViews();
-    return false;
+    return true;
 }
 
 bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
