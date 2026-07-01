@@ -224,6 +224,94 @@
           "width": 32,
           "x": 736,
           "y": 256
+        },
+        {
+          "height": 32,
+          "id": 21,
+          "name": "ambientRitualRainedPews",
+          "rotation": 0,
+          "type": "ambientRitualRainedPews",
+          "visible": true,
+          "width": 32,
+          "x": 128,
+          "y": 96
+        },
+        {
+          "height": 32,
+          "id": 22,
+          "name": "ambientRitualDrownedCenser",
+          "rotation": 0,
+          "type": "ambientRitualDrownedCenser",
+          "visible": true,
+          "width": 32,
+          "x": 384,
+          "y": 96
+        },
+        {
+          "height": 32,
+          "id": 23,
+          "name": "ambientRitualScribeRecords",
+          "rotation": 0,
+          "type": "ambientRitualScribeRecords",
+          "visible": true,
+          "width": 32,
+          "x": 640,
+          "y": 64
+        },
+        {
+          "height": 32,
+          "id": 24,
+          "name": "ambientRitualAnchorScorch",
+          "rotation": 0,
+          "type": "ambientRitualAnchorScorch",
+          "visible": true,
+          "width": 32,
+          "x": 160,
+          "y": 320
+        },
+        {
+          "height": 32,
+          "id": 25,
+          "name": "ambientRitualChalkCircle",
+          "rotation": 0,
+          "type": "ambientRitualChalkCircle",
+          "visible": true,
+          "width": 32,
+          "x": 416,
+          "y": 320
+        },
+        {
+          "height": 32,
+          "id": 26,
+          "name": "ambientRitualBloodGutter",
+          "rotation": 0,
+          "type": "ambientRitualBloodGutter",
+          "visible": true,
+          "width": 32,
+          "x": 96,
+          "y": 480
+        },
+        {
+          "height": 32,
+          "id": 27,
+          "name": "ambientRitualPrisonerTally",
+          "rotation": 0,
+          "type": "ambientRitualPrisonerTally",
+          "visible": true,
+          "width": 32,
+          "x": 352,
+          "y": 576
+        },
+        {
+          "height": 32,
+          "id": 28,
+          "name": "ambientRitualDrownedReeds",
+          "rotation": 0,
+          "type": "ambientRitualDrownedReeds",
+          "visible": true,
+          "width": 32,
+          "x": 640,
+          "y": 640
         }
       ],
       "opacity": 1,
@@ -890,7 +978,7 @@
       "y": 0
     }
   ],
-  "nextobjectid": 21,
+  "nextobjectid": 29,
   "orientation": "orthogonal",
   "properties": {
     "x": "3",

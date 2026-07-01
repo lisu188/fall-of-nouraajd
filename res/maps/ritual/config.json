@@ -322,5 +322,69 @@
         }
       ]
     }
+  },
+  "ambientRitualRainedPews": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/wooden_bench",
+      "canStep": true,
+      "text": "Rows of pews rot where the roof fell in; every kneeler has been turned to face away from the altar."
+    }
+  },
+  "ambientRitualDrownedCenser": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "A brass censer lies drowned in a puddle, still breathing thin grey threads that smell of the crypt."
+    }
+  },
+  "ambientRitualScribeRecords": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "A ledger of confessions swells with rain. The final entries are all the same name, written smaller each time."
+    }
+  },
+  "ambientRitualAnchorScorch": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "Scorch marks radiate from an empty socket where a ritual anchor was torn out, then forced back in."
+    }
+  },
+  "ambientRitualChalkCircle": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "A chalk circle has been scrubbed and redrawn so often the stone beneath is worn soft as wax."
+    }
+  },
+  "ambientRitualBloodGutter": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "canStep": true,
+      "text": "The floor gutters all run toward the sanctum, dry and dark, waiting for the chant to fill them."
+    }
+  },
+  "ambientRitualPrisonerTally": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Tally marks scratched low on the wall count the days of a captive, then stop mid-stroke."
+    }
+  },
+  "ambientRitualDrownedReeds": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "Reeds have swallowed the outer wall, yet a narrow path stays bent open through them, kept by patient hands."
+    }
   }
 }
