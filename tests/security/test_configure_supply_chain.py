@@ -132,6 +132,80 @@ class ConfigureSupplyChainTest(unittest.TestCase):
         self.assertIn('"src/object/*"', classifier_text)
         self.assertNotIn('"tests/*"', classifier_text)
 
+    def test_windows_fast_tools_directory_is_outside_workspace(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+
+        # Trusted downloaded tools (sccache) must live outside the PR workspace so a
+        # workspace-committed tool shim can never be discovered or executed.
+        match = re.search(r"(?m)^\s*WINDOWS_FAST_TOOLS_DIR:\s*(?P<value>.+?)\s*$", workflow_text)
+        self.assertIsNotNone(match)
+        value = match.group("value")
+        self.assertIn("runner.temp", value)
+        self.assertNotIn("github.workspace", value)
+        self.assertNotIn(".windows-tools", value)
+
+        # The setup step must fail closed if the tools dir is ever inside the workspace.
+        self.assertIn(
+            "Refusing to use a fast-tools directory inside the workspace",
+            workflow_text,
+        )
+
+    def test_windows_sccache_is_hash_verified_unconditionally(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+        match = re.search(
+            r"(?ms)- &setup-windows-fast-tools\n.*?name: Set up Windows fast tools\n(?P<body>.*?)(?=^      - )",
+            workflow_text,
+        )
+        self.assertIsNotNone(match)
+        body = match.group("body")
+
+        # The archive hash must always be checked, and the verified absolute path
+        # pinned via SCCACHE_EXECUTABLE.
+        self.assertIn("Get-FileHash -Algorithm SHA256", body)
+        self.assertIn("Unexpected sccache archive hash", body)
+        self.assertIn("SCCACHE_EXECUTABLE=$sccacheExe", body)
+
+        # A pre-existing sccache.exe must NOT short-circuit the download/hash check;
+        # the previous `if (-not (Test-Path $sccacheExe))` guard allowed an
+        # unverified workspace-seeded binary to be trusted.
+        self.assertNotIn("if (-not (Test-Path $sccacheExe))", body)
+
+        # The download/verify must run before the executable is copied into place.
+        self.assertLess(
+            body.index("Unexpected sccache archive hash"),
+            body.index("Copy-Item -Path $downloadedSccache.FullName"),
+        )
+
+    def test_windows_configure_prefers_pinned_sccache_executable(self):
+        configure_script = (REPO_ROOT / "configure.bat").read_text()
+
+        # configure.bat must honor an externally supplied SCCACHE_EXECUTABLE and only
+        # fall back to `where sccache` when it is unset, so the verified absolute path
+        # from CI takes precedence over any sccache shim on PATH.
+        self.assertIn("if not defined SCCACHE_EXECUTABLE", configure_script)
+        self.assertIn('set "CMAKE_C_COMPILER_LAUNCHER=!SCCACHE_EXECUTABLE!"', configure_script)
+        self.assertIn('set "CMAKE_CXX_COMPILER_LAUNCHER=!SCCACHE_EXECUTABLE!"', configure_script)
+
+    def test_windows_vcpkg_cache_key_includes_dependency_inputs(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+
+        # A stale vcpkg cache must not mask changed dependencies: the primary cache
+        # key must hash the manifest, triplet files, and the Windows configure script.
+        self.assertRegex(
+            workflow_text,
+            re.compile(r"hashFiles\(\s*'vcpkg\.json',\s*'cmake/triplets/\*\.cmake',\s*'configure\.bat'\s*\)"),
+        )
+
+    def test_windows_validates_restored_vcpkg_tree_completeness(self):
+        workflow_text = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text()
+
+        # An incomplete restored vcpkg tree must be rejected rather than trusted on a
+        # bare cache hit: validation checks expected files AND a vcpkg dry-run.
+        self.assertIn("vcpkg installed cache is missing expected files", workflow_text)
+        self.assertIn("vcpkg dry-run validation failed", workflow_text)
+        self.assertIn("vcpkg installed cache is incomplete", workflow_text)
+        self.assertIn("install --dry-run", workflow_text)
+
     def test_run_coverage_default_line_gate_is_90_percent(self):
         run_coverage = (REPO_ROOT / "scripts" / "run_coverage.sh").read_text()
 
