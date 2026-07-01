@@ -409,6 +409,9 @@
       "race": {
         "ref": "humanRace"
       },
+      "creatureClass": {
+        "ref": "cultistClass"
+      },
       "sw": 1
     }
   },
@@ -454,6 +457,9 @@
       },
       "race": {
         "ref": "humanRace"
+      },
+      "creatureClass": {
+        "ref": "cultistClass"
       },
       "sw": 2
     }

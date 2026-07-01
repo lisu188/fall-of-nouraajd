@@ -25,8 +25,8 @@ so composed stats and actions equal the pre-archetype legacy result.
 | `Pritz` | `pritzRace` | `bruteClass` | Assigned |
 | `PritzMage` | `pritzRace` | `mageClass` | Assigned |
 | `GoblinThief` | `goblinRace` | `thiefClass` | Assigned |
-| `Cultist` | `humanRace` | (deferred) | Race only (CRA-1 resolved) |
-| `CultLeader` | `humanRace` | (deferred) | Race only (CRA-1 resolved) |
+| `Cultist` | `humanRace` | `cultistClass` | Assigned |
+| `CultLeader` | `humanRace` | `cultistClass` | Assigned |
 
 Notes:
 
@@ -41,9 +41,19 @@ Notes:
   biological race, and every use of the `Cultist` template (hostile cultists and
   the `questGiver`/`oldWoman` townsfolk it is reused for) is human, so they share
   `humanRace`. No `cultRace` id was invented. The assignment is race-only and
-  baseline-preserving (`humanRace` contributes no stats/actions); the combat
-  *class* (`cultistClass`) stays deferred, since attaching it at template level
-  would leak the role onto the non-combat NPC reuses (UNRESOLVED-CLS-1).
+  baseline-preserving (`humanRace` contributes no stats/actions).
+- **`Cultist`/`CultLeader` class assigned as `cultistClass`** at the template
+  level. `cultistClass` is minimal (`mainStat: strength`, no actions/level
+  growth), so it is mechanically baseline-preserving for every Cultist-derived
+  use — the hostile cultists, the derived hostile templates
+  (`ritualCultist`/`ashCultist`/`plagueCultist`), and the `questGiver`/`oldWoman`
+  NPC reuses all keep their existing `strength` main stat and gain no abilities.
+  Trade-off (UNRESOLVED-CLS-1): the two non-combat NPC reuses inherit the
+  `cultistClass` *tag*, which is semantically imperfect though behaviorally
+  inert. A later refinement can move the class to per-spawn / hostile-only
+  assignment (or re-point the NPC reuses to a neutral human template); until
+  then the template-level assignment keeps the class identity complete without
+  any gameplay change.
 - Player-class templates (`Warrior`, `Sorcerer`, `Assasin`, `Wayfarer`,
   `Inquisitor`) are a separate player-class extraction workstream; e.g.
   `WarriorClass` is authored in `res/config/creature_classes.json`.
@@ -296,11 +306,19 @@ Marked **UNRESOLVED-CLS-1** below; it does not block approving the class id list
 
 ## Unresolved class items
 
-### UNRESOLVED-CLS-1: Cultist template's NPC reuse vs `cultistClass`
+### UNRESOLVED-CLS-1: Cultist template's NPC reuse vs `cultistClass` — RESOLVED (template-level, minimal)
 
-The `Cultist` template is reused as non-combat NPCs. Whether `cultistClass` is
-attached at template level (leaking onto NPCs) or only at hostile spawn sites is
-a downstream authoring decision tied to CRA-1; flagged here, not resolved.
+The `Cultist` template is reused as non-combat NPCs. This is resolved by keeping
+`cultistClass` **minimal** (`mainStat: strength`, no actions or level growth) and
+attaching it at the **template level**. Because the class contributes no
+abilities and only names the `strength` main stat the Cultist-derived templates
+already use, the attachment is mechanically **baseline-preserving for every use**,
+including the `questGiver`/`oldWoman` NPC reuses (which keep their stats and gain
+nothing). The residual cost is purely semantic — those two NPCs carry a
+`cultistClass` tag they would not thematically warrant. A future refinement may
+move the class to per-spawn / hostile-only assignment (or re-point the NPC reuses
+to a neutral human template); that is a cosmetic cleanup, not a correctness fix,
+so it is deferred rather than blocking the class assignment.
 
 ### UNRESOLVED-CLS-2: `martialClass` lore name needs human approval
 
