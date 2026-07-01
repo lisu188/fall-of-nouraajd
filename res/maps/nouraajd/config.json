@@ -472,7 +472,7 @@
     "properties": {
       "animation": "images/npc/questGiver",
       "controller": {
-        "class": "CNpcRandomController"
+        "class": "CController"
       },
       "npc": true
     }
@@ -482,7 +482,7 @@
     "properties": {
       "animation": "images/npc/oldWoman",
       "controller": {
-        "class": "CNpcRandomController"
+        "class": "CController"
       },
       "npc": true
     }
