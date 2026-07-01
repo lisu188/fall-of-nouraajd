@@ -804,8 +804,7 @@ void test_creature_class_main_stat_is_authoritative_over_race() {
     // No class: composed main stat falls back to the legacy base main stat.
     expect_true(creature->getStats()->getMainStat() == "strength",
                 "with no creatureClass the composed main stat falls back to the legacy base main stat");
-    expect_true(creature->getStats()->getMainValue() == 3,
-                "the legacy fallback main value reads strength (3)");
+    expect_true(creature->getStats()->getMainValue() == 3, "the legacy fallback main value reads strength (3)");
 
     // Attach a creatureClass declaring intelligence as its main stat: class wins.
     auto klass = std::make_shared<CCreatureClass>();
@@ -997,15 +996,13 @@ void test_creature_effective_interactions_compose_archetype_sources() {
     expect_true(contains(concreteFinisher), "unique concrete actions should be exposed");
     // The class level unlock gated above the current level is withheld.
     expect_true(!contains(classUltimate), "class level unlocks above the current level should not be exposed");
-    expect_true(effective.size() == 4,
-                "composed set should be Attack (concrete) + Claw + Strike + Finisher");
+    expect_true(effective.size() == 4, "composed set should be Attack (concrete) + Claw + Strike + Finisher");
 
     // Legacy creature (no race, no class) still composes only its own sources.
     auto legacy = std::make_shared<CCreature>();
     legacy->addAction(interaction("Attack", "legacyAttack"));
     auto legacyEffective = legacy->getEffectiveInteractions();
-    expect_true(legacyEffective.size() == 1,
-                "a creature with no race/class should compose only its own actions");
+    expect_true(legacyEffective.size() == 1, "a creature with no race/class should compose only its own actions");
 }
 void test_creature_action_merge_dedupes_by_type_id() {
     // Pins the approved creature action merge contract
@@ -1137,8 +1134,7 @@ void test_creature_duplicate_attack_from_race_and_class_collapses_to_single_iden
                 "the effective interaction set must expose the deduplicated Attack exactly once");
     expect_true(effective.find(classAttack) != effective.end() && effective.find(raceAttack) == effective.end(),
                 "getEffectiveInteractions should keep the most-specific Attack identity");
-    expect_true(effective.size() == 2,
-                "the effective interaction set should contain no duplicate action identity");
+    expect_true(effective.size() == 2, "the effective interaction set should contain no duplicate action identity");
 }
 
 void test_no_archetype_creature_level_up_mutates_actions_via_levelling() {
@@ -1614,6 +1610,33 @@ void test_creature_get_dmg_hit_chance_is_not_inverted() {
     expect_true(highConnects == iterations, "attack=100 fully offsets a 0-99 dice roll, so every swing connects");
 }
 
+// CInteraction routes its effect to the caster or the opponent via effectRoutesToCaster
+// (EPIC_06/STORY_01/SUBSTORY_02): an explicit selfTarget always routes to the caster, a
+// legacy Buff-tagged effect without selfTarget stays a self-buff, and every other effect
+// routes to the opponent -- so routing no longer depends solely on effect tags while old
+// buff configs still work.
+void test_interaction_effect_routes_to_caster_via_self_target() {
+    auto interaction = std::make_shared<CInteraction>();
+
+    auto buff = std::make_shared<CEffect>();
+    buff->addTag(CTag::Buff);
+    auto debuff = std::make_shared<CEffect>(); // untagged -> opponent
+
+    // No selfTarget: legacy tag-based routing is preserved exactly.
+    expect_true(interaction->effectRoutesToCaster(buff),
+                "a Buff effect without selfTarget keeps its legacy self-buff routing");
+    expect_true(!interaction->effectRoutesToCaster(debuff),
+                "a non-buff effect without selfTarget routes to the opponent");
+    expect_true(!interaction->effectRoutesToCaster(nullptr),
+                "a null effect without selfTarget does not route to the caster");
+
+    // selfTarget overrides tags: the effect always routes to the caster.
+    interaction->setSelfTarget(true);
+    expect_true(interaction->effectRoutesToCaster(debuff),
+                "selfTarget routes an otherwise-opponent effect to the caster");
+    expect_true(interaction->effectRoutesToCaster(buff), "selfTarget keeps a buff on the caster");
+}
+
 } // namespace
 
 int main() {
@@ -1623,6 +1646,7 @@ int main() {
     test_typed_engine_signal_still_fires_directly();
     test_effect_applies_for_exactly_its_duration_without_underflow();
     test_creature_get_dmg_hit_chance_is_not_inverted();
+    test_interaction_effect_routes_to_caster_via_self_target();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();

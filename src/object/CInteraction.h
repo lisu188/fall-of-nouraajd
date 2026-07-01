@@ -55,6 +55,14 @@ class CInteraction : public CGameObject {
 
     void setSelfTarget(bool value);
 
+    // Effect target routing (EPIC_06/STORY_01/SUBSTORY_02): true when this
+    // interaction's effect applies to the caster rather than the opponent. An
+    // explicit selfTarget routes to the caster; otherwise a legacy Buff-tagged effect
+    // keeps its historical caster-target behavior (compatibility fallback), and every
+    // other effect routes to the opponent. Routing therefore no longer depends solely
+    // on effect tags, while old buff configs keep working.
+    bool effectRoutesToCaster(const std::shared_ptr<CEffect> &effect) const;
+
   private:
     int manaCost = 0;
     bool selfTarget = false;
