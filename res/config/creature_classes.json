@@ -110,5 +110,11 @@
     "properties": {
       "mainStat": "agility"
     }
+  },
+  "cultistClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "strength"
+    }
   }
 }
