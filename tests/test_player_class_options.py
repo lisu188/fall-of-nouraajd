@@ -132,5 +132,49 @@ class PlayerRaceOptionsTest(unittest.TestCase):
             game.player_race_options(g)
 
 
+class _FakeStats:
+    def __init__(self, strength=0, agility=0, stamina=0, intelligence=0):
+        self._strength = strength
+        self._agility = agility
+        self._stamina = stamina
+        self._intelligence = intelligence
+
+    def getStrength(self):
+        return self._strength
+
+    def getAgility(self):
+        return self._agility
+
+    def getStamina(self):
+        return self._stamina
+
+    def getIntelligence(self):
+        return self._intelligence
+
+
+class _FakeRaceWithStats:
+    def __init__(self, base_stats):
+        self._base_stats = base_stats
+
+    def getBaseStats(self):
+        return self._base_stats
+
+
+class RaceStatPreviewTest(unittest.TestCase):
+    def test_neutral_race_reads_balanced(self):
+        self.assertEqual("Balanced", game.race_stat_preview(_FakeRaceWithStats(_FakeStats())))
+
+    def test_missing_base_stats_reads_balanced(self):
+        self.assertEqual("Balanced", game.race_stat_preview(_FakeRaceWithStats(None)))
+
+    def test_deltas_are_formatted_in_order_with_signs(self):
+        base = _FakeStats(strength=1, agility=-1, stamina=2, intelligence=-2)
+        self.assertEqual("STR+1 AGI-1 STA+2 INT-2", game.race_stat_preview(_FakeRaceWithStats(base)))
+
+    def test_only_nonzero_deltas_are_shown(self):
+        base = _FakeStats(agility=2, intelligence=1)
+        self.assertEqual("AGI+2 INT+1", game.race_stat_preview(_FakeRaceWithStats(base)))
+
+
 if __name__ == "__main__":
     unittest.main()

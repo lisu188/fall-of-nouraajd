@@ -144,17 +144,41 @@ def choose_player_class(g):
     return options.get(selection, selection)
 
 
+def race_stat_preview(race):
+    # Compact preview of a race's baseStats modifiers for the selection menu,
+    # e.g. "STR+1 STA+2 AGI-1 INT-2". Only non-zero deltas are shown; a race that
+    # contributes no modifiers (the neutral default) reads as "Balanced".
+    base = race.getBaseStats()
+    if base is None:
+        return "Balanced"
+    parts = []
+    for name, value in (
+        ("STR", base.getStrength()),
+        ("AGI", base.getAgility()),
+        ("STA", base.getStamina()),
+        ("INT", base.getIntelligence()),
+    ):
+        if value:
+            parts.append(f"{name}{value:+d}")
+    return " ".join(parts) if parts else "Balanced"
+
+
 def choose_player_race(g):
     # Offer the player-selectable races (CCreatureRace entries flagged
-    # playerSelectable). Returns the chosen race id, or "" when no race is
+    # playerSelectable), each labelled with a preview of its stat modifiers so the
+    # choice is informed. Returns the chosen race id, or "" when no race is
     # selectable or the choice is cancelled -- an empty race id means "no
     # override", so the player keeps its template's default race and the flow
     # behaves exactly as before races were selectable.
     options = player_race_options(g)
     if not options:
         return ""
-    selection = g.getGuiHandler().showSelection(list_string(g, sorted(options.keys())))
-    return options.get(selection, "")
+    display = {}
+    for label, race_type in options.items():
+        preview = race_stat_preview(g.createObject(race_type))
+        display[f"{label} - {preview}"] = race_type
+    selection = g.getGuiHandler().showSelection(list_string(g, sorted(display.keys())))
+    return display.get(selection, "")
 
 
 def new():
