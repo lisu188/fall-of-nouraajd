@@ -11504,6 +11504,24 @@ class GameTest(unittest.TestCase):
         self.assertLess(time.monotonic() - started_at, 1.0)
         return True, json.dumps({"selected": selected})
 
+    @game_test
+    def test_character_creation_empty_columns_return_without_waiting(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+
+        empty = g.createObject("CListString")
+        non_empty = g.createObject("CListString")
+        non_empty.addValue("Warrior")
+
+        started_at = time.monotonic()
+        # Either column empty -> no panel, returns a ("", "") tuple immediately.
+        self.assertEqual(("", ""), tuple(g.getGuiHandler().showCharacterCreation(empty, empty)))
+        self.assertEqual(("", ""), tuple(g.getGuiHandler().showCharacterCreation(non_empty, empty)))
+        self.assertEqual(("", ""), tuple(g.getGuiHandler().showCharacterCreation(empty, non_empty)))
+        self.assertLess(time.monotonic() - started_at, 1.0)
+        return True, json.dumps({"ok": True})
+
     def test_new_game_load_with_no_saves_reports_message(self):
         game = load_game_module()
 

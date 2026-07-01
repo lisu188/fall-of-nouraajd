@@ -181,6 +181,29 @@ def choose_player_race(g):
     return display.get(selection, "")
 
 
+def choose_character(g):
+    # Combined class + race character-creation screen: one panel with two columns
+    # of buttons (classes on the left, stat-previewed races on the right), closing
+    # once both are picked. Returns (class_type, race_id); an empty class_type means
+    # the choice was cancelled. Falls back to the sequential menus when either side
+    # has no options (e.g. no player-selectable races), preserving old behaviour.
+    class_options = player_class_options(g)  # {label: player_type}
+    race_options = player_race_options(g)  # {label: race_type}
+    race_display = {}
+    for label, race_type in race_options.items():
+        preview = race_stat_preview(g.createObject(race_type))
+        race_display[f"{label} - {preview}"] = race_type
+    if not class_options or not race_display:
+        return choose_player_class(g), choose_player_race(g)
+    class_label, race_label = g.getGuiHandler().showCharacterCreation(
+        list_string(g, list(class_options.keys())),
+        list_string(g, list(race_display.keys())),
+    )
+    if not class_label:
+        return "", ""
+    return class_options.get(class_label, class_label), race_display.get(race_label, "")
+
+
 def new():
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
@@ -193,8 +216,9 @@ def new():
         map = g.getGuiHandler().showSelection(list_string(g, maps))
         if not map:
             return
-        player = choose_player_class(g)
-        race = choose_player_race(g)
+        player, race = choose_character(g)
+        if not player:
+            return
         CGameLoader.startGameWithPlayer(g, map, player, race)
     elif selection == "LOAD":
         saves = CResourcesProvider.getInstance().getFiles("SAVE")
@@ -206,8 +230,9 @@ def new():
             return
         CGameLoader.loadSavedGame(g, save)
     elif selection == "RANDOM":
-        player = choose_player_class(g)
-        race = choose_player_race(g)
+        player, race = choose_character(g)
+        if not player:
+            return
         CGameLoader.startRandomGameWithPlayer(g, player, race)
     while event_loop.instance().run():
         pass

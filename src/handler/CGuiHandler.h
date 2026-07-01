@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "object/CGameObject.h"
 
+#include <utility>
+
 class CListString;
 
 class CGamePanel;
@@ -52,6 +54,14 @@ class CGuiHandler : public CGameObject {
     void showLoot(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
 
     std::string showSelection(std::shared_ptr<CListString> list);
+
+    // Blocking character-creation chooser: two columns of buttons (class options
+    // and race options, each an already-formatted label string), returning the
+    // picked {classLabel, raceLabel}. Returns {"",""} if either column is empty
+    // or the panel is closed without a full pick. The caller (res/game.py) owns
+    // building the labels and mapping them back to ids.
+    std::pair<std::string, std::string> showCharacterCreation(std::shared_ptr<CListString> classes,
+                                                              std::shared_ptr<CListString> races);
 
     void showTooltip(std::string text, int x, int y);
 
