@@ -128,6 +128,11 @@ through the `NativePluginHostV1` ABI, `*_load_v1` entry points) and Python in
   through the full campaign and encodes to MP4 (auto-wraps in `xvfb-run` on Linux).
 - Tests run headless via `SDL_VIDEODRIVER=dummy` (set by `test.py`); UI tests use xvfb.
 
+## Response conventions
+
+- Prefix every reply/message with a timestamp in the **Europe/Warsaw** timezone
+  (e.g. `[2026-07-01 14:32 Europe/Warsaw]`).
+
 ## Repository conventions
 
 - **`AGENTS.md` is the authoritative process doc** for pull-request, merge, and the
