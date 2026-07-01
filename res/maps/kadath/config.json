@@ -1,0 +1,674 @@
+{
+  "kadathStart": {
+    "class": "StartEvent",
+    "properties": {
+      "text": "The dream carries you onto the Cold Waste, and there is no waking now. A road of black basalt climbs north through a snow that has never thawed, past the Plateau of Leng and ruins older than the first sleeper, to the onyx castle of the Great Ones on unknown Kadath. Something in that castle has been waiting for a dreamer bold enough to climb. It is not one of the Great Ones."
+    }
+  },
+  "kadathSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "UNKNOWN KADATH - the cold waste. Climb if you must. The Great Ones no longer answer; only their soul and messenger does."
+    }
+  },
+  "dreamerGuide": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "lengMerchant": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "lengPriest": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/oldWoman",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "campMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        {
+          "ref": "LifePotion"
+        },
+        {
+          "ref": "ManaPotion"
+        },
+        {
+          "ref": "LesserLifePotion"
+        },
+        {
+          "ref": "Scroll"
+        }
+      ]
+    }
+  },
+  "campBarter": {
+    "ref": "Market",
+    "properties": {
+      "animation": "images/buildings/market",
+      "market": {
+        "ref": "campMarket"
+      }
+    }
+  },
+  "dreamGate": {
+    "class": "DreamGate",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "A ring of standing stones frames the road, humming with the pull of deeper dream."
+    }
+  },
+  "onyxThrone": {
+    "class": "OnyxThrone",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true
+    }
+  },
+  "nightGaunt": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/octobogz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Night-Gaunt",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 4,
+          "crit": 3,
+          "dmgMax": 6,
+          "dmgMin": 4,
+          "hit": 5,
+          "intelligence": 2,
+          "normalResist": 6,
+          "stamina": 4,
+          "strength": 6
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 8,
+          "crit": 14,
+          "dmgMax": 18,
+          "dmgMin": 14,
+          "hit": 82,
+          "intelligence": 6,
+          "mainStat": "agility",
+          "normalResist": 7,
+          "stamina": 8,
+          "strength": 8
+        }
+      },
+      "sw": 2
+    }
+  },
+  "lengMan": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cultist",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Man of Leng",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 6,
+          "dmgMin": 4,
+          "hit": 4,
+          "intelligence": 3,
+          "normalResist": 5,
+          "stamina": 5,
+          "strength": 6
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 7,
+          "crit": 14,
+          "dmgMax": 19,
+          "dmgMin": 15,
+          "hit": 80,
+          "intelligence": 8,
+          "mainStat": "strength",
+          "normalResist": 6,
+          "stamina": 7,
+          "strength": 8
+        }
+      },
+      "sw": 1
+    }
+  },
+  "lengSpider": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/pritz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Spider of Leng",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 4,
+          "dmgMax": 5,
+          "dmgMin": 3,
+          "hit": 5,
+          "intelligence": 1,
+          "normalResist": 4,
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 12,
+          "crit": 20,
+          "dmgMax": 16,
+          "dmgMin": 12,
+          "hit": 84,
+          "intelligence": 4,
+          "mainStat": "agility",
+          "normalResist": 4,
+          "stamina": 6,
+          "strength": 6
+        }
+      },
+      "sw": 1
+    }
+  },
+  "elderThing": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/pritzmage",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Elder Thing",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 3,
+          "dmgMax": 8,
+          "dmgMin": 6,
+          "hit": 5,
+          "intelligence": 6,
+          "normalResist": 7,
+          "stamina": 6,
+          "strength": 5
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 16,
+          "dmgMax": 26,
+          "dmgMin": 20,
+          "hit": 82,
+          "intelligence": 14,
+          "mainStat": "intelligence",
+          "normalResist": 9,
+          "stamina": 9,
+          "strength": 7
+        }
+      },
+      "sw": 2
+    }
+  },
+  "highPriestOfLeng": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cult_leader",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "High-Priest Not to Be Described",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      },
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 3,
+          "dmgMax": 9,
+          "dmgMin": 7,
+          "hit": 5,
+          "intelligence": 6,
+          "normalResist": 8,
+          "stamina": 7,
+          "strength": 6
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 7,
+          "crit": 18,
+          "dmgMax": 30,
+          "dmgMin": 22,
+          "hit": 84,
+          "intelligence": 15,
+          "mainStat": "intelligence",
+          "normalResist": 10,
+          "stamina": 12,
+          "strength": 9
+        }
+      },
+      "sw": 2
+    }
+  },
+  "theCrawlingChaos": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/gooby",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Nyarlathotep, the Crawling Chaos",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 4,
+          "crit": 4,
+          "dmgMax": 14,
+          "dmgMin": 10,
+          "hit": 6,
+          "intelligence": 6,
+          "normalResist": 11,
+          "stamina": 11,
+          "strength": 9
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 8,
+          "crit": 20,
+          "dmgMax": 50,
+          "dmgMin": 34,
+          "hit": 88,
+          "intelligence": 16,
+          "mainStat": "intelligence",
+          "normalResist": 14,
+          "stamina": 24,
+          "strength": 14
+        }
+      },
+      "sw": 3
+    }
+  },
+  "roostNightGaunt": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The roost breaks open and faceless Night-Gaunts pour out on leather wings, silent as the grave.",
+      "chance": "12",
+      "monster": {
+        "ref": "nightGaunt",
+        "properties": {
+          "affiliation": "kadath",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "10"
+    }
+  },
+  "roostNorth": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "A high roost empties; the Night-Gaunts wheel down out of the starless dark.",
+      "chance": "12",
+      "monster": {
+        "ref": "nightGaunt",
+        "properties": {
+          "affiliation": "kadath",
+          "controller": {
+            "class": "CGroundController",
+            "properties": {
+              "tileType": "snow"
+            }
+          }
+        }
+      },
+      "monsters": "8"
+    }
+  },
+  "warrenLeng": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The warren of Leng caves in, and its almost-human tenants spill out in their turbaned silence.",
+      "chance": "12",
+      "monster": {
+        "ref": "lengMan",
+        "properties": {
+          "affiliation": "leng",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "8"
+    }
+  },
+  "nestLengSpider": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The nest tears open and the pale Spiders of Leng scuttle down the crag toward you.",
+      "chance": "12",
+      "monster": {
+        "ref": "lengSpider",
+        "properties": {
+          "affiliation": "leng",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "10"
+    }
+  },
+  "vaultElder": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The vault of the Elder Things grinds open; barrel-bodied shapes rise from a sleep of aeons.",
+      "chance": "12",
+      "monster": {
+        "ref": "elderThing",
+        "properties": {
+          "affiliation": "elder",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "6"
+    }
+  },
+  "onyxSignetOfNyarlathotep": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "label": "Onyx Signet of the Crawling Chaos",
+      "description": "A circlet of black onyx pressed with the seal of the soul and messenger of the Other Gods. It floods the mind with the cold clarities of the outer void, but the will it feeds is no longer wholly the wearer's, and the onyx will not leave the brow until the curse is broken.",
+      "power": 20,
+      "tags": [
+        "cursed",
+        "quest"
+      ],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 10,
+          "intelligence": 18,
+          "normalResist": -12,
+          "stamina": -10,
+          "strength": 3
+        }
+      }
+    }
+  },
+  "kadathAscentQuest": {
+    "class": "KadathAscentQuest",
+    "properties": {
+      "description": "Climb the Cold Waste to the onyx castle of Kadath and learn what waits upon its throne."
+    }
+  },
+  "ambientCampCairn": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "A cairn of the dreamers who tried the climb. Each stone is a name; none of the names ever woke."
+    }
+  },
+  "ambientDreamerWarning": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "DREAMER'S WARNING - Do not seek the Great Ones. They have forgotten their own castle, and their guardian has not."
+    }
+  },
+  "ambientFrozenPilgrim": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "A pilgrim sits frozen mid-stride, still facing north, a smile of terrible welcome fixed on his blue lips."
+    }
+  },
+  "ambientSilverKey": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Scratched into ice: with the Silver Key a man may pass the Gate of Deeper Slumber, but no key locks the way back."
+    }
+  },
+  "ambientNightGauntRoost": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "Barbed, faceless, and cold to the touch - the Night-Gaunts do not harm you here. They only tickle, and carry, and leave you where the deeper things wait."
+    }
+  },
+  "ambientChasmWarning": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "The ice here is thin over a crevasse without a bottom. Below, a faint piping keeps a rhythm no living thing taught it."
+    }
+  },
+  "ambientLengGate": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "Here the waste gives onto the Plateau of Leng. Travelers are advised the folk of Leng are not folk, and their feast is not shared."
+    }
+  },
+  "ambientLengHymn": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "A prayer-post of Leng, greasy with tallow: we wear the faces we borrowed, and we do not take them off to eat."
+    }
+  },
+  "ambientLengMasks": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/market_stall",
+      "canStep": true,
+      "text": "A stall of Leng where the almost-men trade in turbans and wide, fixed masks. Do not ask what the masks are hiding."
+    }
+  },
+  "ambientElderGlyphs": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "The ruin walls are cut with dot-groups of a star-headed race that built cities before there were men to dream them."
+    }
+  },
+  "ambientElderShoggoth": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "A frieze shows the Elder Things fleeing a black, bubbling servant that learned to shape itself. Beneath it, a fresher scrawl: it is still here. Tekeli-li."
+    }
+  },
+  "ambientElderRetreat": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "The last glyphs record a retreat into the deeper dark. Even the builders of the world knew when to stop climbing."
+    }
+  },
+  "ambientCyclopeanStair": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "The basalt road becomes a stair too vast for human legs, worn smooth by feet that were never feet."
+    }
+  },
+  "ambientOtherGods": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "canStep": true,
+      "text": "A shrine to the Other Gods, whose faces are veiled. They do not rule; they only devour, and their soul goes masked among them."
+    }
+  },
+  "ambientNyarlathotep": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "One name is cut deeper than the rest, again and again, by many hands: NYARLATHOTEP. The Crawling Chaos. He comes when the dreamer arrives, wearing a pleasant face."
+    }
+  },
+  "ambientOnyxGate": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "The onyx gate of the castle stands open. It has always stood open. Nothing needs to keep a dreamer out who has climbed this far."
+    }
+  },
+  "ambientGreatOnes": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/wooden_bench",
+      "canStep": true,
+      "text": "The Great Ones - the gods of earth's dream - are gone from their thrones, wandered off to a sunset city they loved too well. Only their servant kept the appointment."
+    }
+  },
+  "ambientAzathoth": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/campfire_cauldron",
+      "canStep": true,
+      "text": "At the center of ultimate chaos, the sign warns, the blind idiot god Azathoth gnaws hungrily in inconceivable dark. Do not let the messenger take you there."
+    }
+  },
+  "ambientStarlessNight": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/street_lantern",
+      "canStep": true,
+      "text": "There are no stars over Kadath. There never were. The dark above the castle is the underside of somewhere else."
+    }
+  },
+  "ambientDreamsEnd": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "Last marker before the throne: whatever it offers you on the onyx seat, remember that waking was always the braver quest."
+    }
+  },
+  "ambientColdWaste": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/signpost",
+      "canStep": true,
+      "text": "COLD WASTE - no fuel, no game, no mercy. The only warmth on this road heals the body and asks nothing. Distrust it."
+    }
+  },
+  "ambientNorthRoost": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "Guano and shed barbs cake the north crag. Look up only if you are ready to be carried."
+    }
+  }
+}
