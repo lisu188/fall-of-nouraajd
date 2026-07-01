@@ -16,6 +16,17 @@ story-gated crafting recipes, save/load, random maps, and an MCP engine API for 
   <img alt="Combat panel with player status and action inventory" src="./screenshots/combat.png" width="49%">
 </p>
 
+## walkthrough video
+A full automated playthrough of the Nouraajd campaign — exploring the town, recovering Rolf's skull,
+slaying Gooby, running Father Beren's letter/relic/cleanse chain, saving Victor, and returning the amulet.
+Click the poster to play [`screenshots/nouraajd-walkthrough.mp4`](./screenshots/nouraajd-walkthrough.mp4),
+generated headlessly by [`scripts/generate_walkthrough_video.py`](./scripts/generate_walkthrough_video.py).
+<p>
+  <a href="./screenshots/nouraajd-walkthrough.mp4">
+    <img alt="Fall of Nouraajd walkthrough video" src="./screenshots/nouraajd-walkthrough-poster.png" width="70%">
+  </a>
+</p>
+
 ## features
 - Explore authored maps such as Nouraajd, ritual, siege, and test maps, or start a random generated map.
 - Choose from Warrior, Sorcerer, Assasin, Inquisitor, and Wayfarer player classes.
@@ -66,6 +77,16 @@ python play.py
 
 `python3 play.py` opens the start menu. `NEW` selects a map and player class, `LOAD` uses saved games, and `RANDOM`
 starts a generated map.
+
+### walkthrough video
+Regenerate the campaign walkthrough video (requires the `_game` build and the dev requirements). The script drives a
+real headless GUI session, walks the hero to each objective, completes the full quest chain, showcases the
+inventory/quest-log/character panels, and encodes the frames to MP4. On Linux it runs itself under `xvfb-run`
+automatically:
+<pre>
+python3 -m pip install --upgrade -r requirements-dev.txt
+python3 scripts/generate_walkthrough_video.py --output screenshots/nouraajd-walkthrough.mp4 --scale 1280x720 --fps 24
+</pre>
 
 ### mcp server (engine api)
 <pre>
