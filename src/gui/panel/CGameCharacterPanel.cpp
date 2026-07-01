@@ -30,11 +30,17 @@ void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_pt
             continue;
         }
         // Config-driven reflective accessor: fail closed so a missing / mistyped
-        // char-sheet method name can never crash the render loop.
+        // char-sheet method name can never crash the render loop. Numeric accessors are
+        // shown directly; string accessors (e.g. class / race identity) fall back to a
+        // string invocation so they render as their text value rather than being skipped.
         try {
             text += key + ": " + vstd::str(player->meta()->invoke_method<int>(value, player)) + "\n";
-        } catch (const std::exception &exception) {
-            vstd::logger::warning("Ignoring character sheet value callback failure:", value, exception.what());
+        } catch (const std::exception &) {
+            try {
+                text += key + ": " + player->meta()->invoke_method<std::string>(value, player) + "\n";
+            } catch (const std::exception &exception) {
+                vstd::logger::warning("Ignoring character sheet value callback failure:", value, exception.what());
+            }
         }
     }
     gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
