@@ -303,6 +303,11 @@ configure_file(res/maps/kadath/dialog.json maps/kadath/dialog.json)
 configure_file(res/maps/kadath/map.json maps/kadath/map.json)
 configure_file(res/maps/kadath/script.py maps/kadath/script.py)
 
+configure_file(res/maps/sunderedmarch/config.json maps/sunderedmarch/config.json)
+configure_file(res/maps/sunderedmarch/dialog.json maps/sunderedmarch/dialog.json)
+configure_file(res/maps/sunderedmarch/map.json maps/sunderedmarch/map.json)
+configure_file(res/maps/sunderedmarch/script.py maps/sunderedmarch/script.py)
+
 configure_file(res/maps/test/config.json maps/test/config.json)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)

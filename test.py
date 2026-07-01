@@ -164,6 +164,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_map_walkthrough_test",
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn",
     "McpServerTest.test_stdio_map_walkthrough_kadath",
+    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
@@ -181,6 +182,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_kadath": 30.0,
+    "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 30.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -190,6 +192,7 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_map_walkthrough_test": 10.0,
     "GameTest.test_map_walkthrough_vhulmarn": 15.0,
     "GameTest.test_map_walkthrough_kadath": 15.0,
+    "GameTest.test_map_walkthrough_sunderedmarch": 15.0,
     "GameTest.test_multilevel_map_loads_authored_z_layers": 6.0,
     "GameTest.test_multilevel_map_player_uses_stairs_both_directions": 8.0,
     "GameTest.test_multilevel_map_stale_collision_cache_is_z_scoped": 6.0,
@@ -4715,8 +4718,69 @@ def walkthrough_kadath_map():
     }
 
 
+def walkthrough_sunderedmarch_map():
+    g, game_map, player = load_game_map_with_player("sunderedmarch")
+    for name in (
+        "marchStart",
+        "keymasterCache",
+        "gateThreshold",
+        "obeliskVale",
+        "obeliskBarrow",
+        "obeliskPyre",
+        "digSite",
+    ):
+        find_map_object_definition("sunderedmarch", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("sunderedmarch", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the main quest.
+    move_to_object("marchStart")
+    assert "sunderedMarchQuest" in quest_names(player), "Arrival should grant the Sundered March quest."
+
+    # The Keymaster's cache yields the iron key that opens the barred pass (Heroes-3 keymaster/border gate).
+    move_to_object("keymasterCache")
+    assert player.countItems("ironKey") >= 1, "The keymaster cache should grant the iron key."
+    assert find_runtime_object(game_map, "borderGate") is not None, "The border gate should still bar the pass."
+    move_to_object("gateThreshold")
+    assert game_map.getBoolProperty("gate_open"), "The iron key should open the border gate."
+    assert find_runtime_object(game_map, "borderGate") is None, "The border gate should be removed once opened."
+
+    # The obelisk hunt: reading all three unlocks the barrow dig (Heroes-3 obelisk/Grail).
+    for obelisk in ("obeliskVale", "obeliskBarrow", "obeliskPyre"):
+        move_to_object(obelisk)
+    assert game_map.getNumericProperty("sigils_found") == 3, "All three obelisks should be read."
+
+    # The dig yields the cursed crown and raises the Barrow-Warlord.
+    crowns_before = player.countItems("barrowCrown")
+    move_to_object("digSite")
+    assert game_map.getBoolProperty("crown_taken"), "The dig should unearth the crown once all sigils are read."
+    assert game_map.getBoolProperty("boss_woken"), "Taking the crown should raise the Barrow-Warlord."
+    assert player.countItems("barrowCrown") == crowns_before + 1, "The cursed crown should enter the inventory."
+    assert (
+        find_runtime_object(game_map, "theBarrowWarlordBoss") is not None
+    ), "The Barrow-Warlord should rise at the dig."
+
+    player.checkQuests()
+    assert "sunderedMarchQuest" in completed_quest_names(player), "The Sundered March quest should complete."
+
+    return {
+        "map": "sunderedmarch",
+        "gate_open": game_map.getBoolProperty("gate_open"),
+        "sigils_found": game_map.getNumericProperty("sigils_found"),
+        "crown_taken": game_map.getBoolProperty("crown_taken"),
+        "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "crown_count": player.countItems("barrowCrown"),
+        "boss_present": find_runtime_object(game_map, "theBarrowWarlordBoss") is not None,
+        "quest_completed": "sunderedMarchQuest" in completed_quest_names(player),
+    }
+
+
 WALKTHROUGHS = {
     "kadath": walkthrough_kadath_map,
+    "sunderedmarch": walkthrough_sunderedmarch_map,
     "multilevel": walkthrough_multilevel_map,
     "nouraajd": walkthrough_nouraajd_map,
     "ritual": walkthrough_ritual_map,
@@ -14909,6 +14973,10 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("kadath")
 
     @game_test
+    def test_map_walkthrough_sunderedmarch(self):
+        return execute_walkthrough("sunderedmarch")
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -19286,6 +19354,7 @@ class McpServerTest(unittest.TestCase):
         "test": "_mcp_walkthrough_test",
         "vhulmarn": "_mcp_walkthrough_vhulmarn",
         "kadath": "_mcp_walkthrough_kadath",
+        "sunderedmarch": "_mcp_walkthrough_sunderedmarch",
     }
 
     def make_stub_server(self):
@@ -20006,6 +20075,9 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_kadath(self):
         self._assert_mcp_walkthrough("kadath")
 
+    def test_stdio_map_walkthrough_sunderedmarch(self):
+        self._assert_mcp_walkthrough("sunderedmarch")
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -20502,6 +20574,55 @@ class McpServerTest(unittest.TestCase):
             "throne_taken": map_bool("throne_taken"),
             "boss_woken": map_bool("boss_woken"),
             "has_signet": has_signet,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_sunderedmarch(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "sunderedmarch")
+        for name in (
+            "marchStart",
+            "keymasterCache",
+            "gateThreshold",
+            "obeliskVale",
+            "obeliskBarrow",
+            "obeliskPyre",
+            "digSite",
+        ):
+            find_map_object_definition("sunderedmarch", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Keymaster -> iron key -> border gate opens; obelisks -> dig -> cursed crown + boss.
+        step_onto("marchStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        step_onto("keymasterCache")
+        step_onto("gateThreshold")
+        self.assertTrue(map_bool("gate_open"))
+        for obelisk in ("obeliskVale", "obeliskBarrow", "obeliskPyre"):
+            step_onto(obelisk)
+        self.assertEqual(3, self._mcp_handle_call(session, map_handle, "getNumericProperty", ["sigils_found"]))
+        step_onto("digSite")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+
+        self.assertTrue(map_bool("crown_taken"))
+        self.assertTrue(map_bool("boss_woken"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        has_crown = self._serialized_inventory_has(player_data, "barrowCrown")
+        self.assertTrue(has_crown)
+        return {
+            "map": "sunderedmarch",
+            "gate_open": map_bool("gate_open"),
+            "crown_taken": map_bool("crown_taken"),
+            "boss_woken": map_bool("boss_woken"),
+            "has_crown": has_crown,
             "quests": self._serialized_quest_ids(player_data),
         }
 
