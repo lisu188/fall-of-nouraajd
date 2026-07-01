@@ -1019,6 +1019,168 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     expect_true(!panel->inventorySelect(gui, 0, potion), "second inventory click should clear the used selection");
 }
 
+struct InventoryRightClickHarness {
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CPlayer> player;
+    std::shared_ptr<CGameInventoryPanel> panel;
+};
+
+InventoryRightClickHarness make_inventory_right_click_harness() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    InventoryRightClickHarness harness;
+    harness.game = std::make_shared<CGame>();
+    harness.map = std::make_shared<CMap>();
+    harness.gui = std::make_shared<CGui>();
+    harness.player = std::make_shared<CPlayer>();
+    harness.panel = std::make_shared<CGameInventoryPanel>();
+
+    harness.game->setMap(harness.map);
+    harness.game->setGui(harness.gui);
+    harness.map->setGame(harness.game);
+    harness.gui->setGame(harness.game);
+
+    harness.player->setGame(harness.game);
+    harness.player->setBaseStats(player_stats());
+    harness.player->setHp(harness.player->getHpMax());
+    harness.map->setPlayer(harness.player);
+    return harness;
+}
+
+void test_inventory_right_click_uses_usable_item_once_and_consumes_it() {
+    auto harness = make_inventory_right_click_harness();
+    auto potion = std::make_shared<CPotion>();
+    potion->setGame(harness.game);
+    potion->setName("healingPotion");
+    potion->setTypeId("healingPotionType");
+    potion->addTag(CTag::Heal);
+    harness.player->addItem(potion);
+
+    // Wound the player so the heal potion actually has something to restore, which lets
+    // CCreature::useItem() fire onUse and consume the disposable potion.
+    harness.player->setHp(harness.player->getHpMax() - 1);
+    const auto inventory_size = harness.player->getItems().size();
+
+    const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, potion);
+    expect_true(consumed, "right-clicking a usable item should return true so parents stop processing the click");
+    expect_true(harness.player->getItems().size() == inventory_size - 1,
+                "right-clicking a usable disposable potion should use and consume it exactly once");
+    expect_true(!harness.player->hasInInventory(potion),
+                "the used disposable potion should no longer belong to the player");
+}
+
+void test_inventory_right_click_full_resource_item_not_consumed() {
+    auto harness = make_inventory_right_click_harness();
+    auto potion = std::make_shared<CPotion>();
+    potion->setGame(harness.game);
+    potion->setName("fullHealthPotion");
+    potion->setTypeId("fullHealthPotionType");
+    potion->addTag(CTag::Heal);
+    harness.player->addItem(potion);
+
+    // Player is already at full HP, so the engine reports no use and must not consume it.
+    harness.player->setHp(harness.player->getHpMax());
+    const auto inventory_size = harness.player->getItems().size();
+
+    const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, potion);
+    expect_true(consumed, "right-clicking a full-resource item still handles the click (delegates to useItem)");
+    expect_true(harness.player->getItems().size() == inventory_size,
+                "a full-health potion must not be consumed when the engine reports no use");
+    expect_true(harness.player->hasInInventory(potion),
+                "a full-health potion must remain in the inventory after a no-op use");
+}
+
+void test_inventory_right_click_quest_item_is_protected() {
+    auto harness = make_inventory_right_click_harness();
+    auto quest_item = std::make_shared<CPotion>();
+    quest_item->setGame(harness.game);
+    quest_item->setName("questElixir");
+    quest_item->setTypeId("questElixirType");
+    quest_item->addTag(CTag::Heal);
+    quest_item->addTag(CTag::Quest);
+    harness.player->addItem(quest_item);
+
+    harness.player->setHp(harness.player->getHpMax() - 1);
+    const auto inventory_size = harness.player->getItems().size();
+
+    const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, quest_item);
+    expect_true(!consumed, "right-clicking a quest item must not be handled as a use");
+    expect_true(harness.player->getItems().size() == inventory_size,
+                "quest items must never be consumed by a right-click use");
+    expect_true(harness.player->hasInInventory(quest_item),
+                "quest items must remain in the inventory after a right-click");
+}
+
+void test_inventory_right_click_invalid_and_empty_are_safe() {
+    auto harness = make_inventory_right_click_harness();
+    auto potion = std::make_shared<CPotion>();
+    potion->setGame(harness.game);
+    potion->setName("looseHealingPotion");
+    potion->setTypeId("looseHealingPotionType");
+    potion->addTag(CTag::Heal);
+    // Intentionally NOT added to the inventory: an item the player does not own must not be used.
+    harness.player->setHp(harness.player->getHpMax() - 1);
+
+    const bool not_owned = harness.panel->inventoryRightClickCallback(harness.gui, 0, potion);
+    expect_true(!not_owned, "right-clicking an item not in the inventory must not be handled as a use");
+    expect_true(!harness.player->hasInInventory(potion), "an unowned item is never added or altered by a right-click");
+
+    // A non-item payload (e.g. a bare creature) must be rejected safely.
+    auto non_item = std::make_shared<CCreature>();
+    const bool non_item_handled = harness.panel->inventoryRightClickCallback(harness.gui, 0, non_item);
+    expect_true(!non_item_handled, "right-clicking a non-item payload must be safely ignored");
+
+    // An empty cell (null payload) must be safe and unhandled.
+    const bool empty_handled = harness.panel->inventoryRightClickCallback(harness.gui, 0, nullptr);
+    expect_true(!empty_handled, "right-clicking an empty inventory cell must be safely ignored");
+}
+
+void test_inventory_left_click_drag_still_starts_for_owned_item() {
+    auto harness = make_inventory_right_click_harness();
+    auto potion = std::make_shared<CPotion>();
+    potion->setGame(harness.game);
+    potion->setName("draggableHealingPotion");
+    potion->setTypeId("draggableHealingPotionType");
+    potion->addTag(CTag::Heal);
+    harness.player->addItem(potion);
+
+    // The inventory list is draggable (dragEnabled defaults true, #625): a left-click on an
+    // owned, non-quest item still authorizes a drag start. A quest item never does.
+    expect_true(harness.panel->inventoryDragStart(harness.gui, 0, potion),
+                "left-click drag on an owned non-quest inventory item should still start");
+
+    auto quest_item = std::make_shared<CPotion>();
+    quest_item->setGame(harness.game);
+    quest_item->setName("questBoundPotion");
+    quest_item->setTypeId("questBoundPotionType");
+    quest_item->addTag(CTag::Quest);
+    harness.player->addItem(quest_item);
+    expect_true(!harness.panel->inventoryDragStart(harness.gui, 1, quest_item),
+                "left-click drag must never start for a quest item");
+}
+
+void test_fight_panel_right_click_item_use_still_works() {
+    auto harness = make_inventory_right_click_harness();
+    auto fight_panel = std::make_shared<CGameFightPanel>();
+    auto potion = std::make_shared<CPotion>();
+    potion->setGame(harness.game);
+    potion->setName("fightHealingPotion");
+    potion->setTypeId("fightHealingPotionType");
+    potion->addTag(CTag::Heal);
+    harness.player->addItem(potion);
+
+    harness.player->setHp(harness.player->getHpMax() - 1);
+    const auto inventory_size = harness.player->getItems().size();
+
+    const bool consumed = fight_panel->itemsRightClickCallback(harness.gui, 0, potion);
+    expect_true(consumed, "fight-panel right-click item use should remain unchanged and consume the click");
+    expect_true(harness.player->getItems().size() == inventory_size - 1,
+                "fight-panel right-click should still use and consume a usable disposable potion");
+}
+
 void test_fight_panel_enemy_selection_uses_exact_instance() {
     auto panel = std::make_shared<CGameFightPanel>();
     auto enemy = std::make_shared<CCreature>();
@@ -1786,6 +1948,12 @@ int main() {
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_list_view_refresh_property_collision_fails_closed();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
+    test_inventory_right_click_uses_usable_item_once_and_consumes_it();
+    test_inventory_right_click_full_resource_item_not_consumed();
+    test_inventory_right_click_quest_item_is_protected();
+    test_inventory_right_click_invalid_and_empty_are_safe();
+    test_inventory_left_click_drag_still_starts_for_owned_item();
+    test_fight_panel_right_click_item_use_still_works();
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
