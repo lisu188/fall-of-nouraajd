@@ -122,6 +122,22 @@ def player_class_options(g):
     return options
 
 
+def player_race_options(g):
+    options = {}
+    for race_type in sorted(g.getObjectHandler().getAllSubTypes("CCreatureRace")):
+        race = g.createObject(race_type)
+        if not race.getBoolProperty("playerSelectable"):
+            continue
+        label = race.getStringProperty("label") or race_type
+        if label in options:
+            raise ValueError(
+                f"duplicate player-selectable race label {label!r}: "
+                f"{options[label]!r} and {race_type!r}"
+            )
+        options[label] = race_type
+    return options
+
+
 def choose_player_class(g):
     options = player_class_options(g)
     selection = g.getGuiHandler().showSelection(list_string(g, list(options.keys())))
