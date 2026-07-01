@@ -536,9 +536,16 @@ screenshots must not be left behind once the rendered result has changed.
 
 When regenerating, the screenshot set must cover, at minimum:
 
-- at least one screenshot showing each type of panel (see the panel definitions in `res/config/panels.json`);
-- at least one screenshot from each map — `nouraajd`, `ritual`, `siege`, `multilevel`, and `test` — plus one from a
-  randomly generated map.
+- at least one screenshot showing each type of panel (one per resource id declared in `res/config/panels.json`);
+- at least one screenshot from each map directory under `res/maps/`, plus one from a randomly generated map.
+
+`scripts/generate_screenshots.py` produces exactly this set (`panel-<id>.png` for every panel and `map-<name>.png`
+for every map plus `map-random.png`). It drives a real headless GUI session, so it needs the `_game` build and, on
+Linux, re-executes itself under `xvfb-run` automatically:
+
+```sh
+python3 scripts/generate_screenshots.py --output-dir screenshots
+```
 
 ## Code style
 
