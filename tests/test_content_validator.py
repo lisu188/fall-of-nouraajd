@@ -194,7 +194,7 @@ class ContentValidatorTest(unittest.TestCase):
                 "profileKind": "playerRace",
                 "label": "Human",
                 "baseStatContribution": {"strength": 5, "agility": 5},
-                "tags": ["humanoid"],
+                "traits": ["humanoid"],
                 "resistances": {},
                 "visual": {"animation": "images/players/warrior"},
             }
@@ -244,7 +244,7 @@ class ContentValidatorTest(unittest.TestCase):
                     "profileKind": "playerRace",
                     "label": "Human",
                     "baseStatContribution": {"strength": 1.5},
-                    "tags": ["ok", 2],
+                    "traits": ["ok", 2],
                     "resistances": {"fire": True},
                 }
             },
@@ -253,7 +253,7 @@ class ContentValidatorTest(unittest.TestCase):
         issues = validate_repo(root)
 
         self.assertIssueContains(issues, "res/config/races.json", "human.baseStatContribution.strength", "expected integer")
-        self.assertIssueContains(issues, "human.tags[1]", "expected non-empty string")
+        self.assertIssueContains(issues, "human.traits[1]", "expected non-empty string")
         self.assertIssueContains(issues, "human.resistances.fire", "expected integer")
 
     def test_unreachable_dialog_state_reports_dialog_and_state(self):

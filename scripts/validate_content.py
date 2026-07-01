@@ -35,7 +35,7 @@ PLAYER_CLASS_PROFILE_KEYS = {
     "statContribution",
     "startingEquipment",
 }
-PLAYER_RACE_PROFILE_KEYS = {"profileKind", "label", "baseStatContribution", "tags", "resistances", "visual"}
+PLAYER_RACE_PROFILE_KEYS = {"profileKind", "label", "baseStatContribution", "traits", "resistances", "visual"}
 STARTING_EQUIPMENT_POLICIES = {"fixed", "none"}
 SCRIPT_REF_CALLS = {"createObject", "addObjectByName"}
 SCRIPT_ITEM_CALLS = {"addItem"}
@@ -2214,7 +2214,7 @@ class ContentValidator:
             self._validate_int_valued_map(
                 path, f"{profile_id}.baseStatContribution", profile.get("baseStatContribution"), required=True
             )
-            self._validate_string_list(path, f"{profile_id}.tags", profile.get("tags"), required=False)
+            self._validate_string_list(path, f"{profile_id}.traits", profile.get("traits"), required=False)
             self._validate_int_valued_map(
                 path, f"{profile_id}.resistances", profile.get("resistances"), required=False
             )

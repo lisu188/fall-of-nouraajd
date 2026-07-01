@@ -12,7 +12,7 @@
       "dmgMin": 10,
       "dmgMax": 12
     },
-    "tags": ["humanoid"],
+    "traits": ["humanoid"],
     "resistances": {},
     "visual": {
       "animation": "images/players/warrior"

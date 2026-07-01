@@ -100,7 +100,7 @@ it may carry a `slots` object mapping slot ids to item ids.
 | `profileKind`          | yes      | string `"playerRace"` | Marks the entry as a race profile. |
 | `label`                | yes      | non-empty string | Display name. |
 | `baseStatContribution` | yes      | object (stat name → integer) | Base stat contribution of the race. |
-| `tags`                 | no       | array of non-empty strings | Race tags. |
+| `traits`               | no       | array of non-empty strings | Race traits (distinct from canonical gameplay tags). |
 | `resistances`          | no       | object (name → integer) | Damage/effect resistances. |
 | `visual`               | no       | object | Optional visual variation (e.g. an `animation` root). |
 
