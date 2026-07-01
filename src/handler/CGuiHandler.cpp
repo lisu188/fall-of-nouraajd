@@ -235,6 +235,90 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
     return selected ? *selected : "";
 }
 
+std::pair<std::string, std::string> CGuiHandler::showCharacterCreation(std::shared_ptr<CListString> classes,
+                                                                       std::shared_ptr<CListString> races) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return {"", ""};
+    }
+
+    auto classValues = classes ? classes->getValues() : std::set<std::string>();
+    auto raceValues = races ? races->getValues() : std::set<std::string>();
+    if (classValues.empty() || raceValues.empty()) {
+        // Nothing to compose a two-column chooser from; let the caller fall back.
+        return {"", ""};
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"classCount", static_cast<unsigned long long>(classValues.size())},
+                       {"raceCount", static_cast<unsigned long long>(raceValues.size())},
+                       {"panel", "selectionPanel"},
+                       {"panelKind", "characterCreation"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
+
+    std::shared_ptr<CGamePanel> panel = game->createObject<CGamePanel>("selectionPanel");
+    const std::size_t rows = classValues.size() > raceValues.size() ? classValues.size() : raceValues.size();
+    if (auto centered = vstd::cast<CCenteredLayout>(panel->getLayout())) {
+        centered->setW("600");
+        centered->setH(vstd::str(75 * rows));
+    }
+
+    std::shared_ptr<std::string> selectedClass;
+    std::shared_ptr<std::string> selectedRace;
+    std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
+
+    // Builds one vertical column of option buttons occupying the [x, x+w] band.
+    // `selected` is a pointer to a caller-owned local (valid for the whole call,
+    // including the wait_until below); each button captures that pointer by value
+    // and writes the picked label into it on click. TODO: unify with showSelection.
+    auto buildColumn = [&](const std::set<std::string> &values, std::shared_ptr<std::string> *selected,
+                           const std::string &prefix, const std::string &x, const std::string &w) {
+        int i = 0;
+        for (auto item : values) {
+            std::string clickName = prefix + vstd::str(i);
+
+            panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
+                clickName, panel, [item, selected](CGameGraphicsObject *self, std::shared_ptr<CGui> gui) {
+                    *selected = std::make_shared<std::string>(item);
+                });
+
+            std::shared_ptr<CButton> widget = game->createObject<CButton>("CButton");
+            widget->setClick(clickName);
+            widget->setText(item);
+
+            std::shared_ptr<CLayout> layout = game->createObject<CLayout>("CLayout");
+            const int y0 = 100 * i / values.size();
+            const int y1 = 100 * (i + 1) / values.size();
+            layout->setX(x);
+            layout->setY(vstd::str(y0) + "%");
+            layout->setW(w);
+            layout->setH(vstd::str(y1 - y0) + "%");
+            widget->setLayout(layout);
+            widgets.insert(widget);
+            i++;
+        }
+    };
+
+    buildColumn(classValues, &selectedClass, "clickClass", "0%", "50%");
+    buildColumn(raceValues, &selectedRace, "clickRace", "50%", "50%");
+
+    panel->setChildren(widgets);
+
+    game->getGui()->pushChild(panel);
+
+    // Close once both a class and a race are chosen (or the panel is torn down).
+    vstd::wait_until([&]() { return (selectedClass && selectedRace) || !panel->getGui(); });
+
+    panel->close();
+
+    if (!selectedClass || !selectedRace) {
+        return {"", ""};
+    }
+    return {*selectedClass, *selectedRace};
+}
+
 void CGuiHandler::showTooltip(std::string text, int x, int y) {
     if (text.length() > 0) {
         auto game = _game.lock();
