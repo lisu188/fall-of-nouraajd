@@ -1770,6 +1770,7 @@ class ContentValidator:
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_top_level_ref_cycles(context, visible)
         self._validate_map_json(context, visible, known_classes, archetype_ids)
+        self._validate_map_entry_placement(context, visible)
         self._validate_map_assets(context)
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
@@ -2294,6 +2295,43 @@ class ContentValidator:
                 )
             elif layer_type == "objectgroup":
                 self._validate_object_layer(context, layer, layer_location, visible, known_classes, archetype_ids)
+
+    def _validate_map_entry_placement(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
+        # A StartEvent's onEnter fires the instant a creature arrives on its tile and then
+        # removes itself (the arrival-intro pattern). The player is placed on the map's entry
+        # tile at load time via a real move, so if the entry tile coincides with a StartEvent
+        # the intro fires -- and the event deletes itself -- before gameplay begins. The stdio
+        # walkthroughs then look the start object up by name and find nothing. Require the
+        # entry to sit off the StartEvent (as kadath does) so the player walks onto it.
+        data = context.map_data
+        if not isinstance(data, dict):
+            return
+        entry = _parse_entry_coords(data.get("properties"))
+        if entry is None:
+            return
+        entry_x, entry_y, entry_z = entry
+        for obj in iter_map_objects(data):
+            type_name = obj.get("type")
+            if not isinstance(type_name, str) or type_name not in visible:
+                continue
+            resolved = self._resolve_entry(visible[type_name], visible)
+            if not isinstance(resolved.data, dict) or resolved.data.get("class") != "StartEvent":
+                continue
+            width = obj.get("width")
+            height = obj.get("height")
+            if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
+                continue
+            obj_x = obj.get("x")
+            obj_y = obj.get("y")
+            if not isinstance(obj_x, int) or not isinstance(obj_y, int):
+                continue
+            if (obj_x // width, obj_y // height, 0) == (entry_x, entry_y, entry_z):
+                self._issue(
+                    context.map_path,
+                    "properties (player entry)",
+                    f'player entry ({entry_x}, {entry_y}) sits on self-removing StartEvent '
+                    f'"{obj.get("name", type_name)}"; offset the entry so the event survives spawn',
+                )
 
     def _validate_map_assets(self, context: MapContext) -> None:
         data = context.map_data
@@ -3801,6 +3839,31 @@ class ContentValidator:
             allowed_use.path == relative_path and allowed_use.location == location
             for allowed_use in exclusion.allowed_uses
         )
+
+
+def _parse_entry_coords(properties: Any) -> tuple[int, int, int] | None:
+    """Return the (x, y, z) player-entry tile from a map's top-level properties.
+
+    Tiled stores these as strings; return None when any axis is missing or non-integer
+    so the caller skips maps whose entry metadata other validators already flag.
+    """
+    if not isinstance(properties, dict):
+        return None
+    coords: list[int] = []
+    for axis in ("x", "y", "z"):
+        value = properties.get(axis, 0 if axis == "z" else None)
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            coords.append(value)
+        elif isinstance(value, str):
+            try:
+                coords.append(int(value))
+            except ValueError:
+                return None
+        else:
+            return None
+    return coords[0], coords[1], coords[2]
 
 
 def iter_map_objects(map_data: Any) -> list[dict[str, Any]]:
