@@ -574,6 +574,9 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "goblinRace"
+      },
       "sw": 1
     }
   },
