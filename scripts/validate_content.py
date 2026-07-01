@@ -3365,6 +3365,9 @@ class ContentValidator:
             )
 
     def _validate_creature_race_base_stats(self, path: Path, location: str, base_stats: Any) -> None:
+        allowed_keys = self._creature_race_stats_property_names()
+        if allowed_keys is None:
+            return
         if not isinstance(base_stats, dict):
             self._issue(
                 path,
@@ -3372,14 +3375,35 @@ class ContentValidator:
                 f"expected {CREATURE_RACE_STATS_SCHEMA_CLASS}-compatible object; got {json_value_kind(base_stats)}",
             )
             return
-        allowed_keys = self._creature_race_stats_property_names()
-        if allowed_keys is None:
+        # baseStats is deserialized through the standard object envelope
+        # ({"class": "CStats", "properties": {<stat>: <int>}}) -- the same nested form every
+        # other CStats payload in content uses -- and content loads under a strict deserialize
+        # scope, so a bare/flat stat map (stat keys at the top level, no "class") fails to
+        # construct at load time. Require the envelope and validate the inner stat keys.
+        if "class" not in base_stats and "ref" not in base_stats:
+            self._issue(
+                path,
+                location,
+                f'expected a {CREATURE_RACE_STATS_SCHEMA_CLASS} object node '
+                f'(e.g. {{"class": "{CREATURE_RACE_STATS_SCHEMA_CLASS}", "properties": {{...}}}})',
+            )
             return
-        for stat_key in base_stats:
+        stat_properties = base_stats.get("properties")
+        if stat_properties is None:
+            return
+        if not isinstance(stat_properties, dict):
+            self._issue(
+                path,
+                append_field(location, "properties"),
+                f"expected object; got {json_value_kind(stat_properties)}",
+            )
+            return
+        properties_location = append_field(location, "properties")
+        for stat_key in stat_properties:
             if stat_key not in allowed_keys:
                 self._issue(
                     path,
-                    append_field(location, stat_key),
+                    append_field(properties_location, stat_key),
                     f'"{stat_key}" is not a {CREATURE_RACE_STATS_SCHEMA_CLASS} property; '
                     f"expected one of {', '.join(sorted(allowed_keys))}",
                 )
