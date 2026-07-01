@@ -1,13 +1,45 @@
 # Creature Archetypes: Monster Race Family Taxonomy
 
-Status: Approved taxonomy (design). Scope: groups the concrete production monster
-templates in `res/config/monsters.json` into **race families** for later runtime
-authoring work (EPIC_02 "create race files").
+Status: Approved taxonomy (design), now partially **implemented** in runtime
+config. Scope: groups the concrete production monster templates in
+`res/config/monsters.json` into **race families**.
 
-This document is design-only. It does **not** create any runtime config and does
-**not** rename any concrete monster template id. The race family ids below are
-*proposed* identifiers to be consumed by the later `res/config/creature_races.json`
-authoring task.
+This section was originally authored as design-only, but the runtime archetype
+config it specifies now exists: `res/config/creature_races.json` and
+`res/config/creature_classes.json` are authored and staged, and the
+`CCreatureRace` / `CCreatureClass` engine objects consume them (see
+`src/object/CCreatureClass.h`, `src/object/CCreatureRace.h`). The race family ids
+below remain the source of truth for the monster->race mapping; concrete monster
+template ids are still **not** renamed.
+
+### Implementation status
+
+Assignments are **identity-only / baseline-preserving**: each archetype object
+contributes no `baseStats`/`actions` (classes declare only a matching `mainStat`),
+so composed stats and actions equal the pre-archetype legacy result.
+
+| Monster template | Race | Class | Status |
+| --- | --- | --- | --- |
+| `Gooby` | `goobyRace` | `bruteClass` | Assigned |
+| `OctoBogz` | `octoBogzRace` | `bruteClass` | Assigned |
+| `Pritz` | `pritzRace` | `bruteClass` | Assigned |
+| `PritzMage` | `pritzRace` | `mageClass` | Assigned |
+| `GoblinThief` | `goblinRace` | (deferred) | Race only |
+| `Cultist` | (unresolved) | (unresolved) | Blocked — CRA-1 |
+| `CultLeader` | (unresolved) | (unresolved) | Blocked — CRA-1 |
+
+Notes:
+
+- **`GoblinThief` class deferred**: the taxonomy proposes `thiefClass` (agility),
+  but `GoblinThief`'s own `baseStats.mainStat` is `strength`, so a
+  `mainStat: agility` class would change its composed main stat. That is a
+  deliberate rebalance decision, not a baseline-preserving identity change, so
+  only the race is assigned for now.
+- **`Cultist`/`CultLeader` blocked**: see blocker CRA-1 below. Do not invent a
+  `cultRace` runtime id until it is resolved.
+- Player-class templates (`Warrior`, `Sorcerer`, `Assasin`, `Wayfarer`,
+  `Inquisitor`) are a separate player-class extraction workstream; e.g.
+  `WarriorClass` is authored in `res/config/creature_classes.json`.
 
 ## Naming policy
 
@@ -151,8 +183,12 @@ lineage), a class is *what role it has learned to fight as*. Two creatures of
 different races can share a class (a Pritz mage and a human cultist can both be
 `mageClass`), and a single race can contain members of several classes.
 
-This taxonomy is design-only. It does **not** create any runtime config and does
-**not** rename any concrete template id in `res/config/monsters.json`.
+This taxonomy is now **implemented** in runtime config: the class ids it defines
+are authored in `res/config/creature_classes.json` (`bruteClass`, `mageClass`,
+`WarriorClass`) and referenced from templates via the `creatureClass` property. It
+still does **not** rename any concrete template id in `res/config/monsters.json`.
+See the Implementation status table at the top of this document for current
+assignments.
 
 ## Naming policy (classes)
 
