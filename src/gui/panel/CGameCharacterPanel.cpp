@@ -50,5 +50,5 @@ void CGameCharacterPanel::setCharSheet(std::shared_ptr<CMapStringString> charShe
 
 CListView::collection_pointer CGameCharacterPanel::interactionsCollection(std::shared_ptr<CGui> gui) {
     return std::make_shared<CListView::collection_type>(
-        vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getInteractions()));
+        vstd::cast<CListView::collection_type>(gui->getGame()->getMap()->getPlayer()->getEffectiveInteractions()));
 }

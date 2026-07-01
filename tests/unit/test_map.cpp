@@ -30,6 +30,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CEventHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CEvent.h"
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
 #include "object/CGameObject.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
@@ -352,6 +355,63 @@ void test_scene_manager_repeated_transitions_and_controller_usability() {
                 "scene manager should remain reusable after sequential transitions");
 }
 
+// EPIC_03/STORY_04/SUBSTORY_01: scene/map transitions must preserve the same composed
+// player identity and archetypes. performMapChange (src/core/CSceneManager.cpp) moves the
+// existing player shared_ptr from the source map into the destination via
+// oldMap->getPlayer() -> getMap()->attachPlayer(player); it never reconstructs the player
+// or its archetype references, so the live race/creatureClass set directly on the player
+// object survives the test -> ritual -> siege transitions intact. This is a
+// characterization test asserting that contract.
+void test_scene_manager_transition_preserves_player_archetypes() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto player = game->getMap()->getPlayer();
+
+    // Compose an archetype identity directly on the live player object. setRace/
+    // setCreatureClass store the references on the creature (CCreature::setRace/
+    // setCreatureClass) and flip usesArchetypeComposition() on.
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+    player->setRace(race);
+    player->setCreatureClass(klass);
+
+    expect_true(player->usesArchetypeComposition(),
+                "player should use archetype composition once race/creatureClass are set");
+    expect_true(game->getMap()->getMapName() == "test", "archetype fixture should start on the test map");
+
+    // test -> ritual
+    game->getSceneManager()->requestMapChange(game, "ritual");
+    pump_event_loop_iterations();
+    auto ritual_map = game->getMap();
+    expect_true(ritual_map->getMapName() == "ritual", "first transition should reach the ritual map");
+    expect_true(ritual_map->getPlayer() == player, "first transition should preserve the same player instance");
+    expect_true(player->getRace() == race, "first transition should preserve the player's race archetype reference");
+    expect_true(player->getCreatureClass() == klass,
+                "first transition should preserve the player's creatureClass archetype reference");
+    expect_true(player->usesArchetypeComposition(),
+                "first transition should keep the player on the composed-identity path");
+
+    // ritual -> siege
+    game->getSceneManager()->requestMapChange(game, "siege");
+    pump_event_loop_iterations();
+    auto siege_map = game->getMap();
+    expect_true(siege_map->getMapName() == "siege", "second transition should reach the siege map");
+    expect_true(siege_map->getPlayer() == player, "second transition should preserve the same player instance");
+    expect_true(player->getRace() == race, "second transition should preserve the player's race archetype reference");
+    expect_true(player->getCreatureClass() == klass,
+                "second transition should preserve the player's creatureClass archetype reference");
+
+    // Composed identity (the archetype labels themselves) is unchanged across both hops.
+    expect_true(player->getRace()->getCreatureType() == "humanoid",
+                "the preserved race archetype should keep its composed creature type");
+    expect_true(player->getCreatureClass()->getMainStat() == "strength",
+                "the preserved creatureClass archetype should keep its composed main stat");
+    expect_true(player->usesArchetypeComposition(),
+                "the player should remain on the composed-identity path after both transitions");
+}
+
 void test_scene_manager_null_and_legacy_missing_target_behavior() {
     auto standalone_manager = std::make_shared<CSceneManager>();
     expect_true(!standalone_manager->requestMapChange(nullptr, "ritual"),
@@ -533,6 +593,39 @@ class PostCombatCancellingFightController : public CFightController {
 
     bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { return true; }
 };
+
+// Records onEnter/onLeave hooks fired at its cell with the causing creature's name. Being a CEvent
+// (CMapObject + CVisitable) and not a CCreature, it never satisfies the post-combat fight predicate,
+// so it can sit on the contested cell purely as a destination-event probe.
+class VisitEventProbe : public CEvent {
+  public:
+    void onEnter(std::shared_ptr<CGameEvent> event) override {
+        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+        enterCauses.push_back(caused && caused->getCause() ? caused->getCause()->getName() : std::string());
+    }
+
+    void onLeave(std::shared_ptr<CGameEvent> event) override {
+        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+        leaveCauses.push_back(caused && caused->getCause() ? caused->getCause()->getName() : std::string());
+    }
+
+    std::vector<std::string> enterCauses;
+    std::vector<std::string> leaveCauses;
+};
+
+// Places a VisitEventProbe at the requested cell so destination onEnter/onLeave dispatch can be
+// observed. Mirrors add_post_combat_hostile's positioning/registration sequence.
+std::shared_ptr<VisitEventProbe> add_visit_event_probe(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                       Coords coords) {
+    auto probe = std::make_shared<VisitEventProbe>();
+    probe->setName(name);
+    probe->setGame(game);
+    probe->setPosX(coords.x);
+    probe->setPosY(coords.y);
+    probe->setPosZ(coords.z);
+    game->getMap()->addObject(probe);
+    return probe;
+}
 
 // Finds a walkable origin square that has at least one walkable orthogonal neighbour, returning
 // the origin together with the single-step delta that reaches that neighbour.
@@ -1578,6 +1671,96 @@ void test_map_move_blocks_new_turn_while_transition_pending() {
     expect_true(map->getTurn() == turn_before, "the old map should not advance a turn while a transition is pending");
 }
 
+void test_map_add_object_fills_hp_and_mana_from_composed_stats() {
+    // addObject initializes a freshly spawned (level 0) creature's runtime HP/mana
+    // from the composed stat block (CCreature::getStats -> buildLegacyStats), via the
+    // heal(0)/addMana(0) full-fill paths. getHpMax derives from composed stamina * 7
+    // and getManaMax from the composed main-stat value * 7.
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setStamina(6);      // hpMax = 6 * 7 = 42
+    stats->setIntelligence(4); // manaMax = 4 * 7 = 28
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setName("composedSpawn");
+    creature->setGame(game);
+    creature->setBaseStats(stats);
+    // Spawned with empty runtime pools; addObject should fill them from composed stats.
+    creature->setHp(0);
+    creature->setMana(0);
+
+    expect_true(creature->getLevel() == 0, "fixture creature should spawn at level 0");
+    expect_true(creature->getHpMax() == 42, "composed hpMax should derive from composed stamina * 7");
+    expect_true(creature->getManaMax() == 28, "composed manaMax should derive from composed main-stat value * 7");
+
+    map->addObject(creature);
+
+    expect_true(creature->getHp() == creature->getHpMax(),
+                "addObject should fill a fresh creature's HP to the composed maximum");
+    expect_true(creature->getHp() == 42, "addObject HP fill should use the composed stamina-derived maximum");
+    expect_true(creature->getMana() == creature->getManaMax(),
+                "addObject should fill a fresh creature's mana to the composed maximum");
+    expect_true(creature->getMana() == 28, "addObject mana fill should use the composed main-stat-derived maximum");
+}
+
+void test_set_base_stats_preserves_current_hp_and_mana() {
+    // Assigning the composed stat source (setBaseStats) must not silently refill or
+    // reduce the creature's current HP/mana outside the explicit heal/addMana paths,
+    // even when the new stats change the derived maxima.
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setStamina(10);      // hpMax = 70
+    stats->setIntelligence(10); // manaMax = 70
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setName("statReassignTarget");
+    creature->setGame(game);
+    creature->setBaseStats(stats);
+    map->addObject(creature);
+
+    // Spend some HP/mana so current values sit below the maxima.
+    creature->setHp(25);
+    creature->setMana(15);
+    expect_true(creature->getHp() == 25, "fixture HP should be reduced below maximum before stat reassignment");
+    expect_true(creature->getMana() == 15, "fixture mana should be reduced below maximum before stat reassignment");
+
+    // Reassigning a higher-stat block raises the maxima but must not refill current pools.
+    auto higherStats = std::make_shared<CStats>();
+    higherStats->setMainStat("intelligence");
+    higherStats->setStamina(20);      // hpMax = 140
+    higherStats->setIntelligence(20); // manaMax = 140
+    creature->setBaseStats(higherStats);
+
+    expect_true(creature->getHpMax() == 140, "setBaseStats should raise hpMax through composed stamina");
+    expect_true(creature->getManaMax() == 140, "setBaseStats should raise manaMax through composed main stat");
+    expect_true(creature->getHp() == 25, "setBaseStats should not refill current HP when the maximum increases");
+    expect_true(creature->getMana() == 15, "setBaseStats should not refill current mana when the maximum increases");
+
+    // Reassigning a lower-stat block shrinks the maxima below current pools, but
+    // setBaseStats must not clamp current HP/mana outside heal/addMana paths.
+    auto lowerStats = std::make_shared<CStats>();
+    lowerStats->setMainStat("intelligence");
+    lowerStats->setStamina(2);      // hpMax = 14
+    lowerStats->setIntelligence(1); // manaMax = 7
+    creature->setBaseStats(lowerStats);
+
+    expect_true(creature->getHpMax() == 14, "setBaseStats should lower hpMax through composed stamina");
+    expect_true(creature->getManaMax() == 7, "setBaseStats should lower manaMax through composed main stat");
+    expect_true(creature->getHp() == 25, "setBaseStats should not reduce current HP when the maximum drops below it");
+    expect_true(creature->getMana() == 15,
+                "setBaseStats should not reduce current mana when the maximum drops below it");
+}
+
 void test_post_combat_player_victory_returns_to_origin() {
     auto game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
@@ -1630,6 +1813,93 @@ void test_post_combat_player_defeat_skips_further_movement() {
                 "a defeated player should respawn at the map entry rather than the hostile cell");
     expect_true(!player->getPendingMoveOrigin().has_value(),
                 "afterMove should clear the pending move origin even when the attacker is defeated");
+}
+
+// Captures every numeric CStats field (src/core/CStats.h:26-40) plus the main-stat label into a
+// deterministic, order-stable vector so two effective-stat snapshots can be compared element by
+// element. Uses the concrete CStats getters directly so the snapshot needs no reflection plumbing.
+std::vector<int> capture_player_effective_stats(const std::shared_ptr<CStats> &stats) {
+    return {stats->getStrength(),    stats->getAgility(),      stats->getStamina(),       stats->getIntelligence(),
+            stats->getArmor(),       stats->getBlock(),        stats->getDmgMin(),        stats->getDmgMax(),
+            stats->getAttack(),      stats->getHit(),          stats->getCrit(),          stats->getFireResist(),
+            stats->getFrostResist(), stats->getNormalResist(), stats->getThunderResist(), stats->getShadowResist(),
+            stats->getDamage()};
+}
+
+// EPIC_03/STORY_04/SUBSTORY_02: preserve archetypes through defeat recovery.
+//
+// "Recovery" in this codebase is the player onDestroy restart trigger registered in
+// CMap::registerPlayerTriggers (src/core/CMap.cpp:986-1008): when a defeated player is removed
+// from the map (CMap::removeObject fires onDestroy, src/core/CMap.cpp:481), the trigger re-adds the
+// SAME _player instance, relocates it to the entry, and sets HP to 1 -- it deliberately does not
+// construct a new player or assign fallback archetypes. Because the live instance persists, its
+// archetype reference fields (race/creatureClass), its serialized class/race IDs, and its
+// effective stats must come back identical after the defeat->recovery cycle. This is a
+// characterization test of that contract (no production change).
+void test_post_combat_defeat_recovery_preserves_player_archetypes() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    // Attach concrete archetype definition references and pin identity IDs to the live player, the
+    // same way the map-transition archetype test stages composition on a loaded player.
+    auto race = std::make_shared<CCreatureRace>();
+    race->setCreatureType("humanoid");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+    player->setRace(race);
+    player->setCreatureClass(klass);
+    player->setRaceId("preserve-defeat-race");
+    player->setPlayerClassId("preserve-defeat-class");
+
+    expect_true(player->usesArchetypeComposition(),
+                "a player carrying race/creatureClass should use archetype composition before defeat");
+
+    const std::string race_id_before = player->getRaceId();
+    const std::string class_id_before = player->getPlayerClassId();
+    const auto stats_before = capture_player_effective_stats(player->getStats());
+    const int main_value_before = player->getStats()->getMainValue();
+    expect_true(!stats_before.empty(), "effective stats snapshot should capture at least one numeric stat");
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta),
+                "defeat-recovery archetype fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatSelfDefeatFightController>());
+    add_post_combat_hostile(game, "postCombatArchetypeFoe", hostile_cell);
+
+    // Drive the defeat, then pump the event loop so the onDestroy restart trigger recovers the player.
+    player->move(delta.x, delta.y, delta.z);
+    pump_event_loop_iterations();
+
+    // Recovery must keep the exact same live player instance on the map.
+    expect_true(map->getPlayer() == player,
+                "defeat recovery should keep the same player instance, not construct a replacement");
+    expect_true(player->isAlive(), "the recovered player should be alive again");
+    expect_true(map->normalizeCoords(player->getCoords()) == map->normalizeCoords(map->getEntry()),
+                "the recovered player should respawn at the map entry");
+
+    // Archetype reference fields preserved exactly (same pointers, not fallbacks).
+    expect_true(player->getRace() == race, "defeat recovery must preserve the player's race reference exactly");
+    expect_true(player->getCreatureClass() == klass,
+                "defeat recovery must preserve the player's creatureClass reference exactly");
+    expect_true(player->usesArchetypeComposition(), "the recovered player should still use archetype composition");
+
+    // Class/race identity IDs unchanged.
+    expect_true(player->getRaceId() == race_id_before && player->getRaceId() == "preserve-defeat-race",
+                "defeat recovery must preserve the player's race ID exactly");
+    expect_true(player->getPlayerClassId() == class_id_before && player->getPlayerClassId() == "preserve-defeat-class",
+                "defeat recovery must preserve the player's class ID exactly");
+
+    // Effective stats unchanged across the defeat->recovery cycle.
+    const auto stats_after = capture_player_effective_stats(player->getStats());
+    expect_true(stats_after == stats_before, "defeat recovery must preserve every effective stat value exactly");
+    expect_true(player->getStats()->getMainValue() == main_value_before,
+                "defeat recovery must preserve the player's effective main stat value exactly");
 }
 
 void test_post_combat_player_cancellation_returns_to_origin() {
@@ -1687,17 +1957,260 @@ void test_post_combat_player_multi_opponent_cell_returns_to_origin() {
                 "afterMove should clear the pending move origin after a multi-opponent encounter");
 }
 
+void test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta),
+                "post-combat victory cache fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatVictoryCacheFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    // The coordinate cache must follow the committed final position atomically: the victorious
+    // player is indexed back at its origin and is never left registered in the contested cell, and
+    // the defeated opponent is purged from that cell.
+    expect_true(map->getObjectsAtCoords(origin).contains(player),
+                "the victorious player should be indexed at its origin in the coordinate cache");
+    expect_true(!map->getObjectsAtCoords(hostile_cell).contains(player),
+                "the victorious player must not remain indexed in the hostile cell");
+    expect_true(!map->getObjectsAtCoords(hostile_cell).contains(hostile),
+                "the defeated opponent should be removed from the hostile-cell cache");
+    expect_true(map->getObjectByName(player->getName()) == player,
+                "the player should still resolve by name after returning to its origin");
+}
+
+void test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta),
+                "post-combat cancellation cache fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatCancellingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatCancelCacheFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    // A cancelled/stalled encounter restores the origin without disturbing the survived opponent:
+    // the player is indexed at its origin, never in the contested cell, and the still-living foe
+    // remains indexed in that cell.
+    expect_true(map->getObjectsAtCoords(origin).contains(player),
+                "a cancelled-encounter player should be indexed at its origin in the coordinate cache");
+    expect_true(!map->getObjectsAtCoords(hostile_cell).contains(player),
+                "a cancelled-encounter player must not remain indexed in the hostile cell");
+    expect_true(map->getObjectsAtCoords(hostile_cell).contains(hostile),
+                "the surviving opponent should stay indexed in its cell after a cancelled encounter");
+    expect_true(player->isAlive() && hostile->isAlive(),
+                "a cancelled encounter should leave both combatants alive and correctly indexed");
+}
+
+// Drives a full map move cycle for a player whose CPlayerController path steps directly into a
+// hostile cell. After the encounter resolves the post-combat policy returns the player to its
+// pre-step origin and the commit loop must interrupt the path controller, so a subsequent move
+// cycle does not automatically retarget the same enemy cell.
+void test_post_combat_player_path_stops_after_encounter() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords delta = ZERO;
+    expect_true(find_walkable_step(map, origin, delta), "post-combat path-stop fixture should find a walkable step");
+    const Coords hostile_cell = map->normalizeCoords(origin + delta);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+    auto hostile = add_post_combat_hostile(game, "postCombatPathStopFoe", hostile_cell);
+
+    auto controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    expect_true(controller != nullptr, "the loaded player should be driven by a CPlayerController");
+    controller->setTarget(player, hostile_cell);
+    expect_true(!controller->isCompleted(player),
+                "pathing into the hostile cell should leave the controller with a pending path");
+
+    map->move();
+
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "a player path that hits combat should leave the player at the pre-step origin");
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "a player path that hits combat must not leave the player inside the hostile cell");
+    expect_true(!hostile->isAlive(), "the path-stop encounter should resolve the hostile occupant");
+    expect_true(controller->isCompleted(player),
+                "the encounter should interrupt the path controller so no pending path remains");
+
+    // A second movement cycle must not automatically step the player back into the enemy cell
+    // from the now-cleared path.
+    map->move();
+
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "an interrupted path must not auto-retry stepping into the resolved enemy cell");
+    expect_true(map->normalizeCoords(player->getCoords()) != hostile_cell,
+                "the player must not re-enter the hostile cell after the path is interrupted");
+}
+
+void pick_isolated_step(const std::shared_ptr<CMap> &map, Coords &origin, Coords &hostileCell) {
+    origin = map->normalizeCoords(Coords(100, 100, 0));
+    hostileCell = map->normalizeCoords(origin + EAST);
+    expect_true(origin != hostileCell, "isolated-step fixture should resolve two distinct cells");
+    expect_true(map->canStep(origin), "isolated-step origin should be walkable");
+    expect_true(map->canStep(hostileCell), "isolated-step destination should be walkable");
+    expect_true(map->getObjectsAtCoords(origin).empty(),
+                "isolated-step origin should start free of cached map objects");
+    expect_true(map->getObjectsAtCoords(hostileCell).empty(),
+                "isolated-step destination should start free of cached map objects");
+}
+
+void test_post_combat_player_suppresses_destination_visit_events() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+    auto player = map->getPlayer();
+
+    Coords origin = ZERO;
+    Coords hostile_cell = ZERO;
+    pick_isolated_step(map, origin, hostile_cell);
+    const Coords delta = map->getShortestDelta(origin, hostile_cell);
+
+    player->relocateWithoutMoveHooks(origin);
+    player->setFightController(std::make_shared<PostCombatKillingFightController>());
+
+    // An onLeave probe sits on the origin square the player vacates and an onEnter probe sits on
+    // the contested destination alongside the hostile that drives the fight. The isolated cells
+    // guarantee these probes are the only non-creature visitables involved.
+    auto originProbe = add_visit_event_probe(game, "postCombatLeaveProbe", origin);
+    auto destinationProbe = add_visit_event_probe(game, "postCombatEnterProbe", hostile_cell);
+    add_post_combat_hostile(game, "postCombatEventFoe", hostile_cell);
+
+    player->move(delta.x, delta.y, delta.z);
+
+    // The move begins, so beforeMove fires onLeave exactly once at the origin (no duplicates) with
+    // the moving player as the cause.
+    expect_true((originProbe->leaveCauses == std::vector<std::string>{player->getName()}),
+                "beforeMove should fire onLeave exactly once at the vacated origin cell");
+
+    // Because the player resolves the encounter by returning to the origin, the contested
+    // destination's onEnter must never fire: a regression that committed the step and then ran the
+    // destination visitables would record one (or duplicate) onEnter here.
+    expect_true(destinationProbe->enterCauses.empty(),
+                "winning a step-into fight must not fire onEnter at the contested destination");
+    expect_true(destinationProbe->leaveCauses.empty(),
+                "the contested destination probe should not observe a stray onLeave");
+
+    // Returning to origin must not re-fire a destination-style onEnter on the origin probe either.
+    expect_true(originProbe->enterCauses.empty(),
+                "the non-hook return to origin must not dispatch a duplicate onEnter at the origin");
+    expect_true(map->normalizeCoords(player->getCoords()) == origin,
+                "the player should resolve the suppressed-event encounter back at the origin");
+}
+
 } // namespace
+
+// Race-aware loader overloads ([EPIC_04][STORY_04][SUBSTORY_01]). The new four-argument loaders
+// thread a raceId to the player; the legacy three-argument loaders are now thin wrappers that pass
+// "no race override". Because no race content ships in the repo yet, the empty/absent-raceId path
+// is the normal path and must behave identically to the legacy call and never crash.
+void test_loader_race_overloads_preserve_default_and_attach_race() {
+    // Legacy three-argument path: template's default race, no raceId override.
+    auto legacy_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(legacy_game, "test", "Warrior");
+    auto legacy_player = legacy_game->getMap()->getPlayer();
+    expect_true(legacy_player != nullptr, "legacy three-argument startGameWithPlayer should attach a player");
+    const std::string default_race_id = legacy_player->getRaceId();
+    expect_true(legacy_player->getRace() == nullptr,
+                "legacy three-argument loader should not attach a CCreatureRace (no override)");
+
+    // New four-argument path with an empty raceId must behave identically to the legacy path:
+    // same default race id, no race object attached, no crash.
+    auto empty_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(empty_game, "test", "Warrior", std::string());
+    auto empty_player = empty_game->getMap()->getPlayer();
+    expect_true(empty_player != nullptr, "four-argument loader with empty raceId should attach a player");
+    expect_true(empty_player->getRaceId() == default_race_id,
+                "empty raceId override must preserve the template's default race id");
+    expect_true(empty_player->getRace() == nullptr, "empty raceId override must not attach a CCreatureRace");
+
+    // New four-argument path with an unknown raceId: the race is resolved and type-checked BEFORE
+    // the active map is replaced. Because no such race content exists, the resolved CCreatureRace is
+    // null, so the loader aborts without switching maps or attaching a partial player
+    // ([EPIC_04][STORY_04][SUBSTORY_02]). Starting from a fresh game leaves no active map.
+    auto race_game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(race_game, "test", "Warrior", "nonexistent-race");
+    expect_true(race_game->getMap() == nullptr,
+                "an unknown raceId must abort before replacing the active map (no partial player)");
+
+    // The random-map four-argument overload with an empty raceId must also load without crashing.
+    auto random_game = CGameLoader::loadGame();
+    CGameLoader::startRandomGameWithPlayer(random_game, "Warrior", std::string());
+    auto random_player = random_game->getMap()->getPlayer();
+    expect_true(random_player != nullptr,
+                "four-argument startRandomGameWithPlayer with empty raceId should attach a player");
+    expect_true(random_player->getRaceId() == default_race_id,
+                "random-map empty raceId override must preserve the template's default race id");
+}
+
+// Validate race before replacing the active map ([EPIC_04][STORY_04][SUBSTORY_02]). A game is
+// already running on a map; attempting to (re)start with an invalid non-empty raceId must leave the
+// active map and its player completely unchanged -- no map switch, no partial player -- while a
+// subsequent start with an empty raceId still succeeds.
+void test_loader_invalid_race_leaves_active_map_unchanged() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+
+    auto original_map = game->getMap();
+    expect_true(original_map != nullptr, "the initial start should install an active map");
+    auto original_player = original_map->getPlayer();
+    expect_true(original_player != nullptr, "the initial start should attach a player");
+    original_map->setTurn(41);
+
+    // Attempt a start with an invalid (unknown, non-empty) raceId. The race cannot resolve to a
+    // CCreatureRace, so creation must abort before the active map is replaced.
+    CGameLoader::startGameWithPlayer(game, "ritual", "Warrior", "nonexistent-race");
+
+    expect_true(game->getMap() == original_map, "an invalid raceId must not replace the active map");
+    expect_true(game->getMap()->getMapName() == original_map->getMapName(),
+                "the active map name must be unchanged after a rejected invalid-race start");
+    expect_true(game->getMap()->getTurn() == 41,
+                "the active map state (turn) must be preserved after a rejected invalid-race start");
+    expect_true(original_map->getPlayer() == original_player,
+                "the original player must remain attached after a rejected invalid-race start");
+    expect_true(count_players_on_map(original_map) == 1,
+                "no partial player may be attached after a rejected invalid-race start");
+
+    // An empty raceId (no override) on the same running game still succeeds and switches maps.
+    CGameLoader::startGameWithPlayer(game, "ritual", "Warrior", std::string());
+    expect_true(game->getMap() != nullptr, "an empty raceId start should install a map");
+    expect_true(game->getMap()->getMapName() == "ritual", "an empty raceId start should switch to the requested map");
+    expect_true(game->getMap()->getPlayer() != nullptr, "an empty raceId start should attach a player");
+}
 
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_loader_race_overloads_preserve_default_and_attach_race();
+    test_loader_invalid_race_leaves_active_map_unchanged();
     test_scene_manager_state_duplicate_and_player_transfer();
     test_game_change_map_duplicate_requests_commit_once();
     test_scene_manager_transition_generation_start_and_commit();
     test_scene_manager_stale_transition_generation_clears_pending_state();
     test_scene_manager_trace_rejections_and_completion();
     test_scene_manager_repeated_transitions_and_controller_usability();
+    test_scene_manager_transition_preserves_player_archetypes();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
     test_map_move_ignores_controller_future_after_transition_generation_changes();
@@ -1720,10 +2233,17 @@ int main() {
     test_map_session_store_put_get_evict_and_ownership();
     test_game_context_owns_a_map_session_store();
     test_map_move_blocks_new_turn_while_transition_pending();
+    test_map_add_object_fills_hp_and_mana_from_composed_stats();
+    test_set_base_stats_preserves_current_hp_and_mana();
     test_post_combat_player_victory_returns_to_origin();
     test_post_combat_player_defeat_skips_further_movement();
+    test_post_combat_defeat_recovery_preserves_player_archetypes();
     test_post_combat_player_cancellation_returns_to_origin();
     test_post_combat_player_multi_opponent_cell_returns_to_origin();
+    test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell();
+    test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present();
 
+    test_post_combat_player_path_stops_after_encounter();
+    test_post_combat_player_suppresses_destination_visit_events();
     return finish_tests();
 }

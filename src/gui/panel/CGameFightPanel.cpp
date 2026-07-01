@@ -96,7 +96,7 @@ CListView::collection_pointer CGameFightPanel::interactionsCollection(std::share
         return empty_collection();
     }
     return std::make_shared<CListView::collection_type>(
-        vstd::cast<CListView::collection_type>(player->getInteractions()));
+        vstd::cast<CListView::collection_type>(player->getEffectiveInteractions()));
 }
 
 void CGameFightPanel::interactionsCallback(std::shared_ptr<CGui> gui, int index,

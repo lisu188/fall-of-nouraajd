@@ -423,7 +423,7 @@
           }
         }
       },
-      "monsters": "5"
+      "monsters": "3"
     }
   },
   "market1": {
@@ -472,7 +472,7 @@
     "properties": {
       "animation": "images/npc/questGiver",
       "controller": {
-        "class": "CNpcRandomController"
+        "class": "CController"
       },
       "npc": true
     }
@@ -482,7 +482,7 @@
     "properties": {
       "animation": "images/npc/oldWoman",
       "controller": {
-        "class": "CNpcRandomController"
+        "class": "CController"
       },
       "npc": true
     }
@@ -536,7 +536,7 @@
     "properties": {
       "name": "holyRelic",
       "animation": "images/skull",
-      "description": "A sanctified shard taken from the ruined chapel, the only tool that can cleanse the OctoBogz lair.",
+      "description": "A sanctified shard taken from the ruined chapel, blessed to purify the OctoBogz lair once the brood has fallen.",
       "tags": [
         "quest"
       ]

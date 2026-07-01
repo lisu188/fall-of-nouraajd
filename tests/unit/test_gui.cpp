@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CScript.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
@@ -38,6 +39,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CListView.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
@@ -837,6 +839,145 @@ void test_minimap_bounds_normal_map_renders() {
     expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
 }
 
+// Builds a GUI where a map-layer recorder and an overlapping minimap overlay share the same parent. The
+// minimap is pushed last so it has the higher priority and is visited first by CGameGraphicsObject::event(),
+// exactly like the live layer ordering. Synthetic SDL events dispatched through gui->event() then let us
+// count whether the underlying map layer was reached.
+struct MinimapClickHarness {
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<MouseEventRecorder> map;
+    std::shared_ptr<CMinimapGraphicsObject> minimap;
+};
+
+MinimapClickHarness make_minimap_click_harness() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    MinimapClickHarness harness;
+    harness.gui = std::make_shared<CGui>();
+
+    harness.map = std::make_shared<MouseEventRecorder>();
+    harness.map->setLayout(fixed_layout(0, 0, 200, 200));
+    harness.gui->pushChild(harness.map); // lower priority -> underlying layer
+
+    harness.minimap = std::make_shared<CMinimapGraphicsObject>();
+    harness.minimap->setLayout(fixed_layout(10, 10, 50, 50));
+    harness.gui->pushChild(harness.minimap); // higher priority -> overlay on top
+    return harness;
+}
+
+void test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel() {
+    // 1. A left button press strictly inside the minimap rectangle must be consumed by the overlay and must
+    //    NOT reach the underlying map layer.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 30;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "left click inside the minimap should be handled by the overlay");
+        expect_true(harness.map->button_count == 0,
+                    "left click inside the minimap should not reach the underlying map layer");
+    }
+
+    // 2. A right button press inside the minimap must be consumed the same way.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_RIGHT;
+        down.button.x = 30;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "right click inside the minimap should be handled by the overlay");
+        expect_true(harness.map->button_count == 0,
+                    "right click inside the minimap should not reach the underlying map layer");
+    }
+
+    // 3. Mouse motion inside the minimap must be consumed so hovering/dragging does not interact with the world.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event motion{};
+        motion.type = SDL_MOUSEMOTION;
+        motion.motion.x = 30;
+        motion.motion.y = 30;
+        motion.motion.xrel = 2;
+        motion.motion.yrel = 2;
+        expect_true(harness.gui->event(&motion), "motion inside the minimap should be handled by the overlay");
+        expect_true(harness.map->motion_count == 0,
+                    "motion inside the minimap should not reach the underlying map layer");
+    }
+
+    // 4. A click one pixel outside the minimap rectangle must still fall through to the map. CUtil::isIn uses
+    //    inclusive bounds, so the minimap rect (10,10,50,50) covers x/y in [10,60]; x = 61 is the first column
+    //    outside it.
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 61;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "click outside the minimap should be handled by the map layer");
+        expect_true(harness.map->button_count == 1,
+                    "click one pixel outside the minimap should still reach the underlying map layer");
+    }
+
+    // 5. Wheel decision is explicit: the minimap deliberately does NOT override mouseWheelEvent, so a wheel
+    //    event over the minimap falls through to the map (map zoom keeps working under the cursor).
+    {
+        auto harness = make_minimap_click_harness();
+        SDL_Event wheel{};
+        wheel.type = SDL_MOUSEWHEEL;
+        wheel.wheel.x = 0;
+        wheel.wheel.y = 1;
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+        wheel.wheel.mouseX = 30;
+        wheel.wheel.mouseY = 30;
+        expect_true(harness.gui->event(&wheel), "wheel over the minimap should be handled by the map layer");
+        expect_true(harness.map->wheel_count == 1,
+                    "wheel over the minimap should fall through to the underlying map layer (no wheel override)");
+#endif
+    }
+
+    // 6. A hidden minimap must consume nothing: a visible script that fails to resolve makes isVisible() false,
+    //    so event() short-circuits before any minimap hook and the click reaches the map.
+    {
+        auto harness = make_minimap_click_harness();
+        harness.minimap->setVisible(std::make_shared<CScript>());
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 30;
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "click under a hidden minimap should be handled by the map layer");
+        expect_true(harness.map->button_count == 1, "a hidden minimap should consume nothing");
+    }
+
+    // 7. A modal panel still takes precedence: a higher-priority modal recorder pushed above the minimap
+    //    receives even out-of-its-bounds clicks before the minimap, so the minimap does not override modal
+    //    dispatch.
+    {
+        auto harness = make_minimap_click_harness();
+        auto modalPanel = std::make_shared<MouseEventRecorder>();
+        modalPanel->setLayout(fixed_layout(120, 120, 40, 40));
+        modalPanel->setModal(true);
+        harness.gui->pushChild(modalPanel); // highest priority
+
+        SDL_Event down{};
+        down.type = SDL_MOUSEBUTTONDOWN;
+        down.button.button = SDL_BUTTON_LEFT;
+        down.button.x = 30; // inside the minimap rect, outside the modal panel rect
+        down.button.y = 30;
+        expect_true(harness.gui->event(&down), "modal panel should consume the click");
+        expect_true(modalPanel->button_count == 1, "a modal panel should take precedence over the minimap overlay");
+        expect_true(harness.minimap->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0),
+                    "minimap mouseEvent should still report handled for in-bounds dispatch");
+        expect_true(harness.map->button_count == 0,
+                    "a modal panel should also stop the click before the underlying map layer");
+    }
+}
+
 void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -961,6 +1102,262 @@ void test_list_view_legacy_click_callback_still_fires_without_drag_callbacks() {
     expect_true(harness.panel->last_source_click_index == 0, "legacy click should keep the clicked item index");
     expect_true(harness.panel->last_source_click == harness.panel->sourceItem,
                 "legacy click should keep the clicked item object");
+}
+
+void test_list_view_non_draggable_does_click_only_press_motion_release() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragEnabled(false);
+
+    // Mouse-down on a non-draggable command list must run the click callback and never
+    // start a drag session or capture the pointer.
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "non-draggable list should consume the left click");
+    expect_true(harness.panel->source_clicks == 1, "non-draggable list should fire the click callback once on press");
+    expect_true(harness.panel->drag_starts == 0, "non-draggable list should never call drag-start");
+    expect_true(!harness.gui->hasDragSession(), "non-draggable list must not create a drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "non-draggable list must not capture the pointer");
+
+    // Pointer motion and release must not suppress or duplicate the click callback, and must
+    // not retroactively spawn a session/proxy.
+    harness.gui->updateDragSession(180, 25);
+    expect_true(!harness.gui->hasDragSession(), "motion without a session must not create one");
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 180, 25),
+                "non-draggable list should consume the release");
+    expect_true(harness.panel->source_clicks == 1, "motion/release must not suppress or duplicate the click callback");
+    expect_true(harness.panel->drag_cancels == 0, "non-draggable list release must not report a drag cancel");
+    expect_true(!harness.gui->hasDragSession(), "non-draggable list must leave no drag session after release");
+    expect_true(!harness.gui->hasPointerCapture(), "non-draggable list must leave no pointer capture after release");
+}
+
+void test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    auto gui = std::make_shared<CGui>();
+    auto player = std::make_shared<CPlayer>();
+    auto interaction = std::make_shared<CInteraction>();
+    auto panel = std::make_shared<CGameFightPanel>();
+
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+
+    player->setGame(game);
+    player->setBaseStats(player_stats());
+    player->setMana(player->getManaMax());
+    map->setPlayer(player);
+
+    interaction->setGame(game);
+    interaction->setName("nonDraggableInteraction");
+    interaction->setTypeId("nonDraggableInteractionType");
+    interaction->setManaCost(0);
+    player->addAction(interaction);
+
+    // First combat click selects (highlights) the affordable interaction.
+    panel->interactionsCallback(gui, 0, interaction);
+    expect_true(panel->interactionsSelect(gui, 0, interaction),
+                "first combat interaction click should select the interaction");
+
+    // Second click on the same interaction confirms it; selection is preserved until the
+    // blocking select loop consumes finalSelected, so the highlight remains.
+    panel->interactionsCallback(gui, 0, interaction);
+    expect_true(panel->interactionsSelect(gui, 0, interaction),
+                "second combat interaction click should confirm without losing the selection");
+}
+
+void test_list_view_draggable_default_still_drags_after_non_draggable_change() {
+    auto harness = create_drag_list_harness();
+    // Default (unset dragEnabled) preserves legacy draggable behavior: a populated item
+    // still starts the generic drag session on press (inventory/equipment regression).
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "default draggable list should consume the click");
+    expect_true(harness.gui->hasDragSession(), "default draggable list should still create the existing drag session");
+    expect_true(harness.panel->source_clicks == 1, "default draggable list should still fire the click callback");
+    harness.gui->clearDragSession();
+    harness.gui->releasePointerCapture();
+
+    // Explicitly enabling drag keeps the same behavior.
+    harness.source->setDragEnabled(true);
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "explicitly draggable list should consume the click");
+    expect_true(harness.gui->hasDragSession(), "explicitly draggable list should still create a drag session");
+    harness.gui->clearDragSession();
+    harness.gui->releasePointerCapture();
+}
+
+void test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_or_capture() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragEnabled(false);
+
+    // Press on the non-draggable list (no session/capture is created), then remove the
+    // owning panel mid-interaction. Nothing dangling should remain.
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(!harness.gui->hasDragSession(), "non-draggable press should not create a session before removal");
+    expect_true(!harness.gui->hasPointerCapture(), "non-draggable press should not capture the pointer before removal");
+
+    harness.gui->removeChild(harness.panel);
+    expect_true(!harness.gui->hasDragSession(), "panel removal during input must leave no dangling drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "panel removal during input must leave no dangling pointer capture");
+}
+
+void test_list_view_below_threshold_motion_stays_a_click_no_proxy_no_drop() {
+    // Deferred source callback path (select returns true) so the click is decided at
+    // release: below-threshold motion must fire the click callback exactly once and
+    // never spawn a proxy, drop, or drag-cancel.
+    auto harness = create_drag_list_harness();
+    harness.source->setSelect("");
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+
+    // Press starts a candidate drag session (drag-start deferred the click).
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25),
+                "source press should be consumed");
+    expect_true(harness.gui->hasDragSession(), "press should create a candidate drag session");
+    expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->dragActive,
+                "a fresh session must be a candidate, not an active drag");
+    expect_true(harness.panel->source_clicks == 0, "drag-start should defer the click until release");
+
+    // Below-threshold motion (Chebyshev distance 4 <= threshold) keeps it a candidate.
+    harness.gui->updateDragSession(29, 29);
+    expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->dragActive,
+                "below-threshold motion must not promote the session to an active drag");
+
+    // Release below threshold: this is a click. The click callback fires exactly once,
+    // and no drag-cancel is reported.
+    expect_true(harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 29, 29),
+                "below-threshold release should be consumed");
+    expect_true(harness.panel->source_clicks == 1, "below-threshold release must fire the click callback exactly once");
+    expect_true(harness.panel->drag_cancels == 0, "below-threshold click must not report a drag cancel");
+    expect_true(harness.panel->drops == 0, "below-threshold click must not perform a drop");
+}
+
+void test_list_view_exact_boundary_is_a_click_above_boundary_is_a_drag() {
+    // Exact boundary (Chebyshev distance == threshold) is a click (exclusive boundary).
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(29, 29); // dx = dy = 4 (exact boundary)
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 29, 29);
+        expect_true(harness.panel->source_clicks == 1, "exact-boundary motion must stay a click and fire once");
+        expect_true(harness.panel->drag_cancels == 0, "exact-boundary click must not report a drag cancel");
+    }
+
+    // One pixel past the boundary is a drag; with no target the source drag is canceled
+    // and the click callback does not fire.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(30, 25); // dx = 5 (above boundary)
+        expect_true(harness.gui->getDragSession() && harness.gui->getDragSession()->dragActive,
+                    "above-boundary motion must promote the session to an active drag");
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 30, 25);
+        expect_true(harness.panel->drag_cancels == 1, "above-boundary release without a target must call drag-cancel");
+        expect_true(harness.panel->source_clicks == 0, "an active drag must not fire the click callback");
+    }
+}
+
+void test_list_view_negative_and_diagonal_motion_follow_the_rule() {
+    // Negative-axis motion above threshold is a drag.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        // Start away from the edge so a negative offset stays inside the widget.
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 40, 40);
+        harness.gui->updateDragSession(35, 40); // dx = -5
+        expect_true(harness.gui->getDragSession() && harness.gui->getDragSession()->dragActive,
+                    "negative-axis motion above threshold must become a drag");
+    }
+
+    // Diagonal 4/4 stays a click; diagonal 5/5 is a drag.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 20, 20);
+        harness.gui->updateDragSession(24, 24); // diagonal 4/4
+        expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->dragActive,
+                    "diagonal 4/4 motion must stay a click");
+        harness.gui->updateDragSession(25, 25); // diagonal 5/5
+        expect_true(harness.gui->getDragSession() && harness.gui->getDragSession()->dragActive,
+                    "diagonal 5/5 motion must become a drag");
+    }
+}
+
+void test_list_view_above_threshold_drop_is_accepted_below_threshold_is_not() {
+    // Above-threshold motion onto a valid target performs the drop.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        harness.target->setDragValidate("targetDragValidate");
+        harness.target->setDrop("targetDrop");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(125, 25); // well past the threshold, over the target
+        expect_true(harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                    "above-threshold drop should be consumed by the target");
+        expect_true(harness.panel->drops == 1, "above-threshold motion onto a target must drop exactly once");
+        expect_true(harness.panel->drag_cancels == 0, "an accepted drop must not cancel the source drag");
+    }
+
+    // Below-threshold motion must NOT be treated as a drop even if the release lands on
+    // the target rectangle: it is a click on the source.
+    {
+        auto harness = create_drag_list_harness();
+        harness.source->setDragStart("sourceDragStart");
+        harness.source->setDragCancel("sourceDragCancel");
+        harness.target->setDragValidate("targetDragValidate");
+        harness.target->setDrop("targetDrop");
+
+        harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+        harness.gui->updateDragSession(27, 25); // dx = 2, below threshold
+        expect_true(harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                    "below-threshold release should still be consumed");
+        expect_true(harness.panel->drops == 0, "below-threshold motion must not perform a drop");
+        expect_true(harness.panel->drag_validations == 0, "below-threshold motion must not validate a drop target");
+    }
+}
+
+void test_list_view_below_threshold_candidate_panel_removal_leaves_no_session() {
+    // A candidate (below-threshold) session must be cleared correctly when the owning
+    // panel is removed before the threshold is ever crossed.
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    harness.gui->updateDragSession(26, 26); // below threshold: still a candidate
+    expect_true(harness.gui->hasDragSession() && !harness.gui->getDragSession()->dragActive,
+                "press + jitter should leave a candidate session before removal");
+
+    harness.gui->removeChild(harness.panel);
+    expect_true(!harness.gui->hasDragSession(),
+                "panel removal must clear a below-threshold candidate drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "panel removal must clear pointer capture for a candidate session");
+}
+
+void test_list_view_active_drag_panel_removal_leaves_no_session() {
+    // An active (above-threshold) drag session must also be cleared on panel removal.
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    harness.gui->updateDragSession(120, 25); // above threshold: active drag
+    expect_true(harness.gui->hasDragSession() && harness.gui->getDragSession()->dragActive,
+                "press + threshold-crossing motion should leave an active drag session");
+
+    harness.gui->removeChild(harness.panel);
+    expect_true(!harness.gui->hasDragSession(), "panel removal must clear an active drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "panel removal must clear pointer capture for an active session");
 }
 
 void test_panel_event_callbacks_stop_after_close() {
@@ -1394,6 +1791,16 @@ int main() {
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
+    test_list_view_non_draggable_does_click_only_press_motion_release();
+    test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm();
+    test_list_view_draggable_default_still_drags_after_non_draggable_change();
+    test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_or_capture();
+    test_list_view_below_threshold_motion_stays_a_click_no_proxy_no_drop();
+    test_list_view_exact_boundary_is_a_click_above_boundary_is_a_drag();
+    test_list_view_negative_and_diagonal_motion_follow_the_rule();
+    test_list_view_above_threshold_drop_is_accepted_below_threshold_is_not();
+    test_list_view_below_threshold_candidate_panel_removal_leaves_no_session();
+    test_list_view_active_drag_panel_removal_leaves_no_session();
     test_panel_event_callbacks_stop_after_close();
     test_gui_routes_mouse_motion_to_target_child();
     test_loader_gui_sessions_shutdown_stale_callbacks();
@@ -1411,6 +1818,7 @@ int main() {
     test_minimap_bounds_sparse_coordinates_fail_closed();
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
+    test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
 
     return finish_tests();
 }

@@ -1,0 +1,64 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "composed",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable composed archetype fixture",
+      "mapName": "composed",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "posx": 5,
+            "posy": 9,
+            "posz": 0,
+            "quests": [],
+            "typeId": "Warrior"
+          }
+        },
+        {
+          "class": "CCreature",
+          "properties": {
+            "creatureClass": {
+              "class": "CCreatureClass",
+              "properties": {
+                "baseStats": {
+                  "class": "CStats",
+                  "properties": {
+                    "strength": 9
+                  }
+                },
+                "mainStat": "strength"
+              }
+            },
+            "name": "composedCompanion",
+            "posx": 6,
+            "posy": 9,
+            "posz": 0,
+            "race": {
+              "class": "CCreatureRace",
+              "properties": {
+                "baseStats": {
+                  "class": "CStats",
+                  "properties": {
+                    "strength": 7
+                  }
+                },
+                "creatureType": "humanoid"
+              }
+            },
+            "typeId": "composedCompanionTemplate"
+          }
+        }
+      ],
+      "tiles": [],
+      "triggers": [],
+      "turn": 18
+    }
+  }
+}

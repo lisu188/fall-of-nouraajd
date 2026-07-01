@@ -573,18 +573,31 @@ std::shared_ptr<CArmor> CCreature::getArmor() { return vstd::cast<CArmor>(getIte
 
 // TODO: get rid of this, calculate level automatically
 void CCreature::levelUp() {
-    // Legacy fallback compatibility contract (docs/design/creature_archetypes.md,
-    // "Legacy fallback compatibility contract"): a creature with no race and no
-    // creatureClass uses this legacy level-up path exactly -- increment level and
-    // apply the concrete template's own `levelling` unlock (getLevelAction). No
-    // race/class-driven growth or progression participates, because those archetype
-    // objects (CCreatureRace / CCreatureClass) do not exist yet. Any future
-    // archetype level growth must slot in without altering this no-archetype path.
     level++;
-    // TODO: dynamic action calculation
-    addAction(getLevelAction());
-    heal(0);
-    addMana(0);
+    if (usesArchetypeComposition()) {
+        // Composed level-up path (creature carries a race and/or creatureClass).
+        // Class-derived level unlocks are NOT mutated/serialized into the creature's
+        // own `actions` set: getEffectiveInteractions already surfaces every
+        // `levelling` entry whose unlock level is at or below the current level
+        // (src/object/CCreature.cpp getEffectiveInteractions, the unlockLevel <= level
+        // gate). Raising `level` therefore changes the derived interaction set on its
+        // own, so we only signal `interactionsChanged` for observers to re-query the
+        // composed set -- no duplicate serialized actions accumulate across level-ups.
+        signal("interactionsChanged");
+        heal(0);
+        addMana(0);
+    } else {
+        // Legacy fallback compatibility contract (docs/design/creature_archetypes.md,
+        // "Legacy fallback compatibility contract"): a creature with no race and no
+        // creatureClass uses this legacy level-up path exactly -- increment level and
+        // apply the concrete template's own `levelling` unlock (getLevelAction) by
+        // folding it into `actions`. This preserves the historical behavior where the
+        // unlock is serialized into the creature's own action set.
+        // TODO: dynamic action calculation
+        addAction(getLevelAction());
+        heal(0);
+        addMana(0);
+    }
     if (level > 1) {
         vstd::logger::debug(to_string(), "is now level:", level);
     }
@@ -878,9 +891,18 @@ std::shared_ptr<CStats> CCreature::buildLegacyStats() {
     // compatibility contract"): for a creature with no race and no creatureClass
     // (every creature today) this composes the legacy stat block exactly.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
-    // Main stat: creatureClass.baseStats.mainStat first (extension point), then the
-    // legacy creature.baseStats.mainStat fallback below.
-    ret->setMainStat(getBaseStats()->getMainStat());
+    // Main stat selection (class-first, authoritative): the composed block's mainStat is a
+    // *selected* (not accumulated) field -- CStats::addBonus copies only numeric properties, so
+    // the std::string mainStat must be assigned explicitly. When the creature has a composed
+    // creatureClass that declares a main stat, that class main stat is AUTHORITATIVE and wins
+    // over the legacy/race creature.baseStats main stat. A legacy creature with no class -- or a
+    // class with an empty main stat -- falls back to the legacy creature.baseStats.mainStat
+    // exactly, preserving the no-archetype path (EPIC_02/STORY_04/SUBSTORY_03).
+    std::string composedMainStat = getBaseStats()->getMainStat();
+    if (creatureClass && !creatureClass->getMainStat().empty()) {
+        composedMainStat = creatureClass->getMainStat();
+    }
+    ret->setMainStat(composedMainStat);
     // 1-2. race / creature-class baseStats: extension point (nothing to add yet).
     // 3. creature.baseStats (legacy concrete base).
     ret->addBonus(getBaseStats());

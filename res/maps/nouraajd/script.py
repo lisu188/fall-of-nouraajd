@@ -9,6 +9,7 @@ def load(self, context):
     from game import PlayerQuestRegistry
     from game import QuestStateStore
     from game import claim_once
+    from game import remove_runtime_actors
     from game import ensure_quest
     from game import register, trigger
 
@@ -20,11 +21,7 @@ def load(self, context):
     MAIN_QUEST_GOLD_REWARD = 200
 
     def _clear_victor_encounter(game_map):
-        def should_remove(obj):
-            name = obj.getName()
-            return bool(name) and (name == "cultLeaderQuest" or name.startswith(VICTOR_CULTIST_PREFIX))
-
-        game_map.removeAll(should_remove)
+        remove_runtime_actors(game_map, names=("cultLeaderQuest",), prefixes=(VICTOR_CULTIST_PREFIX,))
         game_map.setNumericProperty("VICTOR_COURTYARD_TURN", -1)
         game_map.setNumericProperty("VICTOR_CULTISTS_PLACED", 0)
 
@@ -929,10 +926,32 @@ def load(self, context):
 
     @register(context)
     class OctoBogzDialog(CDialog):
+        # QuestSystem.get_state("octobogz_contract") is the single authority for which
+        # branch of the dialog is shown. The verified states are "not_started", "active",
+        # and "completed"; each condition below maps one state to one ENTRY branch so the
+        # quest is only offered before it starts, merely acknowledged while active, and
+        # never re-offered once completed (even in the same session right after the reward
+        # is granted, since complete_octobogz_contract runs before this dialog re-opens).
+        def contract_not_started(self):
+            return _quest_system_from(self).get_state("octobogz_contract") == "not_started"
+
+        def contract_active(self):
+            return _quest_system_from(self).get_state("octobogz_contract") == "active"
+
+        def contract_completed(self):
+            return _quest_system_from(self).is_octobogz_contract_completed()
+
         def accept_quest(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
             quest_system = _quest_system_from(self)
+            # No state guard here: accept_quest must still process a "late" claim where the
+            # OctoBogz were cleared before the contract was formally accepted (state already
+            # "completed"), granting the outstanding reward exactly once. Re-entry is safe --
+            # activate_octobogz_contract only acts from "not_started" and the reward is
+            # protected by the OCTOBOGZ_REWARD_CLAIMED guard. Re-offering in normal play is
+            # prevented at the dialog layer: the OFFER_HELP accept option is gated by
+            # contract_not_started, so active/completed states never surface the offer.
             _grant_quest(player, "octoBogzQuest")
             quest_system.activate_octobogz_contract()
             if quest_system.is_octobogz_contract_completed():
@@ -955,6 +974,12 @@ def load(self, context):
                 return
             if game_map.getBoolProperty("VICTOR_REWARD_CLAIMED") or game_map.getBoolProperty("VICTOR_GOOD_END"):
                 return
+            # Claim-first: claim the Victor payout before handing out gold, healing, the reward dialog
+            # and the one-time vendor panel so a re-entered trigger cannot grant the reward twice.
+            # VICTOR_REWARD_CLAIMED is a state-derived legacy flag, so a dedicated non-derived key is
+            # used for the claim to avoid sync_legacy_flags overwriting the guard.
+            if not claim_once(game_map, "VICTOR_REWARD_GRANTED"):
+                return
             player = game.getMap().getPlayer()
             player.addGold(500)
             player.healProc(100)
@@ -972,7 +997,7 @@ def load(self, context):
                 quest_system = _quest_system_from(obj)
                 amulet_state = quest_system.get_state("amulet")
                 if amulet_state == "returned":
-                    game_map.removeObject(obj)
+                    remove_runtime_actors(game_map, names=("oldWoman",))
                     return
                 player = game_map.getPlayer()
                 if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
@@ -1009,15 +1034,15 @@ def load(self, context):
             if quest_system.get_state("amulet") != "active":
                 return
             if player.hasItem(lambda it: it.getName() == "preciousAmulet"):
+                # Claim-first: claim the amulet return reward before consuming the amulet, paying the
+                # gold and cleaning up the quest actors so a re-run cannot grant it twice. AMULET_RETURNED
+                # is a state-derived legacy flag, so a dedicated non-derived key backs the claim.
+                if not claim_once(game_map, "AMULET_REWARD_CLAIMED"):
+                    return
                 player.removeItem(lambda it: it.getName() == "preciousAmulet", True)
                 player.addGold(50)
                 quest_system.finish_amulet()
-                amulet_goblin = game_map.getObjectByName("amuletGoblin")
-                if amulet_goblin:
-                    game_map.removeObject(amulet_goblin)
-                old_woman = game_map.getObjectByName("oldWoman")
-                if old_woman:
-                    game_map.removeObject(old_woman)
+                remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))
                 game.getGuiHandler().showMessage(
                     "The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks."
                 )

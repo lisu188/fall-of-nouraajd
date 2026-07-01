@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CMapGraphicsObject.h"
 #include "handler/CRngHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureRace.h"
 #include "object/CPlayer.h"
 #include "plugin/CPluginAbi.h"
 #include <pybind11/eval.h>
@@ -649,7 +650,7 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
 
 std::expected<std::shared_ptr<CMap>, std::string>
 load_save_candidate(const std::shared_ptr<CGame> &game, const std::string &slotName, const std::string &path) {
-    auto raw = CResourcesProvider::getInstance()->loadJson(path);
+    auto raw = game->getResourcesProvider()->loadJson(path);
     if (!raw) {
         return std::unexpected("save file could not be read or parsed");
     }
@@ -1027,22 +1028,67 @@ std::shared_ptr<CMap> CMapLoader::loadSavedMap(const std::shared_ptr<CGame> &gam
 
 std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
                                                        std::string player) {
+    return loadNewMapWithPlayer(game, name, std::move(player), std::string());
+}
+
+std::shared_ptr<CMap> CMapLoader::loadNewMapWithPlayer(const std::shared_ptr<CGame> &game, const std::string &name,
+                                                       std::string player, const std::string &raceId) {
+    // Validate the player template and (for a non-empty raceId) the race BEFORE loadNewMap replaces
+    // the active map. If the race id cannot be resolved, keep the current map untouched and return it
+    // so the caller's setMap re-set is a no-op instead of attaching a partial player onto a new map.
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
+    if (!ptr) {
+        vstd::logger::warning("Keeping the active map unchanged; player could not be created for:", name);
+        return game->getMap();
+    }
+
     std::shared_ptr<CMap> map = loadNewMap(game, name);
-    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
 
     return map;
 }
 
 // TODO: move to map, set player as well as triggers
-std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player) {
+std::shared_ptr<CPlayer> CMapLoader::createPlayer(const std::shared_ptr<CGame> &game, std::string &player,
+                                                  const std::string &raceId) {
+    // Resolve and type-check the requested race BEFORE the caller replaces the active map. An empty
+    // raceId means "no override": preserve the template's default race so the existing three-argument
+    // loaders behave exactly as before. A non-empty raceId must resolve to a CCreatureRace; if it
+    // does not (unknown id or an id that maps to a non-race object), we log the exact id and return
+    // null so the caller can abort without switching maps or attaching a partial player.
+    std::shared_ptr<CCreatureRace> race;
+    if (!raceId.empty()) {
+        race = game->createObject<CCreatureRace>(raceId);
+        if (!race) {
+            vstd::logger::warning("Rejected player creation for unresolved race id:", raceId);
+            return nullptr;
+        }
+    }
+
     auto ptr = game->createObject<CPlayer>(std::move(player));
+    if (ptr && race) {
+        ptr->setRaceId(raceId);
+        ptr->setRace(std::move(race));
+    }
+
     return ptr;
 }
 
 std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
+    return loadRandomMapWithPlayer(game, std::move(player), std::string());
+}
+
+std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                                          const std::string &raceId) {
+    // Validate the player template and (for a non-empty raceId) the race before generating and
+    // installing the random map. On an unresolved race id, keep the current map untouched.
+    std::shared_ptr<CPlayer> ptr = createPlayer(game, player, raceId);
+    if (!ptr) {
+        vstd::logger::warning("Keeping the active map unchanged; player could not be created for random map");
+        return game->getMap();
+    }
+
     std::shared_ptr<CMap> map = CRandomMapGenerator::loadRandomMap(game);
-    std::shared_ptr<CPlayer> ptr = createPlayer(game, player);
     map->setPlayer(ptr);
     return map;
 }
@@ -1059,7 +1105,11 @@ void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name)
         return;
     }
 
-    CResourcesProvider::getInstance()->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
+    // Persist through the saved map's per-session resources provider; fall back to the process
+    // singleton only when the map has already been detached from its game (compatibility path).
+    auto game = map->getGame();
+    auto resources = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    resources->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
 }
 
 void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,
@@ -1217,11 +1267,21 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
 }
 
 void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player) {
-    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player)));
+    startGameWithPlayer(game, file, std::move(player), std::string());
+}
+
+void CGameLoader::startGameWithPlayer(const std::shared_ptr<CGame> &game, const std::string &file, std::string player,
+                                      const std::string &raceId) {
+    game->setMap(CMapLoader::loadNewMapWithPlayer(game, file, std::move(player), raceId));
 }
 
 void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player) {
-    game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player)));
+    startRandomGameWithPlayer(game, std::move(player), std::string());
+}
+
+void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, std::string player,
+                                            const std::string &raceId) {
+    game->setMap(CMapLoader::loadRandomMapWithPlayer(game, std::move(player), raceId));
 }
 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
@@ -1305,7 +1365,7 @@ bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::st
         return false;
     }
     try {
-        std::string code = CResourcesProvider::getInstance()->load(path);
+        std::string code = game->getResourcesProvider()->load(path);
         pybind11::dict plugin_namespace;
         plugin_namespace["__builtins__"] = build_restricted_plugin_builtins();
         plugin_namespace["__file__"] = path;
@@ -1398,7 +1458,7 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
         }
     }
 
-    for (const std::string &script : CResourcesProvider::getInstance()->getFiles(CResType::PLUGIN)) {
+    for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN)) {
         if (!loadedPythonPlugins.contains(script)) {
             loadedAll = loadPlugin(game, script) && loadedAll;
         }

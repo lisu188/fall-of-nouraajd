@@ -138,26 +138,33 @@ void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_c
     auto target = attach_drop_target_recorder(gui);
 
     gui->startDragSession(source, drag_payload(game), 4, 40, 50);
-    auto initial_tree = serialize_gui_tree(gui);
-    const json *initial_proxy = find_serialized_drag_proxy(initial_tree, "15", "25");
-    expect_true(initial_proxy != nullptr, "drag start should attach a serialized proxy child");
-    if (initial_proxy) {
-        expect_true(serialized_layout_value(*initial_proxy, "x") == "15" &&
-                        serialized_layout_value(*initial_proxy, "y") == "25",
-                    "drag proxy should be centered on the start pointer coordinates");
-        expect_true(serialized_layout_value(*initial_proxy, "w") == "50" &&
-                        serialized_layout_value(*initial_proxy, "h") == "50",
-                    "drag proxy should use the GUI tile size for its serialized layout");
-    }
+    // A drag start is only a *candidate*: below-threshold motion (here zero motion at
+    // the start point) must NOT attach a proxy widget, because the interaction is still
+    // a potential click.
+    auto candidate_tree = serialize_gui_tree(gui);
+    expect_true(find_serialized_drag_proxy(candidate_tree) == nullptr,
+                "candidate drag (no threshold-crossing motion) should not attach a proxy child");
 
+    // Motion that stays within the Chebyshev threshold (<= 4 px on both axes) keeps the
+    // session a candidate and still shows no proxy.
+    gui->updateDragSession(44, 54);
+    auto below_threshold_tree = serialize_gui_tree(gui);
+    expect_true(find_serialized_drag_proxy(below_threshold_tree) == nullptr,
+                "below-threshold motion should not attach a drag proxy child");
+
+    // Crossing the threshold (Chebyshev distance > 4) promotes the session to an active
+    // drag and attaches the proxy centered on the current pointer coordinates.
     gui->updateDragSession(90, 110);
     auto moved_tree = serialize_gui_tree(gui);
     const json *moved_proxy = find_serialized_drag_proxy(moved_tree, "65", "85");
-    expect_true(moved_proxy != nullptr, "drag update should keep one serialized proxy child");
+    expect_true(moved_proxy != nullptr, "crossing the movement threshold should attach one serialized proxy child");
     if (moved_proxy) {
         expect_true(serialized_layout_value(*moved_proxy, "x") == "65" &&
                         serialized_layout_value(*moved_proxy, "y") == "85",
                     "drag proxy serialized layout should follow pointer coordinates");
+        expect_true(serialized_layout_value(*moved_proxy, "w") == "50" &&
+                        serialized_layout_value(*moved_proxy, "h") == "50",
+                    "drag proxy should use the GUI tile size for its serialized layout");
     }
 
     gui->acceptDragSession(target);
@@ -167,13 +174,98 @@ void test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_c
     gui->clearDragSession();
 
     gui->startDragSession(source, drag_payload(game), 5, 60, 70);
+    // Fresh candidate session: no proxy until motion crosses the threshold.
     auto restarted_tree = serialize_gui_tree(gui);
-    expect_true(find_serialized_drag_proxy(restarted_tree, "35", "45") != nullptr,
-                "new drag should attach a fresh serialized proxy child");
+    expect_true(find_serialized_drag_proxy(restarted_tree) == nullptr,
+                "a fresh candidate drag should not attach a proxy child before threshold-crossing motion");
+    gui->updateDragSession(120, 130);
+    auto restarted_active_tree = serialize_gui_tree(gui);
+    expect_true(find_serialized_drag_proxy(restarted_active_tree, "95", "105") != nullptr,
+                "crossing the threshold on the new drag should attach a fresh serialized proxy child");
     gui->cancelDragSession();
     auto canceled_tree = serialize_gui_tree(gui);
     expect_true(find_serialized_drag_proxy(canceled_tree) == nullptr,
                 "canceled drag should remove the serialized proxy child");
+    gui->clearDragSession();
+}
+
+// Drives updateDragSession from a fixed start point to (start + dx, start + dy) and
+// reports whether the session became an active drag. A fresh session is started each
+// time so latching from a previous sample does not leak in.
+bool drag_active_after_offset(const std::shared_ptr<CGui> &gui, const std::shared_ptr<CGameGraphicsObject> &source,
+                              const std::shared_ptr<CGameObject> &payload, int start_x, int start_y, int dx, int dy) {
+    gui->startDragSession(source, payload, 0, start_x, start_y);
+    gui->updateDragSession(start_x + dx, start_y + dy);
+    const bool active = gui->getDragSession() && gui->getDragSession()->dragActive;
+    gui->clearDragSession();
+    return active;
+}
+
+void test_gui_drag_movement_threshold_is_deterministic_chebyshev_boundary() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto source = attach_mouse_recorder(gui);
+    auto payload = drag_payload(game);
+
+    const int start_x = 100;
+    const int start_y = 100;
+
+    // Zero movement stays a click.
+    expect_true(!drag_active_after_offset(gui, source, payload, start_x, start_y, 0, 0),
+                "zero movement must not promote the session to a drag");
+
+    // Below threshold on each single axis stays a click (positive and negative).
+    expect_true(!drag_active_after_offset(gui, source, payload, start_x, start_y, 1, 0),
+                "1px x motion must stay a click");
+    expect_true(!drag_active_after_offset(gui, source, payload, start_x, start_y, 0, 3),
+                "3px y motion must stay a click");
+    expect_true(!drag_active_after_offset(gui, source, payload, start_x, start_y, -4, 0),
+                "-4px x motion (exact boundary) must stay a click");
+    expect_true(!drag_active_after_offset(gui, source, payload, start_x, start_y, 0, -4),
+                "-4px y motion (exact boundary) must stay a click");
+
+    // Exact boundary (Chebyshev distance == threshold) is EXCLUSIVE -> still a click,
+    // including the diagonal 4/4 case.
+    expect_true(!drag_active_after_offset(gui, source, payload, start_x, start_y, 4, 4),
+                "diagonal 4/4 motion at the exact boundary must stay a click (exclusive boundary)");
+
+    // Above threshold on either axis becomes a drag (positive, negative, diagonal).
+    expect_true(drag_active_after_offset(gui, source, payload, start_x, start_y, 5, 0),
+                "5px x motion must become a drag");
+    expect_true(drag_active_after_offset(gui, source, payload, start_x, start_y, 0, 5),
+                "5px y motion must become a drag");
+    expect_true(drag_active_after_offset(gui, source, payload, start_x, start_y, -5, 0),
+                "-5px x motion must become a drag (negative axis)");
+    expect_true(drag_active_after_offset(gui, source, payload, start_x, start_y, 0, -5),
+                "-5px y motion must become a drag (negative axis)");
+    expect_true(drag_active_after_offset(gui, source, payload, start_x, start_y, 5, 5),
+                "diagonal 5/5 motion must become a drag");
+    expect_true(drag_active_after_offset(gui, source, payload, start_x, start_y, -6, 3),
+                "diagonal motion is governed by the larger axis (|-6| > 4)");
+}
+
+void test_gui_drag_active_latches_and_survives_below_threshold_return() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto source = attach_mouse_recorder(gui);
+
+    gui->startDragSession(source, drag_payload(game), 0, 100, 100);
+    expect_true(gui->getDragSession() && !gui->getDragSession()->dragActive,
+                "a fresh session starts as a candidate (not an active drag)");
+
+    gui->updateDragSession(110, 100); // dx = 10 -> crosses threshold
+    expect_true(gui->getDragSession() && gui->getDragSession()->dragActive,
+                "crossing the threshold must latch the session as an active drag");
+
+    gui->updateDragSession(100, 100); // back to start (below threshold again)
+    expect_true(gui->getDragSession() && gui->getDragSession()->dragActive,
+                "an active drag must not demote back to a click when motion returns below the threshold");
     gui->clearDragSession();
 }
 
@@ -183,6 +275,8 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_gui_drag_session_serializes_proxy_child_and_removes_it_after_drop_or_cancel();
+    test_gui_drag_movement_threshold_is_deterministic_chebyshev_boundary();
+    test_gui_drag_active_latches_and_survives_below_threshold_return();
 
     return finish_tests();
 }
