@@ -212,11 +212,15 @@ int CGameGraphicsObject::getPriority() { return priority; }
 void CGameGraphicsObject::setPriority(int _priority) { this->priority = _priority; }
 
 int CGameGraphicsObject::getTopPriority() {
-    auto iterator = std::max_element(children.begin(), children.end());
-    if (iterator != children.end()) {
-        return (*iterator)->getPriority();
+    // children is ordered by priority_comparator (priority ascending, pointer tie-break), so the
+    // last element carries the highest priority. std::max_element without a comparator would instead
+    // compare the shared_ptrs by address and return an arbitrary child's priority, which made
+    // pushChild assign non-strictly-increasing priorities and produced platform-dependent z-order
+    // (equal-priority ties resolved by heap address).
+    if (children.empty()) {
+        return -1;
     }
-    return -1;
+    return (*children.rbegin())->getPriority();
 }
 
 void CGameGraphicsObject::pushChild(const std::shared_ptr<CGameGraphicsObject> &child) {
