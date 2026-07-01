@@ -1,0 +1,139 @@
+{
+  "tollmanDialog": {
+    "class": "TollmanDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "An old man sits with his back to the tarn, a bottle of something black in his fist. He will not look at the water. 'You came up the mire road,' he says. 'Then you've not taken the gold yet. Good. Sit. I'll tell it the once, and then I'll drink until I can't.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "TITHE",
+                  "text": "What gold? What is this drowned place?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "TITHE",
+            "text": "'Vhul'Marn was starving, and the captain came home from the far isles with a bargain. Cast your gold and your get into the tarn, he said, and Father Dagon sends fish, and gold enough, and more. So we did. And so it came - the fish, the gold, all of it. And the town began to change.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "LOOK",
+                  "text": "Changed how?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LOOK",
+            "text": "'Look at their eyes down by the wharf. See how they never blink. That is the Deep coming up in them, the old blood breeding through the young. They do not die, traveler. They go down and dwell in the city of columns under the water, and they are glad of it. The altar waits out on the causeway. It will offer you a tiara of that cold gold. Hear me plain: do not wear it.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ACCEPT",
+                  "text": "I'll cross to the altar. I have to know what the town owed.",
+                  "action": "hear_the_tithe"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ACCEPT",
+            "text": "'Course you will. Everyone does.' He lets go of your sleeve and turns at last to face the tarn. 'When you take it, the bell will not need a hand to ring. Walk quick across the stones, and whatever calls up out of the water - do not answer to your own name.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "widowDialog": {
+    "class": "WidowDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "A woman in a widow's shawl stands too still by the flooded lane. When she speaks the voice arrives a half-beat late, as if translated up from somewhere deep and cold. 'You still have the land on you,' she says. 'The dry look. It fades.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "WARN",
+                  "text": "What happened to the people of Vhul'Marn?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "WARN",
+            "text": "'Nothing happened to us. We were paid.' She smiles with a few too many teeth. 'The gold remembers the shape of a head. Put it on, and it teaches you the hymn, and the hymn opens the door that is already inside you.' She tilts her head like a thing listening under water. 'You will wear it. They always wear it. We will keep a place for you, under.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

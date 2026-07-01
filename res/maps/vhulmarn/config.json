@@ -1,0 +1,488 @@
+{
+  "vhulmarnStart": {
+    "class": "StartEvent",
+    "properties": {
+      "text": "The mire's black water gives way to Vhul'Marn, a fishing hamlet half-swallowed by a lightless tarn. Cyclopean blocks of some elder mason lean at angles that should not hold, and every flooded street runs toward one drowned altar. The town paid a tithe to the deep once. It has never stopped paying."
+    }
+  },
+  "vhulmarnSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "VHUL'MARN - THE DROWNED TITHE. Fish and gold for the deep; the deep keeps the rest."
+    }
+  },
+  "oldTollman": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "markedWidow": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/oldWoman",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "tarnMarket": {
+    "class": "CMarket",
+    "properties": {
+      "items": [
+        {
+          "ref": "LesserLifePotion"
+        },
+        {
+          "ref": "LesserManaPotion"
+        },
+        {
+          "ref": "DarkBeer"
+        }
+      ]
+    }
+  },
+  "tarnBarter": {
+    "ref": "Market",
+    "properties": {
+      "animation": "images/buildings/market",
+      "market": {
+        "ref": "tarnMarket"
+      }
+    }
+  },
+  "tideBell": {
+    "class": "TideBell",
+    "properties": {
+      "animation": "images/ambient/street_lantern",
+      "canStep": true,
+      "text": "A drowned bell hangs above the causeway, its rope tarred black and trailing into the tarn."
+    }
+  },
+  "altarThreshold": {
+    "class": "AltarThreshold",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true
+    }
+  },
+  "deepSpawn": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/octobogz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Deep-Spawn",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 5,
+          "dmgMin": 4,
+          "hit": 4,
+          "intelligence": 2,
+          "normalResist": 6,
+          "stamina": 4,
+          "strength": 5
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 12,
+          "dmgMax": 14,
+          "dmgMin": 11,
+          "hit": 78,
+          "intelligence": 6,
+          "mainStat": "strength",
+          "normalResist": 6,
+          "stamina": 6,
+          "strength": 6
+        }
+      },
+      "sw": 2
+    }
+  },
+  "drownedHybrid": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cultist",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Drowned Hybrid",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 6,
+          "dmgMin": 4,
+          "hit": 4,
+          "intelligence": 3,
+          "normalResist": 5,
+          "stamina": 4,
+          "strength": 5
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 7,
+          "crit": 14,
+          "dmgMax": 17,
+          "dmgMin": 13,
+          "hit": 80,
+          "intelligence": 8,
+          "mainStat": "strength",
+          "normalResist": 5,
+          "stamina": 6,
+          "strength": 7
+        }
+      },
+      "sw": 1
+    }
+  },
+  "tideHierophant": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cult_leader",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Tide-Hierophant of Dagon",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      },
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 3,
+          "dmgMax": 8,
+          "dmgMin": 6,
+          "hit": 5,
+          "intelligence": 5,
+          "normalResist": 7,
+          "stamina": 6,
+          "strength": 6
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 16,
+          "dmgMax": 24,
+          "dmgMin": 18,
+          "hit": 82,
+          "intelligence": 12,
+          "mainStat": "intelligence",
+          "normalResist": 8,
+          "stamina": 10,
+          "strength": 8
+        }
+      },
+      "sw": 2
+    }
+  },
+  "theNameless": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/gooby",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "The Nameless That Dreams Below",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 3,
+          "dmgMax": 12,
+          "dmgMin": 9,
+          "hit": 5,
+          "intelligence": 4,
+          "normalResist": 10,
+          "stamina": 10,
+          "strength": 8
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 6,
+          "crit": 18,
+          "dmgMax": 44,
+          "dmgMin": 30,
+          "hit": 85,
+          "intelligence": 10,
+          "mainStat": "strength",
+          "normalResist": 12,
+          "stamina": 22,
+          "strength": 14
+        }
+      },
+      "sw": 3
+    }
+  },
+  "caveTarnMouth": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The Tarn-Mouth warren caves in; brine and black slime pour from the dark.",
+      "chance": "12",
+      "monster": {
+        "ref": "deepSpawn",
+        "properties": {
+          "affiliation": "deep",
+          "controller": {
+            "class": "CGroundController",
+            "properties": {
+              "tileType": "swamp"
+            }
+          }
+        }
+      },
+      "monsters": "8"
+    }
+  },
+  "caveSunkenWharf": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The Sunken Wharf collapses, and the things nesting beneath the pilings surface hissing.",
+      "chance": "12",
+      "monster": {
+        "ref": "deepSpawn",
+        "properties": {
+          "affiliation": "deep",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "8"
+    }
+  },
+  "caveHybridWarren": {
+    "ref": "Cave",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "message": "The Hybrid Warren breaks open; half-turned townsfolk of the Order spill into the street.",
+      "chance": "12",
+      "monster": {
+        "ref": "drownedHybrid",
+        "properties": {
+          "affiliation": "deep",
+          "controller": {
+            "class": "CTargetController",
+            "properties": {
+              "target": "player"
+            }
+          }
+        }
+      },
+      "monsters": "6"
+    }
+  },
+  "tiaraOfTheDrownedTithe": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "label": "Tiara of the Drowned Tithe",
+      "description": "Deep-wrought gold in the exotic tradition of the Order of Dagon, cold as tarn-water and heavier than its size. It gilds the mind with drowned knowing, but the wearer's flesh forgets how to keep the sea out.",
+      "tags": [
+        "quest"
+      ],
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 8,
+          "intelligence": 14,
+          "normalResist": -10,
+          "stamina": -8,
+          "strength": 2
+        }
+      },
+      "power": 16
+    }
+  },
+  "drownedTitheQuest": {
+    "class": "DrownedTitheQuest",
+    "properties": {
+      "description": "Uncover the secret of the drowned altar at the heart of Vhul'Marn."
+    }
+  },
+  "ambientDrownedGate": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "The town gate is barred from the inside with net-rope and prayer; the mud outside is printed with wide, webbed feet."
+    }
+  },
+  "ambientTitheLedger": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "Tithe ledger: gold given, fish given, sons and daughters given. The final column is only ever marked PAID."
+    }
+  },
+  "ambientNetShrine": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "A shrine of knotted nets and fish-hooks. Beneath a graven fish-god someone has scratched: DAGON HEARS. MOTHER HYDRA ANSWERS."
+    }
+  },
+  "ambientChildrenShoes": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/supply_pile",
+      "canStep": true,
+      "text": "Small shoes are lined up along the tide line, each pair tied with net-cord. None of them point back toward the land."
+    }
+  },
+  "ambientBackwardPrayer": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "A house door bears a prayer written backward, so that only the water on the far side could read it rightly."
+    }
+  },
+  "ambientGoldOrnament": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/market_stall",
+      "canStep": true,
+      "text": "A pawn-stall of strange gold: tiaras and armlets in no earthly fashion, priced in nothing, taken by no one."
+    }
+  },
+  "ambientScrubbedDoorstep": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "This doorstep has been scrubbed pale, yet the tarn keeps seeping brine back up through the joints of the stone."
+    }
+  },
+  "ambientEmptyBoats": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_cart",
+      "canStep": true,
+      "text": "The fishing boats are all drawn up and empty. Their nets are dry. Whatever Vhul'Marn eats now, it does not row out for."
+    }
+  },
+  "ambientBellWarning": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/signpost",
+      "canStep": true,
+      "text": "WARNING - Do not toll the causeway bell after the tide turns. What it calls no longer knows it was ever asked to leave."
+    }
+  },
+  "ambientCyclopeanBlocks": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "canStep": true,
+      "text": "These squared blocks are older than the town, older than masons. Their angles meet where two right angles have no business meeting."
+    }
+  },
+  "ambientDeepScales": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/hay_bales",
+      "canStep": true,
+      "text": "Grey-green scales cling to the causeway stones, sloughed by things shaped enough like men to wear a townsman's coat."
+    }
+  },
+  "ambientDrownedLantern": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/street_lantern",
+      "canStep": true,
+      "text": "A lantern still burns beneath the water's skin, lighting no road for the living, only the long stair going down."
+    }
+  },
+  "ambientObedPact": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "A captain's grave, empty. The stone reads only: HE BROUGHT THE BARGAIN HOME, AND THE BARGAIN OUTLIVED HIM."
+    }
+  },
+  "ambientYhaNthlei": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "canStep": true,
+      "text": "A well without a bottom. Pilgrims knelt here to whisper toward Y'ha-nthlei, the city of columns and wonder that waits under the tarn."
+    }
+  },
+  "ambientHydraHymn": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "canStep": true,
+      "text": "Wax and fish-oil gutter at a hymn-post. The last verse, worn smooth by wet lips: we shall not die, we shall go down and dwell."
+    }
+  },
+  "ambientAltarTithe": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "Before the altar the tithe is named plainly: leave your gold, take the gold that is offered, and wear it, and be welcomed under."
+    }
+  },
+  "ambientStarsAreRight": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/campfire_cauldron",
+      "canStep": true,
+      "text": "Someone kept a tally of the nights the altar sang. The marks stop where a shaking hand wrote: the stars are almost right."
+    }
+  }
+}

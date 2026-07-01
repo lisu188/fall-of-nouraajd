@@ -293,6 +293,11 @@ configure_file(res/maps/ritual/config.json maps/ritual/config.json)
 configure_file(res/maps/ritual/map.json maps/ritual/map.json)
 configure_file(res/maps/ritual/script.py maps/ritual/script.py)
 
+configure_file(res/maps/vhulmarn/config.json maps/vhulmarn/config.json)
+configure_file(res/maps/vhulmarn/dialog.json maps/vhulmarn/dialog.json)
+configure_file(res/maps/vhulmarn/map.json maps/vhulmarn/map.json)
+configure_file(res/maps/vhulmarn/script.py maps/vhulmarn/script.py)
+
 configure_file(res/maps/test/config.json maps/test/config.json)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)
