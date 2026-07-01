@@ -25,8 +25,8 @@ so composed stats and actions equal the pre-archetype legacy result.
 | `Pritz` | `pritzRace` | `bruteClass` | Assigned |
 | `PritzMage` | `pritzRace` | `mageClass` | Assigned |
 | `GoblinThief` | `goblinRace` | (deferred) | Race only |
-| `Cultist` | (unresolved) | (unresolved) | Blocked — CRA-1 |
-| `CultLeader` | (unresolved) | (unresolved) | Blocked — CRA-1 |
+| `Cultist` | `humanRace` | (deferred) | Race only (CRA-1 resolved) |
+| `CultLeader` | `humanRace` | (deferred) | Race only (CRA-1 resolved) |
 
 Notes:
 
@@ -35,8 +35,14 @@ Notes:
   `mainStat: agility` class would change its composed main stat. That is a
   deliberate rebalance decision, not a baseline-preserving identity change, so
   only the race is assigned for now.
-- **`Cultist`/`CultLeader` blocked**: see blocker CRA-1 below. Do not invent a
-  `cultRace` runtime id until it is resolved.
+- **`Cultist`/`CultLeader` race resolved as `humanRace`**: CRA-1 is resolved in
+  favor of the human-faction interpretation — "cult" is an affiliation, not a
+  biological race, and every use of the `Cultist` template (hostile cultists and
+  the `questGiver`/`oldWoman` townsfolk it is reused for) is human, so they share
+  `humanRace`. No `cultRace` id was invented. The assignment is race-only and
+  baseline-preserving (`humanRace` contributes no stats/actions); the combat
+  *class* (`cultistClass`) stays deferred, since attaching it at template level
+  would leak the role onto the non-combat NPC reuses (UNRESOLVED-CLS-1).
 - Player-class templates (`Warrior`, `Sorcerer`, `Assasin`, `Wayfarer`,
   `Inquisitor`) are a separate player-class extraction workstream; e.g.
   `WarriorClass` is authored in `res/config/creature_classes.json`.
@@ -133,29 +139,30 @@ All proposed ids end with the required `Race` suffix.
 
 ## Unresolved design blockers
 
-### CRA-1: Cult templates (`Cultist`, `CultLeader`) have no approved race family
+### CRA-1: Cult templates (`Cultist`, `CultLeader`) race family — RESOLVED (`humanRace`)
 
-The `Cult` stem suggests a single `cultRace` (with `CultLeader` as the elite
-variant), mirroring the `pritzRace` decision. The blocker is that `Cultist` is
-not used purely as a hostile creature: it is also the base template for ordinary
-town NPCs (`questGiver`, `oldWoman` in `res/maps/nouraajd/config.json`, both
-flagged `npc: true` with `CNpcRandomController`). "Cult" is a *faction/affiliation*
-in the existing content, not clearly a biological race, and the same template
-spans both robed cultists and unrelated townsfolk.
+**Resolution:** "cult" is a *faction/affiliation*, not a biological race. The
+`Cultist` template is not used purely as a hostile creature — it is also the base
+template for ordinary town NPCs (`questGiver`, `oldWoman` in
+`res/maps/nouraajd/config.json`, both `npc: true` with `CNpcRandomController`) —
+and every one of those uses (robed cultists and townsfolk alike) is **human**.
+The shared race family is therefore **`humanRace`**, not a `cultRace`. This
+answers the original open questions as follows:
 
-Open questions that must be answered by design before a race id is assigned:
+1. *Is "cult" a race or a human faction?* — A human faction. Members share
+   `humanRace`.
+2. *Re-point the NPC reuse, or tolerate it?* — Tolerate it. Because the shared
+   race is `humanRace`, it is correct for the `questGiver`/`oldWoman` reuses too,
+   so no re-pointing is needed. `race: humanRace` is assigned at the template
+   level and is baseline-preserving for every use (the race contributes no
+   stats/actions).
+3. *Does `CultLeader` share the family?* — Yes; `CultLeader` is also `humanRace`.
 
-1. Is "cult" a race, or a human faction whose members should share a future
-   `humanRace`-style family?
-2. Should the NPC reuse of `Cultist` (questGiver, oldWoman) be re-pointed to a
-   neutral human template so the `Cultist` monster template can carry a hostile
-   race cleanly, or must the race family tolerate NPC reuse?
-3. Should `CultLeader` share whatever family `Cultist` lands in (elite variant),
-   or is it a separate boss-tier race?
-
-Until these are answered, `Cultist` and `CultLeader` remain without an approved
-race family. Do not invent a `cultRace` id in runtime config until this blocker
-is resolved.
+No `cultRace` id was invented. What remains deferred is the combat **class**: a
+`cultistClass` role would be wrong for the non-combat NPC reuses if attached at
+template level (see UNRESOLVED-CLS-1), so the class is left unassigned pending
+that separate decision. `Cultist` and `CultLeader` now carry `humanRace`
+(race-only).
 
 ## Notes for downstream (EPIC_02) work
 
