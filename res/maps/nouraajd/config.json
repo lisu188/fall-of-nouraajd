@@ -305,13 +305,7 @@
     "properties": {
       "items": [
         {
-          "ref": "LesserLifePotion"
-        },
-        {
           "ref": "LifePotion"
-        },
-        {
-          "ref": "LesserManaPotion"
         },
         {
           "ref": "ManaPotion"
