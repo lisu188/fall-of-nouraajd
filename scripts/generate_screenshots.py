@@ -19,18 +19,18 @@
 regenerated and that it covers, at minimum:
 
 * at least one screenshot showing each type of panel declared in
-  ``res/config/panels.json``; and
+    ``res/config/panels.json``; and
 * at least one screenshot from each map directory under ``res/maps/`` plus one
-  from a randomly generated map.
+    from a randomly generated map.
 
 This script drives a real (GUI) headless game session -- the same
 :class:`game_simulation.GameSimulation` driver and SDL ``read_pixels`` readback
 used by the screenshot tests -- to produce that set:
 
 * ``panel-<resourceId>.png`` for every panel in ``res/config/panels.json``,
-  including the ``creatureView`` and ``statsView`` views (which also appear
-  nested inside ``fightPanel``). Each panel is seeded with representative
-  content so the frame is meaningful rather than empty.
+    including the ``creatureView`` and ``statsView`` views (which also appear
+    nested inside ``fightPanel``). Each panel is seeded with representative
+    content so the frame is meaningful rather than empty.
 * ``map-<name>.png`` for every map directory under ``res/maps/``.
 * ``map-random.png`` for a freshly generated random map.
 
