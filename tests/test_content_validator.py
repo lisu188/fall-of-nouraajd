@@ -30,6 +30,7 @@ from scripts.validate_content import (
     ScriptPropertyHygieneAllowance,
     classify_creature_templates,
     inventory_creature_overrides,
+    report_legacy_class_checks,
     report_unmigrated_creatures,
     tile_types_by_id,
     validate_repo,
@@ -256,6 +257,89 @@ class ContentValidatorTest(unittest.TestCase):
         self.assertIssueContains(issues, "res/config/races.json", "human.baseStatContribution.strength", "expected integer")
         self.assertIssueContains(issues, "human.traits[1]", "expected non-empty string")
         self.assertIssueContains(issues, "human.resistances.fire", "expected integer")
+
+    PLAYER_TEMPLATES = {
+        "Warrior": {"class": "CPlayer", "properties": {"label": "Warrior"}},
+        "Sorcerer": {"class": "CPlayer", "properties": {"label": "Sorcerer"}},
+    }
+
+    def test_valid_player_class_id_reference_passes_validation(self):
+        root = self.make_fixture(
+            class_check='player.getPlayerClassId() == "Warrior"',
+            player_templates=self.PLAYER_TEMPLATES,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_unknown_player_class_id_reference_is_flagged(self):
+        root = self.make_fixture(
+            class_check='player.getPlayerClassId() == "Bogus"',
+            player_templates=self.PLAYER_TEMPLATES,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'getPlayerClassId() == "Bogus"',
+            'unknown class id "Bogus"',
+        )
+
+    def test_membership_player_class_id_reference_flags_only_unknown_member(self):
+        root = self.make_fixture(
+            class_check='player.getPlayerClassId() in ("Warrior", "Ghost")',
+            player_templates=self.PLAYER_TEMPLATES,
+        )
+
+        issues = validate_repo(root)
+
+        issue_text = "\n".join(str(issue) for issue in issues)
+        self.assertIn('unknown class id "Ghost"', issue_text)
+        self.assertNotIn('unknown class id "Warrior"', issue_text)
+
+    def test_explicit_player_class_id_property_is_a_valid_reference(self):
+        templates = {
+            "ChampionTemplate": {
+                "class": "CPlayer",
+                "properties": {"label": "Champion", "playerClassId": "Champion"},
+            }
+        }
+        root = self.make_fixture(
+            class_check='player.getPlayerClassId() == "Champion"',
+            player_templates=templates,
+        )
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_legacy_gettypeid_class_check_is_non_fatal_but_reported(self):
+        root = self.make_fixture(
+            class_check='player.getTypeId() == "Warrior"',
+            player_templates=self.PLAYER_TEMPLATES,
+        )
+
+        issues = validate_repo(root)
+        self.assertEqual([], [str(issue) for issue in issues])
+
+        legacy = report_legacy_class_checks(root)
+        self.assertEqual(1, len(legacy))
+        self.assertEqual("Warrior", legacy[0].class_id)
+        self.assertEqual("res/maps/broken/script.py", legacy[0].path)
+        self.assertIn("class_condition", legacy[0].context)
+
+    def test_non_player_gettypeid_check_is_ignored(self):
+        root = self.make_fixture(
+            class_check='monster.getTypeId() == "Ghost"',
+            player_templates=self.PLAYER_TEMPLATES,
+        )
+
+        issues = validate_repo(root)
+        self.assertEqual([], [str(issue) for issue in issues])
+        self.assertEqual([], report_legacy_class_checks(root))
 
     def test_unreachable_dialog_state_reports_dialog_and_state(self):
         root = self.make_fixture()
@@ -2780,13 +2864,16 @@ class ContentValidatorTest(unittest.TestCase):
             with self.subTest(substring=substring):
                 self.assertIn(substring, issue_text)
 
-    def make_fixture(self, script_quest="goodQuest", script_map="broken"):
+    def make_fixture(self, script_quest="goodQuest", script_map="broken", class_check=None, player_templates=None):
         temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)
         root = Path(temp_dir.name)
         (root / "res/config").mkdir(parents=True)
         (root / "res/plugins").mkdir(parents=True)
         (root / "res/maps/broken").mkdir(parents=True)
+
+        if player_templates is not None:
+            write_json(root / "res/config/players.json", player_templates)
 
         write_json(
             root / "res/config/items.json",
@@ -2840,7 +2927,12 @@ class ContentValidatorTest(unittest.TestCase):
             },
         )
         write_json(root / "res/maps/broken/dialog.json", valid_dialog_config())
-        write_script(root / "res/maps/broken/script.py", script_quest=script_quest, script_map=script_map)
+        write_script(
+            root / "res/maps/broken/script.py",
+            script_quest=script_quest,
+            script_map=script_map,
+            class_check=class_check,
+        )
         return root
 
 
@@ -2883,7 +2975,16 @@ def valid_dialog_config():
     }
 
 
-def write_script(path, script_quest, script_map):
+def write_script(path, script_quest, script_map, class_check=None):
+    class_check_method = ""
+    if class_check is not None:
+        class_check_method = textwrap.indent(
+            textwrap.dedent(f"""
+                def class_condition(self):
+                    return {class_check}
+            """),
+            " " * 20,
+        )
     path.write_text(
         textwrap.dedent(f"""
             def load(self, context):
@@ -2916,7 +3017,7 @@ def write_script(path, script_quest, script_map):
 
                     def valid_condition(self):
                         return True
-
+{class_check_method}
                 @trigger(context, "onEnter", "start")
                 class StartTrigger(CEvent):
                     pass
