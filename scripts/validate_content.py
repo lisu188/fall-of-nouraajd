@@ -22,6 +22,21 @@ OBJECT_SCHEMA_KEYS = {"class", "ref", "properties"}
 # Recognised kinds for an optional map.json top-level "assets" declaration. Each declared asset
 # is a safe relative path under its own map directory; the kind documents how the entry resolves.
 MAP_ASSET_KINDS = {"file", "directory", "animationRoot", "logicalId"}
+# Player class/race profile config files and their allowed top-level profile keys. Profiles are
+# data-only config entries (no "class"/"ref"), so the engine's config loader skips them; this
+# validator gives them an explicit schema so malformed profiles are still caught.
+PLAYER_CLASS_PROFILE_FILE = "classes.json"
+PLAYER_RACE_PROFILE_FILE = "races.json"
+PLAYER_CLASS_PROFILE_KEYS = {
+    "profileKind",
+    "label",
+    "actions",
+    "levelling",
+    "statContribution",
+    "startingEquipment",
+}
+PLAYER_RACE_PROFILE_KEYS = {"profileKind", "label", "baseStatContribution", "tags", "resistances", "visual"}
+STARTING_EQUIPMENT_POLICIES = {"fixed", "none"}
 SCRIPT_REF_CALLS = {"createObject", "addObjectByName"}
 SCRIPT_ITEM_CALLS = {"addItem"}
 SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_grant_quest", "grant_quest"}
@@ -1590,6 +1605,7 @@ class ContentValidator:
         self._validate_creature_archetype_naming()
         self._validate_duplicate_player_selectable_race_labels(visible)
         self._validate_required_production_archetypes(visible)
+        self._validate_profile_configs()
 
     def _validate_map_context(self, context: MapContext) -> None:
         visible = self._visible_entries(context)
@@ -2160,6 +2176,97 @@ class ContentValidator:
                 )
                 continue
             self._validate_map_asset_target(context, location, path_value, kind)
+
+    def _validate_profile_configs(self) -> None:
+        for path, data in self.global_files.items():
+            if path.name == PLAYER_CLASS_PROFILE_FILE:
+                self._validate_profile_file(path, data, "playerClass", PLAYER_CLASS_PROFILE_KEYS)
+            elif path.name == PLAYER_RACE_PROFILE_FILE:
+                self._validate_profile_file(path, data, "playerRace", PLAYER_RACE_PROFILE_KEYS)
+
+    def _validate_profile_file(self, path: Path, data: Any, kind: str, allowed_keys: set[str]) -> None:
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        for profile_id, profile in data.items():
+            self._validate_profile_entry(path, profile_id, profile, kind, allowed_keys)
+
+    def _validate_profile_entry(self, path: Path, profile_id: str, profile: Any, kind: str, allowed: set[str]) -> None:
+        if not isinstance(profile, dict):
+            self._issue(path, profile_id, "expected object")
+            return
+        if profile.get("profileKind") != kind:
+            self._issue(path, f"{profile_id}.profileKind", f'expected "{kind}"')
+        unexpected = sorted(set(profile) - allowed)
+        if unexpected:
+            self._issue(path, profile_id, f"unsupported profile keys: {', '.join(unexpected)}")
+        label = profile.get("label")
+        if not isinstance(label, str) or not label:
+            self._issue(path, f"{profile_id}.label", "expected non-empty string")
+        if kind == "playerClass":
+            self._validate_string_list(path, f"{profile_id}.actions", profile.get("actions"), required=True)
+            self._validate_string_valued_map(path, f"{profile_id}.levelling", profile.get("levelling"), required=True)
+            self._validate_int_valued_map(
+                path, f"{profile_id}.statContribution", profile.get("statContribution"), required=True
+            )
+            self._validate_starting_equipment(path, f"{profile_id}.startingEquipment", profile.get("startingEquipment"))
+        else:
+            self._validate_int_valued_map(
+                path, f"{profile_id}.baseStatContribution", profile.get("baseStatContribution"), required=True
+            )
+            self._validate_string_list(path, f"{profile_id}.tags", profile.get("tags"), required=False)
+            self._validate_int_valued_map(
+                path, f"{profile_id}.resistances", profile.get("resistances"), required=False
+            )
+
+    def _validate_string_list(self, path: Path, location: str, value: Any, *, required: bool) -> None:
+        if value is None:
+            if required:
+                self._issue(path, location, "expected array of non-empty strings")
+            return
+        if not isinstance(value, list):
+            self._issue(path, location, "expected array")
+            return
+        for index, item in enumerate(value):
+            if not isinstance(item, str) or not item:
+                self._issue(path, f"{location}[{index}]", "expected non-empty string")
+
+    def _validate_string_valued_map(self, path: Path, location: str, value: Any, *, required: bool) -> None:
+        if value is None:
+            if required:
+                self._issue(path, location, "expected object of non-empty string values")
+            return
+        if not isinstance(value, dict):
+            self._issue(path, location, "expected object")
+            return
+        for key, item in value.items():
+            if not isinstance(item, str) or not item:
+                self._issue(path, f"{location}.{key}", "expected non-empty string")
+
+    def _validate_int_valued_map(self, path: Path, location: str, value: Any, *, required: bool) -> None:
+        if value is None:
+            if required:
+                self._issue(path, location, "expected object of integer values")
+            return
+        if not isinstance(value, dict):
+            self._issue(path, location, "expected object")
+            return
+        for key, item in value.items():
+            if isinstance(item, bool) or not isinstance(item, int):
+                self._issue(path, f"{location}.{key}", "expected integer")
+
+    def _validate_starting_equipment(self, path: Path, location: str, value: Any) -> None:
+        if value is None:
+            self._issue(path, location, "expected object with a 'policy'")
+            return
+        if not isinstance(value, dict):
+            self._issue(path, location, "expected object")
+            return
+        policy = value.get("policy")
+        if policy not in STARTING_EQUIPMENT_POLICIES:
+            self._issue(path, f"{location}.policy", f"expected one of {sorted(STARTING_EQUIPMENT_POLICIES)}")
+        if "slots" in value:
+            self._validate_string_valued_map(path, f"{location}.slots", value.get("slots"), required=False)
 
     def _validate_map_asset_target(self, context: MapContext, location: str, path_value: str, kind: str) -> None:
         if kind == "logicalId":

@@ -260,6 +260,8 @@ add_native_plugin(native_gameplay native_plugins/native_gameplay.cpp)
 add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})
 
 configure_file(res/config/armors.json config/armors.json)
+configure_file(res/config/classes.json config/classes.json)
+configure_file(res/config/races.json config/races.json)
 configure_file(res/config/panels.json config/panels.json)
 configure_file(res/config/buildings.json config/buildings.json)
 configure_file(res/config/crafting.json config/crafting.json)
