@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import io
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -181,6 +183,50 @@ class CiChangeClassifierTest(unittest.TestCase):
             self.assertEqual("true", values["human-review-required"])
             self.assertEqual("true", values["native-needed"])
             self.assertEqual("true", values["coverage-needed"])
+
+    def test_changed_paths_ignores_files_merged_into_base_after_branch_point(self) -> None:
+        def run_git(repo: Path, *args: str) -> str:
+            return subprocess.run(
+                ["git", *args], cwd=repo, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            ).stdout.strip()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.email", "test@example.invalid")
+            run_git(repo, "config", "user.name", "Classifier Test")
+            (repo / "docs").mkdir()
+            (repo / "docs" / "testing.md").write_text("base\n", encoding="utf-8")
+            run_git(repo, "add", "docs/testing.md")
+            run_git(repo, "commit", "-m", "base")
+
+            # Lightweight docs-only PR branch.
+            run_git(repo, "checkout", "-b", "pr")
+            (repo / "docs" / "testing.md").write_text("changed\n", encoding="utf-8")
+            run_git(repo, "add", "docs/testing.md")
+            run_git(repo, "commit", "-m", "lightweight docs change")
+            pr_head = run_git(repo, "rev-parse", "HEAD")
+
+            # The base branch advances with an unrelated native C++ file merged after
+            # the branch point.
+            run_git(repo, "checkout", "main")
+            (repo / "src").mkdir()
+            (repo / "src" / "CGame.cpp").write_text("int x;\n", encoding="utf-8")
+            run_git(repo, "add", "src/CGame.cpp")
+            run_git(repo, "commit", "-m", "concurrent native merge on base")
+            advanced_base = run_git(repo, "rev-parse", "HEAD")
+
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(repo)
+                paths = ci_change_classifier.changedPaths(advanced_base, pr_head)
+            finally:
+                os.chdir(old_cwd)
+
+        # Only the PR's own file is reported; the concurrently merged src/CGame.cpp
+        # must not be swept in and force native/coverage classification.
+        self.assertEqual(("docs/testing.md",), paths)
+        self.assertFalse(ci_change_classifier.classifyPaths(paths).nativeNeeded)
 
     def test_build_workflow_uses_classifier_outputs_for_native_routing(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
