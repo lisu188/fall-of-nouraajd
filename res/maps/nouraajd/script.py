@@ -645,7 +645,7 @@ def load(self, context):
     class DoorDialog(CDialog):
         def can_brace_gate(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getTypeId() == "Warrior" and not player.getBoolProperty("braced_nouraajd_gate")
+            return player.getPlayerClassId() == "Warrior" and not player.getBoolProperty("braced_nouraajd_gate")
 
         def brace_gate(self):
             player = self.getGame().getMap().getPlayer()
@@ -688,7 +688,7 @@ def load(self, context):
 
         def can_shadow_robed_men(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getTypeId() == "Assasin" and not player.getBoolProperty("shadowed_robed_men")
+            return player.getPlayerClassId() == "Assasin" and not player.getBoolProperty("shadowed_robed_men")
 
         def shadow_robed_men(self):
             player = self.getGame().getMap().getPlayer()
@@ -860,7 +860,7 @@ def load(self, context):
 
         def can_decode_stained_glass_ward(self):
             player = self.getGame().getMap().getPlayer()
-            return player.getTypeId() == "Sorcerer" and not player.getBoolProperty("decoded_stained_glass_ward")
+            return player.getPlayerClassId() == "Sorcerer" and not player.getBoolProperty("decoded_stained_glass_ward")
 
         def decode_stained_glass_ward(self):
             player = self.getGame().getMap().getPlayer()
