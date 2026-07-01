@@ -406,6 +406,9 @@
           "strength": 5
         }
       },
+      "race": {
+        "ref": "humanRace"
+      },
       "sw": 1
     }
   },
@@ -448,6 +451,9 @@
           "stamina": 7,
           "strength": 7
         }
+      },
+      "race": {
+        "ref": "humanRace"
       },
       "sw": 2
     }
