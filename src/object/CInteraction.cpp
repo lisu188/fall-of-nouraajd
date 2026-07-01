@@ -63,6 +63,10 @@ int CInteraction::getManaCost() const { return manaCost; }
 
 void CInteraction::setManaCost(int value) { manaCost = value; }
 
+bool CInteraction::getSelfTarget() const { return selfTarget; }
+
+void CInteraction::setSelfTarget(bool value) { selfTarget = value; }
+
 std::shared_ptr<CEffect> CInteraction::getEffect() const { return effect; }
 
 void CInteraction::setEffect(const std::shared_ptr<CEffect> value) { effect = value; }
