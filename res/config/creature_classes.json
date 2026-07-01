@@ -116,5 +116,137 @@
     "properties": {
       "mainStat": "strength"
     }
+  },
+  "AssasinClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "agility",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 3,
+          "intelligence": 2,
+          "hit": 3,
+          "crit": 2,
+          "dmgMin": 1,
+          "dmgMax": 2
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "SneakAttack"
+        },
+        "2": {
+          "ref": "Mutilation"
+        },
+        "3": {
+          "ref": "LethalPoison"
+        },
+        "4": {
+          "ref": "Chloroform"
+        },
+        "5": {
+          "ref": "Stunner"
+        },
+        "6": {
+          "ref": "Backstab"
+        }
+      }
+    }
+  },
+  "InquisitorClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "intelligence",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 2,
+          "stamina": 2,
+          "agility": 1,
+          "intelligence": 2,
+          "hit": 2,
+          "crit": 1,
+          "dmgMin": 1,
+          "dmgMax": 2
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "ExposeCorruption"
+        },
+        "2": {
+          "ref": "Strike"
+        },
+        "3": {
+          "ref": "SanctifiedWard"
+        },
+        "4": {
+          "ref": "FrostBolt"
+        },
+        "5": {
+          "ref": "Barrier"
+        },
+        "6": {
+          "ref": "EndlessPain"
+        }
+      }
+    }
+  },
+  "WayfarerClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "agility",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 2,
+          "stamina": 1,
+          "agility": 3,
+          "intelligence": 1,
+          "hit": 3,
+          "crit": 1,
+          "dmgMin": 1,
+          "dmgMax": 2
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "WayfarersStride"
+        },
+        "2": {
+          "ref": "SneakAttack"
+        },
+        "3": {
+          "ref": "SmugglersMark"
+        },
+        "4": {
+          "ref": "DoubleAttack"
+        },
+        "5": {
+          "ref": "Backstab"
+        },
+        "6": {
+          "ref": "BloodThirst"
+        }
+      }
+    }
   }
 }

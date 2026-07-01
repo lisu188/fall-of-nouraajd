@@ -15,24 +15,8 @@
         "strength": 5
       },
       "class": "CPlayer",
-      "levelStats": {
-        "agility": 3,
-        "crit": 2,
-        "dmgMax": 2,
-        "dmgMin": 1,
-        "hit": 3,
-        "intelligence": 2,
-        "stamina": 1,
-        "strength": 1
-      },
-      "levelling": {
-        "1": "SneakAttack",
-        "2": "Mutilation",
-        "3": "LethalPoison",
-        "4": "Chloroform",
-        "5": "Stunner",
-        "6": "Backstab"
-      }
+      "levelStats": {},
+      "levelling": {}
     },
     "CultLeader": {
       "baseStats": {
@@ -157,24 +141,8 @@
         "strength": 6
       },
       "class": "CPlayer",
-      "levelStats": {
-        "agility": 1,
-        "crit": 1,
-        "dmgMax": 2,
-        "dmgMin": 1,
-        "hit": 2,
-        "intelligence": 2,
-        "stamina": 2,
-        "strength": 2
-      },
-      "levelling": {
-        "1": "ExposeCorruption",
-        "2": "Strike",
-        "3": "SanctifiedWard",
-        "4": "FrostBolt",
-        "5": "Barrier",
-        "6": "EndlessPain"
-      }
+      "levelStats": {},
+      "levelling": {}
     },
     "OctoBogz": {
       "baseStats": {
@@ -309,24 +277,8 @@
         "strength": 6
       },
       "class": "CPlayer",
-      "levelStats": {
-        "agility": 3,
-        "crit": 1,
-        "dmgMax": 2,
-        "dmgMin": 1,
-        "hit": 3,
-        "intelligence": 1,
-        "stamina": 1,
-        "strength": 2
-      },
-      "levelling": {
-        "1": "WayfarersStride",
-        "2": "SneakAttack",
-        "3": "SmugglersMark",
-        "4": "DoubleAttack",
-        "5": "Backstab",
-        "6": "BloodThirst"
-      }
+      "levelStats": {},
+      "levelling": {}
     }
   }
 }
