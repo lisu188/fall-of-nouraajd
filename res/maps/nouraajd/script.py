@@ -945,11 +945,13 @@ def load(self, context):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
             quest_system = _quest_system_from(self)
-            # Guard the offer path itself: only grant/activate when the contract has not
-            # started, so a stale ENTRY option (or a save/load race) cannot re-grant or
-            # re-activate a quest that is already active or completed.
-            if quest_system.get_state("octobogz_contract") != "not_started":
-                return
+            # No state guard here: accept_quest must still process a "late" claim where the
+            # OctoBogz were cleared before the contract was formally accepted (state already
+            # "completed"), granting the outstanding reward exactly once. Re-entry is safe --
+            # activate_octobogz_contract only acts from "not_started" and the reward is
+            # protected by the OCTOBOGZ_REWARD_CLAIMED guard. Re-offering in normal play is
+            # prevented at the dialog layer: the OFFER_HELP accept option is gated by
+            # contract_not_started, so active/completed states never surface the offer.
             _grant_quest(player, "octoBogzQuest")
             quest_system.activate_octobogz_contract()
             if quest_system.is_octobogz_contract_completed():
