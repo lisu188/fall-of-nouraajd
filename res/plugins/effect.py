@@ -126,9 +126,10 @@ def load(self, context):
     @register(context)
     class CloudkillEffect(CEffect):
         def onEffect(self):
-            damage = CDamage()
+            victim = self.getVictim()
+            damage = victim.getGame().createObject("CDamage")
             damage.setNumericProperty("shadow", 3 + self.getCaster().getLevel())
-            self.getVictim().hurt(damage)
+            victim.hurt(damage)
 
     @register(context)
     class HoldPersonEffect(CEffect):

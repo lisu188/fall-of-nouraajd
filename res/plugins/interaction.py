@@ -262,19 +262,27 @@ def load(self, context):
             effect.setNumericProperty("wayfarer_routes", routes)
             return True
 
-    # Baldur's Gate inspired repertoire.
+    # Baldur's Gate inspired repertoire.  CDamage/CStats have no Python
+    # constructor binding, so build them through the object factory of the
+    # creature's game (the pattern the engine exposes for content code).
+
+    def spell_damage(creature):
+        return creature.getGame().createObject("CDamage")
+
+    def bonus_stats(creature):
+        return creature.getGame().createObject("CStats")
 
     @register(context)
     class BurningHands(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("fire", 3 + first.getLevel() * 2)
             second.hurt(damage)
 
     @register(context)
     class AgannazarsScorcher(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("fire", 6 + first.getStats().getNumericProperty("intelligence") // 2)
             second.hurt(damage)
 
@@ -284,14 +292,14 @@ def load(self, context):
             rolled = 0
             for _ in range(max(1, first.getLevel())):
                 rolled += randint(1, 6)
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("fire", rolled)
             second.hurt(damage)
 
     @register(context)
     class FlameStrike(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("fire", 10 + first.getLevel() * 2)
             second.hurt(damage)
 
@@ -301,7 +309,7 @@ def load(self, context):
             rolled = 0
             for _ in range(max(1, first.getLevel())):
                 rolled += randint(1, 6)
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("thunder", rolled)
             second.hurt(damage)
 
@@ -309,7 +317,7 @@ def load(self, context):
     class ChromaticOrb(CInteraction):
         def performAction(self, first, second):
             kinds = ["fire", "frost", "thunder", "shadow", "normal"]
-            damage = CDamage()
+            damage = spell_damage(first)
             base = 4 + first.getLevel() + first.getStats().getNumericProperty("intelligence") // 3
             damage.setNumericProperty(kinds[randint(0, len(kinds) - 1)], base)
             second.hurt(damage)
@@ -318,7 +326,7 @@ def load(self, context):
     class ConeOfCold(CInteraction):
         def performAction(self, first, second):
             intelligence = first.getStats().getNumericProperty("intelligence")
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("frost", 8 + first.getLevel() + intelligence // 2)
             second.hurt(damage)
 
@@ -328,7 +336,7 @@ def load(self, context):
             rolled = 0
             for _ in range(max(1, first.getLevel())):
                 rolled += randint(1, 6)
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("shadow", rolled)
             second.hurt(damage)
 
@@ -336,7 +344,7 @@ def load(self, context):
     class LarlochsMinorDrain(CInteraction):
         def performAction(self, first, second):
             drained = 4 + first.getLevel()
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("shadow", drained)
             second.hurt(damage)
             first.heal(drained)
@@ -345,7 +353,7 @@ def load(self, context):
     class VampiricTouch(CInteraction):
         def performAction(self, first, second):
             drained = 6 + first.getLevel() * 2
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("shadow", drained)
             second.hurt(damage)
             first.heal(drained // 2)
@@ -353,7 +361,7 @@ def load(self, context):
     @register(context)
     class FingerOfDeath(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("shadow", first.getDmg() * 2)
             second.hurt(damage)
             if second.getHpRatio() < 20 and second.isAlive():
@@ -362,7 +370,7 @@ def load(self, context):
     @register(context)
     class SpiritualHammer(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             strength = first.getStats().getNumericProperty("strength")
             damage.setNumericProperty("normal", 3 + first.getLevel() + strength // 3)
             second.hurt(damage)
@@ -370,7 +378,7 @@ def load(self, context):
     @register(context)
     class MelfsAcidArrow(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("normal", 2 + randint(1, 4) + first.getLevel() // 2)
             second.hurt(damage)
 
@@ -393,7 +401,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("agility", -(2 + caster.getLevel() // 2))
             stats.setNumericProperty("hit", -(3 + caster.getLevel() // 3))
             stats.setNumericProperty("block", -4)
@@ -411,7 +419,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("hit", -(2 + caster.getLevel() // 3))
             effect.setBonus(stats)
             return True
@@ -422,7 +430,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("armor", -(2 + caster.getLevel() // 2))
             stats.setNumericProperty("block", -2)
             stats.setNumericProperty("hit", -2)
@@ -435,7 +443,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("agility", 3 + caster.getLevel() // 2)
             stats.setNumericProperty("hit", 3)
             stats.setNumericProperty("crit", 2)
@@ -448,7 +456,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("block", 15 + caster.getLevel() * 2)
             effect.setBonus(stats)
             return True
@@ -459,7 +467,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("armor", 6 + caster.getStats().getNumericProperty("armor") // 2)
             stats.setNumericProperty("normalResist", 5)
             effect.setBonus(stats)
@@ -471,7 +479,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("hit", 2 + caster.getLevel() // 4)
             stats.setNumericProperty("attack", 1)
             effect.setBonus(stats)
@@ -483,7 +491,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("armor", 3 + caster.getLevel() // 2)
             stats.setNumericProperty("normalResist", 3)
             stats.setNumericProperty("shadowResist", 3)
@@ -497,7 +505,7 @@ def load(self, context):
             if not caster:
                 return False
             boost = 2 + caster.getLevel() // 3
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("strength", boost)
             stats.setNumericProperty("agility", boost)
             stats.setNumericProperty("stamina", boost)
