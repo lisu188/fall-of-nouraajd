@@ -94,7 +94,6 @@ std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame
 
 std::shared_ptr<CGameObject> CObjectHandler::_clone(const std::shared_ptr<CGameObject> &object) {
     auto _object = CSerialization::serialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object);
-    // vstd::logger::debug("Cloning:", CJsonUtil::to_string(_object));
     std::shared_ptr<CGameObject> shared_ptr =
         CSerialization::deserialize<std::shared_ptr<json>, std::shared_ptr<CGameObject>>(object->getGame(), _object);
     shared_ptr->setName(CSerialization::generateName(shared_ptr));
