@@ -1,0 +1,106 @@
+{
+  "usurpergateStart": {
+    "class": "UsurpergateStart",
+    "properties": {
+      "text": "The Usurper's Gate. Ash rides the wind off the burned approach, and the curtain wall your grandmother raised now flies a stranger's colors. Behind the breach waits the man who took the keep, the marches, and your name. One court, one throne, one ending."
+    }
+  },
+  "usurpergateSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "THE WARDENSKEEP - trespassers will be hanged from the curtain wall. Signed, the Lord-Protector of the Marches."
+    }
+  },
+  "usurpergateQuest": {
+    "class": "UsurpergateQuest",
+    "properties": {
+      "description": "Breach the curtain wall, defeat the Usurper, and take back the obsidian throne."
+    }
+  },
+  "curtainWallWest1": {
+    "ref": "brickWall",
+    "properties": {}
+  },
+  "curtainWallWest2": {
+    "ref": "brickWall",
+    "properties": {}
+  },
+  "curtainWallEast1": {
+    "ref": "brickWall",
+    "properties": {}
+  },
+  "curtainWallEast2": {
+    "ref": "brickWall",
+    "properties": {}
+  },
+  "housecarlWest": {
+    "ref": "Pritz",
+    "properties": {
+      "affiliation": "usurper",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "housecarlEast": {
+    "ref": "Pritz",
+    "properties": {
+      "affiliation": "usurper",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "theUsurper": {
+    "ref": "CultLeader",
+    "properties": {
+      "label": "The Usurper of the Marches",
+      "affiliation": "usurper",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "obsidianThrone": {
+    "class": "ObsidianThrone",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true
+    }
+  },
+  "banneretHild": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "ambientGibbetRow": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "A row of empty gibbets lines the approach. The Usurper ran out of loyalists to hang before he ran out of rope."
+    }
+  },
+  "ambientTornBanners": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/broken_fence",
+      "canStep": true,
+      "text": "The old Warden banners were torn down and trampled here. Someone has been picking the threads out of the mud and keeping them."
+    }
+  }
+}

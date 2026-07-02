@@ -1,0 +1,122 @@
+{
+  "vossDialog": {
+    "class": "VossDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Quartermaster Voss kneels in the crossroads mud, wrists netted, ledger still chained to his belt. 'Warden. I kept them fed while you were gone. Remember that part too.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "captives_missing",
+                  "nextStateId": "WAITING",
+                  "text": "Where are the people you sold?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "condition": "ready_to_judge",
+                  "action": "spare_voss",
+                  "nextStateId": "SPARED",
+                  "text": "You will live, Voss - and spend that life repaying the marches."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "ready_to_judge",
+                  "action": "execute_voss",
+                  "nextStateId": "EXECUTED",
+                  "text": "The moor keeps what the usurper buries. It can keep you."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "condition": "already_judged",
+                  "nextStateId": "DONE",
+                  "text": "It is finished."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 4
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "WAITING",
+            "text": "'In the barrow cages - west, east, north. Their wardens carry the keys and no mercy. Free all three, Warden, and then... then I suppose you and I settle accounts.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "SPARED",
+            "text": "Voss sags like a cut net. 'The pay-chests. The routes. Every bribe the Lord-Protector ever signed - it is all in the ledger, and the ledger is yours.' The freed loyalists say nothing, but they do not look away from you.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "EXECUTED",
+            "text": "It is quick, which is more than the moor gives most. The loyalists divide the traitor's purse in silence. The lantern at the crossroads gutters once, and burns on.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "DONE",
+            "text": "The crossroads is quiet now. Ahead, past the last barrows, the burned approach climbs toward the Usurper's Gate.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

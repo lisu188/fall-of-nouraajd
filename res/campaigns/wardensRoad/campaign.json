@@ -1,0 +1,37 @@
+{
+  "format": "fall-of-nouraajd-campaign",
+  "schemaVersion": 1,
+  "campaignId": "wardensRoad",
+  "title": "The Warden's Road",
+  "description": "An exile's homecoming in three chapters: retake the village of Hearthfall, free the loyalists caged in the Gravemoor, and storm the Usurper's Gate to reclaim the obsidian throne.",
+  "start": "homecoming",
+  "completionText": "The banner of the Wardens flies over the keep again. From a burned village to a drowned moor to a stolen throne, the road home is walked to its end - and the marches will speak your name out loud now.",
+  "scenarios": {
+    "homecoming": {
+      "map": "hearthfall",
+      "title": "Chapter I - Hearthfall",
+      "briefing": "Ten years of exile end at the village where your name was outlawed. The Usurper's watch holds Hearthfall's square, its granary, and its silence. Break Watch-Captain Osric, and give the marches their first lit hearth in a decade.",
+      "epilogue": "Hearthfall's chimneys smoke again, and word of the Warden's return runs north faster than any rider. But Elder Maren's people are still caged in the Gravemoor - and the man who sold them is caged there too.",
+      "next": { "completed": "rescue" }
+    },
+    "rescue": {
+      "map": "gravemoor",
+      "title": "Chapter II - The Gravemoor",
+      "briefing": "The moor north of Hearthfall keeps the Usurper's secrets: three barrow-crypts, three cages, and the loyalists who would not kneel. Free them all - then decide, before their eyes, what to do with the quartermaster who put them there.",
+      "next": { "spared": "assault_mercy", "executed": "assault_wrath" }
+    },
+    "assault_mercy": {
+      "map": "usurpergate",
+      "title": "Chapter III - The Usurper's Gate",
+      "briefing": "Voss's ledgers bought you every bribe, breach, and back-payment in the Usurper's books, and the loyalists march behind a Warden who chooses mercy with a sword in hand. One curtain wall, one court, one throne. End it.",
+      "next": {}
+    },
+    "assault_wrath": {
+      "map": "usurpergate",
+      "title": "Chapter III - The Usurper's Gate",
+      "briefing": "The moor keeps the traitor, and the marches learned what the Warden's justice costs. The loyalists follow - warily - and the war-chest runs lighter than mercy would have left it. The keep will not care how you judged Voss. Take it anyway.",
+      "carryover": { "gold_max": 400 },
+      "next": {}
+    }
+  }
+}

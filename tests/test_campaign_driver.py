@@ -231,9 +231,27 @@ class ManifestTest(unittest.TestCase):
         manifests = campaign.list_campaigns()
 
         self.assertIn("fallOfNouraajd", [manifest["campaignId"] for manifest in manifests])
+        self.assertIn("wardensRoad", [manifest["campaignId"] for manifest in manifests])
         for manifest in manifests:
             with self.subTest(campaign=manifest["campaignId"]):
                 campaign.validate_manifest(manifest)
+
+    def test_wardens_road_routes_both_judgments_to_terminal_finales(self):
+        manifest = campaign.get_manifest("wardensRoad")
+
+        self.assertEqual("homecoming", manifest["start"])
+        self.assertEqual("rescue", campaign.next_scenario(manifest, "homecoming", "completed"))
+        self.assertEqual("assault_mercy", campaign.next_scenario(manifest, "rescue", "spared"))
+        self.assertEqual("assault_wrath", campaign.next_scenario(manifest, "rescue", "executed"))
+        # Both finales reuse the usurpergate map and are terminal.
+        for finale in ("assault_mercy", "assault_wrath"):
+            with self.subTest(finale=finale):
+                self.assertEqual("usurpergate", manifest["scenarios"][finale]["map"])
+                self.assertIsNone(campaign.next_scenario(manifest, finale, "completed"))
+        # The wrath route enters the finale with the war-chest clamped.
+        self.assertEqual({"gold_max": 400}, manifest["scenarios"]["assault_wrath"]["carryover"])
+        with self.assertRaises(campaign.CampaignError):
+            campaign.next_scenario(manifest, "rescue", "completed")
 
 
 class RoutingTest(unittest.TestCase):
