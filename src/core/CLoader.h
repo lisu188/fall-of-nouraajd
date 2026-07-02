@@ -80,7 +80,7 @@ class CGameLoader {
   private:
     static void initObjectHandler(const std::shared_ptr<CObjectHandler> &handler);
 
-    static void initConfigurations(const std::shared_ptr<CObjectHandler> &handler);
+    static void initConfigurations(const std::shared_ptr<CGame> &game);
 
     static void initScriptHandler(const std::shared_ptr<CScriptHandler> &handler, const std::shared_ptr<CGame> &game);
 };

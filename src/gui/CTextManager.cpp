@@ -68,7 +68,11 @@ fn::sdl::TexturePtr CTextManager::loadTexture(std::string text, int width) {
 CTextManager::CTextManager(const std::shared_ptr<CGui> &_gui) {
     SDL_SAFE(TTF_Init());
     constexpr const char *fontResource = "fonts/ampersand.ttf";
-    const auto resolvedFont = CResourcesProvider::getInstance()->getPath(fontResource);
+    // Resolve through the owning game's per-session resources provider; fall back to the process
+    // singleton only when the manager is created without a live GUI/game (compatibility path).
+    auto game = _gui ? _gui->getGame() : nullptr;
+    auto resourcesProvider = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    const auto resolvedFont = resourcesProvider->getPath(fontResource);
     if (resolvedFont.empty()) {
         vstd::logger::error("CTextManager: cannot resolve font", fontResource, "resolved:", resolvedFont);
     } else {

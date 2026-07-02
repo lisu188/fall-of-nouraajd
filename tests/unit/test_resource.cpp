@@ -216,6 +216,58 @@ void test_load_game_creates_context_owned_providers() {
     expect_true(first_items != second_items, "separate game contexts should not share configuration provider caches");
 }
 
+void test_map_load_resolves_through_context_owned_providers() {
+    auto singletonResources = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(singletonResources->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before context-owned map load test");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto resourceRoot = itemsPath.parent_path().parent_path();
+
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string mapName = "unit_ctx_map_" + std::to_string(nonce);
+    const auto mapDir = resourceRoot / "maps" / mapName;
+    std::filesystem::create_directories(mapDir);
+    const auto mapConfigPath = mapDir / "map.json";
+    const std::string logicalMapConfig = "maps/" + mapName + "/map.json";
+
+    expect_true(write_text_file(mapConfigPath, R"({"marker":"first","properties":{"x":0,"y":0,"z":0},"layers":[]})"),
+                "temporary map fixture should be written");
+    if (!std::filesystem::exists(mapConfigPath)) {
+        std::filesystem::remove_all(mapDir);
+        return;
+    }
+
+    auto game = CGameLoader::loadGame();
+    expect_true(game->getResourcesProvider() != singletonResources,
+                "map load test should run against a context-owned resource provider");
+
+    auto map = CMapLoader::loadNewMap(game, mapName);
+    expect_true(map && map->getMapName() == mapName,
+                "loadNewMap should load the authored map through the game's provider instances");
+
+    // Rewrite the fixture: only a cache primed while loadNewMap ran keeps the original content, so
+    // the assertions below can tell exactly which provider instance the load path went through.
+    expect_true(write_text_file(mapConfigPath, R"({"marker":"second","properties":{"x":0,"y":0,"z":0},"layers":[]})"),
+                "temporary map fixture should be rewritable");
+
+    auto cachedConfig = game->getConfigurationProvider()->getConfiguration(logicalMapConfig);
+    expect_true(json_string_value(cachedConfig, "marker") == "first",
+                "loadNewMap should prime the game's own configuration provider cache");
+
+    CConfigurationProvider explicitProvider(game->getResourcesProvider());
+    auto freshConfig = explicitProvider.getConfiguration(logicalMapConfig);
+    expect_true(json_string_value(freshConfig, "marker") == "second",
+                "an explicitly-passed provider instance should load the map config independently");
+
+    auto legacyConfig = CConfigurationProvider::getConfig(logicalMapConfig);
+    expect_true(json_string_value(legacyConfig, "marker") == "second",
+                "map load must not populate the process-wide configuration provider cache");
+
+    std::filesystem::remove_all(mapDir);
+}
+
 void test_resource_plugin_trust_boundary_rejects_escapes() {
     auto provider = CResourcesProvider::getInstance();
     const auto itemsPath = std::filesystem::path(provider->getPath("config/items.json"));
@@ -258,9 +310,8 @@ void test_resource_plugin_trust_boundary_rejects_escapes() {
     // the _game pybind bindings, which this game_core unit-test binary does not link, so its return
     // value cannot distinguish a boundary rejection from a runtime failure here.
     auto game = CGameLoader::loadGame();
-    for (const std::string &untrusted :
-         {std::string("../evil.py"), std::string("/tmp/evil.py"), std::string("config/items.json"),
-          std::string("plugins/../../escape.py")}) {
+    for (const std::string &untrusted : {std::string("../evil.py"), std::string("/tmp/evil.py"),
+                                         std::string("config/items.json"), std::string("plugins/../../escape.py")}) {
         expect_true(!CPluginLoader::isTrustedPluginPath(untrusted),
                     "paths outside the trusted plugin roots must not be trusted");
         expect_true(!CPluginLoader::loadPlugin(game, untrusted),
@@ -283,6 +334,7 @@ int main() {
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();
     test_load_game_creates_context_owned_providers();
+    test_map_load_resolves_through_context_owned_providers();
     test_resource_plugin_trust_boundary_rejects_escapes();
 
     return finish_tests();
