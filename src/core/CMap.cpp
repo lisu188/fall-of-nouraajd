@@ -529,18 +529,6 @@ std::shared_ptr<CMapObject> CMap::getObjectByName(const std::string &name) {
 
 bool CMap::isMoving() { return moving; }
 
-// void CMap::applyEffects() {
-//     auto pred = [](std::shared_ptr<CMapObject> object) {
-//         return vstd::castable<CCreature>(object);
-//     };
-//     for (std::shared_ptr<CMapObject> object:mapObjects |
-//                                             std::views::values |
-//                                             std::views::filter(pred))
-//                                             {
-//         vstd::cast<CCreature>(object)->applyEffects();
-//     }
-// }
-
 void CMap::forObjects(std::function<void(std::shared_ptr<CMapObject>)> func,
                       std::function<bool(std::shared_ptr<CMapObject>)> predicate) {
     auto clone = mapObjects;
@@ -593,8 +581,6 @@ void CMap::move() {
         auto game = map->getGame();
         return !game || game->getMap() == map;
     };
-
-    // TODO: map->applyEffects();
 
     map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
         map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));

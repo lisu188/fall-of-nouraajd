@@ -58,8 +58,10 @@ python3 test.py                                            # main Python/gamepla
   `_game`), so broken map/config/dialog/quest refs fail fast. It validates each
   map's quest state machine against the keys declared in its `script.py`.
 - **Coverage:** run `./scripts/run_coverage.sh` when a change touches `test.py`,
-  `tests/unit/**`, `src/core/**`, `src/handler/**`, `src/object/**`,
-  `native_plugins/**`, or coverage tooling. It enforces a 90% eligible-line gate.
+  `tests/unit/**`, `src/core/**`, `src/handler/**`, `src/object/**`, `src/gui/**`,
+  `native_plugins/**`, or coverage tooling (the authoritative path list is
+  `COVERAGE_PATH_PATTERNS` in `scripts/ci_change_classifier.py`). It enforces a
+  90% eligible-line gate.
 - **Playtest trace** (debugging gameplay flows):
   `GAME_PLAYTEST_TRACE=1 GAME_PLAYTEST_TRACE_FILE=trace.jsonl python3 test.py GameTest.test_map_walkthrough_nouraajd`.
 
@@ -100,7 +102,7 @@ into the matching registration file or it won't be constructible from content.
 - **`res/maps/<name>/`** — a map is a directory of `map.json` (Tiled-style layers),
   one or more `dialog*.json`, a per-map `config.json`, and a `script.py` that
   drives quest state (declares `QUEST_KEYS`/`QUEST_DEFAULTS`, uses
-  `_set_state`/`state_in`/`get_state`). Maps: `nouraajd`, `ritual`, `siege`,
+  `set_state`/`state_in`/`get_state`). Maps: `nouraajd`, `ritual`, `siege`,
   `multilevel`, `test`.
 - **`res/plugins/*.py`** — Python gameplay plugins (crafting, interactions,
   effects, potions, tiles, objects) declared in `res/plugins/manifest.json`.
