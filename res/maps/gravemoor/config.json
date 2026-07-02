@@ -1,0 +1,111 @@
+{
+  "gravemoorStart": {
+    "class": "GravemoorStart",
+    "properties": {
+      "text": "The Gravemoor swallows the road north of Hearthfall. Somewhere in these drowned barrows the occupation caged the loyalists who would not kneel - and the quartermaster who sold them out waits under guard at the crossroads. Free the three cages, then decide what a Warden's justice weighs."
+    }
+  },
+  "gravemoorSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "THE GRAVEMOOR - the moor keeps what the usurper buries. Three barrow-crypts: west, east, and north."
+    }
+  },
+  "gravemoorQuest": {
+    "class": "GravemoorQuest",
+    "properties": {
+      "description": "Free the caged loyalists and pass judgment on the traitor quartermaster."
+    }
+  },
+  "loyalistCageWest": {
+    "class": "LoyalistCage",
+    "properties": {
+      "animation": "images/buildings/groundhole",
+      "canStep": true,
+      "text": "The west barrow cage breaks open. A half-starved shieldmaiden of your father's guard climbs out and salutes with a bound fist."
+    }
+  },
+  "loyalistCageEast": {
+    "class": "LoyalistCage",
+    "properties": {
+      "animation": "images/buildings/groundhole",
+      "canStep": true,
+      "text": "The east barrow cage splits. The old signal-keeper of Hearthfall crawls free, already asking for a horn to raise the marches."
+    }
+  },
+  "loyalistCageNorth": {
+    "class": "LoyalistCage",
+    "properties": {
+      "animation": "images/buildings/groundhole",
+      "canStep": true,
+      "text": "The north barrow cage falls apart. Your mother's standard-bearer stands up out of the mud, weeping, holding a folded scrap of the true banner."
+    }
+  },
+  "cryptWardenWest": {
+    "ref": "Cultist",
+    "properties": {
+      "affiliation": "moorwatch",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "cryptWardenEast": {
+    "ref": "Cultist",
+    "properties": {
+      "affiliation": "moorwatch",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "cryptWardenNorth": {
+    "ref": "Cultist",
+    "properties": {
+      "affiliation": "moorwatch",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "quartermasterVoss": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "npc": true
+    }
+  },
+  "ambientSunkenBarrow": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "canStep": true,
+      "text": "A barrow older than the marches. Whoever sleeps here was buried standing, facing the keep, sword unsurrendered."
+    }
+  },
+  "ambientOathStone": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "canStep": true,
+      "text": "The oath-stone of the Warden's line. The carved words are mud-choked, but every loyalist in the marches knows them by heart."
+    }
+  },
+  "ambientMoorLantern": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/street_lantern",
+      "canStep": true,
+      "text": "A crossroads lantern, kept burning by no one anyone has ever seen. Moor-folk say it lights the way home for the wrongly buried."
+    }
+  }
+}
