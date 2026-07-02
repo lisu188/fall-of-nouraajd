@@ -17548,6 +17548,8 @@ class GameTest(unittest.TestCase):
 
 SAVE_GENERATED_NAME_PATTERN = re.compile(r"[0-9a-fA-F]{8,}")
 SAVE_GENERATED_NAME_PLACEHOLDER = "<generated-name>"
+SAVE_SLOT_IDENTITY_PREFIX = "__save_slot__/"
+SAVE_SLOT_IDENTITY_PLACEHOLDER = "__save_slot__/<slot>"
 
 
 def normalize_generated_save_names(value):
@@ -17564,6 +17566,11 @@ def normalize_generated_save_names(value):
         for key, item in value.items():
             if key == "name" and isinstance(item, str) and SAVE_GENERATED_NAME_PATTERN.fullmatch(item):
                 normalized[key] = SAVE_GENERATED_NAME_PLACEHOLDER
+            elif key in ("name", "typeId") and isinstance(item, str) and item.startswith(SAVE_SLOT_IDENTITY_PREFIX):
+                # Snapshot identities embed the save slot name; the harness deliberately
+                # saves the first pass and the re-save under different slots, so the
+                # slot-derived identity is legitimately unstable across the round trip.
+                normalized[key] = SAVE_SLOT_IDENTITY_PLACEHOLDER
             else:
                 normalized[key] = normalize_generated_save_names(item)
         return normalized
@@ -17661,11 +17668,11 @@ class SaveRoundTripHarness:
     else must match exactly) and mismatches fail with save_round_trip_diff path lines.
 
     Adding coverage for a new save-affecting feature:
-      * fixture state: drop an inline-object JSON into tests/fixtures/save_compatibility/;
+        * fixture state: drop an inline-object JSON into tests/fixtures/save_compatibility/;
         discover_save_round_trip_fixtures() picks it up with no further wiring (also
         register it in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS if it should join the summary
         matrix checks).
-      * live state: build the state in a test, then
+        * live state: build the state in a test, then
             with SaveRoundTripHarness(self, game) as harness:
                 harness.assert_stable_resave(game_map, "my_feature_round_trip")
     A `normalize` callable may be supplied for a legitimately-unstable field a future epic
