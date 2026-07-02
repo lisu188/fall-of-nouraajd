@@ -20903,16 +20903,28 @@ class McpServerTest(unittest.TestCase):
         for name in ("ninemarchesStart", "ironKeyCache", "ironGateThreshold", "digSite") + obelisks:
             find_map_object_definition("ninemarches", name)
 
+        # The walkthrough validates quest logic, not combat difficulty. Roaming
+        # cave-spawned chasers can camp a visitable tile, and a level-one Warrior can
+        # LOSE that arrival fight — the respawn trigger then drops the player at the
+        # entry with 1 hp, so every later attempt loses too. Level the player up front
+        # and top up hp before each step so tile encounters always resolve and clear.
+        self._mcp_handle_call(session, player_handle, "addExp", [200000])
+
+        def heal_player():
+            hp_max = self._mcp_handle_call(session, player_handle, "getHpMax")
+            self._mcp_handle_call(session, player_handle, "setHp", [hp_max])
+
         def map_bool(name):
             return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
 
         def step_onto(name):
+            heal_player()
             obj = self._mcp_get_object_by_name(session, map_handle, name)
             coords = self._mcp_handle_call(session, obj, "getCoords")
             self._mcp_handle_call(session, player_handle, "setCoords", [coords])
             self._mcp_advance_map(session, map_handle, 1)
 
-        def step_onto_until(name, reached, attempts=3):
+        def step_onto_until(name, reached, attempts=5):
             # Roaming cave-spawned chasers can occupy the target tile: the arrival then
             # resolves as a fight and the post-combat position policy bounces the player
             # back without firing onEnter (RNG-dependent, observed on the Windows runner).
