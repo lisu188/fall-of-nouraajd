@@ -19,3 +19,9 @@ test/
 /windows-tools/
 /planning/*.xlsx.lock
 /planning/.*.tmp.xlsx
+__pycache__/
+.coverage
+/coverage/
+/htmlcov/
+/build/
+/trace*.jsonl
