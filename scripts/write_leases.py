@@ -7,29 +7,29 @@ so overlapping claims can investigate concurrently yet still collide during writ
 module adds a separate, JSON-file-backed write-lease layer:
 
 - The store defaults to ``planning/write_leases.json`` (override with ``--store`` or the
-  ``GAME_WRITE_LEASE_FILE`` environment variable). It is intentionally separate from the
-  XLSX workbooks: no command in this module reads or mutates workbook claims, statuses,
-  owners, or Claim IDs. Expiry and recovery are lease-lifecycle-only operations.
+    ``GAME_WRITE_LEASE_FILE`` environment variable). It is intentionally separate from the
+    XLSX workbooks: no command in this module reads or mutates workbook claims, statuses,
+    owners, or Claim IDs. Expiry and recovery are lease-lifecycle-only operations.
 - Every mutating command runs under one cross-process sidecar lock file
-  (``<store>.lock``, same advisory-lock pattern as ``issue_queue.WorkbookLock``), loads
-  the store, applies an all-or-nothing batch, and atomically replaces the store file.
-  A failed batch leaves the store byte-for-byte unchanged.
+    (``<store>.lock``, same advisory-lock pattern as ``issue_queue.WorkbookLock``), loads
+    the store, applies an all-or-nothing batch, and atomically replaces the store file.
+    A failed batch leaves the store byte-for-byte unchanged.
 - A lease records controller ID, owner, claim ID, normalized source scope, lifecycle
-  state (``ACTIVE``/``RELEASED``/``RECOVERED``), created/renewed/expires timestamps, and
-  a recovery reason.
+    state (``ACTIVE``/``RELEASED``/``RECOVERED``), created/renewed/expires timestamps, and
+    a recovery reason.
 - Scope entries are normalized from four sources with confidence metadata, ordered
-  ``pr-changed-files`` > ``dirty-worktree`` > ``worker-declared`` >
-  ``workbook-target-files``. Workbook target files are planning-grade only: they are
-  recorded, but excluded from conflict checking whenever any higher-confidence source is
-  present, so coarse workbook target overlap alone cannot block disjoint writes.
+    ``pr-changed-files`` > ``dirty-worktree`` > ``worker-declared`` >
+    ``workbook-target-files``. Workbook target files are planning-grade only: they are
+    recorded, but excluded from conflict checking whenever any higher-confidence source is
+    present, so coarse workbook target overlap alone cannot block disjoint writes.
 - The effective scope is expanded deterministically over coupled areas: header plus
-  implementation pairs (``src/**/X.h`` <-> ``X.cpp``), C++ type-registration sets
-  (``src/*/C*TypeRegistration.cpp`` for new engine sources), CMake source registration
-  (``CMakeLists.txt`` for new C++ sources), ``res/maps/<map>/`` content bundles
-  (script.py/dialog*.json/config.json/map.json travel together), serialization pairs,
-  and generated-resource producer/output pairs.
+    implementation pairs (``src/**/X.h`` <-> ``X.cpp``), C++ type-registration sets
+    (``src/*/C*TypeRegistration.cpp`` for new engine sources), CMake source registration
+    (``CMakeLists.txt`` for new C++ sources), ``res/maps/<map>/`` content bundles
+    (script.py/dialog*.json/config.json/map.json travel together), serialization pairs,
+    and generated-resource producer/output pairs.
 - Conflict rule: two ACTIVE, unexpired leases may not have overlapping expanded write
-  scopes. Read-only inspection never requires a lease.
+    scopes. Read-only inspection never requires a lease.
 
 CLI: ``acquire``, ``renew``, ``release``, ``recover``, ``list``, ``validate``.
 Exit codes: 0 success, 1 validation errors, 2 usage/store errors, 3 scope conflict.
