@@ -855,9 +855,14 @@ void CCreature::setNpc(bool value) { npc = value; }
 
 // TODO: make this a CGameEvent
 void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<CCreature> creature) {
-    vstd::fail_if(!std::any_of(actions.begin(), actions.end(), [action](const auto &candidate) {
-        return CGameObject::sameInstance(candidate, action);
-    }));
+    // Selectors (monster AI, fight panel) draw from the composed effective set, which
+    // includes race/class-owned and level-unlocked instances that never live in the
+    // concrete `actions` member — validate against the same composed set.
+    auto effective = getEffectiveInteractions();
+    vstd::fail_if(
+        !std::any_of(effective.begin(), effective.end(),
+                     [action](const auto &candidate) { return CGameObject::sameInstance(candidate, action); }),
+        "Tried to use action not in effective interaction set!");
     action->onAction(this->ptr<CCreature>(), creature);
     if (creature->getArmor()) {
         if (creature->getArmor()->getInteraction()) {
