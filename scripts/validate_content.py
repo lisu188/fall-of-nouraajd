@@ -1388,6 +1388,7 @@ class ContentValidator:
         self._collect_engine_classes()
         self._collect_plugin_classes()
         self._load_type_registration_exclusions()
+        self._validate_type_registration_coverage()
         self._load_global_configs()
         self._load_maps()
         self._load_campaigns()
@@ -1852,6 +1853,44 @@ class ContentValidator:
             | self.native_plugin_registered_classes
             | self.python_registered_classes
         )
+
+    def _validate_type_registration_coverage(self) -> None:
+        """Exhaustively assert that every metadata-declared (``V_META``) engine type is
+        accounted for -- either registered as constructible content (static, native, or
+        Python plugin registration) or explicitly listed as an intentional exclusion in
+        ``scripts/type_registration_exclusions.json``.
+
+        A ``V_META`` type that is neither registered nor excluded is a latent hazard: the
+        loader can be asked to build it by name from content and will fail at runtime with
+        no static warning, and the exclusion manifest silently stops being authoritative.
+        This audit closes that gap so adding a new reflected type forces a deliberate
+        choice -- wire it into a ``register*Types`` call / plugin, or document why it is
+        constructed only from C++ -- rather than leaving it unreachable by accident.
+
+        Registration is the raw union of the fallback/static/native/Python registered sets
+        (exclusions are NOT subtracted here, unlike ``_constructible_classes``): a type may
+        legitimately be both registered for serialization and excluded from content
+        instantiation, and either fact is enough to make it "accounted for".
+        """
+        registered = (
+            self.fallback_registered_classes
+            | self.static_registered_classes
+            | self.native_plugin_registered_classes
+            | self.python_registered_classes
+        )
+        manifest_path = self.repo_root / TYPE_REGISTRATION_EXCLUSIONS_PATH
+        for class_name in sorted(self.metadata_declared_classes):
+            if class_name in registered or class_name in self.registration_exclusions:
+                continue
+            base = self.metadata_class_bases.get(class_name)
+            base_hint = f' (extends "{base}")' if base else ""
+            self._issue(
+                manifest_path,
+                "exclusions",
+                f'metadata-declared type "{class_name}"{base_hint} is neither registered as '
+                "constructible content nor listed as an intentional exclusion; register it "
+                "through CTypes (static/native/Python) or add an exclusion entry with a reason",
+            )
 
     def _parse_script(self, path: Path) -> ScriptInfo | None:
         if not path.exists():

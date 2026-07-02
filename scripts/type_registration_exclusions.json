@@ -11,6 +11,11 @@
       "ownerModule": "src/core/CProvider"
     },
     {
+      "className": "CCustomTrigger",
+      "reason": "C++-only runtime trigger built with a native callback (std::make_shared<CCustomTrigger> in src/core/CMap); its sole constructor takes a std::function, so it has no default constructor and cannot be built from content config.",
+      "ownerModule": "src/object/CTrigger"
+    },
+    {
       "className": "CEventHandler",
       "reason": "Runtime event dispatcher owned by the game loop; content should use CEvent or CTrigger instances.",
       "ownerModule": "src/handler/CEventHandler"

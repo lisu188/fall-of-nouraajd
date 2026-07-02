@@ -4172,5 +4172,69 @@ class NouraajdCatacombsContentTest(unittest.TestCase):
         self.assertIn("holyRelic", self.config)
 
 
+class TypeRegistrationCoverageAuditTest(unittest.TestCase):
+    """Guards the exhaustive V_META registration audit (todo.txt: "add exhaustive audit
+    to ensure every runtime-instantiable V_META type is covered by static or plugin
+    registration")."""
+
+    def _collected_validator(self):
+        validator = ContentValidator(REPO_ROOT)
+        validator._collect_engine_classes()
+        validator._collect_plugin_classes()
+        validator._load_type_registration_exclusions()
+        return validator
+
+    def _registered_classes(self, validator):
+        return (
+            validator.fallback_registered_classes
+            | validator.static_registered_classes
+            | validator.native_plugin_registered_classes
+            | validator.python_registered_classes
+        )
+
+    def test_every_metadata_type_is_registered_or_excluded(self):
+        validator = self._collected_validator()
+        registered = self._registered_classes(validator)
+        excluded = set(validator.registration_exclusions)
+
+        # Sanity: the collectors actually found the reflected engine types and the
+        # registration sources, so an empty-scan false pass cannot slip through.
+        self.assertIn("CItem", validator.metadata_declared_classes)
+        self.assertIn("CItem", registered)
+
+        uncovered = sorted(validator.metadata_declared_classes - registered - excluded)
+        self.assertEqual(
+            [],
+            uncovered,
+            "V_META types neither registered nor excluded (register them via CTypes or "
+            f"add an exclusion entry with a reason): {uncovered}",
+        )
+
+    def test_ccustomtrigger_is_excluded_not_registered(self):
+        validator = self._collected_validator()
+        self.assertIn("CCustomTrigger", validator.metadata_declared_classes)
+        self.assertNotIn("CCustomTrigger", self._registered_classes(validator))
+        self.assertIn("CCustomTrigger", validator.registration_exclusions)
+
+    def test_audit_flags_metadata_type_without_registration_or_exclusion(self):
+        validator = self._collected_validator()
+        validator.metadata_declared_classes.add("CFakeUnregisteredType")
+        validator.metadata_class_bases["CFakeUnregisteredType"] = "CGameObject"
+
+        validator._validate_type_registration_coverage()
+
+        flagged = [issue for issue in validator.issues if "CFakeUnregisteredType" in issue.message]
+        self.assertEqual(1, len(flagged), [str(i) for i in validator.issues])
+        self.assertEqual("scripts/type_registration_exclusions.json", flagged[0].path)
+        self.assertEqual("exclusions", flagged[0].location)
+        self.assertIn('extends "CGameObject"', flagged[0].message)
+
+    def test_audit_ignores_registered_and_excluded_types(self):
+        validator = self._collected_validator()
+        validator._validate_type_registration_coverage()
+        self.assertFalse([issue for issue in validator.issues if "CItem" in issue.message])
+        self.assertFalse([issue for issue in validator.issues if '"CCustomTrigger"' in issue.message])
+
+
 if __name__ == "__main__":
     unittest.main()
