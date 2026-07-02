@@ -213,6 +213,14 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
     "GameTest.test_campaign_driver_routes_full_campaign_with_carryover": 25.0,
     "GameTest.test_campaign_state_survives_save_load": 15.0,
+    "GameTest.test_map_walkthrough_hearthfall": 12.0,
+    "GameTest.test_map_walkthrough_gravemoor": 12.0,
+    "GameTest.test_map_walkthrough_usurpergate": 12.0,
+    "GameTest.test_wardens_road_campaign_mercy_route": 25.0,
+    "GameTest.test_wardens_road_campaign_wrath_route_clamps_gold": 25.0,
+    "McpServerTest.test_stdio_map_walkthrough_hearthfall": 25.0,
+    "McpServerTest.test_stdio_map_walkthrough_gravemoor": 25.0,
+    "McpServerTest.test_stdio_map_walkthrough_usurpergate": 25.0,
     "GameTest.test_map_walkthroughs": 20.0,
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
     "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
@@ -4890,7 +4898,128 @@ def walkthrough_ninemarches_map():
     }
 
 
+def walkthrough_hearthfall_map():
+    g, game_map, player = load_game_map_with_player("hearthfall")
+    for name in ("hearthfallStart", "watchCaptain", "elderMaren"):
+        find_map_object_definition("hearthfall", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("hearthfall", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the liberation quest.
+    move_to_object("hearthfallStart")
+    assert game_map.getBoolProperty("hearthfall_intro"), "Arrival should play the Hearthfall intro."
+    assert "hearthfallQuest" in quest_names(player), "Arrival should grant the Hearthfall quest."
+
+    # Breaking the watch-captain frees the village square.
+    gold_before = player.getGold()
+    game_map.removeObjectByName("watchCaptain")
+    assert game_map.getBoolProperty("captain_defeated"), "Killing Osric should mark the captain defeated."
+
+    # Reporting to Elder Maren pays the village purse and completes the chapter.
+    elder = g.createObject("elderDialog")
+    assert elder.captain_down(), "The elder should be ready to hear of the captain's fall."
+    elder.report_victory()
+    assert game_map.getBoolProperty("victory_reported"), "Reporting should mark the victory."
+    assert player.getGold() == gold_before + 150, "The elder should pay the hidden purse once."
+    elder.report_victory()
+    assert player.getGold() == gold_before + 150, "Repeating the report must not pay twice."
+    player.checkQuests()
+    assert "hearthfallQuest" in completed_quest_names(player), "The Hearthfall quest should complete."
+
+    return {
+        "map": "hearthfall",
+        "captain_defeated": game_map.getBoolProperty("captain_defeated"),
+        "victory_reported": game_map.getBoolProperty("victory_reported"),
+        "gold": player.getGold(),
+        "quest_completed": "hearthfallQuest" in completed_quest_names(player),
+    }
+
+
+def walkthrough_gravemoor_map():
+    g, game_map, player = load_game_map_with_player("gravemoor")
+    cages = ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth")
+    for name in ("gravemoorStart", "quartermasterVoss") + cages:
+        find_map_object_definition("gravemoor", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("gravemoor", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the rescue quest.
+    move_to_object("gravemoorStart")
+    assert "gravemoorQuest" in quest_names(player), "Arrival should grant the Gravemoor quest."
+
+    # Judgment is locked until every cage is open.
+    voss = g.createObject("vossDialog")
+    assert voss.captives_missing(), "Judgment should wait until the loyalists are free."
+
+    for index, cage in enumerate(cages, start=1):
+        move_to_object(cage)
+        assert game_map.getNumericProperty("loyalists_freed") == index, f"Cage {cage} should free a loyalist."
+        assert game_map.getObjectByName(cage) is None, f"Cage {cage} should be gone once opened."
+
+    # Sparing Voss completes the chapter and pays the cached pay-chests once.
+    assert voss.ready_to_judge(), "All cages open should unlock the judgment."
+    gold_before = player.getGold()
+    voss.spare_voss()
+    assert game_map.getBoolProperty("voss_judged"), "Judgment should be recorded."
+    assert game_map.getBoolProperty("voss_spared"), "This route spares the quartermaster."
+    assert player.getGold() == gold_before + 200, "Sparing Voss should yield the pay-chest gold once."
+    voss.spare_voss()
+    assert player.getGold() == gold_before + 200, "Repeating the judgment must not pay twice."
+    player.checkQuests()
+    assert "gravemoorQuest" in completed_quest_names(player), "The Gravemoor quest should complete."
+
+    return {
+        "map": "gravemoor",
+        "loyalists_freed": game_map.getNumericProperty("loyalists_freed"),
+        "voss_judged": game_map.getBoolProperty("voss_judged"),
+        "voss_spared": game_map.getBoolProperty("voss_spared"),
+        "gold": player.getGold(),
+        "quest_completed": "gravemoorQuest" in completed_quest_names(player),
+    }
+
+
+def walkthrough_usurpergate_map():
+    g, game_map, player = load_game_map_with_player("usurpergate")
+    for name in ("usurpergateStart", "theUsurper", "obsidianThrone", "banneretHild"):
+        find_map_object_definition("usurpergate", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("usurpergate", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the assault quest.
+    move_to_object("usurpergateStart")
+    assert "usurpergateQuest" in quest_names(player), "Arrival should grant the Usurper's Gate quest."
+
+    # The Usurper falls; the throne can then be taken, paying the treasury once.
+    gold_before = player.getGold()
+    game_map.removeObjectByName("theUsurper")
+    assert game_map.getBoolProperty("usurper_defeated"), "Killing the Usurper should be recorded."
+    move_to_object("obsidianThrone")
+    assert game_map.getBoolProperty("throne_taken"), "Sitting the throne should retake the keep."
+    assert player.getGold() == gold_before + 500, "Taking the throne should pay the treasury once."
+    player.checkQuests()
+    assert "usurpergateQuest" in completed_quest_names(player), "The Usurper's Gate quest should complete."
+
+    return {
+        "map": "usurpergate",
+        "usurper_defeated": game_map.getBoolProperty("usurper_defeated"),
+        "throne_taken": game_map.getBoolProperty("throne_taken"),
+        "gold": player.getGold(),
+        "quest_completed": "usurpergateQuest" in completed_quest_names(player),
+    }
+
+
 WALKTHROUGHS = {
+    "gravemoor": walkthrough_gravemoor_map,
+    "hearthfall": walkthrough_hearthfall_map,
     "kadath": walkthrough_kadath_map,
     "ninemarches": walkthrough_ninemarches_map,
     "sunderedmarch": walkthrough_sunderedmarch_map,
@@ -4899,6 +5028,7 @@ WALKTHROUGHS = {
     "ritual": walkthrough_ritual_map,
     "siege": walkthrough_siege_map,
     "test": walkthrough_test_map,
+    "usurpergate": walkthrough_usurpergate_map,
     "vhulmarn": walkthrough_vhulmarn_map,
 }
 
@@ -15342,6 +15472,18 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("ninemarches")
 
     @game_test
+    def test_map_walkthrough_hearthfall(self):
+        return execute_walkthrough("hearthfall")
+
+    @game_test
+    def test_map_walkthrough_gravemoor(self):
+        return execute_walkthrough("gravemoor")
+
+    @game_test
+    def test_map_walkthrough_usurpergate(self):
+        return execute_walkthrough("usurpergate")
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -16293,6 +16435,118 @@ class GameTest(unittest.TestCase):
             {
                 "save": save_name,
                 "campaign": "fallOfNouraajd",
+            },
+            sort_keys=True,
+        )
+
+    def _drive_wardens_road_to_judgment(self, g, campaign_module):
+        """Play the Warden's Road campaign up to the Gravemoor judgment.
+
+        Returns (scene_manager, player, voss_dialog) with all three cages
+        already opened, so the caller picks the branch by invoking one of the
+        judgment actions.
+        """
+        game = load_game_module()
+        store = campaign_module.start(g, "wardensRoad", DEFAULT_PLAYER)
+        scene_manager = g.getSceneManager()
+        player = g.getMap().getPlayer()
+        self.assertEqual("hearthfall", g.getMap().mapName)
+        self.assertEqual("homecoming", store.scenario())
+
+        def move_to(map_name, object_name):
+            definition = find_map_object_definition(map_name, object_name)
+            player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        # Chapter I: break the occupation and report to the elder.
+        move_to("hearthfall", "hearthfallStart")
+        g.getMap().removeObjectByName("watchCaptain")
+        g.createObject("elderDialog").report_victory()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("rescue", store.scenario())
+        self.assertEqual([("homecoming", "completed")], store.history())
+
+        # Chapter II: open every barrow cage; judgment is the caller's choice.
+        move_to("gravemoor", "gravemoorStart")
+        for cage in ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth"):
+            move_to("gravemoor", cage)
+        self.assertEqual(3, g.getMap().getNumericProperty("loyalists_freed"))
+        voss = g.createObject("vossDialog")
+        self.assertTrue(voss.ready_to_judge())
+        return scene_manager, player, voss
+
+    @game_test
+    def test_wardens_road_campaign_mercy_route(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        scene_manager, player, voss = self._drive_wardens_road_to_judgment(g, campaign_module)
+        store = campaign_module.CampaignStateStore(player)
+
+        voss.spare_voss()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("usurpergate", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("assault_mercy", store.scenario())
+
+        # Chapter III: fell the Usurper and take the throne; the campaign ends.
+        definition = find_map_object_definition("usurpergate", "usurpergateStart")
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+        g.getMap().removeObjectByName("theUsurper")
+        throne = find_map_object_definition("usurpergate", "obsidianThrone")
+        player.moveTo(throne["x"] // 32, throne["y"] // 32, 0)
+        pump_event_loop(5)
+
+        self.assertTrue(g.getMap().getBoolProperty("throne_taken"))
+        self.assertTrue(store.finished())
+        self.assertFalse(store.active())
+        self.assertEqual(
+            [("homecoming", "completed"), ("rescue", "spared"), ("assault_mercy", "completed")],
+            store.history(),
+        )
+
+        return True, json.dumps(
+            {
+                "campaign": store.campaign_id(),
+                "history": store.history(),
+                "final_map": g.getMap().mapName,
+                "finished": store.finished(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_wardens_road_campaign_wrath_route_clamps_gold(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        scene_manager, player, voss = self._drive_wardens_road_to_judgment(g, campaign_module)
+        store = campaign_module.CampaignStateStore(player)
+
+        voss.execute_voss()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        # The wrath branch enters the finale through the gold-clamped scenario.
+        self.assertEqual("usurpergate", g.getMap().mapName)
+        self.assertEqual("assault_wrath", store.scenario())
+        self.assertEqual([("homecoming", "completed"), ("rescue", "executed")], store.history())
+        self.assertLessEqual(player.getGold(), 400)
+
+        return True, json.dumps(
+            {
+                "campaign": store.campaign_id(),
+                "scenario": store.scenario(),
+                "gold": player.getGold(),
             },
             sort_keys=True,
         )
@@ -20240,6 +20494,9 @@ class McpServerTest(unittest.TestCase):
         "kadath": "_mcp_walkthrough_kadath",
         "sunderedmarch": "_mcp_walkthrough_sunderedmarch",
         "ninemarches": "_mcp_walkthrough_ninemarches",
+        "hearthfall": "_mcp_walkthrough_hearthfall",
+        "gravemoor": "_mcp_walkthrough_gravemoor",
+        "usurpergate": "_mcp_walkthrough_usurpergate",
     }
 
     def make_stub_server(self):
@@ -20966,6 +21223,15 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_ninemarches(self):
         self._assert_mcp_walkthrough("ninemarches")
 
+    def test_stdio_map_walkthrough_hearthfall(self):
+        self._assert_mcp_walkthrough("hearthfall")
+
+    def test_stdio_map_walkthrough_gravemoor(self):
+        self._assert_mcp_walkthrough("gravemoor")
+
+    def test_stdio_map_walkthrough_usurpergate(self):
+        self._assert_mcp_walkthrough("usurpergate")
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -21466,6 +21732,96 @@ class McpServerTest(unittest.TestCase):
             "throne_taken": map_bool("throne_taken"),
             "boss_woken": map_bool("boss_woken"),
             "has_signet": has_signet,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_hearthfall(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "hearthfall")
+        for name in ("hearthfallStart", "watchCaptain", "elderMaren"):
+            find_map_object_definition("hearthfall", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the liberation quest; the watch-captain's fall frees the square.
+        step_onto("hearthfallStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        self.assertTrue(map_bool("hearthfall_intro"))
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["watchCaptain"])
+
+        self.assertTrue(map_bool("captain_defeated"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        return {
+            "map": "hearthfall",
+            "intro": map_bool("hearthfall_intro"),
+            "captain_defeated": map_bool("captain_defeated"),
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_gravemoor(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "gravemoor")
+        cages = ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth")
+        for name in ("gravemoorStart", "quartermasterVoss") + cages:
+            find_map_object_definition("gravemoor", name)
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the rescue quest; opening every barrow cage frees the loyalists.
+        step_onto("gravemoorStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        for cage in cages:
+            step_onto(cage)
+
+        freed = self._mcp_handle_call(session, map_handle, "getNumericProperty", ["loyalists_freed"])
+        self.assertEqual(len(cages), freed)
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        return {
+            "map": "gravemoor",
+            "loyalists_freed": freed,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_usurpergate(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "usurpergate")
+        for name in ("usurpergateStart", "theUsurper", "obsidianThrone"):
+            find_map_object_definition("usurpergate", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the assault quest; the Usurper falls; the throne retakes the keep.
+        step_onto("usurpergateStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["theUsurper"])
+        self.assertTrue(map_bool("usurper_defeated"))
+        step_onto("obsidianThrone")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+
+        self.assertTrue(map_bool("throne_taken"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        return {
+            "map": "usurpergate",
+            "usurper_defeated": map_bool("usurper_defeated"),
+            "throne_taken": map_bool("throne_taken"),
             "quests": self._serialized_quest_ids(player_data),
         }
 

@@ -1,0 +1,96 @@
+{
+  "banneretDialog": {
+    "class": "BanneretDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "A woman in a scorched surcoat kneels by the road, stitching torn banner-threads into a whole. 'Banneret Hild, Warden. Last of your mother's color-guard. I kept the threads. I always believed someone would come back for them.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "usurper_stands",
+                  "nextStateId": "SIEGE",
+                  "text": "How do I get into the keep?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "condition": "throne_waits",
+                  "nextStateId": "THRONE",
+                  "text": "The Usurper is dead."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "keep_retaken",
+                  "nextStateId": "RETAKEN",
+                  "text": "The keep is ours again."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "SIEGE",
+            "text": "'One breach in the curtain wall, dead center, held by his housecarls. Past them the inner court, and in the court the man himself. He has not sat the obsidian throne once, you know. He knows whose it is.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "THRONE",
+            "text": "'Then finish it the old way. The throne is not taken when the tyrant falls - it is taken when the Warden sits. Go and sit, and I will raise your mother's banner over the gate as you do.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "RETAKEN",
+            "text": "Above the gate, the restored banner takes the wind for the first time in ten years. Hild does not cheer. She only breathes out, very slowly, like someone setting down a weight carried the whole way.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

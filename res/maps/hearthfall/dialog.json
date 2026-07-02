@@ -1,0 +1,97 @@
+{
+  "elderDialog": {
+    "class": "ElderDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Elder Maren does not bow. She studies your face the way one reads an old map. 'Ten years, and the marches still whisper your name, Warden. Softly, so the watch cannot fine us for it.'",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "still_occupied",
+                  "nextStateId": "OCCUPIED",
+                  "text": "How do I break the occupation here?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "condition": "captain_down",
+                  "action": "report_victory",
+                  "nextStateId": "FREED",
+                  "text": "Watch-Captain Osric is dead. Hearthfall is yours again."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "victory_reported",
+                  "nextStateId": "AFTER",
+                  "text": "Tell me of the road north."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "OCCUPIED",
+            "text": "'Cut the head from it. Watch-Captain Osric holds the walled square with his bullies, and the village holds its breath. While he draws it, no hearth in Hearthfall dares to smoke.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "FREED",
+            "text": "'Then the first fire lit tonight will be ours.' Maren's voice does not shake, but her hands do. 'The watch dragged our stubbornest north into the Gravemoor, Warden. Cages in the barrow-crypts. Bring our people home.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "AFTER",
+            "text": "'North through the moor gate. Trust the crossroads lantern and nothing else that glows out there. And Warden - the quartermaster who sold us is caged with the rest. What you do with him, the marches will remember.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

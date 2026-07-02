@@ -1,0 +1,103 @@
+{
+  "hearthfallStart": {
+    "class": "HearthfallStart",
+    "properties": {
+      "text": "Hearthfall at last. Ten years of exile end at a village you no longer recognize: the granary burned, the square walled off, and the usurper's occupation banner nailed over your family's sigil. The watch-captain who holds the square knows your name. Make him regret that."
+    }
+  },
+  "hearthfallSign": {
+    "ref": "signPost",
+    "properties": {
+      "text": "HEARTHFALL - by order of the Usurper's watch: curfew at dusk, tithes at dawn, and no word spoken of the exiled Warden."
+    }
+  },
+  "hearthfallQuest": {
+    "class": "HearthfallQuest",
+    "properties": {
+      "description": "Retake the village of Hearthfall from the occupation watch."
+    }
+  },
+  "elderMaren": {
+    "ref": "Cultist",
+    "properties": {
+      "animation": "images/npc/oldWoman",
+      "controller": {
+        "class": "CNpcRandomController"
+      },
+      "npc": true
+    }
+  },
+  "watchCaptain": {
+    "ref": "CultLeader",
+    "properties": {
+      "label": "Watch-Captain Osric",
+      "affiliation": "occupation",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "occupierGate": {
+    "ref": "Cultist",
+    "properties": {
+      "affiliation": "occupation",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "occupierWest": {
+    "ref": "Cultist",
+    "properties": {
+      "affiliation": "occupation",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "occupierEast": {
+    "ref": "Cultist",
+    "properties": {
+      "affiliation": "occupation",
+      "controller": {
+        "class": "CTargetController",
+        "properties": {
+          "target": "player"
+        }
+      }
+    }
+  },
+  "ambientBurnedGranary": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "canStep": true,
+      "text": "The granary is a black ribcage of beams. The occupation burned a winter's grain to teach the village what hunger obeys."
+    }
+  },
+  "ambientTallyPost": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "canStep": true,
+      "text": "A tithe tally hangs from the post. Every family's column ends the same way: owed, owed, owed."
+    }
+  },
+  "ambientColdHearths": {
+    "ref": "signPost",
+    "properties": {
+      "animation": "images/ambient/campfire_cauldron",
+      "canStep": true,
+      "text": "No chimney in Hearthfall has smoked since the watch came. The village that once warmed the marches now hoards its own embers."
+    }
+  }
+}
