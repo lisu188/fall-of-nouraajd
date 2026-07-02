@@ -39,6 +39,7 @@ import argparse
 import dataclasses
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -676,10 +677,25 @@ def sweepRegistry(
             "reasons": reasons,
         }
         if recommended != "NONE":
-            finding["recommendedCommand"] = (
-                f"python3 scripts/subagent_registry.py mark --registry {registryPath} "
-                f"--registration-id {record.registrationId} --to {recommended} "
-                f"--reason {json.dumps('; '.join(reasons))}"
+            # Shell-quote every interpolated field. registrationId/branch/worktree
+            # are attacker-influenced (a subagent registers them), and reasons embed
+            # branch/worktree text; json.dumps only double-quotes, which still lets
+            # bash run $(...)/`...` command substitution when an operator pastes the
+            # command. shlex.join produces a safe, copy-pasteable argv.
+            finding["recommendedCommand"] = shlex.join(
+                [
+                    "python3",
+                    "scripts/subagent_registry.py",
+                    "mark",
+                    "--registry",
+                    str(registryPath),
+                    "--registration-id",
+                    record.registrationId,
+                    "--to",
+                    recommended,
+                    "--reason",
+                    "; ".join(reasons),
+                ]
             )
         findings.append(finding)
     return {
