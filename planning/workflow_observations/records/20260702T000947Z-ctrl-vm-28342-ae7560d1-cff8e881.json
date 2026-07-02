@@ -1,0 +1,56 @@
+{
+  "affectedPaths": [
+    "test.py"
+  ],
+  "category": "ci",
+  "controllerId": "ctrl-vm-28342-ae7560d1",
+  "createdAtUtc": "2026-07-02T00:09:47Z",
+  "details": "Reading the linux CI job log for PR #1254 (base 0db599f) yields two\nmaterially new facts that update prior observations:\n\n1. RESOLVED: the resource_unit_tests / for_unit_tests plugin-load break is\n   fixed. This run reports \"100% tests passed, 0 tests failed out of 10\",\n   including resource_unit_tests (0.07s). Earlier this suite was red main-wide\n   (all Python plugins failed to load), which observation #1259 cited as the\n   functional gate on row 22 #670 \"Define and enforce the Python\n   resource-plugin trust boundary\". That specific gate is now lifted.\n\n2. NEW/WORSE: the native `linux` red is now driven by the gameplay suite\n   (python3 test.py --suite gameplay), not unit tests. Failures observed:\n   - SIGABRT crashes: \"terminate called without an active exception\";\n     test shards 1/2/4 fail with exit code -6.\n   - Shard 3 times out after 1109s (exit 124).\n   - Individual FAILs incl. test_map_walkthrough_ninemarches,\n     test_map_walkthrough_sunderedmarch, test_nouraajd_victor_reward_unlock_regression,\n     test_player_progression_through_level_six_unlocks_once_per_class.\n   This sharpens the prior \"gameplay-walkthrough gate red swarm-wide (huge-map\n   timeouts)\" (#1227): it now includes hard aborts, not just timeouts.\n\nConsequence for the queue: four archetype worker PRs orphaned by dead\ncontroller ctrl-vm-4039 -- #1251 (E07/S04 MCP read-only inspection),\n#1252 (E07/S03 objectRef), #1254 (E04/S05 class/race combination test),\n#1255 (E07/S02 race/class tooltips), rows 90/89/60/88 -- are red ONLY via\nthis shared gameplay gate. Each PR's own added test passes where visible\n(e.g. #1254's test_every_class_race_combination passed at 0.333s). The rows\nare flagged reclaimable (lease expired ~46m) but MUST NOT be reclaimed:\nthat would mark complete, PR-backed work as NOT_STARTED and invite redo.\nThey need a controller/human able to merge-on-unstable (linux non-required)\nor to fix the gameplay crash first.\n",
+  "evidence": [
+    {
+      "ownTest": "test_every_class_race_combination_starts_and_retains_identity passed 0.333s",
+      "pr": 1254,
+      "row": 60
+    },
+    {
+      "unitSuite": "for_unit_tests 100% passed incl resource_unit_tests 0.07s -> plugin-load break resolved"
+    },
+    {
+      "gameplaySuite": "SIGABRT terminate called without an active exception; shards 1/2/4 exit -6; shard 3 timeout 1109s exit 124"
+    },
+    {
+      "gameplayFails": [
+        "test_map_walkthrough_ninemarches",
+        "test_map_walkthrough_sunderedmarch",
+        "test_nouraajd_victor_reward_unlock_regression",
+        "test_player_progression_through_level_six_unlocks_once_per_class"
+      ]
+    },
+    {
+      "deadController": "ctrl-vm-4039",
+      "guidance": "leave for fleet; do not reclaim (PR-backed)",
+      "orphanedPRs": [
+        1251,
+        1252,
+        1254,
+        1255
+      ],
+      "rows": [
+        90,
+        89,
+        60,
+        88
+      ]
+    }
+  ],
+  "fingerprint": "gameplay-suite-sigabrt-red-and-resource-unit-tests-resolved",
+  "id": "20260702T000947Z-ctrl-vm-28342-ae7560d1-cff8e881",
+  "impact": "Every native PR's linux job is red via the shared gameplay crash/timeout, not its own change; 4 complete archetype PRs (#1251/1252/1254/1255) sit unmerged and their reclaimable rows must not be reclaimed (would discard PR-backed work); #670's plugin-load gate is now lifted",
+  "phase": "validation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "0341e35",
+  "suggestedImprovement": "Diagnose/fix the gameplay-suite SIGABRT (terminate called without an active exception) and huge-map shard timeout so native linux reflects per-PR correctness; adopt-and-merge the 4 orphaned ctrl-vm-4039 archetype PRs on unstable; re-evaluate #670 now that its plugin-load gate is lifted",
+  "summary": "resource_unit_tests break RESOLVED (unit suite green, lifts #670 gate); native linux now red via gameplay-suite SIGABRT + shard timeout; 4 archetype PRs orphaned by dead ctrl-vm-4039"
+}
