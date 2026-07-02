@@ -728,6 +728,127 @@ class PollPrChecksTest(unittest.TestCase):
         self.assertTrue(evaluation.failed)
         self.assertEqual(("coverage",), evaluation.missingSteps)
 
+    def test_ambiguous_run_identity_allows_single_matching_run(self) -> None:
+        self.assertIsNone(
+            poll_pr_checks.ambiguousRunIdentity(
+                [
+                    {"databaseId": 1, "headSha": "old"},
+                    {"databaseId": 2, "headSha": "abc123"},
+                ],
+                "abc123",
+            )
+        )
+
+    def test_ambiguous_run_identity_blocks_multiple_distinct_runs_for_head(self) -> None:
+        failure = poll_pr_checks.ambiguousRunIdentity(
+            [
+                {"databaseId": 1, "headSha": "abc123"},
+                {"databaseId": 2, "headSha": "abc123"},
+            ],
+            "abc123",
+        )
+
+        self.assertIsNotNone(failure)
+        self.assertTrue(failure.failed)
+        self.assertIn("ambiguous workflow run identity", failure.message)
+        self.assertIn("2 distinct runs", failure.message)
+
+    def test_poll_checks_blocks_ambiguous_multiple_runs_for_head(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("docs/testing.md",)),
+            patch.object(
+                poll_pr_checks,
+                "runGhRunList",
+                return_value=[
+                    {"databaseId": 1, "headSha": "abc123"},
+                    {"databaseId": 2, "headSha": "abc123"},
+                ],
+            ),
+            patch.object(poll_pr_checks, "runGhRunView") as run_view,
+        ):
+            with redirect_stdout(io.StringIO()):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.failed)
+        self.assertIn("ambiguous workflow run identity", evaluation.message)
+        # An ambiguous set of runs must be rejected before any run is trusted.
+        run_view.assert_not_called()
+
+    def test_verify_run_identity_blocks_invalid_attempt(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run["event"] = "pull_request"
+        run["attempt"] = 0
+
+        failure = poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml")
+
+        self.assertIsNotNone(failure)
+        self.assertTrue(failure.failed)
+        self.assertIn("invalid attempt", failure.message)
+
+    def test_verify_run_identity_blocks_non_numeric_attempt(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run["event"] = "pull_request"
+        run["attempt"] = "not-a-number"
+
+        failure = poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml")
+
+        self.assertIsNotNone(failure)
+        self.assertTrue(failure.failed)
+        self.assertIn("non-numeric attempt", failure.message)
+
+    def test_verify_run_identity_passes_valid_attempt(self) -> None:
+        run = self.runPayload([self.jobPayload()])
+        run["event"] = "pull_request"
+        run["attempt"] = 2
+
+        self.assertIsNone(poll_pr_checks.verifyRunIdentity(run, "abc123", "build.yml"))
+
+    def test_poll_checks_surfaces_run_attempt_in_output(self) -> None:
+        open_pr = {
+            "headRefOid": "abc123",
+            "url": "https://github.com/example/repo/pull/1",
+            "state": "OPEN",
+        }
+        completed_run = self.runPayload([self.jobPayload(name="linux")])
+        completed_run["event"] = "pull_request"
+        completed_run["attempt"] = 3
+
+        stdout = io.StringIO()
+        with (
+            patch.object(poll_pr_checks, "runGhPrView", return_value=open_pr),
+            patch.object(poll_pr_checks, "runGhPrFiles", return_value=("docs/testing.md",)),
+            patch.object(poll_pr_checks, "runGhRunList", return_value=[{"databaseId": 1, "headSha": "abc123"}]),
+            patch.object(poll_pr_checks, "runGhRunView", return_value=completed_run),
+        ):
+            with redirect_stdout(stdout):
+                evaluation = poll_pr_checks.pollChecks(
+                    pr="1",
+                    repo=None,
+                    workflow="build.yml",
+                    requiredJobs=["linux"],
+                    requiredSteps=[],
+                    intervalSeconds=1,
+                    timeoutSeconds=1,
+                )
+
+        self.assertTrue(evaluation.succeeded)
+        self.assertIn("(attempt 3)", stdout.getvalue())
+
     def test_run_gh_json_reports_missing_cli_as_poll_error(self) -> None:
         def raise_missing_gh(*_args: object, **_kwargs: object) -> None:
             raise FileNotFoundError(2, "No such file or directory", "gh")
