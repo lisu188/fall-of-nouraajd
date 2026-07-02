@@ -20926,8 +20926,12 @@ class McpServerTest(unittest.TestCase):
 
         self.assertTrue(map_bool("crown_taken"))
         self.assertTrue(map_bool("boss_woken"))
-        map_data = self._mcp_serialized_map(session, map_handle)
-        player_data = self._serialized_player(map_data)
+        # Serialize only the player: a full-map jsonify of the 1000x1000 ninemarches map
+        # can exceed even the wide map-JSON timeout on slower CI runners (observed on
+        # Windows), and the assertions below only read the player's inventory and quests.
+        player_data = json.loads(
+            self._mcp_engine_call(session, "jsonify", [player_handle], timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
+        )
         has_crown = self._serialized_inventory_has(player_data, "ninefoldCrown")
         self.assertTrue(has_crown)
         return {
