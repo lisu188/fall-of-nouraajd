@@ -17,8 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CGame.h"
+#include "core/CJsonUtil.h"
 #include "core/CStats.h"
 #include "core/CMap.h"
+#include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
 #include "gui/CAnimation.h"
 #include "handler/CTooltipHandler.h"
@@ -618,6 +620,62 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     creature->setGold(25);
     creature->takeGold(5);
     expect_true(creature->getGold() == 20, "takeGold should subtract from creature gold");
+}
+
+void test_equip_item_same_instance_is_noop_and_keeps_cursed_lock() {
+    type_registration::registerCoreTypes();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CItem, CMapObject, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    game->getObjectHandler()->registerConfig(
+        "slotConfiguration", CJsonUtil::from_string(R"({"class":"CSlotConfig","properties":{"configuration":{)"
+                                                    R"("0":{"class":"CSlot","properties":{"types":["CItem"]}},)"
+                                                    R"("3":{"class":"CSlot","properties":{"types":["CItem"]}}}}})",
+                                                    "slotConfiguration"));
+
+    auto creature = std::make_shared<CCreature>();
+    creature->setGame(game);
+    creature->setName("equipLockTester");
+    creature->setBaseStats(stats_with_main(10, 10));
+
+    auto cursed_armor = std::make_shared<CItem>();
+    cursed_armor->setTypeId("cursedTestArmor");
+    cursed_armor->addTag(CTag::Cursed);
+    creature->setEquipped({{"3", cursed_armor}});
+
+    creature->equipItem("3", cursed_armor);
+    expect_true(CGameObject::sameInstance(creature->getItemAtSlot("3"), cursed_armor),
+                "re-equipping the equipped cursed instance must be a no-op, not an unequip");
+    expect_true(!creature->hasInInventory(cursed_armor),
+                "re-equipping the equipped cursed instance must not move it into the inventory");
+
+    creature->equipItem("3", nullptr);
+    expect_true(CGameObject::sameInstance(creature->getItemAtSlot("3"), cursed_armor),
+                "cursed items must stay locked against explicit unequip");
+
+    auto plain_sword = std::make_shared<CItem>();
+    plain_sword->setTypeId("plainTestSword");
+    creature->setEquipped({{"0", plain_sword}, {"3", cursed_armor}});
+
+    creature->equipItem("0", plain_sword);
+    expect_true(CGameObject::sameInstance(creature->getItemAtSlot("0"), plain_sword),
+                "re-equipping the equipped instance must be a no-op for ordinary items too");
+    expect_true(!creature->hasInInventory(plain_sword),
+                "a same-instance re-equip must not duplicate the item into the inventory");
+
+    creature->equipItem("0", nullptr);
+    expect_true(creature->getItemAtSlot("0") == nullptr, "ordinary items must still unequip normally");
+    expect_true(creature->hasInInventory(plain_sword), "a normal unequip must return the item to the inventory");
+
+    cursed_armor->removeTag(CTag::Cursed);
+    creature->equipItem("3", nullptr);
+    expect_true(creature->getItemAtSlot("3") == nullptr, "lifting the curse must unlock the slot again");
+    expect_true(creature->hasInInventory(cursed_armor), "an unlocked unequip must return the item to the inventory");
 }
 
 void test_no_archetype_creature_stats_keep_legacy_composition() {
@@ -1659,6 +1717,7 @@ int main() {
     test_game_object_property_helpers_and_owned_tile_movement();
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
+    test_equip_item_same_instance_is_noop_and_keeps_cursed_lock();
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();
     test_creature_class_main_stat_is_authoritative_over_race();

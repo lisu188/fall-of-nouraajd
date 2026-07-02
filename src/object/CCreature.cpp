@@ -530,14 +530,18 @@ void CCreature::setArmor(std::shared_ptr<CArmor> armor) { this->equipItem(std::t
 
 // TODO: make method unequip instead of equip null
 void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
+    // Re-equipping the same instance is a no-op: falling through to the swap logic
+    // below would unequip the item instead, letting a cursed item escape its slot lock.
+    if (vstd::ctn(equipped, i) && CGameObject::sameInstance(newItem, equipped.at(i))) {
+        return;
+    }
+
     vstd::fail_if(newItem && !getMap()->getGame()->getSlotConfiguration()->canFit(i, newItem),
                   "Tried to insert" + (newItem ? newItem->getType() : "null") + "into slot" + i);
 
     // Cursed items cannot leave the slot they occupy: unequipping or swapping out a
     // cursed item is refused until the curse is lifted (removeTag(CTag::Cursed)).
-    // Re-equipping the same instance is a no-op and stays allowed.
-    if (vstd::ctn(equipped, i) && equipped.at(i)->hasTag(CTag::Cursed) &&
-        !CGameObject::sameInstance(newItem, equipped.at(i))) {
+    if (vstd::ctn(equipped, i) && equipped.at(i)->hasTag(CTag::Cursed)) {
         return;
     }
 
@@ -547,9 +551,6 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
         getMap()->getEventHandler()->gameEvent(
             oldItem, std::make_shared<CGameEventCaused>(CGameEvent::CType::onUnequip, this->ptr<CCreature>()));
         this->addItem(oldItem);
-        if (CGameObject::sameInstance(newItem, oldItem)) {
-            newItem = nullptr;
-        }
     }
     if (newItem) {
         getMap()->getEventHandler()->gameEvent(
