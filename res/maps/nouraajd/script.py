@@ -13,6 +13,14 @@ def load(self, context):
     from game import ensure_quest
     from game import register, trigger
 
+    # The plugin sandbox only allows importing the game and json modules;
+    # game re-exports the campaign driver (res/campaign.py) as an attribute.
+    from game import campaign
+
+    # Scenario outcomes this map reports through campaign.complete_scenario;
+    # campaign manifests route them (see docs/design/multilevel_campaign.md).
+    CAMPAIGN_OUTCOMES = ("completed",)
+
     VICTOR_COURTYARD_TIMEOUT_TURNS = 75
     VICTOR_CULTIST_PREFIX = "victorCultist"
     VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
@@ -223,23 +231,23 @@ def load(self, context):
         # --- Rolf / Gooby ---
         def ensure_main_quest(self, player):
             if self.get_state("main") == "locked":
-                self._set_state("main", "awaiting_gooby")
+                self.set_state("main", "awaiting_gooby")
                 _grant_quest(player, "mainQuest")
 
         def mark_rolf_skull_found(self, player):
             if self.get_state("rolf") != "skull_recovered":
-                self._set_state("rolf", "skull_recovered")
+                self.set_state("rolf", "skull_recovered")
                 self.ensure_main_quest(player)
 
         def mark_gooby_slain(self):
             if self.get_state("main") != "gooby_slain":
-                self._set_state("main", "gooby_slain")
+                self.set_state("main", "gooby_slain")
 
         # --- Letter / relic / cleanse chain ---
         def give_letter(self, player):
             state = self.get_state("beren_chain")
             if state == "letter_pending":
-                self._set_state("beren_chain", "letter_in_hand")
+                self.set_state("beren_chain", "letter_in_hand")
                 _grant_quest(player, "deliverLetterQuest")
                 return True
             if state == "octobogz_slain_pending_letter":
@@ -253,93 +261,93 @@ def load(self, context):
         def mark_letter_delivered(self, player):
             prior = self.get_state("beren_chain")
             if prior == "octobogz_slain_pending_letter":
-                self._set_state("beren_chain", "octobogz_slain_no_relic")
+                self.set_state("beren_chain", "octobogz_slain_no_relic")
                 _grant_quest(player, "retrieveRelicQuest")
             elif prior in ("letter_pending", "letter_in_hand"):
                 next_state = (
                     "relic_obtained" if player.hasItem(lambda it: it.getName() == "holyRelic") else "letter_delivered"
                 )
-                self._set_state("beren_chain", next_state)
+                self.set_state("beren_chain", next_state)
                 _grant_quest(player, "retrieveRelicQuest")
             elif prior == "relic_obtained":
-                self._set_state("beren_chain", "relic_obtained")
+                self.set_state("beren_chain", "relic_obtained")
                 _grant_quest(player, "retrieveRelicQuest")
             else:
-                self._sync_legacy_flags()
+                self.sync_legacy_flags()
 
         def mark_relic_obtained(self):
             state = self.get_state("beren_chain")
             if state in ("letter_delivered", "relic_obtained"):
-                self._set_state("beren_chain", "relic_obtained")
+                self.set_state("beren_chain", "relic_obtained")
 
         def mark_relic_returned(self):
             state = self.get_state("beren_chain")
             if state in ("relic_obtained", "relic_returned_waiting_kill"):
-                self._set_state("beren_chain", "relic_returned_waiting_kill")
+                self.set_state("beren_chain", "relic_returned_waiting_kill")
             elif state == "octobogz_slain_no_relic":
-                self._set_state("beren_chain", "ready_to_report")
+                self.set_state("beren_chain", "ready_to_report")
 
         def mark_octobogz_slain(self):
             state = self.get_state("beren_chain")
             if state in ("relic_returned_waiting_kill", "ready_to_report", "purged"):
-                self._set_state("beren_chain", "ready_to_report")
+                self.set_state("beren_chain", "ready_to_report")
             elif state in ("relic_obtained", "letter_delivered"):
-                self._set_state("beren_chain", "octobogz_slain_no_relic")
+                self.set_state("beren_chain", "octobogz_slain_no_relic")
             elif state in ("letter_pending", "letter_in_hand", "octobogz_slain_pending_letter"):
-                self._set_state("beren_chain", "octobogz_slain_pending_letter")
+                self.set_state("beren_chain", "octobogz_slain_pending_letter")
 
         def mark_cave_purged(self):
             if self.get_state("beren_chain") == "ready_to_report":
-                self._set_state("beren_chain", "purged")
+                self.set_state("beren_chain", "purged")
 
         # --- OctoBogz travelers ---
         def activate_octobogz_contract(self):
             if self.get_state("octobogz_contract") == "not_started":
-                self._set_state("octobogz_contract", "active")
+                self.set_state("octobogz_contract", "active")
             else:
-                self._sync_legacy_flags()
+                self.sync_legacy_flags()
 
         def complete_octobogz_contract(self):
             if self.get_state("octobogz_contract") != "completed":
-                self._set_state("octobogz_contract", "completed")
+                self.set_state("octobogz_contract", "completed")
 
         # --- Amulet quest ---
         def start_amulet(self):
             if self.get_state("amulet") == "not_started":
-                self._set_state("amulet", "active")
+                self.set_state("amulet", "active")
 
         def finish_amulet(self):
-            self._set_state("amulet", "returned")
+            self.set_state("amulet", "returned")
 
         # --- Victor quest ---
         def record_met_victor(self):
             state = self.get_state("victor")
             if state == "not_started":
-                self._set_state("victor", "met_victor")
+                self.set_state("victor", "met_victor")
 
         def record_victor_records(self):
             state = self.get_state("victor")
             if state in ("met_victor", "records_reviewed"):
-                self._set_state("victor", "records_reviewed")
+                self.set_state("victor", "records_reviewed")
 
         def mark_courtyard_known(self):
             state = self.get_state("victor")
             if state in ("records_reviewed", "courtyard_known"):
-                self._set_state("victor", "courtyard_known")
+                self.set_state("victor", "courtyard_known")
 
         def mark_victor_encounter_active(self):
-            self._set_state("victor", "encounter_active")
+            self.set_state("victor", "encounter_active")
             self.map.setNumericProperty("VICTOR_COURTYARD_TURN", self.map.getTurn())
 
         def mark_victor_good_end(self):
-            self._set_state("victor", "good_end")
+            self.set_state("victor", "good_end")
             self.map.setBoolProperty("VICTOR_BAD_END", False)
             self.map.setBoolProperty("VICTOR_GOOD_END", True)
             self.map.setBoolProperty("VICTOR_REWARD_CLAIMED", True)
 
         def mark_victor_bad_end(self):
             if self.get_state("victor") == "encounter_active":
-                self._set_state("victor", "bad_end")
+                self.set_state("victor", "bad_end")
                 self.map.setBoolProperty("VICTOR_GOOD_END", False)
                 self.map.setBoolProperty("VICTOR_BAD_END", True)
                 self.map.setBoolProperty("VICTOR_REWARD_CLAIMED", False)
@@ -411,7 +419,7 @@ def load(self, context):
     @register(context)
     class ChangeMap(CEvent):
         def onEnter(self, event):
-            self.getMap().getGame().changeMap("ritual")
+            campaign.complete_scenario(self.getMap().getGame(), "completed", fallback_map="ritual")
 
     @register(context)
     class MainQuest(CQuest):
@@ -843,9 +851,7 @@ def load(self, context):
         def can_inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
             # Gate on the class identity (playerClassId) with type-id fallback for pre-identity saves.
-            return player.getPlayerClassId() == "Inquisitor" and not player.getBoolProperty(
-                "inspected_stained_glass"
-            )
+            return player.getPlayerClassId() == "Inquisitor" and not player.getBoolProperty("inspected_stained_glass")
 
         def inspect_stained_glass(self):
             player = self.getGame().getMap().getPlayer()
@@ -926,7 +932,7 @@ def load(self, context):
                     "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel."
                 )
                 self.getGame().getMap().getPlayer().checkQuests()
-                self.getGame().changeMap("ritual")
+                campaign.complete_scenario(self.getGame(), "completed", fallback_map="ritual")
             else:
                 self.getGame().getGuiHandler().showMessage("The cave still writhes with OctoBogz corruption.")
 

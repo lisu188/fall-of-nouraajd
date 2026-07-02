@@ -667,6 +667,17 @@ For terminal failure states, use the same fresh status-branch process:
 
 Do not merge partial implementation code merely to publish a queue status. If code must not merge, publish only the workbook state from the latest `main`.
 
+## Subagent lifecycle registry
+
+Track live agent state in the controller-local registry `scripts/subagent_registry.py` (default file under the system
+temp directory; override with `GAME_SUBAGENT_REGISTRY_FILE` or `--registry`; never commit it). `register` each
+worker/QA/PM/recovery subagent before it consumes a slot, feed `lastSeen` only through schema-validated `report`
+payloads from verified polls or structured worker reports, and `finalize` explicitly so finished agents stop consuming
+capacity. Run the read-only `sweep` subcommand after controller restarts and during recovery audits: it reconciles
+records against worktrees, `git rev-parse --verify` branch evidence, and read-only workbook claim evidence, and only
+recommends UNREACHABLE/ORPHANED marks that are applied with the explicit `mark` subcommand. The sweep never deletes
+worktrees, kills processes, mutates the workbook, or rewrites the registry file.
+
 ## Failure and recovery rules
 
 - Claim publication failure: implementation must not start.
@@ -685,6 +696,19 @@ Do not merge partial implementation code merely to publish a queue status. If co
   through an observation-only PR. Do not mix observation records with XLSX, implementation, or workflow-code changes.
 
 Never convert `BLOCKED`, `FAILED`, or `CANCELLED` to `DONE` merely to unlock dependencies.
+
+## Write leases for shared source
+
+Workbook claims give a worker issue ownership, not exclusive write access to shared source. When dispatched work will
+edit high-overlap areas, coordinate writes through `python3 scripts/write_leases.py` (store:
+`planning/write_leases.json`, separate from every XLSX workbook). `acquire` normalizes the worker's concrete scope
+(PR changed files > dirty worktree > worker-declared files > workbook targets, with confidence metadata), expands
+coupled areas (header/implementation pairs, type-registration and CMake units, `res/maps/<map>/` bundles,
+serialization and generated-resource pairs), and atomically grants the batch only if no ACTIVE unexpired lease overlaps
+the expanded scope. Renew leases alongside queue heartbeats, release them when the implementation PR merges, and use
+`recover` for expired leases of vanished workers — recovery is lease-lifecycle-only and never edits workbook
+Status/Owner/Claim ID columns. Read-only inspection never requires a lease, and lease conflicts never change queue
+eligibility: overlapping claims may still investigate concurrently.
 
 ## Cleanup
 

@@ -579,7 +579,11 @@ std::string CResource::getFilePath() const {
 
 std::string CTextResource::getText() {
     const auto filePath = getFilePath();
-    auto resolvedPath = CResourcesProvider::getInstance()->getPath(filePath);
+    // Resolve through the owning game's per-session resources provider; fall back to the process
+    // singleton only for resources that were never attached to a game (compatibility path).
+    auto game = getGame();
+    auto resourcesProvider = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    auto resolvedPath = resourcesProvider->getPath(filePath);
     if (resolvedPath.empty()) {
         return {};
     }

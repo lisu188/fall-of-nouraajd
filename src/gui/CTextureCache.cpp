@@ -100,7 +100,12 @@ SDL_Texture *CTextureCache::getTexture(std::string path) {
 }
 
 fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
-    const auto resolvedPath = CResourcesProvider::getInstance()->getPath(path);
+    auto gui = _gui.lock();
+    // Resolve through the owning game's per-session resources provider; fall back to the process
+    // singleton only when the cache is detached from a live GUI/game (compatibility path).
+    auto game = gui ? gui->getGame() : nullptr;
+    auto resourcesProvider = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    const auto resolvedPath = resourcesProvider->getPath(path);
     if (resolvedPath.empty()) {
         vstd::logger::error("CTextureCache::loadTexture: cannot resolve", path, "resolved:", resolvedPath);
         return nullptr;
@@ -110,7 +115,6 @@ fn::sdl::TexturePtr CTextureCache::loadTexture(std::string path) {
         vstd::logger::error("CTextureCache::loadTexture: cannot load", path, "resolved:", resolvedPath);
         return nullptr;
     }
-    auto gui = _gui.lock();
     return gui ? CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface)) : nullptr;
 }
 
