@@ -1,0 +1,26 @@
+{
+  "evidence": [
+    {
+      "mergeCommit": "37ff270eab378409b81d0cbe794f5ddd073f860a",
+      "mergedPr": 1274,
+      "note": "PR #1274 run 28595210563: linux success 13:58Z, windows success 14:01Z, linux-coverage success 14:13Z; gameplay suite green on both platforms for the first time since 2026-07-01T05:45Z"
+    },
+    {
+      "command": "test.py gate asserts",
+      "result": "find_runtime_object(...) is None replaced with getObjectByName(...) is None at the borderGate/ironGate checks"
+    },
+    {
+      "command": "src/core/CController.cpp",
+      "result": "incremental budgeted flow field (25k expansions/call) + 256-tile chase leash; stdio ninemarches walkthrough passes in-budget"
+    }
+  ],
+  "mergeCommit": "37ff270eab378409b81d0cbe794f5ddd073f860a",
+  "mergedPr": 1274,
+  "observationId": "20260702T080903Z-ctrl-vm-2256-06ac44fc-b7d5f0a2",
+  "resolutionSummary": "Fixed by PR #1274. GameTest ninemarches/sunderedmarch walkthroughs failed on an unsatisfiable assertion (find_runtime_object raises when absent, so 'is None' can never pass) - now getObjectByName(...) is None. The stdio ninemarches per-move timeout came from CTargetController rebuilding a full-map Dijkstra flow field (up to 1M cells) every turn; now seeded per (map, revision, goal), extended incrementally under a 25k-expansion budget, with a 256-tile chase leash, wide map-JSON move timeouts and encounter-bounce retries in the walkthrough.",
+  "resolvedAtUtc": "2026-07-02T14:22:41Z",
+  "resolver": "controller/ctrl-vm-4027-c0afa077",
+  "schemaVersion": 1,
+  "sourceCommit": "37ff270eab378409b81d0cbe794f5ddd073f860a",
+  "status": "resolved"
+}
