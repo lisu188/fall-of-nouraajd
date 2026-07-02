@@ -329,6 +329,21 @@ python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes --gith
 `--skip-run-tree-sizes` is discovery-only. Its JSON output marks `runTrees.sizesMeasured` and each record's
 `sizeMeasured` as `false`; run it without that flag before relying on run-tree byte totals for cleanup priority.
 
+### Shared local-resource broker
+
+The same script also brokers scarce local resources between concurrent controllers via
+`scripts/resource_broker.py`. `python3 scripts/controller_resource_audit.py probe` runs portable read-only probes for
+memory, running heavy build/test/coverage jobs, Xvfb displays, bound TCP ports, build-directory ownership, and
+MCP-server slots; each probe reports `available`, `unavailable`, `unknown`, or `unsupported` and never raises on
+unsupported platforms. `reserve`/`renew`/`release`/`recover`/`list` manage typed reservations (resource type,
+normalized key, controller ID, owner, claim ID, purpose, created/renewed/expires timestamps, lifecycle state) in
+`planning/resource_reservations.json` (override with `--store` or `GAME_RESOURCE_RESERVATION_FILE`) using the same
+sidecar-lock plus atomic-replace batch pattern as `scripts/write_leases.py`: batches are all-or-nothing, exclusive
+resource keys conflict, independent resources stay concurrent, and memory reservations are advisory unless
+`--exclusive` is requested. Expired reservations never block acquisition; they are reported (also under the additive
+`resources` key of the default `--json` audit) and `recover` only marks them `RECOVERED` — records are never deleted
+and no process, port, or worktree is touched. Focused regressions live in `tests/test_controller_resource_audit.py`.
+
 ## Subagent progress protocol
 
 A worker should report meaningful milestones to the controller after source inspection, root-cause analysis,

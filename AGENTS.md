@@ -214,6 +214,17 @@ reconciliation against worktrees, `git rev-parse --verify` branch evidence, and 
 only recommends UNREACHABLE/ORPHANED transitions, which are applied with the explicit `mark` subcommand. The sweeper
 never deletes worktrees, kills processes, or mutates the workbook.
 
+Scarce local resources shared between concurrent controllers (heavy build/test/coverage jobs, Xvfb displays, TCP
+ports, build directories, memory budgets, MCP server slots) are coordinated through the resource broker built into the
+same script. `python3 scripts/controller_resource_audit.py probe` reports read-only availability
+(`available`/`unavailable`/`unknown`/`unsupported`, never raising on unsupported platforms), and
+`reserve`/`renew`/`release`/`recover`/`list` manage typed reservations in `planning/resource_reservations.json`
+(override with `--store` or `GAME_RESOURCE_RESERVATION_FILE`). Reservation batches are all-or-nothing under one
+sidecar lock, exclusive keys are hard conflicts while independent resources stay concurrent, memory reservations are
+advisory unless `--exclusive` is requested, and `recover` only marks expired reservation records — it never deletes
+records, kills processes, or removes worktrees. The default `--json` audit stays read-only and additionally reports
+probe results plus expired reservations under the additive `resources` key.
+
 ## Project overview
 
 `fall-of-nouraajd` is a C++ dark-fantasy 2D game with Python scripts/plugins, JSON resource configuration, SDL assets, CMake builds, and a pybind11 `_game` extension module.

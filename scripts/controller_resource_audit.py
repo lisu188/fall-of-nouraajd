@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Read-only repository, disk, and worktree resource audit for controller workflows."""
+"""Read-only repository, disk, and worktree resource audit for controller workflows.
+
+The default invocation stays a read-only audit and its JSON fields are stable; the shared
+local-resource broker (``scripts/resource_broker.py``) is exposed through the additive
+``probe``/``reserve``/``renew``/``release``/``recover``/``list`` subcommands and through
+the additive ``resources`` key in the audit JSON payload.
+"""
 
 from __future__ import annotations
 
@@ -14,6 +20,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
+try:
+    from scripts import resource_broker
+except ModuleNotFoundError:  # Support `python3 scripts/controller_resource_audit.py`.
+    import resource_broker
+
+BROKER_COMMANDS = ("probe", "reserve", "renew", "release", "recover", "list")
 DEFAULT_RUN_TREE_PATTERNS = ("nouraajd-*", "fall-of-nouraajd-codex", "fon-workflow-optimizer-*")
 DEFAULT_MIN_FREE_GIB = 5.0
 DEFAULT_MAX_USED_PERCENT = 95.0
@@ -620,6 +632,7 @@ def payload(
     errors: Sequence[str],
     warnings: Sequence[str],
     mergePolicy: MergePolicyReport | None = None,
+    resources: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "repoRoot": str(repoRoot),
@@ -673,9 +686,26 @@ def payload(
         },
         "branchProtection": branchProtectionPayload(branchProtection),
         "mergePolicy": mergePolicyPayload(mergePolicy),
+        "resources": resources,
         "errors": list(errors),
         "warnings": list(warnings),
     }
+
+
+def evaluateResourceObservation(resources: dict[str, Any] | None) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not resources:
+        return errors, warnings
+    reservations = resources.get("reservations") or {}
+    if reservations.get("error"):
+        warnings.append(f"resource reservation store could not be inspected: {reservations['error']}")
+    elif reservations.get("expiredActive"):
+        warnings.append(
+            f"{reservations['expiredActive']} expired ACTIVE resource reservation(s); recover them with "
+            "controller_resource_audit.py recover (record-lifecycle-only; nothing is deleted or killed)"
+        )
+    return errors, warnings
 
 
 def printHuman(report: dict[str, Any]) -> None:
@@ -698,6 +728,13 @@ def printHuman(report: dict[str, Any]) -> None:
         print(f"Run trees: {runTrees['total']} matching, " f"{formatBytes(runTrees['totalBytes'])} total")
     else:
         print(f"Run trees: {runTrees['total']} matching, sizes not measured")
+    resources = report.get("resources")
+    if resources:
+        reservations = resources.get("reservations") or {}
+        print(
+            f"Resources: {len(resources.get('probes') or [])} probe(s), "
+            f"{reservations.get('active')} active reservation(s), {reservations.get('expiredActive')} expired"
+        )
     branchProtection = report.get("branchProtection")
     if branchProtection:
         protected = branchProtection["protected"]
@@ -771,7 +808,10 @@ def buildParser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = buildParser().parse_args(argv)
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if arguments and arguments[0] in BROKER_COMMANDS:
+        return resource_broker.main(arguments)
+    args = buildParser().parse_args(arguments)
     repoRoot = Path(args.repo_root).resolve()
     diskPaths = [repoRoot, Path("/tmp"), *[Path(path).resolve() for path in args.disk_path]]
     uniqueDiskPaths = list(dict.fromkeys(path for path in diskPaths if path.exists()))
@@ -805,6 +845,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     mergePolicyErrors, mergePolicyWarnings = evaluateMergePolicy(mergePolicy)
     errors.extend(mergePolicyErrors)
     warnings.extend(mergePolicyWarnings)
+    resources = resource_broker.observeResources(repoRoot)
+    resourceErrors, resourceWarnings = evaluateResourceObservation(resources)
+    errors.extend(resourceErrors)
+    warnings.extend(resourceWarnings)
     summary = worktreeSummary(worktrees)
     if summary["prunable"]:
         warnings.append(f"{summary['prunable']} prunable worktree registration(s); review and run git worktree prune")
@@ -819,6 +863,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         errors,
         warnings,
         mergePolicy=mergePolicy,
+        resources=resources,
     )
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))

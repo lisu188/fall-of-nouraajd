@@ -218,6 +218,15 @@ inform dispatch, but they do not impose a fixed RAM cap. If actual resource pres
 authentication, queue validation, an unmerged workbook-state PR, or repository state prevents safe implementation work,
 keep the extra subagents in standby and record the blocker rather than assigning unsafe implementation issues.
 
+The audit JSON includes an additive `resources` key with read-only probe results
+(`available`/`unavailable`/`unknown`/`unsupported`) for memory, running heavy jobs, Xvfb displays, TCP ports,
+build-directory ownership, and MCP-server slots, plus a reservation summary. Before starting a heavy local job that
+another controller could contend for, reserve the scarce resource with
+`python3 scripts/controller_resource_audit.py reserve --controller-id "$CONTROLLER_ID" --owner <owner> --claim-id
+<claim-id> --resource <type>=<key>` (all-or-nothing batches; exclusive keys conflict, independent resources stay
+concurrent), then `renew` on milestones and `release` when done. Report expired reservations and clear them only with
+`recover`, which marks records `RECOVERED` without deleting them or killing any process.
+
 For each free slot, fetch the latest merged queue state from `origin/main` and calculate the complete
 eligible set yourself. The `claim` command is deterministic by workbook order, so use it only after selecting the exact
 issue. Refresh the project-manager prioritization brief before selecting, and use it to decide whether to proceed,
