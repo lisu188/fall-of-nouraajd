@@ -17516,16 +17516,12 @@ class GameTest(unittest.TestCase):
         fixtures = discover_save_round_trip_fixtures()
         self.assertIn("composed_archetype_v1", fixtures)
         self.assertIn("invalid_primary_valid_backup", fixtures)
-        self.assertEqual(
-            "invalid_primary_valid_backup.json.bak", fixtures["invalid_primary_valid_backup"]["backup"]
-        )
+        self.assertEqual("invalid_primary_valid_backup.json.bak", fixtures["invalid_primary_valid_backup"]["backup"])
 
         results = {}
         with SaveRoundTripHarness(self, game) as harness:
             for fixture_name in sorted(fixtures):
-                results[fixture_name] = harness.assert_fixture_round_trip(fixture_name, fixtures[fixture_name])[
-                    "map"
-                ]
+                results[fixture_name] = harness.assert_fixture_round_trip(fixture_name, fixtures[fixture_name])["map"]
 
             # Live-game round trip: a freshly started game must serialize to a stable
             # fixed point as well, not just the curated fixtures.
