@@ -11,6 +11,7 @@ concurrent controllers can be distinguished.
 - `planning/fall_of_nouraajd_issue_proposals.xlsx` — canonical queue and human-readable backlog.
 - `planning/workflow_observations/` — immutable workflow-observation records and resolution receipts; not a task queue.
 - `scripts/issue_queue.py` — atomic claim/progress/completion CLI.
+- `scripts/write_leases.py` — separate write-lease CLI over `planning/write_leases.json`; see "Write leases" below.
 - `scripts/pr_review_audit.py` — read-only stale/open PR classification helper for merge, cleanup, and dispatch review.
 - `scripts/workflow_observations.py` — read-only/append-only workflow-observation ledger CLI.
 - `prompts/codex-queue-controller.md` — controller-agent operating prompt.
@@ -32,6 +33,21 @@ Exact `Target Files / Modules` overlap, open implementation PRs, and shared sour
 evidence, not automatic claim blockers. The controller must inspect these signals and use them to shape worker prompts,
 review order, expected rebase/merge risk, and validation focus, but a controller should not leave a worker slot empty
 solely because status-and-dependency eligible work overlaps active source scope.
+
+## Write leases
+
+Queue claims represent issue ownership, not write permission on shared source. `scripts/write_leases.py` layers a
+separate JSON-backed write-lease store (default `planning/write_leases.json`; override with `--store` or
+`GAME_WRITE_LEASE_FILE`) on top of the workbook queue. `acquire`/`renew`/`release` run as all-or-nothing batches under
+one sidecar lock file with the same lock-then-atomic-replace pattern as the workbook; a failed batch leaves the store
+unchanged. Scope paths are normalized from PR changed files, dirty worktree paths, worker-declared files, and workbook
+targets with per-source confidence metadata (workbook targets are planning-grade and never block once concrete evidence
+exists), then expanded deterministically over coupled areas: `src/**/X.h` <-> `X.cpp` pairs, `C*TypeRegistration.cpp`
+and `CMakeLists.txt` for new engine sources, whole `res/maps/<map>/` bundles, serialization pairs, and
+generated-resource producer/output pairs. Two ACTIVE unexpired leases may not have overlapping expanded scopes;
+read-only inspection (`list`, `validate`) never requires a lease. `recover` handles stale leases after expiry and is
+lease-lifecycle-only: it never alters workbook Status/Owner/Claim ID state. Focused regressions live in
+`tests/test_write_leases.py`.
 
 ## Setup
 
@@ -87,8 +103,15 @@ keeps only the highest currently eligible priority tier for `storyGroups`, and e
 `selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.healthy`,
 `activeClaims.stale`, `activeClaims.leaseExpired`, `activeClaims.suspect`, `activeClaims.reclaimable`,
 `activeClaims.inactive`, `staleClaimCount`, `staleClaims`, `advisoryTargetFileOverlapCount`,
-`advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps` so heartbeat-overdue claims, expired leases, recovery
+`advisoryTargetFileOverlaps`, `advisoryControlPlaneRowCount`, `advisoryControlPlaneRows`, and per-issue
+`activeFileOverlaps` so heartbeat-overdue claims, expired leases, recovery
 rows, and exact target-file overlaps can inform dispatch decisions without becoming automatic blockers.
+`advisoryControlPlaneRows` maps each eligible row whose `Target Files / Modules` rewrite the shared CI merge-gate or
+controller governance (`.github/workflows/build.yml`, `AGENTS.md`, `scripts/ci_change_classifier.py`,
+`scripts/poll_pr_checks.py`) to the matched files. Such a row can be status-and-dependency `CLEAN` yet unsafe for an
+autonomous controller to auto-claim, since rewriting the validation authority mid-run risks the CI gate for every
+concurrent PR; treat the flag as advisory evidence to route the row to a supervised lane, not as an automatic claim
+blocker.
 `activeClaims.unexpired` is retained as the healthy live-claim count: heartbeat not overdue and lease not expired. When
 `--controller-id` is provided, it also reports `controllerCapacity`: the current controller's healthy owned issues,
 suspect owned issues, reclaimable owned issues, recovery-required state, deficit to the four-issue controller target,

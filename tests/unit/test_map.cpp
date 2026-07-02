@@ -1640,6 +1640,73 @@ void test_game_context_owns_a_map_session_store() {
                 "context-owned store should retain maps across accessor calls");
 }
 
+void test_scene_manager_reload_vs_persistent_transition_requests() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto store = game->getContext()->getMapSessionStore();
+    auto source_map = game->getMap();
+    auto player = source_map->getPlayer();
+    source_map->setTurn(9);
+    source_map->setBoolProperty("session_marker", true);
+    const Coords return_target = first_adjacent_walkable(source_map, player->getCoords());
+
+    // Opt-in persistent transition: retain the source session under an anchor while moving away.
+    CMapTransitionRequest retain_request;
+    retain_request.targetMap = "ritual";
+    retain_request.retainSourceMap = true;
+    retain_request.returnAnchor = "camp";
+    expect_true(game->requestMapTransition(retain_request),
+                "explicit transition request should be accepted while the scene manager is idle");
+    pump_event_loop_iterations();
+
+    auto ritual_map = game->getMap();
+    expect_true(ritual_map != source_map, "explicit transition request should commit a map swap");
+    expect_true(ritual_map->getMapName() == "ritual", "explicit request should commit to the requested destination");
+    expect_true(ritual_map->getTurn() == 9, "carryTurn should default to the legacy turn transfer");
+    expect_true(player->getCoords() == ritual_map->getEntry(),
+                "a request without targetCoords should place the player at the destination entry");
+    expect_true(store->contains("test", "camp"), "retainSourceMap should store the source session under the anchor");
+    expect_true(store->get("test", "camp") == source_map, "the retained session should be the source map instance");
+
+    // Persistent return: reuse the retained session with explicit coordinates and its own turn.
+    ritual_map->setTurn(21);
+    CMapTransitionRequest reuse_request;
+    reuse_request.targetMap = "test";
+    reuse_request.reuseLoadedMap = true;
+    reuse_request.returnAnchor = "camp";
+    reuse_request.targetCoords = return_target;
+    reuse_request.carryTurn = false;
+    expect_true(game->requestMapTransition(reuse_request), "persistent return request should be accepted");
+    pump_event_loop_iterations();
+
+    expect_true(game->getMap() == source_map, "reuseLoadedMap should restore the retained map instance");
+    expect_true(game->getMap()->getBoolProperty("session_marker"),
+                "a persistent session should keep its runtime state across the round trip");
+    expect_true(game->getMap()->getTurn() == 9, "carryTurn=false should keep the retained session's own turn");
+    expect_true(game->getMap()->getPlayer() == player, "persistent transition should transfer the same player object");
+    expect_true(player->getCoords() == return_target, "targetCoords should place the player explicitly");
+    expect_true(count_players_on_map(game->getMap()) == 1,
+                "reattaching the player to a retained session should not duplicate it");
+
+    // Reload semantics stay the default: a plain request reloads even when a session is retained.
+    CMapTransitionRequest reload_request;
+    reload_request.targetMap = "ritual";
+    expect_true(game->requestMapTransition(reload_request), "default reload request should be accepted");
+    pump_event_loop_iterations();
+    expect_true(game->getMap() != ritual_map, "a default request should reload the destination from content");
+    expect_true(game->getMap()->getMapName() == "ritual", "default reload request should commit to the destination");
+
+    CMapTransitionRequest reload_back_request;
+    reload_back_request.targetMap = "test";
+    expect_true(game->requestMapTransition(reload_back_request), "reload-back request should be accepted");
+    pump_event_loop_iterations();
+    expect_true(game->getMap() != source_map,
+                "without reuseLoadedMap the destination should be reloaded even when a session is retained");
+    expect_true(!game->getMap()->getBoolProperty("session_marker"),
+                "a reload transition should not resurrect retained-session runtime state");
+    expect_true(store->get("test", "camp") == source_map, "reload transitions should leave retained sessions intact");
+}
+
 class TurnCountingController : public CController {
   public:
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
@@ -2199,6 +2266,47 @@ void test_loader_invalid_race_leaves_active_map_unchanged() {
     expect_true(game->getMap()->getPlayer() != nullptr, "an empty raceId start should attach a player");
 }
 
+void test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_ids() {
+    // An archetype creature: the concrete spawn/template id lives on the creature
+    // itself, while the race/class ids come from the referenced archetype
+    // definitions. objectRef must record all three distinctly.
+    auto archetype_creature = std::make_shared<CCreature>();
+    archetype_creature->setTypeId("goblinRaider");
+    auto race = std::make_shared<CCreatureRace>();
+    race->setTypeId("goblin");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setTypeId("raider");
+    archetype_creature->setRace(race);
+    archetype_creature->setCreatureClass(klass);
+
+    json archetype_ref = CPlaytestTrace::objectRef(archetype_creature);
+    expect_true(archetype_ref.contains("typeId") && archetype_ref["typeId"].get<std::string>() == "goblinRaider",
+                "archetype creature trace should keep the concrete spawn/template id in typeId");
+    expect_true(archetype_ref.contains("id") && archetype_ref["id"].get<std::string>() == "goblinRaider",
+                "archetype creature trace should keep the concrete spawn id in id");
+    expect_true(archetype_ref.contains("raceId") && archetype_ref["raceId"].get<std::string>() == "goblin",
+                "archetype creature trace should record the race archetype id separately");
+    expect_true(archetype_ref.contains("classId") && archetype_ref["classId"].get<std::string>() == "raider",
+                "archetype creature trace should record the class archetype id separately");
+    expect_true(archetype_ref["raceId"].get<std::string>() != archetype_ref["typeId"].get<std::string>(),
+                "archetype race id must be distinct from the concrete spawn id");
+    expect_true(archetype_ref["classId"].get<std::string>() != archetype_ref["typeId"].get<std::string>(),
+                "archetype class id must be distinct from the concrete spawn id");
+
+    // A legacy (non-archetype) creature carries no race/class definition, so the
+    // additive fields must stay present but empty for backward compatibility.
+    auto legacy_creature = std::make_shared<CCreature>();
+    legacy_creature->setTypeId("wildBoar");
+
+    json legacy_ref = CPlaytestTrace::objectRef(legacy_creature);
+    expect_true(legacy_ref.contains("typeId") && legacy_ref["typeId"].get<std::string>() == "wildBoar",
+                "legacy creature trace should keep the concrete spawn/template id in typeId");
+    expect_true(legacy_ref.contains("raceId") && legacy_ref["raceId"].get<std::string>().empty(),
+                "legacy creature trace should leave the race id empty when no archetype is present");
+    expect_true(legacy_ref.contains("classId") && legacy_ref["classId"].get<std::string>().empty(),
+                "legacy creature trace should leave the class id empty when no archetype is present");
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
 
@@ -2232,6 +2340,7 @@ int main() {
     test_animation_provider_uses_dynamic_animation_for_directory_resources();
     test_map_session_store_put_get_evict_and_ownership();
     test_game_context_owns_a_map_session_store();
+    test_scene_manager_reload_vs_persistent_transition_requests();
     test_map_move_blocks_new_turn_while_transition_pending();
     test_map_add_object_fills_hp_and_mana_from_composed_stats();
     test_set_base_stats_preserves_current_hp_and_mana();
@@ -2245,5 +2354,6 @@ int main() {
 
     test_post_combat_player_path_stops_after_encounter();
     test_post_combat_player_suppresses_destination_visit_events();
+    test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_ids();
     return finish_tests();
 }
