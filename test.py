@@ -17511,6 +17511,27 @@ class GameTest(unittest.TestCase):
             canonical_save_round_trip_form({"properties": {"name": "77aa88bb99cc00dd"}}),
         )
 
+        # Root-map provenance normalization: CObjectHandler::_createObject rewrites the root
+        # map's typeId with the config key it was constructed from ("CMap"/authored id when
+        # freshly started, "__save_slot__/<slot>" after a save-slot restore), so a fresh-save
+        # vs post-reload re-save pair differing only there must not report drift...
+        self.assertEqual(
+            canonical_save_round_trip_form({"snapshot": {"properties": {"typeId": "CMap"}}}),
+            canonical_save_round_trip_form({"snapshot": {"properties": {"typeId": "__save_slot__/slot_a"}}}),
+        )
+        # ...while typeIds of objects INSIDE the map remain real state and still diff exactly.
+        nested_first = {
+            "snapshot": {"properties": {"typeId": "CMap", "objects": [{"properties": {"typeId": "Warrior"}}]}}
+        }
+        nested_second = json.loads(json.dumps(nested_first))
+        nested_second["snapshot"]["properties"]["objects"][0]["properties"]["typeId"] = "Sorcerer"
+        self.assertIn(
+            "$.snapshot.properties.objects[0].properties.typeId: 'Warrior' != 'Sorcerer'",
+            save_round_trip_diff(
+                canonical_save_round_trip_form(nested_first), canonical_save_round_trip_form(nested_second)
+            ),
+        )
+
         # Auto-discovery must keep covering the whole fixture corpus with zero per-fixture
         # wiring, including the backup-recovery pairing.
         fixtures = discover_save_round_trip_fixtures()
@@ -17546,6 +17567,7 @@ SAVE_GENERATED_NAME_PATTERN = re.compile(r"[0-9a-fA-F]{8,}")
 SAVE_GENERATED_NAME_PLACEHOLDER = "<generated-name>"
 SAVE_SLOT_IDENTITY_PREFIX = "__save_slot__/"
 SAVE_SLOT_IDENTITY_PLACEHOLDER = "__save_slot__/<slot>"
+SAVE_MAP_PROVENANCE_PLACEHOLDER = "<map-load-provenance>"
 
 
 def normalize_generated_save_names(value):
@@ -17575,11 +17597,38 @@ def normalize_generated_save_names(value):
     return value
 
 
+def normalize_map_load_provenance(document):
+    """Pin the root CMap snapshot's typeId, which records construction provenance, not state.
+
+    CObjectHandler::_createObject (src/handler/CObjectHandler.cpp) overwrites typeId after
+    deserialization with the config key the object was created from. For the root map that
+    key is the authored map id for a freshly started game but becomes
+    CSaveFormat::savedMapConfigKey ("__save_slot__/<slot>", see restore_save_document in
+    src/core/CLoader.cpp) once the map has been restored from a save slot, so one load/save
+    cycle legitimately rewrites the root typeId. It is pinned to a placeholder before
+    comparison; typeIds of the objects inside the map are real state and compared exactly.
+    """
+    if not isinstance(document, dict):
+        return document
+    snapshot = document.get("snapshot")
+    if not isinstance(snapshot, dict):
+        return document
+    properties = snapshot.get("properties")
+    if not isinstance(properties, dict) or "typeId" not in properties:
+        return document
+    normalized = dict(document)
+    normalized["snapshot"] = dict(snapshot)
+    normalized["snapshot"]["properties"] = dict(properties)
+    normalized["snapshot"]["properties"]["typeId"] = SAVE_MAP_PROVENANCE_PLACEHOLDER
+    return normalized
+
+
 def canonical_save_round_trip_form(document, *, normalize=None):
-    """Comparable form of a saved document: generated names are normalized, then key order
-    and set-backed array order are canonicalized via normalize_save_snapshot. An optional
-    `normalize` callable runs in between for fields a future epic knows to be unstable."""
-    canonical = normalize_generated_save_names(document)
+    """Comparable form of a saved document: generated names and root-map load provenance
+    are normalized, then key order and set-backed array order are canonicalized via
+    normalize_save_snapshot. An optional `normalize` callable runs in between for fields
+    a future epic knows to be unstable."""
+    canonical = normalize_map_load_provenance(normalize_generated_save_names(document))
     if normalize is not None:
         canonical = normalize(canonical)
     return normalize_save_snapshot(canonical)
