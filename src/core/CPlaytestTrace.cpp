@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CMap.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
 #include "object/CGameObject.h"
 #include "object/CItem.h"
 
@@ -245,6 +247,20 @@ json CPlaytestTrace::objectRef(const std::shared_ptr<CGameObject> &object) {
     };
     if (auto creature = std::dynamic_pointer_cast<CCreature>(object)) {
         ref["isPlayer"] = creature->isPlayer();
+        // The "id"/"typeId" above already capture the concrete spawn/template id.
+        // Record the archetype race/class definition ids separately so traces can
+        // distinguish the spawned creature from its race/class archetypes. These
+        // stay empty on legacy (non-archetype) creatures that carry no definition.
+        if (auto race = creature->getRace()) {
+            ref["raceId"] = truncateValue(race->getTypeId());
+        } else {
+            ref["raceId"] = "";
+        }
+        if (auto creatureClass = creature->getCreatureClass()) {
+            ref["classId"] = truncateValue(creatureClass->getTypeId());
+        } else {
+            ref["classId"] = "";
+        }
     }
     return ref;
 }
