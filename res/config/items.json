@@ -161,5 +161,239 @@
         "cursed"
       ]
     }
+  },
+  "SkullHelmet": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 45,
+          "intelligence": 4,
+          "stamina": 2
+        }
+      },
+      "label": "Skull Helmet",
+      "description": "Varnished troll skull worn as a cap by hedge-wizards; grim, but the dead brain-case keeps thoughts orderly.",
+      "power": 4
+    }
+  },
+  "HelmOfTheAlabasterUnicorn": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 70,
+          "intelligence": 6,
+          "stamina": 3
+        }
+      },
+      "label": "Helm of the Alabaster Unicorn",
+      "description": "White-lacquered helm crowned with a spiral horn; a relic of gentler heraldry that still steadies the mind.",
+      "power": 6
+    }
+  },
+  "CrownOfTheSupremeMagi": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 90,
+          "crit": 2,
+          "intelligence": 9,
+          "stamina": 3
+        }
+      },
+      "label": "Crown of the Supreme Magi",
+      "description": "Three interlocking circlets once worn by a magi triumvirate; under them spells come quicker and colder.",
+      "power": 9
+    }
+  },
+  "ThunderHelmet": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 170,
+          "intelligence": 12,
+          "stamina": 6,
+          "strength": 4,
+          "thunderResist": 25
+        }
+      },
+      "label": "Thunder Helmet",
+      "description": "Giant-forged warhelm that mutters with distant storms; hair stands on end beneath it.",
+      "power": 14
+    }
+  },
+  "CrownOfDragontooth": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 260,
+          "crit": 4,
+          "fireResist": 20,
+          "intelligence": 14,
+          "stamina": 10
+        }
+      },
+      "label": "Crown of Dragontooth",
+      "description": "Jagged diadem of dragon fangs set in red gold; whoever bears it speaks with a wyrm's authority over flame.",
+      "power": 21
+    }
+  },
+  "DragonboneGreaves": {
+    "class": "CBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 50,
+          "intelligence": 3,
+          "stamina": 2
+        }
+      },
+      "label": "Dragonbone Greaves",
+      "description": "Shin guards of split wyrm bone, light as ash wood and stubborn as old scars.",
+      "power": 4
+    }
+  },
+  "BootsOfSpeed": {
+    "class": "CBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 12,
+          "armor": 60,
+          "stamina": 4
+        }
+      },
+      "label": "Boots of Speed",
+      "description": "Courier boots stitched with wind-runes; roads seem to shorten beneath them.",
+      "power": 8
+    }
+  },
+  "SandalsOfTheSaint": {
+    "class": "CBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 8,
+          "armor": 230,
+          "block": 4,
+          "intelligence": 10,
+          "stamina": 10,
+          "strength": 8
+        }
+      },
+      "label": "Sandals of the Saint",
+      "description": "Rope sandals a nameless saint wore into martyrdom; grace clings to whoever walks in them.",
+      "power": 20
+    }
+  },
+  "EquestriansGloves": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 9,
+          "armor": 55,
+          "stamina": 3
+        }
+      },
+      "label": "Equestrian's Gloves",
+      "description": "Supple riding gloves from the old horse-fairs; hands move at a canter in them.",
+      "power": 6
+    }
+  },
+  "GauntletsOfTheStillEye": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "armor": 30,
+          "block": 2,
+          "crit": 2
+        }
+      },
+      "label": "Gauntlets of the Still Eye",
+      "description": "Thin gauntlets set with a dragon's dead eye at each cuff; the steady gaze quiets trembling hands.",
+      "power": 3
+    }
+  },
+  "GirdleOfVitality": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 40,
+          "stamina": 9
+        }
+      },
+      "label": "Girdle of Vitality",
+      "description": "Physician's broad belt lined with tonic herbs; the heart beats surer beneath it.",
+      "power": 5
+    }
+  },
+  "SashOfCourage": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 55,
+          "block": 5,
+          "stamina": 6,
+          "strength": 4
+        }
+      },
+      "label": "Sash of Courage",
+      "description": "Campaign sash awarded for holding the gates; fear finds no purchase on the one who wears it.",
+      "power": 7
+    }
+  },
+  "ShacklesOfWar": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": -8,
+          "block": -6,
+          "stamina": 10,
+          "strength": 12
+        }
+      },
+      "label": "Shackles of War",
+      "description": "Iron war-fetters that lock about the waist and choose the field for you: no retreat and no surrender until the curse is struck off.",
+      "power": 13,
+      "tags": [
+        "cursed"
+      ]
+    }
   }
 }

@@ -91,5 +91,97 @@
         "cursed"
       ]
     }
+  },
+  "BreastplateOfPetrifiedWood": {
+    "class": "CArmor",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 40,
+          "intelligence": 2,
+          "stamina": 3
+        }
+      },
+      "label": "Breastplate of Petrified Wood",
+      "description": "Boards of stone-hard fossil oak strapped over quilted cloth; a humble ward that turns aside the odd claw.",
+      "power": 3
+    }
+  },
+  "RibCage": {
+    "class": "CArmor",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 100,
+          "intelligence": 6,
+          "shadowResist": 10,
+          "stamina": 4
+        }
+      },
+      "label": "Rib Cage",
+      "description": "Harness of lacquered beast ribs favored by grave-witches; the dead find its shape familiar and pass by.",
+      "power": 8
+    }
+  },
+  "ArmorOfWonder": {
+    "class": "CArmor",
+    "properties": {
+      "animation": "images/items/armors/robe",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 130,
+          "intelligence": 5,
+          "stamina": 5,
+          "strength": 5
+        }
+      },
+      "label": "Armor of Wonder",
+      "description": "Shimmering mail of no known forge that fits every wearer as if measured; every virtue rises a little beneath it.",
+      "power": 10
+    }
+  },
+  "DragonScaleArmor": {
+    "class": "CArmor",
+    "properties": {
+      "animation": "images/items/armors/platearmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 320,
+          "fireResist": 30,
+          "stamina": 12,
+          "strength": 10
+        }
+      },
+      "label": "Dragon Scale Armor",
+      "description": "Overlapping scales stripped from a red wyrm's flank; furnace heat and Pritscher claws alike slide off.",
+      "power": 19
+    }
+  },
+  "TitansCuirass": {
+    "class": "CArmor",
+    "properties": {
+      "animation": "images/items/armors/chestplateofnorth",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 430,
+          "intelligence": 12,
+          "stamina": 16,
+          "strength": 14,
+          "thunderResist": 20
+        }
+      },
+      "label": "Titan's Cuirass",
+      "description": "Storm-blued plate hammered for a giant's chest and cut down by Victor's smiths; thunder rolls off it like rain.",
+      "power": 23
+    }
   }
 }

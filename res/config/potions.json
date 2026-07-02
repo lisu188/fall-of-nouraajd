@@ -154,5 +154,85 @@
         "mana"
       ]
     }
+  },
+  "FountainOfYouthTonic": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "label": "Fountain of Youth Tonic",
+      "description": "Bottled from a hidden spring that smooths scars and stiff joints, though the youth it returns never lasts.",
+      "power": 2,
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
+    }
+  },
+  "MagicWellDraught": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "label": "Magic Well Draught",
+      "description": "Drawn at midnight from the old well behind the chapel, it returns a modest measure of spent sorcery.",
+      "power": 2,
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
+    }
+  },
+  "OasisWater": {
+    "class": "RejuvenationPotion",
+    "properties": {
+      "animation": "images/items/potions/bless",
+      "label": "Oasis Water",
+      "description": "Clear water carried in wax-sealed skins from a far oasis, easing wounds and weary minds alike.",
+      "power": 3,
+      "singleUse": true,
+      "tags": [
+        "heal",
+        "mana"
+      ]
+    }
+  },
+  "PhoenixFeatherTonic": {
+    "class": "LifePotion",
+    "properties": {
+      "animation": "images/items/potions/life",
+      "label": "Phoenix Feather Tonic",
+      "description": "Crimson tonic steeped with a molted phoenix feather; the drinker's wounds close in a wash of gentle flame.",
+      "power": 4,
+      "singleUse": true,
+      "tags": [
+        "heal"
+      ]
+    }
+  },
+  "MagicSpringPhial": {
+    "class": "ManaPotion",
+    "properties": {
+      "animation": "images/items/potions/mana",
+      "label": "Magic Spring Phial",
+      "description": "Azure water from a mountain spring said to double a caster's reserves; it hums against the glass.",
+      "power": 6,
+      "singleUse": true,
+      "tags": [
+        "mana"
+      ]
+    }
+  },
+  "ElixirOfLife": {
+    "class": "RejuvenationPotion",
+    "properties": {
+      "animation": "images/items/potions/bless",
+      "label": "Elixir of Life",
+      "description": "The alchemists' grail: a golden elixir that knits flesh, refills the wellspring of magic, and mocks death itself.",
+      "power": 6,
+      "singleUse": true,
+      "tags": [
+        "heal",
+        "mana"
+      ]
+    }
   }
 }

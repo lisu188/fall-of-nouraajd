@@ -26,6 +26,18 @@
    "height": 24,
    "width": 24,
    "opacity": 1,
+   "properties": {
+    "default": "GrassTile",
+    "level": "0",
+    "xBound": "23",
+    "yBound": "23"
+   },
+   "propertytypes": {
+    "default": "string",
+    "level": "string",
+    "xBound": "string",
+    "yBound": "string"
+   },
    "visible": true,
    "x": 0,
    "y": 0,
@@ -626,6 +638,12 @@
    "type": "objectgroup",
    "name": "Object Layer",
    "opacity": 1,
+   "properties": {
+    "level": "0"
+   },
+   "propertytypes": {
+    "level": "string"
+   },
    "visible": true,
    "x": 0,
    "y": 0,
