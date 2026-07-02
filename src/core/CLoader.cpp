@@ -49,11 +49,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <dlfcn.h>
 #endif
 
-std::set<std::string> getConfigPaths(const std::string &mapName);
+std::set<std::string> getConfigPaths(const std::shared_ptr<CResourcesProvider> &resourcesProvider,
+                                     const std::string &mapName);
 
 std::string getMapPath(std::string mapName);
 
-std::set<std::string> get_saved_map_dependencies(const json &save, const std::string &mapName);
+std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &game, const json &save,
+                                                 const std::string &mapName);
 
 void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName);
 
@@ -301,18 +303,18 @@ bool is_allowed_dynamic_library_path(const std::string &library) {
     return normalized && normalized->rfind("plugins/native/", 0) == 0;
 }
 
-std::string resolve_dynamic_library_path(const std::string &library) {
+std::string resolve_dynamic_library_path(const std::shared_ptr<CResourcesProvider> &resourcesProvider,
+                                         const std::string &library) {
     if (!is_allowed_dynamic_library_path(library)) {
         vstd::logger::warning("Rejected dynamic C++ plugin outside packaged native plugin paths:", library);
         return {};
     }
 
-    auto provider = CResourcesProvider::getInstance();
     for (const auto &candidate : dynamic_library_candidates(library)) {
         if (!is_allowed_dynamic_library_path(candidate)) {
             continue;
         }
-        auto resolved = provider->getPath(candidate);
+        auto resolved = resourcesProvider->getPath(candidate);
         if (!resolved.empty()) {
             return std::filesystem::absolute(resolved).lexically_normal().string();
         }
@@ -515,11 +517,12 @@ std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std:
     return CSaveFormat::buildEnvelope(snapshot, map->getMapName());
 }
 
-void apply_authored_map_metadata(const std::shared_ptr<CMap> &map, const std::string &mapName) {
-    if (!map) {
+void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                                 const std::string &mapName) {
+    if (!game || !map) {
         return;
     }
-    if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
+    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         map->setDefaultTiles({});
         map->setOutOfBoundsTiles({});
         map->setXBounds({});
@@ -607,7 +610,7 @@ bool rehydrate_loaded_map(const std::shared_ptr<CGame> &game, const std::shared_
         return false;
     }
 
-    apply_authored_map_metadata(map, mapName);
+    apply_authored_map_metadata(game, map, mapName);
 
     return map->restorePlayerAfterLoad(error);
 }
@@ -622,7 +625,7 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
     {
         CScopedGameMap scopedMap(game);
         load_map_resources(game, saveDocument.mapName);
-        for (const auto &requiredMap : get_saved_map_dependencies(*saveDocument.snapshot, saveDocument.mapName)) {
+        for (const auto &requiredMap : get_saved_map_dependencies(game, *saveDocument.snapshot, saveDocument.mapName)) {
             if (requiredMap != saveDocument.mapName) {
                 load_map_resources(game, requiredMap);
             }
@@ -689,18 +692,20 @@ std::optional<SaveLoadResult> try_load_saved_map(const std::shared_ptr<CGame> &g
     return std::nullopt;
 }
 
-void repair_recovered_backup(const SaveLoadResult &loaded, const std::string &slotName) {
+void repair_recovered_backup(const std::shared_ptr<CGame> &game, const SaveLoadResult &loaded,
+                             const std::string &slotName) {
     if (!loaded.recoveredFromBackup) {
         return;
     }
-    const auto backupBytes = CResourcesProvider::getInstance()->load(loaded.sourcePath);
+    auto resourcesProvider = game->getResourcesProvider();
+    const auto backupBytes = resourcesProvider->load(loaded.sourcePath);
     if (backupBytes.empty()) {
         vstd::logger::warning("Recovered backup could not be read for primary repair:", slotName, loaded.sourcePath);
         return;
     }
     const auto primaryPath = CSaveFormat::primaryPath(slotName);
     std::error_code errorCode;
-    const auto resolvedPrimaryPath = CResourcesProvider::getInstance()->getPath(primaryPath);
+    const auto resolvedPrimaryPath = resourcesProvider->getPath(primaryPath);
     if (!resolvedPrimaryPath.empty()) {
         std::filesystem::remove(resolvedPrimaryPath, errorCode);
     }
@@ -709,19 +714,18 @@ void repair_recovered_backup(const SaveLoadResult &loaded, const std::string &sl
                               primaryPath, "resolved:", resolvedPrimaryPath, "reason:", errorCode.message());
         return;
     }
-    if (CResourcesProvider::getInstance()->save(primaryPath, backupBytes)) {
+    if (resourcesProvider->save(primaryPath, backupBytes)) {
         vstd::logger::warning("Repaired save primary from recovered backup:", slotName, primaryPath);
     } else {
         vstd::logger::warning("Failed to repair save primary from recovered backup:", slotName, primaryPath);
     }
 }
 
-std::shared_ptr<json> load_plugin_manifest() {
-    auto provider = CResourcesProvider::getInstance();
-    if (provider->getPath(PLUGIN_MANIFEST_PATH).empty()) {
+std::shared_ptr<json> load_plugin_manifest(const std::shared_ptr<CResourcesProvider> &resourcesProvider) {
+    if (resourcesProvider->getPath(PLUGIN_MANIFEST_PATH).empty()) {
         return nullptr;
     }
-    return provider->loadJson(PLUGIN_MANIFEST_PATH);
+    return resourcesProvider->loadJson(PLUGIN_MANIFEST_PATH);
 }
 
 bool load_plugin_entry(const std::shared_ptr<CGame> &game, const json &entry,
@@ -830,14 +834,15 @@ void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared
     }
 }
 
-std::set<std::string> getConfigPaths(const std::string &mapName) {
+std::set<std::string> getConfigPaths(const std::shared_ptr<CResourcesProvider> &resourcesProvider,
+                                     const std::string &mapName) {
     if (!CSaveFormat::isValidMapName(mapName)) {
         vstd::logger::warning("Rejected invalid map name while loading config:", mapName);
         return {};
     }
 
     const auto logicalMapPath = "maps/" + mapName;
-    const auto resolvedMapPath = CResourcesProvider::getInstance()->getPath(logicalMapPath);
+    const auto resolvedMapPath = resourcesProvider->getPath(logicalMapPath);
     std::error_code errorCode;
     if (resolvedMapPath.empty() || !std::filesystem::is_directory(resolvedMapPath, errorCode)) {
         vstd::logger::warning("Map config directory is missing:", logicalMapPath, "resolved:", resolvedMapPath);
@@ -967,9 +972,10 @@ bool config_matches_saved_quest_refs(const json &entry, const CSavedQuestRefs &r
     return false;
 }
 
-bool map_defines_saved_quest_refs(const std::string &mapName, const CSavedQuestRefs &refs) {
-    for (const auto &configPath : getConfigPaths(mapName)) {
-        auto config = CConfigurationProvider::getConfig(configPath);
+bool map_defines_saved_quest_refs(const std::shared_ptr<CGame> &game, const std::string &mapName,
+                                  const CSavedQuestRefs &refs) {
+    for (const auto &configPath : getConfigPaths(game->getResourcesProvider(), mapName)) {
+        auto config = game->getConfigurationProvider()->getConfiguration(configPath);
         if (!config || !config->is_object()) {
             continue;
         }
@@ -982,7 +988,8 @@ bool map_defines_saved_quest_refs(const std::string &mapName, const CSavedQuestR
     return false;
 }
 
-std::set<std::string> get_saved_map_dependencies(const json &save, const std::string &mapName) {
+std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &game, const json &save,
+                                                 const std::string &mapName) {
     std::set<std::string> maps = {mapName};
     CSavedQuestRefs questRefs;
     collect_saved_quest_refs(save, questRefs);
@@ -990,11 +997,11 @@ std::set<std::string> get_saved_map_dependencies(const json &save, const std::st
         return maps;
     }
 
-    for (const auto &candidate : CResourcesProvider::getInstance()->getFiles(CResType::MAP)) {
+    for (const auto &candidate : game->getResourcesProvider()->getFiles(CResType::MAP)) {
         if (!CSaveFormat::isValidMapName(candidate)) {
             continue;
         }
-        if (map_defines_saved_quest_refs(candidate, questRefs)) {
+        if (map_defines_saved_quest_refs(game, candidate, questRefs)) {
             maps.insert(candidate);
         }
     }
@@ -1002,13 +1009,13 @@ std::set<std::string> get_saved_map_dependencies(const json &save, const std::st
 }
 
 void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
     CPluginLoader::loadMapPlugins(game, mapName);
-    game->getObjectHandler()->registerConfig(getConfigPaths(mapName));
+    game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
 }
 
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
-    if (std::shared_ptr<json> mapc = CConfigurationProvider::getConfig(getMapPath(mapName))) {
+    if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
         game->setMap(map);
         load_map_resources(game, mapName);
@@ -1261,7 +1268,7 @@ std::shared_ptr<CGame> CGameLoader::loadGame() {
     game->getResourcesProvider();
     game->getConfigurationProvider();
     initObjectHandler(game->getObjectHandler());
-    initConfigurations(game->getObjectHandler());
+    initConfigurations(game);
     initScriptHandler(game->getScriptHandler(), game);
     return game;
 }
@@ -1287,7 +1294,7 @@ void CGameLoader::startRandomGameWithPlayer(const std::shared_ptr<CGame> &game, 
 void CGameLoader::loadSavedGame(const std::shared_ptr<CGame> &game, const std::string &save) {
     if (auto loaded = try_load_saved_map(game, save)) {
         game->setMap(loaded->map);
-        repair_recovered_backup(*loaded, save);
+        repair_recovered_backup(game, *loaded, save);
         return;
     }
     vstd::logger::warning("Saved game was not loaded; keeping the active map unchanged:", save);
@@ -1305,9 +1312,9 @@ void CGameLoader::changeMap(const std::shared_ptr<CGame> &game, const std::strin
     game->getSceneManager()->requestMapChange(game, name);
 }
 
-void CGameLoader::initConfigurations(const std::shared_ptr<CObjectHandler> &handler) {
-    for (const std::string &path : CResourcesProvider::getInstance()->getFiles(CResType::CONFIG)) {
-        handler->registerConfig(path);
+void CGameLoader::initConfigurations(const std::shared_ptr<CGame> &game) {
+    for (const std::string &path : game->getResourcesProvider()->getFiles(CResType::CONFIG)) {
+        game->getObjectHandler()->registerConfig(path);
     }
 }
 
@@ -1417,7 +1424,7 @@ bool CPluginLoader::loadDynamicPlugin(const std::shared_ptr<CGame> &game, const 
     }
 
     const auto symbolName = entry.empty() ? std::string(DYNAMIC_PLUGIN_DEFAULT_ENTRY) : entry;
-    const auto resolvedPath = resolve_dynamic_library_path(library);
+    const auto resolvedPath = resolve_dynamic_library_path(game->getResourcesProvider(), library);
     if (resolvedPath.empty()) {
         vstd::logger::warning("Failed to resolve dynamic C++ plugin library:", library);
         return false;
@@ -1453,7 +1460,7 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
     std::set<std::string> loadedPythonPlugins;
     std::set<std::string> loadedDynamicPlugins;
 
-    if (auto manifest = load_plugin_manifest()) {
+    if (auto manifest = load_plugin_manifest(game->getResourcesProvider())) {
         if (manifest->contains("global")) {
             loadedAll = load_plugin_entries(game, (*manifest)["global"], loadedPythonPlugins, loadedDynamicPlugins) &&
                         loadedAll;
@@ -1479,7 +1486,7 @@ bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std
     std::set<std::string> loadedPythonPlugins;
     std::set<std::string> loadedDynamicPlugins;
 
-    if (auto manifest = load_plugin_manifest()) {
+    if (auto manifest = load_plugin_manifest(game->getResourcesProvider())) {
         if (manifest->contains("maps")) {
             const auto &mapEntries = (*manifest)["maps"];
             if (mapEntries.is_object() && mapEntries.contains(mapName)) {
