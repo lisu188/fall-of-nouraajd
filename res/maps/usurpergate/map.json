@@ -29,6 +29,20 @@
    "visible": true,
    "x": 0,
    "y": 0,
+   "properties": {
+    "default": "WastelandTile",
+    "outOfBounds": "MountainTile",
+    "level": "0",
+    "xBound": "23",
+    "yBound": "23"
+   },
+   "propertytypes": {
+    "default": "string",
+    "outOfBounds": "string",
+    "level": "string",
+    "xBound": "string",
+    "yBound": "string"
+   },
    "data": [
     12,
     12,
@@ -616,6 +630,12 @@
    "x": 0,
    "y": 0,
    "draworder": "topdown",
+   "properties": {
+    "level": "0"
+   },
+   "propertytypes": {
+    "level": "string"
+   },
    "objects": [
     {
      "height": 32,
