@@ -31,6 +31,10 @@ CGame::~CGame() {
 
 void CGame::changeMap(std::string file) { CGameLoader::changeMap(this->ptr<CGame>(), std::move(file)); }
 
+bool CGame::requestMapTransition(CMapTransitionRequest request) {
+    return getSceneManager()->requestMapChange(this->ptr<CGame>(), std::move(request));
+}
+
 std::shared_ptr<CMap> CGame::getMap() const { return map; }
 
 void CGame::setMap(std::shared_ptr<CMap> map) { this->map = map; }
