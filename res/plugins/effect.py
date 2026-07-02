@@ -16,9 +16,13 @@
 def load(self, context):
     from game import CTag
     from game import CEffect
-    from game import CDamage
     from game import randint
     from game import register
+
+    # CDamage has no Python constructor binding, so build damage packets
+    # through the victim's game object factory.
+    def spell_damage(creature):
+        return creature.getGame().createObject("CDamage")
 
     def is_cultist(creature):
         affiliation = creature.getStringProperty("affiliation")
@@ -37,7 +41,7 @@ def load(self, context):
     @register(context)
     class AbyssalShadowsEffect(CEffect):
         def onEffect(self):
-            dmg = CDamage()
+            dmg = spell_damage(self.getVictim())
             if self.getTimeLeft() > 1:
                 dmg.setNumericProperty("shadow", self.getCaster().getDmg() * 45 // 100)
             else:
@@ -86,7 +90,7 @@ def load(self, context):
             base = max(1, caster.getStats().getNumericProperty("intelligence") // 3 + caster.getLevel())
             if is_cultist(victim):
                 base += 2 + clues * 2
-            damage = CDamage()
+            damage = spell_damage(self.getVictim())
             damage.setNumericProperty("fire", base)
             victim.hurt(damage)
 
@@ -109,7 +113,7 @@ def load(self, context):
         def onEffect(self):
             caster = self.getCaster()
             routes = self.getNumericProperty("wayfarer_routes")
-            damage = CDamage()
+            damage = spell_damage(self.getVictim())
             damage.setNumericProperty(
                 "normal",
                 max(1, caster.getStats().getNumericProperty("agility") // 3 + caster.getLevel() // 2 + routes),
@@ -126,10 +130,9 @@ def load(self, context):
     @register(context)
     class CloudkillEffect(CEffect):
         def onEffect(self):
-            victim = self.getVictim()
-            damage = victim.getGame().createObject("CDamage")
+            damage = spell_damage(self.getVictim())
             damage.setNumericProperty("shadow", 3 + self.getCaster().getLevel())
-            victim.hurt(damage)
+            self.getVictim().hurt(damage)
 
     @register(context)
     class HoldPersonEffect(CEffect):
