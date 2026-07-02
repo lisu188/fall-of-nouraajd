@@ -94,5 +94,104 @@
     "properties": {
       "duration": 3
     }
+  },
+  "ArmorOfFaithEffect": {
+    "class": "ArmorOfFaithEffect",
+    "properties": {
+      "duration": 4,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "BlessEffect": {
+    "class": "BlessEffect",
+    "properties": {
+      "duration": 4,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "ChillTouchEffect": {
+    "class": "ChillTouchEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "CloudkillEffect": {
+    "class": "CloudkillEffect",
+    "properties": {
+      "duration": 4
+    }
+  },
+  "DoomEffect": {
+    "class": "DoomEffect",
+    "properties": {
+      "duration": 4
+    }
+  },
+  "DrawUponHolyMightEffect": {
+    "class": "DrawUponHolyMightEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "HasteEffect": {
+    "class": "HasteEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "HoldPersonEffect": {
+    "class": "HoldPersonEffect",
+    "properties": {
+      "duration": 2,
+      "tags": [
+        "stun"
+      ]
+    }
+  },
+  "MelfsAcidArrowEffect": {
+    "class": "MelfsAcidArrowEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "MirrorImageEffect": {
+    "class": "MirrorImageEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "SlowEffect": {
+    "class": "SlowEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "StoneskinEffect": {
+    "class": "StoneskinEffect",
+    "properties": {
+      "duration": 4,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "WebEffect": {
+    "class": "WebEffect",
+    "properties": {
+      "duration": 3
+    }
   }
 }
