@@ -20904,23 +20904,29 @@ class McpServerTest(unittest.TestCase):
             find_map_object_definition("ninemarches", name)
 
         # The walkthrough validates quest logic, not combat difficulty. Roaming
-        # cave-spawned chasers can camp a visitable tile, and a level-one Warrior can
-        # LOSE that arrival fight — the respawn trigger then drops the player at the
-        # entry with 1 hp, so every later attempt loses too. Level the player up front
-        # and top up hp before each step so tile encounters always resolve and clear.
-        self._mcp_handle_call(session, player_handle, "addExp", [200000])
-
-        def heal_player():
-            hp_max = self._mcp_handle_call(session, player_handle, "getHpMax")
-            self._mcp_handle_call(session, player_handle, "setHp", [hp_max])
+        # cave-spawned chasers can camp a visitable tile: the arrival then resolves as a
+        # fight, the post-combat position policy bounces the player back without firing
+        # onEnter, and a level-one Warrior can even LOSE that fight (the respawn trigger
+        # drops it at the entry with 1 hp, making every later attempt lose too). Clear
+        # wandering creatures off the target tile before stepping and keep the player
+        # healed, using only MCP-allowlisted methods (getObjectsAtCoords / getName /
+        # removeObjectByName / healProc).
+        player_name = self._mcp_handle_call(session, player_handle, "getName")
 
         def map_bool(name):
             return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
 
+        def clear_wanderers(coords, keep_name):
+            for occupant in self._mcp_handle_call(session, map_handle, "getObjectsAtCoords", [coords]):
+                occ_name = self._mcp_handle_call(session, occupant, "getName")
+                if occ_name and occ_name not in (keep_name, player_name):
+                    self._mcp_handle_call(session, map_handle, "removeObjectByName", [occ_name])
+
         def step_onto(name):
-            heal_player()
+            self._mcp_handle_call(session, player_handle, "healProc", [100])
             obj = self._mcp_get_object_by_name(session, map_handle, name)
             coords = self._mcp_handle_call(session, obj, "getCoords")
+            clear_wanderers(coords, name)
             self._mcp_handle_call(session, player_handle, "setCoords", [coords])
             self._mcp_advance_map(session, map_handle, 1)
 
