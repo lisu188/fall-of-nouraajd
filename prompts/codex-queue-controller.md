@@ -757,3 +757,17 @@ Before stopping, report:
 - resource and cleanup state;
 - worktrees requiring manual review;
 - next eligible issue, when one exists.
+
+## Capability probe
+
+At startup and before any dispatch, polling, or publication step whose prerequisites the runtime may not provide
+(merge methods, `gh` presence and auth, required checks, formatters, build trees, xvfb), run the read-only snapshot:
+
+```bash
+python3 scripts/controller_capability_probe.py --json
+```
+
+The probe never mutates state and exits 0 even when capabilities are missing; evidence is redacted. Branch on its
+`available` / `unavailable` / `unknown` / `unsupported` fields: when a capability the next step depends on is
+`unknown` or `unavailable`, block that dispatch or publication step and report the blocker instead of defaulting to a
+guessed path.

@@ -572,3 +572,13 @@ mean "no dependencies". Real dependency names must already exist in the queue.
   filling worker slots until the blocker is reported or safely cleaned.
 - Remove only completed clean worktrees. Use `git worktree prune` only for prunable metadata after reviewing that the
   corresponding worktree directories no longer exist. Do not delete branches unless explicitly asked.
+
+## Capability probe
+
+`python3 scripts/controller_capability_probe.py --json` prints a read-only, deterministic capability snapshot with
+`repository`, `github`, `ci`, `toolchain`, `build`, and `agent` sections (filter with repeated `--section` flags; pass
+`--now <timestamp>` only when a caller-supplied timestamp must be recorded). Run it at controller startup and before
+dispatch, PR polling, or merge steps whose prerequisites differ by runtime, for example when `gh` may be absent or the
+GitHub API is proxied or blocked. Missing tools appear as actionable field values, never tracebacks, and evidence is
+redacted, so the snapshot is safe to paste into reports. Treat an `unknown` critical capability as a
+dispatch/publication blocker, not as permission to guess a path.
