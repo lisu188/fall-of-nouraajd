@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CController.h"
 #include <algorithm>
+#include <cstdlib>
 
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -42,6 +43,13 @@ struct TargetFlowField {
     std::uint64_t revision = 0;
     Coords goal;
     std::unordered_map<Coords, Coords> nextSteps;
+    // Incremental Dijkstra state: the flood from `goal` is extended lazily, only far
+    // enough to settle each requesting creature's start cell, so a single chaser on a
+    // huge map never pays for flooding the whole map. `frontier`/`costs` persist so a
+    // later, farther request resumes the same search instead of rebuilding.
+    std::unordered_map<Coords, int> costs;
+    std::priority_queue<FlowQueueNode, std::vector<FlowQueueNode>, FlowQueueCompare> frontier;
+    bool exhausted = false;
 };
 
 std::mutex targetFlowMutex;
@@ -168,54 +176,80 @@ int movement_step_cost(const std::shared_ptr<CMap> &map, const Coords &, const C
     return map ? map->lookupMovementCost(to) : 1;
 }
 
-std::shared_ptr<TargetFlowField> build_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
-                                                         std::uint64_t revision) {
+std::shared_ptr<TargetFlowField> seed_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
+                                                        std::uint64_t revision) {
     auto field = std::make_shared<TargetFlowField>();
     field->map = map;
     field->revision = revision;
     field->goal = goal;
 
     if (!map->canStep(goal)) {
+        field->exhausted = true;
         return field;
     }
 
-    std::unordered_map<Coords, int> costs;
-    std::priority_queue<FlowQueueNode, std::vector<FlowQueueNode>, FlowQueueCompare> frontier;
-    costs[goal] = 0;
-    frontier.push({0, goal});
+    field->costs[goal] = 0;
+    field->frontier.push({0, goal});
+    return field;
+}
 
-    while (!frontier.empty()) {
-        if (costs.size() >= MAX_FLOW_FIELD_CELLS) {
-            vstd::logger::warning("Target flow field reached visit limit");
-            break;
+// Extends the flood until `start` is settled (or the search is exhausted, or the
+// per-call work budget runs out). With positive step costs Dijkstra pops in
+// nondecreasing cost order, so once the cheapest frontier entry costs at least as
+// much as the best known cost for `start`, no future relaxation can improve
+// `start` and its nextStep is final. The unpopped frontier stays in the field so
+// a later, farther request resumes where this one stopped. The per-call budget
+// bounds the work a single chase step can trigger on huge maps (a 1000x1000 map
+// would otherwise flood up to a million cells inside one map turn); a chaser
+// whose start was not reached within budget follows its best-known step or
+// stalls for the turn, and the resumed search covers more cells on later calls.
+void extend_target_flow_field(const std::shared_ptr<TargetFlowField> &field, const std::shared_ptr<CMap> &map,
+                              const Coords &start) {
+    constexpr std::size_t maxExpansionsPerCall = 25'000;
+    std::size_t expansions = 0;
+    while (!field->exhausted && !field->frontier.empty()) {
+        auto settled = field->costs.find(start);
+        if (settled != field->costs.end() && field->frontier.top().cost >= settled->second) {
+            return;
         }
-        auto current = frontier.top();
-        frontier.pop();
+        if (field->costs.size() >= MAX_FLOW_FIELD_CELLS) {
+            vstd::logger::warning("Target flow field reached visit limit");
+            field->exhausted = true;
+            return;
+        }
+        if (++expansions > maxExpansionsPerCall) {
+            vstd::logger::debug("Target flow field expansion budget reached before settling requested start");
+            return;
+        }
+        auto current = field->frontier.top();
+        field->frontier.pop();
 
-        auto best = costs.find(current.coords);
-        if (best == costs.end() || best->second != current.cost) {
+        auto best = field->costs.find(current.coords);
+        if (best == field->costs.end() || best->second != current.cost) {
             continue;
         }
 
         for (auto previous : get_reverse_navigation_neighbors(map, current.coords)) {
-            if (previous != goal && !map->canStep(previous)) {
+            if (previous != field->goal && !map->canStep(previous)) {
                 continue;
             }
 
             const int nextCost = current.cost + movement_step_cost(map, previous, current.coords);
-            auto previousCost = costs.find(previous);
-            if (previousCost == costs.end() || nextCost < previousCost->second) {
-                costs[previous] = nextCost;
+            auto previousCost = field->costs.find(previous);
+            if (previousCost == field->costs.end() || nextCost < previousCost->second) {
+                field->costs[previous] = nextCost;
                 field->nextSteps[previous] = current.coords;
-                frontier.push({nextCost, previous});
+                field->frontier.push({nextCost, previous});
             }
         }
     }
-
-    return field;
+    if (field->frontier.empty()) {
+        field->exhausted = true;
+    }
 }
 
-std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal) {
+std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
+                                                       const Coords &start) {
     constexpr std::size_t maxCachedFlowFields = 32;
     const auto revision = map->getNavigationRevision();
     std::lock_guard<std::mutex> lock(targetFlowMutex);
@@ -227,15 +261,18 @@ std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMa
     auto cached = std::find_if(targetFlowCache.begin(), targetFlowCache.end(), [&](const auto &field) {
         return field->map.lock() == map && field->revision == revision && field->goal == goal;
     });
-    if (cached != targetFlowCache.end()) {
-        return *cached;
-    }
 
-    auto field = build_target_flow_field(map, goal, revision);
-    targetFlowCache.push_back(field);
-    while (targetFlowCache.size() > maxCachedFlowFields) {
-        targetFlowCache.erase(targetFlowCache.begin());
+    std::shared_ptr<TargetFlowField> field;
+    if (cached != targetFlowCache.end()) {
+        field = *cached;
+    } else {
+        field = seed_target_flow_field(map, goal, revision);
+        targetFlowCache.push_back(field);
+        while (targetFlowCache.size() > maxCachedFlowFields) {
+            targetFlowCache.erase(targetFlowCache.begin());
+        }
     }
+    extend_target_flow_field(field, map, start);
     return field;
 }
 
@@ -251,7 +288,17 @@ Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std:
         return start;
     }
 
-    auto flow = get_target_flow_field(map, goal);
+    // Chase leash: a chaser farther than this from its target holds position instead of
+    // flooding the navigation field toward it. Every authored map before the 1000x1000
+    // world maps fits inside the leash (200x200 tops), so their behavior is unchanged;
+    // on huge maps this bounds the per-turn navigation cost that made a single map turn
+    // take tens of seconds in CI.
+    constexpr int maxChaseDistance = 256;
+    if (std::abs(start.x - goal.x) > maxChaseDistance || std::abs(start.y - goal.y) > maxChaseDistance) {
+        return start;
+    }
+
+    auto flow = get_target_flow_field(map, goal, start);
     auto next = flow->nextSteps.find(start);
     if (next == flow->nextSteps.end()) {
         return start;
