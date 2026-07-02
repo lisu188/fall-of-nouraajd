@@ -678,6 +678,19 @@ records against worktrees, `git rev-parse --verify` branch evidence, and read-on
 recommends UNREACHABLE/ORPHANED marks that are applied with the explicit `mark` subcommand. The sweep never deletes
 worktrees, kills processes, mutates the workbook, or rewrites the registry file.
 
+## Structured worker reports and restart handoffs
+
+Require workers to emit milestone and end-of-task reports as `scripts/worker_report.py` schema-version-1 JSON: owner,
+claim ID, issue, branch, files changed, per-command outcomes (`passed`/`failed`/`skipped`/`blocked`/`not_run` with exit
+codes and bounded output summaries), the CI head SHA the evidence applies to, and an outcome status. Validate each
+report before trusting it with `python3 scripts/worker_report.py validate --report-file <report> --expect-owner
+"$OWNER" --expect-claim-id "$CLAIM_ID" --expect-issue "$ISSUE_NAME" --expect-branch "$IMPL_BRANCH" --repo .`;
+mismatched identity or a stale CI head SHA rejects the report. After a controller restart, rebuild worker context
+deterministically with `python3 scripts/worker_report.py handoff --report-file <last-report>` (bounded to a documented
+per-section item cap) instead of re-deriving state from free-form logs, and feed accepted reports to the lifecycle
+registry with `registry-payload`. Reports never advance queue state; queue mutations still require workbook-only PRs.
+See `docs/codex-agent-queue.md`.
+
 ## Failure and recovery rules
 
 - Claim publication failure: implementation must not start.

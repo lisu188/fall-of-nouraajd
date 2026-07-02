@@ -14,6 +14,8 @@ concurrent controllers can be distinguished.
 - `scripts/write_leases.py` — separate write-lease CLI over `planning/write_leases.json`; see "Write leases" below.
 - `scripts/pr_review_audit.py` — read-only stale/open PR classification helper for merge, cleanup, and dispatch review.
 - `scripts/workflow_observations.py` — read-only/append-only workflow-observation ledger CLI.
+- `scripts/worker_report.py` — versioned structured worker-report schema, identity/CI-SHA validation, and deterministic
+  bounded restart-handoff CLI; see "Structured worker reports and restart handoffs" below.
 - `prompts/codex-queue-controller.md` — controller-agent operating prompt.
 - `tests/test_issue_queue.py` — focused queue and concurrency regressions.
 
@@ -446,6 +448,36 @@ python3 scripts/subagent_registry.py sweep --repo . --workbook planning/fall_of_
 `git rev-parse --verify` branch evidence, and read-only workbook claim evidence, then prints UNREACHABLE/ORPHANED
 recommendations with the exact `mark` command to apply each transition explicitly. It never deletes worktrees, kills
 processes, mutates the workbook, or rewrites the registry file.
+
+## Structured worker reports and restart handoffs
+
+Worker milestone and end-of-task reports use the versioned JSON schema in `scripts/worker_report.py` (schema version 1,
+stdlib-only) instead of free-form text. A report carries worker identity (`owner` in the
+`controller/<controller-id>/<agent>` form, the exact `claimId`, optional `controllerId`/`registrationId`/`role`/`phase`
+reusing the lifecycle-registry enums), the `issue` name, implementation `branch`, `filesChanged`, `commands` with precise
+per-command outcomes (`passed`, `failed`, `skipped`, `blocked`, `not_run`; `passed`/`failed` carry exit codes and output
+summaries are bounded), the `ciHeadSha` the validation evidence applies to, and an `outcome`
+(`IN_PROGRESS`/`COMPLETE`/`BLOCKED`/`FAILED`). Reports are worker assertions, not verified evidence: they never advance
+queue state and never touch the workbook.
+
+```bash
+python3 scripts/worker_report.py validate --report-file "$REPORT" \
+  --expect-owner "$OWNER" --expect-claim-id "$CLAIM_ID" \
+  --expect-issue "$ISSUE_NAME" --expect-branch "$IMPL_BRANCH" --repo .
+python3 scripts/worker_report.py handoff --report-file "$REPORT" --format markdown
+```
+
+`validate` checks the schema, rejects internally inconsistent identity (`controllerId` must match the owner's controller
+segment) or mismatched expected owner/claim/issue/branch evidence, and rejects a stale `ciHeadSha` that is not a
+plausible 7-40 hex git SHA or no longer matches the branch head (`--repo`, resolved read-only) or explicit
+`--expect-ci-sha` evidence. `render` produces human Markdown and canonical JSON from the same normalized model.
+`handoff` builds a deterministic bounded restart handoff from the last accepted report: content derives only from the
+report (wall-clock time never affects content or ordering; the report fingerprint excludes `createdAtUtc`), and every
+carried section — files changed, pending validation, accepted evidence, blockers, risks, observation refs — is capped at
+10 items by default (`--max-items`, hard limit 50) with explicit omitted counts and a safe next action. On restart,
+regenerate the handoff instead of re-deriving worker state from free-form logs. `registry-payload` converts an accepted
+report into a `scripts/subagent_registry.py report` payload so registry `lastSeen` only advances from schema-valid
+worker evidence. Focused regressions live in `tests/test_worker_report.py`.
 
 ## Block, fail, cancel, and release
 

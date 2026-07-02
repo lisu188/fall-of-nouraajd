@@ -214,6 +214,20 @@ reconciliation against worktrees, `git rev-parse --verify` branch evidence, and 
 only recommends UNREACHABLE/ORPHANED transitions, which are applied with the explicit `mark` subcommand. The sweeper
 never deletes worktrees, kills processes, or mutates the workbook.
 
+## Structured worker reports and restart handoffs
+
+Worker milestone and end-of-task reports follow the versioned JSON schema in `scripts/worker_report.py` (schema
+version 1, stdlib-only): worker identity (`owner` as `controller/<controller-id>/<agent>` plus the exact claim ID),
+issue name, branch, files changed, validation commands with precise per-command outcomes (`passed`/`failed`/`skipped`/
+`blocked`/`not_run`, exit codes for passed/failed, bounded output summaries), the CI head SHA the evidence applies to,
+and an outcome status. `worker_report.py validate` rejects schema violations, internally inconsistent or mismatched
+owner/claim/issue/branch identity, and stale CI SHAs that do not match the branch head or explicit SHA evidence.
+`worker_report.py handoff` generates the deterministic bounded restart handoff (content derives only from the report,
+never wall-clock time; each section is capped, 10 items per section by default with explicit omitted counts), and
+`registry-payload` feeds accepted reports into the `scripts/subagent_registry.py` lifecycle registry. Reports are worker
+assertions and never advance queue state; queue mutations still go through `scripts/issue_queue.py` workbook-only PRs.
+See `docs/codex-agent-queue.md` and `tests/test_worker_report.py`.
+
 ## Project overview
 
 `fall-of-nouraajd` is a C++ dark-fantasy 2D game with Python scripts/plugins, JSON resource configuration, SDL assets, CMake builds, and a pybind11 `_game` extension module.
