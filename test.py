@@ -1609,7 +1609,7 @@ NOURAAJD_QUEST_REWARDS = {
     "rolfQuest": "Starts the Gooby hunt.",
     "mainQuest": "200 gold from relieved townsfolk.",
     "deliverLetterQuest": "Unlocks scribe-desk scroll crafting.",
-    "retrieveRelicQuest": "Unlocks stronger alchemy recipes.",
+    "retrieveRelicQuest": "Unlocks greater potion brewing at the alchemy table.",
     "cleanseCaveQuest": "Opens the road to the ritual chapel.",
     "octoBogzQuest": "1000 gold and the Shadow Blade.",
     "victorQuest": (
@@ -4767,7 +4767,7 @@ def walkthrough_sunderedmarch_map():
     assert find_runtime_object(game_map, "borderGate") is not None, "The border gate should still bar the pass."
     move_to_object("gateThreshold")
     assert game_map.getBoolProperty("gate_open"), "The iron key should open the border gate."
-    assert find_runtime_object(game_map, "borderGate") is None, "The border gate should be removed once opened."
+    assert game_map.getObjectByName("borderGate") is None, "The border gate should be removed once opened."
 
     # The obelisk hunt: reading all three unlocks the barrow dig (Heroes-3 obelisk/Grail).
     for obelisk in ("obeliskVale", "obeliskBarrow", "obeliskPyre"):
@@ -4821,7 +4821,7 @@ def walkthrough_ninemarches_map():
     assert find_runtime_object(game_map, "ironGate") is not None, "The iron gate should still bar the pass."
     move_to_object("ironGateThreshold")
     assert game_map.getBoolProperty("iron_gate_open"), "The iron key should open the gate."
-    assert find_runtime_object(game_map, "ironGate") is None, "The iron gate should be removed once opened."
+    assert game_map.getObjectByName("ironGate") is None, "The iron gate should be removed once opened."
     assert game_map.getNumericProperty("chapter") >= 2, "Opening the gate should advance the chapter."
 
     # Baldur's-Gate companion: quest -> recover the item -> recruit -> boon + reputation reactivity.
@@ -7246,8 +7246,19 @@ class GameTest(unittest.TestCase):
             # Action identity = (typeId, name). Returned as a sorted list so a DOUBLED action would
             # change the list (e.g. ["Attack"] -> ["Attack", "Attack"]) and as a set so a re-keyed
             # duplicate is still caught. A duplicated action would make the two differ in length.
-            identities = [(action.getTypeId(), action.getName()) for action in creature.getActions()]
-            return sorted(identities)
+            #
+            # Captures BOTH backing sets: the concrete template's own `actions` property (raw,
+            # what serialization round-trips) and the composed effective set (race + class +
+            # level unlocks + own actions, what gameplay uses). The Warrior template composes its
+            # actions from WarriorClass since the archetype extraction, so its raw set can be
+            # empty while the effective set must not be; a reload that copied class-granted
+            # actions into the concrete template would change the raw list, and a reload that
+            # dropped or doubled an action would change either list.
+            raw = sorted((action.getTypeId(), action.getName()) for action in creature.getActions())
+            effective = sorted(
+                (action.getTypeId(), action.getName()) for action in creature.getEffectiveInteractions()
+            )
+            return {"raw": raw, "effective": effective}
 
         save_name = unique_save_name("reload_idempotence_legacy_creature")
         save_path = Path.cwd() / "save" / f"{save_name}.json"
@@ -7258,9 +7269,13 @@ class GameTest(unittest.TestCase):
 
             baseline_stats = capture_effective_stats(player)
             baseline_actions = capture_action_identities(player)
-            # Sanity: the legacy Warrior must actually expose stats and at least one action,
-            # otherwise the idempotence assertions below would be vacuous.
-            self.assertTrue(baseline_actions, "legacy Warrior should expose at least one action")
+            # Sanity: the Warrior must actually expose stats and at least one composed action
+            # (WarriorClass grants "Attack"), otherwise the idempotence assertions below would be
+            # vacuous. The raw set may legitimately be empty (class actions stay referenced on
+            # the archetype, never copied into the concrete template).
+            self.assertTrue(
+                baseline_actions["effective"], "Warrior should expose at least one composed action"
+            )
             self.assertGreater(baseline_stats["strength"], 0)
 
             # Discrimination check: if a reload duplicated an action, the captured identity list
@@ -7268,7 +7283,7 @@ class GameTest(unittest.TestCase):
             # "Attack" action would turn ["Attack"] into ["Attack", "Attack"], and the assertEqual
             # on the full sorted list below would fail. Likewise a duplicated stat contribution
             # would inflate a numeric value and break the per-cycle assertEqual on baseline_stats.
-            baseline_action_count = len(baseline_actions)
+            baseline_action_count = len(baseline_actions["effective"])
 
             cycle_stats = [baseline_stats]
             cycle_actions = [baseline_actions]
@@ -7288,10 +7303,11 @@ class GameTest(unittest.TestCase):
 
                 # Idempotent: effective stats identical, no inflation/drift.
                 self.assertEqual(baseline_stats, reloaded_stats)
-                # Idempotent: action identities identical as a set and not duplicated (same count).
+                # Idempotent: raw and composed action identities identical, not duplicated
+                # (same count), and class-granted actions never copied into the raw set.
                 self.assertEqual(baseline_actions, reloaded_actions)
-                self.assertEqual(baseline_action_count, len(reloaded_actions))
-                self.assertEqual(set(baseline_actions), set(reloaded_actions))
+                self.assertEqual(baseline_action_count, len(reloaded_actions["effective"]))
+                self.assertEqual(set(baseline_actions["effective"]), set(reloaded_actions["effective"]))
 
                 cycle_stats.append(reloaded_stats)
                 cycle_actions.append(reloaded_actions)
@@ -7308,7 +7324,8 @@ class GameTest(unittest.TestCase):
             return True, json.dumps(
                 {
                     "actionCount": baseline_action_count,
-                    "actions": ["|".join(identity) for identity in baseline_actions],
+                    "actions": ["|".join(identity) for identity in baseline_actions["effective"]],
+                    "rawActions": ["|".join(identity) for identity in baseline_actions["raw"]],
                     "cycles": len(cycle_stats),
                     "mainStat": baseline_stats["mainStat"],
                     "stats": baseline_stats,
@@ -11859,7 +11876,11 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
-    def test_inventory_right_click_inspects_scroll_without_opening_it(self):
+    def test_inventory_right_click_uses_scroll_and_keeps_it(self):
+        # [EPIC_03][STORY_01][SUBSTORY_04] #628: right-click delegates to CCreature::useItem,
+        # so right-clicking a scroll reads it (opens the blocking CGameTextPanel with its text)
+        # and the non-disposable scroll stays in the inventory. The panel is dismissed with a
+        # queued space key, the same pattern test_blocking_modal_gui_helpers_drive_panels uses.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
         game.CGameLoader.loadGui(g)
@@ -11893,10 +11914,20 @@ class GameTest(unittest.TestCase):
                 break
 
         self.assertIsNotNone(target_graphic)
+
+        captured = {}
+
+        def capture_text_panel():
+            # Runs on the event loop while mouseEvent blocks in awaitClosing, so it
+            # observes the text panel the scroll's onUse opened before space closes it.
+            captured["text_panel_open"] = gui_contains_class(g, "CGameTextPanel")
+
+        queue_sdl_inputs(game, capture_text_panel, push_space_key)
         target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
         pump_event_loop(2)
-        self.assertTrue(gui_contains_class(g, "CTooltip"))
+        self.assertTrue(captured.get("text_panel_open"), "right-click should read the scroll")
         self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
+        self.assertEqual(1, player.countItems("letterFromRolf"))
 
         return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
 
@@ -12993,8 +13024,9 @@ class GameTest(unittest.TestCase):
             "ambient_overlay_preserved": len(ambient_config_names) == 33 and "ambientGateTriageNotice" in config,
             "rolf_old_route_text": "search the cave outside town" in text
             and "the cave entrance lies beyond nouraajd's roads" in text,
+            # Swamp-consistent lair wording since #1248 ("half-sunk under boulders and silt").
             "octobogz_old_route_text": "eastern road beyond the river" in text
-            and "half-buried under boulders and sand" in text,
+            and "half-sunk under boulders and silt" in text,
             "catacombs_old_text": "descend into the catacombs" in text
             and "the catacombs hide the relic beren needs" in text,
             "victor_timer_start_visible": (
@@ -13585,7 +13617,9 @@ class GameTest(unittest.TestCase):
         self.assertEqual(general_refs.count("DaggerOfVileHeart"), 1)
         self.assertNotIn("LifePotion", general_refs)
         self.assertNotIn("ManaPotion", general_refs)
-        self.assertEqual(victor_refs, ["LesserLifePotion", "LifePotion", "LesserManaPotion", "ManaPotion"])
+        # Victor's reward market stocks only the stronger tier; the lesser potions stay at
+        # the general market (de-duped intentionally in #1247, docs/nouraajd-economy.md).
+        self.assertEqual(victor_refs, ["LifePotion", "ManaPotion"])
         self.assertEqual(tavern_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
 
         market = g.createObject("exampleMarket")
@@ -13837,8 +13871,10 @@ class GameTest(unittest.TestCase):
             self.assertIn("victorRewardDialog", captured["dialogs"])
             self.assertIn("victorMarket", captured["trades"])
             config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+            # Victor's reward market stocks only the stronger potions; the lesser tier stays at
+            # the general market (de-duped intentionally in #1247, docs/nouraajd-economy.md).
             self.assertEqual(
-                ["LesserLifePotion", "LifePotion", "LesserManaPotion", "ManaPotion"],
+                ["LifePotion", "ManaPotion"],
                 [item["ref"] for item in config["victorMarket"]["properties"]["items"]],
             )
             self.assertTrue(town_hall.victor_good_end())
@@ -16824,7 +16860,12 @@ class GameTest(unittest.TestCase):
                 seen_unlocks = []
                 for level in range(1, 7):
                     needed = exp_for_level(level) - creature.getNumericProperty("exp")
-                    self.assertGreater(needed, 0, f"{template}: exp step to level {level}")
+                    if level == 1:
+                        # Level 1 unlocks at 0 exp (getExpForLevel(1) == 0); addExp(0) performs
+                        # the normalizing 0 -> 1 level-up, same as CMap's addExp(0) on load.
+                        self.assertEqual(0, needed, f"{template}: exp step to level {level}")
+                    else:
+                        self.assertGreater(needed, 0, f"{template}: exp step to level {level}")
                     creature.addExp(needed)
                     self.assertEqual(level, creature.getLevel(), f"{template}: reached level {level}")
 
@@ -18480,11 +18521,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             pump_event_loop(5)
             selected_after_equip = get_panel_selection_box_counts_by_collection(inventory)
             self.assertEqual(0, selected_after_equip.get("inventoryCollection", 0))
+            # Right-click uses the item since #628; target the Sword (use is a no-op) so
+            # the gesture only resets selection state. Right-clicking a scroll here would
+            # open the blocking CGameTextPanel and stall the xvfb child.
             click_first_list_object(
                 self,
                 inventory_list,
                 g.getGui(),
-                lambda item: not item.hasTag(game.CTag.QUEST),
+                lambda item: item.getTypeId() == "Sword",
                 button=SDL_BUTTON_RIGHT,
             )
             pump_event_loop(5)
@@ -20749,8 +20793,12 @@ class McpServerTest(unittest.TestCase):
         )
 
     def _mcp_advance_map(self, session, map_handle, turns):
+        # Huge authored maps (ninemarches is 1000x1000) legitimately spend more than the
+        # quick-protocol budget inside a single move (turn events plus chaser navigation
+        # across the world map), so map turns share the wide map-JSON timeout instead of
+        # the 10s tool default.
         for _ in range(turns):
-            self._mcp_handle_call(session, map_handle, "move")
+            self._mcp_handle_call(session, map_handle, "move", timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
         return self._mcp_handle_call(session, map_handle, "getTurn")
 
     def _mcp_pump_event_loop(self, session):
@@ -20988,22 +21036,45 @@ class McpServerTest(unittest.TestCase):
             self._mcp_handle_call(session, player_handle, "setCoords", [coords])
             self._mcp_advance_map(session, map_handle, 1)
 
+        def step_onto_until(name, reached, attempts=3):
+            # Roaming cave-spawned chasers can occupy the target tile: the arrival then
+            # resolves as a fight and the post-combat position policy bounces the player
+            # back without firing onEnter (RNG-dependent, observed on the Windows runner).
+            # Each visitable here is flag-guarded and idempotent, so retrying after the
+            # encounter cleared the tile is safe.
+            for _ in range(attempts):
+                step_onto(name)
+                if reached():
+                    return
+            self.fail(f"{name}: onEnter state not reached after {attempts} attempts")
+
+        def player_has_item(type_id):
+            return self._mcp_handle_call(session, player_handle, "countItems", [type_id]) > 0
+
+        def obelisks_read():
+            return self._mcp_handle_call(session, map_handle, "getNumericProperty", ["obelisks_read"])
+
         # Keymaster -> iron key -> gate opens; obelisks -> Citadel dig -> cursed crown + boss.
         step_onto("ninemarchesStart")
         self._mcp_handle_call(session, player_handle, "checkQuests")
-        step_onto("ironKeyCache")
-        step_onto("ironGateThreshold")
+        step_onto_until("ironKeyCache", lambda: player_has_item("ironKey"))
+        step_onto_until("ironGateThreshold", lambda: map_bool("iron_gate_open"))
         self.assertTrue(map_bool("iron_gate_open"))
         for obelisk in obelisks:
-            step_onto(obelisk)
-        self.assertEqual(6, self._mcp_handle_call(session, map_handle, "getNumericProperty", ["obelisks_read"]))
-        step_onto("digSite")
+            before = obelisks_read()
+            step_onto_until(obelisk, lambda: obelisks_read() > before)
+        self.assertEqual(6, obelisks_read())
+        step_onto_until("digSite", lambda: map_bool("crown_taken"))
         self._mcp_handle_call(session, player_handle, "checkQuests")
 
         self.assertTrue(map_bool("crown_taken"))
         self.assertTrue(map_bool("boss_woken"))
-        map_data = self._mcp_serialized_map(session, map_handle)
-        player_data = self._serialized_player(map_data)
+        # Serialize only the player: a full-map jsonify of the 1000x1000 ninemarches map
+        # can exceed even the wide map-JSON timeout on slower CI runners (observed on
+        # Windows), and the assertions below only read the player's inventory and quests.
+        player_data = json.loads(
+            self._mcp_engine_call(session, "jsonify", [player_handle], timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
+        )
         has_crown = self._serialized_inventory_has(player_data, "ninefoldCrown")
         self.assertTrue(has_crown)
         return {
