@@ -430,13 +430,11 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std
     int i = getSizeX(gui) * y + x;
     const bool oversized = isOversizedForCount(gui, itemTypeCount);
     if (i == getLeftArrowIndex(gui) && oversized) {
-        return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(),
-                                                              "images/arrows/left")
-                                 ->withCallback(getArrowCallback(true))); // TODO: cache
+        return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(), "images/arrows/left")
+                                 ->withCallback(getArrowCallback(true)));
     } else if (i == getRightArrowIndex(gui) && oversized) {
-        return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(),
-                                                              "images/arrows/right")
-                                 ->withCallback(getArrowCallback(false))); // TODO: cache
+        return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(), "images/arrows/right")
+                                 ->withCallback(getArrowCallback(false)));
     } else {
         auto indexedCollection = calculateIndices(gui);
         int itemIndex = shiftIndex(gui, i);
@@ -470,7 +468,7 @@ void CListView::addCountBox(const std::shared_ptr<CGui> &gui, int count,
     layout->setH("25%");
     countBox->setLayout(layout);
     countBox->setPriority(4);
-    return_val.push_back(countBox); // TODO: cache
+    return_val.push_back(countBox);
 }
 
 void CListView::addSelectionBox(const std::shared_ptr<CGui> &gui,
@@ -478,7 +476,7 @@ void CListView::addSelectionBox(const std::shared_ptr<CGui> &gui,
     auto selectionBox = gui->getGame()->getObjectHandler()->createObject<CSelectionBox>(gui->getGame());
     selectionBox->setThickness(5);
     selectionBox->setPriority(3);
-    return_val.push_back(selectionBox); // TODO: cache
+    return_val.push_back(selectionBox);
 }
 
 void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
@@ -541,7 +539,7 @@ void CListView::addItemBox(const std::shared_ptr<CGui> &gui,
         CAnimationProvider::getAnimation(gui->getGame(), "images/item")
             ->withCallback([](std::shared_ptr<CGui>, SDL_EventType, int, int, int) { return false; });
     itemBox->setPriority(1);
-    return_val.push_back(itemBox); // TODO: cache
+    return_val.push_back(itemBox);
 }
 
 std::string CListView::getCollection() { return collection; }

@@ -62,9 +62,6 @@ class QuestStateStore:
         if sync:
             self.sync_legacy_flags()
 
-    def _set_state(self, quest, state, sync=True):
-        self.set_state(quest, state, sync=sync)
-
     def reset_all(self):
         for quest, state in self.QUEST_DEFAULTS.items():
             self.map.setStringProperty(self.key(quest), state)
@@ -89,9 +86,6 @@ class QuestStateStore:
     def sync_legacy_flags(self):
         for flag in self.LEGACY_BOOL_FLAGS:
             self.map.setBoolProperty(flag.name, flag.evaluate(self.get_state(flag.quest)))
-
-    def _sync_legacy_flags(self):
-        self.sync_legacy_flags()
 
     def state_in(self, quest, states):
         return self.get_state(quest) in states
