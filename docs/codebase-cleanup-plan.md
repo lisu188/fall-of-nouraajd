@@ -112,8 +112,10 @@ in `res/game.py:11` and `test.py:114`.
   update `res/maps/nouraajd/script.py` call sites.
 - Resolve the two in-code Python TODOs: `res/maps/siege/script.py:141`,
   `res/maps/test/script.py:21` (fix or convert to queue proposals).
-- Replace hardcoded `/tmp/...` fixture paths in
-  `tests/test_controller_resource_audit.py` (:18, :23, :33, :570) with `tempfile`.
+- ~~Replace hardcoded `/tmp/...` fixture paths in
+  `tests/test_controller_resource_audit.py` with `tempfile`~~ — verified
+  no-change-needed: those paths are inert string fixtures inside parsed
+  porcelain text, never created on disk.
 
 ## Phase 2 — Structural refactors (M–L effort, coverage-gated)
 
@@ -215,6 +217,23 @@ explicit go/no-go decision, not a default yes.
   targeting, class/race split, creature rewards). This plan adds no duplicates.
 - Submodule (`vstd`, `random-dungeon-generator`) changes.
 - Gameplay/content changes — this is cleanup only.
+
+## Implementation status (2026-07-02)
+
+Implemented on this branch: all of Phase 0 (0.1–0.8), 1.1 (linux-fast now runs
+`unittest discover` over `tests/` — 478 tests including the previously-unrun
+`tests/regression/` and `tests/security/` suites; `__init__.py` files added to
+make discovery work; Windows jobs keep their three content-validation smoke
+modules), 1.2 (coverage-path docs, worklog gate note, `release.yml` version
+parity, `workbook-queues.yml` path filter), 1.3 (`todo.txt` annotated with
+queue mappings, worklog archived to `docs/todo-worklog.md`), and the safe
+subset of 1.5 (`quest_state.py` alias collapse; the `tempfile` item was a
+false positive — see above).
+
+Not implemented here, still open: 1.4 (bootstrap unification) and the rest of
+1.5 (`test.py` FakeEvent hoist, map-script TODOs) — these need a locally
+runnable engine to validate, which this environment cannot build (submodule
+access unavailable); route them through the queue with the Phase 2 epics.
 
 ## Suggested sequencing
 
