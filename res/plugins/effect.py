@@ -17,6 +17,7 @@ def load(self, context):
     from game import CTag
     from game import CEffect
     from game import CDamage
+    from game import randint
     from game import register
 
     def is_cultist(creature):
@@ -114,3 +115,76 @@ def load(self, context):
                 max(1, caster.getStats().getNumericProperty("agility") // 3 + caster.getLevel() // 2 + routes),
             )
             self.getVictim().hurt(damage)
+
+    # Baldur's Gate inspired repertoire.
+
+    @register(context)
+    class MelfsAcidArrowEffect(CEffect):
+        def onEffect(self):
+            self.getVictim().hurt(2 + self.getCaster().getLevel() // 2)
+
+    @register(context)
+    class CloudkillEffect(CEffect):
+        def onEffect(self):
+            damage = CDamage()
+            damage.setNumericProperty("shadow", 3 + self.getCaster().getLevel())
+            self.getVictim().hurt(damage)
+
+    @register(context)
+    class HoldPersonEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class WebEffect(CEffect):
+        def onEffect(self):
+            agility = self.getVictim().getStats().getNumericProperty("agility")
+            if randint(1, 100) <= 35 + agility * 2:
+                self.removeTag(CTag.STUN)
+            else:
+                self.addTag(CTag.STUN)
+
+    @register(context)
+    class SlowEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class ChillTouchEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class DoomEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class HasteEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class MirrorImageEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class StoneskinEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class BlessEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class ArmorOfFaithEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class DrawUponHolyMightEffect(CEffect):
+        def onEffect(self):
+            pass
