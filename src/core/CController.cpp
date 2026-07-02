@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CController.h"
 #include <algorithm>
+#include <cstdlib>
 
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -204,7 +205,7 @@ std::shared_ptr<TargetFlowField> seed_target_flow_field(const std::shared_ptr<CM
 // stalls for the turn, and the resumed search covers more cells on later calls.
 void extend_target_flow_field(const std::shared_ptr<TargetFlowField> &field, const std::shared_ptr<CMap> &map,
                               const Coords &start) {
-    constexpr std::size_t maxExpansionsPerCall = 100'000;
+    constexpr std::size_t maxExpansionsPerCall = 25'000;
     std::size_t expansions = 0;
     while (!field->exhausted && !field->frontier.empty()) {
         auto settled = field->costs.find(start);
@@ -284,6 +285,16 @@ Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std:
     auto start = map->normalizeCoords(creature->getCoords());
     auto goal = map->normalizeCoords(targetObject->getCoords());
     if (start == goal || !map->canStep(goal)) {
+        return start;
+    }
+
+    // Chase leash: a chaser farther than this from its target holds position instead of
+    // flooding the navigation field toward it. Every authored map before the 1000x1000
+    // world maps fits inside the leash (200x200 tops), so their behavior is unchanged;
+    // on huge maps this bounds the per-turn navigation cost that made a single map turn
+    // take tens of seconds in CI.
+    constexpr int maxChaseDistance = 256;
+    if (std::abs(start.x - goal.x) > maxChaseDistance || std::abs(start.y - goal.y) > maxChaseDistance) {
         return start;
     }
 
