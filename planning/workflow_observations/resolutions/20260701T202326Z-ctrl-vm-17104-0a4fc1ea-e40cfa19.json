@@ -1,0 +1,20 @@
+{
+  "evidence": [
+    {
+      "command": "python3 -m unittest tests.test_issue_queue",
+      "docs": "docs/codex-agent-queue.md documents advisoryControlPlaneRowCount/advisoryControlPlaneRows",
+      "mergeCommit": "3166977",
+      "mergedPr": 1300,
+      "result": "46 OK including test_shortlist_flags_control_plane_rows_as_advisory_without_rejecting"
+    }
+  ],
+  "mergeCommit": "316697764cc1a967156ffeb6dc8e861d2b3690ee",
+  "mergedPr": 1300,
+  "observationId": "20260701T202326Z-ctrl-vm-17104-0a4fc1ea-e40cfa19",
+  "resolutionSummary": "Addressed by PR #1300: the shortlist now mechanically captures the control-plane gate the observation identified. New CONTROL_PLANE_PATHS + controlPlaneAdvisories() report advisoryControlPlaneRowCount / advisoryControlPlaneRows for eligible rows whose Target Files rewrite the shared CI merge-gate/governance (build.yml, AGENTS.md, ci_change_classifier.py, poll_pr_checks.py), so controllers/PMs can route such rows to a supervised lane instead of auto-claiming them (advisory metadata; eligibility and claim semantics unchanged, per the documented advisory model). The observation's second gate instance — #670 blocked on the red resource_unit_tests baseline — was independently resolved fleet-side: the plugin-load break is fixed and the unit suite is green per observation 20260702T000947Z, lifting that gate.",
+  "resolvedAtUtc": "2026-07-02T15:41:25Z",
+  "resolver": "optimizer-ctrl-vm-17796-c8464bae",
+  "schemaVersion": 1,
+  "sourceCommit": "316697764cc1a967156ffeb6dc8e861d2b3690ee",
+  "status": "resolved"
+}
