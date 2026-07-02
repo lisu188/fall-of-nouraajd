@@ -426,6 +426,27 @@ Fetch `origin/main`, verify the merge, and proceed with the next controller step
 `DONE` requires a result summary, validation results, `Progress %=100`, and a completion timestamp. Do not mark `DONE`
 while implementation auto-merge is merely queued.
 
+## Subagent lifecycle registry
+
+The workbook stores durable queue state only; live agent state lives in the controller-local registry managed by
+`scripts/subagent_registry.py`. The registry file defaults to `<system temp dir>/fall-of-nouraajd/subagent_registry.json`
+and can be overridden with `GAME_SUBAGENT_REGISTRY_FILE` or `--registry`; it is local live state, kept separate from the
+XLSX, and never committed. Register each subagent before it consumes a slot, update `lastSeen` only via the
+schema-validated `report` subcommand (verified poll or structured worker report), and release capacity only through the
+explicit `finalize` subcommand; unfinalized records keep consuming capacity so a restarted controller can distinguish
+live, finalized, and orphaned workers.
+
+```bash
+python3 scripts/subagent_registry.py register --owner "controller/$CONTROLLER_ID/subagent-1" --role WORKER \
+  --issue "$ISSUE_NAME" --claim-id "$CLAIM_ID" --worktree "$WORKTREE" --branch "$BRANCH"
+python3 scripts/subagent_registry.py sweep --repo . --workbook planning/fall_of_nouraajd_issue_proposals.xlsx
+```
+
+`sweep` is strictly read-only and byte-stable: it reconciles active records against worktree paths,
+`git rev-parse --verify` branch evidence, and read-only workbook claim evidence, then prints UNREACHABLE/ORPHANED
+recommendations with the exact `mark` command to apply each transition explicitly. It never deletes worktrees, kills
+processes, mutates the workbook, or rewrites the registry file.
+
 ## Block, fail, cancel, and release
 
 Verified source or environment blocker:
