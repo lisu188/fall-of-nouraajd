@@ -360,6 +360,35 @@ class IssueQueueTest(unittest.TestCase):
         self.assertNotIn(self.issue_d, payload["rejected"])
         self.assertNotIn("active-file-overlap", payload["rejectionSummary"])
 
+    def test_shortlist_flags_control_plane_rows_as_advisory_without_rejecting(self) -> None:
+        control_plane = "[EPIC_02][STORY_01][SUBSTORY_02]Harden CI validation authority"
+        normal = "[EPIC_09][STORY_01][SUBSTORY_01]Normal engine work"
+        self.create_workbook(
+            [
+                self.task_row(
+                    control_plane,
+                    "P0",
+                    None,
+                    ".github/workflows/build.yml\nscripts/poll_pr_checks.py",
+                ),
+                self.task_row(normal, "P0", None, "src/core/CGame.cpp"),
+            ]
+        )
+        state = issue_queue.loadQueue(self.workbook_path)
+
+        payload = issue_queue.shortlistTasks(state, seed="control-plane", includeRejected=True)
+
+        # Advisory only: the control-plane row stays eligible and is not rejected.
+        self.assertTrue(payload["eligible"])
+        self.assertEqual(2, payload["eligibleCount"])
+        self.assertEqual(1, payload["advisoryControlPlaneRowCount"])
+        self.assertEqual(
+            {control_plane: [".github/workflows/build.yml", "scripts/poll_pr_checks.py"]},
+            payload["advisoryControlPlaneRows"],
+        )
+        self.assertNotIn(control_plane, payload.get("rejected", {}))
+        self.assertNotIn(normal, payload["advisoryControlPlaneRows"])
+
     def test_shortlist_cli_reports_without_mutating_workbook(self) -> None:
         before = self.workbook_path.read_bytes()
         stdout = io.StringIO()
