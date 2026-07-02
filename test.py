@@ -12900,8 +12900,9 @@ class GameTest(unittest.TestCase):
             "ambient_overlay_preserved": len(ambient_config_names) == 33 and "ambientGateTriageNotice" in config,
             "rolf_old_route_text": "search the cave outside town" in text
             and "the cave entrance lies beyond nouraajd's roads" in text,
+            # Swamp-consistent lair wording since #1248 ("half-sunk under boulders and silt").
             "octobogz_old_route_text": "eastern road beyond the river" in text
-            and "half-buried under boulders and sand" in text,
+            and "half-sunk under boulders and silt" in text,
             "catacombs_old_text": "descend into the catacombs" in text
             and "the catacombs hide the relic beren needs" in text,
             "victor_timer_start_visible": (
@@ -13492,7 +13493,9 @@ class GameTest(unittest.TestCase):
         self.assertEqual(general_refs.count("DaggerOfVileHeart"), 1)
         self.assertNotIn("LifePotion", general_refs)
         self.assertNotIn("ManaPotion", general_refs)
-        self.assertEqual(victor_refs, ["LesserLifePotion", "LifePotion", "LesserManaPotion", "ManaPotion"])
+        # Victor's reward market stocks only the stronger tier; the lesser potions stay at
+        # the general market (de-duped intentionally in #1247, docs/nouraajd-economy.md).
+        self.assertEqual(victor_refs, ["LifePotion", "ManaPotion"])
         self.assertEqual(tavern_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
 
         market = g.createObject("exampleMarket")
@@ -20663,8 +20666,12 @@ class McpServerTest(unittest.TestCase):
         )
 
     def _mcp_advance_map(self, session, map_handle, turns):
+        # Huge authored maps (ninemarches is 1000x1000) legitimately spend more than the
+        # quick-protocol budget inside a single move (turn events plus chaser navigation
+        # across the world map), so map turns share the wide map-JSON timeout instead of
+        # the 10s tool default.
         for _ in range(turns):
-            self._mcp_handle_call(session, map_handle, "move")
+            self._mcp_handle_call(session, map_handle, "move", timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
         return self._mcp_handle_call(session, map_handle, "getTurn")
 
     def _mcp_pump_event_loop(self, session):
