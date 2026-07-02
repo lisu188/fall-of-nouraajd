@@ -452,6 +452,367 @@ class PrReviewAuditTest(unittest.TestCase):
         self.assertEqual("success", review["checkState"])
         self.assertEqual([], review["failedChecks"])
 
+    def test_check_attempt_dedupe_table(self) -> None:
+        cases = [
+            {
+                "name": "cancelled_then_success_reports_success",
+                "checks": [
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "CANCELLED",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:10:00Z",
+                    },
+                ],
+                "state": "success",
+                "failed": [],
+                "pending": [],
+                "staleStates": ["failure"],
+                "ambiguous": [],
+            },
+            {
+                "name": "failure_then_pending_reports_pending",
+                "checks": [
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "IN_PROGRESS",
+                        "startedAt": "2026-06-20T10:20:00Z",
+                    },
+                ],
+                "state": "pending",
+                "failed": [],
+                "pending": ["linux"],
+                "staleStates": ["failure"],
+                "ambiguous": [],
+            },
+            {
+                "name": "success_then_failure_reports_failure",
+                "checks": [
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "completedAt": "2026-06-20T10:20:00Z",
+                    },
+                ],
+                "state": "failure",
+                "failed": ["linux"],
+                "pending": [],
+                "staleStates": ["success"],
+                "ambiguous": [],
+            },
+            {
+                "name": "mixed_graphql_and_rest_shapes_group_by_identity",
+                "checks": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "CANCELLED",
+                        "checkSuite": {"workflowRun": {"runAttempt": 1, "databaseId": 900}},
+                        "detailsUrl": "https://example.test/run/900",
+                    },
+                    {
+                        "name": "linux",
+                        "workflow_name": "build",
+                        "status": "completed",
+                        "conclusion": "success",
+                        "run_attempt": 2,
+                        "check_suite": {"workflow_run": {"run_attempt": 2, "id": 901}},
+                        "details_url": "https://example.test/run/901",
+                    },
+                ],
+                "state": "success",
+                "failed": [],
+                "pending": [],
+                "staleStates": ["failure"],
+                "ambiguous": [],
+            },
+            {
+                "name": "missing_timestamps_use_run_ids",
+                "checks": [
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "checkSuite": {"workflowRun": {"databaseId": 11}},
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "check_suite": {"workflow_run": {"id": 12}},
+                    },
+                ],
+                "state": "success",
+                "failed": [],
+                "pending": [],
+                "staleStates": ["failure"],
+                "ambiguous": [],
+            },
+            {
+                "name": "missing_ordering_with_conflicting_states_is_conservative_and_ambiguous",
+                "checks": [
+                    {"name": "linux", "workflowName": "build", "status": "COMPLETED", "conclusion": "SUCCESS"},
+                    {"name": "linux", "workflowName": "build", "status": "COMPLETED", "conclusion": "FAILURE"},
+                ],
+                "state": "failure",
+                "failed": ["linux"],
+                "pending": [],
+                "staleStates": ["success"],
+                "ambiguous": ["linux"],
+            },
+            {
+                "name": "duplicate_identical_nodes_collapse_without_ambiguity",
+                "checks": [
+                    {"name": "linux", "workflowName": "build", "status": "COMPLETED", "conclusion": "SUCCESS"},
+                    {"name": "linux", "workflowName": "build", "status": "COMPLETED", "conclusion": "SUCCESS"},
+                ],
+                "state": "success",
+                "failed": [],
+                "pending": [],
+                "staleStates": ["success"],
+                "ambiguous": [],
+            },
+            {
+                "name": "same_label_status_context_and_check_run_stay_independent",
+                "checks": [
+                    {
+                        "__typename": "CheckRun",
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:10:00Z",
+                    },
+                    {
+                        "__typename": "StatusContext",
+                        "context": "linux",
+                        "state": "FAILURE",
+                        "createdAt": "2026-06-20T10:00:00Z",
+                    },
+                ],
+                "state": "failure",
+                "failed": ["linux"],
+                "pending": [],
+                "staleStates": [],
+                "ambiguous": [],
+            },
+            {
+                "name": "same_label_checks_from_different_apps_stay_independent",
+                "checks": [
+                    {
+                        "name": "lint",
+                        "app": {"slug": "ci-alpha"},
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:10:00Z",
+                    },
+                    {
+                        "name": "lint",
+                        "app": {"slug": "ci-beta"},
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                ],
+                "state": "failure",
+                "failed": ["lint"],
+                "pending": [],
+                "staleStates": [],
+                "ambiguous": [],
+            },
+            {
+                "name": "stale_rerun_does_not_suppress_independent_current_failure",
+                "checks": [
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "CANCELLED",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:10:00Z",
+                    },
+                    {
+                        "name": "coverage",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "completedAt": "2026-06-20T10:05:00Z",
+                    },
+                ],
+                "state": "failure",
+                "failed": ["coverage"],
+                "pending": [],
+                "staleStates": ["failure"],
+                "ambiguous": [],
+            },
+        ]
+
+        for case in cases:
+            with self.subTest(case=case["name"]):
+                summary = pr_review_audit.checkSummary({"checks": case["checks"]})
+                self.assertEqual(case["state"], summary.state)
+                self.assertEqual(tuple(case["failed"]), summary.failed)
+                self.assertEqual(tuple(case["pending"]), summary.pending)
+                self.assertEqual(case["staleStates"], [record["state"] for record in summary.ignoredStale])
+                self.assertEqual(tuple(case["ambiguous"]), summary.ambiguous)
+
+    def test_ignored_stale_attempts_are_exposed_additively_in_json(self) -> None:
+        review = self.classify(
+            {
+                "number": 136,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "CANCELLED",
+                        "completedAt": "2026-06-20T10:00:00Z",
+                        "detailsUrl": "https://example.test/run/1",
+                    },
+                    {
+                        "name": "linux",
+                        "workflowName": "build",
+                        "status": "COMPLETED",
+                        "conclusion": "SUCCESS",
+                        "completedAt": "2026-06-20T10:10:00Z",
+                        "detailsUrl": "https://example.test/run/2",
+                    },
+                ],
+            }
+        )
+
+        self.assertEqual("ready_to_merge", review["actionCategory"])
+        self.assertEqual("success", review["checkState"])
+        self.assertEqual([], review["failedChecks"])
+        self.assertEqual([], review["ambiguousChecks"])
+        self.assertEqual(1, len(review["ignoredStaleChecks"]))
+        stale = review["ignoredStaleChecks"][0]
+        self.assertEqual("linux", stale["name"])
+        self.assertEqual("failure", stale["state"])
+        self.assertEqual("success", stale["effectiveState"])
+        self.assertEqual("https://example.test/run/1", stale["url"])
+        self.assertEqual(1, stale["position"])
+        # Backward-compatible schema: previously existing keys are still present.
+        for key in ("checkState", "failedChecks", "pendingChecks", "blockers", "mergeAllowed", "buckets"):
+            self.assertIn(key, review)
+
+    def test_ambiguous_duplicate_ordering_reports_blocker_and_marker(self) -> None:
+        review = self.classify(
+            {
+                "number": 137,
+                "files": ["scripts/pr_review_audit.py"],
+                "mergeStateStatus": "CLEAN",
+                "statusCheckRollup": [
+                    {"name": "linux", "workflowName": "build", "status": "COMPLETED", "conclusion": "SUCCESS"},
+                    {"name": "linux", "workflowName": "build", "status": "COMPLETED", "conclusion": "FAILURE"},
+                ],
+            }
+        )
+
+        self.assertEqual("failing_ci", review["actionCategory"])
+        self.assertEqual(["linux"], review["ambiguousChecks"])
+        self.assertIn("ambiguous duplicate check attempt ordering: linux", review["blockers"])
+
+    def test_duplicate_resolution_is_stable_under_input_reordering(self) -> None:
+        checks = [
+            {
+                "name": "linux",
+                "workflowName": "build",
+                "status": "COMPLETED",
+                "conclusion": "FAILURE",
+                "completedAt": "2026-06-20T10:00:00Z",
+            },
+            {
+                "name": "linux",
+                "workflowName": "build",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "completedAt": "2026-06-20T10:10:00Z",
+            },
+        ]
+
+        forward = pr_review_audit.checkSummary({"checks": checks})
+        backward = pr_review_audit.checkSummary({"checks": list(reversed(checks))})
+
+        self.assertEqual("success", forward.state)
+        self.assertEqual(forward.state, backward.state)
+        self.assertEqual(forward.failed, backward.failed)
+        self.assertEqual(forward.pending, backward.pending)
+        self.assertEqual(
+            [record["state"] for record in forward.ignoredStale],
+            [record["state"] for record in backward.ignoredStale],
+        )
+
+    def test_table_output_explains_ignored_stale_attempts(self) -> None:
+        payload = pr_review_audit.auditPayload(
+            [
+                {
+                    "number": 138,
+                    "files": ["scripts/pr_review_audit.py"],
+                    "mergeStateStatus": "CLEAN",
+                    "statusCheckRollup": [
+                        {
+                            "name": "linux",
+                            "workflowName": "build",
+                            "status": "COMPLETED",
+                            "conclusion": "CANCELLED",
+                            "completedAt": "2026-06-20T10:00:00Z",
+                        },
+                        {
+                            "name": "linux",
+                            "workflowName": "build",
+                            "status": "COMPLETED",
+                            "conclusion": "SUCCESS",
+                            "completedAt": "2026-06-20T10:10:00Z",
+                        },
+                    ],
+                }
+            ]
+        )
+
+        table = pr_review_audit.renderTable(payload)
+        self.assertIn("PR\tACTION\tTYPE\tCHECKS\tMERGE\tATTENTION\tBLOCKERS\tSTALE", table)
+        self.assertIn("ignored stale failure attempt of linux (current: success)", table)
+        self.assertEqual(1, payload["summary"]["ignoredStaleChecks"])
+        self.assertEqual(0, payload["summary"]["ambiguousChecks"])
+
     def test_stale_linked_claim_requires_human_review(self) -> None:
         review = self.classify(
             {

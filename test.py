@@ -1327,7 +1327,10 @@ def game_test(f):
         success = result[0]
         log = result[1]
         (TEST_OUTPUT_DIR / f"{n}.json").write_text(str(log))
-        self.assertTrue(success)
+        # Include the log in the failure message: the per-test JSON is only uploaded
+        # as a CI artifact, so without this the shard log records a bare "False is
+        # not true" and hides the real assertion (e.g. a walkthrough traceback).
+        self.assertTrue(success, str(log))
 
     return wrapper
 
@@ -6967,6 +6970,130 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_change_map_reload_transition_does_not_retain_source_session(self):
+        # Legacy CGame.changeMap keeps its reload-compatible semantics: leaving a map does not
+        # retain a persistent session, and revisiting the map reloads it from content.
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        store = g.getContext().getMapSessionStore()
+        game_map.setBoolProperty("session_marker", True)
+        game_map.setNumericProperty("turn", 9)
+
+        g.changeMap("ritual")
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+        self.assertEqual(0, store.size())
+        self.assertEqual(9, g.getMap().getTurn())
+
+        g.changeMap("test")
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        reloaded_map = g.getMap()
+        self.assertFalse(reloaded_map == game_map)
+        self.assertFalse(reloaded_map.getBoolProperty("session_marker"))
+        self.assertEqual(0, store.size())
+        self.assertTrue(reloaded_map.getPlayer() == player)
+        self.assertEqual(9, reloaded_map.getTurn())
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": reloaded_map.mapName,
+                "marker_preserved": reloaded_map.getBoolProperty("session_marker"),
+                "session_count": store.size(),
+                "turn": reloaded_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_explicit_transition_request_round_trips_persistent_session(self):
+        # The opt-in CMapTransitionRequest API retains the source session, reuses it on return,
+        # honors explicit target coordinates, and can keep the persistent session's own turn.
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        store = g.getContext().getMapSessionStore()
+        origin = player.getCoords()
+        return_target = find_adjacent_walkable_tile(game_map, origin)
+        game_map.setBoolProperty("session_marker", True)
+        game_map.setNumericProperty("turn", 9)
+
+        retain_request = game.CMapTransitionRequest()
+        retain_request.targetMap = "ritual"
+        retain_request.retainSourceMap = True
+        retain_request.returnAnchor = "camp"
+        self.assertTrue(g.requestMapTransition(retain_request))
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        ritual_map = g.getMap()
+        self.assertEqual(9, ritual_map.getTurn())
+        self.assertTrue(store.contains("test", "camp"))
+        self.assertTrue(store.get("test", "camp") == game_map)
+        self.assertEqual(
+            (ritual_map.getEntryX(), ritual_map.getEntryY(), ritual_map.getEntryZ()),
+            coords_tuple(player.getCoords()),
+        )
+
+        ritual_map.setNumericProperty("turn", 21)
+        reuse_request = game.CMapTransitionRequest()
+        reuse_request.targetMap = "test"
+        reuse_request.reuseLoadedMap = True
+        reuse_request.returnAnchor = "camp"
+        reuse_request.targetCoords = return_target
+        reuse_request.carryTurn = False
+        self.assertTrue(g.requestMapTransition(reuse_request))
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        restored_map = g.getMap()
+        self.assertTrue(restored_map == game_map)
+        self.assertTrue(restored_map.getBoolProperty("session_marker"))
+        self.assertEqual(9, restored_map.getTurn())
+        self.assertTrue(restored_map.getPlayer() == player)
+        self.assertEqual(coords_tuple(return_target), coords_tuple(player.getCoords()))
+        self.assertEqual(1, count_player_objects(restored_map))
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": restored_map.mapName,
+                "marker_preserved": restored_map.getBoolProperty("session_marker"),
+                "player_coords": coords_tuple(player.getCoords()),
+                "session_count": store.size(),
+                "turn": restored_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_scene_manager_rejects_nested_transition_from_destination_entry(self):
         game = load_game_module()
 
@@ -7131,9 +7258,7 @@ class GameTest(unittest.TestCase):
             # actions into the concrete template would change the raw list, and a reload that
             # dropped or doubled an action would change either list.
             raw = sorted((action.getTypeId(), action.getName()) for action in creature.getActions())
-            effective = sorted(
-                (action.getTypeId(), action.getName()) for action in creature.getEffectiveInteractions()
-            )
+            effective = sorted((action.getTypeId(), action.getName()) for action in creature.getEffectiveInteractions())
             return {"raw": raw, "effective": effective}
 
         save_name = unique_save_name("reload_idempotence_legacy_creature")
@@ -7149,9 +7274,7 @@ class GameTest(unittest.TestCase):
             # (WarriorClass grants "Attack"), otherwise the idempotence assertions below would be
             # vacuous. The raw set may legitimately be empty (class actions stay referenced on
             # the archetype, never copied into the concrete template).
-            self.assertTrue(
-                baseline_actions["effective"], "Warrior should expose at least one composed action"
-            )
+            self.assertTrue(baseline_actions["effective"], "Warrior should expose at least one composed action")
             self.assertGreater(baseline_stats["strength"], 0)
 
             # Discrimination check: if a reload duplicated an action, the captured identity list
@@ -16842,6 +16965,308 @@ class GameTest(unittest.TestCase):
         self.assertEqual(len(class_types) * len(race_ids), len(results))
         return True, json.dumps(results, sort_keys=True)
 
+    @game_test
+    def test_one_time_reward_paths_grant_exactly_once_and_clean_up_actors(self):
+        # [EPIC_07][STORY_02][SUBSTORY_04] Data-driven regression over every one-time
+        # (claim_once-guarded) reward path in res/maps/nouraajd/script.py and
+        # res/maps/siege/script.py. For each path: the FIRST completion must grant exactly
+        # the documented gold/item/unlock and set the claim flag; a repeated completion must
+        # grant nothing extra; and the associated runtime actors must be gone afterwards
+        # (cleaned up via the remove_runtime_actors helper where the script uses it).
+        # Adding a future one-time reward path should only require appending one descriptor.
+        game = load_game_module()
+        original_show_message = game.CGuiHandler.showMessage
+        original_show_dialog = game.CGuiHandler.showDialog
+        original_show_trade = game.CGuiHandler.showTrade
+        original_heal_proc = game.CPlayer.healProc
+        gui_log = {"dialogs": [], "trades": []}
+        heal_amounts = []
+
+        try:
+            game.CGuiHandler.showMessage = lambda self, message: None
+            game.CGuiHandler.showDialog = lambda self, dialog: gui_log["dialogs"].append(dialog.getTypeId())
+            game.CGuiHandler.showTrade = lambda self, market: gui_log["trades"].append(market.getTypeId())
+
+            def capture_heal(player_self, amount):
+                heal_amounts.append(amount)
+                return original_heal_proc(player_self, amount)
+
+            game.CPlayer.healProc = capture_heal
+
+            # --- nouraajd MainQuest (Gooby): 200 gold (MAIN_QUEST_GOLD_REWARD). ---
+            def gooby_setup(ctx):
+                ctx["map"].removeObjectByName("cave1")
+                self.assertEqual("awaiting_gooby", ctx["map"].getStringProperty("quest_state_main"))
+
+            def gooby_complete(ctx):
+                gooby = find_runtime_object(ctx["map"], "gooby1")
+                ctx["map"].removeObjectByName(gooby.getName())
+                ctx["player"].checkQuests()
+
+            def gooby_repeat(ctx):
+                find_player_quest(ctx["player"], "mainQuest").onComplete()
+
+            def gooby_first_checks(ctx):
+                self.assertEqual("gooby_slain", ctx["map"].getStringProperty("quest_state_main"))
+                assert_player_quest_state(self, ctx["player"], "mainQuest", completed=True)
+
+            # --- nouraajd OctoBogzQuest: 1000 gold and exactly one ShadowBlade. ---
+            def octobogz_setup(ctx):
+                ctx["travelers"] = ctx["g"].createObject("dialog")
+                ctx["travelers"].accept_quest()
+                self.assertEqual("active", ctx["map"].getStringProperty("quest_state_octobogz_contract"))
+
+            def octobogz_complete(ctx):
+                ctx["map"].removeObjectByName("cave2")
+                ctx["player"].checkQuests()
+
+            def octobogz_repeat(ctx):
+                find_player_quest(ctx["player"], "octoBogzQuest").onComplete()
+                # Re-accepting the contract after completion must not re-pay either.
+                ctx["travelers"].accept_quest()
+
+            def octobogz_first_checks(ctx):
+                self.assertEqual("completed", ctx["map"].getStringProperty("quest_state_octobogz_contract"))
+                assert_player_quest_state(self, ctx["player"], "octoBogzQuest", completed=True)
+
+            # --- nouraajd Victor courtyard rescue: 500 gold, healProc(100), one-time
+            # victorRewardDialog + victorMarket; cultLeaderQuest and victorCultist* actors
+            # are removed via remove_runtime_actors (_clear_victor_encounter). ---
+            def victor_setup(ctx):
+                ctx["g"].createObject("tavernDialog2").talked_to_victor()
+                ctx["town_hall"] = ctx["g"].createObject("townHallDialog")
+                ctx["town_hall"].spawn_cultists()
+                self.assertEqual("encounter_active", ctx["map"].getStringProperty("quest_state_victor"))
+                self.assertIsNotNone(ctx["map"].getObjectByName("cultLeaderQuest"))
+
+            def victor_complete(ctx):
+                ctx["map"].removeObjectByName("cultLeaderQuest")
+
+            def victor_repeat(ctx):
+                # Neither re-asking for the encounter nor a stray duplicate leader kill
+                # may re-pay the reward once the good end is recorded.
+                ctx["town_hall"].spawn_cultists()
+                duplicate = ctx["g"].createObject("CultLeader")
+                duplicate.setStringProperty("name", "cultLeaderQuest")
+                ctx["map"].addObject(duplicate)
+                ctx["map"].removeObjectByName("cultLeaderQuest")
+
+            def victor_first_checks(ctx):
+                self.assertEqual("good_end", ctx["map"].getStringProperty("quest_state_victor"))
+                self.assertTrue(ctx["map"].getBoolProperty("VICTOR_GOOD_END"))
+                self.assertEqual([100], heal_amounts)
+                self.assertEqual(1, gui_log["dialogs"].count("victorRewardDialog"))
+                self.assertEqual(1, gui_log["trades"].count("victorMarket"))
+                self.assertEqual(-1, ctx["map"].getNumericProperty("VICTOR_COURTYARD_TURN"))
+                self.assertFalse(
+                    any(
+                        obj.getName() and obj.getName().startswith("victorCultist")
+                        for obj in ctx["map"].getObjects()
+                    ),
+                    "victor: all victorCultist* runtime actors must be cleaned up with the reward.",
+                )
+
+            def victor_repeat_checks(ctx):
+                self.assertEqual([100], heal_amounts)
+                self.assertEqual(1, gui_log["dialogs"].count("victorRewardDialog"))
+                self.assertEqual(1, gui_log["trades"].count("victorMarket"))
+
+            # --- nouraajd Amulet return: 50 gold, consumes the amulet; amuletGoblin and
+            # oldWoman are removed via remove_runtime_actors. ---
+            def amulet_setup(ctx):
+                ctx["return_dialog"] = ctx["g"].createObject("questReturnDialog")
+                ctx["g"].createObject("questDialog").start_amulet_quest()
+                self.assertEqual("active", ctx["map"].getStringProperty("quest_state_amulet"))
+                self.assertIsNotNone(ctx["map"].getObjectByName("amuletGoblin"))
+                self.assertIsNotNone(ctx["map"].getObjectByName("oldWoman"))
+                ctx["player"].addItem("preciousAmulet")
+
+            def amulet_complete(ctx):
+                ctx["return_dialog"].complete_amulet_quest()
+
+            def amulet_repeat(ctx):
+                ctx["player"].addItem("preciousAmulet")
+                ctx["return_dialog"].complete_amulet_quest()
+
+            def amulet_first_checks(ctx):
+                self.assertEqual("returned", ctx["map"].getStringProperty("quest_state_amulet"))
+                self.assertFalse(ctx["player"].hasItem(lambda it: it.getName() == "preciousAmulet"))
+
+            def amulet_repeat_checks(ctx):
+                # The rejected re-run must not consume the second amulet either.
+                self.assertTrue(ctx["player"].hasItem(lambda it: it.getName() == "preciousAmulet"))
+
+            # --- siege DefendSiegeQuest: 500 gold plus the campaign_completed unlock. ---
+            def siege_setup(ctx):
+                if "defendSiegeQuest" not in quest_names(ctx["player"]):
+                    ctx["player"].addQuest("defendSiegeQuest")
+                for name in ("spawnPoint1", "spawnPoint2", "spawnPoint3"):
+                    find_runtime_object(ctx["map"], name).setBoolProperty("destroyed", True)
+                self.assertFalse(ctx["map"].getBoolProperty("campaign_completed"))
+
+            def siege_complete(ctx):
+                find_runtime_object(ctx["map"], "spawnPoint4").setBoolProperty("destroyed", True)
+                ctx["player"].checkQuests()
+
+            def siege_repeat(ctx):
+                find_player_quest(ctx["player"], "defendSiegeQuest").onComplete()
+
+            def siege_first_checks(ctx):
+                self.assertTrue(ctx["map"].getBoolProperty("campaign_completed"))
+                assert_player_quest_state(self, ctx["player"], "defendSiegeQuest", completed=True)
+
+            def siege_repeat_checks(ctx):
+                self.assertTrue(ctx["map"].getBoolProperty("campaign_completed"))
+
+            reward_paths = [
+                {
+                    "name": "nouraajd_main_quest_gooby",
+                    "map": "nouraajd",
+                    "gold": 200,
+                    "items": {},
+                    "claim_flags": ("GOOBY_REWARD_CLAIMED",),
+                    "absent_actors": ("gooby1",),
+                    "setup": gooby_setup,
+                    "complete": gooby_complete,
+                    "repeat": gooby_repeat,
+                    "first_checks": gooby_first_checks,
+                },
+                {
+                    "name": "nouraajd_octobogz_contract",
+                    "map": "nouraajd",
+                    "gold": 1000,
+                    "items": {"ShadowBlade": 1},
+                    "claim_flags": ("OCTOBOGZ_REWARD_CLAIMED",),
+                    "absent_actors": (),
+                    "setup": octobogz_setup,
+                    "complete": octobogz_complete,
+                    "repeat": octobogz_repeat,
+                    "first_checks": octobogz_first_checks,
+                },
+                {
+                    "name": "nouraajd_victor_courtyard",
+                    "map": "nouraajd",
+                    "gold": 500,
+                    "items": {},
+                    "claim_flags": ("VICTOR_REWARD_GRANTED", "VICTOR_REWARD_CLAIMED"),
+                    "absent_actors": ("cultLeaderQuest",),
+                    "setup": victor_setup,
+                    "complete": victor_complete,
+                    "repeat": victor_repeat,
+                    "first_checks": victor_first_checks,
+                    "repeat_checks": victor_repeat_checks,
+                },
+                {
+                    "name": "nouraajd_amulet_return",
+                    "map": "nouraajd",
+                    "gold": 50,
+                    "items": {},
+                    "claim_flags": ("AMULET_REWARD_CLAIMED", "AMULET_RETURNED"),
+                    "absent_actors": ("amuletGoblin", "oldWoman"),
+                    "setup": amulet_setup,
+                    "complete": amulet_complete,
+                    "repeat": amulet_repeat,
+                    "first_checks": amulet_first_checks,
+                    "repeat_checks": amulet_repeat_checks,
+                },
+                {
+                    "name": "siege_defend_quest",
+                    "map": "siege",
+                    "gold": 500,
+                    "items": {},
+                    "claim_flags": ("siege_reward_claimed",),
+                    "absent_actors": (),
+                    "setup": siege_setup,
+                    "complete": siege_complete,
+                    "repeat": siege_repeat,
+                    "first_checks": siege_first_checks,
+                    "repeat_checks": siege_repeat_checks,
+                },
+            ]
+
+            results = {}
+            for path in reward_paths:
+                g, game_map, player = load_game_map_with_player(path["map"])
+                ctx = {"g": g, "map": game_map, "player": player}
+                path["setup"](ctx)
+
+                for flag in path["claim_flags"]:
+                    self.assertFalse(
+                        game_map.getBoolProperty(flag),
+                        f"{path['name']}: claim flag {flag} must start unset.",
+                    )
+
+                start_gold = player.getGold()
+                start_items = {item: player.countItems(item) for item in path["items"]}
+
+                path["complete"](ctx)
+
+                self.assertEqual(
+                    path["gold"],
+                    player.getGold() - start_gold,
+                    f"{path['name']}: first completion must grant exactly {path['gold']} gold.",
+                )
+                for item, delta in path["items"].items():
+                    self.assertEqual(
+                        delta,
+                        player.countItems(item) - start_items[item],
+                        f"{path['name']}: first completion must grant exactly {delta} x {item}.",
+                    )
+                for flag in path["claim_flags"]:
+                    self.assertTrue(
+                        game_map.getBoolProperty(flag),
+                        f"{path['name']}: claim flag {flag} must be set by the first completion.",
+                    )
+                for actor in path["absent_actors"]:
+                    self.assertIsNone(
+                        game_map.getObjectByName(actor),
+                        f"{path['name']}: runtime actor {actor} must be cleaned up with the reward.",
+                    )
+                if "first_checks" in path:
+                    path["first_checks"](ctx)
+
+                path["repeat"](ctx)
+
+                self.assertEqual(
+                    path["gold"],
+                    player.getGold() - start_gold,
+                    f"{path['name']}: repeated completion must not grant extra gold.",
+                )
+                for item, delta in path["items"].items():
+                    self.assertEqual(
+                        delta,
+                        player.countItems(item) - start_items[item],
+                        f"{path['name']}: repeated completion must not grant extra {item}.",
+                    )
+                for flag in path["claim_flags"]:
+                    self.assertTrue(
+                        game_map.getBoolProperty(flag),
+                        f"{path['name']}: claim flag {flag} must stay set after a repeat.",
+                    )
+                for actor in path["absent_actors"]:
+                    self.assertIsNone(
+                        game_map.getObjectByName(actor),
+                        f"{path['name']}: runtime actor {actor} must stay removed after a repeat.",
+                    )
+                if "repeat_checks" in path:
+                    path["repeat_checks"](ctx)
+
+                results[path["name"]] = {
+                    "gold_delta": player.getGold() - start_gold,
+                    "item_deltas": {item: player.countItems(item) - start_items[item] for item in path["items"]},
+                    "claim_flags": {flag: game_map.getBoolProperty(flag) for flag in path["claim_flags"]},
+                    "absent_actors": {
+                        actor: game_map.getObjectByName(actor) is None for actor in path["absent_actors"]
+                    },
+                }
+
+            return True, json.dumps(results, sort_keys=True)
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+            game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showTrade = original_show_trade
+            game.CPlayer.healProc = original_heal_proc
+
 
 class ConsoleEventIsolationTest(unittest.TestCase):
     def test_console_key_history_in_fresh_process(self):
@@ -19563,9 +19988,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"{test_name} should be parallelizable, not forced onto the serial shard",
             )
         # The genuinely order-sensitive save-directory tests must stay serial.
-        self.assertTrue(
-            is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty")
-        )
+        self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
 
     def test_shard_balancer_spreads_huge_map_walkthroughs(self):
         # With enough jobs the weight-aware packer must isolate the heavy maps onto
@@ -19577,8 +20000,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
         }
         stdio_walkthroughs = [
-            f"McpServerTest.test_stdio_map_walkthrough_{map_name}"
-            for map_name in McpServerTest.MCP_WALKTHROUGHS
+            f"McpServerTest.test_stdio_map_walkthrough_{map_name}" for map_name in McpServerTest.MCP_WALKTHROUGHS
         ]
         groups = shard_test_names(stdio_walkthroughs, jobs=4, timings=DEFAULT_TEST_DURATIONS)
         for group in groups:

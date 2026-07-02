@@ -697,6 +697,19 @@ worktrees, kills processes, mutates the workbook, or rewrites the registry file.
 
 Never convert `BLOCKED`, `FAILED`, or `CANCELLED` to `DONE` merely to unlock dependencies.
 
+## Write leases for shared source
+
+Workbook claims give a worker issue ownership, not exclusive write access to shared source. When dispatched work will
+edit high-overlap areas, coordinate writes through `python3 scripts/write_leases.py` (store:
+`planning/write_leases.json`, separate from every XLSX workbook). `acquire` normalizes the worker's concrete scope
+(PR changed files > dirty worktree > worker-declared files > workbook targets, with confidence metadata), expands
+coupled areas (header/implementation pairs, type-registration and CMake units, `res/maps/<map>/` bundles,
+serialization and generated-resource pairs), and atomically grants the batch only if no ACTIVE unexpired lease overlaps
+the expanded scope. Renew leases alongside queue heartbeats, release them when the implementation PR merges, and use
+`recover` for expired leases of vanished workers — recovery is lease-lifecycle-only and never edits workbook
+Status/Owner/Claim ID columns. Read-only inspection never requires a lease, and lease conflicts never change queue
+eligibility: overlapping claims may still investigate concurrently.
+
 ## Cleanup
 
 After every controller loop, PR status poll, and merged checkpoint, run the read-only resource audit:

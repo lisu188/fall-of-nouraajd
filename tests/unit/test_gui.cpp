@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGame.h"
 #include "core/CGameContext.h"
+#include "core/CJsonUtil.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CScript.h"
@@ -1490,6 +1491,258 @@ void test_list_view_above_threshold_drop_is_accepted_below_threshold_is_not() {
     }
 }
 
+void test_list_view_moved_drop_without_target_callbacks_cancels_instead_of_clicking() {
+    // Drop contract (#627): a moved cross-list release is only ever a drop. A list that
+    // does not define target drop callbacks is not a drop target, so the gesture must
+    // cancel the source drag. It must NOT fall back to the target's ordinary click
+    // callback with the target-cell object (the pre-fix behavior), because that
+    // re-enters selection-state click flows and can mutate a different object than the
+    // dragged payload.
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+    // The target list intentionally has no dragValidate/drop callbacks.
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasDragSession(), "source drag start should create a GUI drag session");
+    harness.gui->updateDragSession(125, 25); // above threshold, over the target list
+
+    expect_true(harness.target->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                "a moved release over a drop-incapable list should still be consumed");
+    expect_true(harness.panel->target_clicks == 0,
+                "a moved drop must never invoke the target's ordinary click callback");
+    expect_true(harness.panel->drops == 0, "a drop-incapable list must not report a drop");
+    expect_true(harness.panel->drag_cancels == 1,
+                "a moved drop on a drop-incapable list must cancel the source drag once");
+    expect_true(harness.gui->hasDragSession() && !harness.gui->getDragSession()->acceptedTarget.lock(),
+                "a drop-incapable list must never accept the drag session");
+}
+
+struct InventoryDragDropHarness {
+    std::shared_ptr<CGui> gui;
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CPlayer> player;
+    std::shared_ptr<CGameInventoryPanel> panel;
+    std::shared_ptr<CListView> inventory;
+    std::shared_ptr<CListView> equipped;
+};
+
+// Builds a real CGameInventoryPanel with its two CListViews wired exactly like
+// res/config/panels.json (collections, drag callbacks, grouping) plus a two-slot
+// configuration: slot "0" accepts CWeapon and slot "1" accepts CHelmet only. Drag
+// gestures are then driven through the same CListView::mouseEvent entry points the
+// live GUI uses, so the tests exercise payload resolution, validation, and drop
+// dispatch end to end.
+InventoryDragDropHarness create_inventory_drag_drop_harness() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    InventoryDragDropHarness harness;
+    harness.gui = std::make_shared<CGui>();
+    harness.game = create_gui_game(harness.gui);
+    harness.map = harness.game->getMap();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        harness.game->getObjectHandler()->registerType(name, builder);
+    }
+    harness.game->getObjectHandler()->registerConfig("slotConfiguration", CJsonUtil::from_string(R"({
+            "class": "CSlotConfig",
+            "properties": {
+                "configuration": {
+                    "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}},
+                    "1": {"class": "CSlot", "properties": {"slotName": "Head", "types": ["CHelmet"]}}
+                }
+            }
+        })",
+                                                                                                 "slotConfiguration"));
+
+    harness.player = std::make_shared<CPlayer>();
+    harness.player->setGame(harness.game);
+    harness.player->setBaseStats(player_stats());
+    harness.player->setHp(harness.player->getHpMax());
+    harness.map->setPlayer(harness.player);
+
+    harness.panel = std::make_shared<CGameInventoryPanel>();
+    harness.panel->setLayout(fixed_layout(0, 0, 400, 100));
+
+    harness.inventory = std::make_shared<CListView>();
+    harness.inventory->setLayout(fixed_layout(0, 0, 100, 50));
+    harness.inventory->setCollection("inventoryCollection");
+    harness.inventory->setCallback("inventoryCallback");
+    harness.inventory->setSelect("inventorySelect");
+    harness.inventory->setRightClickCallback("inventoryRightClickCallback");
+    harness.inventory->setDragStart("inventoryDragStart");
+    harness.inventory->setDragCancel("inventoryDragCancel");
+    harness.inventory->setDragValidate("inventoryDropValidate");
+    harness.inventory->setDrop("inventoryDrop");
+    harness.inventory->setGrouping(true);
+    harness.inventory->setTileSize(50);
+    harness.inventory->setXPrefferedSize(2);
+    harness.inventory->setYPrefferedSize(1);
+
+    harness.equipped = std::make_shared<CListView>();
+    harness.equipped->setLayout(fixed_layout(200, 0, 100, 50));
+    harness.equipped->setCollection("equippedCollection");
+    harness.equipped->setCallback("equippedCallback");
+    harness.equipped->setSelect("equippedSelect");
+    harness.equipped->setDragStart("equippedDragStart");
+    harness.equipped->setDragCancel("equippedDragCancel");
+    harness.equipped->setDragValidate("equippedDropValidate");
+    harness.equipped->setDrop("equippedDrop");
+    harness.equipped->setTileSize(50);
+    harness.equipped->setXPrefferedSize(2);
+    harness.equipped->setYPrefferedSize(1);
+
+    harness.panel->addChild(harness.inventory);
+    harness.panel->addChild(harness.equipped);
+    harness.gui->pushChild(harness.panel);
+    return harness;
+}
+
+std::shared_ptr<CWeapon> make_inventory_weapon(const InventoryDragDropHarness &harness, const std::string &name) {
+    auto weapon = std::make_shared<CWeapon>();
+    weapon->setGame(harness.game);
+    weapon->setName(name);
+    weapon->setTypeId(name + "Type");
+    // Stat composition folds equipped item bonuses without a null guard, so every
+    // equippable test item carries an (empty) bonus block like configured items do.
+    weapon->setBonus(std::make_shared<CStats>());
+    harness.player->addItem(weapon);
+    return weapon;
+}
+
+void test_inventory_drag_drop_equips_exact_dragged_item_and_unequips_it_back() {
+    auto harness = create_inventory_drag_drop_harness();
+    auto sword = make_inventory_weapon(harness, "identityDragSword");
+    auto spare = make_inventory_weapon(harness, "identityDragSpare");
+
+    // Press on the first inventory cell; the session payload is the exact item shown
+    // in that cell (grouping order is not asserted, identity is read from the session).
+    harness.inventory->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasDragSession(), "inventory press on an owned item should start a drag session");
+    auto payload = vstd::cast<CItem>(harness.gui->getDragSession() ? harness.gui->getDragSession()->payload : nullptr);
+    expect_true(payload && (CGameObject::sameInstance(payload, sword) || CGameObject::sameInstance(payload, spare)),
+                "the drag payload must be one of the player's exact inventory items");
+    if (!payload) {
+        return;
+    }
+    auto other = CGameObject::sameInstance(payload, sword) ? spare : sword;
+
+    // Select the OTHER item via the ordinary click flow: the drop must equip the
+    // dragged payload, never the current selection.
+    harness.panel->inventoryCallback(harness.gui, 0, other);
+
+    harness.gui->updateDragSession(225, 25); // above threshold, over equipped slot "0"
+    expect_true(harness.equipped->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                "drop on a compatible equipment slot should be consumed");
+    expect_true(CGameObject::sameInstance(harness.player->getItemAtSlot("0"), payload),
+                "the exact dragged item must be the one equipped in the compatible slot");
+    expect_true(!harness.player->hasInInventory(payload),
+                "the equipped dragged item must leave the inventory exactly once");
+    expect_true(harness.player->hasInInventory(other),
+                "the selected-but-not-dragged item must stay in the inventory untouched");
+    expect_true(harness.player->getItemAtSlot("1") == nullptr, "no other slot may be touched by the drop");
+    expect_true(harness.gui->getDragSession() &&
+                    harness.gui->getDragSession()->acceptedTarget.lock() == harness.equipped,
+                "a successful drop must accept the drag session on the target list");
+
+    // Round trip: drag the equipped item back onto the inventory list; the exact item
+    // must be unequipped and returned to the inventory once.
+    harness.gui->clearDragSession();
+    harness.gui->releasePointerCapture();
+    harness.equipped->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasDragSession() && harness.gui->getDragSession() &&
+                    CGameObject::sameInstance(harness.gui->getDragSession()->payload, payload),
+                "dragging the equipped slot should carry the exact equipped item as payload");
+    harness.gui->updateDragSession(25, 25); // above threshold, over the inventory list
+    expect_true(harness.inventory->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25),
+                "drop of an equipped item on the inventory list should be consumed");
+    expect_true(harness.player->getItemAtSlot("0") == nullptr,
+                "dropping an equipped item on the inventory must unequip its slot");
+    expect_true(harness.player->hasInInventory(payload), "the exact unequipped item must return to the inventory");
+    expect_true(harness.player->hasInInventory(other), "the untouched item must survive the round trip");
+}
+
+void test_inventory_drag_drop_incompatible_slot_rejects_without_ownership_change() {
+    auto harness = create_inventory_drag_drop_harness();
+    auto sword = make_inventory_weapon(harness, "incompatibleDropSword");
+
+    harness.inventory->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasDragSession(), "inventory press should start the drag session");
+    harness.gui->updateDragSession(275, 25); // above threshold, over equipped slot "1" (helmet-only)
+
+    harness.equipped->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 75, 25);
+    expect_true(harness.player->hasInInventory(sword),
+                "a weapon dropped on an incompatible slot must stay in the inventory");
+    expect_true(harness.player->getItemAtSlot("1") == nullptr, "an incompatible slot must stay empty after the drop");
+    expect_true(harness.player->getItemAtSlot("0") == nullptr,
+                "an incompatible drop must not equip the item anywhere else");
+    expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->acceptedTarget.lock(),
+                "an incompatible drop must not accept the drag session");
+}
+
+void test_inventory_drag_drop_quest_item_is_protected() {
+    auto harness = create_inventory_drag_drop_harness();
+    auto relic = make_inventory_weapon(harness, "questBoundRelicSword");
+    relic->addTag(CTag::Quest);
+
+    // A quest item never authorizes a drag start.
+    harness.inventory->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(!harness.gui->hasDragSession(), "a quest item must never start an inventory drag session");
+
+    // Even a forced session carrying a quest payload must be rejected by the drop
+    // validation, leaving ownership unchanged.
+    harness.gui->startDragSession(harness.inventory, relic, 0, 25, 25, true);
+    harness.gui->updateDragSession(225, 25);
+    harness.equipped->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.player->hasInInventory(relic),
+                "a quest item must stay in the inventory after any drop attempt");
+    expect_true(harness.player->getItemAtSlot("0") == nullptr, "a quest item must never be equipped through a drop");
+    expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->acceptedTarget.lock(),
+                "a quest-item drop must not accept the drag session");
+}
+
+void test_inventory_drag_drop_same_list_release_is_a_no_op() {
+    auto harness = create_inventory_drag_drop_harness();
+    auto sword = make_inventory_weapon(harness, "sameListDropSword");
+
+    harness.inventory->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasDragSession(), "inventory press should start the drag session");
+    harness.gui->updateDragSession(75, 25); // above threshold, still over the inventory list
+
+    harness.inventory->mouseEvent(harness.gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 75, 25);
+    expect_true(harness.player->hasInInventory(sword), "a same-list drop must leave the item in the inventory");
+    expect_true(harness.player->getItemAtSlot("0") == nullptr && harness.player->getItemAtSlot("1") == nullptr,
+                "a same-list drop must not equip anything");
+    expect_true(harness.gui->getDragSession() && !harness.gui->getDragSession()->acceptedTarget.lock(),
+                "a same-list drop must not accept the drag session");
+}
+
+void test_inventory_drag_drop_cancel_outside_targets_keeps_ownership() {
+    auto harness = create_inventory_drag_drop_harness();
+    auto sword = make_inventory_weapon(harness, "cancelPathDragSword");
+
+    harness.inventory->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasDragSession(), "inventory press should start the drag session");
+    harness.gui->updateDragSession(350, 75); // above threshold, outside both lists
+
+    // Release through the full GUI pipeline so cancel, capture, and session cleanup run.
+    SDL_Event release{};
+    release.type = SDL_MOUSEBUTTONUP;
+    release.button.button = SDL_BUTTON_LEFT;
+    release.button.x = 350;
+    release.button.y = 75;
+    harness.gui->event(&release);
+
+    expect_true(!harness.gui->hasDragSession(), "a cancelled drag must clear the drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "a cancelled drag must clear pointer capture");
+    expect_true(harness.player->hasInInventory(sword), "a cancelled drag must leave the item in the inventory");
+    expect_true(harness.player->getItemAtSlot("0") == nullptr && harness.player->getItemAtSlot("1") == nullptr,
+                "a cancelled drag must not equip anything");
+    expect_true(harness.panel->inventorySelect(harness.gui, 0, sword),
+                "a cancelled drag should restore the dragged item as the inventory selection");
+}
+
 void test_list_view_below_threshold_candidate_panel_removal_leaves_no_session() {
     // A candidate (below-threshold) session must be cleared correctly when the owning
     // panel is removed before the threshold is ever crossed.
@@ -1502,8 +1755,7 @@ void test_list_view_below_threshold_candidate_panel_removal_leaves_no_session() 
                 "press + jitter should leave a candidate session before removal");
 
     harness.gui->removeChild(harness.panel);
-    expect_true(!harness.gui->hasDragSession(),
-                "panel removal must clear a below-threshold candidate drag session");
+    expect_true(!harness.gui->hasDragSession(), "panel removal must clear a below-threshold candidate drag session");
     expect_true(!harness.gui->hasPointerCapture(), "panel removal must clear pointer capture for a candidate session");
 }
 
@@ -1967,6 +2219,12 @@ int main() {
     test_list_view_exact_boundary_is_a_click_above_boundary_is_a_drag();
     test_list_view_negative_and_diagonal_motion_follow_the_rule();
     test_list_view_above_threshold_drop_is_accepted_below_threshold_is_not();
+    test_list_view_moved_drop_without_target_callbacks_cancels_instead_of_clicking();
+    test_inventory_drag_drop_equips_exact_dragged_item_and_unequips_it_back();
+    test_inventory_drag_drop_incompatible_slot_rejects_without_ownership_change();
+    test_inventory_drag_drop_quest_item_is_protected();
+    test_inventory_drag_drop_same_list_release_is_a_no_op();
+    test_inventory_drag_drop_cancel_outside_targets_keeps_ownership();
     test_list_view_below_threshold_candidate_panel_removal_leaves_no_session();
     test_list_view_active_drag_panel_removal_leaves_no_session();
     test_panel_event_callbacks_stop_after_close();
