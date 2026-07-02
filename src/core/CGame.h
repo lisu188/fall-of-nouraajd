@@ -49,6 +49,8 @@ class CScriptHandler;
 
 class CSlotConfig;
 
+struct CMapTransitionRequest;
+
 class CGame : public CGameObject {
     V_META(CGame, CGameObject, vstd::meta::empty())
     friend class CGameContext;
@@ -59,6 +61,11 @@ class CGame : public CGameObject {
     ~CGame();
 
     void changeMap(std::string file);
+
+    // Opt-in explicit transition API: unlike changeMap (which always reloads the destination from
+    // content), the request can reuse and retain persistent map sessions. Returns whether the
+    // request was accepted by the scene manager.
+    bool requestMapTransition(CMapTransitionRequest request);
 
     std::shared_ptr<CMap> getMap() const;
 

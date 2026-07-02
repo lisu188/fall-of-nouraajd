@@ -455,19 +455,54 @@ void init_game_module(py::module_ &m) {
         .def("captureTransitionGeneration", &CGameContext::captureTransitionGeneration,
              "Capture the current transition/session generation for deferred callbacks.")
         .def("isTransitionGenerationCurrent", &CGameContext::isTransitionGenerationCurrent,
-             "Return whether a captured transition/session generation is still current.");
+             "Return whether a captured transition/session generation is still current.")
+        .def("getMapSessionStore", &CGameContext::getMapSessionStore,
+             "Return the context-owned persistent map session store.");
+
+    py::class_<CMapSessionStore, std::shared_ptr<CMapSessionStore>>(
+        m, "CMapSessionStore", "Context-owned cache of loaded maps retained across transitions.")
+        .def("put", py::overload_cast<const std::shared_ptr<CMap> &, const std::string &>(&CMapSessionStore::put),
+             py::arg("map"), py::arg("instanceId") = "", "Retain a loaded map session.")
+        .def("get", &CMapSessionStore::get, py::arg("mapName"), py::arg("instanceId") = "",
+             "Return a retained map session or None.")
+        .def("contains", &CMapSessionStore::contains, py::arg("mapName"), py::arg("instanceId") = "",
+             "Return whether a map session is retained.")
+        .def("evict", &CMapSessionStore::evict, py::arg("mapName"), py::arg("instanceId") = "",
+             "Drop a retained map session.")
+        .def("clear", &CMapSessionStore::clear, "Drop every retained map session.")
+        .def("size", &CMapSessionStore::size, "Return the number of retained map sessions.");
 
     py::enum_<CSceneManager::TransitionState>(m, "CSceneTransitionState", "Scene transition lifecycle state.")
         .value("Idle", CSceneManager::TransitionState::Idle)
         .value("TransitionPending", CSceneManager::TransitionState::TransitionPending)
         .value("Transitioning", CSceneManager::TransitionState::Transitioning);
 
+    py::class_<CMapTransitionRequest>(
+        m, "CMapTransitionRequest",
+        "Opt-in explicit map transition request supporting persistent map sessions. Default flags reproduce "
+        "the legacy reload-compatible CGame.changeMap behavior.")
+        .def(py::init<>())
+        .def_readwrite("targetMap", &CMapTransitionRequest::targetMap, "Destination map name.")
+        .def_readwrite("targetCoords", &CMapTransitionRequest::targetCoords,
+                       "Optional player placement; None places the player at the destination entry.")
+        .def_readwrite("reuseLoadedMap", &CMapTransitionRequest::reuseLoadedMap,
+                       "Reuse a retained destination session instead of reloading it from content.")
+        .def_readwrite("retainSourceMap", &CMapTransitionRequest::retainSourceMap,
+                       "Retain the source map session so it can be revisited later.")
+        .def_readwrite("returnAnchor", &CMapTransitionRequest::returnAnchor,
+                       "Optional session anchor used to retain and look up map sessions.")
+        .def_readwrite("carryTurn", &CMapTransitionRequest::carryTurn,
+                       "Copy the source map turn onto the destination map (legacy behavior).");
+
     bool (CSceneManager::*requestMapChange)(const std::shared_ptr<CGame> &, std::string) =
+        &CSceneManager::requestMapChange;
+    bool (CSceneManager::*requestMapChangeWithRequest)(const std::shared_ptr<CGame> &, CMapTransitionRequest) =
         &CSceneManager::requestMapChange;
 
     py::class_<CSceneManager, std::shared_ptr<CSceneManager>>(m, "CSceneManager",
                                                               "Owns queued map transition state and execution.")
         .def("requestMapChange", requestMapChange, "Queue a map transition request.")
+        .def("requestMapChange", requestMapChangeWithRequest, "Queue an explicit map transition request.")
         .def("isTransitionPending", &CSceneManager::isTransitionPending,
              "Return whether a map transition is pending or executing.")
         .def("getTransitionState", &CSceneManager::getTransitionState, "Return the current transition state.")
@@ -479,6 +514,8 @@ void init_game_module(py::module_ &m) {
         m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
+        .def("requestMapTransition", &CGame::requestMapTransition,
+             "Queue an explicit map transition request (opt-in persistent map sessions).")
         .def("loadPlugin", &CGame::loadPlugin, "Load a plugin object into the game.")
         .def("getContext", &CGame::getContext, "Return the runtime service context.")
         .def("getGuiHandler", &CGame::getGuiHandler, "Return the GUI handler service.")

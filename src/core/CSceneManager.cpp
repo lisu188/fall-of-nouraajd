@@ -24,11 +24,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CPlayer.h"
 
 bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, std::string mapName) {
-    return requestMapChange(game, MapTransitionRequest{std::move(mapName)});
+    CMapTransitionRequest request;
+    request.targetMap = std::move(mapName);
+    return requestMapChange(game, std::move(request));
 }
 
-bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTransitionRequest request) {
-    const std::string mapName = std::move(request.mapName);
+bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, CMapTransitionRequest request) {
+    const std::string mapName = request.targetMap;
     if (!game) {
         if (CPlaytestTrace::enabled()) {
             CPlaytestTrace::record("map_transition_rejected", {{"reason", "missing_game"}, {"toMap", mapName}});
@@ -68,6 +70,8 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
     if (CPlaytestTrace::enabled()) {
         json fields = {
             {"accepted", true},
+            {"retainSourceMap", request.retainSourceMap},
+            {"reuseLoadedMap", request.reuseLoadedMap},
             {"toMap", mapName},
             {"transitionState", getTransitionStateName()},
         };
@@ -80,9 +84,10 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
     std::weak_ptr<CGameContext> weakContext = context;
     std::weak_ptr<CMap> weakExpectedMap = game->getMap();
     const bool hadExpectedMap = game->getMap() != nullptr;
-    vstd::call_later([manager, weakGame, weakContext, weakExpectedMap, hadExpectedMap, expectedGeneration, mapName]() {
-        auto resetIfStillPending = [&manager, &mapName]() {
-            if (manager->transitionState == TransitionState::TransitionPending && manager->pendingMapName == mapName) {
+    vstd::call_later([manager, weakGame, weakContext, weakExpectedMap, hadExpectedMap, expectedGeneration, request]() {
+        auto resetIfStillPending = [&manager, &request]() {
+            if (manager->transitionState == TransitionState::TransitionPending &&
+                manager->pendingMapName == request.targetMap) {
                 manager->resetTransition();
             }
         };
@@ -97,7 +102,8 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
             resetIfStillPending();
             return;
         }
-        if (manager->transitionState != TransitionState::TransitionPending || manager->pendingMapName != mapName) {
+        if (manager->transitionState != TransitionState::TransitionPending ||
+            manager->pendingMapName != request.targetMap) {
             return;
         }
         vstd::call_when(
@@ -109,10 +115,10 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
                        (hadExpectedMap && (!expectedMap || game->getMap() != expectedMap)) || !game->getMap() ||
                        !game->getMap()->isMoving();
             },
-            [manager, weakGame, weakContext, weakExpectedMap, hadExpectedMap, expectedGeneration, mapName]() {
-                auto resetIfStillPending = [&manager, &mapName]() {
+            [manager, weakGame, weakContext, weakExpectedMap, hadExpectedMap, expectedGeneration, request]() {
+                auto resetIfStillPending = [&manager, &request]() {
                     if (manager->transitionState == TransitionState::TransitionPending &&
-                        manager->pendingMapName == mapName) {
+                        manager->pendingMapName == request.targetMap) {
                         manager->resetTransition();
                     }
                 };
@@ -127,7 +133,7 @@ bool CSceneManager::requestMapChange(const std::shared_ptr<CGame> &game, MapTran
                     resetIfStillPending();
                     return;
                 }
-                manager->performMapChange(game, mapName);
+                manager->performMapChange(game, request);
             });
     });
     return true;
@@ -151,7 +157,8 @@ std::string CSceneManager::getTransitionStateName() const {
 
 std::string CSceneManager::getPendingMapName() const { return pendingMapName; }
 
-void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const CMapTransitionRequest &request) {
+    const std::string &mapName = request.targetMap;
     try {
         transitionState = TransitionState::Transitioning;
         std::shared_ptr<CMap> oldMap = game->getMap();
@@ -161,7 +168,22 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
             traceFields["oldTurn"] = oldMap ? oldMap->getTurn() : 0;
             traceFields["toMap"] = mapName;
         }
-        std::shared_ptr<CMap> map = CMapLoader::loadNewMap(game, mapName);
+        std::shared_ptr<CMap> map;
+        bool reusedSession = false;
+        if (request.reuseLoadedMap) {
+            auto store = game->getContext()->getMapSessionStore();
+            map = store->get(mapName, request.returnAnchor);
+            if (!map && !request.returnAnchor.empty()) {
+                map = store->get(mapName);
+            }
+            reusedSession = map != nullptr;
+        }
+        if (!map) {
+            map = CMapLoader::loadNewMap(game, mapName);
+        }
+        if (request.retainSourceMap && oldMap) {
+            game->getContext()->getMapSessionStore()->put(oldMap, request.returnAnchor);
+        }
         game->setMap(map);
         if (oldMap && game->getMap()) {
             // Transfer the existing player into the destination map without mutating the
@@ -172,14 +194,21 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const s
             // placement, lifecycle triggers); the source map keeps its player reference.
             std::shared_ptr<CPlayer> player = oldMap->getPlayer();
             if (player) {
-                game->getMap()->attachPlayer(player);
+                if (request.targetCoords) {
+                    game->getMap()->attachPlayer(player, *request.targetCoords);
+                } else {
+                    game->getMap()->attachPlayer(player);
+                }
             }
-            game->getMap()->setTurn(oldMap->getTurn());
+            if (request.carryTurn) {
+                game->getMap()->setTurn(oldMap->getTurn());
+            }
         }
         game->getContext()->advanceTransitionGeneration();
         if (CPlaytestTrace::enabled()) {
             CPlaytestTrace::addMapContext(traceFields, game->getMap());
             traceFields["result"] = "completed";
+            traceFields["reusedSession"] = reusedSession;
             traceFields["transitionState"] = getTransitionStateName();
             CPlaytestTrace::record("map_transition_completed", traceFields);
         }
