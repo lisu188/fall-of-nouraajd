@@ -161,13 +161,78 @@ def verifyRunIdentity(
                     f"'{expected_name}'; ambiguous check identity blocks merge"
                 ),
             )
+    # Bind the trusted decision to the run's re-run attempt. gh reports the
+    # latest attempt's job data; a malformed or non-positive attempt means we
+    # cannot pin validation to a concrete, current run attempt, so fail closed
+    # rather than trust jobs whose attempt identity is ambiguous.
+    if "attempt" in runPayload:
+        try:
+            attempt = int(runPayload.get("attempt"))
+        except (TypeError, ValueError):
+            return CheckEvaluation(
+                state="failure",
+                jobs=(),
+                missingJobs=(),
+                missingSteps=(),
+                message=(
+                    f"workflow run reports non-numeric attempt {runPayload.get('attempt')!r}; "
+                    "cannot bind trusted validation to a run attempt"
+                ),
+            )
+        if attempt < 1:
+            return CheckEvaluation(
+                state="failure",
+                jobs=(),
+                missingJobs=(),
+                missingSteps=(),
+                message=(
+                    f"workflow run reports invalid attempt {attempt}; "
+                    "cannot bind trusted validation to a run attempt"
+                ),
+            )
     return None
 
 
-def selectRunForHead(runs: Sequence[dict[str, Any]], headSha: str) -> dict[str, Any] | None:
+def runsMatchingHead(runs: Sequence[dict[str, Any]], headSha: str) -> list[dict[str, Any]]:
+    return [run for run in runs if str(run.get("headSha") or "") == headSha]
+
+
+def distinctRunCount(runs: Sequence[dict[str, Any]]) -> int:
+    """Count distinct runs by databaseId (re-run attempts share one databaseId)."""
+    seen: list[Any] = []
     for run in runs:
-        if str(run.get("headSha") or "") == headSha:
-            return run
+        run_id = run.get("databaseId")
+        if run_id not in seen:
+            seen.append(run_id)
+    return len(seen)
+
+
+def selectRunForHead(runs: Sequence[dict[str, Any]], headSha: str) -> dict[str, Any] | None:
+    matches = runsMatchingHead(runs, headSha)
+    return matches[0] if matches else None
+
+
+def ambiguousRunIdentity(runs: Sequence[dict[str, Any]], headSha: str) -> CheckEvaluation | None:
+    """Fail-closed when more than one distinct run claims this PR head.
+
+    A single commit polled with ``--event pull_request`` for one workflow should
+    resolve to exactly one run (re-runs bump the attempt on the same databaseId).
+    Two or more distinct runs mean we cannot tell which one is authoritative, so
+    trusting an arbitrary pick would let an ambiguous/spoofed run vouch for the
+    head. Mirror the ambiguous-job handling and block instead.
+    """
+    matches = runsMatchingHead(runs, headSha)
+    if distinctRunCount(matches) > 1:
+        return CheckEvaluation(
+            state="failure",
+            jobs=(),
+            missingJobs=(),
+            missingSteps=(),
+            message=(
+                f"ambiguous workflow run identity: {distinctRunCount(matches)} distinct runs match "
+                f"PR head SHA {headSha}; refusing to trust an arbitrary run"
+            ),
+        )
     return None
 
 
@@ -472,7 +537,7 @@ def runGhRunList(headSha: str, workflow: str, repo: str | None) -> list[dict[str
 
 def runGhRunView(runId: object, repo: str | None) -> dict[str, Any]:
     command = ghCommandWithRepo(
-        ["gh", "run", "view", str(runId), "--json", "jobs,status,conclusion,url,headSha,workflowName,event"],
+        ["gh", "run", "view", str(runId), "--json", "jobs,status,conclusion,url,headSha,workflowName,event,attempt"],
         repo,
     )
     payload = runGhJson(command)
@@ -504,9 +569,11 @@ def printEvaluation(
     head = prPayload.get("headRefOid") or "unknown"
     pr_url = prPayload.get("url") or ""
     run_url = (runPayload or {}).get("url") or ""
+    run_attempt = (runPayload or {}).get("attempt")
     print(f"PR head {head} {pr_url}".rstrip())
     if run_url:
-        print(f"workflow run {run_url}")
+        attempt_suffix = f" (attempt {run_attempt})" if run_attempt else ""
+        print(f"workflow run {run_url}{attempt_suffix}")
     for job in evaluation.jobs:
         for line in formatJob(job, requiredSteps):
             print(line)
@@ -553,6 +620,10 @@ def pollChecks(
 
     while True:
         runs = runGhRunList(head_sha, workflow, repo)
+        run_ambiguity = ambiguousRunIdentity(runs, head_sha)
+        if run_ambiguity is not None:
+            printEvaluation(pr_payload, None, run_ambiguity, effective_steps)
+            return run_ambiguity
         run_summary = selectRunForHead(runs, head_sha)
         run_payload = runGhRunView(run_summary["databaseId"], repo) if run_summary else None
         if run_payload is not None:
