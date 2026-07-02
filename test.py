@@ -20912,16 +20912,35 @@ class McpServerTest(unittest.TestCase):
             self._mcp_handle_call(session, player_handle, "setCoords", [coords])
             self._mcp_advance_map(session, map_handle, 1)
 
+        def step_onto_until(name, reached, attempts=3):
+            # Roaming cave-spawned chasers can occupy the target tile: the arrival then
+            # resolves as a fight and the post-combat position policy bounces the player
+            # back without firing onEnter (RNG-dependent, observed on the Windows runner).
+            # Each visitable here is flag-guarded and idempotent, so retrying after the
+            # encounter cleared the tile is safe.
+            for _ in range(attempts):
+                step_onto(name)
+                if reached():
+                    return
+            self.fail(f"{name}: onEnter state not reached after {attempts} attempts")
+
+        def player_has_item(type_id):
+            return self._mcp_handle_call(session, player_handle, "countItems", [type_id]) > 0
+
+        def obelisks_read():
+            return self._mcp_handle_call(session, map_handle, "getNumericProperty", ["obelisks_read"])
+
         # Keymaster -> iron key -> gate opens; obelisks -> Citadel dig -> cursed crown + boss.
         step_onto("ninemarchesStart")
         self._mcp_handle_call(session, player_handle, "checkQuests")
-        step_onto("ironKeyCache")
-        step_onto("ironGateThreshold")
+        step_onto_until("ironKeyCache", lambda: player_has_item("ironKey"))
+        step_onto_until("ironGateThreshold", lambda: map_bool("iron_gate_open"))
         self.assertTrue(map_bool("iron_gate_open"))
         for obelisk in obelisks:
-            step_onto(obelisk)
-        self.assertEqual(6, self._mcp_handle_call(session, map_handle, "getNumericProperty", ["obelisks_read"]))
-        step_onto("digSite")
+            before = obelisks_read()
+            step_onto_until(obelisk, lambda: obelisks_read() > before)
+        self.assertEqual(6, obelisks_read())
+        step_onto_until("digSite", lambda: map_bool("crown_taken"))
         self._mcp_handle_call(session, player_handle, "checkQuests")
 
         self.assertTrue(map_bool("crown_taken"))
