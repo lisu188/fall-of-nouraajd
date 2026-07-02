@@ -1037,7 +1037,8 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CResourcesProvider, std::shared_ptr<CResourcesProvider>>(m, "CResourcesProvider",
                                                                         "Access to packaged resource files.")
-        .def("getInstance", &CResourcesProvider::getInstance, "Return singleton resource provider.")
+        .def("getInstance", &CResourcesProvider::getInstance,
+             "Return the process-wide resource provider (compatibility facade for code without a game instance).")
         .def("getPath", &CResourcesProvider::getPath, "Resolve a resource path relative to the active resource root.")
         .def("load", &CResourcesProvider::load, "Load a resource file as text.")
         .def("getFiles", &CResourcesProvider::getFiles, "List files under a resource path.");

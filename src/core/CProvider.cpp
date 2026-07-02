@@ -317,6 +317,8 @@ CConfigurationProvider::CConfigurationProvider(std::shared_ptr<CResourcesProvide
     }
 }
 
+// Compatibility-only: serves callers without a game context through a cache that lives for the
+// whole process. Game-attached code must use CGame::getConfigurationProvider() instead.
 std::shared_ptr<json> CConfigurationProvider::getConfig(const std::string &path) {
     static CConfigurationProvider instance;
     return instance.getConfiguration(path);
@@ -346,6 +348,8 @@ void CConfigurationProvider::loadConfig(const std::string &path) {
 
 std::list<std::string> CResourcesProvider::searchPath = buildResourceSearchPath();
 
+// Compatibility-only: process-wide provider shared by every caller without a game context,
+// including Python scripts and plugins. Game-attached code must use CGame::getResourcesProvider().
 std::shared_ptr<CResourcesProvider> CResourcesProvider::getInstance() {
     static std::shared_ptr<CResourcesProvider> instance = std::make_shared<CResourcesProvider>();
     return instance;
