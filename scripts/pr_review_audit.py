@@ -48,16 +48,27 @@ class CheckSummary:
     failed: tuple[str, ...] = ()
     pending: tuple[str, ...] = ()
     total: int = 0
+    ignoredStale: tuple[dict[str, Any], ...] = ()
+    ambiguous: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class CheckAttempt:
-    identity: tuple[str, str]
+    identity: tuple[str, str, str, str]
     name: str
     state: str
     timestamp: float | None
     attempt: int | None
+    runId: int | None
+    url: str
     index: int
+
+
+@dataclass(frozen=True)
+class CheckResolution:
+    effective: CheckAttempt
+    stale: tuple[CheckAttempt, ...]
+    ambiguous: bool
 
 
 def normalizeToken(value: Any) -> str:
@@ -143,10 +154,41 @@ def checkWorkflowName(check: dict[str, Any]) -> str:
     return str(workflow or "")
 
 
-def checkIdentity(check: dict[str, Any], fallback: str) -> tuple[str, str]:
+def checkKind(check: dict[str, Any]) -> str:
+    typename = normalizeToken(firstValue(check, "__typename", default=""))
+    if typename in {"statuscontext", "status_context", "status"}:
+        return "status"
+    if typename in {"checkrun", "check_run"}:
+        return "check_run"
+    if "context" in check and "name" not in check:
+        return "status"
+    return "check_run"
+
+
+def checkApp(check: dict[str, Any]) -> str:
+    app = firstValue(check, "app", "githubApp", "github_app", "appSlug", "app_slug", default=None)
+    if isinstance(app, dict):
+        app = firstValue(app, "slug", "name", "login", default="")
+    if not app:
+        creator = firstValue(check, "creator", default=None)
+        if isinstance(creator, dict):
+            app = firstValue(creator, "login", "name", default="")
+    return str(app or "")
+
+
+def checkIdentity(check: dict[str, Any], fallback: str) -> tuple[str, str, str, str]:
+    kind = checkKind(check)
+    app = normalizeToken(checkApp(check))
     workflow = normalizeToken(checkWorkflowName(check))
     name = normalizeToken(checkName(check, fallback))
-    return (workflow, name)
+    return (kind, app, workflow, name)
+
+
+def checkUrl(check: dict[str, Any]) -> str:
+    url = firstValue(
+        check, "detailsUrl", "details_url", "url", "htmlUrl", "html_url", "targetUrl", "target_url", default=""
+    )
+    return str(url or "")
 
 
 def parseTimestamp(value: Any) -> float | None:
@@ -217,23 +259,74 @@ def checkAttemptNumber(check: dict[str, Any]) -> int | None:
     return max(attempts) if attempts else None
 
 
-def currentCheckAttempt(attempts: Sequence[CheckAttempt]) -> CheckAttempt:
+def checkRunNumber(check: dict[str, Any]) -> int | None:
+    values = [
+        firstValue(check, "runId", "run_id", "workflowRunId", "workflow_run_id", default=None),
+        nestedValue(check, "checkSuite", "workflowRun", "databaseId"),
+        nestedValue(check, "check_suite", "workflow_run", "id"),
+        nestedValue(check, "workflowRun", "databaseId"),
+        nestedValue(check, "workflow_run", "id"),
+    ]
+    runs = [run for run in (parseAttempt(value) for value in values) if run is not None]
+    return max(runs) if runs else None
+
+
+def resolveCheckAttempts(attempts: Sequence[CheckAttempt]) -> CheckResolution:
     if not attempts:
         raise ValueError("check attempt group cannot be empty")
+    if len(attempts) == 1:
+        return CheckResolution(effective=attempts[0], stale=(), ambiguous=False)
+
+    effective: CheckAttempt | None = None
     if all(attempt.timestamp is not None for attempt in attempts):
-        return max(
+        effective = max(
             attempts,
             key=lambda attempt: (
                 attempt.timestamp,
                 attempt.attempt if attempt.attempt is not None else -1,
+                attempt.runId if attempt.runId is not None else -1,
                 attempt.index,
             ),
         )
-    if all(attempt.attempt is not None for attempt in attempts):
-        return max(attempts, key=lambda attempt: (attempt.attempt, attempt.index))
+    elif all(attempt.attempt is not None for attempt in attempts):
+        effective = max(
+            attempts,
+            key=lambda attempt: (attempt.attempt, attempt.runId if attempt.runId is not None else -1, attempt.index),
+        )
+    elif all(attempt.runId is not None for attempt in attempts):
+        effective = max(
+            attempts,
+            key=lambda attempt: (attempt.runId, attempt.attempt if attempt.attempt is not None else -1, attempt.index),
+        )
+    if effective is not None:
+        stale = tuple(attempt for attempt in attempts if attempt is not effective)
+        return CheckResolution(effective=effective, stale=stale, ambiguous=False)
 
+    # Ordering signals are insufficient. Resolve conservatively: never hide a
+    # failure behind an attempt we cannot prove is newer, and flag the group as
+    # ambiguous when the unordered attempts disagree about the state.
     stateRank = {"failure": 3, "pending": 2, "unknown": 1, "success": 0}
-    return max(attempts, key=lambda attempt: (stateRank[attempt.state], attempt.index))
+    effective = max(attempts, key=lambda attempt: (stateRank[attempt.state], attempt.index))
+    stale = tuple(attempt for attempt in attempts if attempt is not effective)
+    ambiguous = len({attempt.state for attempt in attempts}) > 1
+    return CheckResolution(effective=effective, stale=stale, ambiguous=ambiguous)
+
+
+def currentCheckAttempt(attempts: Sequence[CheckAttempt]) -> CheckAttempt:
+    return resolveCheckAttempts(attempts).effective
+
+
+def staleAttemptRecord(stale: CheckAttempt, effective: CheckAttempt) -> dict[str, Any]:
+    return {
+        "name": stale.name,
+        "state": stale.state,
+        "effectiveState": effective.state,
+        "attempt": stale.attempt,
+        "runId": stale.runId,
+        "timestamp": stale.timestamp,
+        "url": stale.url,
+        "position": stale.index,
+    }
 
 
 def stateFromCheck(check: dict[str, Any]) -> str:
@@ -309,7 +402,7 @@ def checkSummary(record: dict[str, Any]) -> CheckSummary:
     if isinstance(rawChecks, str) or not isinstance(rawChecks, Iterable):
         rawChecks = [rawChecks]
 
-    byIdentity: dict[tuple[str, str], list[CheckAttempt]] = {}
+    byIdentity: dict[tuple[str, str, str, str], list[CheckAttempt]] = {}
     unknown = False
     checks = list(rawChecks or ())
     for index, rawCheck in enumerate(checks, start=1):
@@ -322,13 +415,21 @@ def checkSummary(record: dict[str, Any]) -> CheckSummary:
             state=state,
             timestamp=checkTimestamp(check),
             attempt=checkAttemptNumber(check),
+            runId=checkRunNumber(check),
+            url=checkUrl(check),
             index=index,
         )
         byIdentity.setdefault(attempt.identity, []).append(attempt)
 
     failed: list[str] = []
     pending: list[str] = []
-    for attempt in (currentCheckAttempt(attempts) for attempts in byIdentity.values()):
+    ignored_stale: list[dict[str, Any]] = []
+    ambiguous: list[str] = []
+    for resolution in (resolveCheckAttempts(attempts) for attempts in byIdentity.values()):
+        attempt = resolution.effective
+        ignored_stale.extend(staleAttemptRecord(stale, attempt) for stale in resolution.stale)
+        if resolution.ambiguous:
+            ambiguous.append(attempt.name)
         if attempt.state == "failure":
             failed.append(attempt.name)
         elif attempt.state == "pending":
@@ -336,13 +437,29 @@ def checkSummary(record: dict[str, Any]) -> CheckSummary:
         elif attempt.state == "unknown":
             unknown = True
 
+    ignored_stale.sort(key=lambda record: record["position"])
+    stale_tuple = tuple(ignored_stale)
+    ambiguous_tuple = tuple(ambiguous)
     if failed:
-        return CheckSummary(state="failure", failed=tuple(failed), pending=tuple(pending), total=len(checks))
+        return CheckSummary(
+            state="failure",
+            failed=tuple(failed),
+            pending=tuple(pending),
+            total=len(checks),
+            ignoredStale=stale_tuple,
+            ambiguous=ambiguous_tuple,
+        )
     if pending:
-        return CheckSummary(state="pending", pending=tuple(pending), total=len(checks))
+        return CheckSummary(
+            state="pending",
+            pending=tuple(pending),
+            total=len(checks),
+            ignoredStale=stale_tuple,
+            ambiguous=ambiguous_tuple,
+        )
     if unknown or not checks:
-        return CheckSummary(state="unknown", total=len(checks))
-    return CheckSummary(state="success", total=len(checks))
+        return CheckSummary(state="unknown", total=len(checks), ignoredStale=stale_tuple, ambiguous=ambiguous_tuple)
+    return CheckSummary(state="success", total=len(checks), ignoredStale=stale_tuple, ambiguous=ambiguous_tuple)
 
 
 def mergeState(record: dict[str, Any]) -> str:
@@ -514,6 +631,8 @@ def actionFromSignals(
         blockers.append(f"merge state {merge.upper()} is unrecognized")
         buckets.append("human_review_required")
 
+    if checks.ambiguous:
+        blockers.append("ambiguous duplicate check attempt ordering: " + ", ".join(checks.ambiguous))
     if checks.state == "failure":
         blockers.append("required check failure: " + ", ".join(checks.failed))
         buckets.append("failing_ci")
@@ -628,6 +747,8 @@ def classifyPr(record: dict[str, Any]) -> dict[str, Any]:
         "checkState": checks.state,
         "failedChecks": list(checks.failed),
         "pendingChecks": list(checks.pending),
+        "ignoredStaleChecks": [dict(record) for record in checks.ignoredStale],
+        "ambiguousChecks": list(checks.ambiguous),
         "mergeState": mergeState(record) or "missing",
         "controllerOwned": isControllerOwned,
         "controllerDispatchAttention": dispatchAttention,
@@ -671,13 +792,24 @@ def auditPayload(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "controllerDispatchAttention": sum(1 for review in reviews if review["controllerDispatchAttention"]),
             "mergeAllowed": sum(1 for review in reviews if review["mergeAllowed"]),
             "cleanupAllowed": 0,
+            "ignoredStaleChecks": sum(len(review["ignoredStaleChecks"]) for review in reviews),
+            "ambiguousChecks": sum(len(review["ambiguousChecks"]) for review in reviews),
         },
         "pullRequests": reviews,
     }
 
 
+def staleColumn(review: dict[str, Any]) -> str:
+    notes = [
+        f"ignored stale {record['state']} attempt of {record['name']} (current: {record['effectiveState']})"
+        for record in review.get("ignoredStaleChecks", ())
+    ]
+    notes.extend(f"ambiguous attempt ordering for {name}" for name in review.get("ambiguousChecks", ()))
+    return "; ".join(notes) if notes else "-"
+
+
 def renderTable(payload: dict[str, Any]) -> str:
-    lines = ["PR\tACTION\tTYPE\tCHECKS\tMERGE\tATTENTION\tBLOCKERS"]
+    lines = ["PR\tACTION\tTYPE\tCHECKS\tMERGE\tATTENTION\tBLOCKERS\tSTALE"]
     for review in payload["pullRequests"]:
         number = review["number"]
         prNumber = f"#{number}" if number is not None else "-"
@@ -693,6 +825,7 @@ def renderTable(payload: dict[str, Any]) -> str:
                     review["mergeState"],
                     attention,
                     blockers,
+                    staleColumn(review),
                 ]
             )
         )
