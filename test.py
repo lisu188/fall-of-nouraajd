@@ -211,6 +211,8 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_multilevel_map_z_state_persists_after_save_load": 8.0,
     "GameTest.test_playthrough": 20.0,
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
+    "GameTest.test_campaign_driver_routes_full_campaign_with_carryover": 25.0,
+    "GameTest.test_campaign_state_survives_save_load": 15.0,
     "GameTest.test_map_walkthroughs": 20.0,
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
     "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
@@ -1327,7 +1329,10 @@ def game_test(f):
         success = result[0]
         log = result[1]
         (TEST_OUTPUT_DIR / f"{n}.json").write_text(str(log))
-        self.assertTrue(success)
+        # Include the log in the failure message: the per-test JSON is only uploaded
+        # as a CI artifact, so without this the shard log records a bare "False is
+        # not true" and hides the real assertion (e.g. a walkthrough traceback).
+        self.assertTrue(success, str(log))
 
     return wrapper
 
@@ -1609,7 +1614,7 @@ NOURAAJD_QUEST_REWARDS = {
     "rolfQuest": "Starts the Gooby hunt.",
     "mainQuest": "200 gold from relieved townsfolk.",
     "deliverLetterQuest": "Unlocks scribe-desk scroll crafting.",
-    "retrieveRelicQuest": "Unlocks stronger alchemy recipes.",
+    "retrieveRelicQuest": "Unlocks greater potion brewing at the alchemy table.",
     "cleanseCaveQuest": "Opens the road to the ritual chapel.",
     "octoBogzQuest": "1000 gold and the Shadow Blade.",
     "victorQuest": (
@@ -4767,7 +4772,7 @@ def walkthrough_sunderedmarch_map():
     assert find_runtime_object(game_map, "borderGate") is not None, "The border gate should still bar the pass."
     move_to_object("gateThreshold")
     assert game_map.getBoolProperty("gate_open"), "The iron key should open the border gate."
-    assert find_runtime_object(game_map, "borderGate") is None, "The border gate should be removed once opened."
+    assert game_map.getObjectByName("borderGate") is None, "The border gate should be removed once opened."
 
     # The obelisk hunt: reading all three unlocks the barrow dig (Heroes-3 obelisk/Grail).
     for obelisk in ("obeliskVale", "obeliskBarrow", "obeliskPyre"):
@@ -4821,7 +4826,7 @@ def walkthrough_ninemarches_map():
     assert find_runtime_object(game_map, "ironGate") is not None, "The iron gate should still bar the pass."
     move_to_object("ironGateThreshold")
     assert game_map.getBoolProperty("iron_gate_open"), "The iron key should open the gate."
-    assert find_runtime_object(game_map, "ironGate") is None, "The iron gate should be removed once opened."
+    assert game_map.getObjectByName("ironGate") is None, "The iron gate should be removed once opened."
     assert game_map.getNumericProperty("chapter") >= 2, "Opening the gate should advance the chapter."
 
     # Baldur's-Gate companion: quest -> recover the item -> recruit -> boon + reputation reactivity.
@@ -6967,6 +6972,130 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_change_map_reload_transition_does_not_retain_source_session(self):
+        # Legacy CGame.changeMap keeps its reload-compatible semantics: leaving a map does not
+        # retain a persistent session, and revisiting the map reloads it from content.
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        store = g.getContext().getMapSessionStore()
+        game_map.setBoolProperty("session_marker", True)
+        game_map.setNumericProperty("turn", 9)
+
+        g.changeMap("ritual")
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+        self.assertEqual(0, store.size())
+        self.assertEqual(9, g.getMap().getTurn())
+
+        g.changeMap("test")
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        reloaded_map = g.getMap()
+        self.assertFalse(reloaded_map == game_map)
+        self.assertFalse(reloaded_map.getBoolProperty("session_marker"))
+        self.assertEqual(0, store.size())
+        self.assertTrue(reloaded_map.getPlayer() == player)
+        self.assertEqual(9, reloaded_map.getTurn())
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": reloaded_map.mapName,
+                "marker_preserved": reloaded_map.getBoolProperty("session_marker"),
+                "session_count": store.size(),
+                "turn": reloaded_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_explicit_transition_request_round_trips_persistent_session(self):
+        # The opt-in CMapTransitionRequest API retains the source session, reuses it on return,
+        # honors explicit target coordinates, and can keep the persistent session's own turn.
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        store = g.getContext().getMapSessionStore()
+        origin = player.getCoords()
+        return_target = find_adjacent_walkable_tile(game_map, origin)
+        game_map.setBoolProperty("session_marker", True)
+        game_map.setNumericProperty("turn", 9)
+
+        retain_request = game.CMapTransitionRequest()
+        retain_request.targetMap = "ritual"
+        retain_request.retainSourceMap = True
+        retain_request.returnAnchor = "camp"
+        self.assertTrue(g.requestMapTransition(retain_request))
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        ritual_map = g.getMap()
+        self.assertEqual(9, ritual_map.getTurn())
+        self.assertTrue(store.contains("test", "camp"))
+        self.assertTrue(store.get("test", "camp") == game_map)
+        self.assertEqual(
+            (ritual_map.getEntryX(), ritual_map.getEntryY(), ritual_map.getEntryZ()),
+            coords_tuple(player.getCoords()),
+        )
+
+        ritual_map.setNumericProperty("turn", 21)
+        reuse_request = game.CMapTransitionRequest()
+        reuse_request.targetMap = "test"
+        reuse_request.reuseLoadedMap = True
+        reuse_request.returnAnchor = "camp"
+        reuse_request.targetCoords = return_target
+        reuse_request.carryTurn = False
+        self.assertTrue(g.requestMapTransition(reuse_request))
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        restored_map = g.getMap()
+        self.assertTrue(restored_map == game_map)
+        self.assertTrue(restored_map.getBoolProperty("session_marker"))
+        self.assertEqual(9, restored_map.getTurn())
+        self.assertTrue(restored_map.getPlayer() == player)
+        self.assertEqual(coords_tuple(return_target), coords_tuple(player.getCoords()))
+        self.assertEqual(1, count_player_objects(restored_map))
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": restored_map.mapName,
+                "marker_preserved": restored_map.getBoolProperty("session_marker"),
+                "player_coords": coords_tuple(player.getCoords()),
+                "session_count": store.size(),
+                "turn": restored_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_scene_manager_rejects_nested_transition_from_destination_entry(self):
         game = load_game_module()
 
@@ -7122,8 +7251,17 @@ class GameTest(unittest.TestCase):
             # Action identity = (typeId, name). Returned as a sorted list so a DOUBLED action would
             # change the list (e.g. ["Attack"] -> ["Attack", "Attack"]) and as a set so a re-keyed
             # duplicate is still caught. A duplicated action would make the two differ in length.
-            identities = [(action.getTypeId(), action.getName()) for action in creature.getActions()]
-            return sorted(identities)
+            #
+            # Captures BOTH backing sets: the concrete template's own `actions` property (raw,
+            # what serialization round-trips) and the composed effective set (race + class +
+            # level unlocks + own actions, what gameplay uses). The Warrior template composes its
+            # actions from WarriorClass since the archetype extraction, so its raw set can be
+            # empty while the effective set must not be; a reload that copied class-granted
+            # actions into the concrete template would change the raw list, and a reload that
+            # dropped or doubled an action would change either list.
+            raw = sorted((action.getTypeId(), action.getName()) for action in creature.getActions())
+            effective = sorted((action.getTypeId(), action.getName()) for action in creature.getEffectiveInteractions())
+            return {"raw": raw, "effective": effective}
 
         save_name = unique_save_name("reload_idempotence_legacy_creature")
         save_path = Path.cwd() / "save" / f"{save_name}.json"
@@ -7134,9 +7272,11 @@ class GameTest(unittest.TestCase):
 
             baseline_stats = capture_effective_stats(player)
             baseline_actions = capture_action_identities(player)
-            # Sanity: the legacy Warrior must actually expose stats and at least one action,
-            # otherwise the idempotence assertions below would be vacuous.
-            self.assertTrue(baseline_actions, "legacy Warrior should expose at least one action")
+            # Sanity: the Warrior must actually expose stats and at least one composed action
+            # (WarriorClass grants "Attack"), otherwise the idempotence assertions below would be
+            # vacuous. The raw set may legitimately be empty (class actions stay referenced on
+            # the archetype, never copied into the concrete template).
+            self.assertTrue(baseline_actions["effective"], "Warrior should expose at least one composed action")
             self.assertGreater(baseline_stats["strength"], 0)
 
             # Discrimination check: if a reload duplicated an action, the captured identity list
@@ -7144,7 +7284,7 @@ class GameTest(unittest.TestCase):
             # "Attack" action would turn ["Attack"] into ["Attack", "Attack"], and the assertEqual
             # on the full sorted list below would fail. Likewise a duplicated stat contribution
             # would inflate a numeric value and break the per-cycle assertEqual on baseline_stats.
-            baseline_action_count = len(baseline_actions)
+            baseline_action_count = len(baseline_actions["effective"])
 
             cycle_stats = [baseline_stats]
             cycle_actions = [baseline_actions]
@@ -7164,10 +7304,11 @@ class GameTest(unittest.TestCase):
 
                 # Idempotent: effective stats identical, no inflation/drift.
                 self.assertEqual(baseline_stats, reloaded_stats)
-                # Idempotent: action identities identical as a set and not duplicated (same count).
+                # Idempotent: raw and composed action identities identical, not duplicated
+                # (same count), and class-granted actions never copied into the raw set.
                 self.assertEqual(baseline_actions, reloaded_actions)
-                self.assertEqual(baseline_action_count, len(reloaded_actions))
-                self.assertEqual(set(baseline_actions), set(reloaded_actions))
+                self.assertEqual(baseline_action_count, len(reloaded_actions["effective"]))
+                self.assertEqual(set(baseline_actions["effective"]), set(reloaded_actions["effective"]))
 
                 cycle_stats.append(reloaded_stats)
                 cycle_actions.append(reloaded_actions)
@@ -7184,7 +7325,8 @@ class GameTest(unittest.TestCase):
             return True, json.dumps(
                 {
                     "actionCount": baseline_action_count,
-                    "actions": ["|".join(identity) for identity in baseline_actions],
+                    "actions": ["|".join(identity) for identity in baseline_actions["effective"]],
+                    "rawActions": ["|".join(identity) for identity in baseline_actions["raw"]],
                     "cycles": len(cycle_stats),
                     "mainStat": baseline_stats["mainStat"],
                     "stats": baseline_stats,
@@ -11631,9 +11773,80 @@ class GameTest(unittest.TestCase):
             game.CResourcesProvider = original_provider
             game.event_loop = original_event_loop
 
-        self.assertEqual([["LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
+        self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
         self.assertEqual([("No saved games are available.", True)], fake_game.gui_handler.messages)
         self.assertIsNone(FakeGameLoader.loaded_save)
+
+    def test_new_game_campaign_with_no_campaigns_reports_message(self):
+        game = load_game_module()
+
+        class FakeListString:
+            def __init__(self):
+                self.values = []
+
+            def addValue(self, value):
+                self.values.append(value)
+
+            def getValues(self):
+                return set(self.values)
+
+        class FakeGuiHandler:
+            def __init__(self):
+                self.messages = []
+                self.selections = []
+
+            def showSelection(self, list_string):
+                self.selections.append(sorted(list_string.getValues()))
+                return "CAMPAIGN"
+
+            def showInfo(self, message, centered):
+                self.messages.append((message, centered))
+
+        class FakeGame:
+            def __init__(self):
+                self.gui_handler = FakeGuiHandler()
+
+            def createObject(self, type_id):
+                if type_id != "CListString":
+                    raise AssertionError(f"unexpected fake object type: {type_id}")
+                return FakeListString()
+
+            def getGuiHandler(self):
+                return self.gui_handler
+
+        fake_game = FakeGame()
+
+        class FakeGameLoader:
+            @staticmethod
+            def loadGame():
+                return fake_game
+
+            @staticmethod
+            def loadGui(g):
+                pass
+
+        started = []
+        fake_campaign = types.SimpleNamespace(
+            list_campaigns=lambda: [],
+            start=lambda *args: started.append(args),
+        )
+
+        original_loader = game.CGameLoader
+        original_campaign = game.campaign
+        original_event_loop = game.event_loop
+        try:
+            game.CGameLoader = FakeGameLoader
+            game.campaign = fake_campaign
+            game.event_loop = types.SimpleNamespace(instance=lambda: None)
+            game.new()
+        finally:
+            game.CGameLoader = original_loader
+            game.campaign = original_campaign
+            game.event_loop = original_event_loop
+
+        self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
+        self.assertEqual([("No campaigns are available.", True)], fake_game.gui_handler.messages)
+        self.assertEqual([], started)
 
     @game_test
     def test_blocking_modal_gui_helpers_drive_panels(self):
@@ -11735,7 +11948,11 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
-    def test_inventory_right_click_inspects_scroll_without_opening_it(self):
+    def test_inventory_right_click_uses_scroll_and_keeps_it(self):
+        # [EPIC_03][STORY_01][SUBSTORY_04] #628: right-click delegates to CCreature::useItem,
+        # so right-clicking a scroll reads it (opens the blocking CGameTextPanel with its text)
+        # and the non-disposable scroll stays in the inventory. The panel is dismissed with a
+        # queued space key, the same pattern test_blocking_modal_gui_helpers_drive_panels uses.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
         game.CGameLoader.loadGui(g)
@@ -11769,10 +11986,20 @@ class GameTest(unittest.TestCase):
                 break
 
         self.assertIsNotNone(target_graphic)
+
+        captured = {}
+
+        def capture_text_panel():
+            # Runs on the event loop while mouseEvent blocks in awaitClosing, so it
+            # observes the text panel the scroll's onUse opened before space closes it.
+            captured["text_panel_open"] = gui_contains_class(g, "CGameTextPanel")
+
+        queue_sdl_inputs(game, capture_text_panel, push_space_key)
         target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
         pump_event_loop(2)
-        self.assertTrue(gui_contains_class(g, "CTooltip"))
+        self.assertTrue(captured.get("text_panel_open"), "right-click should read the scroll")
         self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
+        self.assertEqual(1, player.countItems("letterFromRolf"))
 
         return True, json.dumps({"rolf_letters": player.countItems("letterFromRolf")}, sort_keys=True)
 
@@ -12869,8 +13096,9 @@ class GameTest(unittest.TestCase):
             "ambient_overlay_preserved": len(ambient_config_names) == 33 and "ambientGateTriageNotice" in config,
             "rolf_old_route_text": "search the cave outside town" in text
             and "the cave entrance lies beyond nouraajd's roads" in text,
+            # Swamp-consistent lair wording since #1248 ("half-sunk under boulders and silt").
             "octobogz_old_route_text": "eastern road beyond the river" in text
-            and "half-buried under boulders and sand" in text,
+            and "half-sunk under boulders and silt" in text,
             "catacombs_old_text": "descend into the catacombs" in text
             and "the catacombs hide the relic beren needs" in text,
             "victor_timer_start_visible": (
@@ -13461,7 +13689,9 @@ class GameTest(unittest.TestCase):
         self.assertEqual(general_refs.count("DaggerOfVileHeart"), 1)
         self.assertNotIn("LifePotion", general_refs)
         self.assertNotIn("ManaPotion", general_refs)
-        self.assertEqual(victor_refs, ["LesserLifePotion", "LifePotion", "LesserManaPotion", "ManaPotion"])
+        # Victor's reward market stocks only the stronger tier; the lesser potions stay at
+        # the general market (de-duped intentionally in #1247, docs/nouraajd-economy.md).
+        self.assertEqual(victor_refs, ["LifePotion", "ManaPotion"])
         self.assertEqual(tavern_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
 
         market = g.createObject("exampleMarket")
@@ -13713,8 +13943,10 @@ class GameTest(unittest.TestCase):
             self.assertIn("victorRewardDialog", captured["dialogs"])
             self.assertIn("victorMarket", captured["trades"])
             config = json.loads((REPO_ROOT / "res/maps/nouraajd/config.json").read_text())
+            # Victor's reward market stocks only the stronger potions; the lesser tier stays at
+            # the general market (de-duped intentionally in #1247, docs/nouraajd-economy.md).
             self.assertEqual(
-                ["LesserLifePotion", "LifePotion", "LesserManaPotion", "ManaPotion"],
+                ["LifePotion", "ManaPotion"],
                 [item["ref"] for item in config["victorMarket"]["properties"]["items"]],
             )
             self.assertTrue(town_hall.victor_good_end())
@@ -15940,6 +16172,132 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_campaign_driver_routes_full_campaign_with_carryover(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        store = campaign_module.start(g, "fallOfNouraajd", DEFAULT_PLAYER)
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        scene_manager = g.getSceneManager()
+
+        self.assertEqual("nouraajd", game_map.mapName)
+        self.assertTrue(campaign_module.active(g))
+        self.assertEqual("fallOfNouraajd", store.campaign_id())
+        self.assertEqual("recovery", store.scenario())
+
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+        town_hall.give_letter()
+        beren.deliver_letter()
+        game_map.removeObjectByName("catacombs")
+        beren.return_relic()
+        game_map.removeObjectByName("cave2")
+        chapel = game_map.getObjectByName("nouraajdChapel")
+        chapel_coords = chapel.getCoords()
+        player.moveTo(chapel_coords.x, chapel_coords.y, chapel_coords.z)
+        beren.finish_cleanse()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("cleansing", store.scenario())
+        self.assertEqual([("recovery", "completed")], store.history())
+
+        ritual_map = g.getMap()
+        ritual_map.setBoolProperty("anchors_destroyed", True)
+        ritual_map.setBoolProperty("leader_defeated", True)
+        captive_marker = ritual_map.getObjectByName("ritualCaptive")
+        captive_coords = captive_marker.getCoords()
+        player.moveTo(captive_coords.x, captive_coords.y, captive_coords.z)
+        captured = g.createObject("capturedSoulDialog")
+        captured.free_captive()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        siege_map = g.getMap()
+        self.assertEqual("siege", siege_map.mapName)
+        self.assertTrue(siege_map.getPlayer() == player)
+        self.assertEqual("siege", store.scenario())
+        self.assertEqual([("recovery", "completed"), ("cleansing", "good_ending")], store.history())
+        self.assertTrue(store.active())
+        self.assertIn("defendSiegeQuest", quest_names(player))
+
+        gold_before = player.getGold()
+        for name in ("spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"):
+            siege_map.getObjectByName(name).setBoolProperty("destroyed", True)
+        player.checkQuests()
+
+        self.assertTrue(siege_map.getBoolProperty("campaign_completed"))
+        self.assertEqual(gold_before + 500, player.getGold())
+        self.assertTrue(store.finished())
+        self.assertFalse(store.active())
+        self.assertEqual(
+            [("recovery", "completed"), ("cleansing", "good_ending"), ("siege", "completed")],
+            store.history(),
+        )
+
+        return True, json.dumps(
+            {
+                "campaign": store.campaign_id(),
+                "history": store.history(),
+                "final_map": siege_map.mapName,
+                "finished": store.finished(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_campaign_state_survives_save_load(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        store = campaign_module.start(g, "fallOfNouraajd", DEFAULT_PLAYER)
+        store.set_var("spared_cultist", "yes")
+        self.assertEqual("nouraajd", g.getMap().mapName)
+
+        save_name = unique_save_name("campaign-state")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        backup_path = Path.cwd() / "save" / f"{save_name}.json.bak"
+        try:
+            game.CMapLoader.save(g.getMap(), save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_player = loaded_game.getMap().getPlayer()
+            loaded_store = campaign_module.CampaignStateStore(loaded_player)
+
+            # Campaign position and variables are player dynamic properties, so
+            # they must round-trip through the ordinary single-map save format.
+            self.assertTrue(campaign_module.active(loaded_game))
+            self.assertEqual("fallOfNouraajd", loaded_store.campaign_id())
+            self.assertEqual("recovery", loaded_store.scenario())
+            self.assertFalse(loaded_store.finished())
+            self.assertEqual("yes", loaded_store.get_var("spared_cultist", default="no"))
+
+            # Manifest routing keeps working on the loaded game: reporting the
+            # scenario outcome advances the campaign and requests the next map.
+            self.assertEqual("cleansing", campaign_module.complete_scenario(loaded_game, "completed"))
+            self.assertEqual("cleansing", loaded_store.scenario())
+            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("TransitionPending", loaded_game.getSceneManager().getTransitionStateName())
+            self.assertEqual("ritual", loaded_game.getSceneManager().getPendingMapName())
+        finally:
+            for path in (save_path, backup_path):
+                if path.exists():
+                    path.unlink()
+
+        return True, json.dumps(
+            {
+                "save": save_name,
+                "campaign": "fallOfNouraajd",
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
         game = load_game_module()
 
@@ -16700,7 +17058,12 @@ class GameTest(unittest.TestCase):
                 seen_unlocks = []
                 for level in range(1, 7):
                     needed = exp_for_level(level) - creature.getNumericProperty("exp")
-                    self.assertGreater(needed, 0, f"{template}: exp step to level {level}")
+                    if level == 1:
+                        # Level 1 unlocks at 0 exp (getExpForLevel(1) == 0); addExp(0) performs
+                        # the normalizing 0 -> 1 level-up, same as CMap's addExp(0) on load.
+                        self.assertEqual(0, needed, f"{template}: exp step to level {level}")
+                    else:
+                        self.assertGreater(needed, 0, f"{template}: exp step to level {level}")
                     creature.addExp(needed)
                     self.assertEqual(level, creature.getLevel(), f"{template}: reached level {level}")
 
@@ -16751,6 +17114,357 @@ class GameTest(unittest.TestCase):
                 }
 
         return True, json.dumps(summary, sort_keys=True)
+
+    @game_test
+    def test_every_class_race_combination_starts_and_retains_identity(self):
+        # Acceptance: every approved class x race combination must start successfully and
+        # retain its expected identities. The approved lists are the runtime-selectable ones
+        # exposed by the merged menu helpers (player_class_options -> {label: playerType},
+        # player_race_options -> {label: raceId}), so this stays in sync with the config and
+        # never hard-codes an ad-hoc list. For each combination we start a fresh game with the
+        # chosen class + race (the four-argument startGameWithPlayer override applies the race),
+        # then assert the constructed player is a live, valid CPlayer whose class identity
+        # (getPlayerClassId) and race identity (getRaceId) match what was selected.
+        game = load_game_module()
+
+        options_game = game.CGameLoader.loadGame()
+        class_options = game.player_class_options(options_game)
+        race_options = game.player_race_options(options_game)
+        class_types = sorted(class_options.values())
+        race_ids = sorted(race_options.values())
+        self.assertGreater(len(class_types), 0, "no player-selectable classes")
+        self.assertGreater(len(race_ids), 0, "no player-selectable races")
+
+        results = {}
+        for player_type in class_types:
+            for race_id in race_ids:
+                combination = f"{player_type}+{race_id}"
+                g = game.CGameLoader.loadGame()
+                game.CGameLoader.startGameWithPlayer(g, "test", player_type, race_id)
+                game_map = g.getMap()
+                self.assertIsNotNone(game_map, combination)
+                player = game_map.getPlayer()
+
+                # Started successfully: the player exists, is a real controllable CPlayer, and is alive.
+                self.assertIsNotNone(player, combination)
+                self.assertIsNotNone(get_player_controller(player), combination)
+                self.assertTrue(player.isAlive(), combination)
+
+                # Retains its expected identities: the selected class id and race id round-trip.
+                self.assertEqual(player_type, player.getPlayerClassId(), combination)
+                self.assertEqual(race_id, player.getRaceId(), combination)
+
+                results[combination] = {
+                    "playerClassId": player.getPlayerClassId(),
+                    "raceId": player.getRaceId(),
+                    "alive": player.isAlive(),
+                }
+
+        # Full coverage of the approved matrix, with a distinct entry per combination.
+        self.assertEqual(len(class_types) * len(race_ids), len(results))
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_one_time_reward_paths_grant_exactly_once_and_clean_up_actors(self):
+        # [EPIC_07][STORY_02][SUBSTORY_04] Data-driven regression over every one-time
+        # (claim_once-guarded) reward path in res/maps/nouraajd/script.py and
+        # res/maps/siege/script.py. For each path: the FIRST completion must grant exactly
+        # the documented gold/item/unlock and set the claim flag; a repeated completion must
+        # grant nothing extra; and the associated runtime actors must be gone afterwards
+        # (cleaned up via the remove_runtime_actors helper where the script uses it).
+        # Adding a future one-time reward path should only require appending one descriptor.
+        game = load_game_module()
+        original_show_message = game.CGuiHandler.showMessage
+        original_show_dialog = game.CGuiHandler.showDialog
+        original_show_trade = game.CGuiHandler.showTrade
+        original_heal_proc = game.CPlayer.healProc
+        gui_log = {"dialogs": [], "trades": []}
+        heal_amounts = []
+
+        try:
+            game.CGuiHandler.showMessage = lambda self, message: None
+            game.CGuiHandler.showDialog = lambda self, dialog: gui_log["dialogs"].append(dialog.getTypeId())
+            game.CGuiHandler.showTrade = lambda self, market: gui_log["trades"].append(market.getTypeId())
+
+            def capture_heal(player_self, amount):
+                heal_amounts.append(amount)
+                return original_heal_proc(player_self, amount)
+
+            game.CPlayer.healProc = capture_heal
+
+            # --- nouraajd MainQuest (Gooby): 200 gold (MAIN_QUEST_GOLD_REWARD). ---
+            def gooby_setup(ctx):
+                ctx["map"].removeObjectByName("cave1")
+                self.assertEqual("awaiting_gooby", ctx["map"].getStringProperty("quest_state_main"))
+
+            def gooby_complete(ctx):
+                gooby = find_runtime_object(ctx["map"], "gooby1")
+                ctx["map"].removeObjectByName(gooby.getName())
+                ctx["player"].checkQuests()
+
+            def gooby_repeat(ctx):
+                find_player_quest(ctx["player"], "mainQuest").onComplete()
+
+            def gooby_first_checks(ctx):
+                self.assertEqual("gooby_slain", ctx["map"].getStringProperty("quest_state_main"))
+                assert_player_quest_state(self, ctx["player"], "mainQuest", completed=True)
+
+            # --- nouraajd OctoBogzQuest: 1000 gold and exactly one ShadowBlade. ---
+            def octobogz_setup(ctx):
+                ctx["travelers"] = ctx["g"].createObject("dialog")
+                ctx["travelers"].accept_quest()
+                self.assertEqual("active", ctx["map"].getStringProperty("quest_state_octobogz_contract"))
+
+            def octobogz_complete(ctx):
+                ctx["map"].removeObjectByName("cave2")
+                ctx["player"].checkQuests()
+
+            def octobogz_repeat(ctx):
+                find_player_quest(ctx["player"], "octoBogzQuest").onComplete()
+                # Re-accepting the contract after completion must not re-pay either.
+                ctx["travelers"].accept_quest()
+
+            def octobogz_first_checks(ctx):
+                self.assertEqual("completed", ctx["map"].getStringProperty("quest_state_octobogz_contract"))
+                assert_player_quest_state(self, ctx["player"], "octoBogzQuest", completed=True)
+
+            # --- nouraajd Victor courtyard rescue: 500 gold, healProc(100), one-time
+            # victorRewardDialog + victorMarket; cultLeaderQuest and victorCultist* actors
+            # are removed via remove_runtime_actors (_clear_victor_encounter). ---
+            def victor_setup(ctx):
+                ctx["g"].createObject("tavernDialog2").talked_to_victor()
+                ctx["town_hall"] = ctx["g"].createObject("townHallDialog")
+                ctx["town_hall"].spawn_cultists()
+                self.assertEqual("encounter_active", ctx["map"].getStringProperty("quest_state_victor"))
+                self.assertIsNotNone(ctx["map"].getObjectByName("cultLeaderQuest"))
+
+            def victor_complete(ctx):
+                ctx["map"].removeObjectByName("cultLeaderQuest")
+
+            def victor_repeat(ctx):
+                # Neither re-asking for the encounter nor a stray duplicate leader kill
+                # may re-pay the reward once the good end is recorded.
+                ctx["town_hall"].spawn_cultists()
+                duplicate = ctx["g"].createObject("CultLeader")
+                duplicate.setStringProperty("name", "cultLeaderQuest")
+                ctx["map"].addObject(duplicate)
+                ctx["map"].removeObjectByName("cultLeaderQuest")
+
+            def victor_first_checks(ctx):
+                self.assertEqual("good_end", ctx["map"].getStringProperty("quest_state_victor"))
+                self.assertTrue(ctx["map"].getBoolProperty("VICTOR_GOOD_END"))
+                self.assertEqual([100], heal_amounts)
+                self.assertEqual(1, gui_log["dialogs"].count("victorRewardDialog"))
+                self.assertEqual(1, gui_log["trades"].count("victorMarket"))
+                self.assertEqual(-1, ctx["map"].getNumericProperty("VICTOR_COURTYARD_TURN"))
+                self.assertFalse(
+                    any(
+                        obj.getName() and obj.getName().startswith("victorCultist")
+                        for obj in ctx["map"].getObjects()
+                    ),
+                    "victor: all victorCultist* runtime actors must be cleaned up with the reward.",
+                )
+
+            def victor_repeat_checks(ctx):
+                self.assertEqual([100], heal_amounts)
+                self.assertEqual(1, gui_log["dialogs"].count("victorRewardDialog"))
+                self.assertEqual(1, gui_log["trades"].count("victorMarket"))
+
+            # --- nouraajd Amulet return: 50 gold, consumes the amulet; amuletGoblin and
+            # oldWoman are removed via remove_runtime_actors. ---
+            def amulet_setup(ctx):
+                ctx["return_dialog"] = ctx["g"].createObject("questReturnDialog")
+                ctx["g"].createObject("questDialog").start_amulet_quest()
+                self.assertEqual("active", ctx["map"].getStringProperty("quest_state_amulet"))
+                self.assertIsNotNone(ctx["map"].getObjectByName("amuletGoblin"))
+                self.assertIsNotNone(ctx["map"].getObjectByName("oldWoman"))
+                ctx["player"].addItem("preciousAmulet")
+
+            def amulet_complete(ctx):
+                ctx["return_dialog"].complete_amulet_quest()
+
+            def amulet_repeat(ctx):
+                ctx["player"].addItem("preciousAmulet")
+                ctx["return_dialog"].complete_amulet_quest()
+
+            def amulet_first_checks(ctx):
+                self.assertEqual("returned", ctx["map"].getStringProperty("quest_state_amulet"))
+                self.assertFalse(ctx["player"].hasItem(lambda it: it.getName() == "preciousAmulet"))
+
+            def amulet_repeat_checks(ctx):
+                # The rejected re-run must not consume the second amulet either.
+                self.assertTrue(ctx["player"].hasItem(lambda it: it.getName() == "preciousAmulet"))
+
+            # --- siege DefendSiegeQuest: 500 gold plus the campaign_completed unlock. ---
+            def siege_setup(ctx):
+                if "defendSiegeQuest" not in quest_names(ctx["player"]):
+                    ctx["player"].addQuest("defendSiegeQuest")
+                for name in ("spawnPoint1", "spawnPoint2", "spawnPoint3"):
+                    find_runtime_object(ctx["map"], name).setBoolProperty("destroyed", True)
+                self.assertFalse(ctx["map"].getBoolProperty("campaign_completed"))
+
+            def siege_complete(ctx):
+                find_runtime_object(ctx["map"], "spawnPoint4").setBoolProperty("destroyed", True)
+                ctx["player"].checkQuests()
+
+            def siege_repeat(ctx):
+                find_player_quest(ctx["player"], "defendSiegeQuest").onComplete()
+
+            def siege_first_checks(ctx):
+                self.assertTrue(ctx["map"].getBoolProperty("campaign_completed"))
+                assert_player_quest_state(self, ctx["player"], "defendSiegeQuest", completed=True)
+
+            def siege_repeat_checks(ctx):
+                self.assertTrue(ctx["map"].getBoolProperty("campaign_completed"))
+
+            reward_paths = [
+                {
+                    "name": "nouraajd_main_quest_gooby",
+                    "map": "nouraajd",
+                    "gold": 200,
+                    "items": {},
+                    "claim_flags": ("GOOBY_REWARD_CLAIMED",),
+                    "absent_actors": ("gooby1",),
+                    "setup": gooby_setup,
+                    "complete": gooby_complete,
+                    "repeat": gooby_repeat,
+                    "first_checks": gooby_first_checks,
+                },
+                {
+                    "name": "nouraajd_octobogz_contract",
+                    "map": "nouraajd",
+                    "gold": 1000,
+                    "items": {"ShadowBlade": 1},
+                    "claim_flags": ("OCTOBOGZ_REWARD_CLAIMED",),
+                    "absent_actors": (),
+                    "setup": octobogz_setup,
+                    "complete": octobogz_complete,
+                    "repeat": octobogz_repeat,
+                    "first_checks": octobogz_first_checks,
+                },
+                {
+                    "name": "nouraajd_victor_courtyard",
+                    "map": "nouraajd",
+                    "gold": 500,
+                    "items": {},
+                    "claim_flags": ("VICTOR_REWARD_GRANTED", "VICTOR_REWARD_CLAIMED"),
+                    "absent_actors": ("cultLeaderQuest",),
+                    "setup": victor_setup,
+                    "complete": victor_complete,
+                    "repeat": victor_repeat,
+                    "first_checks": victor_first_checks,
+                    "repeat_checks": victor_repeat_checks,
+                },
+                {
+                    "name": "nouraajd_amulet_return",
+                    "map": "nouraajd",
+                    "gold": 50,
+                    "items": {},
+                    "claim_flags": ("AMULET_REWARD_CLAIMED", "AMULET_RETURNED"),
+                    "absent_actors": ("amuletGoblin", "oldWoman"),
+                    "setup": amulet_setup,
+                    "complete": amulet_complete,
+                    "repeat": amulet_repeat,
+                    "first_checks": amulet_first_checks,
+                    "repeat_checks": amulet_repeat_checks,
+                },
+                {
+                    "name": "siege_defend_quest",
+                    "map": "siege",
+                    "gold": 500,
+                    "items": {},
+                    "claim_flags": ("siege_reward_claimed",),
+                    "absent_actors": (),
+                    "setup": siege_setup,
+                    "complete": siege_complete,
+                    "repeat": siege_repeat,
+                    "first_checks": siege_first_checks,
+                    "repeat_checks": siege_repeat_checks,
+                },
+            ]
+
+            results = {}
+            for path in reward_paths:
+                g, game_map, player = load_game_map_with_player(path["map"])
+                ctx = {"g": g, "map": game_map, "player": player}
+                path["setup"](ctx)
+
+                for flag in path["claim_flags"]:
+                    self.assertFalse(
+                        game_map.getBoolProperty(flag),
+                        f"{path['name']}: claim flag {flag} must start unset.",
+                    )
+
+                start_gold = player.getGold()
+                start_items = {item: player.countItems(item) for item in path["items"]}
+
+                path["complete"](ctx)
+
+                self.assertEqual(
+                    path["gold"],
+                    player.getGold() - start_gold,
+                    f"{path['name']}: first completion must grant exactly {path['gold']} gold.",
+                )
+                for item, delta in path["items"].items():
+                    self.assertEqual(
+                        delta,
+                        player.countItems(item) - start_items[item],
+                        f"{path['name']}: first completion must grant exactly {delta} x {item}.",
+                    )
+                for flag in path["claim_flags"]:
+                    self.assertTrue(
+                        game_map.getBoolProperty(flag),
+                        f"{path['name']}: claim flag {flag} must be set by the first completion.",
+                    )
+                for actor in path["absent_actors"]:
+                    self.assertIsNone(
+                        game_map.getObjectByName(actor),
+                        f"{path['name']}: runtime actor {actor} must be cleaned up with the reward.",
+                    )
+                if "first_checks" in path:
+                    path["first_checks"](ctx)
+
+                path["repeat"](ctx)
+
+                self.assertEqual(
+                    path["gold"],
+                    player.getGold() - start_gold,
+                    f"{path['name']}: repeated completion must not grant extra gold.",
+                )
+                for item, delta in path["items"].items():
+                    self.assertEqual(
+                        delta,
+                        player.countItems(item) - start_items[item],
+                        f"{path['name']}: repeated completion must not grant extra {item}.",
+                    )
+                for flag in path["claim_flags"]:
+                    self.assertTrue(
+                        game_map.getBoolProperty(flag),
+                        f"{path['name']}: claim flag {flag} must stay set after a repeat.",
+                    )
+                for actor in path["absent_actors"]:
+                    self.assertIsNone(
+                        game_map.getObjectByName(actor),
+                        f"{path['name']}: runtime actor {actor} must stay removed after a repeat.",
+                    )
+                if "repeat_checks" in path:
+                    path["repeat_checks"](ctx)
+
+                results[path["name"]] = {
+                    "gold_delta": player.getGold() - start_gold,
+                    "item_deltas": {item: player.countItems(item) - start_items[item] for item in path["items"]},
+                    "claim_flags": {flag: game_map.getBoolProperty(flag) for flag in path["claim_flags"]},
+                    "absent_actors": {
+                        actor: game_map.getObjectByName(actor) is None for actor in path["absent_actors"]
+                    },
+                }
+
+            return True, json.dumps(results, sort_keys=True)
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+            game.CGuiHandler.showDialog = original_show_dialog
+            game.CGuiHandler.showTrade = original_show_trade
+            game.CPlayer.healProc = original_heal_proc
 
 
 class ConsoleEventIsolationTest(unittest.TestCase):
@@ -18307,11 +19021,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             pump_event_loop(5)
             selected_after_equip = get_panel_selection_box_counts_by_collection(inventory)
             self.assertEqual(0, selected_after_equip.get("inventoryCollection", 0))
+            # Right-click uses the item since #628; target the Sword (use is a no-op) so
+            # the gesture only resets selection state. Right-clicking a scroll here would
+            # open the blocking CGameTextPanel and stall the xvfb child.
             click_first_list_object(
                 self,
                 inventory_list,
                 g.getGui(),
-                lambda item: not item.hasTag(game.CTag.QUEST),
+                lambda item: item.getTypeId() == "Sword",
                 button=SDL_BUTTON_RIGHT,
             )
             pump_event_loop(5)
@@ -19470,9 +20187,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"{test_name} should be parallelizable, not forced onto the serial shard",
             )
         # The genuinely order-sensitive save-directory tests must stay serial.
-        self.assertTrue(
-            is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty")
-        )
+        self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
 
     def test_shard_balancer_spreads_huge_map_walkthroughs(self):
         # With enough jobs the weight-aware packer must isolate the heavy maps onto
@@ -19484,8 +20199,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
         }
         stdio_walkthroughs = [
-            f"McpServerTest.test_stdio_map_walkthrough_{map_name}"
-            for map_name in McpServerTest.MCP_WALKTHROUGHS
+            f"McpServerTest.test_stdio_map_walkthrough_{map_name}" for map_name in McpServerTest.MCP_WALKTHROUGHS
         ]
         groups = shard_test_names(stdio_walkthroughs, jobs=4, timings=DEFAULT_TEST_DURATIONS)
         for group in groups:
@@ -20576,8 +21290,12 @@ class McpServerTest(unittest.TestCase):
         )
 
     def _mcp_advance_map(self, session, map_handle, turns):
+        # Huge authored maps (ninemarches is 1000x1000) legitimately spend more than the
+        # quick-protocol budget inside a single move (turn events plus chaser navigation
+        # across the world map), so map turns share the wide map-JSON timeout instead of
+        # the 10s tool default.
         for _ in range(turns):
-            self._mcp_handle_call(session, map_handle, "move")
+            self._mcp_handle_call(session, map_handle, "move", timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
         return self._mcp_handle_call(session, map_handle, "getTurn")
 
     def _mcp_pump_event_loop(self, session):
@@ -20806,31 +21524,72 @@ class McpServerTest(unittest.TestCase):
         for name in ("ninemarchesStart", "ironKeyCache", "ironGateThreshold", "digSite") + obelisks:
             find_map_object_definition("ninemarches", name)
 
+        # The walkthrough validates quest logic, not combat difficulty. Roaming
+        # cave-spawned chasers can camp a visitable tile: the arrival then resolves as a
+        # fight, the post-combat position policy bounces the player back without firing
+        # onEnter, and a level-one Warrior can even LOSE that fight (the respawn trigger
+        # drops it at the entry with 1 hp, making every later attempt lose too). Clear
+        # wandering creatures off the target tile before stepping and keep the player
+        # healed, using only MCP-allowlisted methods (getObjectsAtCoords / getName /
+        # removeObjectByName / healProc).
+        player_name = self._mcp_handle_call(session, player_handle, "getName")
+
         def map_bool(name):
             return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
 
+        def clear_wanderers(coords, keep_name):
+            for occupant in self._mcp_handle_call(session, map_handle, "getObjectsAtCoords", [coords]):
+                occ_name = self._mcp_handle_call(session, occupant, "getName")
+                if occ_name and occ_name not in (keep_name, player_name):
+                    self._mcp_handle_call(session, map_handle, "removeObjectByName", [occ_name])
+
         def step_onto(name):
+            self._mcp_handle_call(session, player_handle, "healProc", [100])
             obj = self._mcp_get_object_by_name(session, map_handle, name)
             coords = self._mcp_handle_call(session, obj, "getCoords")
+            clear_wanderers(coords, name)
             self._mcp_handle_call(session, player_handle, "setCoords", [coords])
             self._mcp_advance_map(session, map_handle, 1)
+
+        def step_onto_until(name, reached, attempts=5):
+            # Roaming cave-spawned chasers can occupy the target tile: the arrival then
+            # resolves as a fight and the post-combat position policy bounces the player
+            # back without firing onEnter (RNG-dependent, observed on the Windows runner).
+            # Each visitable here is flag-guarded and idempotent, so retrying after the
+            # encounter cleared the tile is safe.
+            for _ in range(attempts):
+                step_onto(name)
+                if reached():
+                    return
+            self.fail(f"{name}: onEnter state not reached after {attempts} attempts")
+
+        def player_has_item(type_id):
+            return self._mcp_handle_call(session, player_handle, "countItems", [type_id]) > 0
+
+        def obelisks_read():
+            return self._mcp_handle_call(session, map_handle, "getNumericProperty", ["obelisks_read"])
 
         # Keymaster -> iron key -> gate opens; obelisks -> Citadel dig -> cursed crown + boss.
         step_onto("ninemarchesStart")
         self._mcp_handle_call(session, player_handle, "checkQuests")
-        step_onto("ironKeyCache")
-        step_onto("ironGateThreshold")
+        step_onto_until("ironKeyCache", lambda: player_has_item("ironKey"))
+        step_onto_until("ironGateThreshold", lambda: map_bool("iron_gate_open"))
         self.assertTrue(map_bool("iron_gate_open"))
         for obelisk in obelisks:
-            step_onto(obelisk)
-        self.assertEqual(6, self._mcp_handle_call(session, map_handle, "getNumericProperty", ["obelisks_read"]))
-        step_onto("digSite")
+            before = obelisks_read()
+            step_onto_until(obelisk, lambda: obelisks_read() > before)
+        self.assertEqual(6, obelisks_read())
+        step_onto_until("digSite", lambda: map_bool("crown_taken"))
         self._mcp_handle_call(session, player_handle, "checkQuests")
 
         self.assertTrue(map_bool("crown_taken"))
         self.assertTrue(map_bool("boss_woken"))
-        map_data = self._mcp_serialized_map(session, map_handle)
-        player_data = self._serialized_player(map_data)
+        # Serialize only the player: a full-map jsonify of the 1000x1000 ninemarches map
+        # can exceed even the wide map-JSON timeout on slower CI runners (observed on
+        # Windows), and the assertions below only read the player's inventory and quests.
+        player_data = json.loads(
+            self._mcp_engine_call(session, "jsonify", [player_handle], timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS)
+        )
         has_crown = self._serialized_inventory_has(player_data, "ninefoldCrown")
         self.assertTrue(has_crown)
         return {

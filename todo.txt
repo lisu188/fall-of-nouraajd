@@ -1,18 +1,26 @@
-//TODO: weird fight bug after fight, player didnt return to position
-//TODO: drag & drop
-//TODO: resizing panels
-//TODO: migrate remaining global/static providers and UI/session services into CGameContext where safe
-//TODO: when lost fight in cave, panel pops out after return to position
-//TODO: encapsulate SDL_RenderCopy
-//TODO: what if we return to oldMap after switch?
-//TODO: make function to compare objects
-//TODO: load assets from map
-//TODO: replace buff with selfTarget
-//TODO: extend pathfinder beyond authored waypoint connectors to generalized multilevel maps
-//TODO: separate class from race
-//TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties
+Engine TODO index. The committed queue workbook
+(planning/fall_of_nouraajd_issue_proposals.xlsx, via scripts/issue_queue.py) is
+the implementation backlog; docs/codebase-cleanup-plan.md sequences the cleanup
+work. Historical fix-by-fix notes live in docs/todo-worklog.md.
+
+Already queued — work the existing workbook items, do not re-propose:
+//TODO: resizing panels                                          [queued: EPIC_05_STORY_02]
+//TODO: migrate remaining global/static providers and UI/session services into CGameContext where safe [queued: EPIC_02_STORY_01]
+//TODO: encapsulate SDL_RenderCopy                               [queued: EPIC_05_STORY_03]
+//TODO: what if we return to oldMap after switch?                [queued: EPIC_02_STORY_03]
+//TODO: load assets from map                                     [queued: EPIC_04_STORY_03]
+//TODO: replace buff with selfTarget                             [queued: EPIC_06_STORY_01]
+//TODO: separate class from race                                 [queued: EPIC_06_STORY_02/03]
+//TODO: mark primitve CGameObjects like CList and CMapString, CScript as primitive and unfold values field directly to properties [queued: EPIC_03_STORY_04]
     generally items with one property, would require not counting props from CGameObject and getting field type from meta class
     because its not accesible in CSerialization
+//TODO: make function to compare objects                         [see docs/object-comparison-semantics.md + tests/test_object_comparison_audit.py; verify remaining scope before proposing]
+
+Open — candidates for new queue proposals (see docs/codebase-cleanup-plan.md for EPIC_08+ suggestions):
+//TODO: weird fight bug after fight, player didnt return to position [possibly fixed by EPIC_01_STORY_02; verify before proposing]
+//TODO: when lost fight in cave, panel pops out after return to position [possibly fixed by EPIC_01; verify before proposing]
+//TODO: drag & drop
+//TODO: extend pathfinder beyond authored waypoint connectors to generalized multilevel maps [partially done, see docs/todo-worklog.md]
 //TODO: implement property change listeners to enable AOP
 //TODO: siege
     //TODO: when changing canStep of gate creatures can get in but cant get out

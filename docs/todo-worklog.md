@@ -1,5 +1,9 @@
 # TODO Worklog
 
+> Historical archive (moved from the repository root). Batch entries below cite
+> the coverage gate as 80% or 95%; those were the gates at the time each batch
+> ran. The current gate is **90%** (`MIN_COVERAGE` in `scripts/run_coverage.sh`).
+
 ## Batch 1
 - Location: `res/maps/nouraajd/script.py`, `res/maps/nouraajd/config.json`, `res/config/potions.json`, `test.py`
 - Original TODO or summary: `TavernDialog1.sell_beer()` was a player-visible stub that only printed `sell_beer` even though the tavern dialog exposed a beer-purchase option.

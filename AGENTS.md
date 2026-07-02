@@ -131,6 +131,15 @@ status-and-dependency eligible issue overlaps active work; claim it and manage t
 such as missing live worker status, repository safety, resource pressure, authentication, queue validation failure, or an
 unmerged workbook-state PR prevents safe dispatch.
 
+Queue claims grant issue ownership only, not write permission on shared source. `scripts/write_leases.py` manages a
+separate JSON write-lease store (`planning/write_leases.json`, never the XLSX) with
+`acquire`/`renew`/`release`/`recover`/`list`/`validate` subcommands. Leases normalize scope from PR changed files, dirty
+worktree paths, worker-declared files, and workbook targets with confidence metadata, expand coupled areas
+deterministically (header/implementation pairs, type-registration and CMake units, `res/maps/<map>/` bundles,
+serialization and generated-resource pairs), and reject any two ACTIVE unexpired leases whose expanded scopes overlap.
+Batches are all-or-nothing under one lock file; read-only inspection never needs a lease, and expiry/recovery is
+lease-lifecycle-only — canonical workbook claims are never touched.
+
 After exclusions, keep only the highest currently available priority tier. Group candidates by `(Epic #, Story #)`,
 randomly select one story with equal probability, then randomly select one eligible substory in that story. Do not fall
 back to spreadsheet order, do not include status/dependency-ineligible rows in the random choice, and do not fall back to
@@ -195,6 +204,15 @@ metadata as blockers to new work until reported or cleaned safely. Remove only c
 `git worktree prune` only for prunable metadata after review, and do not delete branches unless explicitly asked.
 For merge-policy or cleanup-readiness audits, add `--github-repo lisu188/fall-of-nouraajd` to include live branch
 protection and required-check drift in the report.
+
+For live agent state, use the controller-local subagent lifecycle registry `scripts/subagent_registry.py`
+(default file under the system temp directory, overridable via `GAME_SUBAGENT_REGISTRY_FILE` or `--registry`; it is
+local live state, separate from the XLSX, and must never be committed). Register every subagent with `register` before
+it consumes a controller slot, advance `lastSeen` only through schema-validated `report` payloads from verified polls or
+structured worker reports, and release capacity only with explicit `finalize`. `sweep` is a strictly read-only
+reconciliation against worktrees, `git rev-parse --verify` branch evidence, and read-only workbook claim evidence; it
+only recommends UNREACHABLE/ORPHANED transitions, which are applied with the explicit `mark` subcommand. The sweeper
+never deletes worktrees, kills processes, or mutates the workbook.
 
 ## Project overview
 

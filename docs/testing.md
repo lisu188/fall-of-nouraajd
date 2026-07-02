@@ -47,7 +47,8 @@ validation, not as a later runtime-only test, and its findings are reported as
 ordinary `ValidationIssue` errors that fail the run.
 
 For each quest key a map script declares (via `QUEST_KEYS`, `QUEST_DEFAULTS`, and
-`_set_state`/`state_in`/`get_state` usage parsed by `ScriptAnalyzer`), the check
+`set_state`/`state_in`/`get_state` usage parsed by `ScriptAnalyzer` — the legacy
+`_set_state` spelling is still recognized), the check
 reports: defaults, transition writes, or state reads that reference an undeclared
 quest key (missing from `QUEST_KEYS`), and terminal completion states that are
 unreachable because they are neither the quest default nor any transition target.

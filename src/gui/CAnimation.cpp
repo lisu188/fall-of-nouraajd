@@ -136,7 +136,13 @@ void CDynamicAnimation::initialize() {
                             return;
                         }
                         std::string path = currentObject->getAnimation();
-                        auto time = CConfigurationProvider::getConfig(path + "/" + "time.json");
+                        const auto timingPath = path + "/" + "time.json";
+                        // Load timing tables through the owning game's per-session configuration
+                        // provider; fall back to the legacy process-wide accessor only when the
+                        // animation is detached from a game (compatibility path).
+                        auto game = self->getGame();
+                        auto time = game ? game->getConfigurationProvider()->getConfiguration(timingPath)
+                                         : CConfigurationProvider::getConfig(timingPath);
                         if (!time || !time->is_object() || time->empty()) {
                             vstd::logger::warning("CDynamicAnimation: missing or malformed timing table", path);
                             return;

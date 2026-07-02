@@ -54,6 +54,39 @@ class McpHardeningTest(unittest.TestCase):
         for name in denied_names:
             self.assertNotIn(name, body)
 
+    def test_creature_archetype_inspection_is_read_only_and_allowlisted(self):
+        allowed_methods_block = re.search(
+            r"MCP_ALLOWED_HANDLE_METHODS = \{(?P<body>.*?)\n\}", self.mcp_source, re.DOTALL
+        )
+        self.assertIsNotNone(allowed_methods_block)
+        creature_block = re.search(
+            r'"CCreature": \{(?P<body>.*?)\n    \}', allowed_methods_block.group("body"), re.DOTALL
+        )
+        self.assertIsNotNone(creature_block)
+        body = creature_block.group("body")
+
+        read_only_inspectors = (
+            "getArchetypeRaceId",
+            "getArchetypeClassId",
+            "getArchetypeRaceLabel",
+            "getArchetypeClassLabel",
+        )
+        for name in read_only_inspectors:
+            self.assertIn(f'"{name}"', body)
+
+        mutation_surface = (
+            "setArchetypeRaceId",
+            "setArchetypeClassId",
+            "setArchetypeRaceLabel",
+            "setArchetypeClassLabel",
+            "setRace",
+            "setCreatureClass",
+            "getRace",
+            "getCreatureClass",
+        )
+        for name in mutation_surface:
+            self.assertNotIn(name, body)
+
     def test_transport_limits_and_trace_redaction_are_present(self):
         self.assertIn("MAX_MCP_MESSAGE_BYTES = 1024 * 1024", self.mcp_source)
         self.assertIn("MAX_HTTP_SESSIONS", self.mcp_source)
