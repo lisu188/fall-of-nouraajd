@@ -6,6 +6,15 @@ def load(self, context):
     from game import register
     from game import trigger
 
+    # The plugin sandbox only allows importing the game and json modules;
+    # game re-exports the campaign driver (res/campaign.py) as an attribute.
+    from game import campaign
+
+    # Scenario outcomes this map reports through campaign.complete_scenario;
+    # campaign manifests route them (see docs/design/multilevel_campaign.md).
+    # A lost captive (bad ending) does not complete the scenario.
+    CAMPAIGN_OUTCOMES = ("good_ending",)
+
     def ensure_quest(player, quest_name):
         for quest in player.getQuests():
             if quest.getName() == quest_name:
@@ -233,7 +242,7 @@ def load(self, context):
                 self.getGame().getGuiHandler().showMessage(
                     "You earn 300 gold and a Life Potion. The rescued captive points toward a siege beyond the marsh."
                 )
-            self.getGame().changeMap("siege")
+            campaign.complete_scenario(self.getGame(), "good_ending", fallback_map="siege")
 
     @trigger(context, "onTurn", "ritualTurnAnchor")
     class RitualTurnTrigger(CTrigger):

@@ -4,7 +4,14 @@ on:
   push:
     branches:
       - main
+    paths: &queue-paths
+      - "planning/**"
+      - "scripts/issue_queue.py"
+      - "scripts/workbook_queue.py"
+      - "tests/test_workbook_queue.py"
+      - ".github/workflows/workbook-queues.yml"
   pull_request:
+    paths: *queue-paths
 
 permissions:
   contents: read

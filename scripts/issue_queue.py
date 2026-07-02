@@ -101,6 +101,18 @@ ISSUE_NAME_PATTERN = re.compile(r"^\[EPIC_\d{2}\]\[STORY_\d{2}\]\[SUBSTORY_\d{2}
 ISSUE_NAME_TOKENS = re.compile(r"^\[(EPIC_\d{2})\]\[(STORY_\d{2})\]\[(SUBSTORY_\d{2})\](.+)$")
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
 VALID_PRIORITIES = ("P0", "P1", "P2")
+# Shared CI merge-gate and controller-governance files. A row whose declared
+# target files modify these rewrites the validation authority that gates every
+# concurrent PR, so no single autonomous controller can safely validate the
+# fleet-wide blast radius mid-run. Surfaced as advisory shortlist metadata (not
+# an automatic eligibility filter) so a controller/PM can route such rows to a
+# supervised lane instead of auto-claiming them.
+CONTROL_PLANE_PATHS = (
+    ".github/workflows/build.yml",
+    "AGENTS.md",
+    "scripts/ci_change_classifier.py",
+    "scripts/poll_pr_checks.py",
+)
 DEFAULT_RECLAIM_AGE_MINUTES = 240
 DEFAULT_HEARTBEAT_INTERVAL_MINUTES = DEFAULT_RECLAIM_AGE_MINUTES // 2
 DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR = 4
@@ -856,6 +868,26 @@ def targetFileOverlapAdvisories(
     return advisories
 
 
+def controlPlaneAdvisories(tasks: Iterable[TaskRecord]) -> dict[str, list[str]]:
+    """Map issue name -> matched control-plane target files for the given tasks.
+
+    A row is flagged when its declared ``Target Files / Modules`` include the
+    shared CI merge-gate or controller-governance files (``CONTROL_PLANE_PATHS``).
+    This is advisory metadata only: eligibility and claim semantics are
+    unchanged. It lets the controller/PM see that an otherwise-``CLEAN`` eligible
+    row rewrites the validation authority gating all concurrent PRs and route it
+    to a supervised lane rather than auto-claiming it.
+    """
+
+    controlPlane = set(CONTROL_PLANE_PATHS)
+    advisories: dict[str, list[str]] = {}
+    for task in tasks:
+        matched = sorted(task.targetFiles & controlPlane)
+        if matched:
+            advisories[task.issueName] = matched
+    return advisories
+
+
 def rejectionReasonKey(reason: str) -> str:
     return reason.split(":", 1)[0].split("=", 1)[0]
 
@@ -1056,6 +1088,7 @@ def shortlistTasks(
     activeClaims = activeClaimSummary(state, stale, now=now)
     activeFiles = activeTargetFiles(state, stale=stale, now=now)
     advisoryOverlaps = targetFileOverlapAdvisories(state, stale=stale, now=now)
+    controlPlaneRows = controlPlaneAdvisories(eligible)
     selectionSeed = seed or uuid.uuid4().hex
     payload: dict[str, Any] = {
         "eligible": bool(eligible),
@@ -1076,10 +1109,12 @@ def shortlistTasks(
         "rejectedCount": len(rejected),
         "rejectionSummary": rejectionSummary(rejected),
         "advisoryTargetFileOverlapCount": len(advisoryOverlaps),
+        "advisoryControlPlaneRowCount": len(controlPlaneRows),
         "mechanicalFilters": [
             "status=NOT_STARTED",
             "dependencies=DONE",
             "direct target-file overlaps reported as advisory metadata",
+            "control-plane (CI gate/governance) target files reported as advisory metadata",
         ],
     }
     if controllerId:
@@ -1094,6 +1129,7 @@ def shortlistTasks(
     if includeRejected:
         payload["rejected"] = rejected
         payload["advisoryTargetFileOverlaps"] = advisoryOverlaps
+        payload["advisoryControlPlaneRows"] = controlPlaneRows
     if not eligible:
         payload["reason"] = "No eligible task"
         return payload

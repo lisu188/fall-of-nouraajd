@@ -1,6 +1,7 @@
 from _game import *
 import json
 
+import campaign
 from quest_state import LegacyBoolFlag
 from quest_state import PlayerQuestRegistry
 from quest_state import QuestStateStore
@@ -207,7 +208,7 @@ def choose_character(g):
 def new():
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
-    selection = g.getGuiHandler().showSelection(list_string(g, ["NEW", "LOAD", "RANDOM"]))
+    selection = g.getGuiHandler().showSelection(list_string(g, ["NEW", "CAMPAIGN", "LOAD", "RANDOM"]))
     if selection == "NEW":
         maps = CResourcesProvider.getInstance().getFiles("MAP")
         if not maps:
@@ -220,6 +221,18 @@ def new():
         if not player:
             return
         CGameLoader.startGameWithPlayer(g, map, player, race)
+    elif selection == "CAMPAIGN":
+        campaigns = {manifest["title"]: manifest["campaignId"] for manifest in campaign.list_campaigns()}
+        if not campaigns:
+            g.getGuiHandler().showInfo("No campaigns are available.", True)
+            return
+        title = g.getGuiHandler().showSelection(list_string(g, list(campaigns.keys())))
+        if title not in campaigns:
+            return
+        player, race = choose_character(g)
+        if not player:
+            return
+        campaign.start(g, campaigns[title], player, race)
     elif selection == "LOAD":
         saves = CResourcesProvider.getInstance().getFiles("SAVE")
         if not saves:
