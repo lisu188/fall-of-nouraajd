@@ -17466,6 +17466,283 @@ class GameTest(unittest.TestCase):
             game.CGuiHandler.showTrade = original_show_trade
             game.CPlayer.healProc = original_heal_proc
 
+    @game_test
+    def test_save_round_trip_harness_covers_fixtures_and_live_game(self):
+        """End-to-end exercise of the reusable save round-trip comparison harness.
+
+        The harness contract (see SaveRoundTripHarness below) is save -> load -> re-save with
+        a structural comparison of the two serialized documents. Failure mode: if a future
+        change makes any property serialize differently after one load/save cycle -- for
+        example dropping a stat on load, or re-rolling a value in initialize() -- the harness
+        fails with path-level diff lines such as:
+
+            save round-trip drift for composed_archetype_v1:
+            $.snapshot.properties.objects[1].properties.creatureClass.properties.baseStats.properties.strength: 9 != 12
+            $.snapshot.properties.turn: 18 != <missing>
+
+        instead of an opaque assertEqual dump of both documents.
+        """
+        game = load_game_module()
+
+        # The precise-diff reporter is part of the harness contract, so pin its failure
+        # mode on a synthetic drifted document before touching real saves.
+        stable = {
+            "snapshot": {
+                "properties": {
+                    "turn": 18,
+                    "objects": [{"class": "CPlayer", "properties": {"name": "player", "hp": 5}}],
+                }
+            }
+        }
+        drifted = json.loads(json.dumps(stable))
+        drifted["snapshot"]["properties"]["turn"] = 19
+        drifted["snapshot"]["properties"]["objects"][0]["properties"].pop("hp")
+        diff_lines = save_round_trip_diff(
+            canonical_save_round_trip_form(stable), canonical_save_round_trip_form(drifted)
+        )
+        self.assertIn("$.snapshot.properties.turn: 18 != 19", diff_lines)
+        self.assertIn("$.snapshot.properties.objects[0].properties.hp: 5 != <missing>", diff_lines)
+
+        # Generated-name normalization: CSerialization::generateName() assigns random hex
+        # hash names to otherwise-unnamed nested objects, so two saves that differ only in
+        # such a regenerated name must not report drift.
+        self.assertEqual(
+            canonical_save_round_trip_form({"properties": {"name": "0f3a9c771b2d4e55"}}),
+            canonical_save_round_trip_form({"properties": {"name": "77aa88bb99cc00dd"}}),
+        )
+
+        # Auto-discovery must keep covering the whole fixture corpus with zero per-fixture
+        # wiring, including the backup-recovery pairing.
+        fixtures = discover_save_round_trip_fixtures()
+        self.assertIn("composed_archetype_v1", fixtures)
+        self.assertIn("invalid_primary_valid_backup", fixtures)
+        self.assertEqual(
+            "invalid_primary_valid_backup.json.bak", fixtures["invalid_primary_valid_backup"]["backup"]
+        )
+
+        results = {}
+        with SaveRoundTripHarness(self, game) as harness:
+            for fixture_name in sorted(fixtures):
+                results[fixture_name] = harness.assert_fixture_round_trip(fixture_name, fixtures[fixture_name])[
+                    "map"
+                ]
+
+            # Live-game round trip: a freshly started game must serialize to a stable
+            # fixed point as well, not just the curated fixtures.
+            _live_game, live_map, _live_player = load_game_map_with_player("test")
+            results["live:test"] = harness.assert_stable_resave(
+                live_map, "harness_live_round_trip", context="live test map"
+            )["map"]
+
+        self.assertEqual("composed", results["composed_archetype_v1"])
+        self.assertEqual("test", results["live:test"])
+        return True, json.dumps({"round_trips": results}, sort_keys=True)
+
+
+# --- Save round-trip comparison harness ----------------------------------------------------
+#
+# Reusable pieces for asserting that the current save format is a fixed point of one
+# load/save cycle. Future save-affecting epics extend coverage by either dropping a fixture
+# into tests/fixtures/save_compatibility/ (auto-discovered below) or calling
+# SaveRoundTripHarness.assert_stable_resave on live game state they have built up.
+
+SAVE_GENERATED_NAME_PATTERN = re.compile(r"[0-9a-fA-F]{8,}")
+SAVE_GENERATED_NAME_PLACEHOLDER = "<generated-name>"
+
+
+def normalize_generated_save_names(value):
+    """Replace auto-generated object names with a stable placeholder.
+
+    CSerialization::generateName() (src/core/CSerialization.cpp) names otherwise-unnamed
+    objects with vstd::to_hex_hash(..., vstd::rand()), so an object re-created from scratch
+    during a load (instead of restored from its serialized name property) would differ only
+    by that random hex name. The generated names carry no game state, so they are normalized
+    to a placeholder before comparison; every semantic property is still compared exactly.
+    """
+    if isinstance(value, dict):
+        normalized = {}
+        for key, item in value.items():
+            if key == "name" and isinstance(item, str) and SAVE_GENERATED_NAME_PATTERN.fullmatch(item):
+                normalized[key] = SAVE_GENERATED_NAME_PLACEHOLDER
+            else:
+                normalized[key] = normalize_generated_save_names(item)
+        return normalized
+    if isinstance(value, list):
+        return [normalize_generated_save_names(item) for item in value]
+    return value
+
+
+def canonical_save_round_trip_form(document, *, normalize=None):
+    """Comparable form of a saved document: generated names are normalized, then key order
+    and set-backed array order are canonicalized via normalize_save_snapshot. An optional
+    `normalize` callable runs in between for fields a future epic knows to be unstable."""
+    canonical = normalize_generated_save_names(document)
+    if normalize is not None:
+        canonical = normalize(canonical)
+    return normalize_save_snapshot(canonical)
+
+
+def save_round_trip_diff(first, second, path="$"):
+    """Precise structural diff between two canonical save documents.
+
+    Returns human-readable "path: first != second" lines, using "<missing>" for keys or
+    list entries present on only one side, so a round-trip regression points directly at
+    the drifting property instead of dumping both documents.
+    """
+    if first == second:
+        return []
+    if isinstance(first, dict) and isinstance(second, dict):
+        lines = []
+        for key in sorted(set(first) | set(second)):
+            key_path = f"{path}.{key}"
+            if key not in first:
+                lines.append(f"{key_path}: <missing> != {second[key]!r}")
+            elif key not in second:
+                lines.append(f"{key_path}: {first[key]!r} != <missing>")
+            else:
+                lines.extend(save_round_trip_diff(first[key], second[key], key_path))
+        return lines
+    if isinstance(first, list) and isinstance(second, list):
+        lines = []
+        for index in range(max(len(first), len(second))):
+            entry_path = f"{path}[{index}]"
+            if index >= len(first):
+                lines.append(f"{entry_path}: <missing> != {second[index]!r}")
+            elif index >= len(second):
+                lines.append(f"{entry_path}: {first[index]!r} != <missing>")
+            else:
+                lines.extend(save_round_trip_diff(first[index], second[index], entry_path))
+        return lines
+    return [f"{path}: {first!r} != {second!r}"]
+
+
+def discover_save_round_trip_fixtures():
+    """Auto-discover every round-trippable save fixture in SAVE_FIXTURE_DIR.
+
+    Adding a fixture to the round-trip matrix needs zero registration here: drop
+    <name>.json (plus an optional <name>.json.bak backup) into
+    tests/fixtures/save_compatibility/ and it is picked up automatically. Fixtures already
+    registered in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS reuse their declared primary/backup
+    pairing so backup-recovery fixtures install correctly.
+
+    Fixture content rule: use inline {"class": ..., "properties": ...} objects for any
+    state that must survive the round trip; {"ref": ...} entries pointing at content that
+    may not exist on the target map are dropped or rejected at load time.
+    """
+    fixtures = {}
+    referenced = set()
+    for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
+        entry = {"primary": expected["primary"]}
+        referenced.add(expected["primary"])
+        if expected.get("backup"):
+            entry["backup"] = expected["backup"]
+            referenced.add(expected["backup"])
+        fixtures[fixture_name] = entry
+    for path in sorted(SAVE_FIXTURE_DIR.glob("*.json")):
+        if path.name in referenced:
+            continue
+        entry = {"primary": path.name}
+        backup = path.with_name(f"{path.name}.bak")
+        if backup.exists():
+            entry["backup"] = backup.name
+        fixtures[path.stem] = entry
+    return fixtures
+
+
+class SaveRoundTripHarness:
+    """Reusable save -> load -> re-save comparison harness for save-affecting epics.
+
+    Contract: the current serialized save format must be a fixed point of one load/save
+    cycle. The first save canonicalizes whatever went in (legacy envelopes are upgraded,
+    schema migrations run, defaulted properties are materialized), so stability is asserted
+    between the first save and a re-save of its reload -- never against the raw fixture
+    text. Comparison is structural via canonical_save_round_trip_form (key order,
+    set-backed array order, and generated hex-hash object names are normalized; everything
+    else must match exactly) and mismatches fail with save_round_trip_diff path lines.
+
+    Adding coverage for a new save-affecting feature:
+      * fixture state: drop an inline-object JSON into tests/fixtures/save_compatibility/;
+        discover_save_round_trip_fixtures() picks it up with no further wiring (also
+        register it in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS if it should join the summary
+        matrix checks).
+      * live state: build the state in a test, then
+            with SaveRoundTripHarness(self, game) as harness:
+                harness.assert_stable_resave(game_map, "my_feature_round_trip")
+    A `normalize` callable may be supplied for a legitimately-unstable field a future epic
+    introduces; it runs on both documents before comparison.
+    """
+
+    def __init__(self, test_case, game, *, normalize=None):
+        self.test_case = test_case
+        self.game = game
+        self.normalize = normalize
+        self._slots = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.cleanup()
+        return False
+
+    def cleanup(self):
+        while self._slots:
+            cleanup_save_slot(self._slots.pop())
+
+    def _slot(self, prefix):
+        slot_name = unique_save_name(prefix)
+        self._slots.append(slot_name)
+        cleanup_save_slot(slot_name)
+        return slot_name
+
+    def _load_slot(self, slot_name, context):
+        loaded_game = self.game.CGameLoader.loadGame()
+        self.game.CGameLoader.loadSavedGame(loaded_game, slot_name)
+        loaded_map = loaded_game.getMap()
+        self.test_case.assertIsNotNone(loaded_map, f"{context}: save slot {slot_name!r} did not load")
+        return loaded_game, loaded_map
+
+    def _save_document(self, game_map, slot_name):
+        self.game.CMapLoader.save(game_map, slot_name)
+        return json.loads(save_primary_path(slot_name).read_text(encoding="utf-8"))
+
+    def assert_stable_resave(self, game_map, prefix, *, context=None):
+        """Save game_map, reload that save, re-save, and assert both documents match."""
+        context = context or prefix
+        first_slot = self._slot(f"{prefix}_first")
+        first_document = self._save_document(game_map, first_slot)
+        map_name = first_document.get("mapName")
+        assert_save_envelope(self.test_case, first_document, map_name)
+
+        # Keep the reloaded game referenced until the re-save has been written.
+        _reloaded_game, reloaded_map = self._load_slot(first_slot, context)
+        second_document = self._save_document(reloaded_map, self._slot(f"{prefix}_resave"))
+        assert_save_envelope(self.test_case, second_document, map_name)
+
+        self.assert_documents_match(first_document, second_document, context)
+        return {"map": map_name, "first": first_document, "second": second_document}
+
+    def assert_fixture_round_trip(self, fixture_name, fixture=None):
+        """Round-trip one tests/fixtures/save_compatibility fixture through the live loader."""
+        if fixture is None:
+            fixture = discover_save_round_trip_fixtures()[fixture_name]
+        fixture_slot = self._slot(f"round_trip_{fixture_name}")
+        install_save_fixture_slot(fixture_slot, fixture)
+        _loaded_game, loaded_map = self._load_slot(fixture_slot, fixture_name)
+        return self.assert_stable_resave(loaded_map, f"round_trip_{fixture_name}", context=fixture_name)
+
+    def assert_documents_match(self, first_document, second_document, context):
+        """Structurally compare two saved documents, failing with a precise path diff."""
+        canonical_first = canonical_save_round_trip_form(first_document, normalize=self.normalize)
+        canonical_second = canonical_save_round_trip_form(second_document, normalize=self.normalize)
+        if canonical_first == canonical_second:
+            return
+        diff_lines = save_round_trip_diff(canonical_first, canonical_second)
+        preview = "\n".join(diff_lines[:40])
+        if len(diff_lines) > 40:
+            preview += f"\n... and {len(diff_lines) - 40} more differing paths"
+        self.test_case.fail(f"save round-trip drift for {context}:\n{preview}")
+
 
 class ConsoleEventIsolationTest(unittest.TestCase):
     def test_console_key_history_in_fresh_process(self):
