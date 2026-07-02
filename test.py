@@ -211,6 +211,8 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_multilevel_map_z_state_persists_after_save_load": 8.0,
     "GameTest.test_playthrough": 20.0,
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
+    "GameTest.test_campaign_driver_routes_full_campaign_with_carryover": 25.0,
+    "GameTest.test_campaign_state_survives_save_load": 15.0,
     "GameTest.test_map_walkthroughs": 20.0,
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
     "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
@@ -11771,9 +11773,80 @@ class GameTest(unittest.TestCase):
             game.CResourcesProvider = original_provider
             game.event_loop = original_event_loop
 
-        self.assertEqual([["LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
+        self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
         self.assertEqual([("No saved games are available.", True)], fake_game.gui_handler.messages)
         self.assertIsNone(FakeGameLoader.loaded_save)
+
+    def test_new_game_campaign_with_no_campaigns_reports_message(self):
+        game = load_game_module()
+
+        class FakeListString:
+            def __init__(self):
+                self.values = []
+
+            def addValue(self, value):
+                self.values.append(value)
+
+            def getValues(self):
+                return set(self.values)
+
+        class FakeGuiHandler:
+            def __init__(self):
+                self.messages = []
+                self.selections = []
+
+            def showSelection(self, list_string):
+                self.selections.append(sorted(list_string.getValues()))
+                return "CAMPAIGN"
+
+            def showInfo(self, message, centered):
+                self.messages.append((message, centered))
+
+        class FakeGame:
+            def __init__(self):
+                self.gui_handler = FakeGuiHandler()
+
+            def createObject(self, type_id):
+                if type_id != "CListString":
+                    raise AssertionError(f"unexpected fake object type: {type_id}")
+                return FakeListString()
+
+            def getGuiHandler(self):
+                return self.gui_handler
+
+        fake_game = FakeGame()
+
+        class FakeGameLoader:
+            @staticmethod
+            def loadGame():
+                return fake_game
+
+            @staticmethod
+            def loadGui(g):
+                pass
+
+        started = []
+        fake_campaign = types.SimpleNamespace(
+            list_campaigns=lambda: [],
+            start=lambda *args: started.append(args),
+        )
+
+        original_loader = game.CGameLoader
+        original_campaign = game.campaign
+        original_event_loop = game.event_loop
+        try:
+            game.CGameLoader = FakeGameLoader
+            game.campaign = fake_campaign
+            game.event_loop = types.SimpleNamespace(instance=lambda: None)
+            game.new()
+        finally:
+            game.CGameLoader = original_loader
+            game.campaign = original_campaign
+            game.event_loop = original_event_loop
+
+        self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
+        self.assertEqual([("No campaigns are available.", True)], fake_game.gui_handler.messages)
+        self.assertEqual([], started)
 
     @game_test
     def test_blocking_modal_gui_helpers_drive_panels(self):
@@ -16094,6 +16167,132 @@ class GameTest(unittest.TestCase):
                 "player_name": player.getName(),
                 "quests": quest_names(player),
                 "wands": player.countItems("magicWand"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_campaign_driver_routes_full_campaign_with_carryover(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        store = campaign_module.start(g, "fallOfNouraajd", DEFAULT_PLAYER)
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        scene_manager = g.getSceneManager()
+
+        self.assertEqual("nouraajd", game_map.mapName)
+        self.assertTrue(campaign_module.active(g))
+        self.assertEqual("fallOfNouraajd", store.campaign_id())
+        self.assertEqual("recovery", store.scenario())
+
+        town_hall = g.createObject("townHallDialog")
+        beren = g.createObject("berenDialog")
+        town_hall.give_letter()
+        beren.deliver_letter()
+        game_map.removeObjectByName("catacombs")
+        beren.return_relic()
+        game_map.removeObjectByName("cave2")
+        chapel = game_map.getObjectByName("nouraajdChapel")
+        chapel_coords = chapel.getCoords()
+        player.moveTo(chapel_coords.x, chapel_coords.y, chapel_coords.z)
+        beren.finish_cleanse()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("ritual", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("cleansing", store.scenario())
+        self.assertEqual([("recovery", "completed")], store.history())
+
+        ritual_map = g.getMap()
+        ritual_map.setBoolProperty("anchors_destroyed", True)
+        ritual_map.setBoolProperty("leader_defeated", True)
+        captive_marker = ritual_map.getObjectByName("ritualCaptive")
+        captive_coords = captive_marker.getCoords()
+        player.moveTo(captive_coords.x, captive_coords.y, captive_coords.z)
+        captured = g.createObject("capturedSoulDialog")
+        captured.free_captive()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        siege_map = g.getMap()
+        self.assertEqual("siege", siege_map.mapName)
+        self.assertTrue(siege_map.getPlayer() == player)
+        self.assertEqual("siege", store.scenario())
+        self.assertEqual([("recovery", "completed"), ("cleansing", "good_ending")], store.history())
+        self.assertTrue(store.active())
+        self.assertIn("defendSiegeQuest", quest_names(player))
+
+        gold_before = player.getGold()
+        for name in ("spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"):
+            siege_map.getObjectByName(name).setBoolProperty("destroyed", True)
+        player.checkQuests()
+
+        self.assertTrue(siege_map.getBoolProperty("campaign_completed"))
+        self.assertEqual(gold_before + 500, player.getGold())
+        self.assertTrue(store.finished())
+        self.assertFalse(store.active())
+        self.assertEqual(
+            [("recovery", "completed"), ("cleansing", "good_ending"), ("siege", "completed")],
+            store.history(),
+        )
+
+        return True, json.dumps(
+            {
+                "campaign": store.campaign_id(),
+                "history": store.history(),
+                "final_map": siege_map.mapName,
+                "finished": store.finished(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_campaign_state_survives_save_load(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        store = campaign_module.start(g, "fallOfNouraajd", DEFAULT_PLAYER)
+        store.set_var("spared_cultist", "yes")
+        self.assertEqual("nouraajd", g.getMap().mapName)
+
+        save_name = unique_save_name("campaign-state")
+        save_path = Path.cwd() / "save" / f"{save_name}.json"
+        backup_path = Path.cwd() / "save" / f"{save_name}.json.bak"
+        try:
+            game.CMapLoader.save(g.getMap(), save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_player = loaded_game.getMap().getPlayer()
+            loaded_store = campaign_module.CampaignStateStore(loaded_player)
+
+            # Campaign position and variables are player dynamic properties, so
+            # they must round-trip through the ordinary single-map save format.
+            self.assertTrue(campaign_module.active(loaded_game))
+            self.assertEqual("fallOfNouraajd", loaded_store.campaign_id())
+            self.assertEqual("recovery", loaded_store.scenario())
+            self.assertFalse(loaded_store.finished())
+            self.assertEqual("yes", loaded_store.get_var("spared_cultist", default="no"))
+
+            # Manifest routing keeps working on the loaded game: reporting the
+            # scenario outcome advances the campaign and requests the next map.
+            self.assertEqual("cleansing", campaign_module.complete_scenario(loaded_game, "completed"))
+            self.assertEqual("cleansing", loaded_store.scenario())
+            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("TransitionPending", loaded_game.getSceneManager().getTransitionStateName())
+            self.assertEqual("ritual", loaded_game.getSceneManager().getPendingMapName())
+        finally:
+            for path in (save_path, backup_path):
+                if path.exists():
+                    path.unlink()
+
+        return True, json.dumps(
+            {
+                "save": save_name,
+                "campaign": "fallOfNouraajd",
             },
             sort_keys=True,
         )
