@@ -71,13 +71,16 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
             }
             return true;
         }
-        if (!session->canceled && dragMoved(*session) && hitObject) {
-            if (hasTargetDragCallbacks()) {
-                return runDropCallbacks(gui, index, object, sourceList, session->sourceIndex, session->payload);
-            }
-            invokeCallback(gui, index, object);
-            gui->acceptDragSession(self);
-            return true;
+        // Drop contract (#627): a moved cross-list release is ONLY ever a drop. It is
+        // resolved exclusively through the dedicated dragValidate/drop callbacks, which
+        // operate on the exact dragged payload carried by the drag session. It must
+        // never fall back to the ordinary click callback with the target-cell object:
+        // that re-enters selection-state click flows, which can mutate a different item
+        // than the one the user actually dragged (e.g. equip the selected item instead
+        // of the dragged one). A list without target drop callbacks is not a drop
+        // target, so the gesture cancels and ownership stays unchanged.
+        if (!session->canceled && dragMoved(*session) && hitObject && hasTargetDragCallbacks()) {
+            return runDropCallbacks(gui, index, object, sourceList, session->sourceIndex, session->payload);
         }
         if (sourceList) {
             sourceList->notifySourceDragCancel(gui, session->sourceIndex, session->payload);
