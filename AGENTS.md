@@ -205,6 +205,15 @@ metadata as blockers to new work until reported or cleaned safely. Remove only c
 For merge-policy or cleanup-readiness audits, add `--github-repo lisu188/fall-of-nouraajd` to include live branch
 protection and required-check drift in the report.
 
+For live agent state, use the controller-local subagent lifecycle registry `scripts/subagent_registry.py`
+(default file under the system temp directory, overridable via `GAME_SUBAGENT_REGISTRY_FILE` or `--registry`; it is
+local live state, separate from the XLSX, and must never be committed). Register every subagent with `register` before
+it consumes a controller slot, advance `lastSeen` only through schema-validated `report` payloads from verified polls or
+structured worker reports, and release capacity only with explicit `finalize`. `sweep` is a strictly read-only
+reconciliation against worktrees, `git rev-parse --verify` branch evidence, and read-only workbook claim evidence; it
+only recommends UNREACHABLE/ORPHANED transitions, which are applied with the explicit `mark` subcommand. The sweeper
+never deletes worktrees, kills processes, or mutates the workbook.
+
 ## Project overview
 
 `fall-of-nouraajd` is a C++ dark-fantasy 2D game with Python scripts/plugins, JSON resource configuration, SDL assets, CMake builds, and a pybind11 `_game` extension module.

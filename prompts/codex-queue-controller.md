@@ -667,6 +667,17 @@ For terminal failure states, use the same fresh status-branch process:
 
 Do not merge partial implementation code merely to publish a queue status. If code must not merge, publish only the workbook state from the latest `main`.
 
+## Subagent lifecycle registry
+
+Track live agent state in the controller-local registry `scripts/subagent_registry.py` (default file under the system
+temp directory; override with `GAME_SUBAGENT_REGISTRY_FILE` or `--registry`; never commit it). `register` each
+worker/QA/PM/recovery subagent before it consumes a slot, feed `lastSeen` only through schema-validated `report`
+payloads from verified polls or structured worker reports, and `finalize` explicitly so finished agents stop consuming
+capacity. Run the read-only `sweep` subcommand after controller restarts and during recovery audits: it reconciles
+records against worktrees, `git rev-parse --verify` branch evidence, and read-only workbook claim evidence, and only
+recommends UNREACHABLE/ORPHANED marks that are applied with the explicit `mark` subcommand. The sweep never deletes
+worktrees, kills processes, mutates the workbook, or rewrites the registry file.
+
 ## Failure and recovery rules
 
 - Claim publication failure: implementation must not start.
