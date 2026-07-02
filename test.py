@@ -16752,6 +16752,55 @@ class GameTest(unittest.TestCase):
 
         return True, json.dumps(summary, sort_keys=True)
 
+    @game_test
+    def test_every_class_race_combination_starts_and_retains_identity(self):
+        # Acceptance: every approved class x race combination must start successfully and
+        # retain its expected identities. The approved lists are the runtime-selectable ones
+        # exposed by the merged menu helpers (player_class_options -> {label: playerType},
+        # player_race_options -> {label: raceId}), so this stays in sync with the config and
+        # never hard-codes an ad-hoc list. For each combination we start a fresh game with the
+        # chosen class + race (the four-argument startGameWithPlayer override applies the race),
+        # then assert the constructed player is a live, valid CPlayer whose class identity
+        # (getPlayerClassId) and race identity (getRaceId) match what was selected.
+        game = load_game_module()
+
+        options_game = game.CGameLoader.loadGame()
+        class_options = game.player_class_options(options_game)
+        race_options = game.player_race_options(options_game)
+        class_types = sorted(class_options.values())
+        race_ids = sorted(race_options.values())
+        self.assertGreater(len(class_types), 0, "no player-selectable classes")
+        self.assertGreater(len(race_ids), 0, "no player-selectable races")
+
+        results = {}
+        for player_type in class_types:
+            for race_id in race_ids:
+                combination = f"{player_type}+{race_id}"
+                g = game.CGameLoader.loadGame()
+                game.CGameLoader.startGameWithPlayer(g, "test", player_type, race_id)
+                game_map = g.getMap()
+                self.assertIsNotNone(game_map, combination)
+                player = game_map.getPlayer()
+
+                # Started successfully: the player exists, is a real controllable CPlayer, and is alive.
+                self.assertIsNotNone(player, combination)
+                self.assertIsNotNone(get_player_controller(player), combination)
+                self.assertTrue(player.isAlive(), combination)
+
+                # Retains its expected identities: the selected class id and race id round-trip.
+                self.assertEqual(player_type, player.getPlayerClassId(), combination)
+                self.assertEqual(race_id, player.getRaceId(), combination)
+
+                results[combination] = {
+                    "playerClassId": player.getPlayerClassId(),
+                    "raceId": player.getRaceId(),
+                    "alive": player.isAlive(),
+                }
+
+        # Full coverage of the approved matrix, with a distinct entry per combination.
+        self.assertEqual(len(class_types) * len(race_ids), len(results))
+        return True, json.dumps(results, sort_keys=True)
+
 
 class ConsoleEventIsolationTest(unittest.TestCase):
     def test_console_key_history_in_fresh_process(self):
