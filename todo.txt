@@ -17,7 +17,6 @@ Already queued — work the existing workbook items, do not re-propose:
 //TODO: make function to compare objects                         [see docs/object-comparison-semantics.md + tests/test_object_comparison_audit.py; verify remaining scope before proposing]
 
 Open — candidates for new queue proposals (see docs/codebase-cleanup-plan.md for EPIC_08+ suggestions):
-//TODO: add exhaustive audit to ensure every runtime-instantiable V_META type is covered by static or plugin registration [cleanup plan 2.1]
 //TODO: weird fight bug after fight, player didnt return to position [possibly fixed by EPIC_01_STORY_02; verify before proposing]
 //TODO: when lost fight in cave, panel pops out after return to position [possibly fixed by EPIC_01; verify before proposing]
 //TODO: drag & drop
