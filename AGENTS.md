@@ -787,6 +787,15 @@ Before finishing, summarize:
 - any risky assumptions;
 - any follow-up work that is genuinely required.
 
+## Controller capability probe
+
+Controller prompts must not assume merge methods, GitHub auth, required checks, formatters, build trees, or polling
+support. Before dispatch or publication steps that depend on such a capability, run the read-only snapshot
+`python3 scripts/controller_capability_probe.py --json` (optionally with repeated `--section` filters). Every field
+reports `available`, `unavailable`, `unknown`, or `unsupported` with short redacted evidence, and the command exits 0
+even when capabilities are missing. Branch on the reported fields: when a capability a step depends on is `unknown` or
+`unavailable`, block that dispatch or publication step and report the blocker instead of defaulting to a guessed path.
+
 ## Copyright
 
 When modifying source files with copyright headers, preserve the existing owner text and update the year or year range to include the current calendar year.

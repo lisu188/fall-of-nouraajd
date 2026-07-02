@@ -253,5 +253,256 @@
       "label": "Smuggler's Mark",
       "manaCost": 20
     }
+  },
+  "AgannazarsScorcher": {
+    "class": "AgannazarsScorcher",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Agannazar's Scorcher",
+      "manaCost": 14
+    }
+  },
+  "ArmorOfFaith": {
+    "class": "ArmorOfFaith",
+    "properties": {
+      "animation": "images/interactions/armorofendlesswinter",
+      "effect": {
+        "ref": "ArmorOfFaithEffect"
+      },
+      "label": "Armor of Faith",
+      "manaCost": 12,
+      "selfTarget": true
+    }
+  },
+  "Bless": {
+    "class": "Bless",
+    "properties": {
+      "animation": "images/interactions/barrier",
+      "effect": {
+        "ref": "BlessEffect"
+      },
+      "label": "Bless",
+      "manaCost": 10,
+      "selfTarget": true
+    }
+  },
+  "BurningHands": {
+    "class": "BurningHands",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Burning Hands",
+      "manaCost": 8
+    }
+  },
+  "ChillTouch": {
+    "class": "ChillTouch",
+    "properties": {
+      "animation": "images/interactions/frostbolt",
+      "effect": {
+        "ref": "ChillTouchEffect"
+      },
+      "label": "Chill Touch",
+      "manaCost": 10
+    }
+  },
+  "ChromaticOrb": {
+    "class": "ChromaticOrb",
+    "properties": {
+      "animation": "images/interactions/magicmissile",
+      "label": "Chromatic Orb",
+      "manaCost": 15
+    }
+  },
+  "Cloudkill": {
+    "class": "Cloudkill",
+    "properties": {
+      "animation": "images/interactions/lethalpoison",
+      "effect": {
+        "ref": "CloudkillEffect"
+      },
+      "label": "Cloudkill",
+      "manaCost": 40
+    }
+  },
+  "ConeOfCold": {
+    "class": "ConeOfCold",
+    "properties": {
+      "animation": "images/interactions/frostbolt",
+      "label": "Cone of Cold",
+      "manaCost": 35
+    }
+  },
+  "Doom": {
+    "class": "Doom",
+    "properties": {
+      "animation": "images/interactions/endlesspain",
+      "effect": {
+        "ref": "DoomEffect"
+      },
+      "label": "Doom",
+      "manaCost": 12
+    }
+  },
+  "DrawUponHolyMight": {
+    "class": "DrawUponHolyMight",
+    "properties": {
+      "animation": "images/interactions/bloodthirst",
+      "effect": {
+        "ref": "DrawUponHolyMightEffect"
+      },
+      "label": "Draw Upon Holy Might",
+      "manaCost": 25,
+      "selfTarget": true
+    }
+  },
+  "FingerOfDeath": {
+    "class": "FingerOfDeath",
+    "properties": {
+      "animation": "images/interactions/shadowbolt",
+      "label": "Finger of Death",
+      "manaCost": 50
+    }
+  },
+  "Fireball": {
+    "class": "Fireball",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Fireball",
+      "manaCost": 30
+    }
+  },
+  "FlameStrike": {
+    "class": "FlameStrike",
+    "properties": {
+      "animation": "images/interactions/chaosblast",
+      "label": "Flame Strike",
+      "manaCost": 30
+    }
+  },
+  "Haste": {
+    "class": "Haste",
+    "properties": {
+      "animation": "images/interactions/doubleattack",
+      "effect": {
+        "ref": "HasteEffect"
+      },
+      "label": "Haste",
+      "manaCost": 30,
+      "selfTarget": true
+    }
+  },
+  "HoldPerson": {
+    "class": "HoldPerson",
+    "properties": {
+      "animation": "images/interactions/stun",
+      "effect": {
+        "ref": "HoldPersonEffect"
+      },
+      "label": "Hold Person",
+      "manaCost": 35
+    }
+  },
+  "LarlochsMinorDrain": {
+    "class": "LarlochsMinorDrain",
+    "properties": {
+      "animation": "images/interactions/bloodthirst",
+      "label": "Larloch's Minor Drain",
+      "manaCost": 4,
+      "tags": [
+        "heal"
+      ]
+    }
+  },
+  "LightningBolt": {
+    "class": "LightningBolt",
+    "properties": {
+      "animation": "images/interactions/magicmissile",
+      "label": "Lightning Bolt",
+      "manaCost": 25
+    }
+  },
+  "MelfsAcidArrow": {
+    "class": "MelfsAcidArrow",
+    "properties": {
+      "animation": "images/interactions/lethalpoison",
+      "effect": {
+        "ref": "MelfsAcidArrowEffect"
+      },
+      "label": "Melf's Acid Arrow",
+      "manaCost": 12
+    }
+  },
+  "MirrorImage": {
+    "class": "MirrorImage",
+    "properties": {
+      "animation": "images/interactions/barrier",
+      "effect": {
+        "ref": "MirrorImageEffect"
+      },
+      "label": "Mirror Image",
+      "manaCost": 20,
+      "selfTarget": true
+    }
+  },
+  "SkullTrap": {
+    "class": "SkullTrap",
+    "properties": {
+      "animation": "images/interactions/shadowbolt",
+      "label": "Skull Trap",
+      "manaCost": 20
+    }
+  },
+  "Slow": {
+    "class": "Slow",
+    "properties": {
+      "animation": "images/interactions/chloroform",
+      "effect": {
+        "ref": "SlowEffect"
+      },
+      "label": "Slow",
+      "manaCost": 25
+    }
+  },
+  "SpiritualHammer": {
+    "class": "SpiritualHammer",
+    "properties": {
+      "animation": "images/interactions/strike",
+      "label": "Spiritual Hammer",
+      "manaCost": 12
+    }
+  },
+  "Stoneskin": {
+    "class": "Stoneskin",
+    "properties": {
+      "animation": "images/interactions/armorofendlesswinter",
+      "effect": {
+        "ref": "StoneskinEffect"
+      },
+      "label": "Stoneskin",
+      "manaCost": 45,
+      "selfTarget": true
+    }
+  },
+  "VampiricTouch": {
+    "class": "VampiricTouch",
+    "properties": {
+      "animation": "images/interactions/bloodthirst",
+      "label": "Vampiric Touch",
+      "manaCost": 18,
+      "tags": [
+        "heal"
+      ]
+    }
+  },
+  "Web": {
+    "class": "Web",
+    "properties": {
+      "animation": "images/interactions/chloroform",
+      "effect": {
+        "ref": "WebEffect"
+      },
+      "label": "Web",
+      "manaCost": 15
+    }
   }
 }
