@@ -103,8 +103,15 @@ keeps only the highest currently eligible priority tier for `storyGroups`, and e
 `selected.issue.issueName`. It also reports `activeClaims.total`, `activeClaims.unexpired`, `activeClaims.healthy`,
 `activeClaims.stale`, `activeClaims.leaseExpired`, `activeClaims.suspect`, `activeClaims.reclaimable`,
 `activeClaims.inactive`, `staleClaimCount`, `staleClaims`, `advisoryTargetFileOverlapCount`,
-`advisoryTargetFileOverlaps`, and per-issue `activeFileOverlaps` so heartbeat-overdue claims, expired leases, recovery
+`advisoryTargetFileOverlaps`, `advisoryControlPlaneRowCount`, `advisoryControlPlaneRows`, and per-issue
+`activeFileOverlaps` so heartbeat-overdue claims, expired leases, recovery
 rows, and exact target-file overlaps can inform dispatch decisions without becoming automatic blockers.
+`advisoryControlPlaneRows` maps each eligible row whose `Target Files / Modules` rewrite the shared CI merge-gate or
+controller governance (`.github/workflows/build.yml`, `AGENTS.md`, `scripts/ci_change_classifier.py`,
+`scripts/poll_pr_checks.py`) to the matched files. Such a row can be status-and-dependency `CLEAN` yet unsafe for an
+autonomous controller to auto-claim, since rewriting the validation authority mid-run risks the CI gate for every
+concurrent PR; treat the flag as advisory evidence to route the row to a supervised lane, not as an automatic claim
+blocker.
 `activeClaims.unexpired` is retained as the healthy live-claim count: heartbeat not overdue and lease not expired. When
 `--controller-id` is provided, it also reports `controllerCapacity`: the current controller's healthy owned issues,
 suspect owned issues, reclaimable owned issues, recovery-required state, deficit to the four-issue controller target,
