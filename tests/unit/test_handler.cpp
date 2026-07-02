@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CQuestHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
+#include "handler/CTooltipHandler.h"
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
@@ -31,6 +32,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CCreatureRace.h"
 #include "object/CInteraction.h"
 #include "object/CEffect.h"
 #include "object/CItem.h"
@@ -1692,6 +1695,79 @@ void test_creature_subtype_inventory_is_enumerable_on_loaded_game() {
                 "inventory should record exactly one row per enumerated CCreature subtype id");
 }
 
+void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions() {
+    // EPIC_07/STORY_02/SUBSTORY_01: creature tooltips should surface the race and
+    // class archetypes only when they are present, and never repeat a description
+    // that is already shown.
+    auto legacy = std::make_shared<CCreature>();
+    legacy->setLabel("Wandering Rat");
+    legacy->setDescription("A small, mangy rat.");
+
+    const auto legacyTooltip = CTooltipHandler::buildTooltip(legacy);
+    expect_true(legacyTooltip.find("Wandering Rat") != std::string::npos,
+                "legacy creature tooltips should still show the creature label");
+    expect_true(legacyTooltip.find("A small, mangy rat.") != std::string::npos,
+                "legacy creature tooltips should still show the creature description");
+
+    auto race = std::make_shared<CCreatureRace>();
+    race->setLabel("Orc");
+    race->setDescription("Brutish and strong.");
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setLabel("Warrior");
+    creatureClass->setDescription("Master of arms.");
+
+    auto archetyped = std::make_shared<CCreature>();
+    archetyped->setLabel("Grommash");
+    archetyped->setDescription("A scarred veteran.");
+    archetyped->setRace(race);
+    archetyped->setCreatureClass(creatureClass);
+
+    const auto archetypeTooltip = CTooltipHandler::buildTooltip(archetyped);
+    const auto count_occurrences = [](const std::string &haystack, const std::string &needle) {
+        int count = 0;
+        for (std::size_t pos = haystack.find(needle); pos != std::string::npos;
+             pos = haystack.find(needle, pos + needle.size())) {
+            count++;
+        }
+        return count;
+    };
+
+    expect_true(count_occurrences(archetypeTooltip, "Orc") == 1,
+                "present race archetypes should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "Brutish and strong.") == 1,
+                "present race descriptions should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "Warrior") == 1,
+                "present class archetypes should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "Master of arms.") == 1,
+                "present class descriptions should appear exactly once in the tooltip");
+    expect_true(count_occurrences(archetypeTooltip, "A scarred veteran.") == 1,
+                "the creature description should never be duplicated by archetype lines");
+
+    // A shared description across the creature and its archetypes must not be echoed
+    // multiple times.
+    auto sharedDescRace = std::make_shared<CCreatureRace>();
+    sharedDescRace->setLabel("Human");
+    sharedDescRace->setDescription("A scarred veteran.");
+    auto shared = std::make_shared<CCreature>();
+    shared->setLabel("Reginald");
+    shared->setDescription("A scarred veteran.");
+    shared->setRace(sharedDescRace);
+
+    const auto sharedTooltip = CTooltipHandler::buildTooltip(shared);
+    expect_true(count_occurrences(sharedTooltip, "A scarred veteran.") == 1,
+                "an archetype sharing the creature description must not duplicate that line");
+    expect_true(count_occurrences(sharedTooltip, "Human") == 1,
+                "the race label should still appear when only its description is a duplicate");
+
+    // Creatures without archetypes must not emit any archetype lines.
+    auto noArchetype = std::make_shared<CCreature>();
+    noArchetype->setLabel("Plain Creature");
+    noArchetype->setDescription("Nothing special.");
+    const auto plainTooltip = CTooltipHandler::buildTooltip(noArchetype);
+    expect_true(plainTooltip == "Plain Creature\nNothing special.",
+                "creatures without archetypes should not gain any archetype lines");
+}
+
 } // namespace
 
 int main() {
@@ -1700,6 +1776,7 @@ int main() {
     test_script_handler_executes_commands_and_wraps_functions();
     test_handler_constructors_are_covered_by_native_tests();
     test_creature_scale_preserves_level_plus_sw_invariant();
+    test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions();
     test_rng_handler_builds_encounters_from_concrete_creature_sw();
     test_rng_handler_excludes_archetype_definitions_from_encounters();
     test_rng_handler_excludes_player_templates_from_encounters();
