@@ -213,6 +213,14 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_campaign_transitions_preserve_player_and_start_siege": 20.0,
     "GameTest.test_campaign_driver_routes_full_campaign_with_carryover": 25.0,
     "GameTest.test_campaign_state_survives_save_load": 15.0,
+    "GameTest.test_map_walkthrough_hearthfall": 12.0,
+    "GameTest.test_map_walkthrough_gravemoor": 12.0,
+    "GameTest.test_map_walkthrough_usurpergate": 12.0,
+    "GameTest.test_wardens_road_campaign_mercy_route": 25.0,
+    "GameTest.test_wardens_road_campaign_wrath_route_clamps_gold": 25.0,
+    "McpServerTest.test_stdio_map_walkthrough_hearthfall": 25.0,
+    "McpServerTest.test_stdio_map_walkthrough_gravemoor": 25.0,
+    "McpServerTest.test_stdio_map_walkthrough_usurpergate": 25.0,
     "GameTest.test_map_walkthroughs": 20.0,
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
     "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
@@ -4890,7 +4898,128 @@ def walkthrough_ninemarches_map():
     }
 
 
+def walkthrough_hearthfall_map():
+    g, game_map, player = load_game_map_with_player("hearthfall")
+    for name in ("hearthfallStart", "watchCaptain", "elderMaren"):
+        find_map_object_definition("hearthfall", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("hearthfall", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the liberation quest.
+    move_to_object("hearthfallStart")
+    assert game_map.getBoolProperty("hearthfall_intro"), "Arrival should play the Hearthfall intro."
+    assert "hearthfallQuest" in quest_names(player), "Arrival should grant the Hearthfall quest."
+
+    # Breaking the watch-captain frees the village square.
+    gold_before = player.getGold()
+    game_map.removeObjectByName("watchCaptain")
+    assert game_map.getBoolProperty("captain_defeated"), "Killing Osric should mark the captain defeated."
+
+    # Reporting to Elder Maren pays the village purse and completes the chapter.
+    elder = g.createObject("elderDialog")
+    assert elder.captain_down(), "The elder should be ready to hear of the captain's fall."
+    elder.report_victory()
+    assert game_map.getBoolProperty("victory_reported"), "Reporting should mark the victory."
+    assert player.getGold() == gold_before + 150, "The elder should pay the hidden purse once."
+    elder.report_victory()
+    assert player.getGold() == gold_before + 150, "Repeating the report must not pay twice."
+    player.checkQuests()
+    assert "hearthfallQuest" in completed_quest_names(player), "The Hearthfall quest should complete."
+
+    return {
+        "map": "hearthfall",
+        "captain_defeated": game_map.getBoolProperty("captain_defeated"),
+        "victory_reported": game_map.getBoolProperty("victory_reported"),
+        "gold": player.getGold(),
+        "quest_completed": "hearthfallQuest" in completed_quest_names(player),
+    }
+
+
+def walkthrough_gravemoor_map():
+    g, game_map, player = load_game_map_with_player("gravemoor")
+    cages = ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth")
+    for name in ("gravemoorStart", "quartermasterVoss") + cages:
+        find_map_object_definition("gravemoor", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("gravemoor", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the rescue quest.
+    move_to_object("gravemoorStart")
+    assert "gravemoorQuest" in quest_names(player), "Arrival should grant the Gravemoor quest."
+
+    # Judgment is locked until every cage is open.
+    voss = g.createObject("vossDialog")
+    assert voss.captives_missing(), "Judgment should wait until the loyalists are free."
+
+    for index, cage in enumerate(cages, start=1):
+        move_to_object(cage)
+        assert game_map.getNumericProperty("loyalists_freed") == index, f"Cage {cage} should free a loyalist."
+        assert game_map.getObjectByName(cage) is None, f"Cage {cage} should be gone once opened."
+
+    # Sparing Voss completes the chapter and pays the cached pay-chests once.
+    assert voss.ready_to_judge(), "All cages open should unlock the judgment."
+    gold_before = player.getGold()
+    voss.spare_voss()
+    assert game_map.getBoolProperty("voss_judged"), "Judgment should be recorded."
+    assert game_map.getBoolProperty("voss_spared"), "This route spares the quartermaster."
+    assert player.getGold() == gold_before + 200, "Sparing Voss should yield the pay-chest gold once."
+    voss.spare_voss()
+    assert player.getGold() == gold_before + 200, "Repeating the judgment must not pay twice."
+    player.checkQuests()
+    assert "gravemoorQuest" in completed_quest_names(player), "The Gravemoor quest should complete."
+
+    return {
+        "map": "gravemoor",
+        "loyalists_freed": game_map.getNumericProperty("loyalists_freed"),
+        "voss_judged": game_map.getBoolProperty("voss_judged"),
+        "voss_spared": game_map.getBoolProperty("voss_spared"),
+        "gold": player.getGold(),
+        "quest_completed": "gravemoorQuest" in completed_quest_names(player),
+    }
+
+
+def walkthrough_usurpergate_map():
+    g, game_map, player = load_game_map_with_player("usurpergate")
+    for name in ("usurpergateStart", "theUsurper", "obsidianThrone", "banneretHild"):
+        find_map_object_definition("usurpergate", name)
+
+    def move_to_object(name):
+        definition = find_map_object_definition("usurpergate", name)
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+
+    # Arrival grants the assault quest.
+    move_to_object("usurpergateStart")
+    assert "usurpergateQuest" in quest_names(player), "Arrival should grant the Usurper's Gate quest."
+
+    # The Usurper falls; the throne can then be taken, paying the treasury once.
+    gold_before = player.getGold()
+    game_map.removeObjectByName("theUsurper")
+    assert game_map.getBoolProperty("usurper_defeated"), "Killing the Usurper should be recorded."
+    move_to_object("obsidianThrone")
+    assert game_map.getBoolProperty("throne_taken"), "Sitting the throne should retake the keep."
+    assert player.getGold() == gold_before + 500, "Taking the throne should pay the treasury once."
+    player.checkQuests()
+    assert "usurpergateQuest" in completed_quest_names(player), "The Usurper's Gate quest should complete."
+
+    return {
+        "map": "usurpergate",
+        "usurper_defeated": game_map.getBoolProperty("usurper_defeated"),
+        "throne_taken": game_map.getBoolProperty("throne_taken"),
+        "gold": player.getGold(),
+        "quest_completed": "usurpergateQuest" in completed_quest_names(player),
+    }
+
+
 WALKTHROUGHS = {
+    "gravemoor": walkthrough_gravemoor_map,
+    "hearthfall": walkthrough_hearthfall_map,
     "kadath": walkthrough_kadath_map,
     "ninemarches": walkthrough_ninemarches_map,
     "sunderedmarch": walkthrough_sunderedmarch_map,
@@ -4899,6 +5028,7 @@ WALKTHROUGHS = {
     "ritual": walkthrough_ritual_map,
     "siege": walkthrough_siege_map,
     "test": walkthrough_test_map,
+    "usurpergate": walkthrough_usurpergate_map,
     "vhulmarn": walkthrough_vhulmarn_map,
 }
 
@@ -15342,6 +15472,18 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("ninemarches")
 
     @game_test
+    def test_map_walkthrough_hearthfall(self):
+        return execute_walkthrough("hearthfall")
+
+    @game_test
+    def test_map_walkthrough_gravemoor(self):
+        return execute_walkthrough("gravemoor")
+
+    @game_test
+    def test_map_walkthrough_usurpergate(self):
+        return execute_walkthrough("usurpergate")
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -16293,6 +16435,118 @@ class GameTest(unittest.TestCase):
             {
                 "save": save_name,
                 "campaign": "fallOfNouraajd",
+            },
+            sort_keys=True,
+        )
+
+    def _drive_wardens_road_to_judgment(self, g, campaign_module):
+        """Play the Warden's Road campaign up to the Gravemoor judgment.
+
+        Returns (scene_manager, player, voss_dialog) with all three cages
+        already opened, so the caller picks the branch by invoking one of the
+        judgment actions.
+        """
+        game = load_game_module()
+        store = campaign_module.start(g, "wardensRoad", DEFAULT_PLAYER)
+        scene_manager = g.getSceneManager()
+        player = g.getMap().getPlayer()
+        self.assertEqual("hearthfall", g.getMap().mapName)
+        self.assertEqual("homecoming", store.scenario())
+
+        def move_to(map_name, object_name):
+            definition = find_map_object_definition(map_name, object_name)
+            player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        # Chapter I: break the occupation and report to the elder.
+        move_to("hearthfall", "hearthfallStart")
+        g.getMap().removeObjectByName("watchCaptain")
+        g.createObject("elderDialog").report_victory()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("rescue", store.scenario())
+        self.assertEqual([("homecoming", "completed")], store.history())
+
+        # Chapter II: open every barrow cage; judgment is the caller's choice.
+        move_to("gravemoor", "gravemoorStart")
+        for cage in ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth"):
+            move_to("gravemoor", cage)
+        self.assertEqual(3, g.getMap().getNumericProperty("loyalists_freed"))
+        voss = g.createObject("vossDialog")
+        self.assertTrue(voss.ready_to_judge())
+        return scene_manager, player, voss
+
+    @game_test
+    def test_wardens_road_campaign_mercy_route(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        scene_manager, player, voss = self._drive_wardens_road_to_judgment(g, campaign_module)
+        store = campaign_module.CampaignStateStore(player)
+
+        voss.spare_voss()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("usurpergate", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("assault_mercy", store.scenario())
+
+        # Chapter III: fell the Usurper and take the throne; the campaign ends.
+        definition = find_map_object_definition("usurpergate", "usurpergateStart")
+        player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+        pump_event_loop(5)
+        g.getMap().removeObjectByName("theUsurper")
+        throne = find_map_object_definition("usurpergate", "obsidianThrone")
+        player.moveTo(throne["x"] // 32, throne["y"] // 32, 0)
+        pump_event_loop(5)
+
+        self.assertTrue(g.getMap().getBoolProperty("throne_taken"))
+        self.assertTrue(store.finished())
+        self.assertFalse(store.active())
+        self.assertEqual(
+            [("homecoming", "completed"), ("rescue", "spared"), ("assault_mercy", "completed")],
+            store.history(),
+        )
+
+        return True, json.dumps(
+            {
+                "campaign": store.campaign_id(),
+                "history": store.history(),
+                "final_map": g.getMap().mapName,
+                "finished": store.finished(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_wardens_road_campaign_wrath_route_clamps_gold(self):
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+        scene_manager, player, voss = self._drive_wardens_road_to_judgment(g, campaign_module)
+        store = campaign_module.CampaignStateStore(player)
+
+        voss.execute_voss()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        # The wrath branch enters the finale through the gold-clamped scenario.
+        self.assertEqual("usurpergate", g.getMap().mapName)
+        self.assertEqual("assault_wrath", store.scenario())
+        self.assertEqual([("homecoming", "completed"), ("rescue", "executed")], store.history())
+        self.assertLessEqual(player.getGold(), 400)
+
+        return True, json.dumps(
+            {
+                "campaign": store.campaign_id(),
+                "scenario": store.scenario(),
+                "gold": player.getGold(),
             },
             sort_keys=True,
         )
@@ -17465,6 +17719,335 @@ class GameTest(unittest.TestCase):
             game.CGuiHandler.showDialog = original_show_dialog
             game.CGuiHandler.showTrade = original_show_trade
             game.CPlayer.healProc = original_heal_proc
+
+    @game_test
+    def test_save_round_trip_harness_covers_fixtures_and_live_game(self):
+        """End-to-end exercise of the reusable save round-trip comparison harness.
+
+        The harness contract (see SaveRoundTripHarness below) is save -> load -> re-save with
+        a structural comparison of the two serialized documents. Failure mode: if a future
+        change makes any property serialize differently after one load/save cycle -- for
+        example dropping a stat on load, or re-rolling a value in initialize() -- the harness
+        fails with path-level diff lines such as:
+
+            save round-trip drift for composed_archetype_v1:
+            $.snapshot.properties.objects[1].properties.creatureClass.properties.baseStats.properties.strength: 9 != 12
+            $.snapshot.properties.turn: 18 != <missing>
+
+        instead of an opaque assertEqual dump of both documents.
+        """
+        game = load_game_module()
+
+        # The precise-diff reporter is part of the harness contract, so pin its failure
+        # mode on a synthetic drifted document before touching real saves.
+        stable = {
+            "snapshot": {
+                "properties": {
+                    "turn": 18,
+                    "objects": [{"class": "CPlayer", "properties": {"name": "player", "hp": 5}}],
+                }
+            }
+        }
+        drifted = json.loads(json.dumps(stable))
+        drifted["snapshot"]["properties"]["turn"] = 19
+        drifted["snapshot"]["properties"]["objects"][0]["properties"].pop("hp")
+        diff_lines = save_round_trip_diff(
+            canonical_save_round_trip_form(stable), canonical_save_round_trip_form(drifted)
+        )
+        self.assertIn("$.snapshot.properties.turn: 18 != 19", diff_lines)
+        self.assertIn("$.snapshot.properties.objects[0].properties.hp: 5 != <missing>", diff_lines)
+
+        # Generated-name normalization: CSerialization::generateName() assigns random hex
+        # hash names to otherwise-unnamed nested objects, so two saves that differ only in
+        # such a regenerated name must not report drift.
+        self.assertEqual(
+            canonical_save_round_trip_form({"properties": {"name": "0f3a9c771b2d4e55"}}),
+            canonical_save_round_trip_form({"properties": {"name": "77aa88bb99cc00dd"}}),
+        )
+
+        # Root-map provenance normalization: CObjectHandler::_createObject rewrites the root
+        # map's typeId with the config key it was constructed from ("CMap"/authored id when
+        # freshly started, "__save_slot__/<slot>" after a save-slot restore), so a fresh-save
+        # vs post-reload re-save pair differing only there must not report drift...
+        self.assertEqual(
+            canonical_save_round_trip_form({"snapshot": {"properties": {"typeId": "CMap"}}}),
+            canonical_save_round_trip_form({"snapshot": {"properties": {"typeId": "__save_slot__/slot_a"}}}),
+        )
+        # ...while typeIds of objects INSIDE the map remain real state and still diff exactly.
+        nested_first = {
+            "snapshot": {"properties": {"typeId": "CMap", "objects": [{"properties": {"typeId": "Warrior"}}]}}
+        }
+        nested_second = json.loads(json.dumps(nested_first))
+        nested_second["snapshot"]["properties"]["objects"][0]["properties"]["typeId"] = "Sorcerer"
+        self.assertIn(
+            "$.snapshot.properties.objects[0].properties.typeId: 'Warrior' != 'Sorcerer'",
+            save_round_trip_diff(
+                canonical_save_round_trip_form(nested_first), canonical_save_round_trip_form(nested_second)
+            ),
+        )
+
+        # Auto-discovery must keep covering the whole fixture corpus with zero per-fixture
+        # wiring, including the backup-recovery pairing.
+        fixtures = discover_save_round_trip_fixtures()
+        self.assertIn("composed_archetype_v1", fixtures)
+        self.assertIn("invalid_primary_valid_backup", fixtures)
+        self.assertEqual("invalid_primary_valid_backup.json.bak", fixtures["invalid_primary_valid_backup"]["backup"])
+
+        results = {}
+        with SaveRoundTripHarness(self, game) as harness:
+            for fixture_name in sorted(fixtures):
+                results[fixture_name] = harness.assert_fixture_round_trip(fixture_name, fixtures[fixture_name])["map"]
+
+            # Live-game round trip: a freshly started game must serialize to a stable
+            # fixed point as well, not just the curated fixtures.
+            _live_game, live_map, _live_player = load_game_map_with_player("test")
+            results["live:test"] = harness.assert_stable_resave(
+                live_map, "harness_live_round_trip", context="live test map"
+            )["map"]
+
+        self.assertEqual("composed", results["composed_archetype_v1"])
+        self.assertEqual("test", results["live:test"])
+        return True, json.dumps({"round_trips": results}, sort_keys=True)
+
+
+# --- Save round-trip comparison harness ----------------------------------------------------
+#
+# Reusable pieces for asserting that the current save format is a fixed point of one
+# load/save cycle. Future save-affecting epics extend coverage by either dropping a fixture
+# into tests/fixtures/save_compatibility/ (auto-discovered below) or calling
+# SaveRoundTripHarness.assert_stable_resave on live game state they have built up.
+
+SAVE_GENERATED_NAME_PATTERN = re.compile(r"[0-9a-fA-F]{8,}")
+SAVE_GENERATED_NAME_PLACEHOLDER = "<generated-name>"
+SAVE_SLOT_IDENTITY_PREFIX = "__save_slot__/"
+SAVE_SLOT_IDENTITY_PLACEHOLDER = "__save_slot__/<slot>"
+SAVE_MAP_PROVENANCE_PLACEHOLDER = "<map-load-provenance>"
+
+
+def normalize_generated_save_names(value):
+    """Replace auto-generated object names with a stable placeholder.
+
+    CSerialization::generateName() (src/core/CSerialization.cpp) names otherwise-unnamed
+    objects with vstd::to_hex_hash(..., vstd::rand()), so an object re-created from scratch
+    during a load (instead of restored from its serialized name property) would differ only
+    by that random hex name. The generated names carry no game state, so they are normalized
+    to a placeholder before comparison; every semantic property is still compared exactly.
+    """
+    if isinstance(value, dict):
+        normalized = {}
+        for key, item in value.items():
+            if key == "name" and isinstance(item, str) and SAVE_GENERATED_NAME_PATTERN.fullmatch(item):
+                normalized[key] = SAVE_GENERATED_NAME_PLACEHOLDER
+            elif key in ("name", "typeId") and isinstance(item, str) and item.startswith(SAVE_SLOT_IDENTITY_PREFIX):
+                # Snapshot identities embed the save slot name; the harness deliberately
+                # saves the first pass and the re-save under different slots, so the
+                # slot-derived identity is legitimately unstable across the round trip.
+                normalized[key] = SAVE_SLOT_IDENTITY_PLACEHOLDER
+            else:
+                normalized[key] = normalize_generated_save_names(item)
+        return normalized
+    if isinstance(value, list):
+        return [normalize_generated_save_names(item) for item in value]
+    return value
+
+
+def normalize_map_load_provenance(document):
+    """Pin the root CMap snapshot's typeId, which records construction provenance, not state.
+
+    CObjectHandler::_createObject (src/handler/CObjectHandler.cpp) overwrites typeId after
+    deserialization with the config key the object was created from. For the root map that
+    key is the authored map id for a freshly started game but becomes
+    CSaveFormat::savedMapConfigKey ("__save_slot__/<slot>", see restore_save_document in
+    src/core/CLoader.cpp) once the map has been restored from a save slot, so one load/save
+    cycle legitimately rewrites the root typeId. It is pinned to a placeholder before
+    comparison; typeIds of the objects inside the map are real state and compared exactly.
+    """
+    if not isinstance(document, dict):
+        return document
+    snapshot = document.get("snapshot")
+    if not isinstance(snapshot, dict):
+        return document
+    properties = snapshot.get("properties")
+    if not isinstance(properties, dict) or "typeId" not in properties:
+        return document
+    normalized = dict(document)
+    normalized["snapshot"] = dict(snapshot)
+    normalized["snapshot"]["properties"] = dict(properties)
+    normalized["snapshot"]["properties"]["typeId"] = SAVE_MAP_PROVENANCE_PLACEHOLDER
+    return normalized
+
+
+def canonical_save_round_trip_form(document, *, normalize=None):
+    """Comparable form of a saved document: generated names and root-map load provenance
+    are normalized, then key order and set-backed array order are canonicalized via
+    normalize_save_snapshot. An optional `normalize` callable runs in between for fields
+    a future epic knows to be unstable."""
+    canonical = normalize_map_load_provenance(normalize_generated_save_names(document))
+    if normalize is not None:
+        canonical = normalize(canonical)
+    return normalize_save_snapshot(canonical)
+
+
+def save_round_trip_diff(first, second, path="$"):
+    """Precise structural diff between two canonical save documents.
+
+    Returns human-readable "path: first != second" lines, using "<missing>" for keys or
+    list entries present on only one side, so a round-trip regression points directly at
+    the drifting property instead of dumping both documents.
+    """
+    if first == second:
+        return []
+    if isinstance(first, dict) and isinstance(second, dict):
+        lines = []
+        for key in sorted(set(first) | set(second)):
+            key_path = f"{path}.{key}"
+            if key not in first:
+                lines.append(f"{key_path}: <missing> != {second[key]!r}")
+            elif key not in second:
+                lines.append(f"{key_path}: {first[key]!r} != <missing>")
+            else:
+                lines.extend(save_round_trip_diff(first[key], second[key], key_path))
+        return lines
+    if isinstance(first, list) and isinstance(second, list):
+        lines = []
+        for index in range(max(len(first), len(second))):
+            entry_path = f"{path}[{index}]"
+            if index >= len(first):
+                lines.append(f"{entry_path}: <missing> != {second[index]!r}")
+            elif index >= len(second):
+                lines.append(f"{entry_path}: {first[index]!r} != <missing>")
+            else:
+                lines.extend(save_round_trip_diff(first[index], second[index], entry_path))
+        return lines
+    return [f"{path}: {first!r} != {second!r}"]
+
+
+def discover_save_round_trip_fixtures():
+    """Auto-discover every round-trippable save fixture in SAVE_FIXTURE_DIR.
+
+    Adding a fixture to the round-trip matrix needs zero registration here: drop
+    <name>.json (plus an optional <name>.json.bak backup) into
+    tests/fixtures/save_compatibility/ and it is picked up automatically. Fixtures already
+    registered in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS reuse their declared primary/backup
+    pairing so backup-recovery fixtures install correctly.
+
+    Fixture content rule: use inline {"class": ..., "properties": ...} objects for any
+    state that must survive the round trip; {"ref": ...} entries pointing at content that
+    may not exist on the target map are dropped or rejected at load time.
+    """
+    fixtures = {}
+    referenced = set()
+    for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
+        entry = {"primary": expected["primary"]}
+        referenced.add(expected["primary"])
+        if expected.get("backup"):
+            entry["backup"] = expected["backup"]
+            referenced.add(expected["backup"])
+        fixtures[fixture_name] = entry
+    for path in sorted(SAVE_FIXTURE_DIR.glob("*.json")):
+        if path.name in referenced:
+            continue
+        entry = {"primary": path.name}
+        backup = path.with_name(f"{path.name}.bak")
+        if backup.exists():
+            entry["backup"] = backup.name
+        fixtures[path.stem] = entry
+    return fixtures
+
+
+class SaveRoundTripHarness:
+    """Reusable save -> load -> re-save comparison harness for save-affecting epics.
+
+    Contract: the current serialized save format must be a fixed point of one load/save
+    cycle. The first save canonicalizes whatever went in (legacy envelopes are upgraded,
+    schema migrations run, defaulted properties are materialized), so stability is asserted
+    between the first save and a re-save of its reload -- never against the raw fixture
+    text. Comparison is structural via canonical_save_round_trip_form (key order,
+    set-backed array order, and generated hex-hash object names are normalized; everything
+    else must match exactly) and mismatches fail with save_round_trip_diff path lines.
+
+    Adding coverage for a new save-affecting feature:
+        * fixture state: drop an inline-object JSON into tests/fixtures/save_compatibility/;
+        discover_save_round_trip_fixtures() picks it up with no further wiring (also
+        register it in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS if it should join the summary
+        matrix checks).
+        * live state: build the state in a test, then
+            with SaveRoundTripHarness(self, game) as harness:
+                harness.assert_stable_resave(game_map, "my_feature_round_trip")
+    A `normalize` callable may be supplied for a legitimately-unstable field a future epic
+    introduces; it runs on both documents before comparison.
+    """
+
+    def __init__(self, test_case, game, *, normalize=None):
+        self.test_case = test_case
+        self.game = game
+        self.normalize = normalize
+        self._slots = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.cleanup()
+        return False
+
+    def cleanup(self):
+        while self._slots:
+            cleanup_save_slot(self._slots.pop())
+
+    def _slot(self, prefix):
+        slot_name = unique_save_name(prefix)
+        self._slots.append(slot_name)
+        cleanup_save_slot(slot_name)
+        return slot_name
+
+    def _load_slot(self, slot_name, context):
+        loaded_game = self.game.CGameLoader.loadGame()
+        self.game.CGameLoader.loadSavedGame(loaded_game, slot_name)
+        loaded_map = loaded_game.getMap()
+        self.test_case.assertIsNotNone(loaded_map, f"{context}: save slot {slot_name!r} did not load")
+        return loaded_game, loaded_map
+
+    def _save_document(self, game_map, slot_name):
+        self.game.CMapLoader.save(game_map, slot_name)
+        return json.loads(save_primary_path(slot_name).read_text(encoding="utf-8"))
+
+    def assert_stable_resave(self, game_map, prefix, *, context=None):
+        """Save game_map, reload that save, re-save, and assert both documents match."""
+        context = context or prefix
+        first_slot = self._slot(f"{prefix}_first")
+        first_document = self._save_document(game_map, first_slot)
+        map_name = first_document.get("mapName")
+        assert_save_envelope(self.test_case, first_document, map_name)
+
+        # Keep the reloaded game referenced until the re-save has been written.
+        _reloaded_game, reloaded_map = self._load_slot(first_slot, context)
+        second_document = self._save_document(reloaded_map, self._slot(f"{prefix}_resave"))
+        assert_save_envelope(self.test_case, second_document, map_name)
+
+        self.assert_documents_match(first_document, second_document, context)
+        return {"map": map_name, "first": first_document, "second": second_document}
+
+    def assert_fixture_round_trip(self, fixture_name, fixture=None):
+        """Round-trip one tests/fixtures/save_compatibility fixture through the live loader."""
+        if fixture is None:
+            fixture = discover_save_round_trip_fixtures()[fixture_name]
+        fixture_slot = self._slot(f"round_trip_{fixture_name}")
+        install_save_fixture_slot(fixture_slot, fixture)
+        _loaded_game, loaded_map = self._load_slot(fixture_slot, fixture_name)
+        return self.assert_stable_resave(loaded_map, f"round_trip_{fixture_name}", context=fixture_name)
+
+    def assert_documents_match(self, first_document, second_document, context):
+        """Structurally compare two saved documents, failing with a precise path diff."""
+        canonical_first = canonical_save_round_trip_form(first_document, normalize=self.normalize)
+        canonical_second = canonical_save_round_trip_form(second_document, normalize=self.normalize)
+        if canonical_first == canonical_second:
+            return
+        diff_lines = save_round_trip_diff(canonical_first, canonical_second)
+        preview = "\n".join(diff_lines[:40])
+        if len(diff_lines) > 40:
+            preview += f"\n... and {len(diff_lines) - 40} more differing paths"
+        self.test_case.fail(f"save round-trip drift for {context}:\n{preview}")
 
 
 class ConsoleEventIsolationTest(unittest.TestCase):
@@ -20240,6 +20823,9 @@ class McpServerTest(unittest.TestCase):
         "kadath": "_mcp_walkthrough_kadath",
         "sunderedmarch": "_mcp_walkthrough_sunderedmarch",
         "ninemarches": "_mcp_walkthrough_ninemarches",
+        "hearthfall": "_mcp_walkthrough_hearthfall",
+        "gravemoor": "_mcp_walkthrough_gravemoor",
+        "usurpergate": "_mcp_walkthrough_usurpergate",
     }
 
     def make_stub_server(self):
@@ -20966,6 +21552,15 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_ninemarches(self):
         self._assert_mcp_walkthrough("ninemarches")
 
+    def test_stdio_map_walkthrough_hearthfall(self):
+        self._assert_mcp_walkthrough("hearthfall")
+
+    def test_stdio_map_walkthrough_gravemoor(self):
+        self._assert_mcp_walkthrough("gravemoor")
+
+    def test_stdio_map_walkthrough_usurpergate(self):
+        self._assert_mcp_walkthrough("usurpergate")
+
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
         try:
@@ -21466,6 +22061,96 @@ class McpServerTest(unittest.TestCase):
             "throne_taken": map_bool("throne_taken"),
             "boss_woken": map_bool("boss_woken"),
             "has_signet": has_signet,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_hearthfall(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "hearthfall")
+        for name in ("hearthfallStart", "watchCaptain", "elderMaren"):
+            find_map_object_definition("hearthfall", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the liberation quest; the watch-captain's fall frees the square.
+        step_onto("hearthfallStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        self.assertTrue(map_bool("hearthfall_intro"))
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["watchCaptain"])
+
+        self.assertTrue(map_bool("captain_defeated"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        return {
+            "map": "hearthfall",
+            "intro": map_bool("hearthfall_intro"),
+            "captain_defeated": map_bool("captain_defeated"),
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_gravemoor(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "gravemoor")
+        cages = ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth")
+        for name in ("gravemoorStart", "quartermasterVoss") + cages:
+            find_map_object_definition("gravemoor", name)
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the rescue quest; opening every barrow cage frees the loyalists.
+        step_onto("gravemoorStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        for cage in cages:
+            step_onto(cage)
+
+        freed = self._mcp_handle_call(session, map_handle, "getNumericProperty", ["loyalists_freed"])
+        self.assertEqual(len(cages), freed)
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        return {
+            "map": "gravemoor",
+            "loyalists_freed": freed,
+            "quests": self._serialized_quest_ids(player_data),
+        }
+
+    def _mcp_walkthrough_usurpergate(self, session):
+        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "usurpergate")
+        for name in ("usurpergateStart", "theUsurper", "obsidianThrone"):
+            find_map_object_definition("usurpergate", name)
+
+        def map_bool(name):
+            return self._mcp_handle_call(session, map_handle, "getBoolProperty", [name])
+
+        def step_onto(name):
+            obj = self._mcp_get_object_by_name(session, map_handle, name)
+            coords = self._mcp_handle_call(session, obj, "getCoords")
+            self._mcp_handle_call(session, player_handle, "setCoords", [coords])
+            self._mcp_advance_map(session, map_handle, 1)
+
+        # Arrival grants the assault quest; the Usurper falls; the throne retakes the keep.
+        step_onto("usurpergateStart")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["theUsurper"])
+        self.assertTrue(map_bool("usurper_defeated"))
+        step_onto("obsidianThrone")
+        self._mcp_handle_call(session, player_handle, "checkQuests")
+
+        self.assertTrue(map_bool("throne_taken"))
+        map_data = self._mcp_serialized_map(session, map_handle)
+        player_data = self._serialized_player(map_data)
+        return {
+            "map": "usurpergate",
+            "usurper_defeated": map_bool("usurper_defeated"),
+            "throne_taken": map_bool("throne_taken"),
             "quests": self._serialized_quest_ids(player_data),
         }
 

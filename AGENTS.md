@@ -214,6 +214,17 @@ reconciliation against worktrees, `git rev-parse --verify` branch evidence, and 
 only recommends UNREACHABLE/ORPHANED transitions, which are applied with the explicit `mark` subcommand. The sweeper
 never deletes worktrees, kills processes, or mutates the workbook.
 
+Scarce local resources shared between concurrent controllers (heavy build/test/coverage jobs, Xvfb displays, TCP
+ports, build directories, memory budgets, MCP server slots) are coordinated through the resource broker built into the
+same script. `python3 scripts/controller_resource_audit.py probe` reports read-only availability
+(`available`/`unavailable`/`unknown`/`unsupported`, never raising on unsupported platforms), and
+`reserve`/`renew`/`release`/`recover`/`list` manage typed reservations in `planning/resource_reservations.json`
+(override with `--store` or `GAME_RESOURCE_RESERVATION_FILE`). Reservation batches are all-or-nothing under one
+sidecar lock, exclusive keys are hard conflicts while independent resources stay concurrent, memory reservations are
+advisory unless `--exclusive` is requested, and `recover` only marks expired reservation records — it never deletes
+records, kills processes, or removes worktrees. The default `--json` audit stays read-only and additionally reports
+probe results plus expired reservations under the additive `resources` key.
+
 ## Structured worker reports and restart handoffs
 
 Worker milestone and end-of-task reports follow the versioned JSON schema in `scripts/worker_report.py` (schema
@@ -789,6 +800,15 @@ Before finishing, summarize:
 - commands that failed or could not be run;
 - any risky assumptions;
 - any follow-up work that is genuinely required.
+
+## Controller capability probe
+
+Controller prompts must not assume merge methods, GitHub auth, required checks, formatters, build trees, or polling
+support. Before dispatch or publication steps that depend on such a capability, run the read-only snapshot
+`python3 scripts/controller_capability_probe.py --json` (optionally with repeated `--section` filters). Every field
+reports `available`, `unavailable`, `unknown`, or `unsupported` with short redacted evidence, and the command exits 0
+even when capabilities are missing. Branch on the reported fields: when a capability a step depends on is `unknown` or
+`unavailable`, block that dispatch or publication step and report the blocker instead of defaulting to a guessed path.
 
 ## Copyright
 
