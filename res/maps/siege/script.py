@@ -10,6 +10,16 @@ def load(self, context):
     from game import logger
     from game import claim_once
 
+    # The plugin sandbox only allows importing the game and json modules;
+    # game re-exports the campaign driver (res/campaign.py) as an attribute.
+    from game import campaign
+
+    # Scenario outcomes this map reports through campaign.complete_scenario;
+    # campaign manifests route them (see docs/design/multilevel_campaign.md).
+    # This is the final chapter of the shipped campaign, so there is no
+    # standalone fallback map.
+    CAMPAIGN_OUTCOMES = ("completed",)
+
     SPAWN_POINTS = ("spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4")
 
     def destroyed_gate_count(game_map):
@@ -68,6 +78,7 @@ def load(self, context):
             player.addGold(500)
             game_map.setBoolProperty("campaign_completed", True)
             self.getGame().getGuiHandler().showMessage("The last breach is sealed. Nouraajd survives the night.")
+            campaign.complete_scenario(self.getGame(), "completed")
 
     @register(context)
     class SpawnPoint(CEvent):

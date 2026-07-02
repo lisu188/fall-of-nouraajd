@@ -2948,6 +2948,207 @@ class ContentValidatorTest(unittest.TestCase):
         write_amulet_script(root / "res/maps/amulet/script.py")
         return root
 
+    def make_campaign_fixture(self, manifest=None, campaign_id="trial", **script_kwargs):
+        root = self.make_fixture()
+        write_campaign_script(root / "res/maps/broken/script.py", **script_kwargs)
+        campaign_dir = root / "res/campaigns" / campaign_id
+        campaign_dir.mkdir(parents=True)
+        write_json(campaign_dir / "campaign.json", valid_campaign_manifest() if manifest is None else manifest)
+        return root
+
+    def test_valid_campaign_fixture_passes_validation(self):
+        root = self.make_campaign_fixture()
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_campaign_directory_without_manifest_is_flagged(self):
+        root = self.make_campaign_fixture()
+        (root / "res/campaigns/empty").mkdir()
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/campaigns/empty/campaign.json", "missing required JSON file")
+
+    def test_campaign_manifest_missing_keys_and_wrong_header_are_flagged(self):
+        manifest = valid_campaign_manifest()
+        manifest["format"] = "wrong-format"
+        manifest["schemaVersion"] = 2
+        manifest["bogus"] = True
+        del manifest["title"]
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "$.format", 'expected "fall-of-nouraajd-campaign"')
+        self.assertIssueContains(issues, "$.schemaVersion", "expected 1")
+        self.assertIssueContains(issues, 'missing required key "title"')
+        self.assertIssueContains(issues, 'unknown key "bogus"')
+
+    def test_campaign_id_must_match_directory_name(self):
+        manifest = valid_campaign_manifest()
+        manifest["campaignId"] = "other"
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "$.campaignId", 'must match its directory name "trial"')
+
+    def test_campaign_start_and_next_targets_must_name_scenarios(self):
+        manifest = valid_campaign_manifest()
+        manifest["start"] = "nowhere"
+        manifest["scenarios"]["one"]["next"] = {"completed": "missing"}
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "$.start", "must name a scenario in this campaign")
+        self.assertIssueContains(issues, "$.scenarios.one.next.completed", "must name a scenario in this campaign")
+
+    def test_campaign_scenario_map_must_exist(self):
+        manifest = valid_campaign_manifest()
+        manifest["scenarios"]["two"]["map"] = "missing"
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues, "$.scenarios.two.map", "map transition target is missing res/maps/missing/map.json"
+        )
+
+    def test_campaign_unreachable_scenario_is_flagged(self):
+        manifest = valid_campaign_manifest()
+        manifest["scenarios"]["orphan"] = {
+            "map": "broken",
+            "title": "Orphan",
+            "briefing": "Unreached.",
+            "next": {},
+        }
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "$.scenarios.orphan", 'unreachable from the campaign "start" scenario')
+
+    def test_campaign_cycle_and_missing_terminal_are_flagged(self):
+        manifest = valid_campaign_manifest()
+        manifest["scenarios"]["two"]["next"] = {"completed": "one"}
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "$.scenarios", "campaign scenario graph must be acyclic")
+
+    def test_campaign_missing_terminal_scenario_is_flagged(self):
+        manifest = valid_campaign_manifest()
+        manifest["scenarios"]["two"]["next"] = {"completed": "ghost"}
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "$.scenarios.two.next.completed", "must name a scenario in this campaign")
+        self.assertIssueContains(issues, "no reachable terminal scenario")
+
+    def test_campaign_routed_outcome_must_be_declared_by_map_script(self):
+        manifest = valid_campaign_manifest()
+        manifest["scenarios"]["one"]["next"] = {"undeclared": "two"}
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "$.scenarios.one.next.undeclared",
+            "outcome is not declared in res/maps/broken/script.py CAMPAIGN_OUTCOMES",
+        )
+
+    def test_campaign_reported_outcome_must_be_routed_by_non_terminal_scenario(self):
+        manifest = valid_campaign_manifest()
+        manifest["scenarios"]["one"]["next"] = {"other": "two"}
+        root = self.make_campaign_fixture(manifest=manifest, outcomes='("completed", "other")')
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "$.scenarios.one.next",
+            'can report outcome "completed"',
+            "which this non-terminal scenario does not route",
+        )
+
+    def test_campaign_routes_require_script_outcome_declaration(self):
+        root = self.make_campaign_fixture(outcomes=None, completion_call=None)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "$.scenarios.one.next",
+            'map "broken" script declares no CAMPAIGN_OUTCOMES but this scenario routes outcomes',
+        )
+
+    def test_campaign_carryover_shape_is_validated(self):
+        manifest = valid_campaign_manifest()
+        manifest["scenarios"]["one"]["carryover"] = {
+            "gold_max": -5,
+            "items_allow": ["NoSuchItem"],
+            "items_deny": ["LifePotion"],
+            "bogus": 1,
+        }
+        root = self.make_campaign_fixture(manifest=manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "$.scenarios.one.carryover", 'unknown carryover key "bogus"')
+        self.assertIssueContains(issues, '"items_allow" or "items_deny", not both')
+        self.assertIssueContains(issues, "$.scenarios.one.carryover.gold_max", "must be a non-negative integer")
+        self.assertIssueContains(issues, "$.scenarios.one.carryover.items_allow", 'unknown item ref "NoSuchItem"')
+
+    def test_script_complete_scenario_requires_outcome_declaration(self):
+        root = self.make_campaign_fixture(manifest=None, outcomes=None)
+        manifest_path = root / "res/campaigns/trial/campaign.json"
+        manifest = read_json(manifest_path)
+        manifest["scenarios"]["one"]["next"] = {}
+        write_json(manifest_path, manifest)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            "complete_scenario is used but the script declares no CAMPAIGN_OUTCOMES",
+        )
+
+    def test_script_complete_scenario_outcome_must_be_declared(self):
+        root = self.make_campaign_fixture(outcomes='("something_else",)')
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues, "res/maps/broken/script.py", 'outcome "completed" is not declared in CAMPAIGN_OUTCOMES'
+        )
+
+    def test_script_complete_scenario_fallback_map_must_exist(self):
+        root = self.make_campaign_fixture(
+            completion_call='campaign.complete_scenario(self.getGame(), "completed", fallback_map="missingmap")'
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues, "res/maps/broken/script.py", "map transition target is missing res/maps/missingmap/map.json"
+        )
+
+    def test_script_campaign_outcomes_must_be_literal_strings(self):
+        root = self.make_campaign_fixture(outcomes="tuple(dynamic_outcomes)")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues, "res/maps/broken/script.py", "CAMPAIGN_OUTCOMES must be a literal tuple or list of outcome strings"
+        )
+
     def assertIssueContains(self, issues, *substrings):
         issue_text = "\n".join(str(issue) for issue in issues)
         for substring in substrings:
@@ -3108,6 +3309,93 @@ def write_script(path, script_quest, script_map, class_check=None):
                     def valid_condition(self):
                         return True
 {class_check_method}
+                @trigger(context, "onEnter", "start")
+                class StartTrigger(CEvent):
+                    pass
+            """).lstrip(),
+        encoding="utf-8",
+    )
+
+
+def valid_campaign_manifest():
+    return {
+        "format": "fall-of-nouraajd-campaign",
+        "schemaVersion": 1,
+        "campaignId": "trial",
+        "title": "Trial Campaign",
+        "description": "Two chapters on one map.",
+        "start": "one",
+        "completionText": "The trial ends.",
+        "scenarios": {
+            "one": {
+                "map": "broken",
+                "title": "Chapter I",
+                "briefing": "Begin the trial.",
+                "epilogue": "Onward.",
+                "carryover": {"gold_max": 100, "items_deny": ["LifePotion"]},
+                "next": {"completed": "two"},
+            },
+            "two": {
+                "map": "broken",
+                "title": "Chapter II",
+                "briefing": "Finish the trial.",
+                "next": {},
+            },
+        },
+    }
+
+
+def write_campaign_script(
+    path,
+    outcomes='("completed",)',
+    completion_call='campaign.complete_scenario(self.getGame(), "completed", fallback_map="broken")',
+):
+    """Write the fixture map script with campaign declarations.
+
+    Mirrors write_script but reports a campaign outcome instead of a direct
+    changeMap so campaign validation paths can be exercised. ``outcomes=None``
+    omits the CAMPAIGN_OUTCOMES declaration; ``completion_call=None`` omits the
+    complete_scenario report.
+    """
+    outcomes_line = f"CAMPAIGN_OUTCOMES = {outcomes}" if outcomes else ""
+    completion_line = completion_call or "pass"
+    path.write_text(
+        textwrap.dedent(f"""
+            def load(self, context):
+                from game import CDialog
+                from game import CEvent
+                from game import CQuest
+                from game import register
+                from game import trigger
+
+                from game import campaign
+
+                {outcomes_line}
+
+                def ensure_quest(player, quest_name):
+                    player.addQuest(quest_name)
+
+                @register(context)
+                class StartEvent(CEvent):
+                    def onEnter(self, event):
+                        self.getGame().createObject("validMarket")
+                        ensure_quest(event.getCause(), "goodQuest")
+                        event.getCause().addItem("LifePotion")
+                        self.getMap().getObjectByName("start")
+                        {completion_line}
+
+                @register(context)
+                class GoodQuest(CQuest):
+                    pass
+
+                @register(context)
+                class BrokenDialog(CDialog):
+                    def valid_action(self):
+                        pass
+
+                    def valid_condition(self):
+                        return True
+
                 @trigger(context, "onEnter", "start")
                 class StartTrigger(CEvent):
                     pass

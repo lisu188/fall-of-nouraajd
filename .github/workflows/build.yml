@@ -233,7 +233,8 @@ jobs:
           python3 test.py \
             GameTest.test_map_walkthrough_nouraajd \
             McpServerTest.test_stdio_map_walkthrough_nouraajd \
-            GameTest.test_campaign_transitions_preserve_player_and_start_siege
+            GameTest.test_campaign_transitions_preserve_player_and_start_siege \
+            GameTest.test_campaign_driver_routes_full_campaign_with_carryover
       - name: package
         if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
         run: cmake --build cmake-build-release --target package -j"$(nproc)"
@@ -369,6 +370,7 @@ jobs:
         run: |
           python scripts/validate_content.py --repo-root .
           python -m unittest tests.test_content_validator
+          python -m unittest tests.test_campaign_driver
           python -m unittest tests.test_creature_stat_scale_baseline
           python -m unittest tests.test_creature_equipment_inventory_baseline
       - name: test (python fast)
@@ -648,6 +650,7 @@ jobs:
         run: |
           python scripts/validate_content.py --repo-root .
           python -m unittest tests.test_content_validator
+          python -m unittest tests.test_campaign_driver
           python -m unittest tests.test_creature_stat_scale_baseline
           python -m unittest tests.test_creature_equipment_inventory_baseline
       - name: test (python fast)

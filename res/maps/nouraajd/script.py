@@ -13,6 +13,14 @@ def load(self, context):
     from game import ensure_quest
     from game import register, trigger
 
+    # The plugin sandbox only allows importing the game and json modules;
+    # game re-exports the campaign driver (res/campaign.py) as an attribute.
+    from game import campaign
+
+    # Scenario outcomes this map reports through campaign.complete_scenario;
+    # campaign manifests route them (see docs/design/multilevel_campaign.md).
+    CAMPAIGN_OUTCOMES = ("completed",)
+
     VICTOR_COURTYARD_TIMEOUT_TURNS = 75
     VICTOR_CULTIST_PREFIX = "victorCultist"
     VICTOR_COURTYARD_SPAWNS = [(44, 100, 0), (46, 100, 0), (45, 99, 0), (45, 101, 0)]
@@ -411,7 +419,7 @@ def load(self, context):
     @register(context)
     class ChangeMap(CEvent):
         def onEnter(self, event):
-            self.getMap().getGame().changeMap("ritual")
+            campaign.complete_scenario(self.getMap().getGame(), "completed", fallback_map="ritual")
 
     @register(context)
     class MainQuest(CQuest):
@@ -924,7 +932,7 @@ def load(self, context):
                     "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel."
                 )
                 self.getGame().getMap().getPlayer().checkQuests()
-                self.getGame().changeMap("ritual")
+                campaign.complete_scenario(self.getGame(), "completed", fallback_map="ritual")
             else:
                 self.getGame().getGuiHandler().showMessage("The cave still writhes with OctoBogz corruption.")
 

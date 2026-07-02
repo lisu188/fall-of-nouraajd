@@ -1,0 +1,31 @@
+{
+  "format": "fall-of-nouraajd-campaign",
+  "schemaVersion": 1,
+  "campaignId": "fallOfNouraajd",
+  "title": "The Fall of Nouraajd",
+  "description": "From the ruined town to the siege beyond the marsh: recover what the dead left behind, break the soul-binding ritual, and hold the last gatehouse.",
+  "start": "recovery",
+  "completionText": "The last breach is sealed and the marsh falls quiet. What began with a dead sergeant's letter ends on a held wall: Nouraajd survives the night, and so do you.",
+  "scenarios": {
+    "recovery": {
+      "map": "nouraajd",
+      "title": "Chapter I - The Ruined Town",
+      "briefing": "The town of Nouraajd lies in ruin and its dead do not rest. A letter from the late Sergeant Rolf points into the caves beneath the town; follow his trail, put down what killed him, and cleanse the corruption before it spreads.",
+      "epilogue": "The cave is purged and the town breathes again, but Beren's eyes stay fixed on the marsh road. Whatever fed the corruption is still out there, chanting.",
+      "next": { "completed": "cleansing" }
+    },
+    "cleansing": {
+      "map": "ritual",
+      "title": "Chapter II - The Ritual",
+      "briefing": "An abandoned chapel pulses with a soul-binding rite. Break the three anchors before the final verse completes, defeat the ritual leader, and decide the fate of the captive soul held in the stained glass.",
+      "epilogue": "The rescued captive walks beside you out of the chapel, pointing past the marsh to a gatehouse under siege. The cult's remnants have somewhere left to run - and something left to burn.",
+      "next": { "good_ending": "siege" }
+    },
+    "siege": {
+      "map": "siege",
+      "title": "Chapter III - The Siege",
+      "briefing": "The road ends at a besieged gatehouse. Seal every breach with charged mage-wands before the attackers overrun the wall; the Pritz mages among them carry spares, if you can take them.",
+      "next": {}
+    }
+  }
+}
