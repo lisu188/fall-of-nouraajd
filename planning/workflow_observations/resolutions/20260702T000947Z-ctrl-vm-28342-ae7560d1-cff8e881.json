@@ -1,0 +1,26 @@
+{
+  "evidence": [
+    {
+      "mergeCommit": "37ff270eab378409b81d0cbe794f5ddd073f860a",
+      "mergedPr": 1274,
+      "note": "SIGABRT root cause: CCreature::useAction ownership guard vs composed getEffectiveInteractions(); fixed to validate against the composed set"
+    },
+    {
+      "command": "test_inventory_right_click deadlock",
+      "result": "rewritten to #628 semantics with queued space key; shard no longer consumes its 1108s budget"
+    },
+    {
+      "command": "PR #1274 run 28595210563",
+      "result": "test (python gameplay) success on linux and windows; test (python ui) success"
+    }
+  ],
+  "mergeCommit": "37ff270eab378409b81d0cbe794f5ddd073f860a",
+  "mergedPr": 1274,
+  "observationId": "20260702T000947Z-ctrl-vm-28342-ae7560d1-cff8e881",
+  "resolutionSummary": "Fixed by PR #1274. The gameplay-suite SIGABRT was CCreature::useAction validating pointer identity against the concrete actions member while selectors draw from getEffectiveInteractions() (race/class-owned instances since 43c80dd); first composed action in a real fight hit vstd::fail_if -> std::terminate. Guard now validates against the composed set. The 1109s shard timeout was the right-click scroll deadlock (ee06c41/#628 blocking CGameTextPanel headless), fixed by encoding #628 semantics with a queued space key.",
+  "resolvedAtUtc": "2026-07-02T14:22:41Z",
+  "resolver": "controller/ctrl-vm-4027-c0afa077",
+  "schemaVersion": 1,
+  "sourceCommit": "37ff270eab378409b81d0cbe794f5ddd073f860a",
+  "status": "resolved"
+}

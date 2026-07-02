@@ -6967,6 +6967,130 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_change_map_reload_transition_does_not_retain_source_session(self):
+        # Legacy CGame.changeMap keeps its reload-compatible semantics: leaving a map does not
+        # retain a persistent session, and revisiting the map reloads it from content.
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        store = g.getContext().getMapSessionStore()
+        game_map.setBoolProperty("session_marker", True)
+        game_map.setNumericProperty("turn", 9)
+
+        g.changeMap("ritual")
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+        self.assertEqual(0, store.size())
+        self.assertEqual(9, g.getMap().getTurn())
+
+        g.changeMap("test")
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        reloaded_map = g.getMap()
+        self.assertFalse(reloaded_map == game_map)
+        self.assertFalse(reloaded_map.getBoolProperty("session_marker"))
+        self.assertEqual(0, store.size())
+        self.assertTrue(reloaded_map.getPlayer() == player)
+        self.assertEqual(9, reloaded_map.getTurn())
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": reloaded_map.mapName,
+                "marker_preserved": reloaded_map.getBoolProperty("session_marker"),
+                "session_count": store.size(),
+                "turn": reloaded_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_explicit_transition_request_round_trips_persistent_session(self):
+        # The opt-in CMapTransitionRequest API retains the source session, reuses it on return,
+        # honors explicit target coordinates, and can keep the persistent session's own turn.
+        game = load_game_module()
+
+        g, game_map, player = load_game_map_with_player("test")
+        scene_manager = g.getSceneManager()
+        store = g.getContext().getMapSessionStore()
+        origin = player.getCoords()
+        return_target = find_adjacent_walkable_tile(game_map, origin)
+        game_map.setBoolProperty("session_marker", True)
+        game_map.setNumericProperty("turn", 9)
+
+        retain_request = game.CMapTransitionRequest()
+        retain_request.targetMap = "ritual"
+        retain_request.retainSourceMap = True
+        retain_request.returnAnchor = "camp"
+        self.assertTrue(g.requestMapTransition(retain_request))
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        self.assertEqual("ritual", scene_manager.getPendingMapName())
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        ritual_map = g.getMap()
+        self.assertEqual(9, ritual_map.getTurn())
+        self.assertTrue(store.contains("test", "camp"))
+        self.assertTrue(store.get("test", "camp") == game_map)
+        self.assertEqual(
+            (ritual_map.getEntryX(), ritual_map.getEntryY(), ritual_map.getEntryZ()),
+            coords_tuple(player.getCoords()),
+        )
+
+        ritual_map.setNumericProperty("turn", 21)
+        reuse_request = game.CMapTransitionRequest()
+        reuse_request.targetMap = "test"
+        reuse_request.reuseLoadedMap = True
+        reuse_request.returnAnchor = "camp"
+        reuse_request.targetCoords = return_target
+        reuse_request.carryTurn = False
+        self.assertTrue(g.requestMapTransition(reuse_request))
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        restored_map = g.getMap()
+        self.assertTrue(restored_map == game_map)
+        self.assertTrue(restored_map.getBoolProperty("session_marker"))
+        self.assertEqual(9, restored_map.getTurn())
+        self.assertTrue(restored_map.getPlayer() == player)
+        self.assertEqual(coords_tuple(return_target), coords_tuple(player.getCoords()))
+        self.assertEqual(1, count_player_objects(restored_map))
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": restored_map.mapName,
+                "marker_preserved": restored_map.getBoolProperty("session_marker"),
+                "player_coords": coords_tuple(player.getCoords()),
+                "session_count": store.size(),
+                "turn": restored_map.getTurn(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_scene_manager_rejects_nested_transition_from_destination_entry(self):
         game = load_game_module()
 
