@@ -15,22 +15,22 @@ Registry file resolution order:
 1. ``--registry <path>`` on the command line;
 2. the ``GAME_SUBAGENT_REGISTRY_FILE`` environment variable;
 3. the default ``<system temp dir>/fall-of-nouraajd/subagent_registry.json``
-   (for example ``/tmp/fall-of-nouraajd/subagent_registry.json`` on Linux).
+    (for example ``/tmp/fall-of-nouraajd/subagent_registry.json`` on Linux).
 
 Lifecycle contract:
 
 - ``register`` records an agent BEFORE it consumes a controller slot; duplicate
-  active registrations for the same owner or claim ID are rejected.
+    active registrations for the same owner or claim ID are rejected.
 - ``report`` updates ``lastSeenUtc`` only from a schema-valid, identity-matching
-  payload (a verified poll result or a structured worker report). Stale or
-  malformed evidence is rejected without touching the registry.
+    payload (a verified poll result or a structured worker report). Stale or
+    malformed evidence is rejected without touching the registry.
 - ``finalize`` is the only way a record stops consuming capacity.
 - ``sweep`` is strictly read-only: it reconciles records against worktree
-  paths, ``git rev-parse --verify`` branch evidence, and (optionally) read-only
-  workbook claim evidence, then prints UNREACHABLE/ORPHANED recommendations. It
-  never deletes worktrees, kills processes, mutates the workbook, or rewrites
-  the registry file; applying a recommendation requires the explicit ``mark``
-  subcommand.
+    paths, ``git rev-parse --verify`` branch evidence, and (optionally) read-only
+    workbook claim evidence, then prints UNREACHABLE/ORPHANED recommendations. It
+    never deletes worktrees, kills processes, mutates the workbook, or rewrites
+    the registry file; applying a recommendation requires the explicit ``mark``
+    subcommand.
 """
 
 from __future__ import annotations
