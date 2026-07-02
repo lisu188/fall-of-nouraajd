@@ -18397,11 +18397,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             pump_event_loop(5)
             selected_after_equip = get_panel_selection_box_counts_by_collection(inventory)
             self.assertEqual(0, selected_after_equip.get("inventoryCollection", 0))
+            # Right-click uses the item since #628; target the Sword (use is a no-op) so
+            # the gesture only resets selection state. Right-clicking a scroll here would
+            # open the blocking CGameTextPanel and stall the xvfb child.
             click_first_list_object(
                 self,
                 inventory_list,
                 g.getGui(),
-                lambda item: not item.hasTag(game.CTag.QUEST),
+                lambda item: item.getTypeId() == "Sword",
                 button=SDL_BUTTON_RIGHT,
             )
             pump_event_loop(5)
