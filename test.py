@@ -1327,7 +1327,10 @@ def game_test(f):
         success = result[0]
         log = result[1]
         (TEST_OUTPUT_DIR / f"{n}.json").write_text(str(log))
-        self.assertTrue(success)
+        # Include the log in the failure message: the per-test JSON is only uploaded
+        # as a CI artifact, so without this the shard log records a bare "False is
+        # not true" and hides the real assertion (e.g. a walkthrough traceback).
+        self.assertTrue(success, str(log))
 
     return wrapper
 
@@ -7255,9 +7258,7 @@ class GameTest(unittest.TestCase):
             # actions into the concrete template would change the raw list, and a reload that
             # dropped or doubled an action would change either list.
             raw = sorted((action.getTypeId(), action.getName()) for action in creature.getActions())
-            effective = sorted(
-                (action.getTypeId(), action.getName()) for action in creature.getEffectiveInteractions()
-            )
+            effective = sorted((action.getTypeId(), action.getName()) for action in creature.getEffectiveInteractions())
             return {"raw": raw, "effective": effective}
 
         save_name = unique_save_name("reload_idempotence_legacy_creature")
@@ -7273,9 +7274,7 @@ class GameTest(unittest.TestCase):
             # (WarriorClass grants "Attack"), otherwise the idempotence assertions below would be
             # vacuous. The raw set may legitimately be empty (class actions stay referenced on
             # the archetype, never copied into the concrete template).
-            self.assertTrue(
-                baseline_actions["effective"], "Warrior should expose at least one composed action"
-            )
+            self.assertTrue(baseline_actions["effective"], "Warrior should expose at least one composed action")
             self.assertGreater(baseline_stats["strength"], 0)
 
             # Discrimination check: if a reload duplicated an action, the captured identity list
@@ -19989,9 +19988,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"{test_name} should be parallelizable, not forced onto the serial shard",
             )
         # The genuinely order-sensitive save-directory tests must stay serial.
-        self.assertTrue(
-            is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty")
-        )
+        self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
 
     def test_shard_balancer_spreads_huge_map_walkthroughs(self):
         # With enough jobs the weight-aware packer must isolate the heavy maps onto
@@ -20003,8 +20000,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
         }
         stdio_walkthroughs = [
-            f"McpServerTest.test_stdio_map_walkthrough_{map_name}"
-            for map_name in McpServerTest.MCP_WALKTHROUGHS
+            f"McpServerTest.test_stdio_map_walkthrough_{map_name}" for map_name in McpServerTest.MCP_WALKTHROUGHS
         ]
         groups = shard_test_names(stdio_walkthroughs, jobs=4, timings=DEFAULT_TEST_DURATIONS)
         for group in groups:
