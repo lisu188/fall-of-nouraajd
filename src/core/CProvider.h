@@ -120,6 +120,23 @@ class CResourcesProvider {
 
     bool save(std::string file, std::shared_ptr<json> data);
 
+    // Register (or ref-count up) a map-scoped search root. `root` must be an existing directory that
+    // canonicalizes successfully; empty/nonexistent roots are ignored with a warning. Adding the same
+    // scope again increments its reference count so a retained map keeps its root alive.
+    void addScopedRoot(const std::string &scope, const std::string &root);
+
+    // Ref-count down a scope; the root is dropped only when the count reaches zero (i.e. no retained
+    // map still owns objects from that scope).
+    void releaseScopedRoot(const std::string &scope);
+
+    // Select which registered scope resolution should consult. Empty string = no active scope.
+    void setActiveScope(const std::string &scope);
+
+    std::string getActiveScope() const;
+
+    // Inspection helper for tests: canonical roots of all currently-registered scopes, sorted.
+    std::vector<std::string> getScopedRoots() const;
+
     CResourcesProvider() = default;
 
   private:
@@ -130,12 +147,20 @@ class CResourcesProvider {
         std::source_location location;
     };
 
+    struct ScopedRoot {
+        std::string canonicalRoot;
+        int refCount;
+    };
+
     std::expected<std::string, LoadFailure>
     loadExpected(std::string path, std::source_location location = std::source_location::current());
 
     static void logLoadFailure(const LoadFailure &failure);
 
     static std::list<std::string> searchPath;
+
+    std::map<std::string, ScopedRoot> scopedRoots;
+    std::string activeScope;
 };
 
 class CConfigurationProvider {

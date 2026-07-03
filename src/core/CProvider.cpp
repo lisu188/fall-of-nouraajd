@@ -431,7 +431,65 @@ std::string CResourcesProvider::getPath(std::string path) {
             return candidate.string();
         }
     }
+
+    if (!activeScope.empty()) {
+        const auto scope = scopedRoots.find(activeScope);
+        if (scope != scopedRoots.end()) {
+            std::error_code errorCode;
+            const std::filesystem::path resourceRoot(scope->second.canonicalRoot);
+            const auto candidatePath = resourceRoot / requestedPath;
+            auto candidate = std::filesystem::weakly_canonical(candidatePath, errorCode);
+            if (!errorCode && isWithinResourceRoot(candidate, resourceRoot) && std::filesystem::exists(candidate)) {
+                return candidate.string();
+            }
+        }
+    }
     return {};
+}
+
+void CResourcesProvider::addScopedRoot(const std::string &scope, const std::string &root) {
+    auto existing = scopedRoots.find(scope);
+    if (existing != scopedRoots.end()) {
+        ++existing->second.refCount;
+        return;
+    }
+
+    std::error_code errorCode;
+    const auto canonicalRoot = std::filesystem::weakly_canonical(root, errorCode);
+    if (errorCode || root.empty() || !std::filesystem::is_directory(canonicalRoot, errorCode) || errorCode) {
+        vstd::logger::warning("Ignoring scoped resource root:", scope, "root:", root,
+                              "reason:", "root is not an existing directory");
+        return;
+    }
+
+    scopedRoots.emplace(scope, ScopedRoot{canonicalRoot.string(), 1});
+}
+
+void CResourcesProvider::releaseScopedRoot(const std::string &scope) {
+    auto existing = scopedRoots.find(scope);
+    if (existing == scopedRoots.end()) {
+        return;
+    }
+    if (--existing->second.refCount <= 0) {
+        scopedRoots.erase(existing);
+        if (activeScope == scope) {
+            activeScope.clear();
+        }
+    }
+}
+
+void CResourcesProvider::setActiveScope(const std::string &scope) { activeScope = scope; }
+
+std::string CResourcesProvider::getActiveScope() const { return activeScope; }
+
+std::vector<std::string> CResourcesProvider::getScopedRoots() const {
+    std::vector<std::string> roots;
+    roots.reserve(scopedRoots.size());
+    for (const auto &[scope, scopedRoot] : scopedRoots) {
+        roots.push_back(scopedRoot.canonicalRoot);
+    }
+    std::ranges::sort(roots);
+    return roots;
 }
 
 std::vector<std::string> CResourcesProvider::getFiles(const std::string &type) {
