@@ -4463,6 +4463,36 @@ def iter_cpp_function_bodies(text: str) -> list[tuple[str, str]]:
     return functions
 
 
+def _first_template_argument(text: str, start: int) -> str | None:
+    """Return the first top-level template argument beginning at ``text[start]``
+    (just past the opening ``<``), honoring nested ``<...>``.
+
+    Returns None for a malformed/unterminated template. Unlike a ``[^,;\\n]``
+    capture, this stops the first argument at the matching top-level ``>`` or
+    ``,``, so a single-argument registration (``register_type<CFoo>()``) and a
+    nested wrapper (``register_type<CWrapper<CInner>>()``) are captured correctly
+    instead of swallowing the trailing ``>()`` and being rejected.
+    """
+    depth = 0
+    chars: list[str] = []
+    for ch in text[start:]:
+        if ch == "<":
+            depth += 1
+            chars.append(ch)
+        elif ch == ">":
+            if depth == 0:
+                return "".join(chars)
+            depth -= 1
+            chars.append(ch)
+        elif ch == "," and depth == 0:
+            return "".join(chars)
+        elif ch in ";\n":
+            return None
+        else:
+            chars.append(ch)
+    return None
+
+
 def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
     names: set[str] = set()
     # Strip comments first so a commented-out (runtime-disabled) registration is
@@ -4471,9 +4501,12 @@ def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
     # honored a commented register_type<...>, letting an unregistered reflected
     # type pass the coverage audit and then fail at runtime when built by name.
     text = strip_cpp_comments(text)
-    pattern = re.compile(rf"\b{re.escape(call_name)}\s*<\s*([^,;\n]+)")
+    pattern = re.compile(rf"\b{re.escape(call_name)}\s*<")
     for match in pattern.finditer(text):
-        name = normalize_cpp_type(match.group(1))
+        argument = _first_template_argument(text, match.end())
+        if argument is None:
+            continue
+        name = normalize_cpp_type(argument)
         if is_concrete_cpp_class_name(name):
             names.add(name)
     return names

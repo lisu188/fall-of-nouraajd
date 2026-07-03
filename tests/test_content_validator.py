@@ -4341,6 +4341,23 @@ class TypeRegistrationCoverageAuditTest(unittest.TestCase):
         mixed = "CTypes::register_type<CLive, CBase>();\n// CTypes::register_type<CDisabled, CBase>();\n"
         self.assertEqual({"CLive"}, iter_cpp_template_type_names(mixed, "register_type"))
 
+    def test_single_argument_and_nested_wrapper_registrations_are_detected(self):
+        # The first template argument is bounded by the matching top-level `>` or
+        # `,`, honoring nested `<...>`. A single-argument (base-less) registration
+        # and a nested wrapper must both be detected -- a plain `[^,;]` capture
+        # swallowed the trailing `>()` and dropped these, so a future
+        # `register_type<CNewRoot>()` would be falsely flagged as unregistered.
+        def names(src):
+            return iter_cpp_template_type_names(src, "register_type")
+
+        self.assertEqual({"CGameObject"}, names("register_type<CGameObject>();"))
+        self.assertEqual({"CRoot"}, names("CTypes::register_type<CRoot>(host);"))
+        self.assertEqual({"CInner"}, names("register_type<CWrapper<CInner>>();"))
+        self.assertEqual({"CInner"}, names("register_type<CWrapper<CInner>, CBase>();"))
+        self.assertEqual({"CSpaced"}, names("register_type< CSpaced >();"))
+        # Multi-argument detection is unchanged (first argument only).
+        self.assertEqual({"CDerived"}, names("register_type<CDerived, CBase>();"))
+
 
 if __name__ == "__main__":
     unittest.main()
