@@ -1,0 +1,36 @@
+{
+  "affectedPaths": [
+    "src/core/CMap.cpp"
+  ],
+  "category": "ci",
+  "controllerId": "ctrl-vm-12154-c015c7ea",
+  "createdAtUtc": "2026-07-03T09:24:40Z",
+  "details": "Sharpens observation #1351 (gravemoor/hearthfall native walkthroughs fail,\nfleet-wide native CI red) with the exact mechanism.\n\nRoot cause (confirmed by source trace):\n- Campaign scenario transitions place the player through\n  CSceneManager.cpp:198/200 -> CMap::attachPlayer(player[, coords]).\n- CMap::attachPlayer (src/core/CMap.cpp:172-202) positions the player with\n  player->moveTo(target) (lines 196 and 201). moveTo is a direct placement and\n  does NOT raise the destination entry object's onEnter. PR #1348 documents this\n  same semantics (\"attachPlayer performs entry placement but is not required to\n  raise the destination entry object's onEnter\") and, rather than change it,\n  relaxed the RITUAL round-trip test to stop asserting ritual-side init.\n- gravemoor and hearthfall put their one-time intro + quest bootstrap in an entry\n  CEvent.onEnter (res/maps/gravemoor/script.py GravemoorStart.onEnter sets\n  gravemoor_intro and ensure_quest(\"gravemoorQuest\"); hearthfall has the\n  equivalent). Because onEnter never fires on campaign arrival, the intro/quest\n  are never established, and the native walkthroughs (GameTest/McpServerTest\n  .test_(stdio_)map_walkthrough_gravemoor / _hearthfall) fail.\n\nFix options (for the #1301 multilevel-campaign owner):\n  (a) Drive the entry event through the arrival path in the scene-transition/\n      attachPlayer flow (the general version of #1338's \"drive the entry\n      StartEvent through the movement path\" ritual fix), so entry onEnter fires\n      once on campaign arrival for every scenario map; OR\n  (b) Move each campaign map's intro/quest bootstrap off entry-onEnter onto a\n      mechanism that runs on campaign arrival -- e.g. an onTurn initializer\n      guarded by the existing <map>_intro flag, or a campaign-scenario-start hook.\nOption (a) fixes it once for all campaign maps; (b) is per-map content.\n\nNot fixed here: this is native movement/event semantics + multilevel-campaign\ncontent owned by the #1301 author and actively navigated by the fleet (#1338\nmerged, #1348 open for the ritual variant); an isolated unvalidated patch would\nrisk conflicting with that work. Recorded as precise root-cause intel.\n",
+  "evidence": [
+    {
+      "trace": "CSceneManager.cpp:198/200 -> CMap::attachPlayer -> moveTo(target) at CMap.cpp:196,201 (direct placement, no onEnter)"
+    },
+    {
+      "map": "res/maps/gravemoor/script.py GravemoorStart.onEnter sets gravemoor_intro + ensure_quest; never fires on campaign arrival"
+    },
+    {
+      "tests": [
+        "test_map_walkthrough_gravemoor",
+        "test_map_walkthrough_hearthfall"
+      ]
+    },
+    {
+      "relatedFix": "#1338 drove ritual StartEvent through movement path; #1348 relaxed ritual test"
+    }
+  ],
+  "fingerprint": "attachplayer-moveto-skips-entry-onenter-campaign-maps",
+  "id": "20260703T092440Z-ctrl-vm-12154-c015c7ea-0e950780",
+  "impact": "Fleet-wide native CI stays red on gravemoor/hearthfall walkthroughs; sharpens #1351 with the exact CMap::attachPlayer->moveTo mechanism + two fix paths for the #1301 owner (#1348 fixed only ritual)",
+  "phase": "validation",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "9589641",
+  "suggestedImprovement": "Drive the entry event through the arrival/attachPlayer path so onEnter fires once on campaign arrival (general form of #1338), or move gravemoor/hearthfall intro+quest bootstrap off entry-onEnter to an onTurn/scenario-start hook guarded by the <map>_intro flag",
+  "summary": "gravemoor/hearthfall native red root cause: CMap::attachPlayer uses moveTo (no entry onEnter), so campaign-arrival maps whose intro/quest live in entry onEnter never initialize"
+}
