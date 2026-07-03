@@ -1373,6 +1373,20 @@ bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::st
         vstd::logger::warning("Rejected Python plugin outside trusted resource plugin paths:", path);
         return false;
     }
+    // A map's script.py registers its gameplay classes into the object handler as map-scoped
+    // bindings (see CObjectHandler::registerType); global plugins under plugins/ register
+    // authoritative bindings. isTrustedPluginPath already restricts a "script.py" filename to a
+    // valid maps/<name>/ directory, so the filename alone distinguishes the two here.
+    const auto normalizedPath = normalize_relative_resource_path(path);
+    const bool isMapScript = normalizedPath && std::filesystem::path(*normalizedPath).filename() == "script.py";
+    struct MapScriptScopeGuard {
+        std::shared_ptr<CObjectHandler> handler;
+        ~MapScriptScopeGuard() {
+            if (handler) {
+                handler->endMapScriptScope();
+            }
+        }
+    } scopeGuard;
     try {
         std::string code = game->getResourcesProvider()->load(path);
         pybind11::dict plugin_namespace;
@@ -1380,6 +1394,12 @@ bool CPluginLoader::loadPlugin(const std::shared_ptr<CGame> &game, const std::st
         plugin_namespace["__file__"] = path;
         plugin_namespace["__name__"] = vstd::join({"plugin_", vstd::to_hex_hash(path)}, "");
         pybind11::exec(code + "\n", plugin_namespace, plugin_namespace);
+        if (isMapScript) {
+            if (auto handler = game->getObjectHandler()) {
+                handler->beginMapScriptScope();
+                scopeGuard.handler = handler;
+            }
+        }
         plugin_namespace["load"](pybind11::none(), pybind11::cast(game));
         return true;
     } catch (const pybind11::error_already_set &exception) {

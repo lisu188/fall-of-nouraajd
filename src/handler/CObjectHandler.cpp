@@ -72,8 +72,31 @@ std::shared_ptr<CGameObject> CObjectHandler::getType(const std::string &name) {
 }
 
 void CObjectHandler::registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor) {
-    constructors.insert(std::make_pair(name, constructor));
+    // A map's script.py is loaded (registering its classes) immediately before that map's objects
+    // are constructed from TMX, so a class name shared across maps -- e.g. every campaign map
+    // defines its own "StartEvent" -- must resolve to the map currently being loaded. The previous
+    // std::unordered_map::insert kept the first binding and silently dropped later ones, so the
+    // first map loaded in a session (the campaign start) owned a shared class name for every
+    // subsequent map: entering a later map constructed its start markers from the wrong map's class
+    // and skipped that map's arrival initialization.
+    //
+    // Registrations made while a map script is loading are therefore last-wins *among map scripts*,
+    // but must not clobber an authoritative binding registered outside map-script loading (native /
+    // config / global plugin, or an explicit tooling/test registration): those keep first priority
+    // so a globally injected class still overrides a map's same-named declaration.
+    if (loadingMapScript) {
+        if (externalConstructors.contains(name)) {
+            return;
+        }
+    } else {
+        externalConstructors.insert(name);
+    }
+    constructors.insert_or_assign(std::move(name), std::move(constructor));
 }
+
+void CObjectHandler::beginMapScriptScope() { loadingMapScript = true; }
+
+void CObjectHandler::endMapScriptScope() { loadingMapScript = false; }
 
 // TODO: add option to provide custom configuration from string
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type) {

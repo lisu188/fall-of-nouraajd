@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 
+#include <unordered_set>
+
 #include "core/CSerialization.h"
 #include "object/CGameObject.h"
 
@@ -58,6 +60,13 @@ class CObjectHandler : public CGameObject {
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
 
+    // Map-script loading window (see registerType). A map's script.py is executed immediately
+    // before that map's objects are constructed from TMX; the loader brackets that execution with
+    // these so registrations made by the script are treated as map-scoped rather than authoritative.
+    void beginMapScriptScope();
+
+    void endMapScriptScope();
+
     std::shared_ptr<CGameObject> getType(const std::string &name);
 
     std::shared_ptr<json> getConfig(const std::string &type);
@@ -70,6 +79,13 @@ class CObjectHandler : public CGameObject {
     std::shared_ptr<CGameObject> _clone(const std::shared_ptr<CGameObject> &object);
 
     std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> constructors;
+
+    // Names registered outside a map-script load (native/config/global-plugin registration, or an
+    // explicit tooling/test registration). These are authoritative: a map script may not overwrite
+    // them, so a globally injected class keeps working even when a loading map declares the name.
+    std::unordered_set<std::string> externalConstructors;
+
+    bool loadingMapScript = false;
 
     std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
 };
