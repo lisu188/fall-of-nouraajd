@@ -109,6 +109,12 @@ class ArtifactSetRuntime:
                 return False
             piece_items.append(item)
 
+        # Build the combined artifact first so a failed creation never consumes the
+        # pieces (leaving the player with nothing).
+        combined = game_instance.getObjectHandler().createObject(game_instance, definition["combined"])
+        if combined is None:
+            return False
+
         # Unequip every piece (each returns to inventory) so the combined artifact's
         # covered slots are free, then consume the piece instances.
         for item in piece_items:
@@ -118,9 +124,6 @@ class ArtifactSetRuntime:
         for piece_id in definition["pieces"]:
             player.removeItem(lambda held, target=piece_id: held.getTypeId() == target, True)
 
-        combined = game_instance.getObjectHandler().createObject(game_instance, definition["combined"])
-        if combined is None:
-            return False
         player.addItem(combined)
         primary_slot = self._primary_slot(game_instance, combined)
         if primary_slot is not None:
