@@ -7226,6 +7226,249 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_nouraajd_ritual_return_round_trip_preserves_persistent_state(self):
+        # Real-session regression for the Nouraajd -> ritual -> Nouraajd round trip through the
+        # opt-in CMapTransitionRequest API: a retained source session must keep permanent object
+        # removals, quest/map flags, inventory, and quest state, and re-entering the retained map
+        # must not re-run its script (StartEvent stays removed) or fire its triggers twice.
+        game = load_game_module()
+
+        g, nouraajd_map, player = load_game_map_with_player("nouraajd")
+        scene_manager = g.getSceneManager()
+        store = g.getContext().getMapSessionStore()
+        town_hall = g.createObject("townHallDialog")
+
+        # The StartEvent markers ring the map entry, so take one step to run the map intro: it
+        # resets the quest state machine, removes every StartEvent, and hands over Rolf's letter.
+        set_player_target(player, find_adjacent_walkable_tile(nouraajd_map, player.getCoords()))
+        nouraajd_map.move()
+        self.assertTrue(pump_event_loop_until(lambda: player.countItems("letterFromRolf") >= 1, timeout=2.0))
+
+        # Drive persistent state on Nouraajd: quest progression, a permanent object removal
+        # (destroying cave1 spawns gooby1 and grants Rolf's skull), and explicit markers.
+        town_hall.give_letter()
+        self.assertEqual(1, player.countItems("letterToBeren"))
+        nouraajd_map.removeObjectByName("cave1")
+        self.assertIsNone(nouraajd_map.getObjectByName("cave1"))
+        self.assertIsNotNone(nouraajd_map.getObjectByName("gooby1"))
+        self.assertEqual(1, player.countItems("skullOfRolf"))
+        player.addItem("LesserLifePotion")
+        player.setNumericProperty("gold", 321)
+        nouraajd_map.setBoolProperty("return_flow_marker", True)
+
+        turn_hits = []
+
+        class ReturnFlowTurnTrigger(game.CTrigger):
+            def trigger(self, obj, event):
+                turn_hits.append(obj.getName())
+
+        g.getObjectHandler().registerType("ReturnFlowTurnTrigger", ReturnFlowTurnTrigger)
+        counting_trigger = g.createObject("ReturnFlowTurnTrigger")
+        counting_trigger.setStringProperty("object", "nouraajdTownHall")
+        counting_trigger.setStringProperty("event", "onTurn")
+        nouraajd_map.getEventHandler().registerTrigger(counting_trigger)
+
+        # Baseline: the counting trigger fires exactly once per Nouraajd turn.
+        nouraajd_map.move()
+        self.assertTrue(pump_event_loop_until(lambda: len(turn_hits) >= 1, timeout=2.0))
+        pump_event_loop(5)
+        self.assertEqual(1, len(turn_hits))
+        player.checkQuests()
+
+        quest_state_keys = (
+            "quest_state_rolf",
+            "quest_state_main",
+            "quest_state_beren_chain",
+            "quest_state_octobogz_contract",
+            "quest_state_amulet",
+            "quest_state_victor",
+        )
+        expected_states = {key: nouraajd_map.getStringProperty(key) for key in quest_state_keys}
+        self.assertEqual("skull_recovered", expected_states["quest_state_rolf"])
+        self.assertEqual("awaiting_gooby", expected_states["quest_state_main"])
+        self.assertEqual("letter_in_hand", expected_states["quest_state_beren_chain"])
+        expected_active_quests = quest_names(player)
+        expected_potions = player.countItems("LesserLifePotion")
+        # StartEvent removed itself (and its siblings) on first entry after handing over Rolf's
+        # letter; the surviving letter count is the behavioral witness that it never re-runs.
+        start_events_before = [
+            obj for obj in nouraajd_map.getObjects() if obj.getStringProperty("type") == "StartEvent"
+        ]
+        self.assertEqual([], start_events_before)
+        expected_rolf_letters = player.countItems("letterFromRolf")
+        self.assertEqual(1, expected_rolf_letters)
+        expected_turn = nouraajd_map.getTurn()
+
+        retain_request = game.CMapTransitionRequest()
+        retain_request.targetMap = "ritual"
+        retain_request.retainSourceMap = True
+        retain_request.returnAnchor = "nouraajd_return"
+        self.assertTrue(g.requestMapTransition(retain_request))
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        ritual_map = g.getMap()
+        self.assertEqual("ritual", ritual_map.mapName)
+        self.assertTrue(store.contains("nouraajd", "nouraajd_return"))
+        self.assertTrue(store.get("nouraajd", "nouraajd_return") == nouraajd_map)
+        self.assertTrue(ritual_map.getBoolProperty("ritual_initialized"))
+        self.assertIn("ritualQuest", quest_names(player))
+        # The retained source map keeps the removal and its flags while another map is active.
+        self.assertIsNone(nouraajd_map.getObjectByName("cave1"))
+        self.assertTrue(nouraajd_map.getBoolProperty("return_flow_marker"))
+        self.assertEqual(expected_states, {key: nouraajd_map.getStringProperty(key) for key in quest_state_keys})
+
+        reuse_request = game.CMapTransitionRequest()
+        reuse_request.targetMap = "nouraajd"
+        reuse_request.reuseLoadedMap = True
+        reuse_request.returnAnchor = "nouraajd_return"
+        reuse_request.carryTurn = False
+        self.assertTrue(g.requestMapTransition(reuse_request))
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "nouraajd" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        restored_map = g.getMap()
+        self.assertTrue(restored_map == nouraajd_map)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        # Persistent object removal survives the round trip.
+        self.assertIsNone(restored_map.getObjectByName("cave1"))
+        self.assertIsNotNone(restored_map.getObjectByName("gooby1"))
+        # Re-entering the retained session must not re-run the map script: every StartEvent stays
+        # removed, so the quest reset (and second Rolf letter) it would perform cannot repeat.
+        start_events = [
+            obj for obj in restored_map.getObjects() if obj.getStringProperty("type") == "StartEvent"
+        ]
+        self.assertEqual([], start_events)
+        self.assertEqual(expected_rolf_letters, player.countItems("letterFromRolf"))
+        # Map flags, the map's own turn counter, and quest state survive.
+        self.assertTrue(restored_map.getBoolProperty("return_flow_marker"))
+        self.assertEqual(expected_turn, restored_map.getTurn())
+        self.assertEqual(expected_states, {key: restored_map.getStringProperty(key) for key in quest_state_keys})
+
+        # Inventory and player quest state survive.
+        self.assertEqual(1, player.countItems("letterToBeren"))
+        self.assertEqual(1, player.countItems("skullOfRolf"))
+        self.assertEqual(expected_potions, player.countItems("LesserLifePotion"))
+        self.assertEqual(321, player.getNumericProperty("gold"))
+        active_after_return = quest_names(player)
+        for quest_id in expected_active_quests:
+            self.assertIn(quest_id, active_after_return)
+
+        # Triggers must not double-register on re-entry: the counting trigger still fires exactly
+        # once per turn, and the content onDestroy trigger for the catacombs grants exactly one
+        # holy relic when it fires after the round trip.
+        restored_map.move()
+        self.assertTrue(pump_event_loop_until(lambda: len(turn_hits) >= 2, timeout=2.0))
+        pump_event_loop(5)
+        self.assertEqual(2, len(turn_hits))
+        restored_map.removeObjectByName("catacombs")
+        self.assertEqual(1, player.countItems("holyRelic"))
+
+        return True, json.dumps(
+            {
+                "destination": restored_map.mapName,
+                "holy_relics": player.countItems("holyRelic"),
+                "marker_preserved": restored_map.getBoolProperty("return_flow_marker"),
+                "quest_states": {key: restored_map.getStringProperty(key) for key in quest_state_keys},
+                "quests": active_after_return,
+                "turn_trigger_hits": len(turn_hits),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_nouraajd_ritual_return_keeps_single_player_and_map_ownership(self):
+        # Coverage for returning to the old map after a switch: objects left behind on a retained
+        # map must keep reporting their own map while another map is active, and transitions must
+        # never duplicate the player object on either map.
+        game = load_game_module()
+
+        g, nouraajd_map, player = load_game_map_with_player("nouraajd")
+        scene_manager = g.getSceneManager()
+        tavern = nouraajd_map.getObjectByName("nouraajdTavern")
+        self.assertIsNotNone(tavern)
+        self.assertEqual(1, count_player_objects(nouraajd_map))
+        self.assertTrue(player.getMap() == nouraajd_map)
+        self.assertTrue(tavern.getMap() == nouraajd_map)
+
+        retain_request = game.CMapTransitionRequest()
+        retain_request.targetMap = "ritual"
+        retain_request.retainSourceMap = True
+        retain_request.returnAnchor = "return_flow"
+        self.assertTrue(g.requestMapTransition(retain_request))
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        ritual_map = g.getMap()
+        witness = ritual_map.getObjectByName("ritualWitness")
+        self.assertIsNotNone(witness)
+        self.assertFalse(ritual_map == nouraajd_map)
+        # The transferred player follows the active map; each map holds exactly one player object.
+        self.assertTrue(ritual_map.getPlayer() == player)
+        self.assertTrue(player.getMap() == ritual_map)
+        self.assertEqual(1, count_player_objects(ritual_map))
+        self.assertEqual(1, count_player_objects(nouraajd_map))
+        # Objects on the retained source map still report their own map, not the active one.
+        self.assertTrue(tavern.getMap() == nouraajd_map)
+        self.assertFalse(tavern.getMap() == ritual_map)
+        self.assertTrue(witness.getMap() == ritual_map)
+
+        reuse_request = game.CMapTransitionRequest()
+        reuse_request.targetMap = "nouraajd"
+        reuse_request.reuseLoadedMap = True
+        reuse_request.returnAnchor = "return_flow"
+        self.assertTrue(g.requestMapTransition(reuse_request))
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: g.getMap().mapName == "nouraajd" and not scene_manager.isTransitionPending(),
+                timeout=2.0,
+                min_iterations=2,
+            )
+        )
+
+        restored_map = g.getMap()
+        self.assertTrue(restored_map == nouraajd_map)
+        # Re-attaching on return must reuse the existing player object, never duplicate it.
+        self.assertTrue(restored_map.getPlayer() == player)
+        self.assertTrue(restored_map.getObjectByName("player") == player)
+        self.assertTrue(player.getMap() == nouraajd_map)
+        self.assertEqual(1, count_player_objects(restored_map))
+        # The map left behind keeps exactly one player reference (the transfer leaves the source
+        # map untouched by design) and its own objects still report ritual ownership.
+        self.assertEqual(1, count_player_objects(ritual_map))
+        self.assertTrue(witness.getMap() == ritual_map)
+        self.assertFalse(witness.getMap() == restored_map)
+        self.assertTrue(tavern.getMap() == nouraajd_map)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "destination": restored_map.mapName,
+                "old_map_object_owns_old_map": witness.getMap() == ritual_map,
+                "players_on_active_map": count_player_objects(restored_map),
+                "players_on_left_map": count_player_objects(ritual_map),
+                "tavern_owns_nouraajd": tavern.getMap() == nouraajd_map,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_scene_manager_rejects_nested_transition_from_destination_entry(self):
         game = load_game_module()
 
