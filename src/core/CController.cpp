@@ -701,8 +701,13 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [me](const std::shared_ptr<CInteraction> &it) {
         return it->getManaCost() <= me->getMana();
     };
+    // Exclude every self-routing interaction (a Buff-tagged effect or an explicit selfTarget) from
+    // offensive selection: those are handled by the self-target pass above, so a self-heal or self-buff
+    // never leaks into the offensive ranking (where, crediting only its incidental hit, it could tie a
+    // pure attack and win the cheaper-cost tie-break).
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction3 = [](const std::shared_ptr<CInteraction> &it) {
-        return !it->getEffect() || (it->getEffect() && !it->getEffect()->hasTag(CTag::Buff));
+        const auto effect = it->getEffect();
+        return !effect || !it->effectRoutesToCaster(effect);
     };
     // Rank affordable, non-buff interactions by how much they weaken the current
     // opponent rather than by mana cost. Ties break toward the cheaper spell, then
