@@ -338,6 +338,21 @@ configure_file(res/maps/multilevel/config.json maps/multilevel/config.json)
 configure_file(res/maps/multilevel/map.json maps/multilevel/map.json)
 configure_file(res/maps/multilevel/script.py maps/multilevel/script.py)
 
+configure_file(res/maps/hearthfall/config.json maps/hearthfall/config.json)
+configure_file(res/maps/hearthfall/dialog.json maps/hearthfall/dialog.json)
+configure_file(res/maps/hearthfall/map.json maps/hearthfall/map.json)
+configure_file(res/maps/hearthfall/script.py maps/hearthfall/script.py)
+
+configure_file(res/maps/gravemoor/config.json maps/gravemoor/config.json)
+configure_file(res/maps/gravemoor/dialog.json maps/gravemoor/dialog.json)
+configure_file(res/maps/gravemoor/map.json maps/gravemoor/map.json)
+configure_file(res/maps/gravemoor/script.py maps/gravemoor/script.py)
+
+configure_file(res/maps/usurpergate/config.json maps/usurpergate/config.json)
+configure_file(res/maps/usurpergate/dialog.json maps/usurpergate/dialog.json)
+configure_file(res/maps/usurpergate/map.json maps/usurpergate/map.json)
+configure_file(res/maps/usurpergate/script.py maps/usurpergate/script.py)
+
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
 configure_file(res/plugins/object.py plugins/object.py)
@@ -497,6 +512,10 @@ configure_file(res/images/ambient/rubble_and_skulls.png images/ambient/rubble_an
 configure_file(res/fonts/ampersand.ttf fonts/ampersand.ttf COPYONLY)
 
 configure_file(res/game.py game.py)
+configure_file(res/campaign.py campaign.py)
+
+configure_file(res/campaigns/fallOfNouraajd/campaign.json campaigns/fallOfNouraajd/campaign.json)
+configure_file(res/campaigns/wardensRoad/campaign.json campaigns/wardensRoad/campaign.json)
 
 configure_file(test.py test.py)
 configure_file(play.py play.py)
@@ -510,13 +529,14 @@ install(TARGETS ${NATIVE_PLUGIN_TARGETS}
     RUNTIME DESTINATION fall-of-nouraajd/plugins/native
     BUNDLE DESTINATION fall-of-nouraajd/plugins/native
 )
+install(DIRECTORY res/campaigns DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/config DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/fonts DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 
-install(FILES res/game.py play.py mcp.py test.py game_simulation.py quest_state.py DESTINATION fall-of-nouraajd)
+install(FILES res/game.py res/campaign.py play.py mcp.py test.py game_simulation.py quest_state.py DESTINATION fall-of-nouraajd)
 
 if (WIN32)
     install(FILES play.bat DESTINATION fall-of-nouraajd)
