@@ -218,6 +218,15 @@ steps and Windows jobs are skipped after focused workflow validation. The workfl
 `linux-coverage` job that runs `./scripts/run_coverage.sh` when changed paths match the coverage rule; because it is
 path-gated, do not configure it as an always-present branch-protection check.
 
+Alongside the `native-needed` / `coverage-needed` gate outputs, `scripts/ci_change_classifier.py` also emits an
+additive change-**kind** taxonomy consumed by the workflow and poller: `coverage-relevant`, `native-gui`,
+`native-engine`, `content-json-python`, `workflow-python`, `prompts-docs`, and `queue-state-only`. Each changed path is
+assigned exactly one primary kind (GUI C++ before generic engine code, `res/` content before tooling), and **every
+`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. `queue-state-only` is true only when the
+entire diff is workbook/observation state. These booleans do not change native/coverage need (still taken from the
+`NATIVE`/`COVERAGE` pattern sets); they let the workflow route jobs by kind and are covered by a path-matrix test in
+`tests/test_ci_change_classifier.py`.
+
 The campaign-specific PR gates run inside `linux` when native validation is required. Full-route campaign scenarios are
 scheduled, manual, or label-selected gates inside the same job, so they do not add a separate always-present branch
 protection check.
