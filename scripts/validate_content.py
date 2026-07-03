@@ -102,6 +102,7 @@ BUILTIN_CLASSES = {
     "CMarket",
     "CMonsterFightController",
     "CNpcRandomController",
+    "CPants",
     "CPlayer",
     "CPlayerController",
     "CPlayerFightController",
@@ -111,6 +112,7 @@ BUILTIN_CLASSES = {
     "CRangeController",
     "CScroll",
     "CScript",
+    "CShield",
     "CSmallWeapon",
     "CStats",
     "CTargetController",
@@ -1936,6 +1938,7 @@ class ContentValidator:
         for entry in self.global_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_crafting_refs()
+        self._validate_artifact_sets()
         self._validate_creature_archetype_naming()
         self._validate_duplicate_player_selectable_race_labels(visible)
         self._validate_required_production_archetypes(visible)
@@ -3683,6 +3686,176 @@ class ContentValidator:
             if isinstance(station_id, str):
                 station_ids.add(station_id)
         return station_ids
+
+    def _artifact_set_slot_types(self) -> dict[str, list[str]]:
+        """Map each equipment slot id to the item classes it accepts (from slots.json)."""
+        path = self.repo_root / "res" / "config" / "slots.json"
+        data = self.global_files.get(path)
+        result: dict[str, list[str]] = {}
+        if not isinstance(data, dict):
+            return result
+        configuration = (
+            data.get("slotConfiguration", {}).get("properties", {}).get("configuration", {})
+            if isinstance(data.get("slotConfiguration"), dict)
+            else {}
+        )
+        if not isinstance(configuration, dict):
+            return result
+        for slot_id, slot in configuration.items():
+            properties = slot.get("properties", {}) if isinstance(slot, dict) else {}
+            types = properties.get("types", []) if isinstance(properties, dict) else []
+            if isinstance(types, list):
+                result[str(slot_id)] = [value for value in types if isinstance(value, str)]
+        return result
+
+    def _slot_for_item_class(self, item_class: str, slot_types: dict[str, list[str]]) -> str | None:
+        """Return the slot id an item of the given class fits, resolving inheritance."""
+        for slot_id, accepted in slot_types.items():
+            for base in accepted:
+                if item_class == base or self._class_inherits_from(item_class, base):
+                    return slot_id
+        return None
+
+    @staticmethod
+    def _entry_properties(entry: Any) -> dict[str, Any]:
+        if isinstance(entry, dict):
+            properties = entry.get("properties")
+            if isinstance(properties, dict):
+                return properties
+        return {}
+
+    def _item_class(self, item_id: str) -> str | None:
+        entry = self.global_entries.get(item_id)
+        if entry is None or not isinstance(entry.data, dict):
+            return None
+        item_class = entry.data.get("class")
+        return item_class if isinstance(item_class, str) else None
+
+    def _item_tags(self, item_id: str) -> set[str]:
+        entry = self.global_entries.get(item_id)
+        if entry is None:
+            return set()
+        tags = self._entry_properties(entry.data).get("tags")
+        if isinstance(tags, list):
+            return {tag for tag in tags if isinstance(tag, str)}
+        return set()
+
+    def _validate_artifact_sets(self) -> None:
+        path = self.repo_root / "res" / "config" / "artifact_sets.json"
+        data = self.global_files.get(path)
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        slot_types = self._artifact_set_slot_types()
+        piece_owner: dict[str, str] = {}
+        for set_id, definition in data.items():
+            if not isinstance(definition, dict):
+                self._issue(path, set_id, "expected artifact set object")
+                continue
+            for key in sorted(set(definition) - {"label", "pieces", "combined"}):
+                self._issue(path, f"{set_id}.{key}", "unknown artifact set field")
+            label = definition.get("label")
+            if not isinstance(label, str) or not label.strip():
+                self._issue(path, f"{set_id}.label", "expected non-empty label string")
+            pieces = definition.get("pieces")
+            combined = definition.get("combined")
+            if not isinstance(pieces, list) or len(pieces) < 2 or not all(isinstance(p, str) for p in pieces):
+                self._issue(path, f"{set_id}.pieces", "expected a list of at least two item ids")
+                continue
+            if not isinstance(combined, str) or not combined:
+                self._issue(path, f"{set_id}.combined", "expected combined item id string")
+                continue
+
+            for index, piece_id in enumerate(pieces):
+                if piece_id not in self.global_entries:
+                    self._issue(path, f"{set_id}.pieces[{index}]", f'unknown piece item "{piece_id}"')
+                if piece_id in piece_owner and piece_owner[piece_id] != set_id:
+                    self._issue(
+                        path,
+                        f"{set_id}.pieces[{index}]",
+                        f'piece "{piece_id}" already belongs to set "{piece_owner[piece_id]}"',
+                    )
+                piece_owner[piece_id] = set_id
+            if combined not in self.global_entries:
+                self._issue(path, f"{set_id}.combined", f'unknown combined item "{combined}"')
+            if combined in pieces:
+                self._issue(path, f"{set_id}.combined", "combined item cannot also be a set piece")
+
+            # Every piece must resolve to a distinct equipment slot.
+            piece_slots: dict[str, str] = {}
+            slots_seen: set[str] = set()
+            for index, piece_id in enumerate(pieces):
+                piece_class = self._item_class(piece_id)
+                if piece_class is None:
+                    continue
+                slot = self._slot_for_item_class(piece_class, slot_types)
+                if slot is None:
+                    self._issue(
+                        path,
+                        f"{set_id}.pieces[{index}]",
+                        f'piece "{piece_id}" (class "{piece_class}") does not fit any equipment slot',
+                    )
+                    continue
+                if slot in slots_seen:
+                    self._issue(
+                        path,
+                        f"{set_id}.pieces[{index}]",
+                        f'piece "{piece_id}" occupies slot {slot} already used by another piece in this set',
+                    )
+                slots_seen.add(slot)
+                piece_slots[piece_id] = slot
+
+            # The combined item's own slot is its primary; it must match one piece's slot,
+            # and its coveredSlots must equal the remaining pieces' slots.
+            combined_class = self._item_class(combined)
+            if combined_class is None:
+                continue
+            primary_slot = self._slot_for_item_class(combined_class, slot_types)
+            if primary_slot is None:
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" (class "{combined_class}") does not fit any equipment slot',
+                )
+            elif primary_slot not in piece_slots.values():
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" occupies slot {primary_slot}, which no set piece uses',
+                )
+
+            combined_props = self._entry_properties(self.global_entries[combined].data) if combined in self.global_entries else {}
+            covered = combined_props.get("coveredSlots", [])
+            covered_set = {str(slot) for slot in covered} if isinstance(covered, list) else set()
+            expected_covered = set(piece_slots.values()) - ({primary_slot} if primary_slot else set())
+            if covered_set != expected_covered:
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" coveredSlots {sorted(covered_set)} '
+                    f"must equal the non-primary piece slots {sorted(expected_covered)}",
+                )
+
+            # A combined artifact must carry the "compound" tag so random loot / markets
+            # never hand it out directly (only its pieces).
+            if combined in self.global_entries and "compound" not in self._item_tags(combined):
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" must declare the "compound" tag',
+                )
+
+            # A quest piece must not silently lose its un-droppable status on assembly.
+            quest_pieces = [piece_id for piece_id in pieces if "quest" in self._item_tags(piece_id)]
+            if quest_pieces and combined in self.global_entries and "quest" not in self._item_tags(combined):
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" must declare the "quest" tag because piece(s) '
+                    f"{quest_pieces} are quest items",
+                )
 
     def _validate_creature_archetype_naming(self) -> None:
         config_dir = self.repo_root / "res" / "config"

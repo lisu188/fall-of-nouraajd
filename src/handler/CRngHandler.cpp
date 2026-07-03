@@ -54,7 +54,10 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
         std::shared_ptr<CItem> item = game->createObject<CItem>(type);
         if (item) {
             int power = item->getPower();
-            if (power > 0 && !item->hasTag(CTag::Quest)) {
+            // Compound artifacts are assembled from set pieces, never dropped or sold
+            // directly (docs/design/compound_artifacts.md); exclude them from random loot
+            // the same way quest items are excluded.
+            if (power > 0 && !item->hasTag(CTag::Quest) && !item->hasTag(CTag::Compound)) {
                 itemPowerTable.insert(std::make_pair(power, type));
             }
         }

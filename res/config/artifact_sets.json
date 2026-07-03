@@ -1,0 +1,22 @@
+{
+  "armorOfTheDamned": {
+    "label": "Armor of the Damned",
+    "pieces": [
+      "BlackshardOfTheDeadKnight",
+      "ShieldOfTheYawningDead",
+      "SkullHelmet",
+      "RibCage"
+    ],
+    "combined": "ArmorOfTheDamned"
+  },
+  "wrathOfTheDragonFather": {
+    "label": "Wrath of the Dragon Father",
+    "pieces": [
+      "CrownOfDragontooth",
+      "DragonScaleArmor",
+      "DragonboneGreaves",
+      "DragonscaleGuards"
+    ],
+    "combined": "DragonFatherWrath"
+  }
+}
