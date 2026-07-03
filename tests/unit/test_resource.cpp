@@ -474,7 +474,7 @@ void test_scoped_search_roots_resolve_active_map_assets() {
                 "active scope mapA should resolve the asset inside tempRootA");
     {
         std::ifstream stream(resolvedA);
-        std::string contents(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+        std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
         expect_true(contents == "A", "active scope mapA should read the tempRootA copy of the asset");
     }
 
@@ -486,7 +486,7 @@ void test_scoped_search_roots_resolve_active_map_assets() {
                 "active scope mapB should resolve the asset inside tempRootB");
     {
         std::ifstream stream(resolvedB);
-        std::string contents(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+        std::string contents((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
         expect_true(contents == "B", "active scope mapB should read the tempRootB copy of the asset");
     }
 
