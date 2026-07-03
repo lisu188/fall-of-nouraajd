@@ -87,6 +87,23 @@ class McpHardeningTest(unittest.TestCase):
         for name in mutation_surface:
             self.assertNotIn(name, body)
 
+    def test_handle_call_authorizes_before_dereferencing_method(self):
+        # engine_handle_call must reject a non-allowlisted method BEFORE it does
+        # getattr(target, method): dereferencing first would fire a non-allowlisted
+        # property's getter and leaks a method-existence oracle. The allowlist
+        # check must therefore appear ahead of the client-controlled getattr.
+        source = self.mcp_source
+        allowlist_pos = source.find("if method not in self._allowed_handle_methods_for(target):")
+        getattr_pos = source.find("method_callable = getattr(target, method)")
+        self.assertNotEqual(-1, allowlist_pos, "allowlist check not found")
+        self.assertNotEqual(-1, getattr_pos, "client getattr not found")
+        self.assertLess(
+            allowlist_pos,
+            getattr_pos,
+            "allowlist authorization must precede getattr(target, method) so a "
+            "non-allowlisted method is rejected before the object is dereferenced",
+        )
+
     def test_transport_limits_and_trace_redaction_are_present(self):
         self.assertIn("MAX_MCP_MESSAGE_BYTES = 1024 * 1024", self.mcp_source)
         self.assertIn("MAX_HTTP_SESSIONS", self.mcp_source)
