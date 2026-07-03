@@ -104,6 +104,8 @@ class CGameObject;
 
 class CResourcesProvider {
   public:
+    // Compatibility-only process-wide provider for callers without a game context (Python scripts,
+    // plugin code, detached resources). Game-attached code must use CGame::getResourcesProvider().
     static std::shared_ptr<CResourcesProvider> getInstance();
 
     std::string load(std::string path);
@@ -138,11 +140,15 @@ class CResourcesProvider {
 
 class CConfigurationProvider {
   public:
+    // The singleton default keeps provider-less construction working; pass the owning game's
+    // provider (CGame::getResourcesProvider()) to keep configs isolated per game session.
     explicit CConfigurationProvider(
         std::shared_ptr<CResourcesProvider> resourcesProvider = CResourcesProvider::getInstance());
 
     ~CConfigurationProvider();
 
+    // Compatibility-only process-wide config cache for callers without a game context.
+    // Game-attached code must use CGame::getConfigurationProvider()->getConfiguration().
     static std::shared_ptr<json> getConfig(const std::string &path);
 
     std::shared_ptr<json> getConfiguration(const std::string &path);
