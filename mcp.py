@@ -1262,6 +1262,19 @@ class EngineMcpServer:
             }
 
         target = self.handles[handle]
+        # Authorize against the allowlist BEFORE dereferencing the client-supplied
+        # method name. Doing getattr(target, method) first would fire the getter of
+        # any non-allowlisted property/descriptor, and the ordering also leaked a
+        # method-existence oracle (missing -> "Unknown method", present-but-denied
+        # -> "not exported"). Fail closed: anything not allowlisted is uniformly
+        # rejected as not exported before the object is touched.
+        if method not in self._allowed_handle_methods_for(target):
+            result = {"error": f"Method `{method}` is not exported for handle calls"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
         try:
             method_callable = getattr(target, method)
         except AttributeError:
@@ -1274,13 +1287,6 @@ class EngineMcpServer:
 
         if not callable(method_callable):
             result = {"error": f"Attribute `{method}` on handle `{handle}` is not callable"}
-            return {
-                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
-                "structuredContent": result,
-                "isError": True,
-            }
-        if method not in self._allowed_handle_methods_for(target):
-            result = {"error": f"Method `{method}` is not exported for handle calls"}
             return {
                 "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
                 "structuredContent": result,
