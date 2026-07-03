@@ -47,6 +47,29 @@ CGameCharacterPanel::buildCharacterSheetLines(const std::shared_ptr<CPlayer> &pl
             }
         }
     }
+    // Identity rows: the player's race and class rendered as human-readable
+    // labels after the configured numeric / string rows. These come from the
+    // archetype *Label accessors and fail closed exactly like the rows above -
+    // an empty or throwing label is skipped so it can never escape the render
+    // loop or emit a blank row.
+    if (player) {
+        try {
+            std::string race = player->getArchetypeRaceLabel();
+            if (!race.empty()) {
+                lines.emplace_back("Race", race);
+            }
+        } catch (const std::exception &exception) {
+            vstd::logger::warning("Ignoring character sheet race label failure:", exception.what());
+        }
+        try {
+            std::string creatureClass = player->getArchetypeClassLabel();
+            if (!creatureClass.empty()) {
+                lines.emplace_back("Class", creatureClass);
+            }
+        } catch (const std::exception &exception) {
+            vstd::logger::warning("Ignoring character sheet class label failure:", exception.what());
+        }
+    }
     return lines;
 }
 
