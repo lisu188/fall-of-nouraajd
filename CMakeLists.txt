@@ -259,6 +259,7 @@ add_native_plugin(native_marker_plugin native_plugins/native_marker_plugin.cpp)
 add_native_plugin(native_gameplay native_plugins/native_gameplay.cpp)
 add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})
 
+configure_file(res/config/adventure.json config/adventure.json)
 configure_file(res/config/armors.json config/armors.json)
 configure_file(res/config/classes.json config/classes.json)
 configure_file(res/config/races.json config/races.json)
