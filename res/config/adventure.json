@@ -1,0 +1,131 @@
+{
+  "adventureLearningStone": {
+    "class": "AdventureLearningStone",
+    "properties": {
+      "animation": "images/ambient/stone_shrine",
+      "label": "Learning Stone",
+      "exp": 500
+    }
+  },
+  "campfire": {
+    "class": "Campfire",
+    "properties": {
+      "animation": "images/ambient/campfire_cauldron",
+      "label": "Campfire",
+      "gold": 100,
+      "value": 15
+    }
+  },
+  "fountainOfYouth": {
+    "class": "FountainOfYouth",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "label": "Fountain of Youth",
+      "healing": 50
+    }
+  },
+  "magicWell": {
+    "class": "MagicWell",
+    "properties": {
+      "animation": "images/ambient/stone_well",
+      "label": "Magic Well"
+    }
+  },
+  "windmill": {
+    "class": "Windmill",
+    "properties": {
+      "animation": "images/ambient/hay_bales",
+      "label": "Windmill",
+      "gold": 250,
+      "cooldown": 50,
+      "turns": 50
+    }
+  },
+  "treeOfKnowledge": {
+    "class": "TreeOfKnowledge",
+    "properties": {
+      "animation": "images/ambient/dead_tree",
+      "label": "Tree of Knowledge",
+      "cost": 2000
+    }
+  },
+  "mercenaryCamp": {
+    "class": "MercenaryCamp",
+    "properties": {
+      "animation": "images/ambient/supply_pile",
+      "label": "Mercenary Camp",
+      "stat": "strength",
+      "bonus": 1
+    }
+  },
+  "marlettoTower": {
+    "class": "MarlettoTower",
+    "properties": {
+      "animation": "images/buildings/town_hall",
+      "label": "Marletto Tower",
+      "stat": "stamina",
+      "bonus": 1
+    }
+  },
+  "starAxis": {
+    "class": "StarAxis",
+    "properties": {
+      "animation": "images/ambient/brazier",
+      "label": "Star Axis",
+      "stat": "intelligence",
+      "bonus": 1
+    }
+  },
+  "adventureWitchHut": {
+    "class": "AdventureWitchHut",
+    "properties": {
+      "animation": "images/buildings/tavern",
+      "label": "Witch Hut",
+      "bonus": 1
+    }
+  },
+  "adventureObelisk": {
+    "class": "AdventureObelisk",
+    "properties": {
+      "animation": "images/ambient/notice_board",
+      "label": "Obelisk",
+      "text": "Weathered glyphs hint at a secret buried somewhere in Nouraajd."
+    }
+  },
+  "warriorsTomb": {
+    "class": "WarriorsTomb",
+    "properties": {
+      "animation": "images/ambient/gravestone_cluster",
+      "label": "Warrior's Tomb",
+      "enabled": true,
+      "value": 60,
+      "damage": 30
+    }
+  },
+  "sirens": {
+    "class": "Sirens",
+    "properties": {
+      "animation": "images/ambient/rubble_and_skulls",
+      "label": "Sirens",
+      "sacrifice": 30,
+      "expPerHp": 2
+    }
+  },
+  "keymastersTent": {
+    "class": "KeymastersTent",
+    "properties": {
+      "animation": "images/ambient/market_stall",
+      "label": "Keymaster's Tent",
+      "keyColor": "crimson"
+    }
+  },
+  "borderGuard": {
+    "class": "BorderGuard",
+    "properties": {
+      "animation": "images/misc/closed_door",
+      "label": "Border Guard",
+      "keyColor": "crimson",
+      "canStep": false
+    }
+  }
+}
