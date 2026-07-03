@@ -1,0 +1,32 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "explicit",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable explicit class race fixture",
+      "mapName": "explicit",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "playerClassId": "Wayfarer",
+            "posx": 7,
+            "posy": 11,
+            "posz": 0,
+            "quests": [],
+            "raceId": "riverFolk",
+            "typeId": "Sorcerer"
+          }
+        }
+      ],
+      "tiles": [],
+      "triggers": [],
+      "turn": 21
+    }
+  }
+}
