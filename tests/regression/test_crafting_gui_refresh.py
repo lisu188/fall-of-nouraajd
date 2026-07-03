@@ -122,7 +122,7 @@ class FakeRuntime:
             "success_chance": 100,
         }
 
-    def station_options(self, player, station_id):
+    def station_options(self, player, station_id, station=None):
         self.station_option_calls += 1
         description = self.describe_recipe_for_player(player, self.recipe)
         return [self.recipe], {description: self.recipe}

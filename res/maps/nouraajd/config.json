@@ -429,10 +429,16 @@
     }
   },
   "alchemyTable1": {
-    "ref": "AlchemyTable"
+    "ref": "AlchemyTable",
+    "properties": {
+      "unlockHint_CAN_BREW_GREATER_POTIONS": "Return the holy relic to Father Beren."
+    }
   },
   "scribeDesk1": {
-    "ref": "ScribeDesk"
+    "ref": "ScribeDesk",
+    "properties": {
+      "unlockHint_CAN_CRAFT_SCROLLS": "Deliver Mayor Irvin's sealed letter to Father Beren."
+    }
   },
   "gooby": {
     "ref": "Gooby",

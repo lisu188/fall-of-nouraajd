@@ -255,7 +255,9 @@ class ContentValidatorTest(unittest.TestCase):
 
         issues = validate_repo(root)
 
-        self.assertIssueContains(issues, "res/config/races.json", "human.baseStatContribution.strength", "expected integer")
+        self.assertIssueContains(
+            issues, "res/config/races.json", "human.baseStatContribution.strength", "expected integer"
+        )
         self.assertIssueContains(issues, "human.traits[1]", "expected non-empty string")
         self.assertIssueContains(issues, "human.resistances.fire", "expected integer")
 
@@ -2767,9 +2769,7 @@ class ContentValidatorTest(unittest.TestCase):
     def test_creature_race_unknown_base_stats_key_is_reported(self):
         root = self.make_fixture()
         self.write_creature_race_stats_fixture(root)
-        self._write_creature_race(
-            root, {"baseStats": {"class": "CStats", "properties": {"strenght": 5}}}
-        )
+        self._write_creature_race(root, {"baseStats": {"class": "CStats", "properties": {"strenght": 5}}})
 
         issues = validate_repo(root)
 
@@ -3148,6 +3148,97 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertIssueContains(
             issues, "res/maps/broken/script.py", "CAMPAIGN_OUTCOMES must be a literal tuple or list of outcome strings"
+        )
+
+    def _write_crafting_fixture(self, root, recipes):
+        write_json(
+            root / "res/config/buildings.json",
+            {
+                "AlchemyTable": {
+                    "class": "CBuilding",
+                    "properties": {"label": "Alchemist's Table", "craftingStationId": "alchemyTable"},
+                }
+            },
+        )
+        write_json(root / "res/config/crafting.json", recipes)
+
+    def _valid_recipe(self, **overrides):
+        recipe = {
+            "station": "alchemyTable",
+            "inputs": [{"item": "LifePotion", "count": 2}],
+            "output": {"item": "LifePotion", "count": 1},
+            "gold": 20,
+            "successChance": 90,
+        }
+        recipe.update(overrides)
+        return recipe
+
+    def test_crafting_valid_recipe_passes_validation(self):
+        root = self.make_fixture()
+        self._write_crafting_fixture(root, {"brew": self._valid_recipe()})
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_crafting_outputs_list_is_validated(self):
+        root = self.make_fixture()
+        recipe = self._valid_recipe(outputs=[{"item": "LifePotion"}, {"item": "MissingItem"}])
+        del recipe["output"]
+        self._write_crafting_fixture(root, {"brew": recipe})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues, "res/config/crafting.json", "brew.outputs[1].item", 'unknown recipe item "MissingItem"'
+        )
+
+    def test_crafting_output_and_outputs_together_are_flagged(self):
+        root = self.make_fixture()
+        recipe = self._valid_recipe(outputs=[{"item": "LifePotion"}])
+        self._write_crafting_fixture(root, {"brew": recipe})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues, "res/config/crafting.json", 'recipe defines both "output" and "outputs"; use one'
+        )
+
+    def test_crafting_duplicate_input_items_are_flagged(self):
+        root = self.make_fixture()
+        recipe = self._valid_recipe(inputs=[{"item": "LifePotion", "count": 1}, {"item": "LifePotion", "count": 1}])
+        self._write_crafting_fixture(root, {"brew": recipe})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/crafting.json",
+            "brew.inputs[1].item",
+            'duplicate input item "LifePotion"',
+        )
+
+    def test_crafting_scalar_fields_are_validated(self):
+        root = self.make_fixture()
+        recipe = self._valid_recipe(gold=-5, successChance=150, unlockFlag="   ", unlockHint="")
+        recipe["inputs"][0]["count"] = 0
+        self._write_crafting_fixture(root, {"brew": recipe})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/crafting.json",
+            "brew.gold",
+            "expected non-negative integer gold cost",
+            "brew.successChance",
+            "expected integer success chance in 0..100",
+            "brew.unlockFlag",
+            "expected non-empty string flag name",
+            "brew.unlockHint",
+            "expected non-empty string hint text",
+            "brew.inputs[0].count",
+            "expected positive integer count",
         )
 
     def assertIssueContains(self, issues, *substrings):
@@ -4153,9 +4244,7 @@ class NouraajdCatacombsContentTest(unittest.TestCase):
         )
         reachable = self._reachable_tiles()
         adjacent = [
-            (cx + dx, cy + dy)
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-            if (cx + dx, cy + dy) in reachable
+            (cx + dx, cy + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)) if (cx + dx, cy + dy) in reachable
         ]
         self.assertTrue(
             adjacent,

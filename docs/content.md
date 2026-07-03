@@ -106,6 +106,25 @@ it may carry a `slots` object mapping slot ids to item ids.
 
 Unknown top-level keys in a profile are reported so typos are caught.
 
+## Crafting recipes (`res/config/crafting.json`)
+
+Each top-level key is a recipe id handled by the crafting plugin
+(`res/plugins/crafting.py`); `scripts/validate_content.py` enforces the schema.
+
+| Field           | Required | Type | Meaning |
+| --------------- | -------- | ---- | ------- |
+| `station`       | yes      | string | Must match some building's `craftingStationId` property. |
+| `inputs`        | no       | array of item entries | Reagents consumed by the craft. Each item id may appear only once — use `count` for multiples (the runtime merges duplicates defensively, but the validator rejects them). |
+| `output`        | yes*     | item entry | The crafted result. Exactly one of `output` / `outputs` must be present. |
+| `outputs`       | yes*     | non-empty array of item entries | Multi-item results. |
+| `gold`          | no       | non-negative integer | Gold cost, paid together with the reagents *before* the success roll — a failed craft still consumes its full cost. |
+| `successChance` | no       | integer 0–100 (default 100) | Chance the craft produces its output. |
+| `unlockFlag`    | no       | non-empty string | Boolean property gating the recipe; checked on the player first, then on the current map. |
+| `unlockHint`    | no       | non-empty string | Map-agnostic guidance shown while the recipe is locked. A map can override it per flag by setting an `unlockHint_<FLAG>` string property on its station instance (see `scribeDesk1` in `res/maps/nouraajd/config.json`). Without either, a generic "This recipe is locked." is shown — the raw flag name is never displayed. |
+
+An item entry is `{ "item": "<config id>", "count": <positive integer> }`
+(`count` defaults to 1). Item ids must exist in the global config.
+
 ## Gameplay tags (`"tags"`)
 
 Objects (items, effects, interactions, potions, …) may declare a `"tags"` array
