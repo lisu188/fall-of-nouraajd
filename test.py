@@ -5613,6 +5613,172 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_heroes3_adventure_objects_grant_their_rewards(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test", "Warrior")
+
+        class FakeEvent:
+            def __init__(self, cause):
+                self.cause = cause
+
+            def getCause(self):
+                return self.cause
+
+        def place_object(type_id, name):
+            obj = g.createObject(type_id)
+            self.assertIsNotNone(obj, f"Expected adventure object '{type_id}' to be constructible.")
+            obj.name = name
+            game_map.addObject(obj)
+            coords = find_adjacent_walkable_tile(game_map, player.getCoords())
+            obj.moveTo(coords.x, coords.y, coords.z)
+            return obj
+
+        def stat(name):
+            return player.getStats().getNumericProperty(name)
+
+        event = FakeEvent(player)
+        infos = []
+        original_show_info = game.CGuiHandler.showInfo
+        game.CGuiHandler.showInfo = lambda self, message, centered=False: infos.append(message)
+        try:
+            # LearningStone: experience once per player.
+            stone = place_object("adventureLearningStone", "h3LearningStone")
+            exp_before = player.getNumericProperty("exp")
+            stone.onEnter(event)
+            self.assertEqual(exp_before + 500, player.getNumericProperty("exp"))
+            stone.onEnter(event)
+            self.assertEqual(exp_before + 500, player.getNumericProperty("exp"))
+
+            # Campfire: one-time gold plus loot, then it burns out.
+            campfire = place_object("campfire", "adventureCampfire")
+            gold_before = player.getGold()
+            items_before = len(player.getItems())
+            campfire.onEnter(event)
+            self.assertEqual(gold_before + 100, player.getGold())
+            self.assertGreater(len(player.getItems()), items_before)
+            self.assertIsNone(game_map.getObjectByName("adventureCampfire"))
+
+            # FountainOfYouth: heals half of max HP per visit.
+            fountain = place_object("fountainOfYouth", "adventureFountain")
+            player.setHp(1)
+            fountain.onEnter(event)
+            self.assertGreater(player.getHp(), 1)
+
+            # MagicWell: refills mana.
+            well = place_object("magicWell", "adventureMagicWell")
+            player.setMana(0)
+            well.onEnter(event)
+            self.assertGreater(player.getMana(), 0)
+
+            # Windmill: pays out, then needs its cooldown to elapse.
+            windmill = place_object("windmill", "adventureWindmill")
+            gold_before = player.getGold()
+            windmill.onEnter(event)
+            self.assertEqual(gold_before + 250, player.getGold())
+            windmill.onEnter(event)
+            self.assertEqual(gold_before + 250, player.getGold())
+            for _ in range(50):
+                windmill.onTurn(None)
+            windmill.onEnter(event)
+            self.assertEqual(gold_before + 500, player.getGold())
+
+            # Permanent stat trainers: each raises its stat once per player.
+            camp = place_object("mercenaryCamp", "adventureMercenaryCamp")
+            strength_before = stat("strength")
+            camp.onEnter(event)
+            camp.onEnter(event)
+            self.assertEqual(strength_before + 1, stat("strength"))
+
+            tower = place_object("marlettoTower", "adventureMarlettoTower")
+            stamina_before = stat("stamina")
+            tower.onEnter(event)
+            tower.onEnter(event)
+            self.assertEqual(stamina_before + 1, stat("stamina"))
+
+            axis = place_object("starAxis", "adventureStarAxis")
+            intelligence_before = stat("intelligence")
+            axis.onEnter(event)
+            axis.onEnter(event)
+            self.assertEqual(intelligence_before + 1, stat("intelligence"))
+
+            # WitchHut: raises one random stat once per player.
+            hut = place_object("adventureWitchHut", "h3WitchHut")
+            stat_names = ("strength", "agility", "stamina", "intelligence")
+            stats_before = sum(stat(name) for name in stat_names)
+            hut.onEnter(event)
+            hut.onEnter(event)
+            self.assertEqual(stats_before + 1, sum(stat(name) for name in stat_names))
+
+            # TreeOfKnowledge: pays gold for one level, once per player.
+            tree = place_object("treeOfKnowledge", "adventureTree")
+            player.addGold(2000)
+            gold_before = player.getGold()
+            level_before = player.getLevel()
+            tree.onEnter(event)
+            self.assertEqual(level_before + 1, player.getLevel())
+            self.assertEqual(gold_before - 2000, player.getGold())
+            tree.onEnter(event)
+            self.assertEqual(level_before + 1, player.getLevel())
+            self.assertEqual(gold_before - 2000, player.getGold())
+
+            # Obelisk: counts one visit per player and repeats its hint.
+            obelisk = place_object("adventureObelisk", "h3Obelisk")
+            hints_before = len(infos)
+            obelisk.onEnter(event)
+            obelisk.onEnter(event)
+            self.assertEqual(1, player.getNumericProperty("obelisksVisited"))
+            self.assertEqual(hints_before + 2, len(infos))
+
+            # WarriorsTomb: loot at a price, and only once.
+            tomb = place_object("warriorsTomb", "adventureTomb")
+            player.heal(0)
+            items_before = len(player.getItems())
+            hp_before = player.getHp()
+            tomb.onEnter(event)
+            self.assertGreater(len(player.getItems()), items_before)
+            self.assertLess(player.getHp(), hp_before)
+            self.assertTrue(player.isAlive())
+            items_before = len(player.getItems())
+            tomb.onEnter(event)
+            self.assertEqual(items_before, len(player.getItems()))
+
+            # Sirens: trade health for experience, once per player.
+            sirens = place_object("sirens", "adventureSirens")
+            player.heal(0)
+            hp_before = player.getHp()
+            exp_before = player.getNumericProperty("exp")
+            sirens.onEnter(event)
+            self.assertLess(player.getHp(), hp_before)
+            self.assertTrue(player.isAlive())
+            self.assertEqual(exp_before + (hp_before - player.getHp()) * 2, player.getNumericProperty("exp"))
+
+            # KeymastersTent hands out the pass the BorderGuard honors.
+            guard = place_object("borderGuard", "adventureBorderGuard")
+            guard_coords = guard.getCoords()
+            self.assertFalse(game_map.canStep(guard_coords))
+            guard.onTurn(None)
+            self.assertIsNotNone(game_map.getObjectByName("adventureBorderGuard"))
+            tent = place_object("keymastersTent", "adventureKeymastersTent")
+            tent.onEnter(event)
+            self.assertTrue(player.getBoolProperty("borderPass_crimson"))
+            guard.onTurn(None)
+            self.assertIsNone(game_map.getObjectByName("adventureBorderGuard"))
+            self.assertTrue(game_map.canStep(guard_coords))
+        finally:
+            game.CGuiHandler.showInfo = original_show_info
+
+        return True, json.dumps(
+            {
+                "exp": player.getNumericProperty("exp"),
+                "gold": player.getGold(),
+                "level": player.getLevel(),
+                "obelisks": player.getNumericProperty("obelisksVisited"),
+                "infos": len(infos),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_array_deserialize_skips_bad_entries_and_consumers_are_safe(self):
         game = load_game_module()
 
@@ -17258,10 +17424,7 @@ class GameTest(unittest.TestCase):
                 self.assertEqual(1, gui_log["trades"].count("victorMarket"))
                 self.assertEqual(-1, ctx["map"].getNumericProperty("VICTOR_COURTYARD_TURN"))
                 self.assertFalse(
-                    any(
-                        obj.getName() and obj.getName().startswith("victorCultist")
-                        for obj in ctx["map"].getObjects()
-                    ),
+                    any(obj.getName() and obj.getName().startswith("victorCultist") for obj in ctx["map"].getObjects()),
                     "victor: all victorCultist* runtime actors must be cleaned up with the reward.",
                 )
 
