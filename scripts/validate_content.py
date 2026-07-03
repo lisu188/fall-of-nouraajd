@@ -1758,10 +1758,27 @@ class ContentValidator:
             self._issue(path, "$", "missing required JSON file")
             return None
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            # Reject duplicate object keys. Python's json (and simdjson, which the
+            # content tools and the game's Python layer use) silently keep the last
+            # value for a duplicated key, but the engine's strict C++ JSON parser
+            # rejects the whole document ("duplicate JSON object key"), so a file
+            # with duplicate keys passes every repo-reading check yet fails to load
+            # at runtime. Catch it here where it is cheap and unambiguous.
+            return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=self._reject_duplicate_keys(path))
         except json.JSONDecodeError as exc:
             self._issue(path, f"line {exc.lineno} column {exc.colno}", exc.msg)
             return None
+
+    def _reject_duplicate_keys(self, path: Path):
+        def hook(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+            seen: set[str] = set()
+            for key, _ in pairs:
+                if key in seen:
+                    self._issue(path, "$", f'duplicate JSON object key "{key}"')
+                seen.add(key)
+            return dict(pairs)
+
+        return hook
 
     def _load_type_registration_exclusions(self) -> None:
         path = self.repo_root / TYPE_REGISTRATION_EXCLUSIONS_PATH
