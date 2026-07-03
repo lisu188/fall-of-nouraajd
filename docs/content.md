@@ -229,3 +229,8 @@ Set pieces are ordinary items re-classed to a `Set*` slot subclass (e.g.
 set-completion check. `res/config/slots.json` maps every equipment slot,
 including the `CShield` (LeftHand) and `CPants` (Legs) slots used by four-piece
 sets.
+
+For discoverability, each piece's `description` ends with `Part of the <set>
+set (<n> pieces).` and each combined artifact's ends with `Assembled from the
+<set> set.` — this text surfaces in the item tooltip so players can tell which
+items belong together.
