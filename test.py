@@ -7711,6 +7711,171 @@ class GameTest(unittest.TestCase):
             save_path.unlink(missing_ok=True)
 
     @game_test
+    def test_composed_archetype_creature_references_survive_save_load(self):
+        # [EPIC_03][STORY_02][SUBSTORY_01] Composed creature archetypes must survive save/load
+        # exactly once. A concrete "Gooby" template (res/config/monsters.json: CCreature with its
+        # own baseStats/levelStats/actions and a level-4 DoubleAttack unlock) is recomposed with
+        # archetype references that both carry real contributions -- outlanderRace
+        # (res/config/creature_races.json: baseStats strength+1/stamina+2/agility-1/intelligence-2)
+        # and SorcererClass (res/config/creature_classes.json: authoritative mainStat
+        # "intelligence", per-level levelStats, an "Attack" starting action, and a level-keyed
+        # unlock map: MagicMissile@1, AbyssalShadows@2, FrostBolt@3, ...). After CMapLoader.save ->
+        # CGameLoader.loadSavedGame the reloaded creature must preserve the concrete typeId, race
+        # id, class id, level, sw, hp/mana, and the composed effective stats/actions
+        # (CCreature::buildComposedStats / getEffectiveInteractions) -- and a second save/load
+        # cycle must not double-apply any archetype bonus (no stat inflation, no action
+        # duplication, no archetype copied into the concrete template's raw action set).
+        game = load_game_module()
+
+        stat_keys = [
+            "strength",
+            "agility",
+            "stamina",
+            "intelligence",
+            "armor",
+            "block",
+            "dmgMin",
+            "dmgMax",
+            "hit",
+            "crit",
+            "attack",
+            "damage",
+            "fireResist",
+            "frostResist",
+            "thunderResist",
+            "shadowResist",
+            "normalResist",
+        ]
+
+        def action_identities(actions):
+            # Sorted (typeId, name) pairs: a duplicated action grows the list, a dropped or
+            # re-derived action changes it.
+            return sorted((action.getTypeId(), action.getName()) for action in actions)
+
+        def archetype_snapshot(creature):
+            race = creature.getObjectProperty("race")
+            creature_class = creature.getObjectProperty("creatureClass")
+            stats = creature.getStats()
+            return {
+                "type": creature.getType(),
+                "typeId": creature.getTypeId(),
+                "raceId": race.getTypeId() if race is not None else None,
+                "classId": creature_class.getTypeId() if creature_class is not None else None,
+                "level": creature.getLevel(),
+                "sw": creature.getNumericProperty("sw"),
+                "hp": creature.getHp(),
+                "hpMax": creature.getHpMax(),
+                "mana": creature.getMana(),
+                "mainStat": stats.getStringProperty("mainStat"),
+                "mainValue": stats.getMainValue(),
+                "stats": {key: stats.getNumericProperty(key) for key in stat_keys},
+                "rawActions": action_identities(creature.getActions()),
+                "effectiveActions": action_identities(creature.getEffectiveInteractions()),
+            }
+
+        object_name = "composedArchetypeRoundTripCompanion"
+        save_name = unique_save_name("composed_archetype_roundtrip")
+        save_path = save_primary_path(save_name)
+
+        try:
+            g, game_map, player = load_game_map_with_player("test", "Warrior")
+            self.assertIsNotNone(player)
+
+            companion = g.createObject("Gooby")
+            self.assertIsNotNone(companion)
+            companion.name = object_name
+            # Recompose the archetype references so BOTH carry numeric contributions: a reload
+            # that dropped, re-derived, or double-applied either one is visible in the composed
+            # stat block, not just in the identity ids.
+            companion.race = g.createObject("outlanderRace")
+            companion.creatureClass = g.createObject("SorcererClass")
+            companion.level = 2
+            companion.setNumericProperty("sw", 3)
+            game_map.addObject(companion)
+            companion.moveTo(2, 0, 0)
+            # Mid-range vitals, distinct from zero and from the composed maxima, so a reload
+            # that refilled or re-derived hp/mana instead of restoring them is caught.
+            companion.setHp(9)
+            companion.setMana(4)
+
+            baseline = archetype_snapshot(companion)
+
+            # Composition sanity before saving, otherwise the preservation assertions below
+            # would be vacuous.
+            self.assertEqual("CCreature", baseline["type"])
+            self.assertEqual("Gooby", baseline["typeId"])
+            self.assertEqual("outlanderRace", baseline["raceId"])
+            self.assertEqual("SorcererClass", baseline["classId"])
+            self.assertEqual(2, baseline["level"])
+            self.assertEqual(3, baseline["sw"])
+            self.assertEqual(9, baseline["hp"])
+            self.assertEqual(4, baseline["mana"])
+            # SorcererClass names the authoritative main stat; the concrete Gooby template says
+            # "strength", so "intelligence" proves the class REFERENCE (not a baked copy of the
+            # template) drives the composed stats.
+            self.assertEqual("intelligence", baseline["mainStat"])
+            effective_type_ids = {type_id for type_id, _name in baseline["effectiveActions"]}
+            # Class unlocks at or below level 2 plus the shared starting "Attack" must be
+            # composed in; higher unlocks (class FrostBolt@3, Gooby's own DoubleAttack@4) must
+            # stay level-gated out.
+            self.assertLessEqual({"Attack", "MagicMissile", "AbyssalShadows"}, effective_type_ids)
+            self.assertNotIn("FrostBolt", effective_type_ids)
+            self.assertNotIn("DoubleAttack", effective_type_ids)
+
+            snapshots = [baseline]
+            current_map = game_map
+            for _cycle in range(2):
+                game.CMapLoader.save(current_map, save_name)
+
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_map = loaded_game.getMap()
+                loaded_companion = loaded_map.getObjectByName(object_name)
+                self.assertIsNotNone(loaded_companion)
+
+                # Exactly-once contract, checked over two chained cycles: every identity and
+                # composed value matches the baseline. A dropped reference nulls raceId/classId,
+                # a double-applied archetype bonus inflates the composed stats/hpMax/mainValue,
+                # and a duplicated or template-copied action changes an action identity list.
+                reloaded = archetype_snapshot(loaded_companion)
+                self.assertEqual(baseline, reloaded)
+                snapshots.append(reloaded)
+                current_map = loaded_map
+
+            # Persisted shape: the archetypes survive as self-contained inline
+            # {"class","properties"} objects carrying their configured typeIds (the shape pinned
+            # by the composed_archetype_v1 save-compatibility fixture), so reload does not
+            # depend on res/config archetype content.
+            document = json.loads(save_path.read_text(encoding="utf-8"))
+            assert_save_envelope(self, document, "test")
+            saved_companion = snapshot_object_properties(save_snapshot(document), object_name)
+            self.assertEqual("Gooby", saved_companion.get("typeId"))
+            saved_race = saved_companion.get("race")
+            saved_class = saved_companion.get("creatureClass")
+            self.assertIsInstance(saved_race, dict, "race must persist as an inline archetype object")
+            self.assertIsInstance(saved_class, dict, "creatureClass must persist as an inline archetype object")
+            self.assertEqual("CCreatureRace", saved_race.get("class"))
+            self.assertEqual("outlanderRace", saved_race.get("properties", {}).get("typeId"))
+            self.assertEqual("CCreatureClass", saved_class.get("class"))
+            self.assertEqual("SorcererClass", saved_class.get("properties", {}).get("typeId"))
+
+            return True, json.dumps(
+                {
+                    "classId": baseline["classId"],
+                    "cycles": len(snapshots),
+                    "effectiveActions": ["|".join(identity) for identity in baseline["effectiveActions"]],
+                    "hpMax": baseline["hpMax"],
+                    "mainStat": baseline["mainStat"],
+                    "raceId": baseline["raceId"],
+                    "stats": baseline["stats"],
+                    "typeId": baseline["typeId"],
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
     def test_toroidal_map_wraps_and_survives_save_load(self):
         game = load_game_module()
 
