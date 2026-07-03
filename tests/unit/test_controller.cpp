@@ -851,6 +851,15 @@ std::shared_ptr<CEffect> opponent_debuff(const std::shared_ptr<CGame> &game, int
 
 void test_monster_fight_controller_ranks_interactions_by_weakening() {
     auto game = fight_fixture_game();
+    // CInteraction::onAction clones its effect through the object handler (serialize ->
+    // deserialize) when the interaction is cast. The clone only works if CInteraction and CEffect
+    // are wired into the type system for both meta serialization and class-name construction, the
+    // same way the configured-object clone coverage in test_object.cpp registers them. Without this
+    // the cast throws bad_any_cast (unregistered meta) or segfaults (unconstructable class).
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CInteraction, CGameObject>();
+    game->getObjectHandler()->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
+    game->getObjectHandler()->registerType("CInteraction", []() { return std::make_shared<CInteraction>(); });
     auto monster = creature_at(0, 0, 0);
     monster->setGame(game);
     // A single landed hit lands 10 damage; the opponent has no armor/resist.
@@ -865,12 +874,18 @@ void test_monster_fight_controller_ranks_interactions_by_weakening() {
     opponent->setGame(game);
     opponent->getBaseStats()->setStamina(10);
 
+    // Distinct names keep the three apart in the effective interaction set, which
+    // dedupes by typeId then name: bare interactions share the empty-name key and
+    // would collapse to one (real config-backed interactions carry distinct typeIds).
     // Weak but expensive: no lingering effect, so its weakening value is just the hit.
     auto weakPricey = caster_interaction(game, 50, nullptr);
+    weakPricey->setName("weakPricey");
     // Strong but cheap: a 3-turn opponent debuff makes it the most weakening cast.
     auto strongCheap = caster_interaction(game, 10, opponent_debuff(game, 3));
+    strongCheap->setName("strongCheap");
     // Strongest on paper (5-turn debuff) but unaffordable, so it must be skipped.
     auto strongestUnaffordable = caster_interaction(game, 100, opponent_debuff(game, 5));
+    strongestUnaffordable->setName("strongestUnaffordable");
     monster->addAction(weakPricey);
     monster->addAction(strongCheap);
     monster->addAction(strongestUnaffordable);
