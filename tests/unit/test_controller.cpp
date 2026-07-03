@@ -833,8 +833,10 @@ void test_monster_fight_controller_heals_when_next_hit_would_kill() {
 
 std::shared_ptr<CInteraction> caster_interaction(const std::shared_ptr<CGame> &game, int manaCost,
                                                  std::shared_ptr<CEffect> effect) {
-    auto interaction = std::make_shared<CInteraction>();
-    interaction->setGame(game);
+    // Build through the object factory (like createObject in test_core/test_object) so the
+    // interaction and its effect carry the meta initialization CInteraction::onAction relies on
+    // when it clones the effect (a bare make_shared effect throws bad_any_cast on clone<CEffect>()).
+    auto interaction = game->createObject<CInteraction>("CInteraction");
     interaction->setManaCost(manaCost);
     if (effect) {
         interaction->setEffect(effect);
@@ -843,8 +845,7 @@ std::shared_ptr<CInteraction> caster_interaction(const std::shared_ptr<CGame> &g
 }
 
 std::shared_ptr<CEffect> opponent_debuff(const std::shared_ptr<CGame> &game, int duration) {
-    auto effect = std::make_shared<CEffect>();
-    effect->setGame(game);
+    auto effect = game->createObject<CEffect>("CEffect");
     effect->setDuration(duration);
     return effect;
 }
