@@ -85,6 +85,68 @@ LIGHTWEIGHT_PATH_PATTERNS = (
 )
 
 
+# Disjoint change-KIND taxonomy consumed by the workflow and poller. Each changed
+# path is assigned exactly one primary kind by _path_kind() (first match wins, in
+# the order below), so GUI C++ is never mis-bucketed as generic engine code and a
+# res/ content change is never mis-bucketed as an engine change. The workflow can
+# gate expensive jobs from the presence booleans; native/coverage need is still
+# taken from the existing NATIVE/COVERAGE pattern sets (unchanged) for safety.
+GUI_NATIVE_KIND_PATTERNS = ("src/gui/*",)
+ENGINE_NATIVE_KIND_PATTERNS = (
+    "src/*",
+    "native_plugins/*",
+    "random-dungeon-generator/*",
+    "vstd/*",
+    "CMakeLists.txt",
+    "cmake/*",
+    "configure.sh",
+    "configure.bat",
+    "vcpkg.json",
+    "test.py",
+    "tests/unit/*",
+    "tests/fixtures/*",
+    "tests/regression/*",
+)
+CONTENT_KIND_PATTERNS = ("res/*",)
+WORKFLOW_PYTHON_KIND_PATTERNS = (
+    ".github/*",
+    "scripts/*.py",
+    "scripts/*.sh",
+    "tests/test_*.py",
+    "tests/security/*.py",
+)
+QUEUE_STATE_KIND_PATTERNS = (
+    "planning/*.xlsx",
+    "planning/workflow_observations/records/*.json",
+    "planning/workflow_observations/resolutions/*.json",
+)
+PROMPTS_DOCS_KIND_PATTERNS = (
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "*.md",
+    "docs/*",
+    "prompts/*",
+)
+
+
+def _path_kind(path: str) -> str:
+    """Assign one primary KIND to a changed path (first match wins)."""
+    if matchesAny(path, GUI_NATIVE_KIND_PATTERNS):
+        return "native-gui"
+    if matchesAny(path, ENGINE_NATIVE_KIND_PATTERNS):
+        return "native-engine"
+    if matchesAny(path, CONTENT_KIND_PATTERNS):
+        return "content-json-python"
+    if matchesAny(path, WORKFLOW_PYTHON_KIND_PATTERNS):
+        return "workflow-python"
+    if matchesAny(path, QUEUE_STATE_KIND_PATTERNS):
+        return "queue-state"
+    if matchesAny(path, PROMPTS_DOCS_KIND_PATTERNS):
+        return "prompts-docs"
+    return "unclassified"
+
+
 @dataclass(frozen=True)
 class ChangeClassification:
     paths: tuple[str, ...]
@@ -93,6 +155,16 @@ class ChangeClassification:
     nativeReasons: tuple[str, ...]
     authorityChange: bool = False
     authorityPaths: tuple[str, ...] = ()
+    # Additive KIND taxonomy (presence booleans over the changed set). These do
+    # not alter native/coverage need; they let the workflow route jobs by change
+    # kind and let tests pin the classification of each path category.
+    coverageRelevant: bool = False
+    nativeGui: bool = False
+    nativeEngine: bool = False
+    contentJsonPython: bool = False
+    workflowPython: bool = False
+    promptsDocs: bool = False
+    queueStateOnly: bool = False
 
     @property
     def humanReviewRequired(self) -> bool:
@@ -142,6 +214,9 @@ def classifyPaths(paths: Sequence[str], *, forceNative: bool = False) -> ChangeC
         elif not matchesAny(path, LIGHTWEIGHT_PATH_PATTERNS):
             nativeReasons.append(f"unclassified:{path}")
 
+    kinds = [_path_kind(path) for path in changed]
+    coverageRelevant = any(matchesAny(path, COVERAGE_PATH_PATTERNS) for path in changed)
+
     return ChangeClassification(
         paths=changed,
         coverageNeeded=coverageNeeded,
@@ -149,6 +224,13 @@ def classifyPaths(paths: Sequence[str], *, forceNative: bool = False) -> ChangeC
         nativeReasons=tuple(dict.fromkeys(nativeReasons)),
         authorityChange=authorityChange,
         authorityPaths=authorityPaths,
+        coverageRelevant=coverageRelevant,
+        nativeGui="native-gui" in kinds,
+        nativeEngine="native-engine" in kinds,
+        contentJsonPython="content-json-python" in kinds,
+        workflowPython="workflow-python" in kinds,
+        promptsDocs="prompts-docs" in kinds,
+        queueStateOnly=bool(kinds) and all(kind == "queue-state" for kind in kinds),
     )
 
 
@@ -191,11 +273,23 @@ def changedPaths(base: str, head: str) -> tuple[str, ...]:
 
 
 def writeGithubOutput(path: Path, classification: ChangeClassification) -> None:
+    def line(key: str, value: bool) -> str:
+        return f"{key}={str(value).lower()}\n"
+
     with path.open("a", encoding="utf-8") as handle:
-        handle.write(f"coverage-needed={str(classification.coverageNeeded).lower()}\n")
-        handle.write(f"native-needed={str(classification.nativeNeeded).lower()}\n")
-        handle.write(f"authority-change={str(classification.authorityChange).lower()}\n")
-        handle.write(f"human-review-required={str(classification.humanReviewRequired).lower()}\n")
+        handle.write(line("coverage-needed", classification.coverageNeeded))
+        handle.write(line("native-needed", classification.nativeNeeded))
+        handle.write(line("authority-change", classification.authorityChange))
+        handle.write(line("human-review-required", classification.humanReviewRequired))
+        # Additive KIND taxonomy outputs (available to the workflow for finer job
+        # routing; existing native-needed/coverage-needed gating is unchanged).
+        handle.write(line("coverage-relevant", classification.coverageRelevant))
+        handle.write(line("native-gui", classification.nativeGui))
+        handle.write(line("native-engine", classification.nativeEngine))
+        handle.write(line("content-json-python", classification.contentJsonPython))
+        handle.write(line("workflow-python", classification.workflowPython))
+        handle.write(line("prompts-docs", classification.promptsDocs))
+        handle.write(line("queue-state-only", classification.queueStateOnly))
 
 
 def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
@@ -242,11 +336,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "authorityChange": classification.authorityChange,
                 "authorityPaths": list(classification.authorityPaths),
+                "contentJsonPython": classification.contentJsonPython,
                 "coverageNeeded": classification.coverageNeeded,
+                "coverageRelevant": classification.coverageRelevant,
                 "humanReviewRequired": classification.humanReviewRequired,
+                "nativeEngine": classification.nativeEngine,
+                "nativeGui": classification.nativeGui,
                 "nativeNeeded": classification.nativeNeeded,
                 "nativeReasons": list(classification.nativeReasons),
                 "paths": list(classification.paths),
+                "promptsDocs": classification.promptsDocs,
+                "queueStateOnly": classification.queueStateOnly,
+                "workflowPython": classification.workflowPython,
             },
             indent=2,
             sort_keys=True,
