@@ -513,6 +513,63 @@ void test_scoped_search_roots_resolve_active_map_assets() {
     std::filesystem::remove_all(tempRootB, errorCode);
 }
 
+void test_map_load_activates_scope_for_map_local_assets() {
+    // Loading a map must register and activate that map's directory as a scoped search root, so a
+    // map-local asset (e.g. an animation frame declared by a bare name) resolves through the active
+    // scope while global assets keep resolving through the base search path. This is what the
+    // animation/texture cache relies on, since both resolve through the game's resources provider.
+    auto singletonResources = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(singletonResources->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before the map-local asset scope test");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto resourceRoot = itemsPath.parent_path().parent_path();
+
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string mapName = "unit_scope_map_" + std::to_string(nonce);
+    const auto mapDir = resourceRoot / "maps" / mapName;
+    std::filesystem::create_directories(mapDir);
+    const auto mapConfigPath = mapDir / "map.json";
+    const std::string localAssetName = "unit_scope_sprite_" + std::to_string(nonce) + ".png";
+    const auto localAssetPath = mapDir / localAssetName;
+
+    const bool fixtureWritten =
+        write_text_file(mapConfigPath, R"({"marker":"scope","properties":{"x":0,"y":0,"z":0},"layers":[]})") &&
+        write_text_file(localAssetPath, "png");
+    expect_true(fixtureWritten, "temporary map fixture and map-local asset should be written");
+    if (!std::filesystem::exists(mapConfigPath) || !std::filesystem::exists(localAssetPath)) {
+        std::filesystem::remove_all(mapDir);
+        return;
+    }
+
+    auto game = CGameLoader::loadGame();
+    auto provider = game->getResourcesProvider();
+
+    // Before the map loads, the map-local asset must NOT resolve by its bare name (no active scope).
+    expect_true(provider->getPath(localAssetName).empty(),
+                "a map-local asset must not resolve by bare name before its map is loaded");
+
+    auto map = CMapLoader::loadNewMap(game, mapName);
+    expect_true(map && map->getMapName() == mapName, "loadNewMap should load the authored map");
+
+    expect_true(provider->getActiveScope() == mapName, "loadNewMap should activate the loaded map's scope");
+
+    // The map-local asset now resolves by its bare name, inside the map directory.
+    const auto resolvedLocal = provider->getPath(localAssetName);
+    expect_true(!resolvedLocal.empty(), "the map-local asset should resolve through the active map scope");
+    std::error_code errorCode;
+    expect_true(std::filesystem::weakly_canonical(std::filesystem::path(resolvedLocal).parent_path(), errorCode) ==
+                    std::filesystem::weakly_canonical(mapDir, errorCode),
+                "the map-local asset should resolve inside the loaded map's directory");
+
+    // Global assets keep their precedence: a base-path asset still resolves after a scope is active.
+    expect_true(!provider->getPath("config/items.json").empty(),
+                "global assets must still resolve through the base search path with a map scope active");
+
+    std::filesystem::remove_all(mapDir);
+}
+
 } // namespace
 
 int main() {
@@ -526,6 +583,7 @@ int main() {
     test_two_game_contexts_isolate_provider_cache_and_object_config();
     test_resource_plugin_trust_boundary_rejects_escapes();
     test_scoped_search_roots_resolve_active_map_assets();
+    test_map_load_activates_scope_for_map_local_assets();
 
     return finish_tests();
 }

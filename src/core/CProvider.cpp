@@ -401,6 +401,10 @@ std::shared_ptr<json> CResourcesProvider::loadJson(std::string path) {
 }
 
 std::string CResourcesProvider::getPath(std::string path) {
+    // Resolution precedence: the process-wide base search path is always consulted first, so global
+    // assets keep their meaning; only if nothing matches there does the active map scope (if any)
+    // get a chance to resolve a map-local asset of the same relative name. The safe-relative-path
+    // guard below rejects absolute and traversal paths before any root — base or scoped — is tried.
     if (!isSafeRelativeResourcePath(path)) {
         vstd::logger::warning("Rejected unsafe resource path:", path);
         return {};
