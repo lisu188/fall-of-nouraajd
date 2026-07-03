@@ -1641,7 +1641,9 @@ class ContentValidator:
             library = path.stem
             for entry, body in iter_cpp_function_bodies(text):
                 classes = iter_cpp_template_type_names(body, "register_type")
-                for helper_name in re.findall(r"\bnative_plugin::(register_[A-Za-z_]\w*)\s*\(", body):
+                for helper_name in re.findall(
+                    r"\bnative_plugin::(register_[A-Za-z_]\w*)\s*\(", strip_cpp_comments(body)
+                ):
                     classes.update(helper_classes.get(helper_name, set()))
                 if classes:
                     entry_helpers[(library, entry)] = classes
@@ -4395,6 +4397,12 @@ def iter_cpp_function_bodies(text: str) -> list[tuple[str, str]]:
 
 def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
     names: set[str] = set()
+    # Strip comments first so a commented-out (runtime-disabled) registration is
+    # not counted as a live one. Without this, iter_cpp_metadata_declarations
+    # (which strips comments) would omit a commented V_META while this scan still
+    # honored a commented register_type<...>, letting an unregistered reflected
+    # type pass the coverage audit and then fail at runtime when built by name.
+    text = strip_cpp_comments(text)
     pattern = re.compile(rf"\b{re.escape(call_name)}\s*<\s*([^,;\n]+)")
     for match in pattern.finditer(text):
         name = normalize_cpp_type(match.group(1))
