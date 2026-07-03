@@ -257,6 +257,10 @@ pressure without imposing a fixed RAM cap. If the controller cannot keep eight i
 status, dependency, live-worker-status, resource, disk, cleanup, authentication, queue-validation, workbook-PR, or
 repository-safety blocker.
 
+The authoritative mechanical policy values -- the four-slot controller floor/limit, the eight active-worker floor, the
+heartbeat cadence, lease durations, the 240-minute reclaim age, and the advisory target-file overlap policy -- live in
+`scripts/controller_policy.py`. The numbers restated in this document mirror that source; change a value there, not here.
+
 Each controller instance must keep exactly four of its own workbook claim slots active whenever status-and-dependency
 eligible issues are available for that controller. Healthy rows have a non-overdue heartbeat and a non-expired lease.
 Heartbeat-overdue, lease-expired, suspect, and reclaimable rows do not count as healthy work, but they still occupy the

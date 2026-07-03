@@ -33,6 +33,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
+try:
+    from scripts import controller_policy
+except ModuleNotFoundError:  # Support `python3 scripts/issue_queue.py`.
+    import controller_policy
+
 DEFAULT_WORKBOOK = Path("planning/fall_of_nouraajd_issue_proposals.xlsx")
 ISSUE_SHEET = "Issue Proposals"
 
@@ -99,8 +104,9 @@ WORKFLOW_HEADERS = (
 ALL_HEADERS = REQUIRED_HEADERS + WORKFLOW_HEADERS
 ISSUE_NAME_PATTERN = re.compile(r"^\[EPIC_\d{2}\]\[STORY_\d{2}\]\[SUBSTORY_\d{2}\].+")
 ISSUE_NAME_TOKENS = re.compile(r"^\[(EPIC_\d{2})\]\[(STORY_\d{2})\]\[(SUBSTORY_\d{2})\](.+)$")
-PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
-VALID_PRIORITIES = ("P0", "P1", "P2")
+# Priority ordering derives from the canonical priority enum in controller_policy.
+VALID_PRIORITIES = controller_policy.QUEUE_PRIORITIES
+PRIORITY_ORDER = {priority: index for index, priority in enumerate(VALID_PRIORITIES)}
 # Shared CI merge-gate and controller-governance files. A row whose declared
 # target files modify these rewrites the validation authority that gates every
 # concurrent PR, so no single autonomous controller can safely validate the
@@ -113,10 +119,15 @@ CONTROL_PLANE_PATHS = (
     "scripts/ci_change_classifier.py",
     "scripts/poll_pr_checks.py",
 )
-DEFAULT_RECLAIM_AGE_MINUTES = 240
-DEFAULT_HEARTBEAT_INTERVAL_MINUTES = DEFAULT_RECLAIM_AGE_MINUTES // 2
-DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR = 4
-DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT = 4
+# Mechanical policy values derive from the single canonical source
+# (scripts/controller_policy.py); do not restate the numbers here.
+DEFAULT_RECLAIM_AGE_MINUTES = controller_policy.value("reclaim_age_minutes")
+DEFAULT_HEARTBEAT_INTERVAL_MINUTES = controller_policy.heartbeat_interval_minutes()
+DEFAULT_CONTROLLER_ACTIVE_ISSUE_FLOOR = controller_policy.value("controller_active_issue_floor")
+DEFAULT_CONTROLLER_ACTIVE_ISSUE_LIMIT = controller_policy.value("controller_active_issue_limit")
+DEFAULT_LEASE_MINUTES = controller_policy.value("default_lease_minutes")
+DEFAULT_FLEET_ACTIVE_WORKER_FLOOR = controller_policy.value("fleet_active_worker_floor")
+TARGET_FILE_OVERLAP_POLICY = controller_policy.value("target_file_overlap_policy")
 
 
 class QueueError(RuntimeError):
@@ -1094,7 +1105,7 @@ def shortlistTasks(
         "eligible": bool(eligible),
         "selectionSeed": selectionSeed,
         "allowFileOverlap": allowFileOverlap,
-        "targetFileOverlapPolicy": "advisory",
+        "targetFileOverlapPolicy": TARGET_FILE_OVERLAP_POLICY,
         "eligibleCount": len(eligible),
         "highestPriority": None,
         "highestPriorityEligibleCount": 0,
@@ -1326,7 +1337,7 @@ def taskPayload(task: TaskRecord, state: QueueState | None = None, now: datetime
     payload["Status"] = task.status
     payload["Dependencies Parsed"] = task.dependencies
     payload["Target Files Parsed"] = sorted(task.targetFiles)
-    payload["Target File Overlap Policy"] = "advisory"
+    payload["Target File Overlap Policy"] = TARGET_FILE_OVERLAP_POLICY
     payload["Active File Overlaps"] = taskActiveFileOverlaps(state, task, now=now) if state is not None else []
     payload.update(taskLeasePayload(task, now))
     return payload
@@ -1481,7 +1492,7 @@ def claimTask(
     workbookPath: Path,
     owner: str,
     issueName: str | None = None,
-    leaseMinutes: int = 120,
+    leaseMinutes: int = DEFAULT_LEASE_MINUTES,
     priorities: set[str] | None = None,
     epic: str | None = None,
     component: str | None = None,
@@ -1692,7 +1703,7 @@ def heartbeatTask(
     owner: str,
     progress: int | None,
     note: str,
-    leaseMinutes: int = 120,
+    leaseMinutes: int = DEFAULT_LEASE_MINUTES,
     lockTimeoutSeconds: float = 30.0,
 ) -> dict[str, Any]:
     if progress is not None and not 0 <= progress <= 99:
@@ -2087,7 +2098,7 @@ def buildParser() -> argparse.ArgumentParser:
     addCommonArguments(claimParser)
     claimParser.add_argument("--owner", required=True)
     claimParser.add_argument("--issue")
-    claimParser.add_argument("--lease-minutes", type=int, default=120)
+    claimParser.add_argument("--lease-minutes", type=int, default=DEFAULT_LEASE_MINUTES)
     claimParser.add_argument("--priority", action="append", default=[])
     claimParser.add_argument("--epic")
     claimParser.add_argument("--component")
@@ -2105,7 +2116,7 @@ def buildParser() -> argparse.ArgumentParser:
     heartbeatParser.add_argument("--owner", required=True)
     heartbeatParser.add_argument("--progress", type=int)
     heartbeatParser.add_argument("--note", default="")
-    heartbeatParser.add_argument("--lease-minutes", type=int, default=120)
+    heartbeatParser.add_argument("--lease-minutes", type=int, default=DEFAULT_LEASE_MINUTES)
 
     promptParser = subparsers.add_parser("prompt", help="Render a claimed task as a worker-agent prompt")
     addCommonArguments(promptParser)

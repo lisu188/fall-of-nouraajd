@@ -51,16 +51,19 @@ from pathlib import Path
 from typing import Any, Sequence
 
 try:
-    from scripts import issue_queue
+    from scripts import controller_policy, issue_queue
 except ModuleNotFoundError:  # Support `python3 scripts/subagent_registry.py`.
+    import controller_policy
     import issue_queue
 
 SCHEMA_VERSION = 1
 ENV_REGISTRY_FILE = "GAME_SUBAGENT_REGISTRY_FILE"
 DEFAULT_REGISTRY_DIRECTORY = "fall-of-nouraajd"
 DEFAULT_REGISTRY_FILENAME = "subagent_registry.json"
+# Mechanical policy values derive from the single canonical source
+# (scripts/controller_policy.py); do not restate the numbers here.
 DEFAULT_STALE_AFTER_MINUTES = issue_queue.DEFAULT_HEARTBEAT_INTERVAL_MINUTES
-DEFAULT_RETAIN_FINALIZED = 50
+DEFAULT_RETAIN_FINALIZED = controller_policy.value("finalized_retention")
 
 
 class RegistryError(RuntimeError):
