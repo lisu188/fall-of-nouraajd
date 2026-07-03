@@ -7316,7 +7316,30 @@ class GameTest(unittest.TestCase):
         self.assertEqual("ritual", ritual_map.mapName)
         self.assertTrue(store.contains("nouraajd", "nouraajd_return"))
         self.assertTrue(store.get("nouraajd", "nouraajd_return") == nouraajd_map)
-        self.assertTrue(ritual_map.getBoolProperty("ritual_initialized"))
+        # The ritual StartEvent sits on the entry tile and fires through the movement path
+        # (CCreature::afterMove), so transition placement alone is not guaranteed to raise its
+        # onEnter. Walk the player off the entry and back onto it before pinning the
+        # script-driven initialization flags.
+        if not ritual_map.getBoolProperty("ritual_initialized"):
+            ritual_entry = player.getCoords()
+            ritual_side = find_adjacent_walkable_tile(ritual_map, ritual_entry)
+            set_player_target(player, ritual_side)
+            ritual_map.move()
+            self.assertTrue(
+                pump_event_loop_until(
+                    lambda: (player.getCoords().x, player.getCoords().y, player.getCoords().z)
+                    == (ritual_side.x, ritual_side.y, ritual_side.z),
+                    timeout=2.0,
+                )
+            )
+            set_player_target(player, ritual_entry)
+            ritual_map.move()
+        self.assertTrue(
+            pump_event_loop_until(
+                lambda: ritual_map.getBoolProperty("ritual_initialized"),
+                timeout=2.0,
+            )
+        )
         self.assertIn("ritualQuest", quest_names(player))
         # The retained source map keeps the removal and its flags while another map is active.
         self.assertIsNone(nouraajd_map.getObjectByName("cave1"))
