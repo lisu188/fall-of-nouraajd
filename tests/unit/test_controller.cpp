@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameFightPanel.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
@@ -830,6 +831,59 @@ void test_monster_fight_controller_heals_when_next_hit_would_kill() {
                 "monster fight controller should heal when it would otherwise die to the next hit");
 }
 
+std::shared_ptr<CInteraction> caster_interaction(const std::shared_ptr<CGame> &game, int manaCost,
+                                                 std::shared_ptr<CEffect> effect) {
+    auto interaction = std::make_shared<CInteraction>();
+    interaction->setGame(game);
+    interaction->setManaCost(manaCost);
+    if (effect) {
+        interaction->setEffect(effect);
+    }
+    return interaction;
+}
+
+std::shared_ptr<CEffect> opponent_debuff(const std::shared_ptr<CGame> &game, int duration) {
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(game);
+    effect->setDuration(duration);
+    return effect;
+}
+
+void test_monster_fight_controller_ranks_interactions_by_weakening() {
+    auto game = fight_fixture_game();
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    // A single landed hit lands 10 damage; the opponent has no armor/resist.
+    monster->getBaseStats()->setStamina(10);
+    monster->getBaseStats()->setDmgMax(10);
+    monster->setHp(monster->getHpMax());
+    // Enough mana for the strong (10) and weak (50) spells, but not the debuff bomb (100).
+    monster->getBaseStats()->setIntelligence(100);
+    monster->setMana(60);
+
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+    opponent->getBaseStats()->setStamina(10);
+
+    // Weak but expensive: no lingering effect, so its weakening value is just the hit.
+    auto weakPricey = caster_interaction(game, 50, nullptr);
+    // Strong but cheap: a 3-turn opponent debuff makes it the most weakening cast.
+    auto strongCheap = caster_interaction(game, 10, opponent_debuff(game, 3));
+    // Strongest on paper (5-turn debuff) but unaffordable, so it must be skipped.
+    auto strongestUnaffordable = caster_interaction(game, 100, opponent_debuff(game, 5));
+    monster->addAction(weakPricey);
+    monster->addAction(strongCheap);
+    monster->addAction(strongestUnaffordable);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent), "monster fight controller should cast a weakening interaction");
+    // Casting spends the chosen spell's mana: 60 - 10 uniquely identifies the cheap,
+    // strongly-weakening spell over the pricey weak one (would leave 10) and proves the
+    // unaffordable debuff bomb (needs 100) was filtered out by mana affordability.
+    expect_true(monster->getMana() == 50,
+                "monster fight controller should pick the most weakening affordable interaction, not the priciest");
+}
+
 } // namespace
 
 int main() {
@@ -855,6 +909,7 @@ int main() {
     test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal();
     test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
     test_monster_fight_controller_heals_when_next_hit_would_kill();
+    test_monster_fight_controller_ranks_interactions_by_weakening();
 
     return finish_tests();
 }
