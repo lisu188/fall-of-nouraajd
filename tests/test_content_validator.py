@@ -198,6 +198,69 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertIssueContains(issues, "assets[1].path", "duplicate asset declaration: shared.id")
 
+    def _reference_map_animation(self, root, animation):
+        # Add a map object whose ``properties.animation`` references a map-local asset by its
+        # bare, map-relative name -- exactly the reference site _iter_map_asset_reference_sites
+        # collects (``layers[].objects[].properties.animation``). The object carries no name so
+        # it stays clear of the placed-name / trigger-recognition checks.
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"].append(
+            {
+                "id": 2,
+                "type": "StartEvent",
+                "x": 1,
+                "y": 1,
+                "width": 1,
+                "height": 1,
+                "properties": {"animation": animation},
+            }
+        )
+        write_json(map_path, map_data)
+        return map_path
+
+    def test_map_asset_reference_to_declared_animation_passes_validation(self):
+        root = self.make_fixture()
+        self._make_asset_files(root)
+        self._declare_map_assets(root, [{"path": "anim/walk", "kind": "animationRoot"}])
+        self._reference_map_animation(root, "anim/walk")
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
+    def test_map_asset_reference_to_undeclared_animation_is_flagged(self):
+        root = self.make_fixture()
+        self._make_asset_files(root)
+        # The map declares an unrelated asset, so the consistency check runs, but the
+        # referenced map-local animation ("anim/walk", which exists on disk as anim/walk.png)
+        # is never declared -- it would not be staged into the build, so it is flagged.
+        self._declare_map_assets(root, [{"path": "images/portrait.png", "kind": "file"}])
+        self._reference_map_animation(root, "anim/walk")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            "layers[1].objects[1].properties.animation",
+            "references map-local asset 'anim/walk' that is not declared in the map's 'assets' array",
+        )
+
+    def test_map_asset_reference_to_global_asset_is_not_flagged(self):
+        root = self.make_fixture()
+        # A global asset packaged independently of the map under res/. Even though the map
+        # declares an assets array (activating the consistency check), a reference that
+        # resolves through the base res/ search path must never be treated as map-local.
+        (root / "res/images").mkdir(parents=True, exist_ok=True)
+        (root / "res/images/global_sprite.png").write_text("png")
+        self._declare_map_assets(root, [{"path": "hero.combat.idle", "kind": "logicalId"}])
+        self._reference_map_animation(root, "images/global_sprite")
+
+        issues = validate_repo(root)
+
+        self.assertEqual([], [str(issue) for issue in issues])
+
     def _valid_class_profile(self):
         return {
             "warrior": {

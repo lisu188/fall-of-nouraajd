@@ -527,6 +527,8 @@ void init_game_module(py::module_ &m) {
         .def("getSceneManager", &CGame::getSceneManager, "Return the scene transition manager.")
         .def("getRngHandler", &CGame::getRngHandler, "Return the random encounter/loot handler.")
         .def("createObject", createObject, "Create an object by configured type id.")
+        .def("getResourcesProvider", &CGame::getResourcesProvider,
+             "Return the game's context-owned resources provider (map-scoped path resolution).")
         .def("getGui", &CGame::getGui, "Return the GUI root object.");
 
     py::class_<CGameGraphicsObject, CGameObject, std::shared_ptr<CGameGraphicsObject>>(
@@ -1088,7 +1090,11 @@ void init_game_module(py::module_ &m) {
              "Return the process-wide resource provider (compatibility facade for code without a game instance).")
         .def("getPath", &CResourcesProvider::getPath, "Resolve a resource path relative to the active resource root.")
         .def("load", &CResourcesProvider::load, "Load a resource file as text.")
-        .def("getFiles", &CResourcesProvider::getFiles, "List files under a resource path.");
+        .def("getFiles", &CResourcesProvider::getFiles, "List files under a resource path.")
+        .def("getActiveScope", &CResourcesProvider::getActiveScope,
+             "Return the active map scope name, or an empty string when no map scope is active.")
+        .def("getScopedRoots", &CResourcesProvider::getScopedRoots,
+             "Return the canonical roots of all currently-registered map scopes.");
 
     auto ceffect = py::class_<CEffect, CWrapper<CEffect>, std::shared_ptr<CEffect>, CGameObject>(
                        m, "CEffect", "Base status effect class.")

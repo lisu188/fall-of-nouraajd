@@ -5213,6 +5213,120 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_map_local_assets_isolate_per_active_map(self):
+        # Regression for the map-local-assets story (E04/S03): two runtime maps may each
+        # declare a map-local asset under the SAME map-relative filename but with DIFFERENT
+        # content. loadNewMap registers and activates the loaded map's directory as the
+        # resource scope so the active map resolves its OWN copy of that bare name. The
+        # scope-bearing resolution lives on the game context's resources provider
+        # (CGame.getResourcesProvider()), distinct from the process-wide singleton whose base
+        # search path has no active scope. This test drives the runtime map switch and asserts
+        # that the active map's context provider resolves the bare asset name to that map's own
+        # copy (content "A" vs "B"), that the active scope tracks the current map, and that the
+        # bare name never leaks through the process-wide base search path. Complementary
+        # C++ coverage lives in tests/unit/test_resource.cpp
+        # (test_scoped_search_roots_resolve_active_map_assets,
+        # test_map_load_activates_scope_for_map_local_assets).
+        game = load_game_module()
+        nonce = "{}_{}".format(os.getpid(), time.time_ns())
+        asset_name = "localsprite_{}.png".format(nonce)
+        map_a = "unit_local_asset_a_{}".format(nonce)
+        map_b = "unit_local_asset_b_{}".format(nonce)
+        maps_root = Path.cwd() / "maps"
+        dir_a = maps_root / map_a
+        dir_b = maps_root / map_b
+
+        def write_map(map_dir, marker):
+            map_dir.mkdir(parents=True, exist_ok=True)
+            (map_dir / "config.json").write_text("{}")
+            (map_dir / "script.py").write_text("")
+            (map_dir / asset_name).write_text(marker)
+            (map_dir / "map.json").write_text(
+                json.dumps(
+                    {
+                        "type": "map",
+                        "orientation": "orthogonal",
+                        "width": 1,
+                        "height": 1,
+                        "tilewidth": 32,
+                        "tileheight": 32,
+                        "properties": {"x": "0", "y": "0", "z": "0"},
+                        "tilesets": [{"firstgid": 1, "tileproperties": {"0": {"type": "GrassTile"}}}],
+                        "layers": [
+                            {
+                                "type": "tilelayer",
+                                "name": "ground",
+                                "width": 1,
+                                "height": 1,
+                                "properties": {
+                                    "level": "0",
+                                    "default": "GrassTile",
+                                    "outOfBounds": "GrassTile",
+                                    "xBound": "1",
+                                    "yBound": "1",
+                                },
+                                "data": [1],
+                            }
+                        ],
+                    }
+                )
+            )
+
+        try:
+            write_map(dir_a, "A")
+            write_map(dir_b, "B")
+
+            provider = game.CResourcesProvider.getInstance()
+            # The bare map-local name must not resolve through the process-wide base search
+            # path: only a map's active scope (the context provider) can bind it.
+            self.assertEqual("", provider.getPath(asset_name))
+
+            g = game.CGameLoader.loadGame()
+            scoped = g.getResourcesProvider()
+
+            map_obj_a = game.CMapLoader.loadNewMap(g, map_a)
+            self.assertIsNotNone(map_obj_a)
+            self.assertEqual(map_a, g.getMap().mapName)
+            # Same relative filename, different content, each packaged inside its own map dir.
+            self.assertEqual("A", provider.load("maps/{}/{}".format(map_a, asset_name)))
+            # loadNewMap activated map A's scope on the context provider, so the bare name now
+            # resolves through it to map A's OWN copy of the asset.
+            self.assertEqual(map_a, scoped.getActiveScope())
+            resolved_a = scoped.getPath(asset_name)
+            self.assertTrue(resolved_a, "active map A should resolve its own map-local asset")
+            self.assertEqual("A", Path(resolved_a).read_text())
+
+            map_obj_b = game.CMapLoader.loadNewMap(g, map_b)
+            self.assertIsNotNone(map_obj_b)
+            self.assertEqual(map_b, g.getMap().mapName)
+            self.assertEqual("B", provider.load("maps/{}/{}".format(map_b, asset_name)))
+            # Switching to map B moves the active scope; the SAME bare name now resolves to map
+            # B's distinct copy, proving per-active-map isolation.
+            self.assertEqual(map_b, scoped.getActiveScope())
+            resolved_b = scoped.getPath(asset_name)
+            self.assertTrue(resolved_b, "active map B should resolve its own map-local asset")
+            self.assertEqual("B", Path(resolved_b).read_text())
+            self.assertNotEqual(resolved_a, resolved_b)
+
+            # Switching the active map does not collapse the two same-named assets: each
+            # map's own directory still holds its own copy.
+            self.assertEqual("A", provider.load("maps/{}/{}".format(map_a, asset_name)))
+            # And the bare name still never resolves through the base search path after loads.
+            self.assertEqual("", provider.getPath(asset_name))
+
+            report = {
+                "map_a": map_a,
+                "map_b": map_b,
+                "asset": asset_name,
+                "active_map": g.getMap().mapName,
+                "resolved_distinct": resolved_a != resolved_b,
+            }
+            return True, json.dumps(report, sort_keys=True)
+        finally:
+            shutil.rmtree(dir_a, ignore_errors=True)
+            shutil.rmtree(dir_b, ignore_errors=True)
+
+    @game_test
     def test_binding_validation_rejects_invalid_logger_and_dynamic_values(self):
         game = load_game_module()
 
