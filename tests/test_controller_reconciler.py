@@ -39,10 +39,46 @@ class ControllerReconcilerStateMatrixTest(unittest.TestCase):
     def test_claim_selected_recommends_worktree(self) -> None:
         self.assertState(evidence(), reconciler.STATE_CLAIM_SELECTED, reconciler.ACTION_CREATE_WORKTREE)
 
-    def test_worktree_ready_recommends_worker(self) -> None:
-        self.assertState(
-            evidence(worktreeReady=True), reconciler.STATE_WORKTREE_READY, reconciler.ACTION_RUN_WORKER
+    def test_claim_pr_open_waits(self) -> None:
+        ev = evidence(claimPr={"claimId": "claim-1", "issueName": ISSUE, "merged": False})
+        snapshot = self.assertState(ev, reconciler.STATE_CLAIM_PR_OPEN, reconciler.ACTION_WAIT_FOR_CI)
+        # Waiting is a read action; it must never carry a write idempotency key.
+        self.assertIsNone(snapshot.idempotencyKey)
+
+    def test_claim_pr_merged_recommends_worktree(self) -> None:
+        ev = evidence(claimPr={"claimId": "claim-1", "issueName": ISSUE, "merged": True})
+        snapshot = self.assertState(ev, reconciler.STATE_CLAIM_PR_MERGED, reconciler.ACTION_CREATE_WORKTREE)
+        # A merged claim and a freshly selected claim converge on the same write, so
+        # a restart in between cannot duplicate the worktree transition.
+        self.assertEqual("claim-1:create_worktree", snapshot.idempotencyKey)
+        self.assertEqual(reconciler.reconcile(evidence()).idempotencyKey, snapshot.idempotencyKey)
+
+    def test_claim_pr_merged_but_row_unmarked_is_recovery(self) -> None:
+        ev = evidence(
+            queue={"status": "NOT_STARTED", "issueName": ISSUE},
+            claimPr={"claimId": "claim-1", "issueName": ISSUE, "merged": True},
         )
+        snapshot = reconciler.reconcile(ev)
+        self.assertEqual(reconciler.STATE_RECOVERY_REQUIRED, snapshot.state)
+        self.assertTrue(any("claim PR merged" in c for c in snapshot.contradictions))
+
+    def test_claim_pr_claim_id_mismatch_is_recovery(self) -> None:
+        ev = evidence(claimPr={"claimId": "other-claim", "issueName": ISSUE, "merged": False})
+        snapshot = reconciler.reconcile(ev)
+        self.assertEqual(reconciler.STATE_RECOVERY_REQUIRED, snapshot.state)
+        self.assertTrue(any("claim PR claim id mismatch" in c for c in snapshot.contradictions))
+
+    def test_worktree_ready_wins_over_open_claim_pr(self) -> None:
+        # A later lifecycle stage (worktree ready) takes precedence over an
+        # earlier one whose PR record lingers in the evidence blob.
+        ev = evidence(
+            worktreeReady=True,
+            claimPr={"claimId": "claim-1", "issueName": ISSUE, "merged": True},
+        )
+        self.assertState(ev, reconciler.STATE_WORKTREE_READY, reconciler.ACTION_RUN_WORKER)
+
+    def test_worktree_ready_recommends_worker(self) -> None:
+        self.assertState(evidence(worktreeReady=True), reconciler.STATE_WORKTREE_READY, reconciler.ACTION_RUN_WORKER)
 
     def test_worker_running_recommends_open_pr(self) -> None:
         self.assertState(
