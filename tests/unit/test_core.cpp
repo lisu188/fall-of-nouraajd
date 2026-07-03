@@ -912,6 +912,104 @@ void test_nested_primitive_wrappers_serialize_direct_values_and_round_trip() {
                 "integer-key maps should skip empty and unparsable JSON object keys");
 }
 
+void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars() {
+    CTypes::register_type_metadata<PrimitiveSerializationHolder, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(PrimitiveSerializationHolder::static_meta()->name(),
+                                           []() { return std::make_shared<PrimitiveSerializationHolder>(); });
+    game->getObjectHandler()->registerType(CListString::static_meta()->name(),
+                                           []() { return std::make_shared<CListString>(); });
+    game->getObjectHandler()->registerType(CMapStringString::static_meta()->name(),
+                                           []() { return std::make_shared<CMapStringString>(); });
+
+    // (a) Legacy object-shaped primitive: the wrapper is spelled out with its class and nested
+    // "values" property, exactly as older saves and configs stored it.
+    auto legacy_config = std::make_shared<json>();
+    (*legacy_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*legacy_config)["properties"]["listValues"]["class"] = CListString::static_meta()->name();
+    (*legacy_config)["properties"]["listValues"]["properties"]["values"] = {"north", "south"};
+    (*legacy_config)["properties"]["mapValues"]["class"] = CMapStringString::static_meta()->name();
+    (*legacy_config)["properties"]["mapValues"]["properties"]["values"]["confirm"] = "enter";
+
+    auto legacy = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, legacy_config));
+    expect_true(legacy && legacy->getListValues() &&
+                    legacy->getListValues()->getValues() == std::set<std::string>({"north", "south"}),
+                "legacy object-shaped CListString should deserialize into the primitive wrapper property");
+    expect_true(legacy && legacy->getMapValues() &&
+                    legacy->getMapValues()->getValues() == std::map<std::string, std::string>({{"confirm", "enter"}}),
+                "legacy object-shaped CMapStringString should deserialize into the primitive wrapper property");
+
+    // (b) New flattened primitive: the wrapper is stored as its bare value (array for lists, object
+    // for maps) with no class/properties envelope.
+    auto flattened_config = std::make_shared<json>();
+    (*flattened_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*flattened_config)["properties"]["listValues"] = {"east", "west"};
+    (*flattened_config)["properties"]["mapValues"]["cancel"] = "escape";
+
+    auto flattened = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, flattened_config));
+    expect_true(flattened && flattened->getListValues() &&
+                    flattened->getListValues()->getValues() == std::set<std::string>({"east", "west"}),
+                "flattened CListString array should deserialize into the primitive wrapper property");
+    expect_true(flattened && flattened->getMapValues() &&
+                    flattened->getMapValues()->getValues() ==
+                        std::map<std::string, std::string>({{"cancel", "escape"}}),
+                "flattened CMapStringString object should deserialize into the primitive wrapper property");
+
+    // (c) Mixed nesting: one property uses the legacy envelope while the sibling uses the flattened
+    // form in the same object.
+    auto mixed_config = std::make_shared<json>();
+    (*mixed_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*mixed_config)["properties"]["listValues"]["class"] = CListString::static_meta()->name();
+    (*mixed_config)["properties"]["listValues"]["properties"]["values"] = {"up", "down"};
+    (*mixed_config)["properties"]["mapValues"]["confirm"] = "enter";
+    (*mixed_config)["properties"]["mapValues"]["inventory"] = "i";
+
+    auto mixed = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, mixed_config));
+    expect_true(mixed && mixed->getListValues() &&
+                    mixed->getListValues()->getValues() == std::set<std::string>({"up", "down"}),
+                "mixed nesting should honor the legacy object-shaped list property");
+    expect_true(mixed && mixed->getMapValues() &&
+                    mixed->getMapValues()->getValues() ==
+                        std::map<std::string, std::string>({{"confirm", "enter"}, {"inventory", "i"}}),
+                "mixed nesting should honor the flattened map sibling property");
+
+    // (d) Invalid scalar-to-collection coercion: a bare scalar for a collection wrapper is rejected
+    // in strict mode and skipped (property stays unset) in lenient mode.
+    auto scalar_config = std::make_shared<json>();
+    (*scalar_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*scalar_config)["properties"]["listValues"] = 42;
+
+    expect_runtime_error(
+        [&]() {
+            CSerialization::StrictScope strict;
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, scalar_config);
+        },
+        "strict deserialization should reject a bare numeric scalar for a primitive collection property");
+
+    auto lenient = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, scalar_config));
+    expect_true(lenient && !lenient->getListValues(),
+                "lenient deserialization should skip an incompatible scalar without setting the collection property");
+
+    // A non-numeric string scalar for a map wrapper is rejected the same way once coercion fails to
+    // yield an array or object.
+    auto scalar_string_config = std::make_shared<json>();
+    (*scalar_string_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
+    (*scalar_string_config)["properties"]["mapValues"] = "north";
+
+    expect_runtime_error(
+        [&]() {
+            CSerialization::StrictScope strict;
+            CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game,
+                                                                                                  scalar_string_config);
+        },
+        "strict deserialization should reject a bare string scalar for a primitive collection property");
+}
+
 void test_nested_property_notification_batches_emit_one_deterministic_signal() {
     CTypes::register_type_metadata<PropertyChangeProbe, CGameObject>();
 
@@ -2507,6 +2605,7 @@ int main() {
     test_map_domain_signals_emit_for_tile_and_object_changes();
     test_reviewed_value_wrappers_have_explicit_primitive_metadata();
     test_nested_primitive_wrappers_serialize_direct_values_and_round_trip();
+    test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars();
     test_nested_property_notification_batches_emit_one_deterministic_signal();
     test_object_deserialization_batches_property_notifications();
     test_bulk_object_deserialization_notifications_stay_batched();
