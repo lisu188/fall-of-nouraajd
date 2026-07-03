@@ -138,6 +138,10 @@ eligible issues exist. If fewer than eight implementation issues can safely run 
 subagents only lightweight standby roles such as status polling, eligibility summaries, or review preparation, and print
 the exact blocker preventing eight active issues. Standby subagents must not claim issues, edit files, start builds, run
 tests, or touch the workbook.
+The authoritative mechanical policy values (the four-slot controller floor/limit, the eight active-worker floor, the
+heartbeat cadence, lease durations, the reclaim age, and the advisory target-file overlap policy) live in
+`scripts/controller_policy.py`. The numbers stated in this prompt mirror that source; change a value there, not here.
+
 Each controller must also keep exactly four of its own workbook claim slots active when status-and-dependency eligible
 issues are available. Use `controllerCapacity` from `shortlist --controller-id "$CONTROLLER_ID"` to measure the current
 controller's capacity. `healthyOwned` rows count as live work. `suspectOwned` and `reclaimableOwned` rows require
