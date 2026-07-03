@@ -513,11 +513,56 @@ void CRangeController::setDistance(int distance) { this->distance = distance; }
 
 int CRangeController::getDistance() { return distance; }
 
+namespace {
+// Deterministic, pessimistic estimate of one landed opponent hit: the top of the
+// damage range plus the flat damage bonus (CCreature::getDmg() without the
+// miss/crit dice), mitigated by normal resist and armor exactly the way
+// CCreature::hurt()/takeDamage() mitigate a normal-damage strike. Block is a
+// dice roll and is deliberately not credited, keeping the estimate stable and
+// erring toward survival.
+int expected_incoming_hit(const std::shared_ptr<CCreature> &me, const std::shared_ptr<CCreature> &opponent) {
+    auto attack = opponent->getStats();
+    const int raw = std::max(std::max(attack->getDmgMin(), attack->getDmgMax()), 0) + std::max(attack->getDamage(), 0);
+    auto defense = me->getStats();
+    const int afterResist = raw * (100 - defense->getNormalResist()) / 100.0;
+    const int afterArmor = afterResist * ((100 - defense->getArmor()) / 100.0);
+    return std::max(afterArmor, 0);
+}
+
+// Heal items restore getPower() * 20% of max hp (res/plugins/potion.py), capped
+// by the hp actually missing. Returns the estimate for the strongest heal item
+// carried, i.e. the best single-turn hp swing a heal turn could buy.
+int strongest_heal_estimate(const std::shared_ptr<CCreature> &me) {
+    int bestPower = 0;
+    for (const auto &item : me->getItems()) {
+        if (item && item->hasTag(CTag::Heal)) {
+            bestPower = std::max(bestPower, item->getPower());
+        }
+    }
+    const int uncapped = bestPower * me->getHpMax() / 5;
+    return std::min(uncapped, me->getHpMax() - me->getHp());
+}
+
+// A heal turn is only worth its tempo when it actually preserves the combatant:
+// either the creature would not survive the next landed hit anyway (a heal is
+// the only move with a chance to keep it alive), or the strongest heal carried
+// restores more hp than that hit removes (net gain). Healing reflexively at a
+// fixed hp threshold made monsters chain-drink potions against hard hitters
+// while losing more hp per turn than each potion restored.
+bool heal_preserves_combatant(const std::shared_ptr<CCreature> &me, const std::shared_ptr<CCreature> &opponent) {
+    const int incoming = expected_incoming_hit(me, opponent);
+    if (me->getHp() <= incoming) {
+        return true;
+    }
+    return strongest_heal_estimate(me) > incoming;
+}
+} // namespace
+
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
     if (!me || !opponent) {
         return false;
     }
-    if (me->getHpRatio() < 75) {
+    if (me->getHpRatio() < 75 && heal_preserves_combatant(me, opponent)) {
         auto object = getLeastPowerfulItemWithTag(me, CTag::Heal);
         if (object) {
             me->useItem(object);
