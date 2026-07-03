@@ -175,7 +175,7 @@
         }
       },
       "label": "Skull Helmet",
-      "description": "Varnished troll skull worn as a cap by hedge-wizards; grim, but the dead brain-case keeps thoughts orderly.",
+      "description": "Varnished troll skull worn as a cap by hedge-wizards; grim, but the dead brain-case keeps thoughts orderly. Part of the Armor of the Damned set (4 pieces).",
       "power": 4
     }
   },
@@ -248,7 +248,7 @@
         }
       },
       "label": "Crown of Dragontooth",
-      "description": "Jagged diadem of dragon fangs set in red gold; whoever bears it speaks with a wyrm's authority over flame.",
+      "description": "Jagged diadem of dragon fangs set in red gold; whoever bears it speaks with a wyrm's authority over flame. Part of the Wrath of the Dragon Father set (4 pieces).",
       "power": 21
     }
   },
@@ -265,7 +265,7 @@
         }
       },
       "label": "Dragonbone Greaves",
-      "description": "Shin guards of split wyrm bone, light as ash wood and stubborn as old scars.",
+      "description": "Shin guards of split wyrm bone, light as ash wood and stubborn as old scars. Part of the Wrath of the Dragon Father set (4 pieces).",
       "power": 4
     }
   },
@@ -411,7 +411,7 @@
         }
       },
       "label": "Shield of the Yawning Dead",
-      "description": "A barrow-door hammered into a shield; the grave-cold face of it makes the dead hesitate to strike.",
+      "description": "A barrow-door hammered into a shield; the grave-cold face of it makes the dead hesitate to strike. Part of the Armor of the Damned set (4 pieces).",
       "power": 9
     }
   },
@@ -429,7 +429,7 @@
         }
       },
       "label": "Dragonscale Guards",
-      "description": "Thigh guards of overlapping wyrm scale, shrugging off both furnace heat and the claws of the deep.",
+      "description": "Thigh guards of overlapping wyrm scale, shrugging off both furnace heat and the claws of the deep. Part of the Wrath of the Dragon Father set (4 pieces).",
       "power": 7
     }
   },
@@ -460,7 +460,7 @@
         "2"
       ],
       "label": "Armor of the Damned",
-      "description": "Blackshard, barrow-shield, troll-skull and rib harness fused into one damned panoply; the grave answers to whoever wears it.",
+      "description": "Blackshard, barrow-shield, troll-skull and rib harness fused into one damned panoply; the grave answers to whoever wears it. Assembled from the Armor of the Damned set.",
       "power": 24,
       "tags": [
         "compound"
@@ -492,7 +492,7 @@
         "6"
       ],
       "label": "Wrath of the Dragon Father",
-      "description": "Crown, scale, greaves and guards welded into a single wyrm-panoply; the wearer speaks to fire as a father to a wayward child.",
+      "description": "Crown, scale, greaves and guards welded into a single wyrm-panoply; the wearer speaks to fire as a father to a wayward child. Assembled from the Wrath of the Dragon Father set.",
       "power": 30,
       "tags": [
         "compound"

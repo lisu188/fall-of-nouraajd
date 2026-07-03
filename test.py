@@ -6149,6 +6149,28 @@ class GameTest(unittest.TestCase):
             "compound artifacts must never appear as random loot",
         )
 
+    def test_compound_artifact_set_membership_is_discoverable_in_tooltip(self):
+        import artifact_sets
+
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test")
+        runtime = artifact_sets.get_runtime()
+
+        for definition in runtime.all_sets():
+            for piece_id in definition["pieces"]:
+                piece = g.getObjectHandler().createObject(g, piece_id)
+                tooltip = game.CTooltipHandler.buildTooltip(piece)
+                self.assertIn(
+                    definition["label"],
+                    tooltip,
+                    f"piece {piece_id} tooltip should name its set",
+                )
+                self.assertIn("Part of the", tooltip)
+            combined = g.getObjectHandler().createObject(g, definition["combined"])
+            combined_tooltip = game.CTooltipHandler.buildTooltip(combined)
+            self.assertIn(definition["label"], combined_tooltip)
+            self.assertIn("Assembled from the", combined_tooltip)
+
     @game_test
     def test_crafting_runtime_applies_recipe(self):
         import crafting
