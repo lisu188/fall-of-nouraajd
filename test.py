@@ -573,6 +573,79 @@ IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS = {
             "objects": [],
         },
     },
+    # EPIC_03/STORY_04/SUBSTORY_04: primitive-wrapper save-compatibility fixtures. Both carry the
+    # SAME logical values on two CMap-level wrapper properties (a CListString and a CMapStringInt),
+    # differing only in the persisted encoding: `primitive_wrappers_legacy_v1` stores each wrapper in
+    # the legacy schema-1 object-shape ({"class": ..., "properties": {"values": ...}}) while
+    # `primitive_wrappers_flattened_v1` stores the current flattened shape (a bare JSON array/object).
+    # The wrapper properties are ignored by save_fixture_summary (they are neither the player, quest
+    # states, boolean flags, nor the whitelisted numeric keys), so both fixtures share an identical,
+    # clean player-only summary. The `primitiveWrappers` block records the encoding plus the expected
+    # canonical (flattened) values that a load must resolve to; the migration test consumes it instead
+    # of the generic idempotent round-trip (see test_save_migration_fixtures_are_idempotent_and_
+    # round_trip_current_format for why these fixtures need bespoke handling).
+    "primitive_wrappers_legacy_v1": {
+        "primary": "primitive_wrappers_legacy_v1.json",
+        "primitiveWrappers": {
+            "encoding": "legacy",
+            "engineLoadable": True,
+            "values": {
+                "primitiveTags": ["alpha", "beta"],
+                "primitiveCounts": {"gold": 7, "silver": 3},
+            },
+        },
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "test",
+            "turn": 24,
+            "description": "immutable primitive wrapper legacy fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [4, 6, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
+    "primitive_wrappers_flattened_v1": {
+        "primary": "primitive_wrappers_flattened_v1.json",
+        "primitiveWrappers": {
+            "encoding": "flattened",
+            "engineLoadable": False,
+            "values": {
+                "primitiveTags": ["alpha", "beta"],
+                "primitiveCounts": {"gold": 7, "silver": 3},
+            },
+        },
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "test",
+            "turn": 25,
+            "description": "immutable primitive wrapper flattened fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Warrior",
+                "coords": [4, 6, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
 }
 
 
@@ -687,6 +760,26 @@ def save_fixture_summary(document):
     return summary
 
 
+def primitive_wrapper_logical_value(value):
+    """Resolve a primitive-collection wrapper property to its encoding-independent logical value.
+
+    The six registered wrappers (CList*/CMap*) serialize in two interchangeable shapes: the legacy
+    schema-1 object-shape ({"class": ..., "properties": {"values": ...}}) and the current flattened
+    shape (a bare JSON array for the list wrappers, a bare JSON object for the map wrappers). Both must
+    describe the same values. Lists are normalized to a sorted list because they back a std::set (the
+    engine re-serializes them in sorted order); maps keep their key/value pairs.
+    """
+    if isinstance(value, dict) and "class" in value and "properties" in value:
+        inner = value.get("properties", {}).get("values")
+    else:
+        inner = value
+    if isinstance(inner, list):
+        return sorted(inner)
+    if isinstance(inner, dict):
+        return {key: inner[key] for key in sorted(inner)}
+    return inner
+
+
 def normalize_save_snapshot(value):
     if isinstance(value, dict):
         return {key: normalize_save_snapshot(value[key]) for key in sorted(value)}
@@ -745,6 +838,37 @@ class SaveFixtureTest(unittest.TestCase):
             if document.get("format") == SAVE_FORMAT:
                 assert_save_envelope(self, document, expected["summary"]["map"])
             self.assertEqual(expected["summary"], save_fixture_summary(document), fixture_name)
+
+    def test_primitive_wrapper_fixtures_share_values_across_legacy_and_flattened_encodings(self):
+        # EPIC_03/STORY_04/SUBSTORY_04: the immutable primitive-wrapper fixtures pin that the legacy
+        # schema-1 object-shape and the current flattened shape are interchangeable persisted forms of
+        # the SAME wrapper values, so a primitive-serialization change that keeps both shapes readable
+        # cannot break an existing save. This pure-Python guard verifies the persisted bytes directly
+        # (no engine build); the engine-level load is exercised by the migration test.
+        legacy = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["primitive_wrappers_legacy_v1"]
+        flattened = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["primitive_wrappers_flattened_v1"]
+
+        # Both fixtures declare the same expected logical wrapper values.
+        self.assertEqual(legacy["primitiveWrappers"]["values"], flattened["primitiveWrappers"]["values"])
+        canonical = {
+            key: primitive_wrapper_logical_value(value)
+            for key, value in legacy["primitiveWrappers"]["values"].items()
+        }
+
+        persisted = {}
+        for expected in (legacy, flattened):
+            document = json.loads((SAVE_FIXTURE_DIR / expected["primary"]).read_text(encoding="utf-8"))
+            properties = save_snapshot(document).get("properties", {})
+            resolved = {key: primitive_wrapper_logical_value(properties.get(key)) for key in canonical}
+            self.assertEqual(canonical, resolved, expected["primary"])
+            persisted[expected["primitiveWrappers"]["encoding"]] = properties
+
+        # The legacy fixture stores object-shape wrappers; the flattened fixture stores bare forms.
+        self.assertIn("class", persisted["legacy"]["primitiveTags"])
+        self.assertIn("class", persisted["legacy"]["primitiveCounts"])
+        self.assertIsInstance(persisted["flattened"]["primitiveTags"], list)
+        self.assertIsInstance(persisted["flattened"]["primitiveCounts"], dict)
+        self.assertNotIn("class", persisted["flattened"]["primitiveCounts"])
 
     def test_save_fixture_summary_treats_null_player_collections_as_empty(self):
         document = {
@@ -10477,12 +10601,52 @@ class GameTest(unittest.TestCase):
         finally:
             cleanup_save_slot(save_name)
 
+    def assert_primitive_wrapper_fixture(self, game, fixture_name, expected):
+        # EPIC_03/STORY_04/SUBSTORY_04 save-path coverage for the six primitive-collection wrappers.
+        #
+        # No *persisted* engine type declares a primitive-wrapper property (CMap persists only
+        # turn/mapName/objects/tiles/triggers; only non-persisted GUI panels declare wrappers), so a
+        # wrapper cannot occupy a declared slot in a save, and CMap does not re-serialize dynamic
+        # (undeclared) properties. These fixtures therefore pin the guarantee the acceptance criterion
+        # actually asks for -- "primitive serialization changes cannot break existing saves":
+        #   * the legacy object-shape fixture (engineLoadable True) is LOADED through the strict save
+        #     loader and must resolve to an intact map + player summary, proving an existing save that
+        #     carries a legacy-form primitive wrapper still loads cleanly after the SS03 changes;
+        #   * the flattened bare form (engineLoadable False) cannot bind to an undeclared property
+        #     under strict deserialization (a bare array becomes a set-of-objects and is rejected), so
+        #     it is verified at the byte level by
+        #     SaveFixtureTest.test_primitive_wrapper_fixtures_share_values_across_legacy_and_flattened_encodings,
+        #     which also pins that the legacy and flattened encodings describe identical values.
+        # Because CMap does not re-serialize dynamic wrapper properties, these fixtures are not stable
+        # re-save fixed points and opt out of the generic idempotent round-trip and the auto-discovered
+        # round-trip matrix.
+        wrappers = expected["primitiveWrappers"]
+        if not wrappers.get("engineLoadable", False):
+            return {"encoding": wrappers["encoding"], "engineLoaded": False}
+
+        save_name = unique_save_name(f"primitive_wrapper_{fixture_name}")
+        install_save_fixture_slot(save_name, expected)
+        try:
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            self.assertIsNotNone(loaded_map, fixture_name)
+            loaded_snapshot = normalize_save_snapshot(json.loads(game.jsonify(loaded_map)))
+            loaded_state = runtime_save_state_summary(loaded_snapshot)
+            self.assertEqual(comparable_save_state(expected["summary"]), loaded_state, fixture_name)
+            return {"encoding": wrappers["encoding"], "engineLoaded": True, "state": loaded_state}
+        finally:
+            cleanup_save_slot(save_name)
+
     @game_test
     def test_save_migration_fixtures_are_idempotent_and_round_trip_current_format(self):
         game = load_game_module()
 
         fixture_results = {}
         for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
+            if expected.get("primitiveWrappers"):
+                fixture_results[fixture_name] = self.assert_primitive_wrapper_fixture(game, fixture_name, expected)
+                continue
             first = self.load_migration_fixture_once(game, fixture_name, expected, "first")
             second = self.load_migration_fixture_once(game, fixture_name, expected, "second")
             self.assertEqual(first["state"], second["state"], fixture_name)
@@ -18838,11 +19002,20 @@ def discover_save_round_trip_fixtures():
     fixtures = {}
     referenced = set()
     for fixture_name, expected in IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS.items():
-        entry = {"primary": expected["primary"]}
         referenced.add(expected["primary"])
         if expected.get("backup"):
-            entry["backup"] = expected["backup"]
             referenced.add(expected["backup"])
+        # Primitive-wrapper compatibility fixtures (EPIC_03/STORY_04/SUBSTORY_04) are intentionally
+        # NOT stable-resave fixed points: re-saving flattens their CMap-level wrapper properties into a
+        # bare array/object that the strict save loader will not rebind to the same undeclared
+        # property. They are covered by assert_primitive_wrapper_fixture and SaveFixtureTest instead,
+        # so they are excluded from the auto-discovered round-trip matrix (their filenames are still
+        # marked referenced so the glob below does not re-add them).
+        if expected.get("primitiveWrappers"):
+            continue
+        entry = {"primary": expected["primary"]}
+        if expected.get("backup"):
+            entry["backup"] = expected["backup"]
         fixtures[fixture_name] = entry
     for path in sorted(SAVE_FIXTURE_DIR.glob("*.json")):
         if path.name in referenced:
