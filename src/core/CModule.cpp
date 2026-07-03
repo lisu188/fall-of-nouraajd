@@ -344,6 +344,8 @@ void register_python_binding_type_metadata() {
     CTypes::register_type_metadata<CBoots, CItem, CMapObject, CGameObject>();
     CTypes::register_type_metadata<CBelt, CItem, CMapObject, CGameObject>();
     CTypes::register_type_metadata<CGloves, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CPants, CItem, CMapObject, CGameObject>();
+    CTypes::register_type_metadata<CShield, CItem, CMapObject, CGameObject>();
     CTypes::register_type_metadata<CPotion, CItem, CMapObject, CGameObject>();
     CTypes::register_type_metadata<CWrapper<CPotion>, CPotion, CItem, CMapObject, CGameObject>();
     CTypes::register_type_metadata<CScroll, CItem, CMapObject, CGameObject>();
@@ -389,6 +391,7 @@ void init_game_module(py::module_ &m) {
 
     py::enum_<CTag>(m, "CTag", "Canonical gameplay tag identifier.")
         .value("BUFF", CTag::Buff)
+        .value("COMPOUND", CTag::Compound)
         .value("CURSE", CTag::Curse)
         .value("CURSED", CTag::Cursed)
         .value("HEAL", CTag::Heal)
@@ -520,6 +523,7 @@ void init_game_module(py::module_ &m) {
         .def("getContext", &CGame::getContext, "Return the runtime service context.")
         .def("getGuiHandler", &CGame::getGuiHandler, "Return the GUI handler service.")
         .def("getObjectHandler", &CGame::getObjectHandler, "Return the object factory/registry handler.")
+        .def("getSlotConfiguration", &CGame::getSlotConfiguration, "Return the equipment slot compatibility table.")
         .def("getSceneManager", &CGame::getSceneManager, "Return the scene transition manager.")
         .def("getRngHandler", &CGame::getRngHandler, "Return the random encounter/loot handler.")
         .def("createObject", createObject, "Create an object by configured type id.")
@@ -865,7 +869,10 @@ void init_game_module(py::module_ &m) {
         .def("getTileType", &CTile::getTileType, "Return this tile's terrain type.");
     m.attr("CTileBase") = ctile;
 
-    py::class_<CItem, CMapObject, std::shared_ptr<CItem>>(m, "CItem", "Base inventory/equipment item.");
+    py::class_<CItem, CMapObject, std::shared_ptr<CItem>>(m, "CItem", "Base inventory/equipment item.")
+        .def("getPower", &CItem::getPower, "Return the item power/price tier.")
+        .def("getCoveredSlots", &CItem::getCoveredSlots,
+             "Return the extra equipment slot ids this item occupies while equipped (empty for normal items).");
     auto cpotion = py::class_<CPotion, CWrapper<CPotion>, std::shared_ptr<CPotion>, CItem>(m, "CPotion",
                                                                                            "Base potion item class.");
     cpotion.def(py::init_alias<>()).def("onUse", &CPotion::onUse, "Handle potion use event.");
@@ -876,6 +883,46 @@ void init_game_module(py::module_ &m) {
         .def("onUse", &CScroll::onUse, "Handle scroll use event.")
         .def("isDisposable", &CScroll::isDisposable, "Return whether the scroll is consumed on use.");
     m.attr("CScrollBase") = cscroll;
+
+    // Equipment slot base classes, exposed with the CWrapper trampoline + init_alias so
+    // Python content plugins can subclass them (e.g. compound-artifact set pieces and
+    // combined artifacts in res/plugins/artifact_sets.py). Their onEquip/onUnequip/onUse
+    // handlers dispatch to Python overrides via CPythonOverrides (see CItem.cpp).
+    py::class_<CArmor, CWrapper<CArmor>, std::shared_ptr<CArmor>, CItem>(m, "CArmor", "Base body-armor item class.")
+        .def(py::init_alias<>())
+        .def("onEquip", &CArmor::onEquip, "Handle equip event.")
+        .def("onUnequip", &CArmor::onUnequip, "Handle unequip event.")
+        .def("onUse", &CArmor::onUse, "Handle use event.");
+    py::class_<CHelmet, CWrapper<CHelmet>, std::shared_ptr<CHelmet>, CItem>(m, "CHelmet", "Base helmet item class.")
+        .def(py::init_alias<>())
+        .def("onEquip", &CHelmet::onEquip, "Handle equip event.")
+        .def("onUnequip", &CHelmet::onUnequip, "Handle unequip event.")
+        .def("onUse", &CHelmet::onUse, "Handle use event.");
+    py::class_<CBoots, CWrapper<CBoots>, std::shared_ptr<CBoots>, CItem>(m, "CBoots", "Base boots item class.")
+        .def(py::init_alias<>())
+        .def("onEquip", &CBoots::onEquip, "Handle equip event.")
+        .def("onUnequip", &CBoots::onUnequip, "Handle unequip event.")
+        .def("onUse", &CBoots::onUse, "Handle use event.");
+    py::class_<CGloves, CWrapper<CGloves>, std::shared_ptr<CGloves>, CItem>(m, "CGloves", "Base gloves item class.")
+        .def(py::init_alias<>())
+        .def("onEquip", &CGloves::onEquip, "Handle equip event.")
+        .def("onUnequip", &CGloves::onUnequip, "Handle unequip event.")
+        .def("onUse", &CGloves::onUse, "Handle use event.");
+    py::class_<CBelt, CWrapper<CBelt>, std::shared_ptr<CBelt>, CItem>(m, "CBelt", "Base belt item class.")
+        .def(py::init_alias<>())
+        .def("onEquip", &CBelt::onEquip, "Handle equip event.")
+        .def("onUnequip", &CBelt::onUnequip, "Handle unequip event.")
+        .def("onUse", &CBelt::onUse, "Handle use event.");
+    py::class_<CShield, CWrapper<CShield>, std::shared_ptr<CShield>, CItem>(m, "CShield", "Base shield item class.")
+        .def(py::init_alias<>())
+        .def("onEquip", &CShield::onEquip, "Handle equip event.")
+        .def("onUnequip", &CShield::onUnequip, "Handle unequip event.")
+        .def("onUse", &CShield::onUse, "Handle use event.");
+    py::class_<CPants, CWrapper<CPants>, std::shared_ptr<CPants>, CItem>(m, "CPants", "Base leg-armor item class.")
+        .def(py::init_alias<>())
+        .def("onEquip", &CPants::onEquip, "Handle equip event.")
+        .def("onUnequip", &CPants::onUnequip, "Handle unequip event.")
+        .def("onUse", &CPants::onUse, "Handle use event.");
 
     py::class_<CGameEvent, CGameObject, std::shared_ptr<CGameEvent>>(m, "CGameEvent", "Base event object.");
     py::class_<CGameEventCaused, CGameEvent, std::shared_ptr<CGameEventCaused>>(m, "CGameEventCaused",
@@ -1055,8 +1102,15 @@ void init_game_module(py::module_ &m) {
                        .def("onEffect", &CEffect::onEffect, "Apply effect behavior for one tick.");
     m.attr("CEffectBase") = ceffect;
 
-    py::class_<CWeapon, CItem, std::shared_ptr<CWeapon>>(m, "CWeapon", "Weapon item.")
-        .def("getInteraction", &CWeapon::getInteraction, "Return interaction used when this weapon is applied.");
+    py::class_<CWeapon, CWrapper<CWeapon>, std::shared_ptr<CWeapon>, CItem>(m, "CWeapon", "Weapon item.")
+        .def(py::init_alias<>())
+        .def("getInteraction", &CWeapon::getInteraction, "Return interaction used when this weapon is applied.")
+        .def("onEquip", &CWeapon::onEquip, "Handle equip event.")
+        .def("onUnequip", &CWeapon::onUnequip, "Handle unequip event.")
+        .def("onUse", &CWeapon::onUse, "Handle use event.");
+    py::class_<CSmallWeapon, CWrapper<CSmallWeapon>, std::shared_ptr<CSmallWeapon>, CWeapon>(m, "CSmallWeapon",
+                                                                                            "Off-hand small weapon item.")
+        .def(py::init_alias<>());
 
     void (CCreature::*hurtInt)(int) = &CCreature::hurt;
     void (CCreature::*hurtFloat)(float) = &CCreature::hurt;
@@ -1074,6 +1128,13 @@ void init_game_module(py::module_ &m) {
         .def("hurt", hurtFloat, "Apply damage value (float), rounded to int.")
         .def("getWeapon", &CCreature::getWeapon, "Return equipped weapon or None.")
         .def("getItemAtSlot", &CCreature::getItemAtSlot, "Return the item equipped in the given slot, or None.")
+        .def("equipItem", &CCreature::equipItem, py::arg("slot"), py::arg("item"),
+             "Equip an item into the given slot; pass None to unequip whatever is there.")
+        .def("getEquipped", &CCreature::getEquipped, "Return a {slot id: item} map of currently equipped items.")
+        .def("getSlotWithItem", &CCreature::getSlotWithItem,
+             "Return the slot id holding the given item, or empty string if not equipped.")
+        .def("hasEquipped", static_cast<bool (CCreature::*)(std::shared_ptr<CItem>)>(&CCreature::hasEquipped),
+             "Return whether the given item is currently equipped.")
         .def(
             "unequipArmor", [](CCreature &creature) { creature.setArmor(nullptr); }, "Unequip current armor item.")
         .def("getHpRatio", &CCreature::getHpRatio, "Return HP percentage (0-100).")

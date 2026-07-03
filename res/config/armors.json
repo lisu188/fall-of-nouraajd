@@ -110,7 +110,7 @@
     }
   },
   "RibCage": {
-    "class": "CArmor",
+    "class": "SetArmor",
     "properties": {
       "animation": "images/items/armors/leatherarmor",
       "bonus": {
@@ -147,7 +147,7 @@
     }
   },
   "DragonScaleArmor": {
-    "class": "CArmor",
+    "class": "SetArmor",
     "properties": {
       "animation": "images/items/armors/platearmor",
       "bonus": {

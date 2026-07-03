@@ -6056,6 +6056,99 @@ class GameTest(unittest.TestCase):
         finally:
             os.unlink(absolute_path)
 
+    def test_compound_artifact_assembly_and_disassembly(self):
+        import artifact_sets
+
+        g, game_map, player = load_game_map_with_player("test")
+        runtime = artifact_sets.get_runtime()
+        definition = next(s for s in runtime.all_sets() if s["id"] == "armorOfTheDamned")
+        pieces = list(definition["pieces"])
+
+        for piece_id in pieces:
+            item = g.getObjectHandler().createObject(g, piece_id)
+            player.addItem(item)
+            slot = next(iter(g.getSlotConfiguration().getFittingSlots(item)))
+            player.equipItem(slot, item)
+
+        self.assertIn("armorOfTheDamned", [s["id"] for s in runtime.completed_sets(player)])
+
+        self.assertTrue(runtime.assemble(g, player, definition))
+        equipped = {slot: item.getTypeId() for slot, item in player.getEquipped().items() if item}
+        self.assertEqual({"3": "ArmorOfTheDamned"}, equipped)
+        combined = player.getItemAtSlot("3")
+        self.assertEqual({"0", "1", "2"}, set(combined.getCoveredSlots()))
+        for piece_id in pieces:
+            self.assertEqual(0, player.countItems(piece_id))
+
+        # Covered slots stay blocked while the combined artifact is worn.
+        intruder = g.getObjectHandler().createObject(g, "ThunderHelmet")
+        player.addItem(intruder)
+        player.equipItem("2", intruder)
+        self.assertIsNone(player.getItemAtSlot("2"))
+        self.assertEqual(1, player.countItems("ThunderHelmet"))
+
+        # Disassembly restores every piece and frees the slots.
+        self.assertTrue(runtime.disassemble(g, player, combined))
+        self.assertEqual(0, player.countItems("ArmorOfTheDamned"))
+        for piece_id in pieces:
+            self.assertEqual(1, player.countItems(piece_id))
+        self.assertIsNone(player.getItemAtSlot("3"))
+
+    def test_compound_artifact_auto_offer_on_equip(self):
+        import artifact_sets
+
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test")
+        runtime = artifact_sets.get_runtime()
+        definition = next(s for s in runtime.all_sets() if s["id"] == "armorOfTheDamned")
+
+        original_selection = game.CGuiHandler.showSelection
+        original_info = game.CGuiHandler.showInfo
+
+        def auto_assemble(self, options):
+            values = list(options.getValues())
+            for value in values:
+                if value.startswith(artifact_sets.ASSEMBLE_PREFIX):
+                    return value
+            return values[-1]
+
+        try:
+            game.CGuiHandler.showSelection = auto_assemble
+            game.CGuiHandler.showInfo = lambda self, message, centered=False: None
+            for piece_id in definition["pieces"]:
+                item = g.getObjectHandler().createObject(g, piece_id)
+                player.addItem(item)
+                slot = next(iter(g.getSlotConfiguration().getFittingSlots(item)))
+                player.equipItem(slot, item)
+                pump_event_loop(5)
+        finally:
+            game.CGuiHandler.showSelection = original_selection
+            game.CGuiHandler.showInfo = original_info
+
+        equipped = {slot: item.getTypeId() for slot, item in player.getEquipped().items() if item}
+        self.assertEqual({"3": "ArmorOfTheDamned"}, equipped)
+
+    def test_compound_artifacts_excluded_from_random_loot(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test")
+
+        original_loot = game.CGuiHandler.showLoot
+        try:
+            game.CGuiHandler.showLoot = lambda self, creature, items: None
+            for _ in range(40):
+                g.getRngHandler().addRandomLoot(player, 400)
+        finally:
+            game.CGuiHandler.showLoot = original_loot
+
+        type_ids = [item.getTypeId() for item in player.getItems()]
+        self.assertGreater(len(type_ids), 10, "random loot should have produced items")
+        self.assertNotIn("ArmorOfTheDamned", type_ids)
+        self.assertNotIn("DragonFatherWrath", type_ids)
+        self.assertFalse(
+            any(item.hasTag("compound") for item in player.getItems()),
+            "compound artifacts must never appear as random loot",
+        )
+
     @game_test
     def test_crafting_runtime_applies_recipe(self):
         import crafting
