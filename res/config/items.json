@@ -163,7 +163,7 @@
     }
   },
   "SkullHelmet": {
-    "class": "CHelmet",
+    "class": "SetHelmet",
     "properties": {
       "animation": "images/items/helmets/crownofnightmares",
       "bonus": {
@@ -234,7 +234,7 @@
     }
   },
   "CrownOfDragontooth": {
-    "class": "CHelmet",
+    "class": "SetHelmet",
     "properties": {
       "animation": "images/items/helmets/crownofnightmares",
       "bonus": {
@@ -253,7 +253,7 @@
     }
   },
   "DragonboneGreaves": {
-    "class": "CBoots",
+    "class": "SetBoots",
     "properties": {
       "animation": "images/items/boots/eradicatorsboots",
       "bonus": {
@@ -393,6 +393,109 @@
       "power": 13,
       "tags": [
         "cursed"
+      ]
+    }
+  },
+  "ShieldOfTheYawningDead": {
+    "class": "SetShield",
+    "properties": {
+      "animation": "images/items/armors/chestplateofnorth",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 70,
+          "block": 6,
+          "shadowResist": 10,
+          "stamina": 3,
+          "strength": 3
+        }
+      },
+      "label": "Shield of the Yawning Dead",
+      "description": "A barrow-door hammered into a shield; the grave-cold face of it makes the dead hesitate to strike.",
+      "power": 9
+    }
+  },
+  "DragonscaleGuards": {
+    "class": "SetPants",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "armor": 90,
+          "fireResist": 15,
+          "stamina": 4
+        }
+      },
+      "label": "Dragonscale Guards",
+      "description": "Thigh guards of overlapping wyrm scale, shrugging off both furnace heat and the claws of the deep.",
+      "power": 7
+    }
+  },
+  "ArmorOfTheDamned": {
+    "class": "CompoundArmor",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 250,
+          "crit": 4,
+          "dmgMax": 30,
+          "dmgMin": 23,
+          "intelligence": 12,
+          "shadowResist": 30,
+          "stamina": 16,
+          "strength": 10
+        }
+      },
+      "interaction": {
+        "ref": "Doom"
+      },
+      "coveredSlots": [
+        "0",
+        "1",
+        "2"
+      ],
+      "label": "Armor of the Damned",
+      "description": "Blackshard, barrow-shield, troll-skull and rib harness fused into one damned panoply; the grave answers to whoever wears it.",
+      "power": 24,
+      "tags": [
+        "compound"
+      ]
+    }
+  },
+  "DragonFatherWrath": {
+    "class": "CompoundArmor",
+    "properties": {
+      "animation": "images/items/armors/platearmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 10,
+          "armor": 820,
+          "crit": 6,
+          "fireResist": 75,
+          "intelligence": 20,
+          "stamina": 32,
+          "strength": 12
+        }
+      },
+      "interaction": {
+        "ref": "Fireball"
+      },
+      "coveredSlots": [
+        "2",
+        "5",
+        "6"
+      ],
+      "label": "Wrath of the Dragon Father",
+      "description": "Crown, scale, greaves and guards welded into a single wyrm-panoply; the wearer speaks to fire as a father to a wayward child.",
+      "power": 30,
+      "tags": [
+        "compound"
       ]
     }
   }

@@ -102,6 +102,7 @@ BUILTIN_CLASSES = {
     "CMarket",
     "CMonsterFightController",
     "CNpcRandomController",
+    "CPants",
     "CPlayer",
     "CPlayerController",
     "CPlayerFightController",
@@ -111,6 +112,7 @@ BUILTIN_CLASSES = {
     "CRangeController",
     "CScroll",
     "CScript",
+    "CShield",
     "CSmallWeapon",
     "CStats",
     "CTargetController",
@@ -1758,10 +1760,27 @@ class ContentValidator:
             self._issue(path, "$", "missing required JSON file")
             return None
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            # Reject duplicate object keys. Python's json (and simdjson, which the
+            # content tools and the game's Python layer use) silently keep the last
+            # value for a duplicated key, but the engine's strict C++ JSON parser
+            # rejects the whole document ("duplicate JSON object key"), so a file
+            # with duplicate keys passes every repo-reading check yet fails to load
+            # at runtime. Catch it here where it is cheap and unambiguous.
+            return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=self._reject_duplicate_keys(path))
         except json.JSONDecodeError as exc:
             self._issue(path, f"line {exc.lineno} column {exc.colno}", exc.msg)
             return None
+
+    def _reject_duplicate_keys(self, path: Path):
+        def hook(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+            seen: set[str] = set()
+            for key, _ in pairs:
+                if key in seen:
+                    self._issue(path, "$", f'duplicate JSON object key "{key}"')
+                seen.add(key)
+            return dict(pairs)
+
+        return hook
 
     def _load_type_registration_exclusions(self) -> None:
         path = self.repo_root / TYPE_REGISTRATION_EXCLUSIONS_PATH
@@ -1919,6 +1938,7 @@ class ContentValidator:
         for entry in self.global_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
         self._validate_crafting_refs()
+        self._validate_artifact_sets()
         self._validate_creature_archetype_naming()
         self._validate_duplicate_player_selectable_race_labels(visible)
         self._validate_required_production_archetypes(visible)
@@ -3667,6 +3687,176 @@ class ContentValidator:
                 station_ids.add(station_id)
         return station_ids
 
+    def _artifact_set_slot_types(self) -> dict[str, list[str]]:
+        """Map each equipment slot id to the item classes it accepts (from slots.json)."""
+        path = self.repo_root / "res" / "config" / "slots.json"
+        data = self.global_files.get(path)
+        result: dict[str, list[str]] = {}
+        if not isinstance(data, dict):
+            return result
+        configuration = (
+            data.get("slotConfiguration", {}).get("properties", {}).get("configuration", {})
+            if isinstance(data.get("slotConfiguration"), dict)
+            else {}
+        )
+        if not isinstance(configuration, dict):
+            return result
+        for slot_id, slot in configuration.items():
+            properties = slot.get("properties", {}) if isinstance(slot, dict) else {}
+            types = properties.get("types", []) if isinstance(properties, dict) else []
+            if isinstance(types, list):
+                result[str(slot_id)] = [value for value in types if isinstance(value, str)]
+        return result
+
+    def _slot_for_item_class(self, item_class: str, slot_types: dict[str, list[str]]) -> str | None:
+        """Return the slot id an item of the given class fits, resolving inheritance."""
+        for slot_id, accepted in slot_types.items():
+            for base in accepted:
+                if item_class == base or self._class_inherits_from(item_class, base):
+                    return slot_id
+        return None
+
+    @staticmethod
+    def _entry_properties(entry: Any) -> dict[str, Any]:
+        if isinstance(entry, dict):
+            properties = entry.get("properties")
+            if isinstance(properties, dict):
+                return properties
+        return {}
+
+    def _item_class(self, item_id: str) -> str | None:
+        entry = self.global_entries.get(item_id)
+        if entry is None or not isinstance(entry.data, dict):
+            return None
+        item_class = entry.data.get("class")
+        return item_class if isinstance(item_class, str) else None
+
+    def _item_tags(self, item_id: str) -> set[str]:
+        entry = self.global_entries.get(item_id)
+        if entry is None:
+            return set()
+        tags = self._entry_properties(entry.data).get("tags")
+        if isinstance(tags, list):
+            return {tag for tag in tags if isinstance(tag, str)}
+        return set()
+
+    def _validate_artifact_sets(self) -> None:
+        path = self.repo_root / "res" / "config" / "artifact_sets.json"
+        data = self.global_files.get(path)
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        slot_types = self._artifact_set_slot_types()
+        piece_owner: dict[str, str] = {}
+        for set_id, definition in data.items():
+            if not isinstance(definition, dict):
+                self._issue(path, set_id, "expected artifact set object")
+                continue
+            for key in sorted(set(definition) - {"label", "pieces", "combined"}):
+                self._issue(path, f"{set_id}.{key}", "unknown artifact set field")
+            label = definition.get("label")
+            if not isinstance(label, str) or not label.strip():
+                self._issue(path, f"{set_id}.label", "expected non-empty label string")
+            pieces = definition.get("pieces")
+            combined = definition.get("combined")
+            if not isinstance(pieces, list) or len(pieces) < 2 or not all(isinstance(p, str) for p in pieces):
+                self._issue(path, f"{set_id}.pieces", "expected a list of at least two item ids")
+                continue
+            if not isinstance(combined, str) or not combined:
+                self._issue(path, f"{set_id}.combined", "expected combined item id string")
+                continue
+
+            for index, piece_id in enumerate(pieces):
+                if piece_id not in self.global_entries:
+                    self._issue(path, f"{set_id}.pieces[{index}]", f'unknown piece item "{piece_id}"')
+                if piece_id in piece_owner and piece_owner[piece_id] != set_id:
+                    self._issue(
+                        path,
+                        f"{set_id}.pieces[{index}]",
+                        f'piece "{piece_id}" already belongs to set "{piece_owner[piece_id]}"',
+                    )
+                piece_owner[piece_id] = set_id
+            if combined not in self.global_entries:
+                self._issue(path, f"{set_id}.combined", f'unknown combined item "{combined}"')
+            if combined in pieces:
+                self._issue(path, f"{set_id}.combined", "combined item cannot also be a set piece")
+
+            # Every piece must resolve to a distinct equipment slot.
+            piece_slots: dict[str, str] = {}
+            slots_seen: set[str] = set()
+            for index, piece_id in enumerate(pieces):
+                piece_class = self._item_class(piece_id)
+                if piece_class is None:
+                    continue
+                slot = self._slot_for_item_class(piece_class, slot_types)
+                if slot is None:
+                    self._issue(
+                        path,
+                        f"{set_id}.pieces[{index}]",
+                        f'piece "{piece_id}" (class "{piece_class}") does not fit any equipment slot',
+                    )
+                    continue
+                if slot in slots_seen:
+                    self._issue(
+                        path,
+                        f"{set_id}.pieces[{index}]",
+                        f'piece "{piece_id}" occupies slot {slot} already used by another piece in this set',
+                    )
+                slots_seen.add(slot)
+                piece_slots[piece_id] = slot
+
+            # The combined item's own slot is its primary; it must match one piece's slot,
+            # and its coveredSlots must equal the remaining pieces' slots.
+            combined_class = self._item_class(combined)
+            if combined_class is None:
+                continue
+            primary_slot = self._slot_for_item_class(combined_class, slot_types)
+            if primary_slot is None:
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" (class "{combined_class}") does not fit any equipment slot',
+                )
+            elif primary_slot not in piece_slots.values():
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" occupies slot {primary_slot}, which no set piece uses',
+                )
+
+            combined_props = self._entry_properties(self.global_entries[combined].data) if combined in self.global_entries else {}
+            covered = combined_props.get("coveredSlots", [])
+            covered_set = {str(slot) for slot in covered} if isinstance(covered, list) else set()
+            expected_covered = set(piece_slots.values()) - ({primary_slot} if primary_slot else set())
+            if covered_set != expected_covered:
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" coveredSlots {sorted(covered_set)} '
+                    f"must equal the non-primary piece slots {sorted(expected_covered)}",
+                )
+
+            # A combined artifact must carry the "compound" tag so random loot / markets
+            # never hand it out directly (only its pieces).
+            if combined in self.global_entries and "compound" not in self._item_tags(combined):
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" must declare the "compound" tag',
+                )
+
+            # A quest piece must not silently lose its un-droppable status on assembly.
+            quest_pieces = [piece_id for piece_id in pieces if "quest" in self._item_tags(piece_id)]
+            if quest_pieces and combined in self.global_entries and "quest" not in self._item_tags(combined):
+                self._issue(
+                    path,
+                    f"{set_id}.combined",
+                    f'combined item "{combined}" must declare the "quest" tag because piece(s) '
+                    f"{quest_pieces} are quest items",
+                )
+
     def _validate_creature_archetype_naming(self) -> None:
         config_dir = self.repo_root / "res" / "config"
         for filename, suffix in CREATURE_ARCHETYPE_ID_SUFFIXES.items():
@@ -4446,6 +4636,36 @@ def iter_cpp_function_bodies(text: str) -> list[tuple[str, str]]:
     return functions
 
 
+def _first_template_argument(text: str, start: int) -> str | None:
+    """Return the first top-level template argument beginning at ``text[start]``
+    (just past the opening ``<``), honoring nested ``<...>``.
+
+    Returns None for a malformed/unterminated template. Unlike a ``[^,;\\n]``
+    capture, this stops the first argument at the matching top-level ``>`` or
+    ``,``, so a single-argument registration (``register_type<CFoo>()``) and a
+    nested wrapper (``register_type<CWrapper<CInner>>()``) are captured correctly
+    instead of swallowing the trailing ``>()`` and being rejected.
+    """
+    depth = 0
+    chars: list[str] = []
+    for ch in text[start:]:
+        if ch == "<":
+            depth += 1
+            chars.append(ch)
+        elif ch == ">":
+            if depth == 0:
+                return "".join(chars)
+            depth -= 1
+            chars.append(ch)
+        elif ch == "," and depth == 0:
+            return "".join(chars)
+        elif ch in ";\n":
+            return None
+        else:
+            chars.append(ch)
+    return None
+
+
 def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
     names: set[str] = set()
     # Strip comments first so a commented-out (runtime-disabled) registration is
@@ -4454,9 +4674,12 @@ def iter_cpp_template_type_names(text: str, call_name: str) -> set[str]:
     # honored a commented register_type<...>, letting an unregistered reflected
     # type pass the coverage audit and then fail at runtime when built by name.
     text = strip_cpp_comments(text)
-    pattern = re.compile(rf"\b{re.escape(call_name)}\s*<\s*([^,;\n]+)")
+    pattern = re.compile(rf"\b{re.escape(call_name)}\s*<")
     for match in pattern.finditer(text):
-        name = normalize_cpp_type(match.group(1))
+        argument = _first_template_argument(text, match.end())
+        if argument is None:
+            continue
+        name = normalize_cpp_type(argument)
         if is_concrete_cpp_class_name(name):
             names.add(name)
     return names

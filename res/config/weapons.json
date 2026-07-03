@@ -369,7 +369,7 @@
     }
   },
   "BlackshardOfTheDeadKnight": {
-    "class": "CWeapon",
+    "class": "SetWeapon",
     "properties": {
       "animation": "images/items/weapons/shadowblade",
       "bonus": {

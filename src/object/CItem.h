@@ -28,7 +28,8 @@ class CItem : public CMapObject, public CVisitable, public CWearable, public CUs
 
     V_META(CItem, CMapObject, V_PROPERTY(CItem, int, power, getPower, setPower),
            V_PROPERTY(CItem, std::shared_ptr<CStats>, bonus, getBonus, setBonus),
-           V_PROPERTY(CItem, std::shared_ptr<CInteraction>, interaction, getInteraction, setInteraction))
+           V_PROPERTY(CItem, std::shared_ptr<CInteraction>, interaction, getInteraction, setInteraction),
+           V_PROPERTY(CItem, std::set<std::string>, coveredSlots, getCoveredSlots, setCoveredSlots))
 
   public:
     CItem();
@@ -57,11 +58,21 @@ class CItem : public CMapObject, public CVisitable, public CWearable, public CUs
 
     void setInteraction(std::shared_ptr<CInteraction> interaction);
 
+    // Extra equipment slots this item occupies while equipped, in addition to its
+    // own primary slot. A combined ("compound") artifact lists the slot ids of the
+    // set pieces it replaces (see docs/design/compound_artifacts.md); equipping it
+    // blocks those slots, and they free again when it is unequipped. Empty for
+    // ordinary single-slot items.
+    std::set<std::string> getCoveredSlots() const;
+
+    void setCoveredSlots(std::set<std::string> value);
+
     virtual bool isDisposable();
 
   protected:
     std::shared_ptr<CStats> bonus = std::make_shared<CStats>();
     std::shared_ptr<CInteraction> interaction;
+    std::set<std::string> coveredSlots;
     int power = 0;
 
   private:
@@ -96,6 +107,18 @@ class CGloves : public CItem {
     V_META(CGloves, CItem, vstd::meta::empty())
   public:
     CGloves();
+};
+
+class CPants : public CItem {
+    V_META(CPants, CItem, vstd::meta::empty())
+  public:
+    CPants();
+};
+
+class CShield : public CItem {
+    V_META(CShield, CItem, vstd::meta::empty())
+  public:
+    CShield();
 };
 
 class CWeapon : public CItem {

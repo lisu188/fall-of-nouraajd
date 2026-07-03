@@ -1482,6 +1482,24 @@ bool CPluginLoader::loadMapPlugins(const std::shared_ptr<CGame> &game, const std
         return false;
     }
 
+    // Mark every class registration performed while this map's script/plugins load as map-scoped, so
+    // a transition destination's classes override an earlier map's identically named classes without
+    // clobbering core types or explicit overrides. The guard restores the flag even if a plugin
+    // throws mid-load.
+    struct MapScriptScopeGuard {
+        std::shared_ptr<CObjectHandler> handler;
+        explicit MapScriptScopeGuard(std::shared_ptr<CObjectHandler> handler) : handler(std::move(handler)) {
+            if (this->handler) {
+                this->handler->beginMapScriptScope();
+            }
+        }
+        ~MapScriptScopeGuard() {
+            if (handler) {
+                handler->endMapScriptScope();
+            }
+        }
+    } mapScriptScopeGuard(game->getObjectHandler());
+
     bool loadedAll = true;
     std::set<std::string> loadedPythonPlugins;
     std::set<std::string> loadedDynamicPlugins;

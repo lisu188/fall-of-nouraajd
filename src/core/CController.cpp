@@ -556,6 +556,30 @@ bool heal_preserves_combatant(const std::shared_ptr<CCreature> &me, const std::s
     }
     return strongest_heal_estimate(me) > incoming;
 }
+
+// Deterministic estimate of how much a single cast weakens the opponent, used to
+// rank a caster's interactions. Every castable interaction is credited with the
+// caster's expected landed hit on the opponent (expected_incoming_hit in the
+// attacking direction: caster's top damage plus flat bonus, mitigated by the
+// opponent's normal resist and armor, with the block dice deliberately excluded
+// so the estimate stays stable). An interaction that also routes a non-buff
+// effect onto the opponent keeps weakening it for the effect's whole duration,
+// so credit that hit once more per lingering turn. Mana cost is intentionally
+// not part of the value: the previous selector maximized mana cost, which made
+// casters spend their priciest spell instead of their most weakening one.
+int weakening_estimate(const std::shared_ptr<CInteraction> &interaction, const std::shared_ptr<CCreature> &me,
+                       const std::shared_ptr<CCreature> &opponent) {
+    const int hit = expected_incoming_hit(opponent, me);
+    int value = hit;
+    const auto effect = interaction->getEffect();
+    if (effect && !interaction->effectRoutesToCaster(effect) && !effect->hasTag(CTag::Buff)) {
+        // A lingering debuff/stun weakens even a caster with no melee damage, so
+        // floor the per-turn value at 1 to keep such effects ranked above an
+        // interaction that merely lands the same hit once.
+        value += std::max(hit, 1) * std::max(effect->getDuration(), 1);
+    }
+    return value;
+}
 } // namespace
 
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
@@ -576,7 +600,7 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
             return true;
         }
     }
-    if (auto action = selectInteraction(me)) {
+    if (auto action = selectInteraction(me, opponent)) {
         me->useAction(action, opponent);
         return true;
     }
@@ -600,20 +624,32 @@ std::shared_ptr<CItem> CMonsterFightController::getLeastPowerfulItemWithTag(std:
 }
 
 // TODO: use buffs
-std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> cr) {
+std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> me,
+                                                                         std::shared_ptr<CCreature> opponent) {
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](const std::shared_ptr<CInteraction> &it) {
         return !it->hasTag(CTag::Buff);
     };
-    std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [cr](const std::shared_ptr<CInteraction> &it) {
-        return it->getManaCost() <= cr->getMana();
+    std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [me](const std::shared_ptr<CInteraction> &it) {
+        return it->getManaCost() <= me->getMana();
     };
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction3 = [](const std::shared_ptr<CInteraction> &it) {
         return !it->getEffect() || (it->getEffect() && !it->getEffect()->hasTag(CTag::Buff));
     };
-    auto pred = [](const std::shared_ptr<CInteraction> &a, const std::shared_ptr<CInteraction> &b) {
-        return a->getManaCost() < b->getManaCost();
+    // Rank affordable, non-buff interactions by how much they weaken the current
+    // opponent rather than by mana cost. Ties break toward the cheaper spell, then
+    // by name, so the choice is deterministic regardless of container ordering.
+    auto pred = [me, opponent](const std::shared_ptr<CInteraction> &a, const std::shared_ptr<CInteraction> &b) {
+        const int wa = weakening_estimate(a, me, opponent);
+        const int wb = weakening_estimate(b, me, opponent);
+        if (wa != wb) {
+            return wa < wb;
+        }
+        if (a->getManaCost() != b->getManaCost()) {
+            return a->getManaCost() > b->getManaCost();
+        }
+        return a->getName() > b->getName();
     };
-    std::set<std::shared_ptr<CInteraction>> interactions = cr->getInteractions();
+    std::set<std::shared_ptr<CInteraction>> interactions = me->getInteractions();
     auto rng =
         interactions | std::views::filter(pFunction) | std::views::filter(pFunction2) | std::views::filter(pFunction3);
     auto max = std::ranges::max_element(rng, pred);

@@ -91,6 +91,8 @@ bool register_items(const NativePluginHostV1 *host) {
     registered = register_type<CBoots, CItem, CMapObject, CGameObject>(game) && registered;
     registered = register_type<CBelt, CItem, CMapObject, CGameObject>(game) && registered;
     registered = register_type<CGloves, CItem, CMapObject, CGameObject>(game) && registered;
+    registered = register_type<CPants, CItem, CMapObject, CGameObject>(game) && registered;
+    registered = register_type<CShield, CItem, CMapObject, CGameObject>(game) && registered;
     registered = register_type<CScroll, CItem, CMapObject, CGameObject>(game) && registered;
     registered = register_type<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>(game) && registered;
     if (registered) {

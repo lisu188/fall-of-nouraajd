@@ -63,6 +63,10 @@ int CItem::getPower() const { return power; }
 
 void CItem::setPower(int value) { power = value; }
 
+std::set<std::string> CItem::getCoveredSlots() const { return coveredSlots; }
+
+void CItem::setCoveredSlots(std::set<std::string> value) { coveredSlots = std::move(value); }
+
 CArmor::CArmor() {}
 
 std::shared_ptr<CInteraction> CItem::getInteraction() { return interaction; }
@@ -79,6 +83,10 @@ CBelt::CBelt() {}
 CBoots::CBoots() {}
 
 CGloves::CGloves() {}
+
+CPants::CPants() {}
+
+CShield::CShield() {}
 
 CHelmet::CHelmet() {}
 

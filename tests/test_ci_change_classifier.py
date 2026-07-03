@@ -101,7 +101,9 @@ class CiChangeClassifierTest(unittest.TestCase):
             ci_change_classifier.writeGithubOutput(output, classification)
 
             self.assertEqual(
-                "coverage-needed=true\nnative-needed=true\nauthority-change=false\nhuman-review-required=false\n",
+                "coverage-needed=true\nnative-needed=true\nauthority-change=false\nhuman-review-required=false\n"
+                "coverage-relevant=true\nnative-gui=true\nnative-engine=false\ncontent-json-python=false\n"
+                "workflow-python=false\nprompts-docs=false\nqueue-state-only=false\n",
                 output.read_text(encoding="utf-8"),
             )
 
@@ -125,9 +127,78 @@ class CiChangeClassifierTest(unittest.TestCase):
                     "native-needed": "false",
                     "authority-change": "false",
                     "human-review-required": "false",
+                    "coverage-relevant": "false",
+                    "native-gui": "false",
+                    "native-engine": "false",
+                    "content-json-python": "false",
+                    "workflow-python": "true",
+                    "prompts-docs": "false",
+                    "queue-state-only": "false",
                 },
                 values,
             )
+
+    def test_kind_taxonomy_partitions_representative_paths(self) -> None:
+        booleans = (
+            "nativeGui",
+            "nativeEngine",
+            "contentJsonPython",
+            "workflowPython",
+            "promptsDocs",
+            "queueStateOnly",
+            "coverageRelevant",
+        )
+        matrix = {
+            "docs/testing.md": {"promptsDocs"},
+            "AGENTS.md": {"promptsDocs"},
+            "prompts/codex-queue-controller.md": {"promptsDocs"},
+            ".github/workflows/other.yml": {"workflowPython"},
+            "scripts/pr_review_audit.py": {"workflowPython"},
+            "scripts/run_coverage.sh": {"workflowPython", "coverageRelevant"},
+            "planning/board.xlsx": {"queueStateOnly"},
+            "res/config/monsters.json": {"contentJsonPython"},
+            "res/maps/nouraajd/script.py": {"contentJsonPython"},
+            "src/gui/panel/CListView.cpp": {"nativeGui", "coverageRelevant"},
+            "src/gui/CAnimation.cpp": {"nativeGui", "coverageRelevant"},
+            "src/core/CGame.cpp": {"nativeEngine", "coverageRelevant"},
+            "native_plugins/foo.cpp": {"nativeEngine", "coverageRelevant"},
+            "tests/unit/test_core.cpp": {"nativeEngine", "coverageRelevant"},
+        }
+        for path, expected in matrix.items():
+            with self.subTest(path=path):
+                classification = ci_change_classifier.classifyPaths([path])
+                actual = {name for name in booleans if getattr(classification, name)}
+                self.assertEqual(expected, actual)
+
+    def test_every_gui_descendant_requires_native_and_coverage(self) -> None:
+        for path in (
+            "src/gui/CAnimation.cpp",
+            "src/gui/panel/CListView.cpp",
+            "src/gui/widget/deep/nested/Foo.cpp",
+        ):
+            with self.subTest(path=path):
+                classification = ci_change_classifier.classifyPaths([path])
+                self.assertTrue(classification.nativeGui)
+                self.assertTrue(classification.coverageRelevant)
+                self.assertTrue(classification.coverageNeeded)
+                self.assertTrue(classification.nativeNeeded)
+
+    def test_queue_state_only_requires_the_whole_change_to_be_queue_state(self) -> None:
+        pure = ci_change_classifier.classifyPaths(["planning/board.xlsx"])
+        self.assertTrue(pure.queueStateOnly)
+        mixed = ci_change_classifier.classifyPaths(["planning/board.xlsx", "docs/x.md"])
+        self.assertFalse(mixed.queueStateOnly)
+        self.assertTrue(mixed.promptsDocs)
+
+    def test_mixed_diff_unions_kinds_and_validation_needs(self) -> None:
+        classification = ci_change_classifier.classifyPaths(
+            ["src/gui/CAnimation.cpp", "docs/x.md", "res/config/monsters.json"]
+        )
+        self.assertTrue(classification.nativeGui)
+        self.assertTrue(classification.promptsDocs)
+        self.assertTrue(classification.contentJsonPython)
+        self.assertTrue(classification.nativeNeeded)
+        self.assertTrue(classification.coverageNeeded)
 
     def test_main_returns_clean_error_when_git_executable_is_missing(self) -> None:
         def raise_missing_git(*_args: object, **_kwargs: object) -> None:
