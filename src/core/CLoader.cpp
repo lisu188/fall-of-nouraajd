@@ -59,6 +59,8 @@ std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &g
 
 void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &mapName);
 
+void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &mapName);
+
 namespace {
 constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
 constexpr const char *DYNAMIC_PLUGIN_DEFAULT_ENTRY = "game_plugin_load_v1";
@@ -630,6 +632,9 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
                 load_map_resources(game, requiredMap);
             }
         }
+        // Activate the primary saved map's scope last so dependency maps loaded above for their
+        // config/quest data do not leave their scope active.
+        activate_map_scope(game, saveDocument.mapName);
     }
 
     const auto saveConfigKey = CSaveFormat::savedMapConfigKey(slotName);
@@ -1014,11 +1019,31 @@ void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &m
     game->getObjectHandler()->registerConfig(getConfigPaths(game->getResourcesProvider(), mapName));
 }
 
+// Register the map's directory as a scoped search root and make it the active scope so that
+// map-local assets (animations/textures declared by a bare name) resolve through it. Global
+// assets keep their precedence: the base search path is always consulted first, and the scope
+// only adds map-local names that are not found globally. Absolute/traversal paths remain rejected
+// by the provider's existing safe-path guard. Called for the map that becomes active after a load;
+// dependency maps loaded only for config/quest data do not steal the active scope.
+void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &mapName) {
+    const auto provider = game->getResourcesProvider();
+    if (!provider) {
+        return;
+    }
+    const auto mapRoot = provider->getPath("maps/" + mapName);
+    if (mapRoot.empty()) {
+        return;
+    }
+    provider->addScopedRoot(mapName, mapRoot);
+    provider->setActiveScope(mapName);
+}
+
 std::shared_ptr<CMap> CMapLoader::loadNewMap(const std::shared_ptr<CGame> &game, const std::string &mapName) {
     if (std::shared_ptr<json> mapc = game->getConfigurationProvider()->getConfiguration(getMapPath(mapName))) {
         std::shared_ptr<CMap> map = game->getObjectHandler()->createObject<CMap>(game);
         game->setMap(map);
         load_map_resources(game, mapName);
+        activate_map_scope(game, mapName);
         loadFromTmx(map, mapc);
         map->setMapName(mapName);
         return map;
