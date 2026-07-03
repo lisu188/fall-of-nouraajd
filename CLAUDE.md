@@ -130,7 +130,11 @@ through the `NativePluginHostV1` ABI, `*_load_v1` entry points) and Python in
   `map_design_brief`). `python3 mcp.py --build` builds the extension first;
   `--stdio --repo-root . --build-dir cmake-build-release` for stdio transport.
 - **`scripts/generate_walkthrough_video.py`** — drives a headless GUI session
-  through the full campaign and encodes to MP4 (auto-wraps in `xvfb-run` on Linux).
+  through an entire `res/campaigns/` manifest (default `fallOfNouraajd`:
+  nouraajd → ritual → siege), following the async map transitions between
+  chapters, and encodes to MP4 with title cards (auto-wraps in `xvfb-run` on
+  Linux). `--campaign <id>` picks another campaign; `--single-map` renders one
+  map's storyboard.
 - Tests run headless via `SDL_VIDEODRIVER=dummy` (set by `test.py`); UI tests use xvfb.
 
 ## Response conventions

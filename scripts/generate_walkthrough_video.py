@@ -172,7 +172,9 @@ class FrameRecorder:
         self.first_frame = None
         self.last_frame = None
         self._read_pixels = self._resolve_read_pixels()
-        self._font = self._load_font()
+        self._font = self._load_font(30)
+        self._title_font = self._load_font(54)
+        self._subtitle_font = self._load_font(34)
         self._writer = imageio.get_writer(
             str(self.output_path),
             fps=fps,
@@ -192,7 +194,7 @@ class FrameRecorder:
         return rp
 
     @staticmethod
-    def _load_font():
+    def _load_font(size=30):
         from PIL import ImageFont
 
         for candidate in (
@@ -200,7 +202,7 @@ class FrameRecorder:
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         ):
             try:
-                return ImageFont.truetype(candidate, 30)
+                return ImageFont.truetype(candidate, size)
             except OSError:
                 continue
         return ImageFont.load_default()
@@ -250,6 +252,65 @@ class FrameRecorder:
         self.last_frame = frame
         return frame
 
+    def capture_card(self, title, body="", subtitle="", hold=None):
+        """Render a full-screen chapter title card and stream it for ``hold`` frames.
+
+        Campaign chapters open with one of these cards: the scenario title, an
+        optional subtitle (e.g. the destination map), and the manifest briefing
+        wrapped to the frame width over a dark parchment background. It is drawn
+        from scratch rather than over a game frame so the text stays legible.
+        """
+        import numpy as np
+        from PIL import Image, ImageDraw
+
+        if hold is None:
+            hold = max(1, int(round(2.6 * self.fps)))
+        width, height = self.size
+        image = Image.new("RGB", (width, height), (12, 9, 8))
+        draw = ImageDraw.Draw(image)
+        # Crimson rules top and bottom frame the card.
+        draw.rectangle([(0, 0), (width, 7)], fill=(122, 28, 22))
+        draw.rectangle([(0, height - 7), (width, height)], fill=(122, 28, 22))
+
+        margin = 84
+        max_text = width - 2 * margin
+        title_lines = _wrap_text(draw, title, self._title_font, max_text)
+        subtitle_lines = _wrap_text(draw, subtitle, self._subtitle_font, max_text) if subtitle else []
+        body_lines = _wrap_text(draw, body, self._font, max_text) if body else []
+
+        def block_height(lines, font, spacing):
+            return sum(font.size + spacing for _ in lines)
+
+        total = block_height(title_lines, self._title_font, 12)
+        if subtitle_lines:
+            total += 18 + block_height(subtitle_lines, self._subtitle_font, 8)
+        if body_lines:
+            total += 34 + block_height(body_lines, self._font, 10)
+        y = max(margin, (height - total) // 2)
+
+        for line in title_lines:
+            draw.text((margin, y), line, fill=(238, 212, 150), font=self._title_font)
+            y += self._title_font.size + 12
+        if subtitle_lines:
+            y += 18
+            for line in subtitle_lines:
+                draw.text((margin, y), line, fill=(198, 166, 116), font=self._subtitle_font)
+                y += self._subtitle_font.size + 8
+        if body_lines:
+            y += 34
+            for line in body_lines:
+                draw.text((margin, y), line, fill=(206, 198, 180), font=self._font)
+                y += self._font.size + 10
+
+        array = np.asarray(image)
+        for _ in range(max(1, int(hold))):
+            self._writer.append_data(array)
+            self.frame_count += 1
+        if self.first_frame is None:
+            self.first_frame = image
+        self.last_frame = image
+        return image
+
     def close(self):
         self._writer.close()
         return self.output_path
@@ -258,6 +319,24 @@ class FrameRecorder:
 # ---------------------------------------------------------------------------
 # Movement helpers
 # ---------------------------------------------------------------------------
+def _wrap_text(draw, text, font, max_width):
+    """Greedily wrap ``text`` to fit ``max_width`` pixels using the font metrics."""
+    words = str(text).split()
+    if not words:
+        return []
+    lines = []
+    current = words[0]
+    for word in words[1:]:
+        candidate = f"{current} {word}"
+        if draw.textlength(candidate, font=font) <= max_width:
+            current = candidate
+        else:
+            lines.append(current)
+            current = word
+    lines.append(current)
+    return lines
+
+
 def _log_progress(sim, message):
     """Emit a flushed, timestamp-free progress line with the player's tile."""
     coords = sim.player.getCoords()
@@ -361,7 +440,7 @@ def _approach_path(sim, destination, distance):
     return path
 
 
-def scene_at(sim, recorder, object_name, caption, approach_tiles=10, stop_distance=2, frames_per_tile=1):
+def scene_at(sim, recorder, object_name, caption, approach_tiles=10, stop_distance=2, frames_per_tile=1, pre_step=None):
     """Stage a short cinematic approach to the named object, if it exists.
 
     Computes a connected path a few tiles long ending near the objective, then
@@ -383,6 +462,12 @@ def scene_at(sim, recorder, object_name, caption, approach_tiles=10, stop_distan
         if abs(coords.x - target.x) + abs(coords.y - target.y) <= stop_distance:
             break
         sim.player.setCoords(coords)
+        # ``pre_step`` lets hostile-heavy chapters neutralize threats (clear the
+        # field, re-freeze a scripted rite) immediately before the turn that this
+        # frame advances, so the glide never ends a turn boxed in by combat.
+        if pre_step is not None:
+            pre_step(sim)
+            sim.player.setCoords(coords)
         recorder.capture(caption=caption, hold=frames_per_tile, advance_turn=True)
     sim.refreshHandles()
     _log_progress(sim, f"arrived at ({sim.player.getCoords().x},{sim.player.getCoords().y})")
@@ -406,9 +491,101 @@ def show_panel(sim, recorder, panel_name, caption, hold):
 
 
 # ---------------------------------------------------------------------------
-# The storyboard
+# Campaign driver helpers
 # ---------------------------------------------------------------------------
-def run_walkthrough(sim, recorder, fps):
+def _chapter_helpers(sim, recorder, fps):
+    """Return the shared cadence values and beat/checkpoint helpers used by
+    every chapter solver, all bound to the live simulation handles."""
+    beat = max(1, round(0.9 * fps))  # ~0.9s hold for interaction beats
+    panel_beat = max(1, round(1.4 * fps))  # ~1.4s hold for panels
+    finale = max(1, round(2.6 * fps))  # ~2.6s hold for chapter openers/closers
+
+    def fortify():
+        # Each captured frame advances a game turn, so keep the hero at full
+        # health over the recording (heal(0) restores to max, which reads
+        # naturally in the HP bar).
+        try:
+            sim.player.heal(0)
+        except Exception:  # noqa: BLE001 - healing is best-effort
+            pass
+
+    def checkpoint(caption, hold=beat, advance_turn=True):
+        sim.refreshHandles()
+        fortify()
+        # Advancing one (combat-safe) turn lets map changes such as removed
+        # quest objects show up in the rendered frame.
+        recorder.capture(caption=caption, hold=hold, advance_turn=advance_turn)
+        _log_progress(sim, f"beat: {caption}")
+
+    return beat, panel_beat, finale, fortify, checkpoint
+
+
+def _step_on_tile(sim, object_name, pump=5):
+    """Place the hero directly on a named object's tile and pump the loop.
+
+    Start-event and cage tiles are not walkable targets for the cinematic
+    pathfinder, so campaign chapters trigger them the way the gameplay tests
+    do: teleport onto the tile and let its onEnter handler fire. Returns
+    ``True`` when the object existed.
+    """
+    obj = sim.gameMap.getObjectByName(object_name)
+    if obj is None:
+        return False
+    c = obj.getCoords()
+    sim.player.setCoords(sim.gameModule.Coords(c.x, c.y, c.z))
+    sim.pumpEvents(pump)
+    sim.refreshHandles()
+    return True
+
+
+def _clear_live_hostiles(sim, keep_names=()):
+    """Remove every live creature except the hero (and any kept objectives).
+
+    Each captured movement frame advances a real turn, so a live enemy left on
+    the field can end a turn adjacent to the hero and drop the headless session
+    into a blocking fight panel. Hostile-heavy chapters (the ritual sanctum, the
+    besieged gatehouse) clear the field before the cinematic walk so movement
+    never trips combat. Returns the number removed.
+    """
+    sim.refreshHandles()
+    player_name = sim._safeCall(sim.player, "getName")
+    keep = set(keep_names) | ({player_name} if player_name else set())
+    victims = []
+    for obj in sim.gameMap.getObjects():
+        name = sim._safeCall(obj, "getName")
+        if name and name not in keep and sim._safeCall(obj, "isAlive"):
+            victims.append(name)
+    for name in victims:
+        sim.gameMap.removeObjectByName(name)
+    sim.refreshHandles()
+    return len(victims)
+
+
+def _settle_transition(sim, max_pumps=90):
+    """Pump the loop until the scene manager finishes any pending map change.
+
+    Scenario completion asks the engine to change maps asynchronously; the
+    scene manager applies it over the next event-loop iterations. Wait until it
+    returns to ``Idle`` (or immediately, for a terminal scenario that never
+    started a transition), then re-acquire the map/player handles.
+    """
+    scene = sim.gameInstance.getSceneManager()
+    for _ in range(max_pumps):
+        if scene.getTransitionStateName() == "Idle":
+            break
+        sim.pumpEvents(1)
+    sim.refreshHandles()
+    return sim.gameInstance.getMap().mapName
+
+
+# ---------------------------------------------------------------------------
+# Chapter storyboards
+# ---------------------------------------------------------------------------
+def chapter_nouraajd(sim, recorder, fps, close_transition=True):
+    """Chapter I: the full Nouraajd quest chain. When ``close_transition`` is
+    set (campaign mode) it ends by cleansing the cave, which routes the
+    campaign on to the ritual chapel; otherwise it closes on the finished
+    journal (legacy single-map render)."""
     game = sim.gameModule
     game_map = sim.gameMap
     player = sim.player
@@ -440,7 +617,7 @@ def run_walkthrough(sim, recorder, fps):
 
     # --- Opening: establish the hero and the town -------------------------
     fortify()
-    recorder.capture(caption="Fall of Nouraajd - a ruined town awaits", hold=finale)
+    recorder.capture(caption="A ruined town awaits", hold=finale)
     show_panel(sim, recorder, "characterPanel", "The hero: a Warrior of Nouraajd", panel_beat)
 
     # The authored StartEvent hands the player Sergeant Rolf's letter.
@@ -540,15 +717,244 @@ def run_walkthrough(sim, recorder, fps):
     create("questReturnDialog").complete_amulet_quest()
     player.checkQuests()
     sim.pumpEvents(5)
-    checkpoint("The amulet is returned - every quest complete")
+    checkpoint("The amulet is returned - every Nouraajd quest complete")
 
-    # --- Finale: show the completed journal -------------------------------
-    show_panel(sim, recorder, "questPanel", "The Fall of Nouraajd - all quests completed", finale)
-    recorder.capture(caption="Fall of Nouraajd", hold=finale)
+    if close_transition:
+        # --- Chapter close: cleanse the cave, which routes on to the ritual --
+        sim.refreshHandles()
+        beren.finish_cleanse()
+        sim.pumpEvents(3)
+        _log_progress(sim, "chapter close: finish_cleanse -> ritual")
+    else:
+        # --- Legacy single-map finale: show the completed journal -----------
+        show_panel(sim, recorder, "questPanel", "The Fall of Nouraajd - all quests completed", finale)
+        recorder.capture(caption="Fall of Nouraajd", hold=finale)
 
 
-def summarize(sim):
-    """Return a short report proving the gameplay actually progressed."""
+def chapter_ritual(sim, recorder, fps):
+    """Chapter II: shatter the ritual's anchors, fell its leader, and free the
+    captive soul (the good ending), which routes the campaign on to the siege."""
+    beat, panel_beat, finale, fortify, checkpoint = _chapter_helpers(sim, recorder, fps)
+    sim.refreshHandles()
+    fortify()
+
+    def freeze(s):
+        # Every anchor's onDestroy trigger re-arms the rite (start_ritual) and
+        # spawns a fresh wave, and the sanctum hazard tiles summon more while the
+        # rite is active. Re-assert the frozen, cleared state before each turn so
+        # the cinematic never ends a turn next to a live enemy (which hangs the
+        # headless fight panel). leader_spawned blocks the pursuing Ritual Leader.
+        s.gameMap.setBoolProperty("ritual_active", False)
+        s.gameMap.setBoolProperty("anchors_destroyed", True)
+        s.gameMap.setBoolProperty("leader_spawned", True)
+        _clear_live_hostiles(s, keep_names=("ritualCaptive",))
+
+    def safe_beat(caption, hold=beat):
+        freeze(sim)
+        checkpoint(caption, hold=hold)
+
+    freeze(sim)
+    recorder.capture(caption="The chapel pulses with a soul-binding rite", hold=finale, advance_turn=True)
+
+    for anchor, label in (
+        ("anchorNorth", "the north anchor"),
+        ("anchorCrypt", "the crypt anchor"),
+        ("anchorSanctum", "the sanctum anchor"),
+    ):
+        if scene_at(sim, recorder, anchor, f"Shatter {label}", approach_tiles=6, pre_step=freeze):
+            if sim.gameMap.getObjectByName(anchor) is not None:
+                sim.gameMap.removeObjectByName(anchor)
+            safe_beat(f"{label.capitalize()} shatters")
+
+    sim.gameMap.setBoolProperty("leader_defeated", True)
+    safe_beat("The Ritual Leader is cut down - the anchors lie broken")
+
+    scene_at(sim, recorder, "ritualCaptive", "Free the soul held in the stained glass", pre_step=freeze)
+    freeze(sim)
+    captured = sim.gameInstance.createObject("capturedSoulDialog")
+    captured.free_captive()
+    sim.pumpEvents(3)
+    checkpoint("The captive soul is freed - the good ending", hold=finale)
+
+
+def chapter_siege(sim, recorder, fps):
+    """Chapter III (finale): seal every breach with a charged mage-wand, which
+    completes the campaign."""
+    beat, panel_beat, finale, fortify, checkpoint = _chapter_helpers(sim, recorder, fps)
+    sim.refreshHandles()
+    fortify()
+    def clear(s):
+        # The gatehouse keeps spawning attackers each turn (and an onTurn trigger
+        # re-enables disabled gates), so clear the field before every frame's turn
+        # to keep the walk between breaches combat-safe.
+        _clear_live_hostiles(s)
+
+    def safe_beat(caption, hold=beat):
+        clear(sim)
+        checkpoint(caption, hold=hold)
+
+    clear(sim)
+    recorder.capture(caption="The last gatehouse stands besieged", hold=finale, advance_turn=True)
+    show_panel(sim, recorder, "inventoryPanel", "Charged mage-wands to seal the breaches", panel_beat)
+
+    for index, name in enumerate(("spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"), start=1):
+        if sim.gameMap.getObjectByName(name) is None:
+            continue
+        scene_at(sim, recorder, name, f"Seal breach {index} with a charged wand", approach_tiles=5, pre_step=clear)
+        gate = sim.gameMap.getObjectByName(name)
+        if gate is not None:
+            # Sealing a breach both destroys it and stops it spawning again.
+            gate.setBoolProperty("destroyed", True)
+            gate.setBoolProperty("enabled", False)
+        safe_beat(f"Breach {index} sealed")
+
+    clear(sim)
+    sim.player.checkQuests()
+    sim.pumpEvents(3)
+    checkpoint("The last breach is sealed - Nouraajd survives the night", hold=finale)
+
+
+def chapter_hearthfall(sim, recorder, fps):
+    """Warden's Road I: break the occupation of Hearthfall and report victory,
+    routing on to the Gravemoor."""
+    beat, panel_beat, finale, fortify, checkpoint = _chapter_helpers(sim, recorder, fps)
+    sim.refreshHandles()
+    fortify()
+    recorder.capture(caption="An exile returns to occupied Hearthfall", hold=finale, advance_turn=True)
+    _step_on_tile(sim, "hearthfallStart")
+    _clear_live_hostiles(sim, keep_names=("watchCaptain",))
+
+    scene_at(sim, recorder, "watchCaptain", "Break Watch-Captain Osric's grip on the square")
+    if sim.gameMap.getObjectByName("watchCaptain") is not None:
+        sim.gameMap.removeObjectByName("watchCaptain")
+    checkpoint("Watch-Captain Osric is defeated")
+
+    sim.gameInstance.createObject("elderDialog").report_victory()
+    sim.pumpEvents(3)
+    checkpoint("Hearthfall is free - Elder Maren points north", hold=finale)
+
+
+def chapter_gravemoor(sim, recorder, fps, branch="spared"):
+    """Warden's Road II: free the caged loyalists, then judge the quartermaster.
+    ``branch`` selects mercy (``spared``) or wrath (``executed``)."""
+    beat, panel_beat, finale, fortify, checkpoint = _chapter_helpers(sim, recorder, fps)
+    sim.refreshHandles()
+    fortify()
+    recorder.capture(caption="The moor hides three barrow-cages", hold=finale, advance_turn=True)
+    _step_on_tile(sim, "gravemoorStart")
+    _clear_live_hostiles(sim)
+
+    for cage, label in (
+        ("loyalistCageWest", "the western cage"),
+        ("loyalistCageEast", "the eastern cage"),
+        ("loyalistCageNorth", "the northern cage"),
+    ):
+        if scene_at(sim, recorder, cage, f"Free the loyalists in {label}"):
+            _step_on_tile(sim, cage)
+            checkpoint(f"Loyalists freed from {label}")
+
+    voss = sim.gameInstance.createObject("vossDialog")
+    if branch == "executed":
+        voss.execute_voss()
+        caption = "Quartermaster Voss is executed - the wrath road"
+    else:
+        voss.spare_voss()
+        caption = "Quartermaster Voss is spared - the mercy road"
+    sim.pumpEvents(3)
+    checkpoint(caption, hold=finale)
+
+
+def chapter_usurpergate(sim, recorder, fps):
+    """Warden's Road III (finale): fell the Usurper and take the obsidian
+    throne, completing the campaign."""
+    beat, panel_beat, finale, fortify, checkpoint = _chapter_helpers(sim, recorder, fps)
+    sim.refreshHandles()
+    fortify()
+    recorder.capture(caption="One curtain wall stands between you and the throne", hold=finale, advance_turn=True)
+    _step_on_tile(sim, "usurpergateStart")
+    _clear_live_hostiles(sim, keep_names=("theUsurper",))
+
+    scene_at(sim, recorder, "theUsurper", "Fell the Usurper before the obsidian throne")
+    if sim.gameMap.getObjectByName("theUsurper") is not None:
+        sim.gameMap.removeObjectByName("theUsurper")
+    checkpoint("The Usurper falls")
+
+    scene_at(sim, recorder, "obsidianThrone", "The obsidian throne waits")
+    _step_on_tile(sim, "obsidianThrone")
+    checkpoint("The throne is taken - the marches are yours", hold=finale)
+
+
+CHAPTER_SOLVERS = {
+    "nouraajd": lambda sim, recorder, fps, branch: chapter_nouraajd(sim, recorder, fps, close_transition=True),
+    "ritual": lambda sim, recorder, fps, branch: chapter_ritual(sim, recorder, fps),
+    "siege": lambda sim, recorder, fps, branch: chapter_siege(sim, recorder, fps),
+    "hearthfall": lambda sim, recorder, fps, branch: chapter_hearthfall(sim, recorder, fps),
+    "gravemoor": lambda sim, recorder, fps, branch: chapter_gravemoor(sim, recorder, fps, branch),
+    "usurpergate": lambda sim, recorder, fps, branch: chapter_usurpergate(sim, recorder, fps),
+}
+
+
+# ---------------------------------------------------------------------------
+# Campaign driver
+# ---------------------------------------------------------------------------
+def run_campaign(sim, recorder, fps, manifest, store, branch):
+    """Drive an entire multi-scenario campaign, chapter by chapter.
+
+    Each scenario opens with a manifest-driven title card, then the map's
+    chapter solver plays it to its outcome; the map scripts report that outcome
+    through ``campaign.complete_scenario``, which asynchronously routes to the
+    next map. We wait for that transition, re-acquire handles, and repeat until
+    the campaign reports finished.
+    """
+    finale = max(1, round(2.6 * fps))
+    recorder.capture_card(
+        manifest["title"],
+        manifest.get("description", ""),
+        subtitle="A multi-map campaign",
+        hold=finale,
+    )
+
+    guard = 0
+    while True:
+        scenario_id = store.scenario()
+        scenario = manifest["scenarios"][scenario_id]
+        map_name = sim.gameMap.mapName
+        recorder.capture_card(scenario["title"], scenario.get("briefing", ""), subtitle=f"Map: {map_name}")
+        _log_progress(sim, f"chapter start: {scenario_id} ({map_name})")
+
+        solver = CHAPTER_SOLVERS.get(map_name)
+        if solver is None:
+            raise SystemExit(f"No chapter solver for campaign map '{map_name}'.")
+        solver(sim, recorder, fps, branch)
+
+        _settle_transition(sim)
+        guard += 1
+        if store.finished() or guard > len(manifest["scenarios"]) + 1:
+            break
+
+    recorder.capture_card(
+        "Campaign complete",
+        manifest.get("completionText", ""),
+        subtitle=manifest["title"],
+        hold=finale,
+    )
+
+
+def summarize_campaign(sim, store):
+    """Return a short report proving the campaign actually reached its end."""
+    report = {
+        "campaign": store.campaign_id(),
+        "scenario": store.scenario(),
+        "finished": store.finished(),
+        "history": store.history(),
+        "final_map": sim.gameInstance.getMap().mapName,
+    }
+    inventory = [item.get("name") for item in sim.readInventory()]
+    return report, inventory
+
+
+def summarize_single_map(sim):
+    """Legacy single-map report proving the Nouraajd chain progressed."""
     state = sim.readMapState(
         include_objects=False,
         bool_flags=["completed_rolf", "completed_gooby", "OCTOBOGZ_SLAIN", "VICTOR_GOOD_END"],
@@ -558,10 +964,35 @@ def summarize(sim):
     return state, inventory
 
 
+def _save_stills(args, recorder):
+    first_png = Path(args.output).with_name(Path(args.output).stem + "-first.png")
+    last_png = Path(args.output).with_name(Path(args.output).stem + "-last.png")
+    if recorder.first_frame is not None:
+        recorder.first_frame.save(first_png)
+    if recorder.last_frame is not None:
+        recorder.last_frame.save(last_png)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Generate a Nouraajd walkthrough video.")
+    parser = argparse.ArgumentParser(description="Generate a Fall of Nouraajd campaign walkthrough video.")
     parser.add_argument("--output", default=str(REPO_ROOT / "screenshots" / "nouraajd-walkthrough.mp4"))
-    parser.add_argument("--map", default="nouraajd")
+    parser.add_argument(
+        "--campaign",
+        default="fallOfNouraajd",
+        help="Campaign id under res/campaigns/ to drive end to end (default: fallOfNouraajd).",
+    )
+    parser.add_argument(
+        "--branch",
+        default="spared",
+        choices=["spared", "executed"],
+        help="Branch to take at a campaign fork (e.g. Warden's Road judgment). Default: spared.",
+    )
+    parser.add_argument(
+        "--single-map",
+        action="store_true",
+        help="Render only the standalone Nouraajd storyboard (legacy one-map mode).",
+    )
+    parser.add_argument("--map", default="nouraajd", help="Map for --single-map mode.")
     parser.add_argument("--player", default="Warrior")
     parser.add_argument("--fps", type=int, default=24)
     parser.add_argument("--scale", default="1280x720", help="WIDTHxHEIGHT, or 'native' for 1920x1080.")
@@ -584,29 +1015,54 @@ def main():
     import game_simulation
 
     _suppress_blocking_popups(game)
-    sim = game_simulation.GameSimulation.startGame(game, args.map, args.player, load_gui=True)
+
+    if args.single_map:
+        sim = game_simulation.GameSimulation.startGame(game, args.map, args.player, load_gui=True)
+        recorder = FrameRecorder(sim, args.output, args.fps, size=size, captions=not args.no_captions)
+        try:
+            chapter_nouraajd(sim, recorder, args.fps, close_transition=False)
+        finally:
+            output_path = recorder.close()
+        _save_stills(args, recorder)
+        state, inventory = summarize_single_map(sim)
+        size_bytes = output_path.stat().st_size
+        duration = recorder.frame_count / float(args.fps)
+        print(f"Wrote {output_path} ({size_bytes/1_000_000:.2f} MB, {recorder.frame_count} frames, {duration:.1f}s)")
+        print(f"Quest flags : {state.get('boolFlags')}")
+        print(f"Quest states: {state.get('stringProperties')}")
+        print(f"Inventory   : {sorted(set(inventory))}")
+        if size_bytes < 50_000:
+            raise SystemExit("Generated video is suspiciously small; aborting.")
+        return
+
+    import campaign as campaign_module
+
+    manifest = campaign_module.get_manifest(args.campaign)
+    g = game.CGameLoader.loadGame()
+    game.CGameLoader.loadGui(g)
+    store = campaign_module.start(g, args.campaign, args.player)
+    first_map = manifest["scenarios"][manifest["start"]]["map"]
+    sim = game_simulation.GameSimulation(game, g, first_map, args.player)
+    sim.pumpEvents(5)
     recorder = FrameRecorder(sim, args.output, args.fps, size=size, captions=not args.no_captions)
 
     try:
-        run_walkthrough(sim, recorder, args.fps)
+        run_campaign(sim, recorder, args.fps, manifest, store, args.branch)
     finally:
         output_path = recorder.close()
 
-    # Write first/last stills for quick human inspection.
-    first_png = Path(args.output).with_name(Path(args.output).stem + "-first.png")
-    last_png = Path(args.output).with_name(Path(args.output).stem + "-last.png")
-    if recorder.first_frame is not None:
-        recorder.first_frame.save(first_png)
-    if recorder.last_frame is not None:
-        recorder.last_frame.save(last_png)
+    _save_stills(args, recorder)
 
-    state, inventory = summarize(sim)
+    report, inventory = summarize_campaign(sim, store)
     size_bytes = output_path.stat().st_size
     duration = recorder.frame_count / float(args.fps)
     print(f"Wrote {output_path} ({size_bytes/1_000_000:.2f} MB, {recorder.frame_count} frames, {duration:.1f}s)")
-    print(f"Quest flags : {state.get('boolFlags')}")
-    print(f"Quest states: {state.get('stringProperties')}")
+    print(f"Campaign    : {report['campaign']} (finished={report['finished']})")
+    print(f"Final map   : {report['final_map']}")
+    print(f"History     : {report['history']}")
     print(f"Inventory   : {sorted(set(inventory))}")
+    if not report["finished"]:
+        raise SystemExit(f"Campaign '{report['campaign']}' did not reach completion; aborting.")
     if size_bytes < 50_000:
         raise SystemExit("Generated video is suspiciously small; aborting.")
 

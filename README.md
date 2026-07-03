@@ -17,10 +17,12 @@ story-gated crafting recipes, save/load, random maps, and an MCP engine API for 
 </p>
 
 ## walkthrough video
-A full automated playthrough of the Nouraajd campaign — exploring the town, recovering Rolf's skull,
-slaying Gooby, running Father Beren's letter/relic/cleanse chain, saving Victor, and returning the amulet.
-Click the poster to play [`screenshots/nouraajd-walkthrough.mp4`](./screenshots/nouraajd-walkthrough.mp4),
-generated headlessly by [`scripts/generate_walkthrough_video.py`](./scripts/generate_walkthrough_video.py).
+A full automated playthrough of the multi-map **Fall of Nouraajd** campaign, chapter by chapter:
+Chapter I in the ruined town (Rolf's skull, Gooby, Father Beren's letter/relic/cleanse chain, Victor,
+and the amulet), Chapter II breaking the soul-binding ritual in the chapel, and Chapter III holding the
+last besieged gatehouse — with manifest-driven title cards between the scenario maps. Click the poster to
+play [`screenshots/nouraajd-walkthrough.mp4`](./screenshots/nouraajd-walkthrough.mp4), generated headlessly
+by [`scripts/generate_walkthrough_video.py`](./scripts/generate_walkthrough_video.py).
 <p>
   <a href="./screenshots/nouraajd-walkthrough.mp4">
     <img alt="Fall of Nouraajd walkthrough video" src="./screenshots/nouraajd-walkthrough-poster.png" width="70%">
@@ -80,12 +82,17 @@ starts a generated map.
 
 ### walkthrough video
 Regenerate the campaign walkthrough video (requires the `_game` build and the dev requirements). The script drives a
-real headless GUI session, walks the hero to each objective, completes the full quest chain, showcases the
-inventory/quest-log/character panels, and encodes the frames to MP4. On Linux it runs itself under `xvfb-run`
-automatically:
+real headless GUI session through an entire `res/campaigns/` manifest — starting the campaign, playing each scenario
+map to its scripted outcome, and following the async map transitions between chapters — walking the hero to each
+objective, showcasing the inventory/quest-log/character panels, and encoding the frames to MP4 with title cards. On
+Linux it runs itself under `xvfb-run` automatically:
 <pre>
 python3 -m pip install --upgrade -r requirements-dev.txt
+# default: the full multi-map fallOfNouraajd campaign
 python3 scripts/generate_walkthrough_video.py --output screenshots/nouraajd-walkthrough.mp4 --scale 1280x720 --fps 24
+# other campaigns / a single map:
+python3 scripts/generate_walkthrough_video.py --campaign wardensRoad --output screenshots/wardens-road.mp4
+python3 scripts/generate_walkthrough_video.py --single-map --map nouraajd --output screenshots/nouraajd-only.mp4
 </pre>
 
 ### mcp server (engine api)
