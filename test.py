@@ -550,6 +550,29 @@ IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS = {
             "objects": [{"name": "composedCompanion", "typeId": "composedCompanionTemplate"}],
         },
     },
+    "explicit_class_race_v1": {
+        "primary": "explicit_class_race_v1.json",
+        "summary": {
+            "encoding": "versioned",
+            "schemaVersion": 1,
+            "map": "explicit",
+            "turn": 21,
+            "description": "immutable explicit class race fixture",
+            "player": {
+                "class": "CPlayer",
+                "name": "player",
+                "typeId": "Sorcerer",
+                "coords": [7, 11, 0],
+                "activeQuests": [],
+                "completedQuests": [],
+                "items": [],
+            },
+            "questStates": {},
+            "trueFlags": [],
+            "numericProperties": {},
+            "objects": [],
+        },
+    },
 }
 
 
@@ -10654,6 +10677,117 @@ class GameTest(unittest.TestCase):
             )
         finally:
             cleanup_save_slot(save_name)
+
+    @game_test
+    def test_player_template_saves_migrate_class_race_and_round_trip(self):
+        # [EPIC_06][STORY_02][SUBSTORY_06] Every current player template must survive a
+        # save/load migration: the loaded player's class identity (getPlayerClassId) and
+        # default race identity (getRaceId) are derived correctly, the template's starting
+        # inventory/equipment and composed stats are non-degenerate, and the snapshot
+        # round-trips (load -> save -> reload) without drift. A separate explicit class/race
+        # fixture proves that overridden playerClassId/raceId values also round-trip stably.
+        #
+        # The template list is read from the runtime menu helper (player_class_options ->
+        # {label: playerType}) rather than a hard-coded list, so it stays in sync with the
+        # config; expected class/race values are derived from a freshly started player of the
+        # same template rather than pinned to string literals.
+        game = load_game_module()
+
+        options_game = game.CGameLoader.loadGame()
+        class_options = game.player_class_options(options_game)
+        player_types = sorted(class_options.values())
+        self.assertGreater(len(player_types), 0, "no player-selectable templates")
+
+        results = {}
+        for player_type in player_types:
+            save_name = unique_save_name(f"player_template_{player_type}")
+            cleanup_save_slot(save_name)
+            try:
+                # Build a save whose player uses this template. A fresh start applies the
+                # template's default identity: playerClassId derives from the type id and the
+                # race id falls back to the engine default when the template names no race.
+                start_game = game.CGameLoader.loadGame()
+                game.CGameLoader.startGameWithPlayer(start_game, "test", player_type)
+                start_map = start_game.getMap()
+                start_player = start_map.getPlayer()
+                self.assertEqual(player_type, start_player.getTypeId(), player_type)
+                self.assertEqual(player_type, start_player.getPlayerClassId(), player_type)
+                default_race = start_player.getRaceId()
+                self.assertTrue(default_race, player_type)
+                game.CMapLoader.save(start_map, save_name)
+
+                # First load through the save pipeline: the migrated player derives the
+                # expected class/race identity and exposes non-degenerate equipment/stats.
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_map = loaded_game.getMap()
+                loaded_player = loaded_map.getPlayer()
+                self.assertEqual(player_type, loaded_player.getTypeId(), player_type)
+                self.assertEqual(player_type, loaded_player.getPlayerClassId(), player_type)
+                self.assertEqual(default_race, loaded_player.getRaceId(), player_type)
+
+                equipped = {slot: item.getTypeId() for slot, item in loaded_player.getEquipped().items() if item}
+                self.assertTrue(equipped, player_type)
+                stats = loaded_player.getStats()
+                self.assertIsNotNone(stats, player_type)
+                self.assertGreater(stats.getMainValue(), 0, player_type)
+
+                snapshot_a = runtime_save_state_summary(normalize_save_snapshot(json.loads(game.jsonify(loaded_map))))
+
+                # Round-trip stability: re-saving the loaded map and reloading yields an
+                # identical normalized snapshot and preserves the derived identity.
+                game.CMapLoader.save(loaded_map, save_name)
+                reloaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(reloaded_game, save_name)
+                reloaded_map = reloaded_game.getMap()
+                reloaded_player = reloaded_map.getPlayer()
+                self.assertEqual(player_type, reloaded_player.getPlayerClassId(), player_type)
+                self.assertEqual(default_race, reloaded_player.getRaceId(), player_type)
+                snapshot_b = runtime_save_state_summary(
+                    normalize_save_snapshot(json.loads(game.jsonify(reloaded_map)))
+                )
+                self.assertEqual(snapshot_a, snapshot_b, player_type)
+
+                results[player_type] = {
+                    "typeId": loaded_player.getTypeId(),
+                    "playerClassId": loaded_player.getPlayerClassId(),
+                    "raceId": default_race,
+                    "equippedSlots": sorted(str(slot) for slot in equipped),
+                    "mainStat": stats.getMainValue(),
+                }
+            finally:
+                cleanup_save_slot(save_name)
+
+        # Explicit class/race fixture: overridden playerClassId/raceId differ from the raw
+        # type id and must survive load -> save -> reload unchanged.
+        explicit = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["explicit_class_race_v1"]
+        explicit_save = unique_save_name("player_template_explicit_class_race")
+        install_save_fixture_slot(explicit_save, explicit)
+        try:
+            explicit_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(explicit_game, explicit_save)
+            explicit_player = explicit_game.getMap().getPlayer()
+            self.assertEqual("Sorcerer", explicit_player.getTypeId())
+            self.assertEqual("Wayfarer", explicit_player.getPlayerClassId())
+            self.assertEqual("riverFolk", explicit_player.getRaceId())
+
+            game.CMapLoader.save(explicit_game.getMap(), explicit_save)
+            reloaded_explicit_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(reloaded_explicit_game, explicit_save)
+            reloaded_explicit_player = reloaded_explicit_game.getMap().getPlayer()
+            self.assertEqual("Sorcerer", reloaded_explicit_player.getTypeId())
+            self.assertEqual("Wayfarer", reloaded_explicit_player.getPlayerClassId())
+            self.assertEqual("riverFolk", reloaded_explicit_player.getRaceId())
+
+            results["explicit_class_race_v1"] = {
+                "typeId": reloaded_explicit_player.getTypeId(),
+                "playerClassId": reloaded_explicit_player.getPlayerClassId(),
+                "raceId": reloaded_explicit_player.getRaceId(),
+            }
+        finally:
+            cleanup_save_slot(explicit_save)
+
+        return True, json.dumps({"templates": results}, sort_keys=True)
 
     @game_test
     def test_legacy_save_rejects_noncanonical_player_name_without_activation(self):
