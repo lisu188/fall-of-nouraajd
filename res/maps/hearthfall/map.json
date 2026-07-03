@@ -26,6 +26,9 @@
    "height": 24,
    "width": 24,
    "opacity": 1,
+   "visible": true,
+   "x": 0,
+   "y": 0,
    "properties": {
     "default": "GrassTile",
     "outOfBounds": "MountainTile",
@@ -40,9 +43,6 @@
     "xBound": "string",
     "yBound": "string"
    },
-   "visible": true,
-   "x": 0,
-   "y": 0,
    "data": [
     12,
     12,
@@ -626,16 +626,16 @@
    "type": "objectgroup",
    "name": "Object Layer",
    "opacity": 1,
+   "visible": true,
+   "x": 0,
+   "y": 0,
+   "draworder": "topdown",
    "properties": {
     "level": "0"
    },
    "propertytypes": {
     "level": "string"
    },
-   "visible": true,
-   "x": 0,
-   "y": 0,
-   "draworder": "topdown",
    "objects": [
     {
      "height": 32,
