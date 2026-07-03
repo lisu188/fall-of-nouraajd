@@ -11,11 +11,16 @@ python3 scripts/validate_content.py --repo-root .
 
 Each map lives in `res/maps/<name>/` and is described by a Tiled-style
 `map.json`. A map may additionally declare the local assets it owns through an
-**optional** top-level `assets` array. The declaration is descriptive metadata:
-it documents and validates which files, directories, and logical resources a map
-depends on. Undeclared assets are not loaded or staged differently yet — engine
-loading and CMake staging rules are introduced separately — so adding `assets`
-is safe and purely additive for existing maps.
+**optional** top-level `assets` array. The declaration documents and validates
+which files, directories, and logical resources a map owns. It is now also
+load-bearing: engine loading treats the map's own directory as an active scoped
+search root (so map-local animations/textures resolve), and the CMake build
+**stages each declared asset into the build tree**. A map-local asset that an
+animation/background field references but does not declare would therefore not be
+packaged — so declared assets and referenced assets must stay consistent (see
+**Reference consistency and staging** below). Adding `assets` remains safe and
+purely additive for existing maps: they declare no `assets` and reference only
+global (`res/`-wide) resources, so nothing changes for them.
 
 ### Shape
 
@@ -67,6 +72,33 @@ within it. The validator rejects a declaration when its `path`:
 
 A `path` may not be declared more than once within a single map's `assets`
 array.
+
+### Reference consistency and staging
+
+Once a map declares an `assets` array, the validator additionally enforces that
+every **map-local** animation/background reference the map makes is declared.
+Concretely, it walks the map's own object layers (`map.json` object
+`properties.animation` / `properties.background`) and the map's local config
+entries (per-map `config.json` / `dialog*.json` `properties.animation` /
+`properties.background`), and for each referenced value:
+
+- If the value resolves to a **global** asset under `res/` (as a directory, a
+  file, or a `<value>.png` sprite), it is packaged independently of the map and
+  is left alone — this is how the existing maps reference shared `images/...`
+  animations.
+- If the value resolves **only** under the map's own directory (map-local) but
+  is **not** matched by a declared `assets` entry, the validator reports an
+  error: an undeclared map-local asset would not be staged, so the map would
+  break on a fresh build. Declare it with kind `file`, `directory`, or
+  `animationRoot` (an `animationRoot` at `path` matches a reference to `path`,
+  and a `file` at `path.png` matches a reference to `path`). `logicalId` entries
+  are logical handles and never satisfy a filesystem reference.
+
+On the build side, `CMakeLists.txt` reads each map's `map.json`, and for every
+declared entry stages it into the build tree next to the map: `file` and
+`animationRoot` (`<path>.png` form) are copied with `configure_file(... COPYONLY)`,
+`directory` and directory-form `animationRoot` entries are copied wholesale, and
+`logicalId` entries are skipped. Maps without an `assets` array are a no-op.
 
 ## Player class and race profiles (`res/config/classes.json`, `res/config/races.json`)
 
