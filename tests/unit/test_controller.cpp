@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameFightPanel.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
@@ -745,6 +746,90 @@ void test_monster_fight_controller_uses_mana_item_when_mana_is_low() {
     expect_true(monster->getItems().empty(), "used disposable mana item should be removed from inventory");
 }
 
+std::shared_ptr<CGame> fight_fixture_game() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    return game;
+}
+
+std::shared_ptr<CCreature> fight_fixture_monster(const std::shared_ptr<CGame> &game, int stamina, int hp) {
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    monster->getBaseStats()->setStamina(stamina);
+    monster->setHp(hp);
+    return monster;
+}
+
+std::shared_ptr<CCreature> fight_fixture_hitter(const std::shared_ptr<CGame> &game, int dmg) {
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+    opponent->getBaseStats()->setDmgMin(dmg);
+    opponent->getBaseStats()->setDmgMax(dmg);
+    return opponent;
+}
+
+std::shared_ptr<CPotion> heal_potion(const std::shared_ptr<CGame> &game, int power) {
+    auto potion = std::make_shared<CPotion>();
+    potion->setGame(game);
+    potion->setPower(power);
+    potion->addTag(CTag::Heal);
+    return potion;
+}
+
+void test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 35 (50%): the old fixed 75% threshold healed reflexively here.
+    auto monster = fight_fixture_monster(game, 10, 35);
+    // One expected landed hit removes 20 hp; the best heal restores ~14 (power 1 -> 20% of 70).
+    auto opponent = fight_fixture_hitter(game, 20);
+    monster->addItem(heal_potion(game, 1));
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should attack a hard hitter instead of wasting the turn");
+    expect_true(monster->getItems().size() == 1,
+                "monster should not spend a heal that is outpaced by one expected enemy hit");
+}
+
+void test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 20 (28%): hurt, but the expected 2 hp hit is not lethal.
+    auto monster = fight_fixture_monster(game, 10, 20);
+    auto opponent = fight_fixture_hitter(game, 2);
+    // The strongest heal (power 5, capped by missing hp to 50) clearly outpaces the hit.
+    auto weak = heal_potion(game, 1);
+    auto strong = heal_potion(game, 5);
+    monster->addItem(weak);
+    monster->addItem(strong);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should heal when the heal is a net gain at low hp");
+    expect_true(monster->getItems().size() == 1, "monster fight controller should use only one heal item per turn");
+    expect_true(monster->hasItem(strong) && !monster->hasItem(weak),
+                "monster fight controller should spend the least powerful heal item first");
+}
+
+void test_monster_fight_controller_heals_when_next_hit_would_kill() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 10: the expected 25 hp hit is lethal, so healing is the only play
+    // even though the best heal (~14) restores less than the hit removes.
+    auto monster = fight_fixture_monster(game, 10, 10);
+    auto opponent = fight_fixture_hitter(game, 25);
+    monster->addItem(heal_potion(game, 1));
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should act when the next hit would kill");
+    expect_true(monster->getItems().empty(),
+                "monster fight controller should heal when it would otherwise die to the next hit");
+}
+
 } // namespace
 
 int main() {
@@ -767,6 +852,9 @@ int main() {
     test_player_fight_controller_start_is_idempotent_and_guards_invalid_encounters();
     test_player_fight_controller_end_is_idempotent_and_guards_invalid_encounters();
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
+    test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal();
+    test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
+    test_monster_fight_controller_heals_when_next_hit_would_kill();
 
     return finish_tests();
 }
