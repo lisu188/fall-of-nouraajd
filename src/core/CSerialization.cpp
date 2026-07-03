@@ -129,6 +129,46 @@ std::shared_ptr<json> primitiveObjectConfig(const std::shared_ptr<CGame> &game, 
     return primitiveObjectConfig<CMapIntInt>(game, property, value);
 }
 
+// The registered primitive wrappers (CList*/CMap*) all expose their value through a "values"
+// collection (a std::set or std::map). A flattened primitive therefore always deserializes from a
+// JSON array or object; a bare scalar can never be a valid flattened form for such a property.
+bool isPrimitiveCollectionValueType(std::type_index valueType) {
+    return valueType != std::type_index(typeid(int)) && valueType != std::type_index(typeid(std::string)) &&
+           valueType != std::type_index(typeid(bool));
+}
+
+template <typename T> bool isPrimitiveCollectionPointer(std::type_index property) {
+    if (property != std::type_index(typeid(std::shared_ptr<T>)) || !CTypes::isPrimitiveType<T>()) {
+        return false;
+    }
+    auto valueType = CTypes::primitiveValueType<T>();
+    return valueType && isPrimitiveCollectionValueType(*valueType);
+}
+
+bool isPrimitiveCollectionPointer(std::type_index property) {
+    return isPrimitiveCollectionPointer<CListString>(property) || isPrimitiveCollectionPointer<CListInt>(property) ||
+           isPrimitiveCollectionPointer<CMapStringString>(property) ||
+           isPrimitiveCollectionPointer<CMapStringInt>(property) ||
+           isPrimitiveCollectionPointer<CMapIntString>(property) || isPrimitiveCollectionPointer<CMapIntInt>(property);
+}
+
+// Guards scalar-to-collection coercion for primitive-wrapper properties. Returns true when the
+// scalar has been handled (rejected) and the caller must not attempt the underlying scalar
+// assignment. In strict mode an incompatible scalar raises a specific error; otherwise it is
+// skipped so the property keeps its default value instead of being silently mis-typed.
+bool rejectScalarForPrimitiveCollection(std::type_index property, const std::string &key) {
+    if (!isPrimitiveCollectionPointer(property)) {
+        return false;
+    }
+    const std::string message = "Cannot deserialize scalar value for property '" + key +
+                                "' which expects a primitive collection wrapper (a JSON array or object is required)";
+    if (CSerialization::isStrict()) {
+        throw std::runtime_error(message);
+    }
+    vstd::logger::warning(message);
+    return true;
+}
+
 class CGameObjectPointerSerializer : public CSerializerBase {
   public:
     std::any serialize(std::any object) final {
@@ -228,7 +268,7 @@ void CSerialization::setObjectProperty(const std::shared_ptr<CGameObject> &objec
 void CSerialization::setNumericProperty(const std::shared_ptr<CGameObject> &object, const std::string &key, int value) {
     if (isString(object, key)) {
         object->setStringProperty(key, vstd::str(value));
-    } else {
+    } else if (!rejectScalarForPrimitiveCollection(getProperty(object, key), key)) {
         object->setNumericProperty(key, value);
     }
 }
@@ -237,7 +277,7 @@ void CSerialization::setBooleanProperty(const std::shared_ptr<CGameObject> &obje
                                         bool value) {
     if (isString(object, key)) {
         object->setStringProperty(key, vstd::str(value));
-    } else {
+    } else if (!rejectScalarForPrimitiveCollection(getProperty(object, key), key)) {
         object->setBoolProperty(key, value);
     }
 }
@@ -246,7 +286,9 @@ void CSerialization::setStringProperty(const std::shared_ptr<CGameObject> &objec
                                        const std::string &value) {
     auto coerced = coerceStringProperty(getProperty(object, key), value);
     if (std::holds_alternative<std::string>(coerced)) {
-        object->setStringProperty(key, std::get<std::string>(coerced));
+        if (!rejectScalarForPrimitiveCollection(getProperty(object, key), key)) {
+            object->setStringProperty(key, std::get<std::string>(coerced));
+        }
     } else if (std::holds_alternative<int>(coerced)) {
         setNumericProperty(object, key, std::get<int>(coerced));
     } else if (std::holds_alternative<bool>(coerced)) {
