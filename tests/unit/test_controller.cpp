@@ -923,14 +923,16 @@ void test_monster_fight_controller_ranks_interactions_by_weakening() {
 
 // Builds a full-health monster with plenty of mana and wires the type system so its
 // interactions can be cast. Returns the monster; the caller supplies its actions.
-std::shared_ptr<CCreature> self_target_fixture_monster(const std::shared_ptr<CGame> &game, int hp) {
+std::shared_ptr<CCreature> self_target_fixture_monster(const std::shared_ptr<CGame> &game, bool hurt) {
     register_effect_and_interaction(game);
     auto monster = creature_at(0, 0, 0);
     monster->setGame(game);
-    monster->getBaseStats()->setStamina(10); // hpMax = 70
+    monster->getBaseStats()->setStamina(10);
     monster->getBaseStats()->setDmgMax(10);
     monster->getBaseStats()->setIntelligence(100);
-    monster->setHp(hp);
+    // Set HP relative to the creature's own getHpMax() so the hurt/healthy split does not depend on
+    // the exact hpMax formula: a hurt caster sits at 1 HP (ratio well under 75), a healthy one at full.
+    monster->setHp(hurt ? 1 : monster->getHpMax());
     monster->setMana(60);
     return monster;
 }
@@ -944,7 +946,7 @@ std::shared_ptr<CCreature> self_target_fixture_opponent(const std::shared_ptr<CG
 
 void test_monster_fight_controller_applies_missing_self_buff() {
     auto game = fight_fixture_game();
-    auto monster = self_target_fixture_monster(game, 70); // full health: no heal/mana detours
+    auto monster = self_target_fixture_monster(game, false); // full health: no heal/mana detours
     auto opponent = self_target_fixture_opponent(game);
 
     // Affordable self-target buff (Buff-tagged effect routes to the caster) and an
@@ -969,7 +971,7 @@ void test_monster_fight_controller_applies_missing_self_buff() {
 
 void test_monster_fight_controller_skips_duplicate_self_buff() {
     auto game = fight_fixture_game();
-    auto monster = self_target_fixture_monster(game, 70);
+    auto monster = self_target_fixture_monster(game, false);
     auto opponent = self_target_fixture_opponent(game);
 
     // The caster already carries an equivalent buff (same name/identity), so recasting it
@@ -995,7 +997,7 @@ void test_monster_fight_controller_heals_self_only_when_hurt() {
     // Hurt caster (hp 30 of 70 -> ratio ~42 < 75): the self-target heal is worth the turn.
     {
         auto game = fight_fixture_game();
-        auto monster = self_target_fixture_monster(game, 30);
+        auto monster = self_target_fixture_monster(game, true);
         auto opponent = self_target_fixture_opponent(game);
 
         // Heal effect is not Buff-tagged, so selfTarget must be set for it to route to the caster.
@@ -1016,7 +1018,7 @@ void test_monster_fight_controller_heals_self_only_when_hurt() {
     // Healthy caster (full hp -> ratio 100): the heal is not useful, so offense is chosen.
     {
         auto game = fight_fixture_game();
-        auto monster = self_target_fixture_monster(game, 70);
+        auto monster = self_target_fixture_monster(game, false);
         auto opponent = self_target_fixture_opponent(game);
 
         auto selfHeal = caster_interaction(game, 10, named_self_effect(game, "mend", CTag::Heal));
