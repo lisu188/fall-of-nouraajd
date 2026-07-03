@@ -2225,6 +2225,53 @@ void test_character_panel_sheet_lines_build_without_rendering_and_fail_closed() 
                 "character sheet builder should return no rows for a missing player");
 }
 
+void test_character_panel_sheet_lines_render_race_and_class_labels() {
+    auto panel = std::make_shared<CGameCharacterPanel>();
+    auto charSheet = std::make_shared<CMapStringString>();
+    charSheet->setValues({{"Gold", "getGold"}});
+    panel->setCharSheet(charSheet);
+
+    auto player = std::make_shared<CPlayer>();
+    player->setBaseStats(player_stats());
+    player->setGold(50);
+    player->setTypeId("Harpy");
+    player->setLabel("Harpy Windcaller");
+
+    // The builder appends the archetype race / class identity rows after the
+    // configured rows, resolving them from the human-readable *Label accessors
+    // without any GUI/SDL rendering.
+    const auto lines = panel->buildCharacterSheetLines(player);
+    auto find_row = [&](const std::string &label) -> std::string {
+        for (const auto &[key, value] : lines) {
+            if (key == label) {
+                return value;
+            }
+        }
+        return "";
+    };
+    expect_true(lines.size() == 3, "builder should append the Race and Class rows after the configured rows");
+    expect_true(!lines.empty() && lines.front().first == "Gold",
+                "configured rows should still precede the appended identity rows");
+    expect_true(find_row("Race") == "Harpy Windcaller",
+                "character sheet builder should render the archetype race label");
+    expect_true(find_row("Class") == "Harpy Windcaller",
+                "character sheet builder should render the archetype class label");
+
+    // Fail-closed: with no label / type id / name the identity labels resolve
+    // empty and are skipped rather than emitting blank Race / Class rows.
+    auto anonymous = std::make_shared<CPlayer>();
+    anonymous->setBaseStats(player_stats());
+    anonymous->setGold(0);
+    const auto anonymousLines = panel->buildCharacterSheetLines(anonymous);
+    bool hasIdentityRow = false;
+    for (const auto &[key, value] : anonymousLines) {
+        if (key == "Race" || key == "Class") {
+            hasIdentityRow = true;
+        }
+    }
+    expect_true(!hasIdentityRow, "character sheet builder should skip empty race / class labels fail-closed");
+}
+
 } // namespace
 
 int main() {
@@ -2234,6 +2281,7 @@ int main() {
     test_widget_ignores_unarmed_non_left_clicks();
     test_widget_reflective_callbacks_fail_closed_on_bad_config();
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
+    test_character_panel_sheet_lines_render_race_and_class_labels();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();
