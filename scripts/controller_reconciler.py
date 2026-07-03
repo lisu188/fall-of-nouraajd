@@ -21,18 +21,18 @@ conflicting evidence rather than guessing a write.
 Evidence schema (all fields optional unless noted; extra keys are ignored)::
 
     {
-      "issueName": "[EPIC_..]..",          # required
-      "owner": "controller/ctrl-x/subagent-1",
-      "claimId": "abc-123",                # required for any write transition
-      "queue": { "status": "IN_PROGRESS", "owner": "...", "claimId": "...",
-                 "issueName": "...", "stale": false },
-      "implementationPr": { "number": 12, "claimId": "...", "issueName": "...",
-                 "owner": "...", "headSha": "...", "branch": "...",
-                 "merged": false, "mergeableState": "clean",
-                 "statusCheckRollup": [ ... ] },   # normalized by pr_review_audit
-      "terminalPr": { "number": 13, "claimId": "...", "merged": false },
-      "worktreeReady": true,               # local evidence (subagent registry)
-      "workerRunning": true
+        "issueName": "[EPIC_..]..",          # required
+        "owner": "controller/ctrl-x/subagent-1",
+        "claimId": "abc-123",                # required for any write transition
+        "queue": { "status": "IN_PROGRESS", "owner": "...", "claimId": "...",
+            "issueName": "...", "stale": false },
+        "implementationPr": { "number": 12, "claimId": "...", "issueName": "...",
+            "owner": "...", "headSha": "...", "branch": "...",
+            "merged": false, "mergeableState": "clean",
+            "statusCheckRollup": [ ... ] },   # normalized by pr_review_audit
+        "terminalPr": { "number": 13, "claimId": "...", "merged": false },
+        "worktreeReady": true,               # local evidence (subagent registry)
+        "workerRunning": true
     }
 """
 
