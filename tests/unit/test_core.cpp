@@ -928,7 +928,7 @@ void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars
     auto legacy_config = std::make_shared<json>();
     (*legacy_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
     (*legacy_config)["properties"]["listValues"]["class"] = CListString::static_meta()->name();
-    (*legacy_config)["properties"]["listValues"]["properties"]["values"] = {"north", "south"};
+    (*legacy_config)["properties"]["listValues"]["properties"]["values"] = json::array({"north", "south"});
     (*legacy_config)["properties"]["mapValues"]["class"] = CMapStringString::static_meta()->name();
     (*legacy_config)["properties"]["mapValues"]["properties"]["values"]["confirm"] = "enter";
 
@@ -945,7 +945,7 @@ void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars
     // for maps) with no class/properties envelope.
     auto flattened_config = std::make_shared<json>();
     (*flattened_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
-    (*flattened_config)["properties"]["listValues"] = {"east", "west"};
+    (*flattened_config)["properties"]["listValues"] = json::array({"east", "west"});
     (*flattened_config)["properties"]["mapValues"]["cancel"] = "escape";
 
     auto flattened = std::dynamic_pointer_cast<PrimitiveSerializationHolder>(
@@ -963,7 +963,7 @@ void test_legacy_and_flattened_primitive_wrappers_deserialize_and_reject_scalars
     auto mixed_config = std::make_shared<json>();
     (*mixed_config)["class"] = PrimitiveSerializationHolder::static_meta()->name();
     (*mixed_config)["properties"]["listValues"]["class"] = CListString::static_meta()->name();
-    (*mixed_config)["properties"]["listValues"]["properties"]["values"] = {"up", "down"};
+    (*mixed_config)["properties"]["listValues"]["properties"]["values"] = json::array({"up", "down"});
     (*mixed_config)["properties"]["mapValues"]["confirm"] = "enter";
     (*mixed_config)["properties"]["mapValues"]["inventory"] = "i";
 
