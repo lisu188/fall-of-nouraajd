@@ -78,6 +78,25 @@ class ContentValidatorTest(unittest.TestCase):
             "previously defined at layers[1].objects[0]",
         )
 
+    def test_duplicate_json_object_keys_are_flagged(self):
+        root = self.make_fixture()
+        map_path = root / "res/maps/broken/map.json"
+        # Inject a literal duplicate key. Python's json keeps the last value, but
+        # the engine's strict C++ loader rejects the whole document, so the
+        # validator must flag it. write_json cannot emit duplicates -- patch raw text.
+        text = map_path.read_text(encoding="utf-8")
+        patched = text.replace('"layers":', '"width": 24,\n  "width": 24,\n  "layers":', 1)
+        self.assertNotEqual(text, patched, "expected to inject a duplicate key")
+        map_path.write_text(patched, encoding="utf-8")
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            'duplicate JSON object key "width"',
+        )
+
     def _declare_map_assets(self, root, assets):
         map_path = root / "res/maps/broken/map.json"
         map_data = read_json(map_path)
@@ -4331,7 +4350,9 @@ class TypeRegistrationCoverageAuditTest(unittest.TestCase):
         # out passes the coverage audit and then fails at runtime when built by
         # name. iter_cpp_metadata_declarations already strips comments, so this
         # scan must too, or the two disagree.
-        self.assertEqual({"CFoo"}, iter_cpp_template_type_names("CTypes::register_type<CFoo, CBar>();", "register_type"))
+        self.assertEqual(
+            {"CFoo"}, iter_cpp_template_type_names("CTypes::register_type<CFoo, CBar>();", "register_type")
+        )
         self.assertEqual(set(), iter_cpp_template_type_names("// CTypes::register_type<CFoo>();", "register_type"))
         self.assertEqual(
             set(),
