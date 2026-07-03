@@ -833,10 +833,8 @@ void test_monster_fight_controller_heals_when_next_hit_would_kill() {
 
 std::shared_ptr<CInteraction> caster_interaction(const std::shared_ptr<CGame> &game, int manaCost,
                                                  std::shared_ptr<CEffect> effect) {
-    // Build through the object factory (like createObject in test_core/test_object) so the
-    // interaction and its effect carry the meta initialization CInteraction::onAction relies on
-    // when it clones the effect (a bare make_shared effect throws bad_any_cast on clone<CEffect>()).
-    auto interaction = game->createObject<CInteraction>("CInteraction");
+    auto interaction = std::make_shared<CInteraction>();
+    interaction->setGame(game);
     interaction->setManaCost(manaCost);
     if (effect) {
         interaction->setEffect(effect);
@@ -845,13 +843,23 @@ std::shared_ptr<CInteraction> caster_interaction(const std::shared_ptr<CGame> &g
 }
 
 std::shared_ptr<CEffect> opponent_debuff(const std::shared_ptr<CGame> &game, int duration) {
-    auto effect = game->createObject<CEffect>("CEffect");
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(game);
     effect->setDuration(duration);
     return effect;
 }
 
 void test_monster_fight_controller_ranks_interactions_by_weakening() {
     auto game = fight_fixture_game();
+    // CInteraction::onAction clones its effect through the object handler (serialize ->
+    // deserialize) when the interaction is cast. The clone only works if CInteraction and CEffect
+    // are wired into the type system for both meta serialization and class-name construction, the
+    // same way the configured-object clone coverage in test_object.cpp registers them. Without this
+    // the cast throws bad_any_cast (unregistered meta) or segfaults (unconstructable class).
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CInteraction, CGameObject>();
+    game->getObjectHandler()->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
+    game->getObjectHandler()->registerType("CInteraction", []() { return std::make_shared<CInteraction>(); });
     auto monster = creature_at(0, 0, 0);
     monster->setGame(game);
     // A single landed hit lands 10 damage; the opponent has no armor/resist.
