@@ -18,6 +18,8 @@ Before every optimization cycle, inspect the current versions from `origin/main`
 - `tests/test_issue_queue.py`
 - `scripts/workflow_observations.py`
 - `docs/codex-workflow-observations.md`
+- `scripts/worker_report.py`
+- `tests/test_worker_report.py`
 - `planning/fall_of_nouraajd_issue_proposals.xlsx`
 - `planning/workflow_observations/`
 - `.github/workflows/build.yml`
@@ -136,6 +138,7 @@ Repeat the following cycle:
      - `python3 -m unittest tests.test_controller_resource_audit`
      - `python3 -m unittest tests.test_pr_review_audit`
      - `python3 -m unittest tests.test_workflow_observations`
+     - `python3 -m unittest tests.test_worker_report`
      - `python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes`
        This is run-tree discovery evidence only; rerun without `--skip-run-tree-sizes` before relying on byte totals.
    - Collect relevant evidence such as failures, test duration, queue conflicts, stale claims, PR-state errors,
