@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import os
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -272,6 +273,29 @@ class SubagentRegistryTest(unittest.TestCase):
         self.assertIn(missing["registrationId"], findings[missing_owner]["recommendedCommand"])
         self.assertEqual(len(result["recommendations"]), 1)
         del healthy
+
+    def test_sweep_recommended_command_shell_quotes_untrusted_fields(self) -> None:
+        # A subagent registers its own branch/worktree, so those strings are
+        # untrusted. They flow into the operator-facing recommendedCommand; if it
+        # is not shell-quoted, pasting it runs $(...)/`...`/; embedded by an
+        # attacker. The command must be a single safely-quoted argv instead.
+        repo = self.init_git_repo([])
+        malicious_branch = "codex/x$(touch pwned)`id`; rm -rf ."
+        record = self.register_default(branch=malicious_branch)
+
+        finding = subagent_registry.sweepRegistry(self.registry_path, repoRoot=repo)["findings"][0]
+        command = finding["recommendedCommand"]
+
+        # shlex.split tokenizes exactly as a POSIX shell would: the untrusted
+        # branch survives only as one inert --reason argument and never splits
+        # into active words like "rm"/"-rf" or a substitution token.
+        argv = shlex.split(command)
+        self.assertEqual(argv[:3], ["python3", "scripts/subagent_registry.py", "mark"])
+        self.assertEqual(argv[argv.index("--registration-id") + 1], record["registrationId"])
+        self.assertIn(malicious_branch, argv[argv.index("--reason") + 1])
+        self.assertNotIn("rm", argv)
+        self.assertNotIn("-rf", argv)
+        self.assertNotIn("$(touch", "".join(token for token in argv if token != argv[argv.index("--reason") + 1]))
 
     def test_sweep_recommends_unreachable_for_missing_branch_or_stale_last_seen(self) -> None:
         repo = self.init_git_repo([])

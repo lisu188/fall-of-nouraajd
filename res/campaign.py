@@ -77,8 +77,23 @@ def _require(condition, message):
         raise CampaignError(message)
 
 
+# CampaignStateStore.record_outcome serializes history as
+# "<scenario_id>:<outcome>" entries joined by ",". A scenario id or outcome key
+# containing either delimiter would corrupt that string (mis-split ids/outcomes
+# or fabricate entries), so reject them at validation time.
+_HISTORY_DELIMITERS = (",", ":")
+
+
+def _reject_history_delimiters(where, label, value):
+    _require(
+        not any(delimiter in value for delimiter in _HISTORY_DELIMITERS),
+        f'{where}: {label} must not contain "," or ":" (reserved for campaign history)',
+    )
+
+
 def _validate_scenario(campaign_id, scenario_id, scenario, scenario_ids):
     where = f'campaign "{campaign_id}" scenario "{scenario_id}"'
+    _reject_history_delimiters(where, f'scenario id "{scenario_id}"', scenario_id)
     _require(isinstance(scenario, dict), f"{where}: scenario must be an object")
     for key in SCENARIO_REQUIRED_KEYS:
         _require(key in scenario, f'{where}: missing required key "{key}"')
@@ -93,6 +108,7 @@ def _validate_scenario(campaign_id, scenario_id, scenario, scenario_ids):
     _require(isinstance(routes, dict), f'{where}: "next" must be an object mapping outcome to scenario id')
     for outcome, target in routes.items():
         _require(isinstance(outcome, str) and outcome, f'{where}: outcomes in "next" must be non-empty strings')
+        _reject_history_delimiters(where, f'outcome "{outcome}"', outcome)
         _require(
             isinstance(target, str) and target in scenario_ids,
             f'{where}: "next" target for outcome "{outcome}" must name a scenario in this campaign',
@@ -147,8 +163,9 @@ def validate_manifest(data):
         isinstance(scenarios, dict) and scenarios,
         f'campaign "{campaign_id}": "scenarios" must be a non-empty object',
     )
+    start_id = data["start"]
     _require(
-        data["start"] in scenarios,
+        isinstance(start_id, str) and start_id in scenarios,
         f'campaign "{campaign_id}": "start" must name a scenario in this campaign',
     )
     for scenario_id, scenario in scenarios.items():
@@ -189,6 +206,17 @@ def list_campaigns(root=None):
 
 
 def get_manifest(campaign_id, root=None):
+    # campaign_id can come from an untrusted save file (CampaignStateStore reads
+    # it as a dynamic player property), so refuse anything but a bare directory
+    # name to keep the manifest read inside campaigns_root().
+    _require(
+        isinstance(campaign_id, str)
+        and campaign_id
+        and "/" not in campaign_id
+        and "\\" not in campaign_id
+        and campaign_id not in (".", ".."),
+        f"invalid campaign id {campaign_id!r}: must be a bare campaign directory name",
+    )
     root = campaigns_root() if root is None else Path(root)
     manifest_path = root / campaign_id / CAMPAIGN_MANIFEST_NAME
     _require(manifest_path.is_file(), f'unknown campaign "{campaign_id}" (missing {manifest_path})')
