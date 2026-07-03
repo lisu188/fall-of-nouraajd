@@ -72,7 +72,10 @@
   },
   "gravewatchScribe": {
     "ref": "ScribeDesk",
-    "properties": {"animation": "images/buildings/chapel"}
+    "properties": {
+      "animation": "images/buildings/chapel",
+      "unlockHint_CAN_CRAFT_SCROLLS": "Study Gravewatch's learning stone until its drill-marks teach you the scribe's craft."
+    }
   },
   "learningStone": {
     "class": "LearningStone",

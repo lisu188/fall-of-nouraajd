@@ -20,10 +20,9 @@ from game import randint
 
 LEAVE_OPTION = "Leave"
 
-UNLOCK_HINTS = {
-    "CAN_CRAFT_SCROLLS": "Deliver Mayor Irvin's sealed letter to Father Beren.",
-    "CAN_BREW_GREATER_POTIONS": "Return the holy relic to Father Beren.",
-}
+# Shown for a locked recipe when neither the recipe's unlockHint nor the
+# station's per-map override provides text. Never expose the raw flag name.
+DEFAULT_LOCKED_HINT = "This recipe is locked."
 
 
 def _status(ok, reason=""):
@@ -38,16 +37,27 @@ def _coerce_count(value, default=1):
 
 
 def _normalize_item_entries(entries):
+    # Entries listing the same item more than once are merged into a single
+    # requirement: verification and removal both treat each entry
+    # independently, so duplicates would otherwise pass the inventory check
+    # with fewer items than the recipe actually costs.
     normalized = []
+    index_by_item = {}
     for entry in entries or []:
         if isinstance(entry, str):
-            normalized.append({"item_id": entry, "count": 1})
-            continue
-        if isinstance(entry, dict):
+            item_id, count = entry, 1
+        elif isinstance(entry, dict):
             item_id = entry.get("item") or entry.get("item_id") or entry.get("itemId") or entry.get("id")
             if not item_id:
                 continue
-            normalized.append({"item_id": item_id, "count": _coerce_count(entry.get("count", 1), 1)})
+            count = _coerce_count(entry.get("count", 1), 1)
+        else:
+            continue
+        if item_id in index_by_item:
+            normalized[index_by_item[item_id]]["count"] += count
+        else:
+            index_by_item[item_id] = len(normalized)
+            normalized.append({"item_id": item_id, "count": count})
     return normalized
 
 
@@ -185,6 +195,7 @@ class CraftingRuntime:
             "gold": gold_cost,
             "success_chance": success_chance,
             "unlock": self._normalize_unlock_requirement(recipe_id, payload),
+            "unlock_hint": str(payload.get("unlockHint", "") or "").strip(),
             "display_name": self.get_item_label(primary_output),
         }
 
@@ -257,12 +268,18 @@ class CraftingRuntime:
                 missing.append(f"{gold_cost - held_gold}g")
         return missing
 
-    def recipe_unlock_hint(self, recipe):
+    def recipe_unlock_hint(self, recipe, station=None):
         unlock_state = recipe.get("unlock", {"type": "none", "value": None})
         if unlock_state["type"] != "flag":
             return ""
-        flag_name = unlock_state["value"]
-        return UNLOCK_HINTS.get(flag_name, f"Requires {flag_name}.")
+        # A map can tailor the guidance to its own quest line by setting an
+        # "unlockHint_<FLAG>" string property on its station instance; the
+        # recipe's unlockHint from crafting.json is the map-agnostic default.
+        if station is not None:
+            override = station.getStringProperty("unlockHint_" + unlock_state["value"])
+            if override:
+                return override
+        return recipe.get("unlock_hint") or DEFAULT_LOCKED_HINT
 
     def recipe_state(self, player, recipe):
         if not self.is_unlocked(player, recipe):
@@ -271,10 +288,10 @@ class CraftingRuntime:
             return "missing"
         return "ready"
 
-    def describe_recipe_for_player(self, player, recipe):
+    def describe_recipe_for_player(self, player, recipe, station=None):
         description = self.describe_recipe(recipe)
         if not self.is_unlocked(player, recipe):
-            return f"LOCKED - {description} | Unlock: {self.recipe_unlock_hint(recipe)}"
+            return f"LOCKED - {description} | Unlock: {self.recipe_unlock_hint(recipe, station)}"
         missing = self.missing_requirements(player, recipe)
         if not missing:
             return f"READY - {description}"
@@ -297,9 +314,9 @@ class CraftingRuntime:
     def available_recipes(self, player, station_id):
         return [recipe for recipe in self.station_recipes(station_id) if self.is_unlocked(player, recipe)]
 
-    def station_options(self, player, station_id):
+    def station_options(self, player, station_id, station=None):
         recipes = self.station_recipes(station_id)
-        option_map = {self.describe_recipe_for_player(player, recipe): recipe for recipe in recipes}
+        option_map = {self.describe_recipe_for_player(player, recipe, station): recipe for recipe in recipes}
         return recipes, option_map
 
     def execute_recipe(self, game_instance, player, recipe):
@@ -318,7 +335,7 @@ def get_runtime():
     return _RUNTIME
 
 
-def _format_result_message(runtime, recipe, result, player=None):
+def _format_result_message(runtime, recipe, result, player=None, station=None):
     if result["ok"]:
         output = recipe["outputs"][0]
         label = runtime.get_item_label(output["item_id"])
@@ -328,7 +345,7 @@ def _format_result_message(runtime, recipe, result, player=None):
         return f"You crafted {label}."
     reason = result.get("reason", "")
     if reason == "locked":
-        return f"That recipe is locked. {runtime.recipe_unlock_hint(recipe)}"
+        return f"That recipe is locked. {runtime.recipe_unlock_hint(recipe, station)}"
     if reason == "failed":
         return "The reagents fizzled and nothing was created."
     if reason == "missing:gold":
@@ -360,7 +377,7 @@ def open_crafting_station(station, player):
     handler = game_instance.getGuiHandler()
     station_label = station.getStringProperty("label") or station_id
     while True:
-        recipes, option_map = runtime.station_options(player, station_id)
+        recipes, option_map = runtime.station_options(player, station_id, station)
         if not recipes:
             handler.showInfo(f"No known recipes for {station_label}.", True)
             return
@@ -371,10 +388,10 @@ def open_crafting_station(station, player):
             break
         recipe = option_map[selection]
         if not runtime.is_unlocked(player, recipe):
-            handler.showInfo(_format_result_message(runtime, recipe, _status(False, "locked"), player), True)
+            handler.showInfo(_format_result_message(runtime, recipe, _status(False, "locked"), player, station), True)
             continue
         result = runtime.execute_recipe(game_instance, player, recipe)
-        handler.showInfo(_format_result_message(runtime, recipe, result, player), True)
+        handler.showInfo(_format_result_message(runtime, recipe, result, player, station), True)
 
 
 def craft_recipe(game_instance, player, recipe_id):

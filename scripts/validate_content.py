@@ -653,6 +653,12 @@ SCRIPT_PROPERTY_HYGIENE_ALLOWLIST = (
         reason="Crafting recipes read this player compatibility flag through unlockFlag configuration.",
     ),
     ScriptPropertyHygieneAllowance(
+        path="res/maps/ninemarches/script.py",
+        owner="map",
+        name="CAN_CRAFT_SCROLLS",
+        reason="Crafting recipes read this map flag through unlockFlag configuration.",
+    ),
+    ScriptPropertyHygieneAllowance(
         path="res/maps/multilevel/script.py",
         owner="map",
         name="used_stairs_up",
@@ -2160,7 +2166,9 @@ class ContentValidator:
             if scenario_id in finished or cycle_reported:
                 return
             if scenario_id in in_progress:
-                self._issue(path, "$.scenarios", "campaign scenario graph must be acyclic (transitions are forward-only)")
+                self._issue(
+                    path, "$.scenarios", "campaign scenario graph must be acyclic (transitions are forward-only)"
+                )
                 cycle_reported = True
                 return
             in_progress.add(scenario_id)
@@ -2727,7 +2735,7 @@ class ContentValidator:
                 self._issue(
                     context.map_path,
                     "properties (player entry)",
-                    f'player entry ({entry_x}, {entry_y}) sits on self-removing StartEvent '
+                    f"player entry ({entry_x}, {entry_y}) sits on self-removing StartEvent "
                     f'"{obj.get("name", type_name)}"; offset the entry so the event survives spawn',
                 )
 
@@ -2808,9 +2816,7 @@ class ContentValidator:
                 path, f"{profile_id}.baseStatContribution", profile.get("baseStatContribution"), required=True
             )
             self._validate_string_list(path, f"{profile_id}.traits", profile.get("traits"), required=False)
-            self._validate_int_valued_map(
-                path, f"{profile_id}.resistances", profile.get("resistances"), required=False
-            )
+            self._validate_int_valued_map(path, f"{profile_id}.resistances", profile.get("resistances"), required=False)
 
     def _validate_string_list(self, path: Path, location: str, value: Any, *, required: bool) -> None:
         if value is None:
@@ -3588,20 +3594,65 @@ class ContentValidator:
                 self._issue(crafting_path, f"{recipe_name}.station", f'unknown crafting station "{station}"')
             inputs = recipe.get("inputs", [])
             if isinstance(inputs, list):
+                seen_inputs: set[str] = set()
                 for index, item in enumerate(inputs):
-                    self._validate_recipe_item(crafting_path, f"{recipe_name}.inputs[{index}]", item)
+                    item_name = self._validate_recipe_item(crafting_path, f"{recipe_name}.inputs[{index}]", item)
+                    if item_name is None:
+                        continue
+                    # The crafting runtime verifies each entry independently, so a
+                    # duplicated item id would pass the inventory check with fewer
+                    # items than the recipe costs. The runtime now merges duplicates
+                    # defensively, but content should still declare each item once.
+                    if item_name in seen_inputs:
+                        self._issue(
+                            crafting_path,
+                            f"{recipe_name}.inputs[{index}].item",
+                            f'duplicate input item "{item_name}"; declare a single entry with the combined count',
+                        )
+                    seen_inputs.add(item_name)
             output = recipe.get("output")
-            self._validate_recipe_item(crafting_path, f"{recipe_name}.output", output)
+            outputs = recipe.get("outputs")
+            if output is not None and outputs is not None:
+                self._issue(crafting_path, recipe_name, 'recipe defines both "output" and "outputs"; use one')
+            if outputs is not None and output is None:
+                if isinstance(outputs, list) and outputs:
+                    for index, item in enumerate(outputs):
+                        self._validate_recipe_item(crafting_path, f"{recipe_name}.outputs[{index}]", item)
+                else:
+                    self._issue(crafting_path, f"{recipe_name}.outputs", "expected non-empty list of recipe items")
+            else:
+                self._validate_recipe_item(crafting_path, f"{recipe_name}.output", output)
+            self._validate_recipe_scalars(crafting_path, recipe_name, recipe)
 
-    def _validate_recipe_item(self, path: Path, location: str, item: Any) -> None:
+    def _validate_recipe_scalars(self, path: Path, recipe_name: str, recipe: dict) -> None:
+        gold = recipe.get("gold", recipe.get("gold_cost"))
+        if gold is not None and (not isinstance(gold, int) or isinstance(gold, bool) or gold < 0):
+            self._issue(path, f"{recipe_name}.gold", "expected non-negative integer gold cost")
+        chance = recipe.get("successChance", recipe.get("success_chance"))
+        if chance is not None and (not isinstance(chance, int) or isinstance(chance, bool) or not 0 <= chance <= 100):
+            self._issue(path, f"{recipe_name}.successChance", "expected integer success chance in 0..100")
+        unlock_flag = recipe.get("unlockFlag")
+        if unlock_flag is not None and (not isinstance(unlock_flag, str) or not unlock_flag.strip()):
+            self._issue(path, f"{recipe_name}.unlockFlag", "expected non-empty string flag name")
+        unlock_hint = recipe.get("unlockHint")
+        if unlock_hint is not None and (not isinstance(unlock_hint, str) or not unlock_hint.strip()):
+            self._issue(path, f"{recipe_name}.unlockHint", "expected non-empty string hint text")
+
+    def _validate_recipe_item(self, path: Path, location: str, item: Any) -> str | None:
         if not isinstance(item, dict):
             self._issue(path, location, "expected recipe item object")
-            return
+            return None
+        count = item.get("count")
+        if count is not None and (not isinstance(count, int) or isinstance(count, bool) or count < 1):
+            self._issue(path, f"{location}.count", "expected positive integer count")
         item_name = item.get("item")
-        if isinstance(item_name, str) and item_name not in self.global_entries:
-            self._issue(path, f"{location}.item", f'unknown recipe item "{item_name}"')
-        elif item_name is not None and not isinstance(item_name, str):
+        if isinstance(item_name, str):
+            if item_name not in self.global_entries:
+                self._issue(path, f"{location}.item", f'unknown recipe item "{item_name}"')
+            return item_name
+        if item_name is not None:
             self._issue(path, f"{location}.item", "expected string item id")
+        return None
 
     def _crafting_station_ids(self) -> set[str]:
         station_ids: set[str] = set()
@@ -4078,7 +4129,7 @@ class ContentValidator:
             self._issue(
                 path,
                 location,
-                f'expected a {CREATURE_RACE_STATS_SCHEMA_CLASS} object node '
+                f"expected a {CREATURE_RACE_STATS_SCHEMA_CLASS} object node "
                 f'(e.g. {{"class": "{CREATURE_RACE_STATS_SCHEMA_CLASS}", "properties": {{...}}}})',
             )
             return

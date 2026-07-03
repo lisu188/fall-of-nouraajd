@@ -25,7 +25,8 @@
         ],
         "output": { "item": "TownPortalScroll", "count": 1 },
         "gold": 35,
-        "unlockFlag": "CAN_CRAFT_SCROLLS"
+        "unlockFlag": "CAN_CRAFT_SCROLLS",
+        "unlockHint": "Someone lettered must first grant you the scribe's craft."
     },
     "scribe_emergency_portal_scroll": {
         "station": "scribeDesk",
@@ -36,7 +37,8 @@
         "output": { "item": "TownPortalScroll", "count": 1 },
         "gold": 20,
         "successChance": 85,
-        "unlockFlag": "CAN_CRAFT_SCROLLS"
+        "unlockFlag": "CAN_CRAFT_SCROLLS",
+        "unlockHint": "Someone lettered must first grant you the scribe's craft."
     },
     "blend_greater_life_potion": {
         "station": "alchemyTable",
@@ -46,7 +48,8 @@
         "output": { "item": "GreaterLifePotion", "count": 1 },
         "gold": 45,
         "successChance": 90,
-        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS",
+        "unlockHint": "A master alchemist must first teach you greater brewing."
     },
     "blend_greater_mana_potion": {
         "station": "alchemyTable",
@@ -56,7 +59,8 @@
         "output": { "item": "GreaterManaPotion", "count": 1 },
         "gold": 45,
         "successChance": 90,
-        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS",
+        "unlockHint": "A master alchemist must first teach you greater brewing."
     },
     "brew_full_life_potion": {
         "station": "alchemyTable",
@@ -66,7 +70,8 @@
         "output": { "item": "FullLifePotion", "count": 1 },
         "gold": 90,
         "successChance": 85,
-        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS",
+        "unlockHint": "A master alchemist must first teach you greater brewing."
     },
     "brew_full_mana_potion": {
         "station": "alchemyTable",
@@ -76,6 +81,7 @@
         "output": { "item": "FullManaPotion", "count": 1 },
         "gold": 90,
         "successChance": 85,
-        "unlockFlag": "CAN_BREW_GREATER_POTIONS"
+        "unlockFlag": "CAN_BREW_GREATER_POTIONS",
+        "unlockHint": "A master alchemist must first teach you greater brewing."
     }
 }
