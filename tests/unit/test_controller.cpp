@@ -865,12 +865,18 @@ void test_monster_fight_controller_ranks_interactions_by_weakening() {
     opponent->setGame(game);
     opponent->getBaseStats()->setStamina(10);
 
+    // Distinct names keep the three apart in the effective interaction set, which
+    // dedupes by typeId then name: bare interactions share the empty-name key and
+    // would collapse to one (real config-backed interactions carry distinct typeIds).
     // Weak but expensive: no lingering effect, so its weakening value is just the hit.
     auto weakPricey = caster_interaction(game, 50, nullptr);
+    weakPricey->setName("weakPricey");
     // Strong but cheap: a 3-turn opponent debuff makes it the most weakening cast.
     auto strongCheap = caster_interaction(game, 10, opponent_debuff(game, 3));
+    strongCheap->setName("strongCheap");
     // Strongest on paper (5-turn debuff) but unaffordable, so it must be skipped.
     auto strongestUnaffordable = caster_interaction(game, 100, opponent_debuff(game, 5));
+    strongestUnaffordable->setName("strongestUnaffordable");
     monster->addAction(weakPricey);
     monster->addAction(strongCheap);
     monster->addAction(strongestUnaffordable);
