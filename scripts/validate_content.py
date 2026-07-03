@@ -2768,6 +2768,7 @@ class ContentValidator:
             self._issue(context.map_path, "assets", "expected array")
             return
         seen_paths: set[str] = set()
+        declared_keys: set[str] = set()
         for index, entry in enumerate(assets):
             location = f"assets[{index}]"
             if not isinstance(entry, dict):
@@ -2797,6 +2798,8 @@ class ContentValidator:
                 )
                 continue
             self._validate_map_asset_target(context, location, path_value, kind)
+            declared_keys.update(self._map_asset_reference_keys(path_value, kind))
+        self._validate_map_asset_references(context, declared_keys)
 
     def _validate_profile_configs(self) -> None:
         for path, data in self.global_files.items():
@@ -2904,6 +2907,121 @@ class ContentValidator:
                     f"{location}.path",
                     f"declared animation root resolves to neither a directory nor a '<path>.png' file: {path_value}",
                 )
+
+    @staticmethod
+    def _map_asset_reference_keys(path_value: str, kind: str) -> set[str]:
+        """Normalized reference keys under which a declared asset can be referenced.
+
+        Animation/background fields reference an asset by its map-relative path *without* the
+        ``.png`` extension the engine appends when resolving a ``<path>.png`` sprite, so a declared
+        ``file``/``animationRoot`` that points at a PNG must also be matchable by its extension-less
+        form. Directories are referenced verbatim. ``logicalId`` entries are logical handles, not
+        filesystem paths, so they never satisfy a map-local reference and are excluded here.
+        """
+        keys: set[str] = set()
+        if kind == "logicalId":
+            return keys
+        normalized = path_value.rstrip("/")
+        keys.add(normalized)
+        if kind in ("file", "animationRoot") and normalized.endswith(".png"):
+            keys.add(normalized[: -len(".png")])
+        if kind == "animationRoot":
+            keys.add(f"{normalized}.png")
+        return keys
+
+    @staticmethod
+    def _map_asset_path_exists(base: Path, value: str) -> bool:
+        """True when ``value`` resolves under ``base`` as a directory, a file, or a ``<value>.png`` sprite."""
+        target = base / value
+        if target.is_dir() or target.is_file():
+            return True
+        return (base / f"{value}.png").is_file()
+
+    def _iter_map_asset_reference_sites(self, context: MapContext) -> list[tuple[Path, str, str]]:
+        """Collect ``(path, location, value)`` for every animation/background reference owned by a map.
+
+        Reference sites are the map's own object layers (``map.json`` object ``properties.animation`` /
+        ``properties.background``), the map-level ``properties.background``, and the map's local config
+        entries (per-map ``config.json``/``dialog*.json`` ``properties.animation`` / ``properties.background``).
+        Only literal strings authored inside the map directory are collected; values inherited from
+        global templates via ``ref`` are not (they live outside the map and are packaged globally).
+        """
+        sites: list[tuple[Path, str, str]] = []
+        reference_fields = ("animation", "background")
+        data = context.map_data
+        if isinstance(data, dict):
+            map_props = data.get("properties")
+            if isinstance(map_props, dict):
+                background = map_props.get("background")
+                if isinstance(background, str) and background:
+                    sites.append((context.map_path, "properties.background", background))
+            layers = data.get("layers")
+            if isinstance(layers, list):
+                for layer_index, layer in enumerate(layers):
+                    if not isinstance(layer, dict) or layer.get("type") != "objectgroup":
+                        continue
+                    objects = layer.get("objects")
+                    if not isinstance(objects, list):
+                        continue
+                    for object_index, obj in enumerate(objects):
+                        if not isinstance(obj, dict):
+                            continue
+                        props = obj.get("properties")
+                        if not isinstance(props, dict):
+                            continue
+                        base = f"layers[{layer_index}].objects[{object_index}].properties"
+                        for field in reference_fields:
+                            value = props.get(field)
+                            if isinstance(value, str) and value:
+                                sites.append((context.map_path, f"{base}.{field}", value))
+        for key, entry in context.config_entries.items():
+            entry_data = entry.data
+            if not isinstance(entry_data, dict):
+                continue
+            props = entry_data.get("properties")
+            if not isinstance(props, dict):
+                continue
+            for field in reference_fields:
+                value = props.get(field)
+                if isinstance(value, str) and value:
+                    sites.append((entry.path, f"{key}.properties.{field}", value))
+        return sites
+
+    def _validate_map_asset_references(self, context: MapContext, declared_keys: set[str]) -> None:
+        """Ensure every map-local animation/background reference is a declared (hence staged) asset.
+
+        Runs only for maps that declare an ``assets`` array. A reference is treated as *map-local*
+        when it resolves under the map directory *and* is not already satisfied by a global asset
+        under ``res/`` (global animations/backgrounds are packaged independently and must stay valid).
+        A map-local reference with no matching declared asset would not be staged into the build, so
+        it is flagged. This deliberately never fires for the existing maps: they declare no ``assets``
+        (so this method returns immediately) and reference only global ``images/...`` assets.
+        """
+        if not declared_keys and not self._map_declares_assets(context):
+            return
+        res_root = self.repo_root / "res"
+        for path, location, value in self._iter_map_asset_reference_sites(context):
+            normalized = value.strip().rstrip("/")
+            if not normalized or not is_safe_map_relative_path(normalized):
+                continue
+            if self._map_asset_path_exists(res_root, normalized):
+                # Satisfied by a global asset; packaged independently of the map, so it is fine.
+                continue
+            if not self._map_asset_path_exists(context.directory, normalized):
+                # Neither global nor map-local: an unrelated/unresolved reference other checks own.
+                continue
+            if normalized not in declared_keys:
+                self._issue(
+                    path,
+                    location,
+                    f"references map-local asset '{value}' that is not declared in the map's 'assets' array; "
+                    "declare it (kind file/directory/animationRoot) so it is validated and staged into the build",
+                )
+
+    @staticmethod
+    def _map_declares_assets(context: MapContext) -> bool:
+        data = context.map_data
+        return isinstance(data, dict) and isinstance(data.get("assets"), list)
 
     def _validate_tile_layer(
         self,

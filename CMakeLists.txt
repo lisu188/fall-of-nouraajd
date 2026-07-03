@@ -280,6 +280,73 @@ configure_file(res/config/weapons.json config/weapons.json)
 configure_file(res/config/artifact_sets.json config/artifact_sets.json)
 configure_file(res/config/graphics.json config/graphics.json)
 
+# Stage a map's DECLARED map-local assets (from its map.json "assets" array) into the build tree,
+# alongside the explicit per-file configure_file() lines below. Most maps declare no "assets" at all,
+# so this is a no-op for them today; it becomes active only when a map declares map-local assets.
+# It is intentionally defensive: a missing map.json, a missing/malformed "assets" array, or an
+# unreadable entry is logged via message(STATUS ...) and skipped -- never a fatal error, because a
+# broken configure fails all of CI. string(JSON ...) requires CMake >= 3.19 (we require >= 3.20).
+function(stage_map_declared_assets map_name)
+    set(_map_dir "res/maps/${map_name}")
+    set(_map_json "${CMAKE_CURRENT_SOURCE_DIR}/${_map_dir}/map.json")
+    if (NOT EXISTS "${_map_json}")
+        return()
+    endif ()
+    if (CMAKE_VERSION VERSION_LESS 3.19)
+        message(STATUS "stage_map_declared_assets: CMake < 3.19 lacks string(JSON); skipping ${map_name}")
+        return()
+    endif ()
+    file(READ "${_map_json}" _map_contents)
+    string(JSON _assets_type ERROR_VARIABLE _assets_type_err TYPE "${_map_contents}" assets)
+    if (_assets_type_err OR NOT _assets_type STREQUAL "ARRAY")
+        # No "assets" array (the common case) or a malformed one: nothing to stage.
+        return()
+    endif ()
+    string(JSON _assets_len ERROR_VARIABLE _assets_len_err LENGTH "${_map_contents}" assets)
+    if (_assets_len_err OR _assets_len EQUAL 0)
+        return()
+    endif ()
+    math(EXPR _assets_last "${_assets_len} - 1")
+    foreach (_i RANGE ${_assets_last})
+        string(JSON _asset_path ERROR_VARIABLE _path_err GET "${_map_contents}" assets ${_i} path)
+        if (_path_err OR _asset_path STREQUAL "")
+            message(STATUS "stage_map_declared_assets: ${map_name} assets[${_i}] has no readable 'path'; skipping")
+            continue ()
+        endif ()
+        string(JSON _asset_kind ERROR_VARIABLE _kind_err GET "${_map_contents}" assets ${_i} kind)
+        if (_kind_err)
+            set(_asset_kind "")
+        endif ()
+        set(_src "${CMAKE_CURRENT_SOURCE_DIR}/${_map_dir}/${_asset_path}")
+        set(_rel_src "${_map_dir}/${_asset_path}")
+        set(_rel_dst "maps/${map_name}/${_asset_path}")
+        if (_asset_kind STREQUAL "logicalId")
+            # Logical handle, not a filesystem path: nothing to copy.
+            continue ()
+        elseif (_asset_kind STREQUAL "directory")
+            if (IS_DIRECTORY "${_src}")
+                get_filename_component(_dst_parent "${_rel_dst}" DIRECTORY)
+                file(COPY "${_src}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/${_dst_parent}")
+            else ()
+                message(STATUS "stage_map_declared_assets: ${map_name} directory asset '${_asset_path}' missing; skipping")
+            endif ()
+        else ()
+            # file / animationRoot / unspecified: stage the concrete file if present, otherwise the
+            # "<path>.png" sprite an animationRoot resolves to, otherwise the directory form.
+            if (EXISTS "${_src}" AND NOT IS_DIRECTORY "${_src}")
+                configure_file("${_rel_src}" "${_rel_dst}" COPYONLY)
+            elseif (EXISTS "${_src}.png")
+                configure_file("${_rel_src}.png" "${_rel_dst}.png" COPYONLY)
+            elseif (IS_DIRECTORY "${_src}")
+                get_filename_component(_dst_parent "${_rel_dst}" DIRECTORY)
+                file(COPY "${_src}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/${_dst_parent}")
+            else ()
+                message(STATUS "stage_map_declared_assets: ${map_name} asset '${_asset_path}' (kind '${_asset_kind}') not found; skipping")
+            endif ()
+        endif ()
+    endforeach ()
+endfunction()
+
 configure_file(res/maps/nouraajd/config.json maps/nouraajd/config.json)
 configure_file(res/maps/nouraajd/dialog.json maps/nouraajd/dialog.json)
 configure_file(res/maps/nouraajd/dialog2.json maps/nouraajd/dialog2.json)
@@ -354,6 +421,16 @@ configure_file(res/maps/usurpergate/config.json maps/usurpergate/config.json)
 configure_file(res/maps/usurpergate/dialog.json maps/usurpergate/dialog.json)
 configure_file(res/maps/usurpergate/map.json maps/usurpergate/map.json)
 configure_file(res/maps/usurpergate/script.py maps/usurpergate/script.py)
+
+# Stage every map's declared map-local assets (see stage_map_declared_assets above). This is a
+# no-op for every map today because none declare an "assets" array; it activates automatically the
+# moment a map adds one.
+set(GAME_STAGED_MAPS
+    nouraajd siege ritual vhulmarn kadath ninemarches sunderedmarch gravemoor
+    hearthfall usurpergate test multilevel)
+foreach (_staged_map ${GAME_STAGED_MAPS})
+    stage_map_declared_assets(${_staged_map})
+endforeach ()
 
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
