@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CSaveFormat.h"
+#include "handler/CObjectHandler.h"
+#include "object/CItem.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
@@ -325,6 +327,110 @@ void test_resource_plugin_trust_boundary_rejects_escapes() {
                 "an in-root plugin path under plugins/ must be trusted by the boundary");
 }
 
+void test_two_game_contexts_isolate_provider_cache_and_object_config() {
+    // Two independent game sessions. SUBSTORY_01/02/03 moved the resources/configuration providers
+    // onto CGameContext, so each game must resolve content through its OWN provider and cache rather
+    // than through the process-wide compatibility singletons.
+    auto firstGame = CGameLoader::loadGame();
+    auto secondGame = CGameLoader::loadGame();
+
+    auto firstResources = firstGame->getResourcesProvider();
+    auto secondResources = secondGame->getResourcesProvider();
+    expect_true(firstResources && secondResources, "both game contexts should expose resources providers");
+    expect_true(firstResources != secondResources,
+                "each game context should own a distinct resources provider instance");
+    expect_true(firstResources != CResourcesProvider::getInstance(),
+                "context-owned resources providers must not be the process-wide singleton");
+    expect_true(secondResources != CResourcesProvider::getInstance(),
+                "context-owned resources providers must not be the process-wide singleton");
+
+    auto firstConfiguration = firstGame->getConfigurationProvider();
+    auto secondConfiguration = secondGame->getConfigurationProvider();
+    expect_true(firstConfiguration != secondConfiguration,
+                "each game context should own a distinct configuration provider instance");
+
+    // Register the SAME logical config id with DIFFERENT temp-file content, one value per game. The
+    // fixture lives directly under config/ so getConfiguration routes it through CConfigResourceLoader.
+    const auto itemsPath = std::filesystem::path(firstResources->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before game-scoped provider isolation test");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto logicalConfigName = "unit_game_scoped_provider_" + std::to_string(nonce) + ".json";
+    const auto tempConfigPath = itemsPath.parent_path() / logicalConfigName;
+    std::filesystem::remove(tempConfigPath);
+
+    expect_true(write_text_file(tempConfigPath, R"({"marker":"first"})"),
+                "game-scoped provider isolation fixture should be written");
+    if (!std::filesystem::exists(tempConfigPath)) {
+        return;
+    }
+
+    auto firstConfig = firstConfiguration->getConfiguration(logicalConfigName);
+    expect_true(json_string_value(firstConfig, "marker") == "first",
+                "the first game provider should cache the initial temp config content");
+
+    // Rewrite the fixture: only the game whose provider already cached it keeps the original value, so
+    // each assertion pins down exactly which game-scoped cache served the request.
+    expect_true(write_text_file(tempConfigPath, R"({"marker":"second"})"),
+                "game-scoped provider isolation fixture should be rewritable");
+
+    auto secondConfig = secondConfiguration->getConfiguration(logicalConfigName);
+    auto firstConfigAgain = firstConfiguration->getConfiguration(logicalConfigName);
+    expect_true(firstConfigAgain == firstConfig, "a game provider should return its own cached config entry");
+    expect_true(json_string_value(firstConfigAgain, "marker") == "first",
+                "the first game provider should keep its own cached value after the file changes");
+    expect_true(json_string_value(secondConfig, "marker") == "second",
+                "the second game provider should load its own fresh value from the temp file");
+    expect_true(secondConfig != firstConfig, "separate game providers must not share configuration cache entries");
+
+    // The process-wide compatibility singleton must not have been populated by either game session:
+    // asking it now reads the current on-disk value ("second"), never the first game's cached "first".
+    auto singletonConfig = CConfigurationProvider::getConfig(logicalConfigName);
+    expect_true(json_string_value(singletonConfig, "marker") == "second",
+                "the process-wide configuration singleton must load independently of the game caches");
+    expect_true(singletonConfig != firstConfig,
+                "game providers must not populate the process-wide configuration singleton");
+
+    std::filesystem::remove(tempConfigPath);
+
+    // Object-construction path: register the SAME logical object id in each game's own object handler
+    // with a DIFFERENT value, then build it from each game and assert each resolves its own config.
+    const auto objectTypeId = "unit_game_scoped_item_" + std::to_string(nonce);
+    auto firstItemConfig = std::make_shared<json>();
+    (*firstItemConfig)["class"] = "CItem";
+    (*firstItemConfig)["properties"]["power"] = 11;
+    firstGame->getObjectHandler()->registerConfig(objectTypeId, firstItemConfig);
+
+    auto secondItemConfig = std::make_shared<json>();
+    (*secondItemConfig)["class"] = "CItem";
+    (*secondItemConfig)["properties"]["power"] = 22;
+    secondGame->getObjectHandler()->registerConfig(objectTypeId, secondItemConfig);
+
+    expect_true(firstGame->getObjectHandler() != secondGame->getObjectHandler(),
+                "each game context should own a distinct object handler instance");
+    expect_true(firstGame->getObjectHandler()->getConfig(objectTypeId) == firstItemConfig,
+                "the first game object handler should return only its own registered config");
+    expect_true(secondGame->getObjectHandler()->getConfig(objectTypeId) == secondItemConfig,
+                "the second game object handler should return only its own registered config");
+
+    auto firstItem = firstGame->createObject<CItem>(objectTypeId);
+    auto secondItem = secondGame->createObject<CItem>(objectTypeId);
+    expect_true(firstItem && secondItem, "both games should build the configured object through their own handler");
+    expect_true(firstItem && firstItem->getPower() == 11,
+                "the first game should build the object from its own game-scoped config");
+    expect_true(secondItem && secondItem->getPower() == 22,
+                "the second game should build the object from its own game-scoped config");
+
+    // Unsafe-path rejection is unchanged for context-owned providers.
+    expect_true(firstResources->getPath("").empty(), "context-owned providers must reject empty resource paths");
+    expect_true(firstResources->getPath("../config/items.json").empty(),
+                "context-owned providers must reject parent-traversal resource paths");
+    expect_true(firstResources->getPath("/etc/passwd").empty(),
+                "context-owned providers must reject absolute resource paths");
+}
+
 } // namespace
 
 int main() {
@@ -335,6 +441,7 @@ int main() {
     test_configuration_provider_instances_do_not_share_config_cache();
     test_load_game_creates_context_owned_providers();
     test_map_load_resolves_through_context_owned_providers();
+    test_two_game_contexts_isolate_provider_cache_and_object_config();
     test_resource_plugin_trust_boundary_rejects_escapes();
 
     return finish_tests();
