@@ -97,7 +97,7 @@ class CMonsterFightController : public CFightController {
     bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override;
 
   private:
-    std::shared_ptr<CInteraction> selectInteraction(std::shared_ptr<CCreature> cr);
+    std::shared_ptr<CInteraction> selectInteraction(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent);
 
     std::shared_ptr<CItem> getLeastPowerfulItemWithTag(std::shared_ptr<CCreature> cr, CTag tag);
 };
