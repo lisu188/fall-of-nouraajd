@@ -28,21 +28,16 @@
         }
       ],
       "charSheet": {
-        "class": "CMapStringString",
-        "properties": {
-          "values": {
-            "Class": "getPlayerClassId",
-            "Race": "getRaceId",
-            "Level": "getLevel",
-            "Experience": "getExp",
-            "Gold": "getGold",
-            "Mana": "getMana",
-            "Total Mana": "getManaMax",
-            "Mana Regeneration Rate": "getManaRegRate",
-            "Health Points": "getHp",
-            "Total Health Points": "getHpMax"
-          }
-        }
+        "Class": "getPlayerClassId",
+        "Race": "getRaceId",
+        "Level": "getLevel",
+        "Experience": "getExp",
+        "Gold": "getGold",
+        "Mana": "getMana",
+        "Total Mana": "getManaMax",
+        "Mana Regeneration Rate": "getManaRegRate",
+        "Health Points": "getHp",
+        "Total Health Points": "getHpMax"
       },
       "layout": {
         "class": "CCenteredLayout",
