@@ -30,6 +30,7 @@ from scripts.validate_content import (
     ScriptPropertyHygieneAllowance,
     classify_creature_templates,
     inventory_creature_overrides,
+    iter_cpp_template_type_names,
     report_legacy_class_checks,
     report_unmigrated_creatures,
     tile_types_by_id,
@@ -4234,6 +4235,22 @@ class TypeRegistrationCoverageAuditTest(unittest.TestCase):
         validator._validate_type_registration_coverage()
         self.assertFalse([issue for issue in validator.issues if "CItem" in issue.message])
         self.assertFalse([issue for issue in validator.issues if '"CCustomTrigger"' in issue.message])
+
+    def test_commented_registration_is_not_counted_as_registration(self):
+        # A commented-out (runtime-disabled) registration must NOT be treated as a
+        # live one; otherwise a reflected type whose only registration is commented
+        # out passes the coverage audit and then fails at runtime when built by
+        # name. iter_cpp_metadata_declarations already strips comments, so this
+        # scan must too, or the two disagree.
+        self.assertEqual({"CFoo"}, iter_cpp_template_type_names("CTypes::register_type<CFoo, CBar>();", "register_type"))
+        self.assertEqual(set(), iter_cpp_template_type_names("// CTypes::register_type<CFoo>();", "register_type"))
+        self.assertEqual(
+            set(),
+            iter_cpp_template_type_names("/* CTypes::register_type<CFoo, CBar>(); */", "register_type"),
+        )
+        # A live registration next to a commented one still resolves to the live type only.
+        mixed = "CTypes::register_type<CLive, CBase>();\n// CTypes::register_type<CDisabled, CBase>();\n"
+        self.assertEqual({"CLive"}, iter_cpp_template_type_names(mixed, "register_type"))
 
 
 if __name__ == "__main__":
