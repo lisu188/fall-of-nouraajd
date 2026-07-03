@@ -20,6 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGamePanel.h"
 #include "core/CList.h"
 
+#include <string>
+#include <utility>
+#include <vector>
+
+class CPlayer;
+
 class CGameCharacterPanel : public CGamePanel {
     V_META(CGameCharacterPanel, CGamePanel,
            V_PROPERTY(CGameCharacterPanel, std::shared_ptr<CMapStringString>, charSheet, getCharSheet, setCharSheet),
@@ -28,6 +34,13 @@ class CGameCharacterPanel : public CGamePanel {
     void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
   public:
+    // Render-free text assembly for the character sheet: resolves the configured
+    // charSheet accessors against the player and returns the ordered label/value
+    // rows renderObject draws. Kept separate from rendering so the panel text is
+    // unit-testable without SDL and so later identity rows (race / class labels)
+    // can extend the row list in one place.
+    std::vector<std::pair<std::string, std::string>> buildCharacterSheetLines(const std::shared_ptr<CPlayer> &player);
+
     std::shared_ptr<CMapStringString> getCharSheet();
 
     void setCharSheet(std::shared_ptr<CMapStringString> charSheet);

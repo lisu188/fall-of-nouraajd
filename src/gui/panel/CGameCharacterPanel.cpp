@@ -19,12 +19,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJsonUtil.h"
 #include "core/CMap.h"
 #include "gui/CTextManager.h"
+#include "object/CPlayer.h"
 
 #include <exception>
 
-void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    std::string text;
-    std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+std::vector<std::pair<std::string, std::string>>
+CGameCharacterPanel::buildCharacterSheetLines(const std::shared_ptr<CPlayer> &player) {
+    std::vector<std::pair<std::string, std::string>> lines;
+    if (!charSheet) {
+        return lines;
+    }
     for (auto [key, value] : charSheet->getValues()) {
         if (value.empty() || !player) {
             continue;
@@ -34,14 +38,23 @@ void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_pt
         // shown directly; string accessors (e.g. class / race identity) fall back to a
         // string invocation so they render as their text value rather than being skipped.
         try {
-            text += key + ": " + vstd::str(player->meta()->invoke_method<int>(value, player)) + "\n";
+            lines.emplace_back(key, vstd::str(player->meta()->invoke_method<int>(value, player)));
         } catch (const std::exception &) {
             try {
-                text += key + ": " + player->meta()->invoke_method<std::string>(value, player) + "\n";
+                lines.emplace_back(key, player->meta()->invoke_method<std::string>(value, player));
             } catch (const std::exception &exception) {
                 vstd::logger::warning("Ignoring character sheet value callback failure:", value, exception.what());
             }
         }
+    }
+    return lines;
+}
+
+void CGameCharacterPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
+    std::string text;
+    std::shared_ptr<CPlayer> player = gui->getGame()->getMap()->getPlayer();
+    for (const auto &[label, value] : buildCharacterSheetLines(player)) {
+        text += label + ": " + value + "\n";
     }
     gui->getTextManager()->drawText(text, rect->x, rect->y, rect->w);
 }
