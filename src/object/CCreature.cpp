@@ -545,6 +545,29 @@ void CCreature::equipItem(std::string i, std::shared_ptr<CItem> newItem) {
         return;
     }
 
+    // Compound-artifact slot occupancy (docs/design/compound_artifacts.md): a combined
+    // artifact "covers" the slots of the pieces it replaces, so those slots must stay
+    // empty while it is worn. Refuse (no-op, like the cursed lock) rather than throw so
+    // the GUI equip paths degrade gracefully.
+    if (newItem) {
+        // 1. Slot i must not already be covered by another equipped compound artifact.
+        for (auto [otherSlot, otherItem] : equipped) {
+            if (otherSlot == i || !otherItem) {
+                continue;
+            }
+            if (otherItem->getCoveredSlots().contains(i)) {
+                return;
+            }
+        }
+        // 2. Every slot this item would cover must currently be free. The assembly flow
+        //    empties the piece slots before equipping the combined artifact.
+        for (const auto &covered : newItem->getCoveredSlots()) {
+            if (covered != i && vstd::ctn(equipped, covered) && equipped.at(covered)) {
+                return;
+            }
+        }
+    }
+
     if (vstd::ctn(equipped, i)) {
         std::shared_ptr<CItem> oldItem = equipped.at(i);
 

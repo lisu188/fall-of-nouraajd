@@ -1,9 +1,31 @@
 # Compound Artifacts — Heroes 3-style Artifact Sets
 
-Status: **Design-only hand-off.** No engine or content change ships with this
-document. It specifies the feature end-to-end (schema, engine enablers, plugin
-runtime, GUI, validation, tests) so implementation can proceed in phased,
-independently mergeable stories.
+Status: **Implemented.** This document is the design of record; the feature now
+ships. Highlights of what landed and where:
+
+- **Engine**: `CShield` (LeftHand) and `CPants` (Legs) item classes fill the
+  previously dead slot types (`src/object/CItem.*`, registered in
+  `src/core/CModule.cpp` + `src/plugin/NativePlugin.cpp`); a `coveredSlots`
+  (`std::set<std::string>`) reflected property on `CItem` with occupancy
+  enforcement in `CCreature::equipItem`; `onEquip`/`onUnequip` now dispatch to
+  Python overrides (`CItem.cpp`); the slot classes plus `equipItem`,
+  `getEquipped`, `getSlotWithItem`, `hasEquipped`, `getSlotConfiguration`, and
+  `getCoveredSlots` are bound to Python; a `compound` `CTag` excludes combined
+  artifacts from random loot (`CRngHandler`).
+- **Content**: `res/config/artifact_sets.json` defines two four-piece H3 sets —
+  *Armor of the Damned* (uses the new shield slot) and *Wrath of the Dragon
+  Father* (uses the new pants slot). Runtime is `res/plugins/artifact_sets.py`.
+- **Assembly UX**: equipping the last piece defers (via the event loop) a
+  `showSelection` prompt to fuse the set; disassembly is offered by using the
+  combined artifact from the inventory.
+- **Validation/tests**: `_validate_artifact_sets` in
+  `scripts/validate_content.py`, validator tests in
+  `tests/test_content_validator.py`, and gameplay tests in `test.py`.
+
+The design narrative below is preserved; where it describes options or future
+phases, the bullets above record what was actually built. The two answered open
+questions: **compound artifacts never appear in markets or random loot**
+(pieces only), and **shields and pants slots were added**.
 
 ## Goal
 

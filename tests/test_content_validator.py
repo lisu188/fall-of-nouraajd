@@ -3155,6 +3155,107 @@ class ContentValidatorTest(unittest.TestCase):
             with self.subTest(substring=substring):
                 self.assertIn(substring, issue_text)
 
+    # --- Artifact set (compound artifact) validation --------------------------------
+
+    _ARTIFACT_SLOTS = {
+        "slotConfiguration": {
+            "class": "CSlotConfig",
+            "properties": {
+                "configuration": {
+                    "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}},
+                    "1": {"class": "CSlot", "properties": {"slotName": "LeftHand", "types": ["CSmallWeapon", "CShield"]}},
+                    "2": {"class": "CSlot", "properties": {"slotName": "Head", "types": ["CHelmet"]}},
+                    "3": {"class": "CSlot", "properties": {"slotName": "Chest", "types": ["CArmor"]}},
+                    "5": {"class": "CSlot", "properties": {"slotName": "Feet", "types": ["CBoots"]}},
+                    "6": {"class": "CSlot", "properties": {"slotName": "Legs", "types": ["CPants"]}},
+                }
+            },
+        }
+    }
+
+    def _run_artifact_sets(self, sets, items):
+        """Drive _validate_artifact_sets directly with hand-built config state."""
+        from scripts.validate_content import ConfigEntry, ContentValidator
+
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        validator = ContentValidator(Path(temp_dir.name))
+        config_dir = validator.repo_root / "res" / "config"
+        validator.global_files[config_dir / "slots.json"] = self._ARTIFACT_SLOTS
+        validator.global_files[config_dir / "artifact_sets.json"] = sets
+        for item_id, data in items.items():
+            validator.global_entries[item_id] = ConfigEntry(key=item_id, data=data, path=config_dir / "items.json")
+        validator._validate_artifact_sets()
+        return [str(issue) for issue in validator.issues]
+
+    @staticmethod
+    def _valid_artifact_items():
+        return {
+            "PieceHelm": {"class": "CHelmet", "properties": {"power": 3}},
+            "PieceArmor": {"class": "CArmor", "properties": {"power": 5}},
+            "PieceBlade": {"class": "CWeapon", "properties": {"power": 4}},
+            "TheCombined": {
+                "class": "CArmor",
+                "properties": {"coveredSlots": ["0", "2"], "tags": ["compound"]},
+            },
+        }
+
+    @staticmethod
+    def _valid_artifact_set():
+        return {
+            "demoSet": {
+                "label": "Demo Set",
+                "pieces": ["PieceHelm", "PieceArmor", "PieceBlade"],
+                "combined": "TheCombined",
+            }
+        }
+
+    def test_valid_artifact_set_passes_validation(self):
+        issues = self._run_artifact_sets(self._valid_artifact_set(), self._valid_artifact_items())
+        self.assertEqual([], issues)
+
+    def test_artifact_set_unknown_piece_is_flagged(self):
+        sets = self._valid_artifact_set()
+        sets["demoSet"]["pieces"] = ["PieceHelm", "PieceArmor", "MissingPiece"]
+        issues = self._run_artifact_sets(sets, self._valid_artifact_items())
+        self.assertIssueContains(issues, "artifact_sets.json", "demoSet.pieces[2]", 'unknown piece item "MissingPiece"')
+
+    def test_artifact_set_duplicate_slot_is_flagged(self):
+        items = self._valid_artifact_items()
+        items["PieceBlade"] = {"class": "CHelmet", "properties": {}}  # second helmet -> slot clash on Head
+        issues = self._run_artifact_sets(self._valid_artifact_set(), items)
+        self.assertIssueContains(issues, "demoSet.pieces[2]", "occupies slot 2 already used by another piece")
+
+    def test_artifact_set_covered_slots_mismatch_is_flagged(self):
+        items = self._valid_artifact_items()
+        items["TheCombined"]["properties"]["coveredSlots"] = ["0"]  # missing head slot 2
+        issues = self._run_artifact_sets(self._valid_artifact_set(), items)
+        self.assertIssueContains(issues, "demoSet.combined", "coveredSlots", "must equal the non-primary piece slots")
+
+    def test_artifact_set_missing_compound_tag_is_flagged(self):
+        items = self._valid_artifact_items()
+        items["TheCombined"]["properties"]["tags"] = []
+        issues = self._run_artifact_sets(self._valid_artifact_set(), items)
+        self.assertIssueContains(issues, "demoSet.combined", 'must declare the "compound" tag')
+
+    def test_artifact_set_combined_cannot_be_a_piece(self):
+        sets = self._valid_artifact_set()
+        sets["demoSet"]["pieces"] = ["PieceHelm", "PieceArmor", "TheCombined"]
+        issues = self._run_artifact_sets(sets, self._valid_artifact_items())
+        self.assertIssueContains(issues, "demoSet.combined", "combined item cannot also be a set piece")
+
+    def test_artifact_set_shared_piece_across_sets_is_flagged(self):
+        sets = self._valid_artifact_set()
+        sets["otherSet"] = {"label": "Other", "pieces": ["PieceHelm", "PieceArmor"], "combined": "TheCombined"}
+        issues = self._run_artifact_sets(sets, self._valid_artifact_items())
+        self.assertIssueContains(issues, "already belongs to set")
+
+    def test_artifact_set_quest_piece_requires_quest_combined(self):
+        items = self._valid_artifact_items()
+        items["PieceHelm"]["properties"]["tags"] = ["quest"]
+        issues = self._run_artifact_sets(self._valid_artifact_set(), items)
+        self.assertIssueContains(issues, "demoSet.combined", 'must declare the "quest" tag')
+
     def make_fixture(self, script_quest="goodQuest", script_map="broken", class_check=None, player_templates=None):
         temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)

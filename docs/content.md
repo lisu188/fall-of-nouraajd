@@ -117,6 +117,7 @@ overloads), so typos fail loudly rather than silently doing nothing.
 | Tag      | Meaning |
 | -------- | ------- |
 | `buff`   | Effect/interaction is beneficial and self-targeted; the AI will not cast it at an enemy and skips it when picking an offensive action. |
+| `compound` | Marks a combined ("compound") artifact assembled from an artifact set. Compound items are excluded from random loot (`CRngHandler`) and are never authored into markets, so the player only ever obtains them by assembling a set (see **Artifact sets** below). |
 | `curse`  | Effect/interaction is harmful — the negative counterpart to `buff`. Non-buff effects already target the victim, so a `curse`-tagged effect lands on the enemy; the tag is a marker for content, AI targeting, and curse-cleansing/resistance mechanics. Note: this tags a harmful *effect*, distinct from `cursed`, which locks an *item* to its slot. |
 | `cursed` | Once equipped, the item is locked to its slot and cannot be unequipped or swapped out. The lock is enforced in `CCreature::equipItem` and mirrored in the inventory UI. Lift it (Baldur's Gate "remove curse") by clearing the tag — `removeTag(CTag::Cursed)` from an effect, interaction, or plugin — after which the item unequips normally. Any negative stats a cursed item imposes are ordinary content (its equipment bonuses / attached effect), not part of the tag itself. |
 | `heal`   | Consumable restores HP; monster AI will quaff it when hurt. |
@@ -128,3 +129,52 @@ overloads), so typos fail loudly rather than silently doing nothing.
 Adding a tag touches four mirrored sites: the `CTag` enum (`src/core/CTags.h`),
 the `TAG_DEFINITIONS` table (`src/core/CTags.cpp`), the pybind `CTag` binding
 (`src/core/CModule.cpp`), and this table.
+
+## Artifact sets (`res/config/artifact_sets.json`)
+
+Heroes 3-style compound artifacts. A set groups several equippable **pieces**;
+when the player has every piece equipped, the game offers to fuse them into a
+single **combined artifact** that occupies all the pieces' slots and grants a
+stronger bonus plus an active ability. The combined artifact can be
+disassembled back into its pieces by using it from the inventory. Runtime logic
+lives in `res/plugins/artifact_sets.py`; the full design is in
+`docs/design/compound_artifacts.md`.
+
+`artifact_sets.json` is a top-level JSON object keyed by a set id. Each value:
+
+| Field      | Required | Type | Description |
+| ---------- | -------- | ---- | ----------- |
+| `label`    | yes      | non-empty string | Display name used in the assemble/disassemble prompts. |
+| `pieces`   | yes      | array of ≥ 2 item ids | The set pieces. Each must resolve to a **distinct** equipment slot. |
+| `combined` | yes      | item id | The combined artifact produced by assembling the set. |
+
+Validated by `_validate_artifact_sets` in `scripts/validate_content.py`:
+
+- every `pieces` entry and the `combined` id resolve to a global item config;
+- the pieces map to pairwise-distinct slots (via the class → slot mapping in
+  `res/config/slots.json`), and each piece class fits a real slot;
+- the combined item's own class fits exactly one piece's slot (its **primary**
+  slot); its `coveredSlots` property must list exactly the *other* pieces' slot
+  ids (this is what makes assembly occupy the whole set — see `coveredSlots`
+  below);
+- the combined item declares the `compound` tag (so loot/markets never hand it
+  out directly), and inherits the `quest` tag if any piece carries it;
+- a `combined` id is never also a piece, and a piece belongs to at most one set.
+
+### Combined artifacts and `coveredSlots`
+
+A combined artifact is an ordinary item entry whose `class` is a Python subclass
+of the primary slot's class (e.g. `CompoundArmor`), registered in
+`res/plugins/artifact_sets.py`. Beyond the usual item fields it uses:
+
+- **`coveredSlots`** — a reflected `CItem` property (array of slot id strings):
+  the extra slots the artifact occupies while equipped, in addition to its
+  primary slot. `CCreature::equipItem` blocks those slots while the artifact is
+  worn and frees them when it is removed. Ordinary items omit it (empty).
+- **`tags: ["compound"]`** — required (see above).
+
+Set pieces are ordinary items re-classed to a `Set*` slot subclass (e.g.
+`SetHelmet`, `SetShield`, `SetPants`) so that equipping one triggers the
+set-completion check. `res/config/slots.json` maps every equipment slot,
+including the `CShield` (LeftHand) and `CPants` (Legs) slots used by four-piece
+sets.
