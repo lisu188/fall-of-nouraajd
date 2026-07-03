@@ -104,6 +104,10 @@ unique controller ID with `python3 scripts/issue_queue.py controller-id` and use
 workbook-only pull requests. Each claim or terminal status PR should mark exactly one issue unless the controller
 workflow explicitly permits batching and all selected issues are proven independent.
 
+The authoritative mechanical policy values -- the eight active-worker floor, the four-slot controller floor/limit, the
+heartbeat cadence, lease durations, the reclaim age, and the advisory target-file overlap policy -- live in
+`scripts/controller_policy.py`. The numbers restated below mirror that source; change a value there, not here.
+
 Keep at least eight live subagents attached to the controller whenever the subagent interface is available. Keep at least
 eight implementation issues active whenever eight status-and-dependency eligible implementation issues exist. Treat eight
 active issues as the minimum operating target, not a best-effort aspiration. Before filling any implementation slot, note current RAM,
