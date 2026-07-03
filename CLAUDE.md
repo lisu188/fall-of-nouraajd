@@ -103,9 +103,12 @@ into the matching registration file or it won't be constructible from content.
   one or more `dialog*.json`, a per-map `config.json`, and a `script.py` that
   drives quest state (declares `QUEST_KEYS`/`QUEST_DEFAULTS`, uses
   `set_state`/`state_in`/`get_state`). Maps: `nouraajd`, `ritual`, `siege`,
-  `multilevel`, `test`.
+  `multilevel`, `ninemarches`, `hearthfall`, `gravemoor`, `usurpergate`,
+  `sunderedmarch`, `kadath`, `vhulmarn`, `test`.
 - **`res/plugins/*.py`** — Python gameplay plugins (crafting, interactions,
-  effects, potions, tiles, objects) declared in `res/plugins/manifest.json`.
+  effects, potions, tiles, objects). Every `.py` in the directory is
+  auto-discovered by `CPluginLoader`; `res/plugins/manifest.json` declares
+  native/dynamic plugin entries and optional per-map plugin lists.
 - **`res/game.py`** — the Python-side facade over `_game`; wraps native trace
   helpers and quest-state integration (`quest_state.py`).
 - Content schemas are documented in `docs/content.md`; the authoritative checker

@@ -89,9 +89,13 @@ def load(self, context):
             player.addGold(120)
             player.healProc(80)
             game_map.setBoolProperty("shrine_used", True)
+            # Gravewatch's scroll-crafting unlock: the crafting plugin reads this
+            # map flag through the scribe recipes' unlockFlag configuration.
+            game_map.setBoolProperty("CAN_CRAFT_SCROLLS", True)
             game.getGuiHandler().showMessage(
                 "You study Gravewatch's learning stone until the old drill-marks settle into your hands. You feel "
-                "steadier, and 120 gold in forgotten muster-pay falls from its hollow base."
+                "steadier, and 120 gold in forgotten muster-pay falls from its hollow base. Among the drill-marks "
+                "you learn the scribe's copying-craft - Gravewatch's scribe desk will serve you now."
             )
 
     @register(context)
