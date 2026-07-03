@@ -16,8 +16,13 @@
 def load(self, context):
     from game import CTag
     from game import CEffect
-    from game import CDamage
+    from game import randint
     from game import register
+
+    # CDamage has no Python constructor binding, so build damage packets
+    # through the victim's game object factory.
+    def spell_damage(creature):
+        return creature.getGame().createObject("CDamage")
 
     def is_cultist(creature):
         affiliation = creature.getStringProperty("affiliation")
@@ -36,7 +41,7 @@ def load(self, context):
     @register(context)
     class AbyssalShadowsEffect(CEffect):
         def onEffect(self):
-            dmg = CDamage()
+            dmg = spell_damage(self.getVictim())
             if self.getTimeLeft() > 1:
                 dmg.setNumericProperty("shadow", self.getCaster().getDmg() * 45 // 100)
             else:
@@ -85,7 +90,7 @@ def load(self, context):
             base = max(1, caster.getStats().getNumericProperty("intelligence") // 3 + caster.getLevel())
             if is_cultist(victim):
                 base += 2 + clues * 2
-            damage = CDamage()
+            damage = spell_damage(self.getVictim())
             damage.setNumericProperty("fire", base)
             victim.hurt(damage)
 
@@ -108,9 +113,82 @@ def load(self, context):
         def onEffect(self):
             caster = self.getCaster()
             routes = self.getNumericProperty("wayfarer_routes")
-            damage = CDamage()
+            damage = spell_damage(self.getVictim())
             damage.setNumericProperty(
                 "normal",
                 max(1, caster.getStats().getNumericProperty("agility") // 3 + caster.getLevel() // 2 + routes),
             )
             self.getVictim().hurt(damage)
+
+    # Baldur's Gate inspired repertoire.
+
+    @register(context)
+    class MelfsAcidArrowEffect(CEffect):
+        def onEffect(self):
+            self.getVictim().hurt(2 + self.getCaster().getLevel() // 2)
+
+    @register(context)
+    class CloudkillEffect(CEffect):
+        def onEffect(self):
+            damage = spell_damage(self.getVictim())
+            damage.setNumericProperty("shadow", 3 + self.getCaster().getLevel())
+            self.getVictim().hurt(damage)
+
+    @register(context)
+    class HoldPersonEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class WebEffect(CEffect):
+        def onEffect(self):
+            agility = self.getVictim().getStats().getNumericProperty("agility")
+            if randint(1, 100) <= 35 + agility * 2:
+                self.removeTag(CTag.STUN)
+            else:
+                self.addTag(CTag.STUN)
+
+    @register(context)
+    class SlowEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class ChillTouchEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class DoomEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class HasteEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class MirrorImageEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class StoneskinEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class BlessEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class ArmorOfFaithEffect(CEffect):
+        def onEffect(self):
+            pass
+
+    @register(context)
+    class DrawUponHolyMightEffect(CEffect):
+        def onEffect(self):
+            pass

@@ -315,6 +315,21 @@ configure_file(res/maps/sunderedmarch/dialog.json maps/sunderedmarch/dialog.json
 configure_file(res/maps/sunderedmarch/map.json maps/sunderedmarch/map.json)
 configure_file(res/maps/sunderedmarch/script.py maps/sunderedmarch/script.py)
 
+configure_file(res/maps/gravemoor/config.json maps/gravemoor/config.json)
+configure_file(res/maps/gravemoor/dialog.json maps/gravemoor/dialog.json)
+configure_file(res/maps/gravemoor/map.json maps/gravemoor/map.json)
+configure_file(res/maps/gravemoor/script.py maps/gravemoor/script.py)
+
+configure_file(res/maps/hearthfall/config.json maps/hearthfall/config.json)
+configure_file(res/maps/hearthfall/dialog.json maps/hearthfall/dialog.json)
+configure_file(res/maps/hearthfall/map.json maps/hearthfall/map.json)
+configure_file(res/maps/hearthfall/script.py maps/hearthfall/script.py)
+
+configure_file(res/maps/usurpergate/config.json maps/usurpergate/config.json)
+configure_file(res/maps/usurpergate/dialog.json maps/usurpergate/dialog.json)
+configure_file(res/maps/usurpergate/map.json maps/usurpergate/map.json)
+configure_file(res/maps/usurpergate/script.py maps/usurpergate/script.py)
+
 configure_file(res/maps/test/config.json maps/test/config.json)
 configure_file(res/maps/test/map.json maps/test/map.json)
 configure_file(res/maps/test/script.py maps/test/script.py)
@@ -354,7 +369,6 @@ configure_file(res/images/interactions/stun.png images/interactions/stun.png COP
 configure_file(res/images/interactions/abyssalshadows.png images/interactions/abyssalshadows.png COPYONLY)
 
 configure_file(res/images/panel.png images/panel.png COPYONLY)
-configure_file(res/images/paper.png images/paper.png COPYONLY)
 configure_file(res/images/arrows/left.png images/arrows/left.png COPYONLY)
 configure_file(res/images/arrows/right.png images/arrows/right.png COPYONLY)
 configure_file(res/images/item.png images/item.png COPYONLY)

@@ -15,10 +15,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 def load(self, context):
     from game import CInteraction
-    from game import CDamage
-    from game import CStats
     from game import randint
     from game import register
+
+    # CDamage/CStats have no Python constructor binding, so build them through
+    # the object factory of the creature's game (the construction path the
+    # engine exposes to content code).
+    def spell_damage(creature):
+        return creature.getGame().createObject("CDamage")
+
+    def bonus_stats(creature):
+        return creature.getGame().createObject("CStats")
 
     def is_cultist(creature):
         affiliation = creature.getStringProperty("affiliation")
@@ -39,7 +46,7 @@ def load(self, context):
     @register(context)
     class ElemStaff(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("fire", 1)
             damage.setNumericProperty("frost", 1)
             damage.setNumericProperty("thunder", 1)
@@ -69,7 +76,7 @@ def load(self, context):
     @register(context)
     class ChaosBlast(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("fire", first.getMana() // 2)
             damage.setNumericProperty("thunder", first.getMana() // 2)
             second.hurt(damage)
@@ -89,7 +96,7 @@ def load(self, context):
     class FrostBolt(CInteraction):
         def performAction(self, first, second):
             Attack().onAction(first, second)
-            damage = CDamage()
+            damage = spell_damage(first)
             intelligence = first.getStats().getNumericProperty("intelligence")
             damage.setNumericProperty("frost", intelligence * 75 // 100)
             second.hurt(damage)
@@ -105,7 +112,7 @@ def load(self, context):
     @register(context)
     class ShadowBolt(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             damage.setNumericProperty("shadow", int(first.getDmg() * 2.25))
             second.hurt(damage)
 
@@ -177,7 +184,7 @@ def load(self, context):
             caster = effect.getCaster()
             if not caster:
                 return False
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("armor", caster.getStats().getNumericProperty("armor") * 75 // 100)
             effect.setBonus(stats)
             return True
@@ -186,7 +193,7 @@ def load(self, context):
     class ExposeCorruption(CInteraction):
         def performAction(self, first, second):
             Attack().onAction(first, second)
-            damage = CDamage()
+            damage = spell_damage(first)
             clues = first.getNumericProperty("inquisitor_clues")
             base = first.getStats().getNumericProperty("intelligence") // 2 + first.getLevel()
             if is_cultist(second):
@@ -199,7 +206,7 @@ def load(self, context):
             if not caster:
                 return False
             clues = caster.getNumericProperty("inquisitor_clues")
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("armor", -(2 + clues * 2))
             stats.setNumericProperty("block", -(2 + caster.getLevel() // 2))
             effect.setBonus(stats)
@@ -216,7 +223,7 @@ def load(self, context):
             if not caster:
                 return False
             clues = caster.getNumericProperty("inquisitor_clues")
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("armor", 4 + caster.getLevel() + clues)
             stats.setNumericProperty("normalResist", 3 + clues * 2)
             stats.setNumericProperty("hit", 2 + clues)
@@ -234,7 +241,7 @@ def load(self, context):
             if not caster:
                 return False
             routes = caster.getNumericProperty("wayfarer_routes")
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("agility", 2 + routes + caster.getLevel() // 3)
             stats.setNumericProperty("block", 4 + routes * 2)
             stats.setNumericProperty("hit", 3 + routes)
@@ -245,7 +252,7 @@ def load(self, context):
     @register(context)
     class SmugglersMark(CInteraction):
         def performAction(self, first, second):
-            damage = CDamage()
+            damage = spell_damage(first)
             routes = first.getNumericProperty("wayfarer_routes")
             damage.setNumericProperty("normal", max(1, first.getStats().getNumericProperty("agility") // 2 + routes))
             second.hurt(damage)
@@ -255,9 +262,250 @@ def load(self, context):
             if not caster:
                 return False
             routes = caster.getNumericProperty("wayfarer_routes")
-            stats = CStats()
+            stats = bonus_stats(caster)
             stats.setNumericProperty("block", -(3 + routes * 2))
             stats.setNumericProperty("hit", -(2 + caster.getLevel() // 3))
             effect.setBonus(stats)
             effect.setNumericProperty("wayfarer_routes", routes)
+            return True
+
+    # Baldur's Gate inspired repertoire.
+    @register(context)
+    class BurningHands(CInteraction):
+        def performAction(self, first, second):
+            damage = spell_damage(first)
+            damage.setNumericProperty("fire", 3 + first.getLevel() * 2)
+            second.hurt(damage)
+
+    @register(context)
+    class AgannazarsScorcher(CInteraction):
+        def performAction(self, first, second):
+            damage = spell_damage(first)
+            damage.setNumericProperty("fire", 6 + first.getStats().getNumericProperty("intelligence") // 2)
+            second.hurt(damage)
+
+    @register(context)
+    class Fireball(CInteraction):
+        def performAction(self, first, second):
+            rolled = 0
+            for _ in range(max(1, first.getLevel())):
+                rolled += randint(1, 6)
+            damage = spell_damage(first)
+            damage.setNumericProperty("fire", rolled)
+            second.hurt(damage)
+
+    @register(context)
+    class FlameStrike(CInteraction):
+        def performAction(self, first, second):
+            damage = spell_damage(first)
+            damage.setNumericProperty("fire", 10 + first.getLevel() * 2)
+            second.hurt(damage)
+
+    @register(context)
+    class LightningBolt(CInteraction):
+        def performAction(self, first, second):
+            rolled = 0
+            for _ in range(max(1, first.getLevel())):
+                rolled += randint(1, 6)
+            damage = spell_damage(first)
+            damage.setNumericProperty("thunder", rolled)
+            second.hurt(damage)
+
+    @register(context)
+    class ChromaticOrb(CInteraction):
+        def performAction(self, first, second):
+            kinds = ["fire", "frost", "thunder", "shadow", "normal"]
+            damage = spell_damage(first)
+            base = 4 + first.getLevel() + first.getStats().getNumericProperty("intelligence") // 3
+            damage.setNumericProperty(kinds[randint(0, len(kinds) - 1)], base)
+            second.hurt(damage)
+
+    @register(context)
+    class ConeOfCold(CInteraction):
+        def performAction(self, first, second):
+            intelligence = first.getStats().getNumericProperty("intelligence")
+            damage = spell_damage(first)
+            damage.setNumericProperty("frost", 8 + first.getLevel() + intelligence // 2)
+            second.hurt(damage)
+
+    @register(context)
+    class SkullTrap(CInteraction):
+        def performAction(self, first, second):
+            rolled = 0
+            for _ in range(max(1, first.getLevel())):
+                rolled += randint(1, 6)
+            damage = spell_damage(first)
+            damage.setNumericProperty("shadow", rolled)
+            second.hurt(damage)
+
+    @register(context)
+    class LarlochsMinorDrain(CInteraction):
+        def performAction(self, first, second):
+            drained = 4 + first.getLevel()
+            damage = spell_damage(first)
+            damage.setNumericProperty("shadow", drained)
+            second.hurt(damage)
+            first.heal(drained)
+
+    @register(context)
+    class VampiricTouch(CInteraction):
+        def performAction(self, first, second):
+            drained = 6 + first.getLevel() * 2
+            damage = spell_damage(first)
+            damage.setNumericProperty("shadow", drained)
+            second.hurt(damage)
+            first.heal(drained // 2)
+
+    @register(context)
+    class FingerOfDeath(CInteraction):
+        def performAction(self, first, second):
+            damage = spell_damage(first)
+            damage.setNumericProperty("shadow", first.getDmg() * 2)
+            second.hurt(damage)
+            if second.getHpRatio() < 20 and second.isAlive():
+                second.hurt(int(first.getDmg() * 1.5))
+
+    @register(context)
+    class SpiritualHammer(CInteraction):
+        def performAction(self, first, second):
+            damage = spell_damage(first)
+            strength = first.getStats().getNumericProperty("strength")
+            damage.setNumericProperty("normal", 3 + first.getLevel() + strength // 3)
+            second.hurt(damage)
+
+    @register(context)
+    class MelfsAcidArrow(CInteraction):
+        def performAction(self, first, second):
+            damage = spell_damage(first)
+            damage.setNumericProperty("normal", 2 + randint(1, 4) + first.getLevel() // 2)
+            second.hurt(damage)
+
+    @register(context)
+    class Cloudkill(CInteraction):
+        pass
+
+    @register(context)
+    class HoldPerson(CInteraction):
+        def configureEffect(self, effect):
+            return randint(1, 3) != 1
+
+    @register(context)
+    class Web(CInteraction):
+        pass
+
+    @register(context)
+    class Slow(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("agility", -(2 + caster.getLevel() // 2))
+            stats.setNumericProperty("hit", -(3 + caster.getLevel() // 3))
+            stats.setNumericProperty("block", -4)
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class ChillTouch(CInteraction):
+        def performAction(self, first, second):
+            damage = spell_damage(first)
+            damage.setNumericProperty("frost", 2 + randint(1, 8))
+            second.hurt(damage)
+
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("hit", -(2 + caster.getLevel() // 3))
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class Doom(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("armor", -(2 + caster.getLevel() // 2))
+            stats.setNumericProperty("block", -2)
+            stats.setNumericProperty("hit", -2)
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class Haste(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("agility", 3 + caster.getLevel() // 2)
+            stats.setNumericProperty("hit", 3)
+            stats.setNumericProperty("crit", 2)
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class MirrorImage(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("block", 15 + caster.getLevel() * 2)
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class Stoneskin(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("armor", 6 + caster.getStats().getNumericProperty("armor") // 2)
+            stats.setNumericProperty("normalResist", 5)
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class Bless(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("hit", 2 + caster.getLevel() // 4)
+            stats.setNumericProperty("attack", 1)
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class ArmorOfFaith(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("armor", 3 + caster.getLevel() // 2)
+            stats.setNumericProperty("normalResist", 3)
+            stats.setNumericProperty("shadowResist", 3)
+            effect.setBonus(stats)
+            return True
+
+    @register(context)
+    class DrawUponHolyMight(CInteraction):
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            boost = 2 + caster.getLevel() // 3
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("strength", boost)
+            stats.setNumericProperty("agility", boost)
+            stats.setNumericProperty("stamina", boost)
+            effect.setBonus(stats)
             return True

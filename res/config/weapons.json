@@ -349,5 +349,123 @@
         "cursed"
       ]
     }
+  },
+  "CentaursAxe": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/broadsword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 13,
+          "dmgMin": 9,
+          "stamina": 1,
+          "strength": 3
+        }
+      },
+      "label": "Centaur's Axe",
+      "description": "Plainswrought axe traded up from centaur herds long since scattered; its balance still favors a charging swing.",
+      "power": 3
+    }
+  },
+  "BlackshardOfTheDeadKnight": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/shadowblade",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "dmgMax": 25,
+          "dmgMin": 19,
+          "shadowResist": 5,
+          "stamina": 4,
+          "strength": 5
+        }
+      },
+      "label": "Blackshard of the Dead Knight",
+      "description": "Night-black shard pried from a dead knight's barrow beneath the catacombs; it drinks lamplight like the grave.",
+      "power": 7
+    }
+  },
+  "OgresClubOfHavoc": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/shortstaff",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 39,
+          "dmgMin": 28,
+          "stamina": 7,
+          "strength": 13
+        }
+      },
+      "label": "Ogre's Club of Havoc",
+      "description": "Knotted ogre cudgel banded in siege iron; every blow lands with the weight of a falling gate.",
+      "power": 12
+    }
+  },
+  "SwordOfHellfire": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/chaossword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "crit": 4,
+          "dmgMax": 45,
+          "dmgMin": 36,
+          "fireResist": 15,
+          "stamina": 6,
+          "strength": 10
+        }
+      },
+      "label": "Sword of Hellfire",
+      "description": "Forged in a furnace stoked with cult pyres, its edge sheds sparks that scar stone.",
+      "power": 16
+    }
+  },
+  "TitansGladius": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/valkyrie",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 10,
+          "block": -4,
+          "crit": 5,
+          "dmgMax": 63,
+          "dmgMin": 56,
+          "stamina": 12,
+          "strength": 16
+        }
+      },
+      "label": "Titan's Gladius",
+      "description": "Storm-forged giant's blade sized down for mortal hands; it demands attack over guard and punishes hesitation.",
+      "power": 24
+    }
+  },
+  "SwordOfJudgement": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/void",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 12,
+          "crit": 3,
+          "dmgMax": 66,
+          "dmgMin": 58,
+          "intelligence": 12,
+          "stamina": 12,
+          "strength": 12
+        }
+      },
+      "label": "Sword of Judgement",
+      "description": "The old kings' arbiter blade, said to weigh a soul with every stroke; none it finds wanting rise again.",
+      "power": 26
+    }
   }
 }

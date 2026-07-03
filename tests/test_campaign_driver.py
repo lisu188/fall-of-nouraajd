@@ -198,6 +198,32 @@ class ManifestTest(unittest.TestCase):
                 with self.assertRaises(campaign.CampaignError):
                     campaign.validate_manifest(data)
 
+    def test_validate_manifest_rejects_non_string_start(self):
+        # A non-string "start" must raise CampaignError, not an unguarded
+        # TypeError from the ``start in scenarios`` membership test.
+        for bad_start in ([], {}, 3, None):
+            with self.subTest(start=bad_start):
+                data = manifest_fixture()
+                data["start"] = bad_start
+                with self.assertRaises(campaign.CampaignError):
+                    campaign.validate_manifest(data)
+
+    def test_validate_manifest_rejects_history_delimiters(self):
+        # Scenario ids and outcome keys are serialized into campaign history as
+        # "<id>:<outcome>" entries joined by ",", so neither may contain those
+        # delimiters or the recorded history would be corrupted.
+        colon_id = manifest_fixture()
+        colon_id["scenarios"]["on:e"] = colon_id["scenarios"].pop("one")
+        colon_id["start"] = "on:e"
+
+        comma_outcome = manifest_fixture()
+        comma_outcome["scenarios"]["one"]["next"] = {"completed,extra": "two"}
+
+        for label, data in (("colon-in-id", colon_id), ("comma-in-outcome", comma_outcome)):
+            with self.subTest(case=label):
+                with self.assertRaises(campaign.CampaignError):
+                    campaign.validate_manifest(data)
+
     def test_list_campaigns_returns_sorted_manifests(self):
         root = self.make_root()
         second = manifest_fixture()
@@ -227,13 +253,41 @@ class ManifestTest(unittest.TestCase):
         with self.assertRaises(campaign.CampaignError):
             campaign.get_manifest("unknown", root)
 
+    def test_get_manifest_rejects_path_traversal_ids(self):
+        # campaign_id can originate from an untrusted save; a traversal id must be
+        # refused before it is joined into the manifest filesystem path.
+        root = self.make_root()
+        self.write_campaign(root, manifest_fixture())
+        for bad_id in ("../trial", "a/b", "..", ".", "", "a\\b"):
+            with self.subTest(campaign_id=bad_id):
+                with self.assertRaises(campaign.CampaignError):
+                    campaign.get_manifest(bad_id, root)
+
     def test_shipped_campaigns_load_and_validate(self):
         manifests = campaign.list_campaigns()
 
         self.assertIn("fallOfNouraajd", [manifest["campaignId"] for manifest in manifests])
+        self.assertIn("wardensRoad", [manifest["campaignId"] for manifest in manifests])
         for manifest in manifests:
             with self.subTest(campaign=manifest["campaignId"]):
                 campaign.validate_manifest(manifest)
+
+    def test_wardens_road_routes_both_judgments_to_terminal_finales(self):
+        manifest = campaign.get_manifest("wardensRoad")
+
+        self.assertEqual("homecoming", manifest["start"])
+        self.assertEqual("rescue", campaign.next_scenario(manifest, "homecoming", "completed"))
+        self.assertEqual("assault_mercy", campaign.next_scenario(manifest, "rescue", "spared"))
+        self.assertEqual("assault_wrath", campaign.next_scenario(manifest, "rescue", "executed"))
+        # Both finales reuse the usurpergate map and are terminal.
+        for finale in ("assault_mercy", "assault_wrath"):
+            with self.subTest(finale=finale):
+                self.assertEqual("usurpergate", manifest["scenarios"][finale]["map"])
+                self.assertIsNone(campaign.next_scenario(manifest, finale, "completed"))
+        # The wrath route enters the finale with the war-chest clamped.
+        self.assertEqual({"gold_max": 400}, manifest["scenarios"]["assault_wrath"]["carryover"])
+        with self.assertRaises(campaign.CampaignError):
+            campaign.next_scenario(manifest, "rescue", "completed")
 
 
 class RoutingTest(unittest.TestCase):
