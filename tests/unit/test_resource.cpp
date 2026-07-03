@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <string>
 
@@ -431,6 +432,87 @@ void test_two_game_contexts_isolate_provider_cache_and_object_config() {
                 "context-owned providers must reject absolute resource paths");
 }
 
+void test_scoped_search_roots_resolve_active_map_assets() {
+    // Two maps register the SAME logical filename under DIFFERENT scoped roots; the active scope must
+    // decide which physical file resolves. A bare scoped filename must never resolve through the base
+    // (process-wide) search path, so nothing here can collide with the real resource tree.
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const std::string assetName = "scoped_asset_" + nonce + ".txt";
+
+    const auto tempRootA = std::filesystem::temp_directory_path() / ("scoped-root-a-" + nonce);
+    const auto tempRootB = std::filesystem::temp_directory_path() / ("scoped-root-b-" + nonce);
+    std::error_code errorCode;
+    std::filesystem::create_directories(tempRootA, errorCode);
+    std::filesystem::create_directories(tempRootB, errorCode);
+    expect_true(write_text_file(tempRootA / assetName, "A"), "scoped root A fixture should be written");
+    expect_true(write_text_file(tempRootB / assetName, "B"), "scoped root B fixture should be written");
+
+    const auto canonicalRootA = std::filesystem::weakly_canonical(tempRootA, errorCode).string();
+    const auto canonicalRootB = std::filesystem::weakly_canonical(tempRootB, errorCode).string();
+
+    auto provider = std::make_shared<CResourcesProvider>();
+
+    // Nothing is active yet, so a bare scoped filename must not resolve at the base search path.
+    expect_true(provider->getPath(assetName).empty(), "scoped asset must not resolve at base search path");
+
+    provider->addScopedRoot("mapA", tempRootA.string());
+    provider->addScopedRoot("mapB", tempRootB.string());
+    auto roots = provider->getScopedRoots();
+    expect_true(std::find(roots.begin(), roots.end(), canonicalRootA) != roots.end(),
+                "getScopedRoots should list the canonical root of mapA");
+    expect_true(std::find(roots.begin(), roots.end(), canonicalRootB) != roots.end(),
+                "getScopedRoots should list the canonical root of mapB");
+
+    // Registered but inactive scopes must not change base resolution.
+    expect_true(provider->getPath(assetName).empty(), "scoped asset must not resolve while no scope is active");
+
+    provider->setActiveScope("mapA");
+    const auto resolvedA = provider->getPath(assetName);
+    expect_true(!resolvedA.empty(), "active scope mapA should resolve the scoped asset");
+    expect_true(std::filesystem::weakly_canonical(std::filesystem::path(resolvedA).parent_path(), errorCode).string() ==
+                    canonicalRootA,
+                "active scope mapA should resolve the asset inside tempRootA");
+    {
+        std::ifstream stream(resolvedA);
+        std::string contents(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+        expect_true(contents == "A", "active scope mapA should read the tempRootA copy of the asset");
+    }
+
+    provider->setActiveScope("mapB");
+    const auto resolvedB = provider->getPath(assetName);
+    expect_true(!resolvedB.empty(), "active scope mapB should resolve the scoped asset");
+    expect_true(std::filesystem::weakly_canonical(std::filesystem::path(resolvedB).parent_path(), errorCode).string() ==
+                    canonicalRootB,
+                "active scope mapB should resolve the asset inside tempRootB");
+    {
+        std::ifstream stream(resolvedB);
+        std::string contents(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+        expect_true(contents == "B", "active scope mapB should read the tempRootB copy of the asset");
+    }
+
+    // Security: an active scope must never relax the traversal/absolute guards.
+    expect_true(provider->getPath("../escape.txt").empty(),
+                "parent-traversal paths must be rejected even with an active scope");
+    expect_true(provider->getPath("/etc/passwd").empty(), "absolute paths must be rejected even with an active scope");
+
+    // Ref-counting: a second add keeps the root alive across one release.
+    provider->addScopedRoot("mapA", tempRootA.string());
+    provider->releaseScopedRoot("mapA");
+    provider->setActiveScope("mapA");
+    expect_true(!provider->getPath(assetName).empty(), "mapA should still resolve while its refcount is positive");
+
+    provider->releaseScopedRoot("mapA");
+    auto rootsAfterRelease = provider->getScopedRoots();
+    expect_true(std::find(rootsAfterRelease.begin(), rootsAfterRelease.end(), canonicalRootA) ==
+                    rootsAfterRelease.end(),
+                "mapA root should be dropped once its refcount reaches zero");
+    expect_true(provider->getActiveScope().empty(), "releasing the active scope to zero should clear the active scope");
+    expect_true(provider->getPath(assetName).empty(), "mapA asset must not resolve after its scope is dropped");
+
+    std::filesystem::remove_all(tempRootA, errorCode);
+    std::filesystem::remove_all(tempRootB, errorCode);
+}
+
 } // namespace
 
 int main() {
@@ -443,6 +525,7 @@ int main() {
     test_map_load_resolves_through_context_owned_providers();
     test_two_game_contexts_isolate_provider_cache_and_object_config();
     test_resource_plugin_trust_boundary_rejects_escapes();
+    test_scoped_search_roots_resolve_active_map_assets();
 
     return finish_tests();
 }
