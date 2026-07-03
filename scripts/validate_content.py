@@ -19,6 +19,12 @@ from pathlib import Path
 from typing import Any
 
 OBJECT_SCHEMA_KEYS = {"class", "ref", "properties"}
+# Registered primitive-collection wrapper classes (see src/core/CCoreTypeRegistration.cpp). A property
+# whose declared engine type is one of these may be authored either in the legacy schema-1 object-shape
+# ({"class": "CListString", "properties": {"values": [...]}}) or in the current flattened shape (a bare
+# JSON array for the list wrappers, a bare JSON object for the map wrappers). The validator accepts both.
+PRIMITIVE_LIST_WRAPPER_CLASSES = {"CListInt", "CListString"}
+PRIMITIVE_MAP_WRAPPER_CLASSES = {"CMapStringString", "CMapStringInt", "CMapIntString", "CMapIntInt"}
 # Recognised kinds for an optional map.json top-level "assets" declaration. Each declared asset
 # is a safe relative path under its own map directory; the kind documents how the entry resolves.
 MAP_ASSET_KINDS = {"file", "directory", "animationRoot", "logicalId"}
@@ -2539,6 +2545,21 @@ class ContentValidator:
         visible: dict[str, ConfigEntry],
         known_classes: set[str],
     ) -> None:
+        expected_base_class = expected_cpp_object_base_class(cpp_property.type_token)
+        # A primitive-collection wrapper property (EPIC_03/STORY_04) may use either the legacy
+        # object-shape ({"class": ..., "properties": {"values": ...}}) or the current flattened shape
+        # (a bare JSON array for list wrappers, a bare class-less JSON object for map wrappers). Accept
+        # the flattened shape here; the legacy object-shape (a dict carrying "class"/"ref") falls
+        # through to the standard object-node compatibility check below.
+        if expected_base_class in PRIMITIVE_LIST_WRAPPER_CLASSES and isinstance(value, list):
+            return
+        if (
+            expected_base_class in PRIMITIVE_MAP_WRAPPER_CLASSES
+            and isinstance(value, dict)
+            and "class" not in value
+            and "ref" not in value
+        ):
+            return
         expected_kind = expected_json_property_kind(cpp_property.type_token)
         if expected_kind is None:
             return
@@ -2550,7 +2571,6 @@ class ContentValidator:
                 f'property "{cpp_property.name}" for class "{class_name}" expected {expected_kind}; got {actual_kind}',
             )
             return
-        expected_base_class = expected_cpp_object_base_class(cpp_property.type_token)
         if expected_base_class is not None:
             self._validate_property_object_compatibility(
                 path,

@@ -261,6 +261,20 @@ class ContentValidatorTest(unittest.TestCase):
 
         self.assertEqual([], [str(issue) for issue in issues])
 
+    def test_panels_charsheet_uses_flattened_primitive_and_validates(self):
+        # EPIC_03/STORY_04/SUBSTORY_05: CGameCharacterPanel.charSheet (a CMapStringString wrapper) was
+        # migrated from the legacy schema-1 object-shape to the current flattened shape (a bare JSON
+        # object with no class/properties envelope). Confirm the real content is authored in the
+        # flattened form and that metadata-aware validation of the full repo accepts it -- i.e. the
+        # flattened primitive representation is a valid alternative to the legacy object-shape while
+        # every other resource file remains valid.
+        panels = json.loads((REPO_ROOT / "res/config/panels.json").read_text(encoding="utf-8"))
+        char_sheet = panels["characterPanel"]["properties"]["charSheet"]
+        self.assertNotIn("class", char_sheet)
+        self.assertNotIn("properties", char_sheet)
+        self.assertEqual("getPlayerClassId", char_sheet.get("Class"))
+        self.assertEqual([], [str(issue) for issue in validate_repo(REPO_ROOT)])
+
     def _valid_class_profile(self):
         return {
             "warrior": {
