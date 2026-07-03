@@ -58,6 +58,16 @@ class CObjectHandler : public CGameObject {
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
 
+    // Map-script registration scope. Class names registered while the scope is active (i.e. while a
+    // map's script.py is being loaded) are treated as map-scoped: a later map-scoped registration of
+    // the same name overrides an earlier map-scoped one, so a transition destination runs its own
+    // class rather than a previously loaded map's identically named class. Persistent registrations
+    // (core types, native/global plugins, and manual registerType calls made outside this scope) are
+    // never overridden by a map script, preserving core-type protection and explicit test overrides.
+    void beginMapScriptScope();
+
+    void endMapScriptScope();
+
     std::shared_ptr<CGameObject> getType(const std::string &name);
 
     std::shared_ptr<json> getConfig(const std::string &type);
@@ -70,6 +80,11 @@ class CObjectHandler : public CGameObject {
     std::shared_ptr<CGameObject> _clone(const std::shared_ptr<CGameObject> &object);
 
     std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> constructors;
+
+    // Names whose current constructor was registered by a map script (see beginMapScriptScope).
+    std::unordered_set<std::string> mapScopedTypes;
+
+    bool mapScriptScopeActive = false;
 
     std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
 };
