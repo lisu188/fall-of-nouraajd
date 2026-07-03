@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
@@ -2185,6 +2186,45 @@ void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
     expect_true(panel->clicks == 1, "valid widget click callback should still fire");
 }
 
+void test_character_panel_sheet_lines_build_without_rendering_and_fail_closed() {
+    auto panel = std::make_shared<CGameCharacterPanel>();
+    auto player = std::make_shared<CPlayer>();
+    player->setBaseStats(player_stats());
+    player->setLevel(4);
+    player->setGold(123);
+    player->setRaceId("harpy");
+
+    // No configured charSheet: the builder must fail closed with no rows.
+    expect_true(panel->buildCharacterSheetLines(player).empty(),
+                "character sheet builder should return no rows without a configured charSheet");
+
+    auto charSheet = std::make_shared<CMapStringString>();
+    charSheet->setValues({{"Gold", "getGold"},
+                          {"Level", "getLevel"},
+                          {"Race", "getRaceId"},
+                          {"Broken", "notARealAccessor"},
+                          {"Empty", ""}});
+    panel->setCharSheet(charSheet);
+
+    // The builder resolves the reflective accessors without any GUI/SDL rendering,
+    // keeps the configured (map-ordered) rows, and skips bad or empty accessor
+    // names fail-closed instead of throwing out of the panel.
+    const auto lines = panel->buildCharacterSheetLines(player);
+    expect_true(lines.size() == 3,
+                "character sheet builder should keep resolvable rows and skip bad / empty accessors");
+    if (lines.size() == 3) {
+        expect_true(lines[0].first == "Gold" && lines[0].second == "123",
+                    "character sheet builder should resolve numeric accessors without rendering");
+        expect_true(lines[1].first == "Level" && lines[1].second == "4",
+                    "character sheet builder should preserve the charSheet row ordering");
+        expect_true(lines[2].first == "Race" && lines[2].second == "harpy",
+                    "character sheet builder should fall back to string accessors for identity rows");
+    }
+
+    expect_true(panel->buildCharacterSheetLines(nullptr).empty(),
+                "character sheet builder should return no rows for a missing player");
+}
+
 } // namespace
 
 int main() {
@@ -2193,6 +2233,7 @@ int main() {
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
     test_widget_ignores_unarmed_non_left_clicks();
     test_widget_reflective_callbacks_fail_closed_on_bad_config();
+    test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();
