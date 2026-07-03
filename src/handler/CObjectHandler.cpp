@@ -72,8 +72,30 @@ std::shared_ptr<CGameObject> CObjectHandler::getType(const std::string &name) {
 }
 
 void CObjectHandler::registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor) {
-    constructors.insert(std::make_pair(name, constructor));
+    if (mapScriptScopeActive) {
+        // A map script is registering this class. Several maps legitimately define the same class
+        // name (e.g. StartEvent), and a map may be loaded while another map is still active during a
+        // transition. Override an existing registration only when it too was owned by a map script,
+        // so the destination map runs its own class instead of the previously loaded map's -- e.g.
+        // entering the ritual map after Nouraajd must build ritualStart from the ritual StartEvent,
+        // not Nouraajd's. Persistent registrations (core types, native/global plugins, or explicit
+        // manual registerType overrides made outside a map scope) are left untouched.
+        const bool alreadyPersistent = constructors.contains(name) && !mapScopedTypes.contains(name);
+        if (alreadyPersistent) {
+            return;
+        }
+        constructors.insert_or_assign(name, std::move(constructor));
+        mapScopedTypes.insert(std::move(name));
+        return;
+    }
+    // Persistent registration path: keep first-registration-wins so core types (registered first at
+    // game init) and explicit test/manual overrides cannot be clobbered by later registrations.
+    constructors.insert(std::make_pair(std::move(name), std::move(constructor)));
 }
+
+void CObjectHandler::beginMapScriptScope() { mapScriptScopeActive = true; }
+
+void CObjectHandler::endMapScriptScope() { mapScriptScopeActive = false; }
 
 // TODO: add option to provide custom configuration from string
 std::shared_ptr<CGameObject> CObjectHandler::_createObject(std::shared_ptr<CGame> game, const std::string &type) {
