@@ -725,21 +725,16 @@ def _capture_panel(sim, recorder, panel, caption, hold):
             pass
 
 
-def showcase_panels(sim, recorder, fps):
-    """Tour every in-game panel, each populated with real content.
-
-    The HUD panels (character / inventory / journal) render the hero's live
-    state; the contextual panels are populated the same way the game populates
-    them in play — a stocked market for trade, a set of items for loot, and a
-    real townsfolk dialog. The fight panel is shown separately by the battles.
-    """
-    g = sim.gameInstance
+def showcase_hud(sim, recorder, fps):
+    """Tour the always-available HUD panels (character / inventory / journal /
+    info), each rendering the hero's live state. The contextual panels — trade,
+    loot, dialog and the fight screen — are wired to real in-world encounters
+    instead (a market building, a fallen foe, an NPC, a battle)."""
     hold = max(1, round(1.6 * fps))
     recorder.capture_card(
-        "The Interface",
-        "Every panel a player uses - the character sheet, inventory, quest journal, "
-        "trade, loot and dialog screens (the fight panel is shown in each battle).",
-        subtitle="A tour of the HUD",
+        "The Hero's HUD",
+        "The panels a player checks anywhere: the character sheet, inventory and quest journal.",
+        subtitle="Character - Inventory - Journal",
         hold=max(1, round(2.4 * fps)),
     )
     show_panel(sim, recorder, "characterPanel", "Character sheet: class, race and combat stats", hold)
@@ -754,49 +749,74 @@ def showcase_panels(sim, recorder, fps):
         text="The dead of Nouraajd do not rest. Every wand, coin and cured soul buys one more night.",
     )
 
-    # Trade panel backed by a stocked market.
-    try:
-        market = g.createObject("CMarket")
-        for item_id in ("IronSword", "LeatherArmor", "LifePotion", "ShadowBlade"):
-            item = g.createObject(item_id)
-            if item is not None:
-                try:
-                    market.add(item)
-                except Exception:  # noqa: BLE001
-                    pass
-        trade = g.createObject("tradePanel")
-        trade.setMarket(market)
-        _capture_panel(sim, recorder, trade, "Trade panel: buy and sell at the market", hold)
-    except Exception:  # noqa: BLE001
-        pass
 
-    # Loot panel with a set of spoils (setItems takes a set).
-    try:
-        loot_items = set()
-        for item_id in ("ShadowBlade", "LifePotion", "skullOfRolf"):
-            item = g.createObject(item_id)
-            if item is not None:
-                loot_items.add(item)
-        loot = g.createObject("lootPanel")
-        loot.setCreature(sim.player)
-        loot.setItems(loot_items)
-        _capture_panel(sim, recorder, loot, "Loot panel: spoils from chests and fallen foes", hold)
-    except Exception:  # noqa: BLE001
-        pass
+def open_trade_at(sim, recorder, market_object_name, caption, fps):
+    """Walk to a market building and open its own market's trade panel.
 
-    # Dialog panel showing a real townsfolk conversation.
+    Reads the building's real ``market`` object property — the same market the
+    building's onEnter would open in play — so the wares on sale are the map's
+    actual stock, shown where the market stands."""
+    if sim.gameMap.getObjectByName(market_object_name) is None:
+        return False
+    scene_at(sim, recorder, market_object_name, "Approaching the town market", stop_distance=1)
+    market_object = sim.gameMap.getObjectByName(market_object_name)
+    market = None
     try:
-        dialog = g.createObject("berenDialog")
-        dialog_panel = g.createObject("dialogPanel")
-        dialog_panel.setDialog(dialog)
-        sim.gameInstance.getGui().pushChild(dialog_panel)
-        dialog_panel.reload()
+        market = market_object.getObjectProperty("market")
+    except Exception:  # noqa: BLE001
+        market = None
+    if market is None:
+        return False
+    trade = sim.gameInstance.createObject("tradePanel")
+    trade.setMarket(market)
+    _capture_panel(sim, recorder, trade, caption, max(1, round(2.0 * fps)))
+    return True
+
+
+def open_dialog_at(sim, recorder, npc_object_name, dialog_id, caption, fps):
+    """Walk to a townsfolk NPC and open the very dialog its onEnter would show."""
+    if sim.gameMap.getObjectByName(npc_object_name) is None:
+        return False
+    scene_at(sim, recorder, npc_object_name, "Approaching the townsfolk", stop_distance=1)
+    g = sim.gameInstance
+    dialog = g.createObject(dialog_id)
+    if dialog is None:
+        return False
+    panel = g.createObject("dialogPanel")
+    panel.setDialog(dialog)
+    g.getGui().pushChild(panel)
+    try:
+        panel.reload()
         sim.pumpEvents(3)
-        recorder.capture(caption="Dialog panel: conversations with the townsfolk", hold=hold)
-        dialog_panel.close()
-        sim.pumpEvents(2)
+        recorder.capture(caption=caption, hold=max(1, round(2.0 * fps)))
+    finally:
+        try:
+            panel.close()
+            sim.pumpEvents(2)
+        except Exception:  # noqa: BLE001
+            pass
+    return True
+
+
+def open_loot(sim, recorder, creature, item_ids, caption, fps):
+    """Open a loot panel for a fallen foe's spoils, at the kill."""
+    g = sim.gameInstance
+    items = set()
+    for item_id in item_ids:
+        item = g.createObject(item_id)
+        if item is not None:
+            items.add(item)
+    if not items:
+        return False
+    loot = g.createObject("lootPanel")
+    try:
+        if creature is not None:
+            loot.setCreature(creature)
+        loot.setItems(items)
     except Exception:  # noqa: BLE001
-        pass
+        return False
+    _capture_panel(sim, recorder, loot, caption, max(1, round(2.0 * fps)))
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -995,6 +1015,9 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     checkpoint("Quest: recover the skull of Sergeant Rolf")
     show_panel(sim, recorder, "questPanel", "Quest log: Rolf's plea is now active", panel_beat)
 
+    # --- The town market: real trade panel wired to the market building ----
+    open_trade_at(sim, recorder, "market1", "The town market: buy and sell the map's wares", fps)
+
     # --- Rolf: recover the skull from the cave ----------------------------
     scene_at(sim, recorder, "cave1", "Descending into the haunted cave")
     if game_map.getObjectByName("cave1") is not None:
@@ -1011,7 +1034,8 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     checkpoint("Gooby slain - 200 gold from grateful townsfolk")
     show_panel(sim, recorder, "questPanel", "Quest log: the main path opens", panel_beat)
 
-    # --- Beren's chain: deliver the letter, fetch and return the relic ----
+    # --- Beren's chain: visit the Town Hall NPC, take the letter ----------
+    open_dialog_at(sim, recorder, "nouraajdTownHall", "townHallDialog", "Town Hall: a letter for Father Beren", fps)
     town_hall = create("townHallDialog")
     town_hall.give_letter()
     checkpoint("The Town Hall entrusts a letter for Father Beren")
@@ -1071,7 +1095,10 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     sim.refreshHandles()
     checkpoint("A final quest: recover the precious amulet")
     approach_and_fight(sim, recorder, "amuletGoblin", "Chasing the amulet thief", fps)
-    if game_map.getObjectByName("amuletGoblin") is not None:
+    # The fallen thief yields the amulet - shown in a real loot panel at the kill.
+    goblin = game_map.getObjectByName("amuletGoblin")
+    open_loot(sim, recorder, goblin, ["preciousAmulet"], "Loot: the stolen amulet is recovered", fps)
+    if goblin is not None:
         game_map.removeObjectByName("amuletGoblin")
     player.addItem("preciousAmulet")
     create("questReturnDialog").complete_amulet_quest()
@@ -1079,8 +1106,8 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     sim.pumpEvents(5)
     checkpoint("The amulet is returned - every Nouraajd quest complete")
 
-    # --- Interface tour: showcase every panel with the hero fully kitted out --
-    showcase_panels(sim, recorder, fps)
+    # --- HUD tour: the always-available panels with the hero fully kitted out --
+    showcase_hud(sim, recorder, fps)
 
     if close_transition:
         # --- Chapter close: cleanse the cave, which routes on to the ritual --
