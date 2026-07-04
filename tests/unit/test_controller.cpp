@@ -849,6 +849,28 @@ std::shared_ptr<CEffect> opponent_debuff(const std::shared_ptr<CGame> &game, int
     return effect;
 }
 
+// A named, tagged effect used to drive the monster AI's self-target logic. The name
+// doubles as the identity used by caster_already_has_effect (typeId stays empty on
+// these bare fixtures), so distinct names keep separate effects apart.
+std::shared_ptr<CEffect> named_self_effect(const std::shared_ptr<CGame> &game, const std::string &name, CTag tag) {
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(game);
+    effect->setName(name);
+    effect->addTag(tag);
+    return effect;
+}
+
+// Registers CEffect/CInteraction in both the meta system and the object builder so that
+// CInteraction::onAction can clone its effect (serialize -> deserialize) when the monster
+// casts. Without this the cast throws bad_any_cast (unregistered meta) or segfaults
+// (unconstructable class), exactly as documented on the weakening-ranking test.
+void register_effect_and_interaction(const std::shared_ptr<CGame> &game) {
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CInteraction, CGameObject>();
+    game->getObjectHandler()->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
+    game->getObjectHandler()->registerType("CInteraction", []() { return std::make_shared<CInteraction>(); });
+}
+
 void test_monster_fight_controller_ranks_interactions_by_weakening() {
     auto game = fight_fixture_game();
     // CInteraction::onAction clones its effect through the object handler (serialize ->
@@ -899,6 +921,122 @@ void test_monster_fight_controller_ranks_interactions_by_weakening() {
                 "monster fight controller should pick the most weakening affordable interaction, not the priciest");
 }
 
+// Builds a full-health monster with plenty of mana and wires the type system so its
+// interactions can be cast. Returns the monster; the caller supplies its actions.
+std::shared_ptr<CCreature> self_target_fixture_monster(const std::shared_ptr<CGame> &game, bool hurt) {
+    register_effect_and_interaction(game);
+    auto monster = creature_at(0, 0, 0);
+    monster->setGame(game);
+    monster->getBaseStats()->setStamina(10);
+    monster->getBaseStats()->setDmgMax(10);
+    monster->getBaseStats()->setIntelligence(100);
+    // Set HP relative to the creature's own getHpMax() so the hurt/healthy split does not depend on
+    // the exact hpMax formula: a hurt caster sits at 1 HP (ratio well under 75), a healthy one at full.
+    monster->setHp(hurt ? 1 : monster->getHpMax());
+    monster->setMana(60);
+    return monster;
+}
+
+std::shared_ptr<CCreature> self_target_fixture_opponent(const std::shared_ptr<CGame> &game) {
+    auto opponent = creature_at(1, 0, 0);
+    opponent->setGame(game);
+    opponent->getBaseStats()->setStamina(10);
+    return opponent;
+}
+
+void test_monster_fight_controller_applies_missing_self_buff() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false); // full health: no heal/mana detours
+    auto opponent = self_target_fixture_opponent(game);
+
+    // Affordable self-target buff (Buff-tagged effect routes to the caster) and an
+    // affordable offensive spell. The buff costs less, so if the AI ignored self-target
+    // usefulness and only picked by weakening it would spend the pricier offensive spell.
+    auto selfBuff = caster_interaction(game, 10, named_self_effect(game, "shield", CTag::Buff));
+    selfBuff->setName("selfBuff");
+    auto offensive = caster_interaction(game, 50, nullptr);
+    offensive->setName("offensive");
+    monster->addAction(selfBuff);
+    monster->addAction(offensive);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should act when a useful self-buff is available");
+    // Casting the buff spends 10 mana (60 -> 50) and applies the buff to the caster.
+    // Casting the cheap self-buff (cost 10) leaves 50 mana; the pricier offensive spell would have
+    // left 10, so this uniquely proves the AI chose the self-target buff.
+    expect_true(monster->getMana() == 50,
+                "monster fight controller should cast the affordable self-target buff, not the offensive spell");
+}
+
+void test_monster_fight_controller_skips_duplicate_self_buff() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+
+    // The caster already carries an equivalent buff (same name/identity), so recasting it
+    // would only spam a duplicate; the AI should fall back to the offensive spell.
+    monster->addEffect(named_self_effect(game, "shield", CTag::Buff));
+    auto selfBuff = caster_interaction(game, 10, named_self_effect(game, "shield", CTag::Buff));
+    selfBuff->setName("selfBuff");
+    auto offensive = caster_interaction(game, 50, nullptr);
+    offensive->setName("offensive");
+    monster->addAction(selfBuff);
+    monster->addAction(offensive);
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster fight controller should still act when the only self-buff is a duplicate");
+    // The offensive spell costs 50 (60 -> 10); the cheaper buff would have left 50, so this
+    // uniquely proves the duplicate buff was skipped in favor of offense.
+    expect_true(monster->getMana() == 10,
+                "monster fight controller should skip a duplicate self-buff and cast the offensive spell");
+}
+
+void test_monster_fight_controller_heals_self_only_when_hurt() {
+    // Hurt caster (hp 30 of 70 -> ratio ~42 < 75): the self-target heal is worth the turn.
+    {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, true);
+        auto opponent = self_target_fixture_opponent(game);
+
+        // Heal effect is not Buff-tagged, so selfTarget must be set for it to route to the caster.
+        auto selfHeal = caster_interaction(game, 10, named_self_effect(game, "mend", CTag::Heal));
+        selfHeal->setSelfTarget(true);
+        selfHeal->setName("selfHeal");
+        auto offensive = caster_interaction(game, 50, nullptr);
+        offensive->setName("offensive");
+        monster->addAction(selfHeal);
+        monster->addAction(offensive);
+
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(monster, opponent), "monster fight controller should act while hurt");
+        // Casting the heal (cost 10) leaves 50 mana; the offensive spell would have left 10, so this
+        // proves the hurt caster chose the self-target heal.
+        expect_true(monster->getMana() == 50, "monster fight controller should cast the self-target heal while hurt");
+    }
+    // Healthy caster (full hp -> ratio 100): the heal is not useful, so offense is chosen.
+    {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+
+        auto selfHeal = caster_interaction(game, 10, named_self_effect(game, "mend", CTag::Heal));
+        selfHeal->setSelfTarget(true);
+        selfHeal->setName("selfHeal");
+        auto offensive = caster_interaction(game, 50, nullptr);
+        offensive->setName("offensive");
+        monster->addAction(selfHeal);
+        monster->addAction(offensive);
+
+        auto controller = std::make_shared<CMonsterFightController>();
+        expect_true(controller->control(monster, opponent), "monster fight controller should act while healthy");
+        // The offensive spell costs 50 (60 -> 10); a chosen heal would have left 50.
+        expect_true(monster->getMana() == 10,
+                    "monster fight controller should not cast a self-target heal at full health");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -925,6 +1063,9 @@ int main() {
     test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
     test_monster_fight_controller_heals_when_next_hit_would_kill();
     test_monster_fight_controller_ranks_interactions_by_weakening();
+    test_monster_fight_controller_applies_missing_self_buff();
+    test_monster_fight_controller_skips_duplicate_self_buff();
+    test_monster_fight_controller_heals_self_only_when_hurt();
 
     return finish_tests();
 }

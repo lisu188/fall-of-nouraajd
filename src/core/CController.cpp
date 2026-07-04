@@ -580,6 +580,33 @@ int weakening_estimate(const std::shared_ptr<CInteraction> &interaction, const s
     }
     return value;
 }
+
+// Two effects denote the same buff/heal when they share a stable identity: the
+// configured typeId when present, otherwise the object name. Monster AI uses this
+// to recognize a self-target action whose effect the caster already carries so it
+// does not recast it.
+bool same_effect_identity(const std::shared_ptr<CEffect> &a, const std::shared_ptr<CEffect> &b) {
+    if (!a || !b) {
+        return false;
+    }
+    const std::string aType = a->getTypeId();
+    const std::string bType = b->getTypeId();
+    if (!aType.empty() || !bType.empty()) {
+        return aType == bType;
+    }
+    return a->getName() == b->getName();
+}
+
+// True when the caster already carries an effect with the same identity as the
+// one an interaction would apply, i.e. recasting it would only spam a duplicate.
+bool caster_already_has_effect(const std::shared_ptr<CCreature> &me, const std::shared_ptr<CEffect> &effect) {
+    for (const auto &active : me->getEffects()) {
+        if (same_effect_identity(active, effect)) {
+            return true;
+        }
+    }
+    return false;
+}
 } // namespace
 
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
@@ -623,17 +650,64 @@ std::shared_ptr<CItem> CMonsterFightController::getLeastPowerfulItemWithTag(std:
     return {};
 }
 
-// TODO: use buffs
+// Before ranking offensive casts, look for a self-target defensive/heal/buff action
+// worth a turn: it must be affordable, route its effect to the caster, and not merely
+// duplicate an effect the caster already carries. A Heal-tagged effect only earns the
+// turn while the caster is hurt (HpRatio < 75); any other self-routing effect (a buff)
+// is worth casting whenever it is missing. This lets monsters shore themselves up
+// without spamming duplicate buffs, and otherwise falls through to offensive selection.
 std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> me,
                                                                          std::shared_ptr<CCreature> opponent) {
+    auto selfTargetUseful = [me](const std::shared_ptr<CInteraction> &it) {
+        if (it->getManaCost() > me->getMana()) {
+            return false;
+        }
+        const auto effect = it->getEffect();
+        if (!effect || !it->effectRoutesToCaster(effect)) {
+            return false;
+        }
+        if (caster_already_has_effect(me, effect)) {
+            return false;
+        }
+        if (effect->hasTag(CTag::Heal)) {
+            return me->getHpRatio() < 75;
+        }
+        return true;
+    };
+    // Rank useful self-target actions deterministically: a needed heal outranks a plain
+    // buff, then the pricier action wins, then the lexicographically smaller name breaks
+    // the tie -- mirroring the offensive selector so container order never decides.
+    auto selfPred = [](const std::shared_ptr<CInteraction> &a, const std::shared_ptr<CInteraction> &b) {
+        const bool ha = a->getEffect() && a->getEffect()->hasTag(CTag::Heal);
+        const bool hb = b->getEffect() && b->getEffect()->hasTag(CTag::Heal);
+        if (ha != hb) {
+            return !ha;
+        }
+        if (a->getManaCost() != b->getManaCost()) {
+            return a->getManaCost() < b->getManaCost();
+        }
+        return a->getName() > b->getName();
+    };
+    std::set<std::shared_ptr<CInteraction>> selfInteractions = me->getInteractions();
+    auto selfRng = selfInteractions | std::views::filter(selfTargetUseful);
+    auto bestSelf = std::ranges::max_element(selfRng, selfPred);
+    if (bestSelf != std::ranges::end(selfRng)) {
+        return *bestSelf;
+    }
+
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](const std::shared_ptr<CInteraction> &it) {
         return !it->hasTag(CTag::Buff);
     };
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [me](const std::shared_ptr<CInteraction> &it) {
         return it->getManaCost() <= me->getMana();
     };
+    // Exclude every self-routing interaction (a Buff-tagged effect or an explicit selfTarget) from
+    // offensive selection: those are handled by the self-target pass above, so a self-heal or self-buff
+    // never leaks into the offensive ranking (where, crediting only its incidental hit, it could tie a
+    // pure attack and win the cheaper-cost tie-break).
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction3 = [](const std::shared_ptr<CInteraction> &it) {
-        return !it->getEffect() || (it->getEffect() && !it->getEffect()->hasTag(CTag::Buff));
+        const auto effect = it->getEffect();
+        return !effect || !it->effectRoutesToCaster(effect);
     };
     // Rank affordable, non-buff interactions by how much they weaken the current
     // opponent rather than by mana cost. Ties break toward the cheaper spell, then
