@@ -684,6 +684,63 @@ def show_panel(sim, recorder, panel_name, caption, hold):
             pass
 
 
+def _open_panel(sim, recorder, panel_name, caption, hold, text=None):
+    """Open a panel via the gui handler (the same call the game makes when a
+    player opens one), optionally seed a text panel with content, capture it,
+    then close it. Best-effort: a panel that fails to open is skipped."""
+    panel = None
+    try:
+        panel = sim.gameInstance.getGuiHandler().openPanel(panel_name)
+        if text is not None and panel is not None and hasattr(panel, "setText"):
+            try:
+                panel.setText(text)
+            except Exception:  # noqa: BLE001
+                pass
+        sim.pumpEvents(3)
+        recorder.capture(caption=caption, hold=hold)
+    except Exception:  # noqa: BLE001
+        pass
+    finally:
+        try:
+            if panel is not None:
+                panel.close()
+                sim.pumpEvents(2)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def showcase_panels(sim, recorder, fps):
+    """Tour every in-game panel so the whole interface appears on screen.
+
+    The HUD panels (character / inventory / journal) render the hero's live
+    state; the contextual panels (info, trade, loot, dialog) are opened the same
+    way the game opens them in play. The fight panel is shown separately by the
+    on-screen battles.
+    """
+    hold = max(1, round(1.6 * fps))
+    recorder.capture_card(
+        "The Interface",
+        "Every panel a player uses - the character sheet, inventory, quest journal, "
+        "trade, loot and dialog screens (the fight panel is shown in each battle).",
+        subtitle="A tour of the HUD",
+        hold=max(1, round(2.4 * fps)),
+    )
+    show_panel(sim, recorder, "characterPanel", "Character sheet: class, race and combat stats", hold)
+    show_panel(sim, recorder, "inventoryPanel", "Inventory: weapons, armour and quest items", hold)
+    show_panel(sim, recorder, "questPanel", "Quest journal: objectives, rewards and hints", hold)
+    _open_panel(
+        sim,
+        recorder,
+        "infoPanel",
+        "Info panel: lore and status messages",
+        hold,
+        text="The dead of Nouraajd do not rest. Every wand, coin and cured soul buys one more night.",
+    )
+    _open_panel(sim, recorder, "tradePanel", "Trade panel: buy and sell at the market", hold)
+    _open_panel(sim, recorder, "lootPanel", "Loot panel: spoils from chests and fallen foes", hold)
+    _open_panel(sim, recorder, "dialogPanel", "Dialog panel: conversations with the townsfolk", hold)
+
+
 # ---------------------------------------------------------------------------
 # Campaign driver helpers
 # ---------------------------------------------------------------------------
@@ -963,6 +1020,9 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     player.checkQuests()
     sim.pumpEvents(5)
     checkpoint("The amulet is returned - every Nouraajd quest complete")
+
+    # --- Interface tour: showcase every panel with the hero fully kitted out --
+    showcase_panels(sim, recorder, fps)
 
     if close_transition:
         # --- Chapter close: cleanse the cave, which routes on to the ritual --
