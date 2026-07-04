@@ -11294,6 +11294,148 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"templates": results}, sort_keys=True)
 
     @game_test
+    def test_class_progression_survives_save_reload(self):
+        # [EPIC_06][STORY_03][SUBSTORY_04] Claiming an Inquisitor/Wayfarer class, advancing its
+        # level-gated progression, and round-tripping through CMapLoader.save ->
+        # CGameLoader.loadSavedGame must preserve the class identity (getPlayerClassId), race
+        # identity (getRaceId), the level/exp counters, a one-time class-discovery flag/counter,
+        # and the derived action sets: the raw own actions (getActions) plus the level-composed
+        # effective actions (getEffectiveInteractions). Every assertion is pinned to a value
+        # captured from the live progressed player, never a hard-coded constant, so it stays
+        # correct as class content evolves.
+        #
+        # Progression is driven deterministically with CCreature.addExp (mirrors test_level): each
+        # addExp(1000) accrues experience until the player crosses enough level thresholds to
+        # unlock several class-granted actions (res/config/creature_classes.json Inquisitor/Wayfarer
+        # levelling maps), so the captured effective action set is non-degenerate. The save/reload
+        # plumbing mirrors test_player_template_saves_migrate_class_race_and_round_trip.
+        game = load_game_module()
+
+        def action_type_ids(actions):
+            return sorted(action.getTypeId() for action in actions)
+
+        def progression_snapshot(player):
+            return {
+                "playerClassId": player.getPlayerClassId(),
+                "raceId": player.getRaceId(),
+                "level": player.getLevel(),
+                "exp": player.getNumericProperty("exp"),
+                "rawActions": action_type_ids(player.getActions()),
+                "effectiveActions": action_type_ids(player.getEffectiveInteractions()),
+            }
+
+        results = {}
+        for player_type in ("Inquisitor", "Wayfarer"):
+            save_name = unique_save_name(f"class_progression_reload_{player_type}")
+            cleanup_save_slot(save_name)
+            try:
+                _g, game_map, player = load_game_map_with_player("test", player_type)
+                self.assertIsNotNone(player)
+                # A fresh start claims the template's class identity.
+                self.assertEqual(player_type, player.getPlayerClassId(), player_type)
+
+                # Advance the class's level-gated progression deterministically: accrue exp until
+                # the player has climbed at least three levels, unlocking several class actions.
+                start_level = player.getLevel()
+                while player.getLevel() < start_level + 3:
+                    player.addExp(1000)
+                self.assertGreaterEqual(player.getLevel(), start_level + 3, player_type)
+
+                baseline = progression_snapshot(player)
+                # Sanity so the preservation assertions are not vacuous: the composed effective
+                # action set must be non-empty.
+                self.assertTrue(baseline["effectiveActions"], player_type)
+
+                game.CMapLoader.save(game_map, save_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_player = loaded_game.getMap().getPlayer()
+                self.assertIsNotNone(loaded_player)
+
+                # Every captured identity, counter, flag, and derived-action value survives the
+                # save/reload cycle unchanged.
+                self.assertEqual(baseline, progression_snapshot(loaded_player), player_type)
+
+                results[player_type] = baseline
+            finally:
+                cleanup_save_slot(save_name)
+
+        return True, json.dumps({"classes": results}, sort_keys=True)
+
+    @game_test
+    def test_class_progression_survives_map_transition_and_back(self):
+        # [EPIC_06][STORY_03][SUBSTORY_04] The same progressed Inquisitor/Wayfarer must keep its
+        # class identity, level/exp counters, discovery flag/counter, and derived action sets
+        # across the current reload-based map transition: CGame.changeMap out to another map and
+        # back. That transition reloads the destination map from content but transfers the SAME
+        # player object (mirrors
+        # test_change_map_reload_transition_does_not_retain_source_session and
+        # test_scene_manager_real_map_transitions_preserve_player_state_and_triggers, both of which
+        # assert reloaded_map.getPlayer() == player), so the class progression must travel with it.
+        # When persistent map sessions land the transition mechanism can be swapped without
+        # changing these self-referential assertions.
+        game = load_game_module()
+
+        def action_type_ids(actions):
+            return sorted(action.getTypeId() for action in actions)
+
+        def progression_snapshot(player):
+            return {
+                "playerClassId": player.getPlayerClassId(),
+                "raceId": player.getRaceId(),
+                "level": player.getLevel(),
+                "exp": player.getNumericProperty("exp"),
+                "rawActions": action_type_ids(player.getActions()),
+                "effectiveActions": action_type_ids(player.getEffectiveInteractions()),
+            }
+
+        results = {}
+        for player_type in ("Inquisitor", "Wayfarer"):
+            g, _game_map, player = load_game_map_with_player("test", player_type)
+            scene_manager = g.getSceneManager()
+            self.assertEqual(player_type, player.getPlayerClassId(), player_type)
+
+            start_level = player.getLevel()
+            while player.getLevel() < start_level + 3:
+                player.addExp(1000)
+            baseline = progression_snapshot(player)
+            self.assertTrue(baseline["effectiveActions"], player_type)
+
+            # Transition out to another map: the reload transition transfers the same player.
+            g.changeMap("ritual")
+            self.assertTrue(
+                pump_event_loop_until(
+                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "ritual"
+                    and not sm.isTransitionPending(),
+                    timeout=2.0,
+                    min_iterations=2,
+                ),
+                player_type,
+            )
+            ritual_map = g.getMap()
+            self.assertTrue(ritual_map.getPlayer() == player, player_type)
+            self.assertEqual(baseline, progression_snapshot(player), player_type)
+
+            # Transition back to the origin map: same player, same progression.
+            g.changeMap("test")
+            self.assertTrue(
+                pump_event_loop_until(
+                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "test"
+                    and not sm.isTransitionPending(),
+                    timeout=2.0,
+                    min_iterations=2,
+                ),
+                player_type,
+            )
+            returned_map = g.getMap()
+            self.assertTrue(returned_map.getPlayer() == player, player_type)
+            self.assertEqual(baseline, progression_snapshot(player), player_type)
+
+            results[player_type] = baseline
+
+        return True, json.dumps({"classes": results}, sort_keys=True)
+
+    @game_test
     def test_legacy_save_rejects_noncanonical_player_name_without_activation(self):
         game = load_game_module()
 
