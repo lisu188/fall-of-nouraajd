@@ -317,6 +317,120 @@ class FrameRecorder:
 
 
 # ---------------------------------------------------------------------------
+# Real input injection (keystrokes / mouse clicks)
+# ---------------------------------------------------------------------------
+# SDL event/keycode constants (SDL2 ABI). Arrow-key SDL_KEYDOWN events are the
+# hero's movement input: CMapGraphicsObject::keyboardEvent turns each one into a
+# one-tile step in that direction plus a turn advance, exactly as a human player
+# pressing an arrow key would. Injecting them through the bound keyboardEvent
+# routes through the same GUI dispatch a real key press takes.
+SDL_KEYDOWN = 0x300
+SDL_MOUSEBUTTONDOWN = 0x401
+SDL_MOUSEBUTTONUP = 0x402
+SDL_BUTTON_LEFT = 1
+SDLK_UP = 0x40000052
+SDLK_DOWN = 0x40000051
+SDLK_LEFT = 0x40000050
+SDLK_RIGHT = 0x4000004F
+
+
+class InputDriver:
+    """Drives the hero with real injected keyboard (and mouse) events.
+
+    The map view's ``CMapGraphicsObject`` handles arrow keys by stepping the
+    hero one tile and advancing the turn, so walking is done purely through
+    injected key presses — the hero actually pathwalks the map rather than
+    having its coordinates teleported. Mouse clicks are injected the same way
+    for widget interactions.
+    """
+
+    def __init__(self, sim):
+        self.sim = sim
+        self.refresh()
+
+    def refresh(self):
+        self.gui = self.sim.gameInstance.getGui()
+        # The map graphics object is re-created per loaded map, so re-resolve it
+        # after every scene/map transition.
+        self.mapobj = self.gui.findChild("CMapGraphicsObject") if self.gui else None
+        return self
+
+    def key(self, keycode):
+        if self.mapobj is None:
+            self.refresh()
+        if self.mapobj is not None:
+            self.mapobj.keyboardEvent(self.gui, SDL_KEYDOWN, keycode)
+
+    def step(self, dx, dy):
+        """Press the arrow key for a one-tile step. Paths are 4-connected, so at
+        most one axis is ever non-zero; prefer the horizontal step otherwise."""
+        if dx > 0:
+            self.key(SDLK_RIGHT)
+        elif dx < 0:
+            self.key(SDLK_LEFT)
+        elif dy > 0:
+            self.key(SDLK_DOWN)
+        elif dy < 0:
+            self.key(SDLK_UP)
+
+
+def _input_driver(sim):
+    driver = getattr(sim, "_input_driver_cache", None)
+    if driver is None:
+        driver = InputDriver(sim)
+        sim._input_driver_cache = driver
+    return driver
+
+
+def _path_from_player(sim, dest, max_len=400, max_nodes=80000):
+    """Breadth-first path of 4-connected walkable tiles from the hero's current
+    tile to ``dest`` (or the closest reachable tile toward it), as a list of
+    ``Coords`` the hero can walk one key press at a time. The goal tile itself is
+    allowed even when occupied so an objective standing on a blocked tile is
+    still approachable."""
+    from collections import deque
+
+    Coords = sim.gameModule.Coords
+    can_step = sim.gameMap.canStep
+    p = sim.player.getCoords()
+    start = (int(p.x), int(p.y), int(p.z))
+    goal = (int(dest.x), int(dest.y), int(dest.z))
+    if start == goal:
+        return []
+    parent = {start: None}
+    frontier = deque([start])
+    found = None
+    nodes = 0
+    while frontier and nodes < max_nodes:
+        node = frontier.popleft()
+        nodes += 1
+        if node == goal:
+            found = node
+            break
+        x, y, z = node
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            cand = (x + dx, y + dy, z)
+            if cand in parent:
+                continue
+            if cand == goal or can_step(Coords(*cand)):
+                parent[cand] = node
+                frontier.append(cand)
+    if found is None:
+        # Goal unreachable within budget: aim for the explored tile closest to it
+        # so the hero still walks meaningfully toward the objective.
+        found = min(parent, key=lambda n: abs(n[0] - goal[0]) + abs(n[1] - goal[1]))
+    path = []
+    node = found
+    while node is not None and node != start:
+        path.append(Coords(node[0], node[1], node[2]))
+        node = parent[node]
+    path.reverse()
+    if max_len and len(path) > max_len:
+        path = path[:max_len]
+    return path
+
+
+# ---------------------------------------------------------------------------
 # Movement helpers
 # ---------------------------------------------------------------------------
 def _wrap_text(draw, text, font, max_width):
@@ -396,81 +510,161 @@ def ensure_safe(sim):
                     return
 
 
-def _approach_path(sim, destination, distance):
-    """Return a connected tile path ending at ``destination``, ~``distance`` long.
-
-    Breadth-first search outward from the objective over walkable neighbours,
-    tracking parents, then reconstruct the path from the farthest tile reached
-    (capped at ``distance`` rings) back to the objective. The result is a list of
-    ``Coords`` from a staging tile to ``destination``, every tile walkable and
-    connected, so the hero can glide along it without invoking the engine's
-    expensive per-turn pathfinding.
-    """
-    Coords = sim.gameModule.Coords
-    can_step = sim.gameMap.canStep
-    start = (int(destination.x), int(destination.y), int(destination.z))
-    parent = {start: None}
-    frontier = [start]
-    farthest = start
-    rings = 0
-    while frontier and rings < distance:
-        nxt = []
-        for node in frontier:
-            x, y, z = node
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                cand = (x + dx, y + dy, z)
-                if cand in parent:
-                    continue
-                if can_step(Coords(*cand)):
-                    parent[cand] = node
-                    nxt.append(cand)
-                    farthest = cand
-        if not nxt:
-            break
-        frontier = nxt
-        rings += 1
-
-    # Walk parents from the farthest staging tile back to the objective; this
-    # yields the path already ordered staging -> destination.
-    path = []
-    node = farthest
-    while node is not None:
-        path.append(Coords(node[0], node[1], node[2]))
-        node = parent[node]
-    return path
-
-
 def scene_at(sim, recorder, object_name, caption, approach_tiles=10, stop_distance=2, frames_per_tile=1, pre_step=None):
-    """Stage a short cinematic approach to the named object, if it exists.
+    """Walk the hero to the named object through real keyboard input, if present.
 
-    Computes a connected path a few tiles long ending near the objective, then
-    glides the hero along it with ``setCoords`` (which, unlike engine
-    pathfinding, is instant), capturing a frame per tile. The walk halts
+    Computes a connected walkable path from the hero's *current* tile to a tile
+    beside the objective, then walks it one arrow-key press at a time (each press
+    is a real input event that steps the hero and advances a turn), capturing a
+    frame per tile so the traversal is fully visible. The walk halts
     ``stop_distance`` tiles short of the objective so the hero never ends a turn
-    adjacent to a (possibly hostile) objective and trips blocking combat; the
-    caller resolves the objective by removing it. Returns ``True`` if the object
-    was present.
+    on a (possibly hostile) objective; the caller resolves it. ``pre_step`` lets
+    hostile-heavy chapters neutralize threats before each step so a walk never
+    ends a turn boxed in by combat. Returns ``True`` if the object was present.
     """
     obj = sim.gameMap.getObjectByName(object_name)
     if obj is None:
         return False
     target = obj.getCoords()
     destination = sim._interactionCoords(target)
-    path = _approach_path(sim, destination, approach_tiles)
-    _log_progress(sim, f"approach {object_name}: {len(path)} tiles -> ({destination.x},{destination.y}) :: {caption}")
-    for coords in path:
-        if abs(coords.x - target.x) + abs(coords.y - target.y) <= stop_distance:
+    # By default, keep the immediate area clear as the hero walks so a stray
+    # creature never traps the turn in the modal fight panel; hostile-heavy
+    # chapters pass their own pre_step (freeze the rite, clear the whole field).
+    if pre_step is None:
+        pre_step = _clear_nearby_hostiles
+    driver = _input_driver(sim).refresh()
+    path = _path_from_player(sim, destination)
+    # Long walks still show the whole journey, but capture only every ``stride``
+    # steps so a cross-map trek stays a few seconds of video rather than tens.
+    stride = max(1, len(path) // 120)
+    _log_progress(
+        sim,
+        f"walk {object_name}: {len(path)} tiles via keys (stride {stride}) "
+        f"-> ({destination.x},{destination.y}) :: {caption}",
+    )
+    for index, tile in enumerate(path):
+        if abs(tile.x - target.x) + abs(tile.y - target.y) <= stop_distance:
             break
-        sim.player.setCoords(coords)
-        # ``pre_step`` lets hostile-heavy chapters neutralize threats (clear the
-        # field, re-freeze a scripted rite) immediately before the turn that this
-        # frame advances, so the glide never ends a turn boxed in by combat.
         if pre_step is not None:
             pre_step(sim)
-            sim.player.setCoords(coords)
-        recorder.capture(caption=caption, hold=frames_per_tile, advance_turn=True)
+            driver.refresh()
+        cur = sim.player.getCoords()
+        dx = (tile.x > cur.x) - (tile.x < cur.x)
+        dy = (tile.y > cur.y) - (tile.y < cur.y)
+        if dx == 0 and dy == 0:
+            continue
+        driver.step(dx, dy)
+        sim.pumpEvents(1)
+        sim.refreshHandles()
+        if index % stride == 0 or index == len(path) - 1:
+            recorder.capture(caption=caption, hold=frames_per_tile, advance_turn=False)
+        now = sim.player.getCoords()
+        if now.x == cur.x and now.y == cur.y:
+            # The step did not land (a creature moved into the way); stop walking
+            # rather than spin, and let the caller resolve the objective.
+            _log_progress(sim, f"blocked at ({cur.x},{cur.y}) heading ({dx},{dy})")
+            break
     sim.refreshHandles()
     _log_progress(sim, f"arrived at ({sim.player.getCoords().x},{sim.player.getCoords().y})")
+    return True
+
+
+def _is_fightable(sim, obj):
+    return obj is not None and sim._safeCall(obj, "isAlive") is True and (sim._safeCall(obj, "getHpMax") or 0) > 0
+
+
+def stage_fight(sim, recorder, enemy, caption, fps, rounds_cap=40):
+    """Play out a real, visible fight against ``enemy`` in the fight panel.
+
+    Opens the game's fight panel (both combatants, live HP bars) and resolves the
+    encounter one round at a time with the player's actual attack interaction —
+    the enemy's HP visibly drops each captured frame until it dies. Frames are
+    captured with ``advance_turn=False`` so no map turn passes during the fight,
+    which is what keeps the enemy from acting and the headless session from
+    dropping into the engine's own blocking (nested-event-loop) combat.
+    """
+    g = sim.gameInstance
+    gui = g.getGui()
+    panel = g.createObject("fightPanel")
+    panel.setEnemies([enemy])
+    gui.pushChild(panel)
+    sim.pumpEvents(3)
+    interactions = panel.interactionsCollection(gui)
+    attack = interactions[0] if interactions else None
+    beat = max(1, round(0.5 * fps))
+    for _ in range(rounds_cap):
+        if not sim._safeCall(enemy, "isAlive"):
+            break
+        hp = sim._safeCall(enemy, "getHp")
+        mx = sim._safeCall(enemy, "getHpMax")
+        recorder.capture(caption=f"{caption} ({hp}/{mx} HP)", hold=beat, advance_turn=False)
+        if attack is not None:
+            sim.player.useAction(attack, enemy)
+        else:
+            try:
+                enemy.hurt(20)
+            except Exception:  # noqa: BLE001
+                break
+        sim.pumpEvents(1)
+        try:
+            sim.player.heal(0)  # keep the hero at full health across the recording
+        except Exception:  # noqa: BLE001
+            pass
+    recorder.capture(caption=f"{caption} - defeated", hold=max(1, round(1.0 * fps)), advance_turn=False)
+    try:
+        panel.close()
+    except Exception:  # noqa: BLE001
+        pass
+    sim.pumpEvents(2)
+    sim.refreshHandles()
+
+
+def approach_and_fight(sim, recorder, enemy_name, caption, fps, fight_range=9, max_steps=260):
+    """Walk the hero toward the live enemy via real key presses, then fight it.
+
+    Greedily steps toward the enemy's *current* tile (it may pursue), clearing
+    incidental threats but keeping the target, and halts ``fight_range`` tiles
+    short — close enough to read as a confrontation, far enough that no step ends
+    a turn adjacent (which would trip the blocking fight panel). Then it stages a
+    visible round-by-round fight against that real, fully-statted enemy. Returns
+    ``True`` if the enemy was present.
+    """
+    if sim.gameMap.getObjectByName(enemy_name) is None:
+        return False
+    driver = _input_driver(sim).refresh()
+    stuck = 0
+    for _ in range(max_steps):
+        enemy = sim.gameMap.getObjectByName(enemy_name)
+        if enemy is None:
+            break
+        p = sim.player.getCoords()
+        c = enemy.getCoords()
+        if abs(p.x - c.x) + abs(p.y - c.y) <= fight_range:
+            break
+        _clear_nearby_hostiles(sim, radius=3, keep_names=(enemy_name,))
+        driver.refresh()
+        dx = (c.x > p.x) - (c.x < p.x)
+        dy = (c.y > p.y) - (c.y < p.y)
+        if abs(c.x - p.x) >= abs(c.y - p.y) and dx != 0:
+            driver.step(dx, 0)
+        elif dy != 0:
+            driver.step(0, dy)
+        else:
+            driver.step(dx, 0)
+        sim.pumpEvents(1)
+        sim.refreshHandles()
+        recorder.capture(caption=caption, hold=1, advance_turn=False)
+        now = sim.player.getCoords()
+        if now.x == p.x and now.y == p.y:
+            stuck += 1
+            if stuck >= 3:
+                break
+        else:
+            stuck = 0
+    enemy = sim.gameMap.getObjectByName(enemy_name)
+    if _is_fightable(sim, enemy):
+        _log_progress(sim, f"fight {enemy_name}: {sim._safeCall(enemy, 'getHpMax')} HP :: {caption}")
+        stage_fight(sim, recorder, enemy, caption, fps)
     return True
 
 
@@ -536,6 +730,58 @@ def _step_on_tile(sim, object_name, pump=5):
     sim.pumpEvents(pump)
     sim.refreshHandles()
     return True
+
+
+def _clear_nearby_hostiles(sim, radius=3, keep_names=()):
+    """Remove live creatures within ``radius`` tiles of the hero.
+
+    The hero moves through real key presses, and each press advances a turn; if a
+    live enemy is adjacent when that turn resolves, the engine opens a modal fight
+    panel that spins its own nested event loop awaiting a click — which a
+    single-threaded headless driver can never deliver, so it hangs. Sweeping the
+    immediate area before each step keeps the walk clear of that trap without
+    touching distant objectives. Returns the number removed.
+    """
+    sim.refreshHandles()
+    player = sim.player
+    pc = player.getCoords()
+    player_name = sim._safeCall(player, "getName")
+    keep = set(keep_names) | ({player_name} if player_name else set())
+    victims = []
+    for obj in sim.gameMap.getObjects():
+        name = sim._safeCall(obj, "getName")
+        if not name or name in keep or not sim._safeCall(obj, "isAlive"):
+            continue
+        c = obj.getCoords()
+        if c.z == pc.z and abs(c.x - pc.x) + abs(c.y - pc.y) <= radius:
+            victims.append(name)
+    for name in victims:
+        sim.gameMap.removeObjectByName(name)
+    if victims:
+        sim.refreshHandles()
+    return len(victims)
+
+
+def _nearest_live_enemy_name(sim):
+    """Return the name of the nearest live non-player creature on the hero's
+    level, or ``None``."""
+    sim.refreshHandles()
+    p = sim.player.getCoords()
+    player_name = sim._safeCall(sim.player, "getName")
+    best_name = None
+    best_dist = None
+    for obj in sim.gameMap.getObjects():
+        name = sim._safeCall(obj, "getName")
+        if not name or name == player_name or not sim._safeCall(obj, "isAlive"):
+            continue
+        c = obj.getCoords()
+        if c.z != p.z:
+            continue
+        d = abs(c.x - p.x) + abs(c.y - p.y)
+        if best_dist is None or d < best_dist:
+            best_dist = d
+            best_name = name
+    return best_name
 
 
 def _clear_live_hostiles(sim, keep_names=()):
@@ -642,11 +888,10 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     checkpoint("Rolf's skull recovered - the townsfolk are relieved")
     show_panel(sim, recorder, "inventoryPanel", "Inventory: the skull of Rolf is yours", panel_beat)
 
-    # --- Gooby: the main quest -------------------------------------------
-    if scene_at(sim, recorder, "gooby1", "Tracking the beast Gooby"):
-        gooby = game_map.getObjectByName("gooby1")
-        if gooby is not None:
-            game_map.removeObjectByName(gooby.getName())
+    # --- Gooby: the main quest (a real, on-screen fight) -----------------
+    approach_and_fight(sim, recorder, "gooby1", "Tracking the beast Gooby", fps)
+    if game_map.getObjectByName("gooby1") is not None:
+        game_map.removeObjectByName("gooby1")
     player.checkQuests()
     checkpoint("Gooby slain - 200 gold from grateful townsfolk")
     show_panel(sim, recorder, "questPanel", "Quest log: the main path opens", panel_beat)
@@ -694,11 +939,12 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
 
     town_hall.spawn_cultists()
     sim.refreshHandles()
-    leader = game_map.getObjectByName("cultLeaderQuest")
-    # Do not walk into the cultist swarm (a packed melee would trip blocking
-    # combat); the encounter is shown via the quest log and resolved directly.
     checkpoint("Cultists ambush the courtyard - defend Victor")
-    if leader is not None and game_map.getObjectByName(leader.getName()) is not None:
+    # Fight the cult leader head-on; incidental cultists are cleared as the hero
+    # closes so the approach never stalls in the packed melee.
+    approach_and_fight(sim, recorder, "cultLeaderQuest", "Duel with the cult leader", fps)
+    leader = game_map.getObjectByName("cultLeaderQuest")
+    if leader is not None:
         game_map.removeObjectByName(leader.getName())
     player.checkQuests()
     sim.pumpEvents(5)
@@ -709,10 +955,9 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     create("questDialog").start_amulet_quest()
     sim.refreshHandles()
     checkpoint("A final quest: recover the precious amulet")
-    if scene_at(sim, recorder, "amuletGoblin", "Chasing the amulet thief"):
-        goblin = game_map.getObjectByName("amuletGoblin")
-        if goblin is not None:
-            game_map.removeObjectByName(goblin.getName())
+    approach_and_fight(sim, recorder, "amuletGoblin", "Chasing the amulet thief", fps)
+    if game_map.getObjectByName("amuletGoblin") is not None:
+        game_map.removeObjectByName("amuletGoblin")
     player.addItem("preciousAmulet")
     create("questReturnDialog").complete_amulet_quest()
     player.checkQuests()
@@ -766,6 +1011,19 @@ def chapter_ritual(sim, recorder, fps):
                 sim.gameMap.removeObjectByName(anchor)
             safe_beat(f"{label.capitalize()} shatters")
 
+    # Let the Ritual Leader descend (one turn with the rite briefly re-armed, but
+    # anchors_destroyed keeps the waves suppressed), then duel it on-screen.
+    sim.gameMap.setBoolProperty("anchors_destroyed", True)
+    sim.gameMap.setBoolProperty("leader_spawned", False)
+    sim.gameMap.setBoolProperty("ritual_active", True)
+    _input_driver(sim).refresh().key(SDLK_UP)
+    sim.pumpEvents(2)
+    sim.refreshHandles()
+    sim.gameMap.setBoolProperty("ritual_active", False)
+    if _is_fightable(sim, sim.gameMap.getObjectByName("ritualLeader")):
+        approach_and_fight(sim, recorder, "ritualLeader", "Duel with the Ritual Leader", fps)
+        if sim.gameMap.getObjectByName("ritualLeader") is not None:
+            sim.gameMap.removeObjectByName("ritualLeader")
     sim.gameMap.setBoolProperty("leader_defeated", True)
     safe_beat("The Ritual Leader is cut down - the anchors lie broken")
 
@@ -796,6 +1054,18 @@ def chapter_siege(sim, recorder, fps):
     clear(sim)
     recorder.capture(caption="The last gatehouse stands besieged", hold=finale, advance_turn=True)
     show_panel(sim, recorder, "inventoryPanel", "Charged mage-wands to seal the breaches", panel_beat)
+
+    # Let the assault spawn, then cut down one attacker on-screen before sealing.
+    for _ in range(8):
+        if _nearest_live_enemy_name(sim) is not None:
+            break
+        sim.gameMap.move()
+        sim.pumpEvents(1)
+        sim.refreshHandles()
+    foe = _nearest_live_enemy_name(sim)
+    if foe is not None:
+        approach_and_fight(sim, recorder, foe, "Cut down a siege attacker", fps)
+    clear(sim)
 
     for index, name in enumerate(("spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"), start=1):
         if sim.gameMap.getObjectByName(name) is None:

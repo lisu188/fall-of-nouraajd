@@ -133,7 +133,11 @@ through the `NativePluginHostV1` ABI, `*_load_v1` entry points) and Python in
   through an entire `res/campaigns/` manifest (default `fallOfNouraajd`:
   nouraajd → ritual → siege), following the async map transitions between
   chapters, and encodes to MP4 with title cards (auto-wraps in `xvfb-run` on
-  Linux). `--campaign <id>` picks another campaign; `--single-map` renders one
+  Linux). The hero traverses each map through **real injected key presses**
+  (arrow keys dispatched via the bound `keyboardEvent`, routed through the same
+  GUI path a human player's input takes) and fights enemies **on-screen in the
+  fight panel** (`approach_and_fight`/`stage_fight` drive real `useAction`
+  rounds). `--campaign <id>` picks another campaign; `--single-map` renders one
   map's storyboard.
 - Tests run headless via `SDL_VIDEODRIVER=dummy` (set by `test.py`); UI tests use xvfb.
 

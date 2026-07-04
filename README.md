@@ -17,12 +17,15 @@ story-gated crafting recipes, save/load, random maps, and an MCP engine API for 
 </p>
 
 ## walkthrough video
-A full automated playthrough of the multi-map **Fall of Nouraajd** campaign, chapter by chapter:
-Chapter I in the ruined town (Rolf's skull, Gooby, Father Beren's letter/relic/cleanse chain, Victor,
-and the amulet), Chapter II breaking the soul-binding ritual in the chapel, and Chapter III holding the
-last besieged gatehouse — with manifest-driven title cards between the scenario maps. Click the poster to
-play [`screenshots/nouraajd-walkthrough.mp4`](./screenshots/nouraajd-walkthrough.mp4), generated headlessly
-by [`scripts/generate_walkthrough_video.py`](./scripts/generate_walkthrough_video.py).
+A full automated playthrough of the multi-map **Fall of Nouraajd** campaign, chapter by chapter, where the
+hero **walks the maps through real injected key presses** (the same input path a human player's arrow keys
+take) and **fights enemies on-screen in the fight panel** (Gooby, the courtyard cult leader, the amulet
+thief, the Ritual Leader). Chapter I in the ruined town (Rolf's skull, Gooby, Father Beren's
+letter/relic/cleanse chain, Victor, and the amulet), Chapter II breaking the soul-binding ritual in the
+chapel, and Chapter III holding the last besieged gatehouse — with manifest-driven title cards between the
+scenario maps. Click the poster to play
+[`screenshots/nouraajd-walkthrough.mp4`](./screenshots/nouraajd-walkthrough.mp4), generated headlessly by
+[`scripts/generate_walkthrough_video.py`](./scripts/generate_walkthrough_video.py).
 <p>
   <a href="./screenshots/nouraajd-walkthrough.mp4">
     <img alt="Fall of Nouraajd walkthrough video" src="./screenshots/nouraajd-walkthrough-poster.png" width="70%">
