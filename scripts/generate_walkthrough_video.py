@@ -558,6 +558,9 @@ def scene_at(sim, recorder, object_name, caption, approach_tiles=10, stop_distan
         sim.refreshHandles()
         if index % stride == 0 or index == len(path) - 1:
             recorder.capture(caption=caption, hold=frames_per_tile, advance_turn=False)
+        # Pause to read any ambient notice the hero has just walked up to, so the
+        # town's signs appear in place, in the order a player would meet them.
+        _read_signs_underfoot(sim, recorder)
         now = sim.player.getCoords()
         if now.x == cur.x and now.y == cur.y:
             # The step did not land (a creature moved into the way); stop walking
@@ -654,6 +657,7 @@ def approach_and_fight(sim, recorder, enemy_name, caption, fps, fight_range=9, m
         sim.pumpEvents(1)
         sim.refreshHandles()
         recorder.capture(caption=caption, hold=1, advance_turn=False)
+        _read_signs_underfoot(sim, recorder)
         now = sim.player.getCoords()
         if now.x == p.x and now.y == p.y:
             stuck += 1
@@ -849,76 +853,79 @@ def open_loot(sim, recorder, creature, item_ids, caption, fps):
     return True
 
 
-def explore_dialogs(sim, recorder, fps, dialog_ids, title, subtitle):
-    """Show every townsfolk conversation on the current map.
+def show_dialog_at(sim, recorder, npc_object_name, dialog_id, caption, fps):
+    """Walk to a townsfolk NPC and show the opening line of its dialog.
 
-    Each dialog is opened at its opening line (the state its NPC's onEnter would
-    show). We deliberately do not press option keys here: many of these dialogs
-    carry quest actions (deliver a letter, spawn cultists, cleanse the cave and
-    transition maps), and selecting an option would fire them out of order. The
-    Town Hall dialog is played through interactively elsewhere; here the point is
-    to surface each conversation's existence and voice."""
+    Unlike :func:`open_dialog_at` this does not press any option keys, so it is
+    safe for NPCs whose options carry quest actions (the tavern's Victor flags,
+    the travelers' contract): the hero simply meets them and their voice is
+    heard, exactly as walking onto the tile would open the conversation."""
+    if sim.gameMap.getObjectByName(npc_object_name) is None:
+        return False
+    scene_at(sim, recorder, npc_object_name, "Approaching the townsfolk", stop_distance=1)
     g = sim.gameInstance
-    hold = max(1, round(1.4 * fps))
-    recorder.capture_card(
-        title,
-        "Every conversation the townsfolk offer, shown at its opening line.",
-        subtitle=subtitle,
-        hold=max(1, round(2.4 * fps)),
-    )
-    for dialog_id in dialog_ids:
-        dialog = g.createObject(dialog_id)
-        if dialog is None:
-            continue
-        panel = g.createObject("dialogPanel")
+    dialog = g.createObject(dialog_id)
+    if dialog is None:
+        return False
+    panel = g.createObject("dialogPanel")
+    try:
+        panel.setDialog(dialog)
+        g.getGui().pushChild(panel)
+        panel.reload()
+        sim.pumpEvents(3)
+        recorder.capture(caption=caption, hold=max(1, round(2.0 * fps)))
+    except Exception:  # noqa: BLE001
+        pass
+    finally:
         try:
-            panel.setDialog(dialog)
-            g.getGui().pushChild(panel)
-            panel.reload()
-            sim.pumpEvents(3)
-            recorder.capture(caption=f"Conversation: {dialog_id}", hold=hold)
+            panel.close()
+            sim.pumpEvents(2)
         except Exception:  # noqa: BLE001
             pass
-        finally:
-            try:
-                panel.close()
-                sim.pumpEvents(2)
-            except Exception:  # noqa: BLE001
-                pass
+    return True
 
 
-def explore_ambient_messages(sim, recorder, fps):
-    """Read every ambient notice, prayer and warning left across the map.
+def _arm_ambient_signs(sim, fps):
+    """Index the map's ambient sign-posts so they can be read on the walk.
 
-    Each ambient object is a sign-post carrying a ``text`` property that its
-    onEnter shows through an info panel; here every one is surfaced in that same
-    info panel so no piece of the town's environmental storytelling is missed."""
-    ambient = []
-    seen = set()
+    Stores name -> (x, y, text) for every ambient notice, plus the fps and an
+    empty 'read' set, on the sim; :func:`_read_signs_underfoot` then surfaces
+    each one the hero walks up to, in the geographic order a player meets them
+    rather than as an out-of-band montage."""
+    pois = {}
     for obj in sim.gameMap.getObjects():
         name = sim._safeCall(obj, "getName") or ""
-        if not (name.startswith("ambient") or "Sign" in name or "sign" in name):
+        if not (name.startswith("ambient") or name == "nouraajdSign"):
             continue
         try:
             text = obj.getStringProperty("text")
         except Exception:  # noqa: BLE001
             text = ""
-        if text and text not in seen:
-            seen.add(text)
-            ambient.append((name, text))
-    if not ambient:
+        if text:
+            c = obj.getCoords()
+            pois[name] = (int(c.x), int(c.y), text)
+    sim._sign_pois = pois
+    sim._signs_read = set()
+    sim._video_fps = fps
+
+
+def _read_signs_underfoot(sim, recorder, radius=2):
+    """Read (in an info panel) any un-read ambient sign the hero is next to."""
+    pois = getattr(sim, "_sign_pois", None)
+    if not pois:
         return
-    ambient.sort()
-    hold = max(1, round(0.8 * fps))
-    recorder.capture_card(
-        "The Ruined Town Speaks",
-        "Notices, prayers and warnings the townsfolk left behind - every ambient message across Nouraajd.",
-        subtitle=f"{len(ambient)} readings",
-        hold=max(1, round(2.4 * fps)),
-    )
-    for _name, text in ambient:
-        label = text if len(text) <= 64 else text[:61] + "..."
-        _open_panel(sim, recorder, "infoPanel", label, hold, text=text)
+    read = sim._signs_read
+    fps = getattr(sim, "_video_fps", 24)
+    p = sim.player.getCoords()
+    hold = max(1, round(0.9 * fps))
+    for name in list(pois.keys()):
+        if name in read:
+            continue
+        x, y, text = pois[name]
+        if p.z == 0 and abs(p.x - x) + abs(p.y - y) <= radius:
+            read.add(name)
+            label = text if len(text) <= 64 else text[:61] + "..."
+            _open_panel(sim, recorder, "infoPanel", label, hold, text=text)
 
 
 # ---------------------------------------------------------------------------
@@ -1117,10 +1124,20 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     checkpoint("Quest: recover the skull of Sergeant Rolf")
     show_panel(sim, recorder, "questPanel", "Quest log: Rolf's plea is now active", panel_beat)
 
-    # --- The town market: real trade panel wired to the market building ----
-    open_trade_at(sim, recorder, "market1", "The town market: buy and sell the map's wares", fps)
+    # Index the ambient sign-posts so the hero reads each one in place as it is
+    # passed, rather than in an out-of-band montage.
+    _arm_ambient_signs(sim, fps)
 
-    # --- Rolf: recover the skull from the cave ----------------------------
+    # --- Visit Nouraajd: explore the town before descending to the cave ----
+    # The town square (gate, tavern, town hall) lies west of the start, between
+    # the hero and the cave, so this westward tour meets the townsfolk and reads
+    # the street notices exactly on the way a player would first walk.
+    open_trade_at(sim, recorder, "market1", "The town market: buy and sell the map's wares", fps)
+    show_dialog_at(sim, recorder, "nouraajdDoor", "doorDialog", "At the town gate", fps)
+    show_dialog_at(sim, recorder, "nouraajdTavern", "tavernDialog1", "In the tavern, hooded strangers slip out", fps)
+    open_dialog_at(sim, recorder, "nouraajdTownHall", "townHallDialog", "The Town Hall: Mayor Irvin's plea", fps)
+
+    # --- Rolf: now descend to the haunted cave ----------------------------
     scene_at(sim, recorder, "cave1", "Descending into the haunted cave")
     if game_map.getObjectByName("cave1") is not None:
         game_map.removeObjectByName("cave1")
@@ -1136,8 +1153,7 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     checkpoint("Gooby slain - 200 gold from grateful townsfolk")
     show_panel(sim, recorder, "questPanel", "Quest log: the main path opens", panel_beat)
 
-    # --- Beren's chain: visit the Town Hall NPC, take the letter ----------
-    open_dialog_at(sim, recorder, "nouraajdTownHall", "townHallDialog", "Town Hall: a letter for Father Beren", fps)
+    # --- Beren's chain: the mayor entrusts the sealed letter --------------
     town_hall = create("townHallDialog")
     town_hall.give_letter()
     checkpoint("The Town Hall entrusts a letter for Father Beren")
@@ -1208,17 +1224,6 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     sim.pumpEvents(5)
     checkpoint("The amulet is returned - every Nouraajd quest complete")
 
-    # --- Exploration: every townsfolk conversation and ambient notice ------
-    explore_dialogs(
-        sim,
-        recorder,
-        fps,
-        ["doorDialog", "tavernDialog1", "tavernDialog2", "berenDialog", "victorRewardDialog", "dialog"],
-        "Voices of Nouraajd",
-        "The townsfolk conversations",
-    )
-    explore_ambient_messages(sim, recorder, fps)
-
     # --- HUD tour: the always-available panels with the hero fully kitted out --
     showcase_hud(sim, recorder, fps)
 
@@ -1240,6 +1245,9 @@ def chapter_ritual(sim, recorder, fps):
     beat, panel_beat, finale, fortify, checkpoint = _chapter_helpers(sim, recorder, fps)
     sim.refreshHandles()
     fortify()
+    # Re-index signs for this map (the ritual chapel has none) so the walk never
+    # tries to read the previous map's notices.
+    _arm_ambient_signs(sim, fps)
 
     def freeze(s):
         # Every anchor's onDestroy trigger re-arms the rite (start_ritual) and
@@ -1285,17 +1293,6 @@ def chapter_ritual(sim, recorder, fps):
     sim.gameMap.setBoolProperty("leader_defeated", True)
     safe_beat("The Ritual Leader is cut down - the anchors lie broken")
 
-    # Explore the chapel's own conversations before freeing the captive.
-    explore_dialogs(
-        sim,
-        recorder,
-        fps,
-        ["chapelWarningDialog", "recordsDialog", "capturedSoulDialog"],
-        "Voices of the Chapel",
-        "The ritual dialogs",
-    )
-    freeze(sim)
-
     scene_at(sim, recorder, "ritualCaptive", "Free the soul held in the stained glass", pre_step=freeze)
     freeze(sim)
     captured = sim.gameInstance.createObject("capturedSoulDialog")
@@ -1310,6 +1307,7 @@ def chapter_siege(sim, recorder, fps):
     beat, panel_beat, finale, fortify, checkpoint = _chapter_helpers(sim, recorder, fps)
     sim.refreshHandles()
     fortify()
+    _arm_ambient_signs(sim, fps)  # the siege map has no ambient signs; clear stale ones
     def clear(s):
         # The gatehouse keeps spawning attackers each turn (and an onTurn trigger
         # re-enables disabled gates), so clear the field before every frame's turn
