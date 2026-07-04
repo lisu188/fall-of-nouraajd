@@ -6294,6 +6294,210 @@ class GameTest(unittest.TestCase):
             cleanup_save_slot(save_name)
 
     @game_test
+    def test_selftarget_interaction_routes_effect_to_caster(self):
+        """A selfTarget interaction applies its effect to the caster, not the opponent.
+
+        This is the migrated targeting form: CInteraction::onAction routes through
+        effectRoutesToCaster, which returns true for an explicit selfTarget regardless
+        of the effect's tags. A healthy opponent is passed as the target, so a mis-route
+        would land the buff on the opponent instead -- this self-routing is exactly the
+        invariant the monster AI relies on when it casts a self-buff. (The AI's action
+        *selection* has no Python-bound fight-move entry point; it is covered by the
+        self_target fixtures in tests/unit/test_controller.cpp.)
+        """
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "SelfTargetBuffAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "selfTarget": True,
+                        "effect": {"class": "CEffect", "properties": {"tags": ["buff"], "duration": 3}},
+                    },
+                }
+            ),
+        )
+
+        interaction = g.createObject("SelfTargetBuffAction")
+        caster = g.createObject("CCreature")
+        opponent = g.createObject("CCreature")
+        self.assertEqual(0, len(list(caster.getEffects())))
+        self.assertEqual(0, len(list(opponent.getEffects())))
+
+        interaction.onAction(caster, opponent)
+
+        caster_effects = list(caster.getEffects())
+        opponent_effects = list(opponent.getEffects())
+        self.assertEqual(1, len(caster_effects))
+        self.assertEqual(0, len(opponent_effects))
+        self.assertEqual("CEffect", caster_effects[0].getType())
+        return True, json.dumps(
+            {"caster_effects": len(caster_effects), "opponent_effects": len(opponent_effects)},
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_opponent_target_interaction_routes_effect_to_opponent(self):
+        """A non-selfTarget, non-Buff interaction applies its effect to the opponent.
+
+        With selfTarget unset and no Buff tag, effectRoutesToCaster returns false and
+        onAction applies the cloned effect to the target creature instead of the caster.
+        """
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "OpponentStrikeAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "effect": {"class": "CEffect", "properties": {"tags": ["stun"], "duration": 2}},
+                    },
+                }
+            ),
+        )
+
+        interaction = g.createObject("OpponentStrikeAction")
+        caster = g.createObject("CCreature")
+        opponent = g.createObject("CCreature")
+
+        interaction.onAction(caster, opponent)
+
+        caster_effects = list(caster.getEffects())
+        opponent_effects = list(opponent.getEffects())
+        self.assertEqual(0, len(caster_effects))
+        self.assertEqual(1, len(opponent_effects))
+        self.assertEqual("CEffect", opponent_effects[0].getType())
+        return True, json.dumps(
+            {"caster_effects": len(caster_effects), "opponent_effects": len(opponent_effects)},
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_targetless_self_action_applies_to_caster_and_skips_opponent_effect(self):
+        """A self-target action used with no opponent still applies to the caster.
+
+        CInteraction::onAction routes a selfTarget effect to the caster before it ever
+        inspects the (here null) target, so a targetless self action buffs the caster
+        without raising. By contrast an opponent-target effect with no target is skipped
+        entirely (the engine logs and drops it), leaving no effect on the caster.
+        """
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "TargetlessSelfBuffAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "selfTarget": True,
+                        "effect": {"class": "CEffect", "properties": {"tags": ["buff"], "duration": 3}},
+                    },
+                }
+            ),
+        )
+        handler.registerConfigJson(
+            "TargetlessOpponentStrikeAction",
+            json.dumps(
+                {
+                    "class": "CInteraction",
+                    "properties": {
+                        "effect": {"class": "CEffect", "properties": {"tags": ["stun"], "duration": 2}},
+                    },
+                }
+            ),
+        )
+
+        self_action = g.createObject("TargetlessSelfBuffAction")
+        opponent_action = g.createObject("TargetlessOpponentStrikeAction")
+
+        self_caster = g.createObject("CCreature")
+        self_action.onAction(self_caster, None)
+        self.assertEqual(1, len(list(self_caster.getEffects())))
+
+        opponent_caster = g.createObject("CCreature")
+        opponent_action.onAction(opponent_caster, None)
+        self.assertEqual(0, len(list(opponent_caster.getEffects())))
+
+        return True, json.dumps(
+            {
+                "self_caster_effects": len(list(self_caster.getEffects())),
+                "opponent_caster_effects": len(list(opponent_caster.getEffects())),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_selftarget_interaction_survives_save_load(self):
+        """An object carrying a selfTarget interaction round-trips selfTarget == true.
+
+        Covers both the in-process serialization path (clone, which serializes and
+        rebuilds the object) and a full CMapLoader.save -> reload cycle: a creature
+        carrying an inline selfTarget action is placed on the map, saved to a slot, the
+        game is reloaded from disk, and the reloaded creature's action still reports
+        selfTarget true.
+        """
+        game = load_game_module()
+        g, game_map, _ = load_game_map_with_player("test")
+        handler = g.getObjectHandler()
+        handler.registerConfigJson(
+            "SelfTargetInteractionCarrier",
+            json.dumps(
+                {
+                    "class": "CCreature",
+                    "properties": {
+                        "actions": [
+                            {
+                                "class": "CInteraction",
+                                "properties": {
+                                    "selfTarget": True,
+                                    "effect": {"class": "CEffect", "properties": {"tags": ["buff"]}},
+                                },
+                            }
+                        ],
+                    },
+                }
+            ),
+        )
+
+        carrier = g.createObject("SelfTargetInteractionCarrier")
+        object_name = f"selfTargetCarrier_{os.getpid()}_{time.time_ns()}"
+        carrier.name = object_name
+        game_map.addObject(carrier)
+        carrier.moveTo(game_map.getEntryX(), game_map.getEntryY(), game_map.getEntryZ())
+
+        actions = list(carrier.getActions())
+        self.assertEqual(1, len(actions))
+        self.assertTrue(actions[0].getBoolProperty("selfTarget"))
+        # Clone round-trips through the same serialize/deserialize path as a save.
+        self.assertTrue(actions[0].clone().getBoolProperty("selfTarget"))
+
+        save_name = f"selftarget_interaction_roundtrip_{os.getpid()}_{time.time_ns()}"
+        try:
+            game.CMapLoader.save(game_map, save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_carrier = loaded_game.getMap().getObjectByName(object_name)
+            self.assertIsNotNone(loaded_carrier)
+            loaded_actions = list(loaded_carrier.getActions())
+            self.assertEqual(1, len(loaded_actions))
+            self.assertTrue(loaded_actions[0].getBoolProperty("selfTarget"))
+            return True, json.dumps(
+                {
+                    "before": bool(actions[0].getBoolProperty("selfTarget")),
+                    "after": bool(loaded_actions[0].getBoolProperty("selfTarget")),
+                },
+                sort_keys=True,
+            )
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
     def test_python_plugin_loader_rejects_non_resource_paths(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
