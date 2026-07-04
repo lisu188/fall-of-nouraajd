@@ -709,14 +709,31 @@ def _open_panel(sim, recorder, panel_name, caption, hold, text=None):
             pass
 
 
+def _capture_panel(sim, recorder, panel, caption, hold):
+    """Push an already-populated panel, capture it, then close it."""
+    try:
+        sim.gameInstance.getGui().pushChild(panel)
+        sim.pumpEvents(3)
+        recorder.capture(caption=caption, hold=hold)
+    except Exception:  # noqa: BLE001
+        pass
+    finally:
+        try:
+            panel.close()
+            sim.pumpEvents(2)
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def showcase_panels(sim, recorder, fps):
-    """Tour every in-game panel so the whole interface appears on screen.
+    """Tour every in-game panel, each populated with real content.
 
     The HUD panels (character / inventory / journal) render the hero's live
-    state; the contextual panels (info, trade, loot, dialog) are opened the same
-    way the game opens them in play. The fight panel is shown separately by the
-    on-screen battles.
+    state; the contextual panels are populated the same way the game populates
+    them in play — a stocked market for trade, a set of items for loot, and a
+    real townsfolk dialog. The fight panel is shown separately by the battles.
     """
+    g = sim.gameInstance
     hold = max(1, round(1.6 * fps))
     recorder.capture_card(
         "The Interface",
@@ -736,9 +753,50 @@ def showcase_panels(sim, recorder, fps):
         hold,
         text="The dead of Nouraajd do not rest. Every wand, coin and cured soul buys one more night.",
     )
-    _open_panel(sim, recorder, "tradePanel", "Trade panel: buy and sell at the market", hold)
-    _open_panel(sim, recorder, "lootPanel", "Loot panel: spoils from chests and fallen foes", hold)
-    _open_panel(sim, recorder, "dialogPanel", "Dialog panel: conversations with the townsfolk", hold)
+
+    # Trade panel backed by a stocked market.
+    try:
+        market = g.createObject("CMarket")
+        for item_id in ("IronSword", "LeatherArmor", "LifePotion", "ShadowBlade"):
+            item = g.createObject(item_id)
+            if item is not None:
+                try:
+                    market.add(item)
+                except Exception:  # noqa: BLE001
+                    pass
+        trade = g.createObject("tradePanel")
+        trade.setMarket(market)
+        _capture_panel(sim, recorder, trade, "Trade panel: buy and sell at the market", hold)
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Loot panel with a set of spoils (setItems takes a set).
+    try:
+        loot_items = set()
+        for item_id in ("ShadowBlade", "LifePotion", "skullOfRolf"):
+            item = g.createObject(item_id)
+            if item is not None:
+                loot_items.add(item)
+        loot = g.createObject("lootPanel")
+        loot.setCreature(sim.player)
+        loot.setItems(loot_items)
+        _capture_panel(sim, recorder, loot, "Loot panel: spoils from chests and fallen foes", hold)
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Dialog panel showing a real townsfolk conversation.
+    try:
+        dialog = g.createObject("berenDialog")
+        dialog_panel = g.createObject("dialogPanel")
+        dialog_panel.setDialog(dialog)
+        sim.gameInstance.getGui().pushChild(dialog_panel)
+        dialog_panel.reload()
+        sim.pumpEvents(3)
+        recorder.capture(caption="Dialog panel: conversations with the townsfolk", hold=hold)
+        dialog_panel.close()
+        sim.pumpEvents(2)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # ---------------------------------------------------------------------------

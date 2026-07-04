@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../gui/panel/CGameQuestPanel.h"
 #include "../gui/panel/CGameQuestionPanel.h"
 #include "../gui/panel/CGameTextPanel.h"
+#include "../gui/panel/CGameLootPanel.h"
 #include "../gui/panel/CGameTradePanel.h"
 #include "../gui/panel/CListView.h"
 #include "../handler/CHandler.h"
@@ -1284,7 +1285,16 @@ void init_game_module(py::module_ &m) {
                                                                                     "Question/choice panel.");
 
     py::class_<CGameDialogPanel, CGamePanel, std::shared_ptr<CGameDialogPanel>>(m, "CGameDialogPanel",
-                                                                                "Dialog conversation panel.");
+                                                                                "Dialog conversation panel.")
+        .def("getDialog", &CGameDialogPanel::getDialog, "Return the dialog shown by this panel.")
+        .def("setDialog", &CGameDialogPanel::setDialog, "Set the dialog shown by this panel.")
+        .def("reload", &CGameDialogPanel::reload, "Rebuild the panel widgets from its dialog.");
+
+    py::class_<CGameLootPanel, CGamePanel, std::shared_ptr<CGameLootPanel>>(m, "CGameLootPanel", "Loot panel.")
+        .def("getCreature", &CGameLootPanel::getCreature, "Return the loot-source creature.")
+        .def("setCreature", &CGameLootPanel::setCreature, "Set the loot-source creature.")
+        .def("getItems", &CGameLootPanel::getItems, "Return the loot items.")
+        .def("setItems", &CGameLootPanel::setItems, "Set the loot items.");
 
     py::class_<CGameInventoryPanel, CGamePanel, std::shared_ptr<CGameInventoryPanel>>(m, "CGameInventoryPanel",
                                                                                       "Inventory panel.");
