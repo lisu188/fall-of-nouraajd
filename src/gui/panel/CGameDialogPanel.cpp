@@ -111,6 +111,8 @@ void CGameDialogPanel::reload() {
     }
 }
 
+int CGameDialogPanel::getOptionCount() { return static_cast<int>(getCurrentOptions().size()); }
+
 std::shared_ptr<CDialogOption> CGameDialogPanel::getOption(int option) { return getCurrentOptions()[option]; }
 
 std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> CGameDialogPanel::getCurrentOptions() {

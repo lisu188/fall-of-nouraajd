@@ -33,6 +33,8 @@ class CGameDialogPanel : public CGamePanel {
 
     void reload();
 
+    int getOptionCount();
+
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
   private:

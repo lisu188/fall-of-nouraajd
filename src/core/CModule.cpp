@@ -1288,7 +1288,9 @@ void init_game_module(py::module_ &m) {
                                                                                 "Dialog conversation panel.")
         .def("getDialog", &CGameDialogPanel::getDialog, "Return the dialog shown by this panel.")
         .def("setDialog", &CGameDialogPanel::setDialog, "Set the dialog shown by this panel.")
-        .def("reload", &CGameDialogPanel::reload, "Rebuild the panel widgets from its dialog.");
+        .def("reload", &CGameDialogPanel::reload, "Rebuild the panel widgets from its dialog.")
+        .def("getOptionCount", &CGameDialogPanel::getOptionCount,
+             "Return the number of options in the current dialog state (0 when the conversation has ended).");
 
     py::class_<CGameLootPanel, CGamePanel, std::shared_ptr<CGameLootPanel>>(m, "CGameLootPanel", "Loot panel.")
         .def("getCreature", &CGameLootPanel::getCreature, "Return the loot-source creature.")

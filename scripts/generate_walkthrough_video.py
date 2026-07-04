@@ -773,8 +773,38 @@ def open_trade_at(sim, recorder, market_object_name, caption, fps):
     return True
 
 
+def drive_dialog(sim, recorder, panel, caption, fps, max_steps=4):
+    """Play out a dialog interactively by pressing its option number keys.
+
+    The dialog panel selects an option when a digit key is pressed (its own
+    ``keyboardEvent``, exactly as a human player picks a line), so injecting
+    ``1`` walks the conversation forward state by state — each reply and its new
+    options are captured — until an option ends the talk (option count drops to
+    zero) or the step budget runs out.
+    """
+    gui = sim.gameInstance.getGui()
+    recorder.capture(caption=caption, hold=max(1, round(2.0 * fps)))
+    for _ in range(max_steps):
+        try:
+            if panel.getOptionCount() <= 0:
+                break
+        except Exception:  # noqa: BLE001
+            break
+        # Press the '1' key to choose the first line; the panel advances and
+        # rebuilds itself for the next state.
+        panel.keyboardEvent(gui, SDL_KEYDOWN, ord("1"))
+        sim.pumpEvents(3)
+        try:
+            if panel.getOptionCount() <= 0:
+                break
+        except Exception:  # noqa: BLE001
+            break
+        recorder.capture(caption=caption, hold=max(1, round(1.5 * fps)))
+
+
 def open_dialog_at(sim, recorder, npc_object_name, dialog_id, caption, fps):
-    """Walk to a townsfolk NPC and open the very dialog its onEnter would show."""
+    """Walk to a townsfolk NPC and hold the very conversation its onEnter opens,
+    driving the options with real key presses."""
     if sim.gameMap.getObjectByName(npc_object_name) is None:
         return False
     scene_at(sim, recorder, npc_object_name, "Approaching the townsfolk", stop_distance=1)
@@ -788,7 +818,7 @@ def open_dialog_at(sim, recorder, npc_object_name, dialog_id, caption, fps):
     try:
         panel.reload()
         sim.pumpEvents(3)
-        recorder.capture(caption=caption, hold=max(1, round(2.0 * fps)))
+        drive_dialog(sim, recorder, panel, caption, fps)
     finally:
         try:
             panel.close()
