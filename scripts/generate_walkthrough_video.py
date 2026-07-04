@@ -849,6 +849,78 @@ def open_loot(sim, recorder, creature, item_ids, caption, fps):
     return True
 
 
+def explore_dialogs(sim, recorder, fps, dialog_ids, title, subtitle):
+    """Show every townsfolk conversation on the current map.
+
+    Each dialog is opened at its opening line (the state its NPC's onEnter would
+    show). We deliberately do not press option keys here: many of these dialogs
+    carry quest actions (deliver a letter, spawn cultists, cleanse the cave and
+    transition maps), and selecting an option would fire them out of order. The
+    Town Hall dialog is played through interactively elsewhere; here the point is
+    to surface each conversation's existence and voice."""
+    g = sim.gameInstance
+    hold = max(1, round(1.4 * fps))
+    recorder.capture_card(
+        title,
+        "Every conversation the townsfolk offer, shown at its opening line.",
+        subtitle=subtitle,
+        hold=max(1, round(2.4 * fps)),
+    )
+    for dialog_id in dialog_ids:
+        dialog = g.createObject(dialog_id)
+        if dialog is None:
+            continue
+        panel = g.createObject("dialogPanel")
+        try:
+            panel.setDialog(dialog)
+            g.getGui().pushChild(panel)
+            panel.reload()
+            sim.pumpEvents(3)
+            recorder.capture(caption=f"Conversation: {dialog_id}", hold=hold)
+        except Exception:  # noqa: BLE001
+            pass
+        finally:
+            try:
+                panel.close()
+                sim.pumpEvents(2)
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def explore_ambient_messages(sim, recorder, fps):
+    """Read every ambient notice, prayer and warning left across the map.
+
+    Each ambient object is a sign-post carrying a ``text`` property that its
+    onEnter shows through an info panel; here every one is surfaced in that same
+    info panel so no piece of the town's environmental storytelling is missed."""
+    ambient = []
+    seen = set()
+    for obj in sim.gameMap.getObjects():
+        name = sim._safeCall(obj, "getName") or ""
+        if not (name.startswith("ambient") or "Sign" in name or "sign" in name):
+            continue
+        try:
+            text = obj.getStringProperty("text")
+        except Exception:  # noqa: BLE001
+            text = ""
+        if text and text not in seen:
+            seen.add(text)
+            ambient.append((name, text))
+    if not ambient:
+        return
+    ambient.sort()
+    hold = max(1, round(0.8 * fps))
+    recorder.capture_card(
+        "The Ruined Town Speaks",
+        "Notices, prayers and warnings the townsfolk left behind - every ambient message across Nouraajd.",
+        subtitle=f"{len(ambient)} readings",
+        hold=max(1, round(2.4 * fps)),
+    )
+    for _name, text in ambient:
+        label = text if len(text) <= 64 else text[:61] + "..."
+        _open_panel(sim, recorder, "infoPanel", label, hold, text=text)
+
+
 # ---------------------------------------------------------------------------
 # Campaign driver helpers
 # ---------------------------------------------------------------------------
@@ -1136,6 +1208,17 @@ def chapter_nouraajd(sim, recorder, fps, close_transition=True):
     sim.pumpEvents(5)
     checkpoint("The amulet is returned - every Nouraajd quest complete")
 
+    # --- Exploration: every townsfolk conversation and ambient notice ------
+    explore_dialogs(
+        sim,
+        recorder,
+        fps,
+        ["doorDialog", "tavernDialog1", "tavernDialog2", "berenDialog", "victorRewardDialog", "dialog"],
+        "Voices of Nouraajd",
+        "The townsfolk conversations",
+    )
+    explore_ambient_messages(sim, recorder, fps)
+
     # --- HUD tour: the always-available panels with the hero fully kitted out --
     showcase_hud(sim, recorder, fps)
 
@@ -1201,6 +1284,17 @@ def chapter_ritual(sim, recorder, fps):
             sim.gameMap.removeObjectByName("ritualLeader")
     sim.gameMap.setBoolProperty("leader_defeated", True)
     safe_beat("The Ritual Leader is cut down - the anchors lie broken")
+
+    # Explore the chapel's own conversations before freeing the captive.
+    explore_dialogs(
+        sim,
+        recorder,
+        fps,
+        ["chapelWarningDialog", "recordsDialog", "capturedSoulDialog"],
+        "Voices of the Chapel",
+        "The ritual dialogs",
+    )
+    freeze(sim)
 
     scene_at(sim, recorder, "ritualCaptive", "Free the soul held in the stained glass", pre_step=freeze)
     freeze(sim)
