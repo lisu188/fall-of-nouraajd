@@ -18854,6 +18854,70 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(results, sort_keys=True)
 
     @game_test
+    def test_legacy_player_ids_create_configured_players_with_class_properties(self):
+        # [EPIC_06][STORY_02][SUBSTORY_03] Player-creation compatibility for the class/race
+        # separation. Selecting any of the historical character ids through
+        # CGameLoader.startGameWithPlayer must still build the existing configured CPlayer, set
+        # its class identity (getPlayerClassId) accordingly, expose a race identity (getRaceId),
+        # and surface the class-granted actions now sourced from the res/config/creature_classes
+        # profile the template references (monsters.json creatureClass ref -> <Name>Class). The
+        # legacy config entries must all remain present -- including the historical "Assasin"
+        # spelling preserved as a resource id -- so old character selection and saves keep working
+        # while the class/race properties become available.
+        game = load_game_module()
+
+        # The runtime menu is the source of truth for selectable templates, so this list stays in
+        # sync with the config rather than hard-coding it. Every historical legacy id -- including
+        # the preserved "Assasin" spelling -- must still be offered (config entries were not
+        # removed during the class/race separation).
+        options_game = game.CGameLoader.loadGame()
+        template_ids = set(game.player_class_options(options_game).values())
+        for legacy_id in ("Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"):
+            self.assertIn(legacy_id, template_ids, f"legacy template {legacy_id} was removed")
+
+        def action_type_ids(actions):
+            return sorted(action.getTypeId() for action in actions)
+
+        results = {}
+        for player_type in sorted(template_ids):
+            g = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(g, "test", player_type)
+            game_map = g.getMap()
+            self.assertIsNotNone(game_map, player_type)
+            player = game_map.getPlayer()
+
+            # Still the existing configured CPlayer: created, of the selected type, alive and
+            # controllable exactly as before the class/race split.
+            self.assertIsNotNone(player, player_type)
+            self.assertEqual(player_type, player.getTypeId(), player_type)
+            self.assertIsNotNone(get_player_controller(player), player_type)
+            self.assertTrue(player.isAlive(), player_type)
+
+            # playerClassId is set accordingly and a non-empty race identity is exposed, so the
+            # class/race properties are available on the freshly created player.
+            self.assertEqual(player_type, player.getPlayerClassId(), player_type)
+            self.assertTrue(player.getRaceId(), player_type)
+
+            # The referenced class profile is wired through creation: the composed effective
+            # interactions surface the class-granted baseline action ("Attack" from each
+            # <Name>Class.actions), proving the class content reaches the player. This is
+            # level-independent -- class starting actions are ungated -- so it holds for a
+            # fresh (level 0) character.
+            effective = action_type_ids(player.getEffectiveInteractions())
+            self.assertIn("Attack", effective, player_type)
+
+            results[player_type] = {
+                "typeId": player.getTypeId(),
+                "playerClassId": player.getPlayerClassId(),
+                "raceId": player.getRaceId(),
+                "effectiveActions": effective,
+            }
+
+        # Every offered template produced a distinct configured player.
+        self.assertEqual(len(template_ids), len(results))
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
     def test_one_time_reward_paths_grant_exactly_once_and_clean_up_actors(self):
         # [EPIC_07][STORY_02][SUBSTORY_04] Data-driven regression over every one-time
         # (claim_once-guarded) reward path in res/maps/nouraajd/script.py and
