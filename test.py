@@ -1684,6 +1684,7 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_inventory_drag_close_or_modal_panel_cancels_without_equip",
     "test_inventory_equipped_selection_resets_inventory_selection",
     "test_inventory_quest_item_selection_is_ignored",
+    "test_trade_grouped_inventory_sell_selects_all_sellable_copies",
     "test_fight_quest_item_selection_is_ignored",
     "test_cave_loss_does_not_reopen_fight_panel",
     "test_fight_panel_select_interaction_cancels_on_sdl_quit",
@@ -1740,6 +1741,7 @@ XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
     "test_inventory_drag_close_or_modal_panel_cancels_without_equip": 6,
     "test_inventory_equipped_selection_resets_inventory_selection": 6,
     "test_inventory_quest_item_selection_is_ignored": 6,
+    "test_trade_grouped_inventory_sell_selects_all_sellable_copies": 6,
     "test_fight_quest_item_selection_is_ignored": 6,
     "test_cave_loss_does_not_reopen_fight_panel": 6,
     "test_fight_panel_select_interaction_cancels_on_sdl_quit": 6,
@@ -20530,6 +20532,56 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         weapon_after = player.getWeapon().getTypeId() if player.getWeapon() else None
         self.assertEqual(1, player.countItems("letterToBeren"))
         self.assertEqual(weapon_before, weapon_after)
+
+    def test_trade_grouped_inventory_sell_selects_all_sellable_copies(self):
+        game, g, _, player = create_xvfb_gameplay_session(self)
+        player.setItems(set())
+        for index in range(2):
+            scroll = g.createObject("Scroll")
+            scroll.name = f"groupedTradeSellScroll{index}"
+            player.addItem(scroll)
+        quest_scroll = g.createObject("Scroll")
+        quest_scroll.name = "groupedTradeSellQuestScroll"
+        quest_scroll.addTag(game.CTag.QUEST)
+        player.addItem(quest_scroll)
+        market = g.createObject("CMarket")
+
+        trade = open_panel_for_screenshot(self, g, "tradePanel", "CGameTradePanel")
+        trade.setMarket(market)
+        pump_event_loop(3)
+        player_list = find_list_view(trade, "inventoryCollection")
+        scroll_column, scroll_row, _ = find_visible_list_cell_by_type(player_list, g.getGui(), "Scroll")
+
+        activate_list_cell(player_list, g.getGui(), scroll_column, scroll_row)
+        pump_event_loop(5)
+        self.assertEqual(1, get_panel_selection_box_counts_by_collection(trade).get("inventoryCollection", 0))
+        self.assertGreater(trade.getTotalSellCost(), 0)
+
+        captured_question = {}
+
+        def answer_and_capture():
+            panel = find_top_level_panel(g, "CGameQuestionPanel")
+            if panel is None:
+                game.event_loop.instance().invoke(answer_and_capture)
+                return
+            panel_data = json.loads(game.jsonify(panel))
+            captured_question["text"] = panel_data.get("properties", {}).get("question", "")
+            buttons = sorted(find_descendants_by_type(panel, "CButton"), key=lambda child: resolved_rect(child)[0])
+            activate_widget(buttons[0], g.getGui())
+
+        game.event_loop.instance().invoke(answer_and_capture)
+        buttons = {button.text: button for button in find_descendants_by_type(trade, "CButton")}
+        activate_widget(buttons["SELL"], g.getGui())
+        self.assertTrue(pump_event_loop_until(lambda: "text" in captured_question, timeout=2.0))
+        pump_event_loop(5)
+
+        self.assertIn("2x Scroll", captured_question.get("text", ""))
+        self.assertEqual(1, player.countItems("Scroll"))
+        self.assertTrue(player.hasItem(lambda item: item.getName() == quest_scroll.getName() and item.hasTag("quest")))
+        market_scrolls = [item for item in market.getItems() if item.getTypeId() == "Scroll"]
+        self.assertEqual(2, len(market_scrolls))
+        self.assertFalse(any(item.hasTag(game.CTag.QUEST) for item in market_scrolls))
+        self.assertEqual(0, trade.getTotalSellCost())
 
     def test_fight_quest_item_selection_is_ignored(self):
         game, g, _, player = create_xvfb_gameplay_session(self, map_name="nouraajd")
