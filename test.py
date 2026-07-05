@@ -21044,6 +21044,11 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             root = assert_runtime_rect(self, "dialogPanel dense", panel, ROOT_800_600)
             widgets = sorted(find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1])
             self.assertEqual(1 + len(dense_options), len(widgets))
+            self.assertEqual(
+                ["Dense dialog state with enough options to exercise proportional option layout."]
+                + [f"{index + 1}: {text}" for index, text in enumerate(dense_options)],
+                [widget.text for widget in widgets],
+            )
             previous = None
             for widget in widgets:
                 widget_rect = resolved_rect(widget)
