@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextureCache.h"
 
 #include <algorithm>
+#include <map>
 
 CListView::collection_pointer CGameTradePanel::inventoryCollection(std::shared_ptr<CGui> gui) {
     auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
@@ -33,13 +34,15 @@ CListView::collection_pointer CGameTradePanel::inventoryCollection(std::shared_p
 
 void CGameTradePanel::inventoryCallback(std::shared_ptr<CGui> gui, int index,
                                         std::shared_ptr<CGameObject> _newSelection) {
-    this->selectInventory(vstd::cast<CItem>(_newSelection));
+    this->selectInventory(gui, vstd::cast<CItem>(_newSelection));
     refreshViews();
 }
 
 bool CGameTradePanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return std::any_of(selectedInventory.begin(), selectedInventory.end(),
-                       [object](const auto &selection) { return CGameObject::sameInstance(selection.lock(), object); });
+    auto item = vstd::cast<CItem>(object);
+    auto stack = getSellableInventoryStack(gui, item);
+    return !stack.empty() && std::all_of(stack.begin(), stack.end(),
+                                         [this](const auto &stackItem) { return isInventorySelected(stackItem); });
 }
 
 CListView::collection_pointer CGameTradePanel::marketCollection(std::shared_ptr<CGui> gui) {
@@ -114,11 +117,19 @@ void CGameTradePanel::finalizeBuy(std::shared_ptr<CGui> gui) {
     }
 }
 
-std::set<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {
-    return vstd::functional::map<std::set<std::string>>(items, [](std::weak_ptr<CItem> ob) {
+std::vector<std::string> CGameTradePanel::getItemNames(std::list<std::weak_ptr<CItem>> items) {
+    std::map<std::string, int> counts;
+    for (const auto &ob : items) {
         auto item = ob.lock();
-        return item ? item->getLabel() : std::string();
-    });
+        if (item) {
+            counts[item->getLabel()]++;
+        }
+    }
+    std::vector<std::string> names;
+    for (const auto &[label, count] : counts) {
+        names.push_back(count > 1 ? vstd::str(count) + "x " + label : label);
+    }
+    return names;
 }
 
 int CGameTradePanel::getTotalSellCost() {
@@ -155,18 +166,52 @@ void CGameTradePanel::selectMarket(std::weak_ptr<CItem> selection) {
     }
 }
 
-void CGameTradePanel::selectInventory(std::weak_ptr<CItem> selection) {
-    if (selection.lock() && !selection.lock()->hasTag(CTag::Quest)) {
-        auto selected = selection.lock();
-        auto selectionIt =
-            std::find_if(selectedInventory.begin(), selectedInventory.end(),
-                         [selected](const auto &item) { return CGameObject::sameInstance(item.lock(), selected); });
-        if (selectionIt != selectedInventory.end()) {
-            selectedInventory.erase(selectionIt);
-        } else {
-            selectedInventory.push_back(selection);
+void CGameTradePanel::selectInventory(std::shared_ptr<CGui> gui, std::weak_ptr<CItem> selection) {
+    auto selected = selection.lock();
+    auto stack = getSellableInventoryStack(gui, selected);
+    if (stack.empty()) {
+        return;
+    }
+
+    const bool allSelected = std::all_of(stack.begin(), stack.end(),
+                                         [this](const auto &stackItem) { return isInventorySelected(stackItem); });
+    if (allSelected) {
+        selectedInventory.remove_if([&stack](const auto &item) {
+            auto selectedItem = item.lock();
+            return !selectedItem || std::any_of(stack.begin(), stack.end(), [selectedItem](const auto &stackItem) {
+                return CGameObject::sameInstance(selectedItem, stackItem);
+            });
+        });
+    } else {
+        selectedInventory.remove_if([](const auto &item) { return item.expired(); });
+        for (const auto &stackItem : stack) {
+            if (!isInventorySelected(stackItem)) {
+                selectedInventory.push_back(stackItem);
+            }
         }
     }
+}
+
+std::vector<std::shared_ptr<CItem>> CGameTradePanel::getSellableInventoryStack(std::shared_ptr<CGui> gui,
+                                                                               std::shared_ptr<CItem> selection) {
+    std::vector<std::shared_ptr<CItem>> stack;
+    auto player = gui && gui->getGame() && gui->getGame()->getMap() ? gui->getGame()->getMap()->getPlayer() : nullptr;
+    if (!player || !selection) {
+        return stack;
+    }
+    const auto typeId = selection->getTypeId();
+    for (const auto &item : player->getItems()) {
+        if (item && item->getTypeId() == typeId && !item->hasTag(CTag::Quest)) {
+            stack.push_back(item);
+        }
+    }
+    return stack;
+}
+
+bool CGameTradePanel::isInventorySelected(std::shared_ptr<CItem> item) {
+    return item && std::any_of(selectedInventory.begin(), selectedInventory.end(), [item](const auto &selection) {
+               return CGameObject::sameInstance(selection.lock(), item);
+           });
 }
 
 void CGameTradePanel::setMarket(std::shared_ptr<CMarket> _market) { market = _market; }
