@@ -20,10 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CGamePanel.h"
 #include "object/CPlayer.h"
 
+#include <vector>
+
 class CGameTradePanel : public CGamePanel {
     V_META(CGameTradePanel, CGamePanel,
            // TODO: unify this with CGameInventoryPanel
-           // TODO: allow selecting couple of grouped objects
            V_PROPERTY(CGameTradePanel, std::shared_ptr<CMarket>, market, getMarket, setMarket),
            V_METHOD(CGameTradePanel, inventoryCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
            V_METHOD(CGameTradePanel, inventoryCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
@@ -78,8 +79,12 @@ class CGameTradePanel : public CGamePanel {
 
     void selectMarket(std::weak_ptr<CItem> selection);
 
-    void selectInventory(std::weak_ptr<CItem> selection);
+    void selectInventory(std::shared_ptr<CGui> gui, std::weak_ptr<CItem> selection);
 
-    // TODO: should be not unique collection. items get merged
-    std::set<std::string> getItemNames(std::list<std::weak_ptr<CItem>> items);
+    std::vector<std::shared_ptr<CItem>> getSellableInventoryStack(std::shared_ptr<CGui> gui,
+                                                                  std::shared_ptr<CItem> selection);
+
+    bool isInventorySelected(std::shared_ptr<CItem> item);
+
+    std::vector<std::string> getItemNames(std::list<std::weak_ptr<CItem>> items);
 };
