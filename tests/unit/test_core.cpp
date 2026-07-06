@@ -2572,6 +2572,44 @@ void test_creature_composed_main_stat_selection() {
                 "an empty creatureClass main stat falls back to creature.baseStats");
 }
 
+// CSerialization::generateName must never hand out a name its uniqueness
+// predicate rejects: name-keyed registries treat a colliding name as a
+// duplicate and silently drop the newcomer (CMap::addObject "Ignoring
+// duplicate map object"), so the generator has to re-roll instead. Pins:
+//   * a rejected candidate is never returned (the collision-retry loop);
+//   * candidates offered to the predicate are all distinct (the sequence
+//     counter keeps hash inputs unique even under allocator address reuse
+//     and RNG repeats);
+//   * a predicate that rejects every candidate fails loudly with
+//     std::runtime_error instead of returning a known-colliding name;
+//   * repeated default-overload calls on the same object stay distinct.
+void test_generate_name_collision_retry() {
+    auto object = std::make_shared<CGameObject>();
+
+    std::set<std::string> rejected;
+    auto reject_first_three = [&rejected](const std::string &candidate) {
+        if (rejected.size() < 3) {
+            rejected.insert(candidate);
+            return true;
+        }
+        return false;
+    };
+    auto name = CSerialization::generateName(object, reject_first_three);
+    expect_true(!name.empty(), "generateName returns a non-empty name once the predicate accepts");
+    expect_true(rejected.count(name) == 0, "generateName never returns a candidate its predicate rejected");
+    expect_true(rejected.size() == 3, "generateName offers distinct fresh candidates until one is accepted");
+
+    std::set<std::string> names;
+    for (int i = 0; i < 64; i++) {
+        names.insert(CSerialization::generateName(object));
+    }
+    expect_true(names.size() == 64, "repeated generateName calls on the same object yield distinct names");
+
+    expect_runtime_error(
+        [&object]() { CSerialization::generateName(object, [](const std::string &) { return true; }); },
+        "generateName throws instead of returning a name when every candidate collides");
+}
+
 } // namespace
 
 int main() {
@@ -2620,6 +2658,7 @@ int main() {
     test_save_format_codec_validation();
     test_save_format_bounds_crafted_documents();
     test_serialization_collection_and_error_helpers();
+    test_generate_name_collision_retry();
     test_creature_effective_stats_baseline_capture();
     test_creature_effective_actions_baseline_capture();
     test_interaction_self_target_property_round_trip();
