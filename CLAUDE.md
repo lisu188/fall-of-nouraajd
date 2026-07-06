@@ -91,10 +91,22 @@ The engine uses a reflection macro from the **`vstd`** submodule: `V_META(Class,
 Base, ...properties)` with `V_PROPERTY(...)` declarations (see any header in
 `src/object/` or `src/gui/object/`). This drives JSON (de)serialization —
 objects are constructed by type name from JSON and their properties round-trip
-through the meta system. Each source area registers its types via
-`register*Types()` (declared in `src/core/CTypeRegistration.h`, implemented in the
-`C*TypeRegistration.cpp` files). When adding a new engine object type, wire it
-into the matching registration file or it won't be constructible from content.
+through the meta system. Registration is split across two mechanisms:
+- **Core/GUI framework types** register via `register*Types()` (declared in
+  `src/core/CTypeRegistration.h`, implemented in the `C*TypeRegistration.cpp`
+  files).
+- **Gameplay object types** (`src/object/`: creatures, items, effects,
+  interactions, tiles, dialogs, quests, controllers, …) register via the
+  `native_plugin::register_*` helpers in `src/plugin/NativePlugin.cpp`, invoked
+  through the `native_gameplay*` dynamic-plugin entry points
+  (`native_plugins/native_gameplay*.cpp`, `*_load_v1`) declared in
+  `res/plugins/manifest.json`. `registerObjectTypes()` registers only the
+  `CGameObject` base.
+
+When adding a new gameplay object type, wire it into the matching
+`register_*` function in `src/plugin/NativePlugin.cpp`; core/GUI types go into
+the matching `C*TypeRegistration.cpp` file. Either way, an unregistered type
+won't be constructible from content.
 
 ### Content pipeline (`res/`)
 - **`res/config/*.json`** — global definitions (items, weapons, armors, monsters,
