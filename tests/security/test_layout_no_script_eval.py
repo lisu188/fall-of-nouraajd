@@ -32,7 +32,7 @@ class LayoutScriptEvaluationTest(unittest.TestCase):
     def test_invalid_layout_dimensions_fall_back_to_zero(self):
         layout_cpp = (REPO_ROOT / "src/gui/CLayout.cpp").read_text()
         parse_value = re.search(
-            r"std::pair<CLayout::TYPE, int> CLayout::parseValue\(std::string value\) \{(?P<body>.*?)\n\}",
+            r"std::pair<CLayout::TYPE, double> CLayout::parseValue\(std::string value\) \{(?P<body>.*?)\n\}",
             layout_cpp,
             re.DOTALL,
         )
