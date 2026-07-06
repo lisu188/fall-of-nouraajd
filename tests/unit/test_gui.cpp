@@ -38,9 +38,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
+#define GAME_UNIT_TESTS
+#include "gui/panel/CGameDialogPanel.h"
+#undef GAME_UNIT_TESTS
 #include "gui/panel/CListView.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
+#include "object/CDialog.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
@@ -51,6 +55,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <chrono>
 #include <limits>
+#include <vector>
 #include <utility>
 
 namespace {
@@ -2272,6 +2277,37 @@ void test_character_panel_sheet_lines_render_race_and_class_labels() {
     expect_true(!hasIdentityRow, "character sheet builder should skip empty race / class labels fail-closed");
 }
 
+void test_dialog_panel_current_options_preserve_numeric_display_order() {
+    auto make_option = [](int number, const std::string &text) {
+        auto option = std::make_shared<CDialogOption>();
+        option->setNumber(number);
+        option->setText(text);
+        return option;
+    };
+
+    auto state = std::make_shared<CDialogState>();
+    state->setStateId("ENTRY");
+    state->setOptions({
+        make_option(2, "third"),
+        make_option(0, "first"),
+        make_option(1, "second"),
+    });
+
+    auto dialog = std::make_shared<CDialog>();
+    dialog->setStates({state});
+
+    auto panel = std::make_shared<CGameDialogPanel>();
+    panel->setDialog(dialog);
+
+    std::vector<std::string> displayedOptions;
+    for (const auto &[index, option] : panel->getCurrentOptionsForTest()) {
+        displayedOptions.push_back(std::to_string(index + 1) + ": " + option->getText());
+    }
+
+    expect_true(displayedOptions == std::vector<std::string>({"1: first", "2: second", "3: third"}),
+                "dialog panel should display options from lowest dialog number to highest");
+}
+
 } // namespace
 
 int main() {
@@ -2282,6 +2318,7 @@ int main() {
     test_widget_reflective_callbacks_fail_closed_on_bad_config();
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
     test_character_panel_sheet_lines_render_race_and_class_labels();
+    test_dialog_panel_current_options_preserve_numeric_display_order();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();
