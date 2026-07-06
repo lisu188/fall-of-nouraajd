@@ -297,12 +297,14 @@ void test_player_controller_prefers_longer_lower_cost_route() {
 // script-driven control), where a merely-paused path would linger and resume.
 void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
     auto game = std::make_shared<CGame>();
-    auto map = open_tile_map(game, 4, 1);
+    auto map = open_tile_map(game, 5, 1);
     auto player = player_at(game, Coords(0, 0, 0));
     auto controller = std::make_shared<CPlayerController>();
     player->setController(controller);
 
-    controller->setTarget(player, Coords(2, 0, 0));
+    // Mid-route obstacle: path [1,2,3], block (2,0,0) while the destination itself
+    // stays steppable, so the stop comes from the blocked NEXT step.
+    controller->setTarget(player, Coords(3, 0, 0));
     auto first_step = resolve_coords(controller->control(player));
     expect_true(first_step == Coords(1, 0, 0), "player auto-path should start with the adjacent corridor step");
     player->moveTo(first_step);
@@ -311,22 +313,41 @@ void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
                 "the remaining route should render as path while it is still passable");
 
     map->removeTile(2, 0, 0);
-    expect_true(map->addTile(tile(false), 2, 0, 0), "fixture should block the next path step");
-    expect_true(!map->canStep(Coords(2, 0, 0)), "fixture should make the next path step impassable");
+    expect_true(map->addTile(tile(false), 2, 0, 0), "fixture should block the mid-route step");
+    expect_true(!map->canStep(Coords(2, 0, 0)), "fixture should make the mid-route step impassable");
+    expect_true(map->canStep(Coords(3, 0, 0)), "the destination itself should stay steppable");
 
     auto blocked_step = resolve_coords(controller->control(player));
     expect_true(blocked_step == Coords(1, 0, 0), "a blocked auto-path must not steer into the obstacle");
     expect_true(controller->isCompleted(player), "a blocked auto-path counts as completed (stopped)");
-    expect_true(!controller->isOnPath(player, Coords(2, 0, 0)).first,
+    expect_true(!controller->isOnPath(player, Coords(3, 0, 0)).first,
                 "a stopped auto-path must not keep rendering stale footprints");
 
     map->removeTile(2, 0, 0);
-    expect_true(map->addTile(tile(true), 2, 0, 0), "fixture should clear the obstacle again");
+    expect_true(map->addTile(tile(true), 2, 0, 0), "fixture should clear the mid-route obstacle again");
     auto after_unblock = resolve_coords(controller->control(player));
     expect_true(after_unblock == Coords(1, 0, 0),
-                "an auto-path stopped by an obstacle must not resume after the obstacle clears");
+                "an auto-path stopped by a mid-route obstacle must not resume after the obstacle clears");
     expect_true(controller->isCompleted(player),
                 "the abandoned route stays abandoned until the player picks a new target");
+
+    // Blocked destination: fresh route [2,3] from (1,0,0), block the TARGET while
+    // the next step stays steppable, so the stop comes from the impassable goal.
+    controller->setTarget(player, Coords(3, 0, 0));
+    expect_true(!controller->isCompleted(player), "a fresh target should restore a pending route");
+    map->removeTile(3, 0, 0);
+    expect_true(map->addTile(tile(false), 3, 0, 0), "fixture should block the destination");
+    expect_true(map->canStep(Coords(2, 0, 0)), "the next step should stay steppable");
+
+    auto blocked_target_step = resolve_coords(controller->control(player));
+    expect_true(blocked_target_step == Coords(1, 0, 0), "a blocked destination must stop the walk immediately");
+    map->removeTile(3, 0, 0);
+    expect_true(map->addTile(tile(true), 3, 0, 0), "fixture should clear the destination again");
+    auto after_target_unblock = resolve_coords(controller->control(player));
+    expect_true(after_target_unblock == Coords(1, 0, 0),
+                "an auto-path stopped by a blocked destination must not resume after it clears");
+    expect_true(controller->isCompleted(player),
+                "the abandoned route stays abandoned after a blocked-destination stop as well");
 }
 
 void test_npc_random_controller_prefers_longer_lower_cost_route() {
