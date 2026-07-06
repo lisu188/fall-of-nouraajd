@@ -188,8 +188,7 @@ class CConfigurationProvider {
 class CAnimationProvider {
   public:
     static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game,
-                                                    const std::shared_ptr<CGameObject> &object, bool custom = false);
+                                                    const std::shared_ptr<CGameObject> &object);
 
-    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game, std::string path,
-                                                    bool custom = false);
+    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game, std::string path);
 };
