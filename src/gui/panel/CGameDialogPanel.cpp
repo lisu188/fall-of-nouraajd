@@ -113,7 +113,7 @@ void CGameDialogPanel::reload() {
 
 std::shared_ptr<CDialogOption> CGameDialogPanel::getOption(int option) { return getCurrentOptions()[option]; }
 
-std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> CGameDialogPanel::getCurrentOptions() {
+std::map<int, std::shared_ptr<CDialogOption>> CGameDialogPanel::getCurrentOptions() {
     // TODO: make this generic and in vstd
     struct OptionComparator {
         bool operator()(const std::shared_ptr<CDialogOption> &a, const std::shared_ptr<CDialogOption> &b) const {
@@ -138,7 +138,7 @@ std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> CGameDialogPanel::
         }
     }
 
-    std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> return_value;
+    std::map<int, std::shared_ptr<CDialogOption>> return_value;
     int index = 0;
     for (const auto &option : options) {
         return_value[index++] = option;

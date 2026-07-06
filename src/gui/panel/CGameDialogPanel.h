@@ -35,6 +35,10 @@ class CGameDialogPanel : public CGamePanel {
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
+#ifdef GAME_UNIT_TESTS
+    std::map<int, std::shared_ptr<CDialogOption>> getCurrentOptionsForTest() { return getCurrentOptions(); }
+#endif
+
   private:
     std::shared_ptr<CDialog> dialog;
     std::string currentStateId = "ENTRY";
@@ -45,5 +49,5 @@ class CGameDialogPanel : public CGamePanel {
 
     void selectOption(const std::shared_ptr<CDialogOption> &option);
 
-    std::map<int, std::shared_ptr<CDialogOption>, std::greater<>> getCurrentOptions();
+    std::map<int, std::shared_ptr<CDialogOption>> getCurrentOptions();
 };
