@@ -351,7 +351,7 @@
     "class": "CItem",
     "properties": {
       "name": "skullOfRolf",
-      "animation": "images/skull",
+      "animation": "images/items/quest/skullOfRolf",
       "description": "The blackened skull of Sergeant Rolf, etched with the command sigils he used to rally Nouraajd before he fell.",
       "tags": [
         "quest"
@@ -535,7 +535,7 @@
     "class": "CItem",
     "properties": {
       "name": "holyRelic",
-      "animation": "images/skull",
+      "animation": "images/items/quest/holyRelic",
       "description": "A sanctified shard taken from the ruined chapel, blessed to purify the OctoBogz lair once the brood has fallen.",
       "tags": [
         "quest"
@@ -546,7 +546,7 @@
     "class": "CItem",
     "properties": {
       "name": "preciousAmulet",
-      "animation": "images/item",
+      "animation": "images/items/quest/preciousAmulet",
       "description": "A weathered family talisman carried by the old woman of Nouraajd, still warm from her prayers.",
       "tags": [
         "quest"

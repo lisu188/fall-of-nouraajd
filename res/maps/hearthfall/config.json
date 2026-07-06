@@ -20,7 +20,7 @@
   "elderMaren": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/oldWoman",
+      "animation": "images/npc/elderMaren",
       "controller": {
         "class": "CNpcRandomController"
       },
@@ -30,6 +30,7 @@
   "watchCaptain": {
     "ref": "CultLeader",
     "properties": {
+      "animation": "images/monsters/watchCaptain",
       "label": "Watch-Captain Osric",
       "affiliation": "occupation",
       "controller": {
@@ -43,6 +44,7 @@
   "occupierGate": {
     "ref": "Cultist",
     "properties": {
+      "animation": "images/monsters/occupierGate",
       "affiliation": "occupation",
       "controller": {
         "class": "CTargetController",
@@ -55,6 +57,7 @@
   "occupierWest": {
     "ref": "Cultist",
     "properties": {
+      "animation": "images/monsters/occupierWest",
       "affiliation": "occupation",
       "controller": {
         "class": "CTargetController",
@@ -67,6 +70,7 @@
   "occupierEast": {
     "ref": "Cultist",
     "properties": {
+      "animation": "images/monsters/occupierEast",
       "affiliation": "occupation",
       "controller": {
         "class": "CTargetController",
