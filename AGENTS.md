@@ -218,6 +218,16 @@ reconciliation against worktrees, `git rev-parse --verify` branch evidence, and 
 only recommends UNREACHABLE/ORPHANED transitions, which are applied with the explicit `mark` subcommand. The sweeper
 never deletes worktrees, kills processes, or mutates the workbook.
 
+After a restart or container suspension, derive the single deterministic next action per issue with the read-only
+`scripts/controller_reconciler.py` (`snapshot`/`reconcile`/`next-action` over a JSON evidence blob). It correlates the
+XLSX row, claim ID, claim PR, implementation PR/CI, and terminal PR by exact identity into one lifecycle state
+(`claim_selected`, `claim_pr_open`, `claim_pr_merged`, `worktree_ready`, `worker_running`, `implementation_pr_open`,
+`ci_pending`/`ci_passed`/`ci_failed`, `implementation_merged`, `terminal_pr_open`, `done`, `blocked`,
+`recovery_required`) and attaches an idempotency key (exact claim ID plus transition) to every write action so a
+restarted controller never duplicates a claim, PR, merge, or DONE write. It is strictly read-only — it never touches the
+workbook, git, or GitHub — and contradictory evidence fails closed to `recovery_required` rather than guessing a write.
+See `docs/codex-agent-queue.md` for the evidence schema and states.
+
 Scarce local resources shared between concurrent controllers (heavy build/test/coverage jobs, Xvfb displays, TCP
 ports, build directories, memory budgets, MCP server slots) are coordinated through the resource broker built into the
 same script. `python3 scripts/controller_resource_audit.py probe` reports read-only availability

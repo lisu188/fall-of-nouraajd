@@ -26,6 +26,8 @@ Evidence schema (all fields optional unless noted; extra keys are ignored)::
         "claimId": "abc-123",                # required for any write transition
         "queue": { "status": "IN_PROGRESS", "owner": "...", "claimId": "...",
             "issueName": "...", "stale": false },
+        "claimPr": { "number": 11, "claimId": "...", "issueName": "...",
+            "owner": "...", "merged": false },   # workbook-only claim PR
         "implementationPr": { "number": 12, "claimId": "...", "issueName": "...",
             "owner": "...", "headSha": "...", "branch": "...",
             "merged": false, "mergeableState": "clean",
@@ -52,6 +54,8 @@ except ImportError:  # pragma: no cover - used when imported as scripts.controll
 # Controller lifecycle states (durable evidence only; worktree/worker states are
 # supplied as local evidence by the subagent registry, not inferred here).
 STATE_CLAIM_SELECTED = "claim_selected"
+STATE_CLAIM_PR_OPEN = "claim_pr_open"
+STATE_CLAIM_PR_MERGED = "claim_pr_merged"
 STATE_WORKTREE_READY = "worktree_ready"
 STATE_WORKER_RUNNING = "worker_running"
 STATE_IMPLEMENTATION_PR_OPEN = "implementation_pr_open"
@@ -123,6 +127,7 @@ class _Facts:
     claimId: str
     owner: str
     queue: dict[str, Any]
+    claimPr: dict[str, Any] | None
     implementationPr: dict[str, Any] | None
     terminalPr: dict[str, Any] | None
     worktreeReady: bool
@@ -185,6 +190,7 @@ def buildFacts(evidence: dict[str, Any]) -> _Facts:
     queue = _asDict(evidence.get("queue"))
     claimId = _str(evidence.get("claimId")) or _str(audit.firstValue(queue, "claimId", "claim_id", default=""))
     owner = _str(evidence.get("owner")) or audit.queueOwner(queue)
+    claim = evidence.get("claimPr")
     impl = evidence.get("implementationPr")
     term = evidence.get("terminalPr")
     facts = _Facts(
@@ -192,6 +198,7 @@ def buildFacts(evidence: dict[str, Any]) -> _Facts:
         claimId=claimId,
         owner=owner,
         queue=queue,
+        claimPr=claim if isinstance(claim, dict) else None,
         implementationPr=impl if isinstance(impl, dict) else None,
         terminalPr=term if isinstance(term, dict) else None,
         worktreeReady=audit.truthy(evidence.get("worktreeReady")),
@@ -206,6 +213,8 @@ def buildFacts(evidence: dict[str, Any]) -> _Facts:
     if claimId and queueClaim:
         _mismatch(facts, "queue claim id", claimId, queueClaim)
 
+    if facts.claimPr is not None:
+        _correlatePr(facts, facts.claimPr, "claim")
     if facts.implementationPr is not None:
         _correlatePr(facts, facts.implementationPr, "implementation")
     if facts.terminalPr is not None:
@@ -215,10 +224,15 @@ def buildFacts(evidence: dict[str, Any]) -> _Facts:
 
 def _deriveState(facts: _Facts) -> str:
     queueStatus = audit.queueStatus(facts.queue)
+    claimMerged = facts.claimPr is not None and audit.truthy(audit.firstValue(facts.claimPr, "merged", default=False))
     implMerged = facts.implementationPr is not None and audit.truthy(
         audit.firstValue(facts.implementationPr, "merged", default=False)
     )
 
+    # Contradiction: the claim PR merged (the issue is claimed on the remote) but
+    # the queue row still shows it as never claimed -> merged-but-unmarked recovery.
+    if claimMerged and queueStatus in {"not_started", ""}:
+        facts.contradictions.append("claim PR merged but queue row is not claimed")
     # Contradiction: implementation merged but the queue row was never claimed.
     if implMerged and queueStatus in {"not_started", ""}:
         facts.contradictions.append("implementation PR merged but queue row is not claimed")
@@ -262,6 +276,13 @@ def _deriveState(facts: _Facts) -> str:
         return STATE_WORKER_RUNNING
     if facts.worktreeReady:
         return STATE_WORKTREE_READY
+    # Claim-PR phase: the workbook-only claim PR gates implementation. A merged
+    # claim PR means the claim is durable and the worktree is what remains next; an
+    # open claim PR means the controller is still waiting for the concurrency guard.
+    if facts.claimPr is not None:
+        if claimMerged:
+            return STATE_CLAIM_PR_MERGED
+        return STATE_CLAIM_PR_OPEN
     if queueStatus == "in_progress":
         return STATE_CLAIM_SELECTED
     # No claim, no PR, no local evidence: nothing selected for this issue.
@@ -276,6 +297,15 @@ def _nextAction(state: str, facts: _Facts) -> str:
     if state == STATE_BLOCKED:
         return ACTION_NONE
     if state == STATE_CLAIM_SELECTED:
+        return ACTION_CREATE_WORKTREE
+    if state == STATE_CLAIM_PR_OPEN:
+        # The concurrency guard has not merged yet; keep waiting, never re-open a
+        # duplicate claim PR.
+        return ACTION_WAIT_FOR_CI
+    if state == STATE_CLAIM_PR_MERGED:
+        # Claim is durable; the next durable write is the worktree. This is the
+        # same action (and idempotency key) claim_selected produces, so a restart
+        # between "claim merged" and "worktree created" never duplicates work.
         return ACTION_CREATE_WORKTREE
     if state == STATE_WORKTREE_READY:
         return ACTION_RUN_WORKER
