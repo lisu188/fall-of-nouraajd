@@ -4,7 +4,6 @@ the implementation backlog; docs/codebase-cleanup-plan.md sequences the cleanup
 work. Historical fix-by-fix notes live in docs/todo-worklog.md.
 
 Already queued — work the existing workbook items, do not re-propose:
-//TODO: resizing panels                                          [queued: EPIC_05_STORY_02]
 //TODO: migrate remaining global/static providers and UI/session services into CGameContext where safe [queued: EPIC_02_STORY_01]
 //TODO: encapsulate SDL_RenderCopy                               [queued: EPIC_05_STORY_03]
 //TODO: what if we return to oldMap after switch?                [queued: EPIC_02_STORY_03]

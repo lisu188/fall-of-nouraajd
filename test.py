@@ -2648,6 +2648,11 @@ def annotate_panel_layout(source_path, output_path, summary):
     annotated.save(output_path)
 
 
+def gui_logical_size(g):
+    gui = g.getGui()
+    return int(gui.getNumericProperty("width")), int(gui.getNumericProperty("height"))
+
+
 def capture_panel_layout(test_case, g, scenario, panel, regions=None, outside_tolerance=0):
     regions = regions or {}
     pump_event_loop(3)
@@ -2656,7 +2661,7 @@ def capture_panel_layout(test_case, g, scenario, panel, regions=None, outside_to
         data, width, height = capture_sdl_screenshot(screenshot_path, g.getGui())
     except RuntimeError as exc:
         test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
-    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertEqual(gui_logical_size(g), (width, height))
     panel_rect = resolved_rect(panel)
     objects = sorted((gui_object_record(obj) for obj in collect_gui_descendants(panel)), key=lambda item: item["rect"])
     summary = {
@@ -2716,7 +2721,7 @@ def assert_screenshot_has_rendered_pixels(test_case, g, name):
         test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
 
     test_case.assertEqual(".png", screenshot_path.suffix)
-    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertEqual(gui_logical_size(g), (width, height))
     test_case.assertTrue(screenshot_path.exists())
     test_case.assertGreater(screenshot_path.stat().st_size, 0)
     with Image.open(screenshot_path) as image:
@@ -2739,7 +2744,7 @@ def assert_minimap_has_rendered_pixels(test_case, g, name):
         test_case.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
     summary = screenshot_rect_summary(data, width, MINIMAP_RECT)
 
-    test_case.assertEqual((GUI_WIDTH, GUI_HEIGHT), (width, height))
+    test_case.assertEqual(gui_logical_size(g), (width, height))
     test_case.assertTrue(screenshot_path.exists())
     test_case.assertGreater(screenshot_path.stat().st_size, 0)
     with Image.open(screenshot_path) as image:
@@ -8099,9 +8104,7 @@ class GameTest(unittest.TestCase):
         self.assertIsNone(restored_map.getObjectByName("cave1"))
         self.assertIsNotNone(restored_map.getObjectByName("gooby1"))
         # The StartEvent markers removed on first entry stay removed on the reused session.
-        start_events = [
-            obj for obj in restored_map.getObjects() if obj.getStringProperty("type") == "StartEvent"
-        ]
+        start_events = [obj for obj in restored_map.getObjects() if obj.getStringProperty("type") == "StartEvent"]
         self.assertEqual([], start_events)
         # Post-return source-state equality (map flags, turn, quest-state machine, inventory) is
         # intentionally not asserted: reuseLoadedMap re-attaches the player at the map entry, and
@@ -11249,9 +11252,7 @@ class GameTest(unittest.TestCase):
                 reloaded_player = reloaded_map.getPlayer()
                 self.assertEqual(player_type, reloaded_player.getPlayerClassId(), player_type)
                 self.assertEqual(default_race, reloaded_player.getRaceId(), player_type)
-                snapshot_b = runtime_save_state_summary(
-                    normalize_save_snapshot(json.loads(game.jsonify(reloaded_map)))
-                )
+                snapshot_b = runtime_save_state_summary(normalize_save_snapshot(json.loads(game.jsonify(reloaded_map))))
                 self.assertEqual(snapshot_a, snapshot_b, player_type)
 
                 results[player_type] = {
@@ -11407,8 +11408,7 @@ class GameTest(unittest.TestCase):
             g.changeMap("ritual")
             self.assertTrue(
                 pump_event_loop_until(
-                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "ritual"
-                    and not sm.isTransitionPending(),
+                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "ritual" and not sm.isTransitionPending(),
                     timeout=2.0,
                     min_iterations=2,
                 ),
@@ -11422,8 +11422,7 @@ class GameTest(unittest.TestCase):
             g.changeMap("test")
             self.assertTrue(
                 pump_event_loop_until(
-                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "test"
-                    and not sm.isTransitionPending(),
+                    lambda gm=g, sm=scene_manager: gm.getMap().mapName == "test" and not sm.isTransitionPending(),
                     timeout=2.0,
                     min_iterations=2,
                 ),
@@ -13511,6 +13510,64 @@ class GameTest(unittest.TestCase):
                 "market_items": len(market.getItems()),
                 "player_swords": player.countItems("Sword"),
             },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_window_resize_scales_percent_panels(self):
+        # Panels use percent-of-window layouts with pixel minimums (res/config/panels.json):
+        # a window larger than the 1920x1080 design scales panels up, a smaller one floors
+        # them at their design size. Logical size is driven through the CGui width/height
+        # properties, which feed the root layout's runtime overrides.
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        gui = g.getGui()
+        gui_handler = g.getGuiHandler()
+
+        def open_inventory():
+            panel = gui_handler.openPanel("inventoryPanel")
+            pump_event_loop(3)
+            return panel
+
+        def close_panel(panel):
+            panel.close()
+            pump_event_loop(3)
+
+        gui.setNumericProperty("width", 2560)
+        gui.setNumericProperty("height", 1440)
+        self.assertEqual((0, 0, 2560, 1440), resolved_rect(gui))
+        minimap = next(iter(collect_gui_children(gui, "CMinimapGraphicsObject")))
+        self.assertEqual((2340, 1220, 220, 220), resolved_rect(minimap))
+
+        panel = open_inventory()
+        scaled_rect = resolved_rect(panel)
+        self.assertEqual((747, 320, 1066, 800), scaled_rect)
+        inventory_list = find_list_view(panel, "inventoryCollection")
+        equipped_list = find_list_view(panel, "equippedCollection")
+        self.assertEqual((747, 320, 266, 800), resolved_rect(inventory_list))
+        self.assertEqual((1546, 320, 266, 800), resolved_rect(equipped_list))
+        self.assertEqual((5, 16), list_runtime_grid(inventory_list, gui))
+        self.assertEqual((4, 2), list_runtime_grid(equipped_list, gui))
+        close_panel(panel)
+
+        gui.setNumericProperty("width", 1024)
+        gui.setNumericProperty("height", 768)
+        panel = open_inventory()
+        floored_rect = resolved_rect(panel)
+        self.assertEqual((112, 84, 800, 600), floored_rect)
+        close_panel(panel)
+
+        gui.setNumericProperty("width", 1920)
+        gui.setNumericProperty("height", 1080)
+        panel = open_inventory()
+        design_rect = resolved_rect(panel)
+        self.assertEqual((560, 240, 800, 600), design_rect)
+        close_panel(panel)
+
+        return True, json.dumps(
+            {"scaled": scaled_rect, "floored": floored_rect, "design": design_rect},
             sort_keys=True,
         )
 
@@ -20166,6 +20223,14 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual((0, 0, width, height), tuple(map_graph.getResolvedRect()))
         self.assertEqual(expected_proxy_count, len(map_graph.getChildren()))
         assert_rendered_map_proxy_cells(self, g)
+
+        panel = open_layout_panel(self, g, "inventoryPanel")
+        try:
+            self.assertEqual((0, 0, 800, 600), resolved_rect(panel))
+            self.assertEqual((4, 2), list_runtime_grid(find_list_view(panel, "equippedCollection"), gui))
+        finally:
+            panel.close()
+            pump_event_loop(3)
 
     def test_screenshot_readback_has_rendered_pixels(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
