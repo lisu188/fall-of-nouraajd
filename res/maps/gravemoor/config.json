@@ -44,6 +44,7 @@
   "cryptWardenWest": {
     "ref": "Cultist",
     "properties": {
+      "animation": "images/monsters/cryptWardenWest",
       "affiliation": "moorwatch",
       "controller": {
         "class": "CTargetController",
@@ -56,6 +57,7 @@
   "cryptWardenEast": {
     "ref": "Cultist",
     "properties": {
+      "animation": "images/monsters/cryptWardenEast",
       "affiliation": "moorwatch",
       "controller": {
         "class": "CTargetController",
@@ -68,6 +70,7 @@
   "cryptWardenNorth": {
     "ref": "Cultist",
     "properties": {
+      "animation": "images/monsters/cryptWardenNorth",
       "affiliation": "moorwatch",
       "controller": {
         "class": "CTargetController",
@@ -80,7 +83,7 @@
   "quartermasterVoss": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/questGiver",
+      "animation": "images/npc/quartermasterVoss",
       "npc": true
     }
   },

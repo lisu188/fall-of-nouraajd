@@ -14,7 +14,7 @@
   "dreamerGuide": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/questGiver",
+      "animation": "images/npc/dreamerGuide",
       "controller": {
         "class": "CNpcRandomController"
       },
@@ -24,7 +24,7 @@
   "lengMerchant": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/questGiver",
+      "animation": "images/npc/lengMerchant",
       "controller": {
         "class": "CNpcRandomController"
       },
@@ -34,7 +34,7 @@
   "lengPriest": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/oldWoman",
+      "animation": "images/npc/lengPriest",
       "controller": {
         "class": "CNpcRandomController"
       },
@@ -92,7 +92,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/octobogz",
+      "animation": "images/monsters/nightGaunt",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -137,7 +137,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/cultist",
+      "animation": "images/monsters/lengMan",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -182,7 +182,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/pritz",
+      "animation": "images/monsters/lengSpider",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -227,7 +227,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/pritzmage",
+      "animation": "images/monsters/elderThing",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -272,7 +272,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/cult_leader",
+      "animation": "images/monsters/highPriestOfLeng",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -323,7 +323,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/gooby",
+      "animation": "images/monsters/theCrawlingChaos",
       "fightController": {
         "class": "CMonsterFightController"
       },

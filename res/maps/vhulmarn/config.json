@@ -14,7 +14,7 @@
   "oldTollman": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/questGiver",
+      "animation": "images/npc/oldTollman",
       "controller": {
         "class": "CNpcRandomController"
       },
@@ -24,7 +24,7 @@
   "markedWidow": {
     "ref": "Cultist",
     "properties": {
-      "animation": "images/npc/oldWoman",
+      "animation": "images/npc/markedWidow",
       "controller": {
         "class": "CNpcRandomController"
       },
@@ -79,7 +79,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/octobogz",
+      "animation": "images/monsters/deepSpawn",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -124,7 +124,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/cultist",
+      "animation": "images/monsters/drownedHybrid",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -169,7 +169,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/cult_leader",
+      "animation": "images/monsters/tideHierophant",
       "fightController": {
         "class": "CMonsterFightController"
       },
@@ -220,7 +220,7 @@
           "ref": "Attack"
         }
       ],
-      "animation": "images/monsters/gooby",
+      "animation": "images/monsters/theNameless",
       "fightController": {
         "class": "CMonsterFightController"
       },
