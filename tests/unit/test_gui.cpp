@@ -407,6 +407,66 @@ void test_layout_runtime_overrides_preserve_serialized_percentage_layouts() {
                 "clearing parent runtime overrides should restore the serialized parent rectangle");
 }
 
+void test_layout_fractional_percentages_resolve_exact_design_pixels() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto parentLayout = std::make_shared<CLayout>();
+    parentLayout->setRect(0, 0, 1920, 1080);
+    parent->setLayout(parentLayout);
+
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto childLayout = std::make_shared<CCenteredLayout>();
+    childLayout->setW("41.67%");
+    childLayout->setH("55.56%");
+    child->setLayout(childLayout);
+    parent->addChild(child);
+
+    expect_rect(childLayout->getRect(child), 560, 240, 800, 600,
+                "fractional percentages should reproduce the 800x600 design rect at 1920x1080");
+
+    parentLayout->setRuntimeRect(0, 0, 2560, 1440);
+    expect_rect(childLayout->getRect(child), 747, 320, 1066, 800,
+                "fractional percentages should scale panels with a larger root rectangle");
+
+    childLayout->setW("12.5");
+    expect_true(childLayout->getRect(child)->w == 0, "fractional plain pixel values should stay invalid");
+    childLayout->setW("nan%");
+    expect_true(childLayout->getRect(child)->w == 0, "non-finite percentages should stay invalid");
+}
+
+void test_layout_minimum_size_floors_percentage_panels() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto parentLayout = std::make_shared<CLayout>();
+    parentLayout->setRect(0, 0, 1280, 720);
+    parent->setLayout(parentLayout);
+
+    auto child = std::make_shared<CGameGraphicsObject>();
+    auto childLayout = std::make_shared<CCenteredLayout>();
+    childLayout->setW("41.67%");
+    childLayout->setH("55.56%");
+    childLayout->setMinW(800);
+    childLayout->setMinH(600);
+    child->setLayout(childLayout);
+    parent->addChild(child);
+
+    expect_rect(childLayout->getRect(child), 240, 60, 800, 600,
+                "panels below the minimum size should be floored and stay centered");
+
+    parentLayout->setRuntimeRect(0, 0, 1920, 1080);
+    expect_rect(childLayout->getRect(child), 560, 240, 800, 600,
+                "the minimum floor should hand off exactly at the design resolution");
+
+    childLayout->setRuntimeW(320);
+    childLayout->setRuntimeH(200);
+    expect_rect(childLayout->getRect(child), 800, 440, 320, 200,
+                "runtime size overrides should bypass the minimum floor");
+
+    childLayout->clearRuntimeRect();
+    parentLayout->setRuntimeRect(0, 0, 1280, 720);
+    childLayout->setMinW(-50);
+    childLayout->setMinH(-50);
+    expect_rect(childLayout->getRect(child), 374, 160, 533, 400, "negative minimum sizes should be ignored");
+}
+
 void test_gui_window_is_resizable_and_guard_paths_fail_closed() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -2314,6 +2374,8 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
+    test_layout_fractional_percentages_resolve_exact_design_pixels();
+    test_layout_minimum_size_floors_percentage_panels();
     test_widget_ignores_unarmed_non_left_clicks();
     test_widget_reflective_callbacks_fail_closed_on_bad_config();
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();

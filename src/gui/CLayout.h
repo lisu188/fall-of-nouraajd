@@ -27,16 +27,17 @@ class CLayout : public CGameObject {
            V_PROPERTY(CLayout, std::string, h, getH, setH), V_PROPERTY(CLayout, std::string, x, getX, setX),
            V_PROPERTY(CLayout, std::string, y, getY, setY),
            V_PROPERTY(CLayout, std::string, vertical, getVertical, setVertical),
-           V_PROPERTY(CLayout, std::string, horizontal, getHorizontal, setHorizontal))
+           V_PROPERTY(CLayout, std::string, horizontal, getHorizontal, setHorizontal),
+           V_PROPERTY(CLayout, int, minW, getMinW, setMinW), V_PROPERTY(CLayout, int, minH, getMinH, setMinH))
   public:
     virtual std::shared_ptr<SDL_Rect> getRect(std::shared_ptr<CGameGraphicsObject> object);
 
   private:
     enum TYPE { SIMPLE, PERCENT };
 
-    std::pair<TYPE, int> parseValue(std::string value);
+    std::pair<TYPE, double> parseValue(std::string value);
 
-    int parseValue(std::pair<TYPE, int> value, int parentValue);
+    int parseValue(std::pair<TYPE, double> value, int parentValue);
 
     int parseValue(std::string value, int parentValue);
 
@@ -86,6 +87,14 @@ class CLayout : public CGameObject {
 
     void clearRuntimeRect();
 
+    int getMinW();
+
+    void setMinW(int _minW);
+
+    int getMinH();
+
+    void setMinH(int _minH);
+
     std::string getVertical();
 
     void setVertical(std::string vertical);
@@ -101,6 +110,8 @@ class CLayout : public CGameObject {
     std::string y = "0";
     std::string vertical;
     std::string horizontal;
+    int minW = 0;
+    int minH = 0;
     std::optional<int> runtimeX;
     std::optional<int> runtimeY;
     std::optional<int> runtimeW;
