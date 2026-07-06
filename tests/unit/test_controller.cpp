@@ -289,6 +289,46 @@ void test_player_controller_prefers_longer_lower_cost_route() {
     expect_true(controller->isCompleted(player), "player weighted detour should complete after the target step");
 }
 
+// An obstacle appearing on the player's pending auto-path must STOP the walk, not
+// pause it: the controller abandons the stored route when its next step becomes
+// impassable, so the route cannot silently resume after the obstacle moves away.
+// CMap::move() already interrupts a controller that yields no movement, but the
+// controller is also polled directly (GUI footprint rendering via isOnPath,
+// script-driven control), where a merely-paused path would linger and resume.
+void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 4, 1);
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+
+    controller->setTarget(player, Coords(2, 0, 0));
+    auto first_step = resolve_coords(controller->control(player));
+    expect_true(first_step == Coords(1, 0, 0), "player auto-path should start with the adjacent corridor step");
+    player->moveTo(first_step);
+    controller->onStepCommitted(player, first_step);
+    expect_true(controller->isOnPath(player, Coords(2, 0, 0)).first,
+                "the remaining route should render as path while it is still passable");
+
+    map->removeTile(2, 0, 0);
+    expect_true(map->addTile(tile(false), 2, 0, 0), "fixture should block the next path step");
+    expect_true(!map->canStep(Coords(2, 0, 0)), "fixture should make the next path step impassable");
+
+    auto blocked_step = resolve_coords(controller->control(player));
+    expect_true(blocked_step == Coords(1, 0, 0), "a blocked auto-path must not steer into the obstacle");
+    expect_true(controller->isCompleted(player), "a blocked auto-path counts as completed (stopped)");
+    expect_true(!controller->isOnPath(player, Coords(2, 0, 0)).first,
+                "a stopped auto-path must not keep rendering stale footprints");
+
+    map->removeTile(2, 0, 0);
+    expect_true(map->addTile(tile(true), 2, 0, 0), "fixture should clear the obstacle again");
+    auto after_unblock = resolve_coords(controller->control(player));
+    expect_true(after_unblock == Coords(1, 0, 0),
+                "an auto-path stopped by an obstacle must not resume after the obstacle clears");
+    expect_true(controller->isCompleted(player),
+                "the abandoned route stays abandoned until the player picks a new target");
+}
+
 void test_npc_random_controller_prefers_longer_lower_cost_route() {
     vstd::rng().seed(4);
     auto game = std::make_shared<CGame>();
@@ -1047,6 +1087,7 @@ int main() {
     test_npc_random_controller_clears_stale_blocked_path();
     test_ground_controller_ignores_stale_transition_generation();
     test_player_controller_prefers_longer_lower_cost_route();
+    test_player_controller_stops_and_clears_path_when_obstacle_appears();
     test_npc_random_controller_prefers_longer_lower_cost_route();
     test_target_controller_flow_field_prefers_longer_lower_cost_route();
     test_player_controller_prefers_cheap_navigation_edge_over_expensive_band();
