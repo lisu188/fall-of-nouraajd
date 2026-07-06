@@ -219,6 +219,74 @@ void test_load_game_creates_context_owned_providers() {
     expect_true(first_items != second_items, "separate game contexts should not share configuration provider caches");
 }
 
+void test_game_contexts_isolate_same_logical_config_id() {
+    auto singletonResources = CResourcesProvider::getInstance();
+    const auto itemsPath = std::filesystem::path(singletonResources->getPath("config/items.json"));
+    expect_true(!itemsPath.empty(), "items config should resolve before context-owned config isolation test");
+    if (itemsPath.empty()) {
+        return;
+    }
+    const auto configRoot = itemsPath.parent_path();
+
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string logicalConfigId = "unit_ctx_isolation_" + std::to_string(nonce) + ".json";
+    const auto configPath = configRoot / logicalConfigId;
+    std::filesystem::remove(configPath);
+
+    // Publish the same logical id with the "alpha" value and let the first game context cache it.
+    expect_true(write_text_file(configPath, R"({"marker":"alpha"})"),
+                "context isolation fixture should be written with the initial value");
+    if (!std::filesystem::exists(configPath)) {
+        return;
+    }
+
+    auto firstGame = CGameLoader::loadGame();
+    auto secondGame = CGameLoader::loadGame();
+    expect_true(firstGame->getConfigurationProvider() != secondGame->getConfigurationProvider(),
+                "distinct game contexts must own distinct configuration providers");
+
+    auto firstAlpha = firstGame->getConfigurationProvider()->getConfiguration(logicalConfigId);
+    expect_true(json_string_value(firstAlpha, "marker") == "alpha",
+                "the first game context should load the initial config value under the shared logical id");
+
+    // Re-publish the same logical id with a different value; only a per-context cache keeps the two
+    // games serving different objects for one id.
+    expect_true(write_text_file(configPath, R"({"marker":"beta"})"),
+                "context isolation fixture should be rewritable with a second value");
+
+    auto secondBeta = secondGame->getConfigurationProvider()->getConfiguration(logicalConfigId);
+    expect_true(json_string_value(secondBeta, "marker") == "beta",
+                "a separate game context should read the current config value for the same logical id");
+
+    // The second context's load must not be visible in, or mutate, the first context's cache.
+    auto firstAlphaAgain = firstGame->getConfigurationProvider()->getConfiguration(logicalConfigId);
+    expect_true(firstAlphaAgain == firstAlpha,
+                "a game context should keep serving its own cached object for a given logical id");
+    expect_true(json_string_value(firstAlphaAgain, "marker") == "alpha",
+                "another context's load of the same id must not leak into or overwrite a context's cache");
+    expect_true(firstAlpha != secondBeta,
+                "two game contexts must resolve the same logical id to their own isolated objects");
+
+    // Static compatibility behavior stays separate: neither context load primes the process-wide cache.
+    auto legacyConfig = CConfigurationProvider::getConfig(logicalConfigId);
+    expect_true(json_string_value(legacyConfig, "marker") == "beta",
+                "context-owned loads must not populate the process-wide configuration provider cache");
+    expect_true(legacyConfig != firstAlpha && legacyConfig != secondBeta,
+                "the process-wide compatibility cache must stay distinct from context-owned caches");
+
+    // Unsafe-path rejection is unchanged for context-owned resource providers.
+    auto firstResources = firstGame->getResourcesProvider();
+    auto secondResources = secondGame->getResourcesProvider();
+    expect_true(firstResources->getPath("../config/items.json").empty(),
+                "context-owned providers must keep rejecting parent-traversal resource paths");
+    expect_true(secondResources->getPath("/etc/passwd").empty(),
+                "context-owned providers must keep rejecting absolute resource paths");
+    expect_true(!firstResources->getPath("config/items.json").empty(),
+                "context-owned providers must keep resolving safe in-root resource paths");
+
+    std::filesystem::remove(configPath);
+}
+
 void test_map_load_resolves_through_context_owned_providers() {
     auto singletonResources = CResourcesProvider::getInstance();
     const auto itemsPath = std::filesystem::path(singletonResources->getPath("config/items.json"));
@@ -579,6 +647,7 @@ int main() {
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();
     test_load_game_creates_context_owned_providers();
+    test_game_contexts_isolate_same_logical_config_id();
     test_map_load_resolves_through_context_owned_providers();
     test_two_game_contexts_isolate_provider_cache_and_object_config();
     test_resource_plugin_trust_boundary_rejects_escapes();
