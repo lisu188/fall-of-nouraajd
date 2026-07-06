@@ -468,6 +468,35 @@ python3 scripts/subagent_registry.py sweep --repo . --workbook planning/fall_of_
 recommendations with the exact `mark` command to apply each transition explicitly. It never deletes worktrees, kills
 processes, mutates the workbook, or rewrites the registry file.
 
+## Durable controller transition reconciler
+
+A controller's per-issue state is spread across the XLSX row, its claim ID, the worktree, the branch, the workbook-only
+**claim PR**, the implementation PR and its CI, and the terminal status PR. After a restart or container suspension the
+controller must decide what to do next without redoing a transition it already performed (a duplicate claim,
+worktree, implementation PR, merge, or DONE write). `scripts/controller_reconciler.py` derives one deterministic
+controller state and the single next action from a JSON evidence blob and prints JSON. It is strictly read-only: it
+never touches the workbook, git, or GitHub, so `snapshot`/`reconcile`/`next-action` can never themselves duplicate a
+transition. It reuses `pr_review_audit` for queue/PR/check normalization.
+
+```bash
+python3 scripts/controller_reconciler.py next-action --evidence-file evidence.json   # or pipe JSON on stdin
+python3 scripts/controller_reconciler.py reconcile < evidence.json
+```
+
+The evidence blob carries `issueName` (required), `claimId`, `owner`, the `queue` row, and optional `claimPr`,
+`implementationPr`, `terminalPr`, `worktreeReady`, and `workerRunning` records. The derived state is one of
+`claim_selected`, `claim_pr_open`, `claim_pr_merged`, `worktree_ready`, `worker_running`, `implementation_pr_open`,
+`ci_pending`, `ci_passed`, `ci_failed`, `implementation_merged`, `terminal_pr_open`, `done`, `blocked`, or
+`recovery_required`. Correlation is by exact identity (claim ID, issue name, owner, branch/head SHA, PR number); title
+matching alone is never authoritative. Every write action (`create_worktree`, `run_worker`, `open_implementation_pr`,
+`merge_implementation`, `mark_done`) carries an idempotency key of the exact claim ID plus the transition, so
+re-deriving the same state after a restart yields the same key and a caller that records applied keys skips work it
+already did — e.g. a merged claim PR and a freshly selected claim both resolve to the same `create_worktree` key.
+Contradictory evidence (a merged claim PR against an unclaimed row, a DONE row with an open implementation PR, a PR whose
+claim ID does not match) fails closed to `recovery_required` with the conflicting evidence instead of guessing a write;
+`reconcile` then exits non-zero so callers can branch. Read-only `snapshot`, `reconcile`, and `next-action` never call
+workbook save, git write commands, or GitHub mutations.
+
 ## Structured worker reports and restart handoffs
 
 Worker milestone and end-of-task reports use the versioned JSON schema in `scripts/worker_report.py` (schema version 1,
