@@ -42,8 +42,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "600",
-          "w": "800"
+          "h": "55.56%",
+          "minH": 600,
+          "minW": 800,
+          "w": "41.67%"
         }
       }
     }
@@ -89,7 +91,7 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "200",
+          "h": "66.67%",
           "horizontal": "PARENT",
           "vertical": "UP"
         }
@@ -150,8 +152,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "300",
-          "w": "400"
+          "h": "27.78%",
+          "minH": 300,
+          "minW": 400,
+          "w": "20.84%"
         }
       }
     }
@@ -190,10 +194,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "300",
-                "w": "200",
-                "x": "150",
-                "y": "100"
+                "h": "50%",
+                "w": "25%",
+                "x": "18.75%",
+                "y": "16.67%"
               }
             }
           }
@@ -228,10 +232,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "300",
-                "w": "200",
-                "x": "450",
-                "y": "100"
+                "h": "50%",
+                "w": "25%",
+                "x": "56.25%",
+                "y": "16.67%"
               }
             }
           }
@@ -327,8 +331,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "600",
-          "w": "800"
+          "h": "55.56%",
+          "minH": 600,
+          "minW": 800,
+          "w": "41.67%"
         }
       }
     }
@@ -351,8 +357,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "300",
-          "w": "400"
+          "h": "27.78%",
+          "minH": 300,
+          "minW": 400,
+          "w": "20.84%"
         }
       }
     }
@@ -425,8 +433,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "600",
-          "w": "800"
+          "h": "55.56%",
+          "minH": 600,
+          "minW": 800,
+          "w": "41.67%"
         }
       }
     }
@@ -437,8 +447,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "600",
-          "w": "800"
+          "h": "55.56%",
+          "minH": 600,
+          "minW": 800,
+          "w": "41.67%"
         }
       }
     }
@@ -449,7 +461,7 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "100",
+          "h": "33.34%",
           "horizontal": "PARENT",
           "vertical": "DOWN"
         }
@@ -462,8 +474,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "300",
-          "w": "400"
+          "h": "27.78%",
+          "minH": 300,
+          "minW": 400,
+          "w": "20.84%"
         }
       },
       "children": [
@@ -493,8 +507,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "600",
-          "w": "800"
+          "h": "55.56%",
+          "minH": 600,
+          "minW": 800,
+          "w": "41.67%"
         }
       }
     }
@@ -510,10 +526,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "100",
-                "w": "200",
-                "x": "200",
-                "y": "500"
+                "h": "16.67%",
+                "vertical": "DOWN",
+                "w": "25%",
+                "x": "25%"
               }
             },
             "text": "SELL"
@@ -526,10 +542,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "100",
-                "w": "200",
-                "x": "400",
-                "y": "500"
+                "h": "16.67%",
+                "vertical": "DOWN",
+                "w": "25%",
+                "x": "50%"
               }
             },
             "text": "BUY"
@@ -541,9 +557,9 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "200",
-                "w": "200",
-                "x": "200",
+                "h": "33.34%",
+                "w": "25%",
+                "x": "25%",
                 "y": "0"
               }
             },
@@ -556,9 +572,9 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "200",
-                "w": "200",
-                "x": "400",
+                "h": "33.34%",
+                "w": "25%",
+                "x": "50%",
                 "y": "0"
               }
             },
@@ -618,8 +634,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "600",
-          "w": "800"
+          "h": "55.56%",
+          "minH": 600,
+          "minW": 800,
+          "w": "41.67%"
         }
       }
     }
@@ -630,8 +648,10 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "600",
-          "w": "800"
+          "h": "55.56%",
+          "minH": 600,
+          "minW": 800,
+          "w": "41.67%"
         }
       }
     }
