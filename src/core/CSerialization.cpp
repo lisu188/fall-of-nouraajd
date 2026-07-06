@@ -19,8 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
 #include "core/CList.h"
+#include "core/CMap.h"
 #include "core/CTypes.h"
 
+#include <atomic>
+#include <cstdint>
 #include <stdexcept>
 
 std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_index, std::type_index> key) {
@@ -427,11 +430,11 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     } else if (CJsonUtil::isType(config)) {
         object = game->getObjectHandler()->getType((*config)["class"].get<std::string>());
         if (object) {
+            object->setGame(game);
             if (vstd::is_empty(object->getName())) {
                 object->setName(CSerialization::generateName(object));
             }
             object->setType((*config)["class"].get<std::string>());
-            object->setGame(game);
         }
     }
     if (!object && CSerialization::isStrict()) {
@@ -463,9 +466,29 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
     return object;
 }
 
-// TODO: handle collisions
 std::string CSerialization::generateName(const std::shared_ptr<CGameObject> &object) {
-    return vstd::to_hex_hash(to_hex(object), vstd::rand());
+    return generateName(object, [&object](const std::string &candidate) {
+        auto game = object ? object->getGame() : nullptr;
+        auto map = game ? game->getMap() : nullptr;
+        return map && map->getObjectByName(candidate) != nullptr;
+    });
+}
+
+std::string CSerialization::generateName(const std::shared_ptr<CGameObject> &object,
+                                         const std::function<bool(const std::string &)> &isNameTaken) {
+    // A colliding generated name silently drops the newcomer from name-keyed registries such as
+    // CMap::mapObjects, so candidates are re-rolled until free. The sequence counter keeps hash
+    // inputs distinct even when the allocator reuses an object address and the RNG repeats.
+    static std::atomic<std::uint64_t> sequence{0};
+    constexpr int maxAttempts = 256;
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+        auto candidate = vstd::to_hex_hash(to_hex(object), vstd::rand(), sequence.fetch_add(1));
+        if (!isNameTaken || !isNameTaken(candidate)) {
+            return candidate;
+        }
+    }
+    throw std::runtime_error("Failed to generate a unique object name after " + std::to_string(maxAttempts) +
+                             " attempts");
 }
 
 std::shared_ptr<json> map_serialize(const std::map<std::string, std::shared_ptr<CGameObject>> &object) {

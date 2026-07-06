@@ -245,6 +245,9 @@ class CSerialization {
 
     static std::string generateName(const std::shared_ptr<CGameObject> &object);
 
+    static std::string generateName(const std::shared_ptr<CGameObject> &object,
+                                    const std::function<bool(const std::string &)> &isNameTaken);
+
     static bool isStrict();
 
     static bool setStrict(bool value);
