@@ -585,7 +585,7 @@ bool CResourcesProvider::save(std::string file, std::shared_ptr<json> data) {
 }
 
 std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game,
-                                                             const std::shared_ptr<CGameObject> &object, bool custom) {
+                                                             const std::shared_ptr<CGameObject> &object) {
     if (!game || !object) {
         return nullptr;
     }
@@ -595,8 +595,7 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
     if (!resolvedAnimationPath.empty() && std::filesystem::is_directory(resolvedAnimationPath)) {
         animation = game->createObject<CDynamicAnimation>("CDynamicAnimation");
     } else if (std::filesystem::is_regular_file(game->getResourcesProvider()->getPath(animationPath + ".png"))) {
-        animation = custom ? game->createObject<CAnimation>("CCustomAnimation")
-                           : game->createObject<CStaticAnimation>("CStaticAnimation");
+        animation = game->createObject<CStaticAnimation>("CStaticAnimation");
     } else {
         // TODO: if the path wasnt empty load text instead, requires changes in text
         // manager
@@ -610,15 +609,14 @@ std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_p
     return animation;
 }
 
-std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, std::string path,
-                                                             bool custom) {
+std::shared_ptr<CAnimation> CAnimationProvider::getAnimation(const std::shared_ptr<CGame> &game, std::string path) {
     std::shared_ptr<CGameObject> object = game->createObject<CGameObject>();
     if (!object) {
         vstd::logger::warning("Skipping animation path with unregistered CGameObject type:", path);
         return nullptr;
     }
     object->setAnimation(std::move(path));
-    auto animation = getAnimation(game, object, custom);
+    auto animation = getAnimation(game, object);
     if (animation) {
         animation->setOwnedObject(object);
     }
