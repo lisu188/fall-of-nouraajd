@@ -740,6 +740,10 @@ std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shar
     }
     return vstd::now([this, player]() {
         if (!canContinue(player)) {
+            // A path that can no longer be continued (finished, or its next step became blocked)
+            // is abandoned outright, so a later poll cannot silently resume a stale route after
+            // the obstacle moves away.
+            clearPath();
             return player->getCoords();
         }
         return path.at(currentStep);
@@ -785,7 +789,6 @@ void CPlayerController::interrupt(std::shared_ptr<CCreature>) { clearPath(); }
 
 void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) {}
 
-// TODO: add stopping when obstacle found
 std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
     if (!isCompleted(player)) {
         for (auto it : path | std::views::filter([this](auto it) { return it.first >= currentStep - 1; })) {
