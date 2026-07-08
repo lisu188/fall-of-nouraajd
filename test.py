@@ -2919,9 +2919,15 @@ def iter_tracked_cpp_source_files():
 
 
 def strip_cpp_comments_and_strings(text):
-    # Strip comments first (mirrors strip_cpp_comments in scripts/validate_content.py)
-    # so commented-out calls are not counted as live ones, then drop string and
-    # character literals so quoted tokens (e.g. log messages) are not counted either.
+    # Raw string literals must go first: they are possibly multiline and may contain
+    # quotes and comment markers, so the comment/string passes below would mis-handle
+    # their contents (e.g. a raw-string fixture quoting SDL_RenderCopy would survive
+    # and be counted as a live call).
+    text = re.sub(r'(?:u8|u|U|L)?R"([^"()\\\s]{0,16})\(.*?\)\1"', "", text, flags=re.DOTALL)
+    # Strip comments next (mirrors strip_cpp_comments in scripts/validate_content.py)
+    # so commented-out calls are not counted as live ones, then drop ordinary string
+    # and character literals so quoted tokens (e.g. log messages) are not counted
+    # either.
     text = re.sub(r"/\*.*?\*/|//[^\n\r]*", "", text, flags=re.DOTALL)
     return re.sub(r"\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", "", text)
 
