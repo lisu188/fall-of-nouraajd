@@ -1476,6 +1476,117 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     objectHandler->unregisterConfig(highId);
 }
 
+// [EPIC_08][STORY_05][SUBSTORY_01] Associated-class metadata: future-gated encounter
+// scale hook. CCreatureRace.associatedClasses models D&D-inspired associated classes
+// (a class that reinforces the race's natural role), and CRngHandler's
+// classifyClassAssociation/scaleEncounterPower hook lets the encounter power table
+// DISTINGUISH associated from non-associated pairings. Balance is design-gated: the
+// multipliers behind scaleEncounterPower are pinned to the neutral value 1, so the
+// hook must be the identity for every classification and the encounter scale output
+// must stay bit-identical to the pre-hook math for all existing content (empty
+// metadata => zero effect). This test proves both halves of that acceptance.
+void test_rng_handler_distinguishes_associated_classes_with_neutral_scale() {
+    using ClassAssociation = CRngHandler::ClassAssociation;
+
+    // --- Capability (metadata): a race configured with associatedClasses reports the
+    // distinction for class ids and for class objects (configured-identity semantics).
+    auto race = std::make_shared<CCreatureRace>();
+    race->setAssociatedClasses({"mageClass"});
+
+    expect_true(race->isAssociatedClass("mageClass"), "a race should report a listed class id as associated");
+    expect_true(!race->isAssociatedClass("bruteClass"), "a race should report an unlisted class id as non-associated");
+    expect_true(!race->isAssociatedClass(std::string()), "an empty class id should never be associated");
+
+    auto mageClass = std::make_shared<CCreatureClass>();
+    mageClass->setTypeId("mageClass");
+    auto bruteClass = std::make_shared<CCreatureClass>();
+    bruteClass->setTypeId("bruteClass");
+    expect_true(race->isAssociatedClass(mageClass), "a class object should match by its configured typeId");
+    expect_true(!race->isAssociatedClass(bruteClass), "an off-role class object should not match");
+    auto namedOnlyClass = std::make_shared<CCreatureClass>();
+    namedOnlyClass->setName("mageClass");
+    expect_true(race->isAssociatedClass(namedOnlyClass),
+                "a class with no typeId should fall back to its name, matching configured-identity semantics");
+    expect_true(!race->isAssociatedClass(std::shared_ptr<CCreatureClass>()), "a null class is never associated");
+
+    // --- Capability (hook input): the encounter hook derives the right distinction
+    // from a creature's race/class pairing.
+    expect_true(CRngHandler::classifyClassAssociation(nullptr) == ClassAssociation::NoArchetype,
+                "a null creature carries no association to weigh");
+    auto creature = std::make_shared<CCreature>();
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NoArchetype,
+                "a legacy creature (no race, no class) carries no association to weigh");
+    creature->setRace(race);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NoArchetype,
+                "a race-only creature has no race/class pairing to classify");
+    creature->setCreatureClass(mageClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::Associated,
+                "a class listed in the race's associatedClasses should classify as Associated");
+    creature->setCreatureClass(bruteClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NonAssociated,
+                "a class missing from the race's associatedClasses should classify as NonAssociated");
+    auto emptyMetadataRace = std::make_shared<CCreatureRace>();
+    creature->setRace(emptyMetadataRace);
+    creature->setCreatureClass(mageClass);
+    expect_true(CRngHandler::classifyClassAssociation(creature) == ClassAssociation::NonAssociated,
+                "a race with default-empty associatedClasses should treat every class as non-associated");
+
+    // --- Neutrality (design-gated): the hook is the identity for EVERY classification
+    // and power, so the constructor's power-table key provably equals the raw getSw()
+    // no matter how a creature classifies (initial migration balance unchanged).
+    for (int power : {0, 1, 2, 4, 9, 40, 1000}) {
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::NoArchetype) == power,
+                    "legacy creatures must keep their raw power as the encounter power key");
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::Associated) == power,
+                    "the associated-class multiplier must stay neutral until the balance design is approved");
+        expect_true(CRngHandler::scaleEncounterPower(power, ClassAssociation::NonAssociated) == power,
+                    "the non-associated-class multiplier must stay neutral until the balance design is approved");
+    }
+
+    // --- Neutrality (existing content): for every encounter candidate the configured
+    // game registers, the hooked key the constructor computes equals the raw getSw(),
+    // so the creature power table is identical to the pre-hook build. Reconstructs the
+    // candidate set exactly as the constructor does (src/handler/CRngHandler.cpp),
+    // including the CPlayer exclusion.
+    auto game = load_empty_game();
+    auto objectHandler = game->getObjectHandler();
+
+    std::set<int> rawSwKeys;
+    for (const std::string &type : objectHandler->getAllSubTypes("CCreature")) {
+        auto resolvedClass = objectHandler->getType(objectHandler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        auto prototype = game->createObject<CCreature>(type);
+        if (!prototype) {
+            continue;
+        }
+        const int hookedKey =
+            CRngHandler::scaleEncounterPower(prototype->getSw(), CRngHandler::classifyClassAssociation(prototype));
+        expect_true(hookedKey == prototype->getSw(),
+                    "every existing encounter candidate's hooked power key must equal its raw getSw()");
+        rawSwKeys.insert(prototype->getSw());
+    }
+
+    // The live handler (built with the hook in place) must still assemble encounters
+    // exclusively from the raw concrete sw buckets, exactly as before the hook.
+    CRngHandler rng_handler(game);
+    bool producedEncounter = false;
+    for (int attempt = 0; attempt < 64; attempt++) {
+        for (const auto &sampled : rng_handler.getRandomEncounter(40)) {
+            if (!sampled) {
+                continue;
+            }
+            producedEncounter = true;
+            expect_true(rawSwKeys.contains(sampled->getSw()),
+                        "encounter creatures must still be drawn from the raw concrete sw power buckets");
+            expect_true(sampled->getScale() == sampled->getLevel() + sampled->getSw(),
+                        "the neutral hook must preserve getScale() == level + sw for encounter creatures");
+        }
+    }
+    expect_true(producedEncounter, "the hooked power table should still assemble non-empty encounters");
+}
+
 std::shared_ptr<json> make_unit_player_config(int sw) {
     auto config = CJsonUtil::from_string("{\"class\":\"CPlayer\",\"properties\":{\"sw\":" + std::to_string(sw) + "}}",
                                          "unitPlayerSwConfig");
@@ -1782,6 +1893,7 @@ int main() {
     test_rng_handler_excludes_player_templates_from_encounters();
     test_rng_handler_captures_encounter_power_and_scale_baseline();
     test_rng_handler_encounter_candidates_stay_in_stable_power_buckets();
+    test_rng_handler_distinguishes_associated_classes_with_neutral_scale();
     test_creature_subtype_inventory_is_enumerable_on_loaded_game();
     test_event_handler_trigger_registration_uses_named_comparison_helpers();
     test_fight_handler_rejects_stale_and_cross_map_participants();
