@@ -2947,6 +2947,51 @@ void test_panel_resize_handle_press_beats_covering_child_and_release_ends_captur
     expect_rect(layout->getRect(panel), 0, 0, 260, 200, "a stale resize must not change the panel size");
 }
 
+// Subclass panels (inventory/fight/trade) override mouseEvent for right-click selection resets
+// WITHOUT delegating to CGamePanel, so the resize interception in CGamePanel::event must reach the
+// panel-level resize state machine non-virtually: a virtual call would let the override consume the
+// claimed handle press doing nothing, leaving an opted-in subclass panel impossible to resize by
+// real input (caught end-to-end by the xvfb panel resize suite).
+void test_panel_resize_handle_press_resizes_subclass_panel_with_mouse_override() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGameInventoryPanel>();
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    panel->setResizable(true);
+    gui->pushChild(panel);
+
+    SDL_Event down{};
+    down.type = SDL_MOUSEBUTTONDOWN;
+    down.button.button = SDL_BUTTON_LEFT;
+    down.button.x = 195;
+    down.button.y = 145;
+    expect_true(gui->event(&down), "a handle press on a subclass panel should be handled");
+    expect_true(panel->isResizing(), "a handle press must start the resize despite the subclass mouseEvent override");
+    expect_true(gui->isPointerCapturedBy(panel), "a handle press should capture the pointer for the subclass panel");
+
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 255;
+    motion.motion.y = 195;
+    gui->event(&motion);
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "captured motion should resize the subclass panel");
+
+    SDL_Event up{};
+    up.type = SDL_MOUSEBUTTONUP;
+    up.button.button = SDL_BUTTON_LEFT;
+    up.button.x = 100;
+    up.button.y = 100;
+    gui->event(&up);
+    expect_true(!panel->isResizing(), "the release must end the subclass panel resize");
+    expect_true(!gui->hasPointerCapture(), "the release must free the pointer capture");
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "the release must keep the resized rectangle");
+}
+
 // A centered layout recomputes x/y from the current size, so runtime W/H alone would move the
 // panel's origin (and its panel-local pointer space) on every drag update. The resize must pin the
 // top-left corner for the whole drag and keep it pinned after the drag ends.
@@ -3160,6 +3205,7 @@ int main() {
     test_dialog_panel_current_options_preserve_numeric_display_order();
     test_panel_opt_in_resize_handle_drag_resizes_within_bounds();
     test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture();
+    test_panel_resize_handle_press_resizes_subclass_panel_with_mouse_override();
     test_panel_resize_centered_layout_keeps_origin_pinned();
     test_panel_session_geometry_restores_reopened_panel_same_identity_only();
     test_panel_session_geometry_reapply_clamps_to_new_parent_bounds();
