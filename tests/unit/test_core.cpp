@@ -2454,6 +2454,11 @@ void test_creature_clone_preserves_composed_archetypes() {
     auto race = game->createObject<CCreatureRace>("CCreatureRace");
     expect_true(race != nullptr, "CCreatureRace is registered and constructs in the loaded game");
     race->setCreatureType("humanoid");
+    // Racial advancement scaffolding (EPIC_08/STORY_04/SUBSTORY_01): author a racial
+    // progression on the race so the clone round-trip covers racialLevelStats too.
+    auto racialGrowth = std::make_shared<CStats>();
+    racialGrowth->setStamina(3);
+    race->setRacialLevelStats(racialGrowth);
 
     auto classUnlock = game->createObject<CInteraction>("CInteraction");
     expect_true(classUnlock != nullptr, "CInteraction is registered and constructs in the loaded game");
@@ -2490,6 +2495,7 @@ void test_creature_clone_preserves_composed_archetypes() {
     source->setCreatureClass(klass);
     source->setTemplates({overlay});
     source->setLevel(3);
+    source->setRacialLevel(2);
     source->setHp(11);
     source->setGold(5);
     // The unlock lives on the archetype, not on the creature's own actions.
@@ -2528,6 +2534,15 @@ void test_creature_clone_preserves_composed_archetypes() {
         expect_true(overlay->getOrder() == 10,
                     "mutating the clone's template overlay does not write back to the source's template");
     }
+
+    // Racial advancement round-trips through the serialize -> deserialize clone path
+    // like every other creature property: the racial level (distinct from the class
+    // level) and the race's racial progression survive the round trip.
+    expect_true(clone->getRacialLevel() == 2,
+                "the clone keeps the source's racialLevel through the serialize/deserialize round trip");
+    expect_true(clone->getRace()->getRacialLevelStats() != nullptr &&
+                    clone->getRace()->getRacialLevelStats()->getStamina() == 3,
+                "the clone's race keeps the authored racialLevelStats progression through the round trip");
 
     // Generated unique name distinct from the source.
     expect_true(!clone->getName().empty(), "the clone receives a generated name");

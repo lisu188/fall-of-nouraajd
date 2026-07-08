@@ -89,3 +89,12 @@ bool CCreatureRace::isAssociatedClass(const std::shared_ptr<CCreatureClass> &cre
     }
     return isAssociatedClass(classId);
 }
+
+std::shared_ptr<CStats> CCreatureRace::getRacialLevelStats() { return racialLevelStats; }
+
+// Null-safe like setBaseStats: a missing racial progression normalizes to an
+// empty CStats (zero contribution), so the composed-stat fold never dereferences
+// a null definition and a race without progression stays strictly neutral.
+void CCreatureRace::setRacialLevelStats(std::shared_ptr<CStats> value) {
+    racialLevelStats = value ? value : std::make_shared<CStats>();
+}

@@ -843,6 +843,209 @@ void test_creature_stat_precedence_orders_sources_and_main_stat() {
                 "removing the effects source should remove exactly its contribution from the composed stat");
 }
 
+void test_racial_progression_defaults_keep_composition_neutral() {
+    // [EPIC_08][STORY_04][SUBSTORY_01] Model racial advancement separately from class
+    // level -- NEUTRALITY. Racial advancement (CCreatureRace::racialLevelStats applied
+    // once per CCreature::racialLevel) is future-gated scaffolding: with the neutral
+    // defaults (racialLevel == 0 and/or an empty race progression) it contributes
+    // exactly zero, so every existing creature -- legacy or composed -- keeps a
+    // bit-identical stat block and the class level semantics are untouched. There is
+    // deliberately NO XP wiring for racialLevel, so nothing can raise it implicitly.
+    auto same_int_properties = [](const std::shared_ptr<CStats> &before, const std::shared_ptr<CStats> &after) {
+        bool same = before->getMainStat() == after->getMainStat();
+        before->meta()->for_all_properties(before, [&](auto property) {
+            if (property->value_type() != std::type_index(typeid(int))) {
+                return;
+            }
+            same = same && before->getProperty<int>(property->name()) == after->getProperty<int>(property->name());
+        });
+        return same;
+    };
+
+    // Shared legacy shape reused from the existing composition tests: base 10 int,
+    // +2 int per class level, level 3.
+    auto make_creature = []() {
+        auto creature = std::make_shared<CCreature>();
+        auto base = std::make_shared<CStats>();
+        base->setMainStat("intelligence");
+        base->setIntelligence(10);
+        base->setStamina(6);
+        creature->setBaseStats(base);
+        auto level_stats = std::make_shared<CStats>();
+        level_stats->setIntelligence(2);
+        creature->setLevelStats(level_stats);
+        creature->setLevel(3);
+        return creature;
+    };
+
+    // (a) Legacy creature (no race, no creatureClass): racialLevel alone must not
+    // contribute -- racial progression is race-carried, and the legacy path stays exact.
+    auto legacy = make_creature();
+    auto legacy_before = legacy->getStats();
+    expect_true(legacy->getRacialLevel() == 0, "racialLevel should default to 0 (zero contribution)");
+    expect_true(legacy_before->getIntelligence() == 10 + 3 * 2,
+                "the legacy creature should keep the exact legacy composition (base + level*levelStats)");
+    legacy->setRacialLevel(5);
+    expect_true(same_int_properties(legacy_before, legacy->getStats()),
+                "a racialLevel on a legacy creature (no race) must not change the composed stats");
+    expect_true(legacy->getLevel() == 3, "racialLevel must not disturb the class-driven level");
+
+    // (b) Composed creature whose race has NO authored racial progression: a nonzero
+    // racialLevel composes bit-identically (default-empty progression => zero growth).
+    auto composed = make_creature();
+    auto race = std::make_shared<CCreatureRace>();
+    composed->setRace(race);
+    auto composed_before = composed->getStats();
+    composed->setRacialLevel(4);
+    expect_true(same_int_properties(composed_before, composed->getStats()),
+                "racial levels over an empty race progression must contribute exactly zero");
+
+    // (c) Composed creature whose race HAS racial progression but racialLevel stays at
+    // the default 0: attaching the progression must not change anything.
+    auto gated = make_creature();
+    auto progressive_race = std::make_shared<CCreatureRace>();
+    gated->setRace(progressive_race);
+    auto gated_before = gated->getStats();
+    auto racial_growth = std::make_shared<CStats>();
+    racial_growth->setStamina(3);
+    racial_growth->setStrength(2);
+    progressive_race->setRacialLevelStats(racial_growth);
+    expect_true(same_int_properties(gated_before, gated->getStats()),
+                "race progression with the default racialLevel of 0 must contribute exactly zero");
+}
+
+void test_racial_level_composes_race_progression_independently_of_class_level() {
+    // [EPIC_08][STORY_04][SUBSTORY_01] Model racial advancement separately from class
+    // level -- CAPABILITY. A race configured with racialLevelStats plus a creature
+    // racialLevel of N composes exactly N * racialLevelStats, folded at the documented
+    // position (after all base sources, opening the per-level growth block ahead of
+    // creatureClass.levelStats and creature.levelStats). The racial contribution is
+    // independent of -- and coexists with -- the class level growth: changing the class
+    // level does not alter the racial contribution and vice versa.
+    auto creature = std::make_shared<CCreature>();
+
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence");
+    base->setIntelligence(10);
+    base->setStamina(6);
+    base->setStrength(4);
+    creature->setBaseStats(base);
+
+    auto creature_growth = std::make_shared<CStats>();
+    creature_growth->setIntelligence(1);
+    creature->setLevelStats(creature_growth);
+
+    auto race_base = std::make_shared<CStats>();
+    race_base->setStamina(2);
+    auto racial_growth = std::make_shared<CStats>();
+    racial_growth->setStamina(3);
+    racial_growth->setStrength(2);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(race_base);
+    race->setRacialLevelStats(racial_growth);
+    creature->setRace(race);
+
+    auto class_growth = std::make_shared<CStats>();
+    class_growth->setIntelligence(2);
+    class_growth->setStamina(1);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setLevelStats(class_growth);
+    creature->setCreatureClass(klass);
+
+    const int class_level = 3;
+    const int racial_level = 2;
+    creature->setLevel(class_level);
+    creature->setRacialLevel(racial_level);
+
+    // Independently recompute the documented composition:
+    //   race.baseStats -> creature.baseStats -> racialLevel * race.racialLevelStats ->
+    //   class_level * (class levelStats + creature levelStats).
+    auto expected = std::make_shared<CStats>();
+    expected->setMainStat(base->getMainStat());
+    expected->addBonus(race_base);
+    expected->addBonus(base);
+    for (int i = 0; i < racial_level; ++i) {
+        expected->addBonus(racial_growth);
+    }
+    for (int i = 0; i < class_level; ++i) {
+        expected->addBonus(class_growth);
+    }
+    for (int i = 0; i < class_level; ++i) {
+        expected->addBonus(creature_growth);
+    }
+
+    auto actual = creature->getStats();
+    actual->meta()->for_all_properties(actual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = actual->getProperty<int>(property->name());
+        int expected_value = expected->getProperty<int>(property->name());
+        if (actual_value != expected_value) {
+            std::cerr << "RACIAL STAT DIFF [" << property->name() << "] expected " << expected_value << " but got "
+                      << actual_value << "\n";
+        }
+        expect_true(actual_value == expected_value,
+                    "composed stats should fold racialLevel * race.racialLevelStats alongside (not instead of) "
+                    "the class level growth");
+    });
+    expect_true(actual->getMainStat() == "intelligence",
+                "racial progression is numeric-only and must not disturb the selected main stat");
+
+    // Independence, direction 1: raising the CLASS level adds exactly the class +
+    // creature growth -- the racial contribution stays constant.
+    creature->setLevel(class_level + 2);
+    auto after_class_levels = creature->getStats();
+    expect_true(after_class_levels->getIntelligence() == actual->getIntelligence() + 2 * (2 + 1),
+                "raising the class level should add exactly the class+creature growth per level");
+    expect_true(after_class_levels->getStamina() == actual->getStamina() + 2 * 1,
+                "raising the class level should not change the racial stamina contribution");
+    expect_true(after_class_levels->getStrength() == actual->getStrength(),
+                "raising the class level should leave the racial-only strength contribution untouched");
+
+    // Independence, direction 2: raising the RACIAL level adds exactly the racial
+    // growth -- the class-level contribution stays constant.
+    creature->setRacialLevel(racial_level + 3);
+    auto after_racial_levels = creature->getStats();
+    expect_true(after_racial_levels->getStamina() == after_class_levels->getStamina() + 3 * 3,
+                "raising the racial level should add exactly the racial stamina growth per racial level");
+    expect_true(after_racial_levels->getStrength() == after_class_levels->getStrength() + 3 * 2,
+                "raising the racial level should add exactly the racial strength growth per racial level");
+    expect_true(after_racial_levels->getIntelligence() == after_class_levels->getIntelligence(),
+                "raising the racial level should not alter the class-level intelligence contribution");
+    expect_true(creature->getLevel() == class_level + 2 && creature->getRacialLevel() == racial_level + 3,
+                "class level and racial level are distinct, independently stored fields");
+}
+
+void test_racial_level_round_trips_through_meta_property_binding() {
+    // [EPIC_08][STORY_04][SUBSTORY_01] Serialization: racialLevel (creature) and
+    // racialLevelStats (race) are declared V_META properties, so they round-trip
+    // through the same meta property binding save/clone serialization uses for
+    // every other creature property. Pin the binding both ways (setter -> property
+    // read, property write -> getter).
+    auto creature = std::make_shared<CCreature>();
+    expect_true(creature->getProperty<int>("racialLevel") == 0,
+                "the racialLevel meta property should expose the neutral default of 0");
+    creature->setProperty("racialLevel", 4);
+    expect_true(creature->getRacialLevel() == 4,
+                "writing the racialLevel meta property should reach the racial level field");
+    creature->setRacialLevel(7);
+    expect_true(creature->getProperty<int>("racialLevel") == 7,
+                "the racialLevel setter should be visible through the meta property binding");
+
+    auto race = std::make_shared<CCreatureRace>();
+    auto growth = std::make_shared<CStats>();
+    growth->setStamina(3);
+    race->setProperty("racialLevelStats", growth);
+    expect_true(race->getRacialLevelStats()->getStamina() == 3,
+                "writing the racialLevelStats meta property should reach the race progression field");
+    expect_true(race->getProperty<std::shared_ptr<CStats>>("racialLevelStats")->getStamina() == 3,
+                "the racialLevelStats meta property should read back the authored progression");
+    race->setRacialLevelStats(nullptr);
+    expect_true(race->getRacialLevelStats() != nullptr && race->getRacialLevelStats()->getStamina() == 0,
+                "a null racial progression should normalize to an empty (zero-contribution) CStats");
+}
+
 void test_creature_class_main_stat_is_authoritative_over_race() {
     // [EPIC_02][STORY_04][SUBSTORY_03] Make creatureClass authoritative for mainStat.
     // When a creature has a composed creatureClass declaring a main stat, that class main stat
@@ -2240,6 +2443,9 @@ int main() {
     test_equip_item_same_instance_is_noop_and_keeps_cursed_lock();
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();
+    test_racial_progression_defaults_keep_composition_neutral();
+    test_racial_level_composes_race_progression_independently_of_class_level();
+    test_racial_level_round_trips_through_meta_property_binding();
     test_creature_class_main_stat_is_authoritative_over_race();
     test_player_composed_stats_reflect_race_and_class_archetype();
     test_player_without_archetype_falls_back_to_base_stats();
