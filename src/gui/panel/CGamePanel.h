@@ -71,6 +71,12 @@ class CGamePanel : public CGameGraphicsObject {
 
     bool isResizing();
 
+    // Re-applies geometry recorded for this panel's typeId in the CGui session store, clamped like a
+    // live resize against the CURRENT parent bounds. Called by CGui when the panel is attached, so a
+    // reopened/rebuilt panel keeps its user-adjusted geometry for the session; a no-op for
+    // non-resizable panels, unknown identities, or an empty store.
+    void applySessionGeometry(const std::shared_ptr<CGui> &gui);
+
   protected:
     // Claims resize-handle presses (and the matching release while a resize is active) before child
     // dispatch, so a child covering the bottom-right corner cannot swallow the resize interaction.
@@ -94,8 +100,19 @@ class CGamePanel : public CGameGraphicsObject {
 
     ResizeBounds getResizeBounds();
 
+    // Bounds for a panel whose top-left corner sits at the given parent-relative origin. Shared by
+    // the live resize (current origin) and session-geometry re-apply (stored origin), so both clamp
+    // identically.
+    ResizeBounds getResizeBounds(int originX, int originY);
+
     // Base CGameGraphicsObject::getRect() is private; resolve this panel's own rectangle through its layout.
     std::shared_ptr<SDL_Rect> getSelfRect();
+
+    // The parent's rectangle, or an empty rect when the panel has no parent (or no parent layout).
+    std::shared_ptr<SDL_Rect> getParentRect();
+
+    // Records the panel's current runtime geometry into the GUI session store when a resize ends.
+    void recordSessionGeometry();
 
     bool resizable = false;
     int resizeHandleSize = DEFAULT_HANDLE_SIZE;
