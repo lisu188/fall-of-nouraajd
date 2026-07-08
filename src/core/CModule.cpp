@@ -844,7 +844,13 @@ void init_game_module(py::module_ &m) {
         .def("setSubtypes", &CCreatureRace::setSubtypes, "Set the race's subtype tags.")
         .def("isPlayerSelectable", &CCreatureRace::isPlayerSelectable,
              "Whether the race is offered at character creation.")
-        .def("setPlayerSelectable", &CCreatureRace::setPlayerSelectable, "Set whether the race is player-selectable.");
+        .def("setPlayerSelectable", &CCreatureRace::setPlayerSelectable, "Set whether the race is player-selectable.")
+        .def("getAssociatedClasses", &CCreatureRace::getAssociatedClasses,
+             "Return the class ids that reinforce this race's natural role (future encounter-balance metadata).")
+        .def("setAssociatedClasses", &CCreatureRace::setAssociatedClasses,
+             "Set the associated class ids (empty ids are dropped).")
+        .def("isAssociatedClass", py::overload_cast<const std::string &>(&CCreatureRace::isAssociatedClass),
+             "Whether the class id is listed as reinforcing this race's natural role.");
 
     py::class_<CCreatureClass, CGameObject, std::shared_ptr<CCreatureClass>>(
         m, "CCreatureClass", "Creature class archetype definition (metadata only; not a spawnable creature).")

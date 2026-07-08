@@ -2048,6 +2048,7 @@ void test_creature_race_metadata_round_trip() {
     race->setCreatureType("humanoid");
     race->setSubtypes({"human", "northerner"});
     race->setPlayerSelectable(true);
+    race->setAssociatedClasses({"mageClass", "cultistClass"});
     race->setLabel("Human");
     race->setDescription("The common folk of Nouraajd.");
 
@@ -2070,6 +2071,12 @@ void test_creature_race_metadata_round_trip() {
     expect_true(round_trip->getBaseStats() && round_trip->getBaseStats()->getStrength() == 7,
                 "base stats should survive the round-trip");
     expect_true(round_trip->getActions().size() == 1, "innate actions should survive the round-trip");
+    expect_true(round_trip->getAssociatedClasses() == std::set<std::string>({"mageClass", "cultistClass"}),
+                "associatedClasses metadata should survive the round-trip");
+    expect_true(round_trip->isAssociatedClass("mageClass"),
+                "a round-tripped race should still report a listed class as associated");
+    expect_true(!round_trip->isAssociatedClass("bruteClass"),
+                "a round-tripped race should still report an unlisted class as non-associated");
 
     // Null-safety: empty/null stats and null actions must not crash aggregation.
     auto bare = std::make_shared<CCreatureRace>();
@@ -2077,6 +2084,10 @@ void test_creature_race_metadata_round_trip() {
     expect_true(bare->getBaseStats() != nullptr, "null baseStats should normalize to an empty CStats");
     bare->setActions({nullptr});
     expect_true(bare->getActions().empty(), "null actions should be filtered out");
+    expect_true(bare->getAssociatedClasses().empty(),
+                "associatedClasses should default empty so existing races carry no association metadata");
+    bare->setAssociatedClasses({""});
+    expect_true(bare->getAssociatedClasses().empty(), "empty associated class ids should be filtered out");
 
     // A race definition is not a creature subtype, so it must never appear in the
     // CCreature subtype enumeration.

@@ -23,6 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 #include <string>
 
+class CCreatureClass;
+
 class CInteraction;
 
 // CCreatureRace is a CGameObject-derived *metadata definition*, not a CCreature
@@ -39,7 +41,9 @@ class CCreatureRace : public CGameObject {
            V_PROPERTY(CCreatureRace, std::set<std::shared_ptr<CInteraction>>, actions, getActions, setActions),
            V_PROPERTY(CCreatureRace, std::string, creatureType, getCreatureType, setCreatureType),
            V_PROPERTY(CCreatureRace, std::set<std::string>, subtypes, getSubtypes, setSubtypes),
-           V_PROPERTY(CCreatureRace, bool, playerSelectable, isPlayerSelectable, setPlayerSelectable))
+           V_PROPERTY(CCreatureRace, bool, playerSelectable, isPlayerSelectable, setPlayerSelectable),
+           V_PROPERTY(CCreatureRace, std::set<std::string>, associatedClasses, getAssociatedClasses,
+                      setAssociatedClasses))
 
   public:
     CCreatureRace();
@@ -66,10 +70,24 @@ class CCreatureRace : public CGameObject {
 
     void setPlayerSelectable(bool value);
 
+    // [EPIC_08][STORY_05] D&D-inspired associated classes: the class ids (configured
+    // identity, e.g. "mageClass") that reinforce this race's natural role. Metadata
+    // only for now -- encounter scale treats associated and non-associated pairings
+    // identically until the balance design is approved. Defaults empty, so existing
+    // races and configs are unaffected.
+    std::set<std::string> getAssociatedClasses();
+
+    void setAssociatedClasses(std::set<std::string> value);
+
+    bool isAssociatedClass(const std::string &classId);
+
+    bool isAssociatedClass(const std::shared_ptr<CCreatureClass> &creatureClass);
+
   private:
     std::shared_ptr<CStats> baseStats = std::make_shared<CStats>();
     std::set<std::shared_ptr<CInteraction>> actions;
     std::string creatureType;
     std::set<std::string> subtypes;
     bool playerSelectable = false;
+    std::set<std::string> associatedClasses;
 };

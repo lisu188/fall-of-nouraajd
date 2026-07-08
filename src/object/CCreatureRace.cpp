@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CCreatureRace.h"
 #include "core/CStats.h"
+#include "object/CCreatureClass.h"
 #include "object/CInteraction.h"
 
 CCreatureRace::CCreatureRace() {}
@@ -56,3 +57,35 @@ void CCreatureRace::setSubtypes(std::set<std::string> value) { subtypes = value;
 bool CCreatureRace::isPlayerSelectable() { return playerSelectable; }
 
 void CCreatureRace::setPlayerSelectable(bool value) { playerSelectable = value; }
+
+std::set<std::string> CCreatureRace::getAssociatedClasses() { return associatedClasses; }
+
+// Null-safe: drop empty class ids so association queries and serialization stay
+// deterministic (an empty id can never name a configured class).
+void CCreatureRace::setAssociatedClasses(std::set<std::string> value) {
+    std::set<std::string> filtered;
+    for (const auto &classId : value) {
+        if (!classId.empty()) {
+            filtered.insert(classId);
+        }
+    }
+    associatedClasses = filtered;
+}
+
+bool CCreatureRace::isAssociatedClass(const std::string &classId) {
+    return !classId.empty() && associatedClasses.contains(classId);
+}
+
+// Resolves the class's configured identity the way the engine's configured-identity
+// helpers do (CGameObject::sameConfiguredType): prefer the typeId, fall back to the
+// name only when typeId is empty. Null classes are never associated.
+bool CCreatureRace::isAssociatedClass(const std::shared_ptr<CCreatureClass> &creatureClass) {
+    if (!creatureClass) {
+        return false;
+    }
+    std::string classId = creatureClass->getTypeId();
+    if (classId.empty()) {
+        classId = creatureClass->getName();
+    }
+    return isAssociatedClass(classId);
+}
