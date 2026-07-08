@@ -36,6 +36,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
+#include "object/CCreatureTemplate.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
 #include "object/CInteraction.h"
@@ -2462,9 +2463,21 @@ void test_creature_clone_preserves_composed_archetypes() {
     klass->setMainStat("strength");
     klass->setLevelling({{"1", classUnlock}});
 
+    // A template overlay reference (EPIC_08 template layer): attached inline like
+    // the race/class definitions so the clone round-trip must carry it through the
+    // same serialize -> deserialize path.
+    auto overlay = game->createObject<CCreatureTemplate>("CCreatureTemplate");
+    expect_true(overlay != nullptr, "CCreatureTemplate is registered and constructs in the loaded game");
+    overlay->setOrder(10);
+    overlay->setScaleAdjustment(1);
+    auto overlayStats = std::make_shared<CStats>();
+    overlayStats->setStrength(2);
+    overlay->setStatAdjustments(overlayStats);
+
     source->setName("composedSource");
     source->setRace(race);
     source->setCreatureClass(klass);
+    source->setTemplates({overlay});
     source->setLevel(3);
     source->setHp(11);
     source->setGold(5);
@@ -2488,6 +2501,19 @@ void test_creature_clone_preserves_composed_archetypes() {
                 "the clone's race archetype keeps the same definition (creatureType)");
     expect_true(clone->getCreatureClass()->getMainStat() == "strength",
                 "the clone's creatureClass archetype keeps the same definition (mainStat)");
+
+    // Template overlay preserved: the reference round-trips through the clone's
+    // serialize -> deserialize cycle with its ordering key, scale adjustment and
+    // stat adjustments intact.
+    expect_true(clone->getTemplates().size() == 1, "the clone retains the template overlay reference");
+    auto clonedOverlay = *clone->getTemplates().begin();
+    expect_true(clonedOverlay->getOrder() == 10 && clonedOverlay->getScaleAdjustment() == 1,
+                "the clone's template keeps its ordering key and scale adjustment");
+    expect_true(clonedOverlay->getStatAdjustments() && clonedOverlay->getStatAdjustments()->getStrength() == 2,
+                "the clone's template keeps its stat adjustments");
+    clonedOverlay->setOrder(99);
+    expect_true(overlay->getOrder() == 10,
+                "mutating the clone's template overlay does not write back to the source's template");
 
     // Generated unique name distinct from the source.
     expect_true(!clone->getName().empty(), "the clone receives a generated name");
