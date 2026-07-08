@@ -851,6 +851,14 @@ void test_racial_progression_defaults_keep_composition_neutral() {
     // exactly zero, so every existing creature -- legacy or composed -- keeps a
     // bit-identical stat block and the class level semantics are untouched. There is
     // deliberately NO XP wiring for racialLevel, so nothing can raise it implicitly.
+    //
+    // The per-property comparison below reflects over CStats via getProperty<int>,
+    // which needs the CStats any-cast converter registered (see the registration
+    // note in test_racial_level_round_trips_through_meta_property_binding).
+    // Register it here explicitly so this test does not depend on test order.
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+
     auto same_int_properties = [](const std::shared_ptr<CStats> &before, const std::shared_ptr<CStats> &after) {
         bool same = before->getMainStat() == after->getMainStat();
         before->meta()->for_all_properties(before, [&](auto property) {
@@ -922,6 +930,13 @@ void test_racial_level_composes_race_progression_independently_of_class_level() 
     // creatureClass.levelStats and creature.levelStats). The racial contribution is
     // independent of -- and coexists with -- the class level growth: changing the class
     // level does not alter the racial contribution and vice versa.
+    //
+    // The expected-vs-actual sweep below reflects over CStats via getProperty<int>,
+    // so register the CStats any-cast converter explicitly (idempotent; see the
+    // registration note in test_racial_level_round_trips_through_meta_property_binding).
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+
     auto creature = std::make_shared<CCreature>();
 
     auto base = std::make_shared<CStats>();
@@ -1023,6 +1038,23 @@ void test_racial_level_round_trips_through_meta_property_binding() {
     // through the same meta property binding save/clone serialization uses for
     // every other creature property. Pin the binding both ways (setter -> property
     // read, property write -> getter).
+    //
+    // Reflective V_META access routes through vstd::any_cast converters that only
+    // exist for types registered via CTypes::register_type: property_impl::
+    // object_from_any (vstd/vmeta.h) casts the shared_ptr<CGameObject> handle from
+    // CGameObject::ptr() to the property's DECLARING type, and without the
+    // registered converter that cast falls through to std::any_cast and dies with
+    // bad_any_cast. This per-domain test binary does not run the full module type
+    // registration, so register the exact chain this test reflects over (CCreature,
+    // CCreatureRace, and the shared_ptr<CStats> property payload), the same way the
+    // equip and tooltip tests in this file register theirs. Registration is global
+    // and idempotent, so repeating it here is safe regardless of test order.
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CCreatureRace, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+
     auto creature = std::make_shared<CCreature>();
     expect_true(creature->getProperty<int>("racialLevel") == 0,
                 "the racialLevel meta property should expose the neutral default of 0");
