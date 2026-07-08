@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <optional>
+#include <vector>
 
 #include "core/CStats.h"
 #include "object/CMapObject.h"
@@ -46,6 +47,8 @@ class CCreatureRace;
 
 class CCreatureClass;
 
+class CCreatureTemplate;
+
 typedef std::map<std::string, std::shared_ptr<CInteraction>> CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem>> CItemMap;
 
@@ -67,6 +70,7 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
                       setFightController),
            V_PROPERTY(CCreature, std::shared_ptr<CCreatureRace>, race, getRace, setRace),
            V_PROPERTY(CCreature, std::shared_ptr<CCreatureClass>, creatureClass, getCreatureClass, setCreatureClass),
+           V_PROPERTY(CCreature, std::set<std::shared_ptr<CCreatureTemplate>>, templates, getTemplates, setTemplates),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
            V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
            V_METHOD(CCreature, getEffects, std::set<std::shared_ptr<CEffect>>))
@@ -280,9 +284,22 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     void setCreatureClass(std::shared_ptr<CCreatureClass> value);
 
-    // True when this creature carries either archetype definition. Composed
-    // stat/action/level behavior branches on this so partial migrations are
-    // explicit and creatures without archetypes keep the legacy paths exactly.
+    // Optional template overlays (empty on every current creature). Templates are
+    // CCreatureTemplate metadata definitions layered AFTER race/class composition;
+    // they never replace the race or the creatureClass reference.
+    std::set<std::shared_ptr<CCreatureTemplate>> getTemplates();
+
+    void setTemplates(std::set<std::shared_ptr<CCreatureTemplate>> value);
+
+    // The creature's templates in their defined application order: ascending
+    // `order` key, ties broken by configured identity (typeId, then name) so the
+    // fold-in is deterministic.
+    std::vector<std::shared_ptr<CCreatureTemplate>> getOrderedTemplates();
+
+    // True when this creature carries an archetype definition (race/creatureClass)
+    // or a template overlay. Composed stat/action/level behavior branches on this
+    // so partial migrations are explicit and creatures without archetypes or
+    // templates keep the legacy paths exactly.
     bool usesArchetypeComposition();
 
   protected:
@@ -303,6 +320,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     std::shared_ptr<CCreatureRace> race;
 
     std::shared_ptr<CCreatureClass> creatureClass;
+
+    std::set<std::shared_ptr<CCreatureTemplate>> templates;
 
     std::optional<Coords> pendingMoveOrigin;
 

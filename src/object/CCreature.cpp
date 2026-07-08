@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
+#include "object/CCreatureTemplate.h"
 
 #include "core/CController.h"
 #include "core/CGame.h"
@@ -169,14 +170,19 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
     //   2. class starting actions   -- creatureClass.actions (null on legacy)
     //   3. class level unlocks       -- creatureClass.levelling entries unlocked
     //                                   up to the current level
-    //   4. concrete template         -- the creature's own levelling unlocks then
+    //   4. template overlays         -- CCreatureTemplate action additions, applied
+    //                                   in ascending template `order` (future
+    //                                   mechanics, EPIC_08; empty on all current
+    //                                   content)
+    //   5. concrete template         -- the creature's own levelling unlocks then
     //                                   its own configured actions (most specific)
     //
-    // The race / creatureClass archetype references are independently null: a
-    // legacy creature (neither set) contributes nothing from positions 1-3 and
-    // composes exactly the concrete-template sources, matching the legacy
-    // behavior. When present, archetype sources slot in ahead of the concrete
-    // template without changing the concrete-actions-win precedence.
+    // The race / creatureClass archetype references are independently null and the
+    // template overlay set is independently empty: a legacy creature (none set)
+    // contributes nothing from positions 1-4 and composes exactly the
+    // concrete-template sources, matching the legacy behavior. When present,
+    // archetype/template sources slot in ahead of the concrete template without
+    // changing the concrete-actions-win precedence.
 
     std::vector<std::shared_ptr<CInteraction>> ordered;
 
@@ -229,10 +235,21 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
         appendUnlockedLevelling(creatureClass->getLevelling());
     }
 
-    // 4a. concrete template level unlocks: the creature's own levelling map.
+    // 4. template overlays: action additions in ascending template order, so a
+    // later template overrides duplicate keys of an earlier one while the
+    // creature's own concrete sources below stay most specific.
+    for (const auto &overlay : getOrderedTemplates()) {
+        for (const auto &action : overlay->getActions()) {
+            if (action) {
+                ordered.push_back(action);
+            }
+        }
+    }
+
+    // 5a. concrete template level unlocks: the creature's own levelling map.
     appendUnlockedLevelling(levelling);
 
-    // 4b. concrete own actions: added last so they win duplicate-key conflicts.
+    // 5b. concrete own actions: added last so they win duplicate-key conflicts.
     for (const auto &action : actions) {
         if (action) {
             ordered.push_back(action);
@@ -388,7 +405,16 @@ int CCreature::getDmg() {
     }
 }
 
-int CCreature::getScale() { return level + sw; }
+int CCreature::getScale() {
+    // Template overlays may shift the encounter/exp scale (e.g. an elite variant
+    // counting as one level tougher). Every current creature has no templates, so
+    // this composes exactly the legacy level + sw.
+    int scale = level + sw;
+    for (const auto &overlay : getOrderedTemplates()) {
+        scale += overlay->getScaleAdjustment();
+    }
+    return scale;
+}
 
 bool CCreature::isAlive() { return hp > 0; }
 
@@ -629,7 +655,8 @@ std::shared_ptr<CArmor> CCreature::getArmor() { return vstd::cast<CArmor>(getIte
 void CCreature::levelUp() {
     level++;
     if (usesArchetypeComposition()) {
-        // Composed level-up path (creature carries a race and/or creatureClass).
+        // Composed level-up path (creature carries a race, a creatureClass and/or
+        // template overlays).
         // Class-derived level unlocks are NOT mutated/serialized into the creature's
         // own `actions` set: getEffectiveInteractions already surfaces every
         // `levelling` entry whose unlock level is at or below the current level
@@ -945,11 +972,16 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     //   3. creature.baseStats
     //   4. creatureClass.levelStats per level
     //   5. creature.levelStats per level
-    //   6. equipment bonuses
-    //   7. effect bonuses
+    //   6. template overlays (ordered) -- CCreatureTemplate.statAdjustments applied
+    //      in ascending template `order`, AFTER the race/class/creature stack and
+    //      before the external-modifier tail (future mechanics, EPIC_08; empty on
+    //      all current content)
+    //   7. equipment bonuses
+    //   8. effect bonuses
     // The equipment-then-effects tail keeps the same relative order as the legacy
-    // path. Each archetype reference is independently null-guarded: usesArchetype-
-    // Composition() only guarantees at least one of race / creatureClass is set.
+    // path. Each archetype reference is independently null-guarded and the template
+    // set independently empty-guarded: usesArchetypeComposition() only guarantees
+    // at least one of race / creatureClass / templates is present.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
     // Main stat is a *selected* (not accumulated) field, so it must be set explicitly
     // (CStats::addBonus copies only numeric properties). The creatureClass is
@@ -982,13 +1014,22 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     for (int i = 0; i < level; i++) {
         ret->addBonus(getLevelStats());
     }
-    // 6. equipment bonuses.
+    // 6. template overlays in ascending `order`: additive stat adjustments layered
+    // AFTER the race/class/creature intrinsic stack, before external modifiers. A
+    // creature with no templates skips this stage entirely, composing bit-identical
+    // to the pre-template contract.
+    for (const auto &overlay : getOrderedTemplates()) {
+        if (overlay->getStatAdjustments()) {
+            ret->addBonus(overlay->getStatAdjustments());
+        }
+    }
+    // 7. equipment bonuses.
     for (auto [slot, item] : getEquipped()) {
         if (item) {
             ret->addBonus(item->getBonus());
         }
     }
-    // 7. effect bonuses.
+    // 8. effect bonuses.
     for (auto effect : getEffects()) {
         if (effect) {
             ret->addBonus(effect->getBonus());
@@ -1093,4 +1134,37 @@ std::shared_ptr<CCreatureClass> CCreature::getCreatureClass() { return creatureC
 // A null creatureClass is valid: it marks a legacy (non-archetype) creature.
 void CCreature::setCreatureClass(std::shared_ptr<CCreatureClass> value) { creatureClass = value; }
 
-bool CCreature::usesArchetypeComposition() { return race != nullptr || creatureClass != nullptr; }
+std::set<std::shared_ptr<CCreatureTemplate>> CCreature::getTemplates() { return templates; }
+
+// An empty template set is valid (and is the state of every current creature): it
+// marks a creature without variant overlays. Null entries are dropped so the
+// ordered fold-in and serialization stay well-formed.
+void CCreature::setTemplates(std::set<std::shared_ptr<CCreatureTemplate>> value) {
+    std::set<std::shared_ptr<CCreatureTemplate>> filtered;
+    for (const auto &overlay : value) {
+        if (overlay) {
+            filtered.insert(overlay);
+        }
+    }
+    templates = filtered;
+}
+
+std::vector<std::shared_ptr<CCreatureTemplate>> CCreature::getOrderedTemplates() {
+    std::vector<std::shared_ptr<CCreatureTemplate>> ordered(templates.begin(), templates.end());
+    // Deterministic application order: ascending `order` key, ties broken by the
+    // configured identity (typeId, falling back to name) so equal-order templates
+    // still fold in reproducibly.
+    auto identity = [](const std::shared_ptr<CCreatureTemplate> &overlay) {
+        const std::string typeId = overlay->getTypeId();
+        return typeId.empty() ? overlay->getName() : typeId;
+    };
+    std::sort(ordered.begin(), ordered.end(), [&identity](const auto &lhs, const auto &rhs) {
+        if (lhs->getOrder() != rhs->getOrder()) {
+            return lhs->getOrder() < rhs->getOrder();
+        }
+        return identity(lhs) < identity(rhs);
+    });
+    return ordered;
+}
+
+bool CCreature::usesArchetypeComposition() { return race != nullptr || creatureClass != nullptr || !templates.empty(); }
