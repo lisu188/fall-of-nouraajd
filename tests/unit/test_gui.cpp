@@ -1102,9 +1102,12 @@ void test_reactive_list_views_refresh_counts_match_model_changes_exactly() {
     expect_true(inventory_list->refresh_count == inventory_base + 3,
                 "three inventory changes in one event-loop turn must coalesce into exactly one rebuild");
 
-    // Unrelated model changes rebuild nothing (no over-refresh).
-    player->setNumericProperty("gold", 42);
-    player->setStringProperty("title", "warden");
+    // Unrelated model changes rebuild nothing (no over-refresh). The names must be
+    // dynamic-only properties: a name owned by a typed V_META property (e.g. "gold" on
+    // CCreature) would route setProperty through the typed reflective setter, which
+    // needs object-type any-cast registrations this GUI suite does not perform.
+    player->setNumericProperty("threat", 42);
+    player->setStringProperty("warCry", "warden");
     drain_event_loop();
     expect_true(inventory_list->refresh_count == inventory_base + 3 &&
                     equipped_list->refresh_count == equipped_base + 1 &&
@@ -1186,11 +1189,13 @@ void test_quest_panel_refresh_count_coalesces_rapid_invalidations() {
     expect_true(panel->build_count == 3, "a quest-state property change must count exactly one rebuild");
 
     quest_state->signal("turnPassed");
+    drain_event_loop();
     panel->getText(gui);
     panel->getText(gui);
     expect_true(panel->build_count == 4, "turnPassed must count exactly one rebuild");
 
     quest_state->signal("objectChanged", Coords(5, 6, 0));
+    drain_event_loop();
     panel->getText(gui);
     panel->getText(gui);
     expect_true(panel->build_count == 5, "objectChanged must count exactly one rebuild");
