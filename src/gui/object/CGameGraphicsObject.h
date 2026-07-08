@@ -99,7 +99,10 @@ class CGameGraphicsObject : public CGameObject {
 
     void setLayout(std::shared_ptr<CLayout> layout);
 
-    void addChild(const std::shared_ptr<CGameGraphicsObject> &child);
+    // Virtual so a container can observe children joining it (CGui re-applies session-recorded
+    // panel geometry on attach). Every attach path funnels through here (pushChild, setParent,
+    // setChildren), so an override sees each child exactly when it becomes reachable.
+    virtual void addChild(const std::shared_ptr<CGameGraphicsObject> &child);
 
     void pushChild(const std::shared_ptr<CGameGraphicsObject> &child);
 

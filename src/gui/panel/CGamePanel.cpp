@@ -126,6 +126,12 @@ bool CGamePanel::isInResizeHandle(int x, int y) {
 }
 
 CGamePanel::ResizeBounds CGamePanel::getResizeBounds() {
+    auto rect = getSelfRect();
+    auto parentRect = getParentRect();
+    return getResizeBounds(rect->x - parentRect->x, rect->y - parentRect->y);
+}
+
+CGamePanel::ResizeBounds CGamePanel::getResizeBounds(int originX, int originY) {
     ResizeBounds bounds{RESIZE_MIN_SIZE, RESIZE_MIN_SIZE, RESIZE_MAX_FALLBACK, RESIZE_MAX_FALLBACK};
     if (auto layout = getLayout()) {
         bounds.minW = std::max(RESIZE_MIN_SIZE, layout->getMinW());
@@ -134,13 +140,10 @@ CGamePanel::ResizeBounds CGamePanel::getResizeBounds() {
     if (auto parent = getParent()) {
         if (auto parentLayout = parent->getLayout()) {
             auto parentRect = parentLayout->getRect(parent);
-            auto rect = getSelfRect();
             // Keep the panel fully inside its parent: the max edge is the room left of the parent's
-            // right/bottom edge from the panel's fixed top-left corner.
-            int roomW = parentRect->w - (rect->x - parentRect->x);
-            int roomH = parentRect->h - (rect->y - parentRect->y);
-            bounds.maxW = std::max(bounds.minW, roomW);
-            bounds.maxH = std::max(bounds.minH, roomH);
+            // right/bottom edge from the given parent-relative top-left origin.
+            bounds.maxW = std::max(bounds.minW, parentRect->w - originX);
+            bounds.maxH = std::max(bounds.minH, parentRect->h - originY);
         }
     }
     return bounds;
@@ -159,12 +162,7 @@ bool CGamePanel::beginResize(int x, int y) {
     // x/y from the current size, so runtime W/H alone would move the origin (and with it the
     // panel-local pointer space) on every update. Latching runtime X/Y freezes the origin relative
     // to the parent so the panel resizes from a stable corner.
-    auto parentOrigin = CUtil::rect(0, 0, 0, 0);
-    if (auto parent = getParent()) {
-        if (auto parentLayout = parent->getLayout()) {
-            parentOrigin = parentLayout->getRect(parent);
-        }
-    }
+    auto parentOrigin = getParentRect();
     layout->setRuntimeX(rect->x - parentOrigin->x);
     layout->setRuntimeY(rect->y - parentOrigin->y);
     // Latch the offset from the pointer to the panel's right/bottom edge so the drag is jump-free.
@@ -191,11 +189,65 @@ void CGamePanel::updateResize(int x, int y) {
     layout->setRuntimeH(newH);
 }
 
-void CGamePanel::endResize() { resizing = false; }
+void CGamePanel::endResize() {
+    if (!resizing) {
+        return;
+    }
+    resizing = false;
+    // The drag is over: remember the panel's runtime geometry for the rest of the session, so a
+    // closed/reopened (or rebuilt) panel with the same identity comes back with the same rectangle.
+    recordSessionGeometry();
+}
+
+void CGamePanel::recordSessionGeometry() {
+    auto gui = getGui();
+    if (!gui || getTypeId().empty() || !getLayout()) {
+        return;
+    }
+    auto rect = getSelfRect();
+    auto parentOrigin = getParentRect();
+    // Stored x/y are parent-relative (the space CLayout keeps runtime X/Y in); w/h are pixels. The
+    // store lives on the CGui only, so nothing here can reach a layout config or a save file.
+    gui->setSessionPanelGeometry(getTypeId(), {rect->x - parentOrigin->x, rect->y - parentOrigin->y, rect->w, rect->h});
+}
+
+void CGamePanel::applySessionGeometry(const std::shared_ptr<CGui> &gui) {
+    if (!gui || !resizable || getTypeId().empty()) {
+        return;
+    }
+    auto layout = getLayout();
+    if (!layout) {
+        return;
+    }
+    auto stored = gui->getSessionPanelGeometry(getTypeId());
+    if (!stored) {
+        return;
+    }
+    // Clamp exactly like a live resize, but against the CURRENT parent rectangle: the window (and
+    // with it the scaled runtime layout) may have changed since the geometry was recorded, and the
+    // restored panel must never land outside the new bounds. First keep the origin inside the parent
+    // with at least the minimum size of room, then clamp the edges to the room left from that origin.
+    auto originBounds = getResizeBounds(0, 0);
+    int x = std::clamp(stored->x, 0, std::max(0, originBounds.maxW - originBounds.minW));
+    int y = std::clamp(stored->y, 0, std::max(0, originBounds.maxH - originBounds.minH));
+    auto sizeBounds = getResizeBounds(x, y);
+    // Runtime overrides only: the serialized layout values stay untouched (mirrors the resize path).
+    layout->setRuntimeRect(x, y, std::clamp(stored->w, sizeBounds.minW, sizeBounds.maxW),
+                           std::clamp(stored->h, sizeBounds.minH, sizeBounds.maxH));
+}
 
 std::shared_ptr<SDL_Rect> CGamePanel::getSelfRect() {
     auto layout = getLayout();
     return layout ? layout->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
+}
+
+std::shared_ptr<SDL_Rect> CGamePanel::getParentRect() {
+    if (auto parent = getParent()) {
+        if (auto parentLayout = parent->getLayout()) {
+            return parentLayout->getRect(parent);
+        }
+    }
+    return CUtil::rect(0, 0, 0, 0);
 }
 
 void CGamePanel::refreshViews() {

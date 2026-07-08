@@ -2765,6 +2765,173 @@ void test_panel_resize_centered_layout_keeps_origin_pinned() {
                 "pinning the origin must not rewrite the serialized centered layout");
 }
 
+// Session-only geometry persistence: finishing a resize records the panel's runtime geometry in the
+// CGui session store (keyed by the panel's stable typeId), and a NEW panel instance with the same
+// identity gets it re-applied when it joins the GUI. Serialized layout values stay untouched, other
+// identities are unaffected, non-resizable panels never apply, and identity-less panels never record.
+void test_panel_session_geometry_restores_reopened_panel_same_identity_only() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    panel->setTypeId("questPanel");
+    panel->setResizable(true);
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    gui->pushChild(panel);
+    expect_rect(layout->getRect(panel), 0, 0, 200, 150, "attaching with an empty store must change nothing");
+
+    // Resize to 260x200 (grab offset 5,5) and finish the drag: endResize records the geometry.
+    panel->beginResize(195, 145);
+    panel->updateResize(255, 195);
+    panel->endResize();
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "the drag should resize the live panel");
+
+    // Close the panel and reopen a brand-new instance with the same identity: geometry is restored.
+    panel->close();
+    expect_true(gui->findChild(panel) == nullptr, "close should detach the panel from the gui");
+    auto reopened = std::make_shared<CGamePanel>();
+    reopened->setTypeId("questPanel");
+    reopened->setResizable(true);
+    auto reopenedLayout = fixed_layout(0, 0, 200, 150);
+    reopened->setLayout(reopenedLayout);
+    gui->pushChild(reopened);
+    expect_rect(reopenedLayout->getRect(reopened), 0, 0, 260, 200,
+                "a reopened panel with the same identity should restore its session geometry");
+    expect_true(reopenedLayout->getX() == "0" && reopenedLayout->getY() == "0" && reopenedLayout->getW() == "200" &&
+                    reopenedLayout->getH() == "150",
+                "restoring session geometry must not rewrite any serialized layout value");
+    reopened->close();
+
+    // A different identity must not inherit the recorded geometry.
+    auto other = std::make_shared<CGamePanel>();
+    other->setTypeId("inventoryPanel");
+    other->setResizable(true);
+    auto otherLayout = fixed_layout(0, 0, 200, 150);
+    other->setLayout(otherLayout);
+    gui->pushChild(other);
+    expect_rect(otherLayout->getRect(other), 0, 0, 200, 150,
+                "a different panel identity must not receive another panel's geometry");
+    other->close();
+
+    // A panel without the resize opt-in must never have geometry applied, even for a known identity.
+    auto locked = std::make_shared<CGamePanel>();
+    locked->setTypeId("questPanel");
+    auto lockedLayout = fixed_layout(0, 0, 200, 150);
+    locked->setLayout(lockedLayout);
+    gui->pushChild(locked);
+    expect_rect(lockedLayout->getRect(locked), 0, 0, 200, 150,
+                "a non-resizable panel must not have session geometry applied");
+    locked->close();
+
+    // A panel with no stable identity records nothing when resized.
+    auto anonymous = std::make_shared<CGamePanel>();
+    anonymous->setResizable(true);
+    anonymous->setLayout(fixed_layout(0, 0, 200, 150));
+    gui->pushChild(anonymous);
+    anonymous->beginResize(195, 145);
+    anonymous->updateResize(255, 195);
+    anonymous->endResize();
+    anonymous->close();
+    expect_true(!gui->getSessionPanelGeometry(""), "a panel without a typeId must not record session geometry");
+}
+
+// Re-applied session geometry must clamp against the CURRENT parent bounds: if the window shrank
+// (window scaling rewrites the gui layout's runtime size) between the resize and the reopen, the
+// restored panel must land fully inside the new bounds instead of keeping an out-of-range rectangle.
+void test_panel_session_geometry_reapply_clamps_to_new_parent_bounds() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    // A centered panel resized once records its pinned origin (300, 225) with the new 260x200 size.
+    auto panel = std::make_shared<CGamePanel>();
+    panel->setTypeId("questPanel");
+    panel->setResizable(true);
+    auto layout = std::make_shared<CCenteredLayout>();
+    layout->setW("200");
+    layout->setH("150");
+    panel->setLayout(layout);
+    gui->pushChild(panel);
+    panel->beginResize(195, 145);
+    panel->updateResize(255, 195);
+    panel->endResize();
+    expect_rect(layout->getRect(panel), 300, 225, 260, 200, "the resized centered panel keeps its pinned origin");
+    panel->close();
+
+    // Shrink the gui (the same runtime-override mechanism window scaling uses) and reopen the panel:
+    // the origin (300, 225) still fits, but the size clamps to the room left inside 400x300.
+    gui->setWidth(400);
+    gui->setHeight(300);
+    auto reopened = std::make_shared<CGamePanel>();
+    reopened->setTypeId("questPanel");
+    reopened->setResizable(true);
+    auto reopenedLayout = std::make_shared<CCenteredLayout>();
+    reopenedLayout->setW("200");
+    reopenedLayout->setH("150");
+    reopened->setLayout(reopenedLayout);
+    gui->pushChild(reopened);
+    expect_rect(reopenedLayout->getRect(reopened), 300, 225, 100, 75,
+                "restored geometry must clamp its size to the room left in the smaller parent");
+    reopened->close();
+
+    // Shrink further so even the recorded origin no longer fits: it clamps to leave the minimum
+    // 32x32 of room, and the size clamps to that remaining room.
+    gui->setWidth(320);
+    gui->setHeight(240);
+    auto cramped = std::make_shared<CGamePanel>();
+    cramped->setTypeId("questPanel");
+    cramped->setResizable(true);
+    auto crampedLayout = std::make_shared<CCenteredLayout>();
+    crampedLayout->setW("200");
+    crampedLayout->setH("150");
+    cramped->setLayout(crampedLayout);
+    gui->pushChild(cramped);
+    expect_rect(crampedLayout->getRect(cramped), 288, 208, 32, 32,
+                "a restored origin outside the new parent must clamp back inside with minimum room");
+    expect_true(crampedLayout->getW() == "200" && crampedLayout->getH() == "150",
+                "clamped re-apply must not rewrite the serialized centered layout");
+}
+
+// The geometry store is session-only: it lives on the CGui instance (one per game session) and is
+// cleared by CGui::shutdown(), the session boundary CGameContext drives when a game session ends.
+// A fresh CGui starts empty, so user-adjusted geometry can never leak across sessions (and, being a
+// plain non-reflective member, it can never be serialized to disk at all).
+void test_panel_session_geometry_clears_at_session_shutdown() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    panel->setTypeId("questPanel");
+    panel->setResizable(true);
+    panel->setLayout(fixed_layout(0, 0, 200, 150));
+    gui->pushChild(panel);
+    panel->beginResize(195, 145);
+    panel->updateResize(255, 195);
+    panel->endResize();
+
+    auto stored = gui->getSessionPanelGeometry("questPanel");
+    expect_true(stored.has_value(), "finishing a resize should record geometry in the session store");
+    expect_true(stored && stored->x == 0 && stored->y == 0 && stored->w == 260 && stored->h == 200,
+                "the recorded geometry should match the resized rectangle");
+
+    gui->shutdown();
+    expect_true(!gui->getSessionPanelGeometry("questPanel"),
+                "shutdown (the session boundary) must clear the session geometry store");
+
+    auto nextSession = std::make_shared<CGui>();
+    expect_true(!nextSession->getSessionPanelGeometry("questPanel"),
+                "a new session's GUI must not inherit geometry from a previous session");
+}
+
 } // namespace
 
 int main() {
@@ -2781,6 +2948,9 @@ int main() {
     test_panel_opt_in_resize_handle_drag_resizes_within_bounds();
     test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture();
     test_panel_resize_centered_layout_keeps_origin_pinned();
+    test_panel_session_geometry_restores_reopened_panel_same_identity_only();
+    test_panel_session_geometry_reapply_clamps_to_new_parent_bounds();
+    test_panel_session_geometry_clears_at_session_shutdown();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();

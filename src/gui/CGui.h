@@ -25,7 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 
 #include <atomic>
+#include <map>
 #include <optional>
+#include <string>
 
 class CTextureCache;
 
@@ -80,6 +82,28 @@ class CGui : public CGameGraphicsObject {
     // false. This is the accessor every non-CGui call site (e.g. CListView) must use
     // to decide drag-vs-click, so the rule lives in exactly one place.
     static bool isDragActive(const DragSession &session);
+
+    // Session-only geometry remembered for user-resized panels, keyed by the panel's stable typeId
+    // (the config name CObjectHandler stamps on every created object). x/y are parent-relative (the
+    // same space as CLayout's runtime X/Y overrides); w/h are pixels. Deliberately NOT a reflective
+    // property: it can never be serialized into layout configs or save files, and it dies with this
+    // CGui (one CGui per game session), so user-adjusted geometry persists for the session only.
+    struct PanelGeometry {
+        int x = 0;
+        int y = 0;
+        int w = 0;
+        int h = 0;
+    };
+
+    void setSessionPanelGeometry(const std::string &panelType, const PanelGeometry &geometry);
+
+    std::optional<PanelGeometry> getSessionPanelGeometry(const std::string &panelType) const;
+
+    void clearSessionPanelGeometry();
+
+    // Re-applies session-recorded geometry the moment a panel joins the GUI, so a panel closed and
+    // reopened (or rebuilt) within the same session keeps its user-adjusted geometry.
+    void addChild(const std::shared_ptr<CGameGraphicsObject> &child) override;
 
     using CGameGraphicsObject::event;
     using CGameGraphicsObject::render;
@@ -174,6 +198,8 @@ class CGui : public CGameGraphicsObject {
                             const std::shared_ptr<CGameGraphicsObject> &object) const;
 
     std::optional<DragSession> dragSession;
+
+    std::map<std::string, PanelGeometry> sessionPanelGeometry;
 
     std::weak_ptr<CGameGraphicsObject> pointerCapture;
 
