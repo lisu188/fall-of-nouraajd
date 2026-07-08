@@ -71,6 +71,11 @@ class CGamePanel : public CGameGraphicsObject {
 
     bool isResizing();
 
+  protected:
+    // Claims resize-handle presses (and the matching release while a resize is active) before child
+    // dispatch, so a child covering the bottom-right corner cannot swallow the resize interaction.
+    bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
+
   private:
     // Minimum edge length a resizable panel is ever clamped to, independent of the layout's own minW/minH.
     // Keeps the panel at least as large as its handle so the handle stays grabbable.

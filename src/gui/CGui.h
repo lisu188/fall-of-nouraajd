@@ -81,6 +81,7 @@ class CGui : public CGameGraphicsObject {
     // to decide drag-vs-click, so the rule lives in exactly one place.
     static bool isDragActive(const DragSession &session);
 
+    using CGameGraphicsObject::event;
     using CGameGraphicsObject::render;
 
     SDL_Renderer *getRenderer() const;

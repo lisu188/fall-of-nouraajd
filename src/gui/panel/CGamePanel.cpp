@@ -49,10 +49,38 @@ bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type,
 bool CGamePanel::mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
                                   int yrel) {
     if (isResizing()) {
+        // If the pointer capture ended without this panel seeing the release (e.g. drag cancel or an
+        // externally released capture), drop the stale resize instead of resizing with no button held.
+        if (sharedPtr && !sharedPtr->isPointerCapturedBy(this->ptr<CGameGraphicsObject>())) {
+            endResize();
+            return false;
+        }
         updateResize(x, y);
         return true;
     }
     return false;
+}
+
+bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
+    if (event && isAttachedToGui(gui) && isVisible()) {
+        // A press on the resize handle is claimed before child dispatch: children (e.g. list views)
+        // consume left button-downs even on empty cells, so a child covering the bottom-right corner
+        // would otherwise swallow the grab. Same for the matching release while a resize is active,
+        // which CGui routes through normal hit testing when it lands inside the captured panel.
+        if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT) {
+            auto rect = getSelfRect();
+            if (isInResizeHandle(event->button.x - rect->x, event->button.y - rect->y)) {
+                return mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, event->button.x - rect->x,
+                                  event->button.y - rect->y);
+            }
+        }
+        if (event->type == SDL_MOUSEBUTTONUP && event->button.button == SDL_BUTTON_LEFT && isResizing()) {
+            auto rect = getSelfRect();
+            return mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, event->button.x - rect->x,
+                              event->button.y - rect->y);
+        }
+    }
+    return CGameGraphicsObject::event(gui, event);
 }
 
 void CGamePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
@@ -122,7 +150,23 @@ bool CGamePanel::beginResize(int x, int y) {
     if (!isInResizeHandle(x, y)) {
         return false;
     }
+    auto layout = getLayout();
+    if (!layout) {
+        return false;
+    }
     auto rect = getSelfRect();
+    // Pin the top-left corner for the whole drag: centered/right/bottom-aligned layouts recompute
+    // x/y from the current size, so runtime W/H alone would move the origin (and with it the
+    // panel-local pointer space) on every update. Latching runtime X/Y freezes the origin relative
+    // to the parent so the panel resizes from a stable corner.
+    auto parentOrigin = CUtil::rect(0, 0, 0, 0);
+    if (auto parent = getParent()) {
+        if (auto parentLayout = parent->getLayout()) {
+            parentOrigin = parentLayout->getRect(parent);
+        }
+    }
+    layout->setRuntimeX(rect->x - parentOrigin->x);
+    layout->setRuntimeY(rect->y - parentOrigin->y);
     // Latch the offset from the pointer to the panel's right/bottom edge so the drag is jump-free.
     resizeGrabOffsetW = rect->w - x;
     resizeGrabOffsetH = rect->h - y;
