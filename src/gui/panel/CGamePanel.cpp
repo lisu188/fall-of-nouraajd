@@ -16,14 +16,142 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGamePanel.h"
+#include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
 #include "gui/object/CWidget.h"
+
+#include <algorithm>
 
 bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) { return true; }
 
 bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    if (button == SDL_BUTTON_LEFT) {
+        if (type == SDL_MOUSEBUTTONDOWN && beginResize(x, y)) {
+            // Capture the pointer so the resize keeps tracking even if the cursor leaves the panel rect.
+            if (sharedPtr) {
+                sharedPtr->capturePointer(this->ptr<CGameGraphicsObject>());
+            }
+            return true;
+        }
+        if (type == SDL_MOUSEBUTTONUP && isResizing()) {
+            endResize();
+            if (sharedPtr) {
+                sharedPtr->releasePointerCapture();
+            }
+            return true;
+        }
+    }
     return true;
+}
+
+bool CGamePanel::mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
+                                  int yrel) {
+    if (isResizing()) {
+        updateResize(x, y);
+        return true;
+    }
+    return false;
+}
+
+void CGamePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    // Only opted-in panels paint a grab handle; everything else renders exactly as before.
+    if (!resizable || !gui || !rect || rect->w <= 0 || rect->h <= 0) {
+        return;
+    }
+    auto renderer = gui->getRenderer();
+    if (!renderer) {
+        return;
+    }
+    int handle = std::clamp(resizeHandleSize, 1, std::min(rect->w, rect->h));
+    SDL_Rect handleRect{rect->x + rect->w - handle, rect->y + rect->h - handle, handle, handle};
+    CUtil::setRenderDrawColor(renderer, CColors::Yellow);
+    SDL_RenderFillRect(renderer, &handleRect);
+}
+
+bool CGamePanel::isResizable() { return resizable; }
+
+void CGamePanel::setResizable(bool _resizable) {
+    resizable = _resizable;
+    if (!resizable) {
+        endResize();
+    }
+}
+
+int CGamePanel::getResizeHandleSize() { return resizeHandleSize; }
+
+void CGamePanel::setResizeHandleSize(int _resizeHandleSize) { resizeHandleSize = std::max(_resizeHandleSize, 1); }
+
+bool CGamePanel::isResizing() { return resizing; }
+
+bool CGamePanel::isInResizeHandle(int x, int y) {
+    if (!resizable) {
+        return false;
+    }
+    auto rect = getSelfRect();
+    if (rect->w <= 0 || rect->h <= 0) {
+        return false;
+    }
+    int handle = std::clamp(resizeHandleSize, 1, std::min(rect->w, rect->h));
+    return x >= rect->w - handle && x <= rect->w && y >= rect->h - handle && y <= rect->h;
+}
+
+CGamePanel::ResizeBounds CGamePanel::getResizeBounds() {
+    ResizeBounds bounds{RESIZE_MIN_SIZE, RESIZE_MIN_SIZE, RESIZE_MAX_FALLBACK, RESIZE_MAX_FALLBACK};
+    if (auto layout = getLayout()) {
+        bounds.minW = std::max(RESIZE_MIN_SIZE, layout->getMinW());
+        bounds.minH = std::max(RESIZE_MIN_SIZE, layout->getMinH());
+    }
+    if (auto parent = getParent()) {
+        if (auto parentLayout = parent->getLayout()) {
+            auto parentRect = parentLayout->getRect(parent);
+            auto rect = getSelfRect();
+            // Keep the panel fully inside its parent: the max edge is the room left of the parent's
+            // right/bottom edge from the panel's fixed top-left corner.
+            int roomW = parentRect->w - (rect->x - parentRect->x);
+            int roomH = parentRect->h - (rect->y - parentRect->y);
+            bounds.maxW = std::max(bounds.minW, roomW);
+            bounds.maxH = std::max(bounds.minH, roomH);
+        }
+    }
+    return bounds;
+}
+
+bool CGamePanel::beginResize(int x, int y) {
+    if (!isInResizeHandle(x, y)) {
+        return false;
+    }
+    auto rect = getSelfRect();
+    // Latch the offset from the pointer to the panel's right/bottom edge so the drag is jump-free.
+    resizeGrabOffsetW = rect->w - x;
+    resizeGrabOffsetH = rect->h - y;
+    resizing = true;
+    return true;
+}
+
+void CGamePanel::updateResize(int x, int y) {
+    if (!resizing) {
+        return;
+    }
+    auto layout = getLayout();
+    if (!layout) {
+        endResize();
+        return;
+    }
+    auto bounds = getResizeBounds();
+    int newW = std::clamp(x + resizeGrabOffsetW, bounds.minW, bounds.maxW);
+    int newH = std::clamp(y + resizeGrabOffsetH, bounds.minH, bounds.maxH);
+    // Resize via runtime overrides so the serialized layout values stay intact (mirrors window scaling).
+    layout->setRuntimeW(newW);
+    layout->setRuntimeH(newH);
+}
+
+void CGamePanel::endResize() { resizing = false; }
+
+std::shared_ptr<SDL_Rect> CGamePanel::getSelfRect() {
+    auto layout = getLayout();
+    return layout ? layout->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
 }
 
 void CGamePanel::refreshViews() {

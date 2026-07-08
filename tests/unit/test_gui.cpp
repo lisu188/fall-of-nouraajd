@@ -2368,6 +2368,67 @@ void test_dialog_panel_current_options_preserve_numeric_display_order() {
                 "dialog panel should display options from lowest dialog number to highest");
 }
 
+// Exercises the opt-in resize handle purely through geometry/state: no renderer, no real SDL input.
+// A default panel must ignore the handle entirely; an opted-in panel must resize from a bottom-right
+// handle drag and clamp within [min, parent] bounds without rewriting its serialized layout.
+void test_panel_opt_in_resize_handle_drag_resizes_within_bounds() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    parent->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    parent->addChild(panel);
+
+    // Default (not opted in): the corner is not a handle and a click there must not start a resize.
+    expect_true(!panel->isResizable(), "panels should not be resizable by default (opt-in only)");
+    expect_true(!panel->isInResizeHandle(195, 145),
+                "a non-resizable panel must not treat its bottom-right corner as a handle");
+    expect_true(!panel->beginResize(195, 145), "a non-resizable panel must not start a resize drag");
+    expect_true(!panel->isResizing(), "a non-resizable panel must never enter the resizing state");
+    // A left press on the corner is still consumed (modal) but changes no size.
+    expect_true(panel->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 195, 145),
+                "a modal panel still consumes clicks even when resizing is disabled");
+    expect_rect(layout->getRect(panel), 0, 0, 200, 150,
+                "a non-resizable panel must keep its size after a corner click");
+
+    // Opt in and drive a handle drag directly (pointer coordinates are panel-local; top-left is fixed).
+    panel->setResizable(true);
+    expect_true(panel->isInResizeHandle(195, 145),
+                "an opted-in panel's bottom-right corner should hit-test as the resize handle");
+    expect_true(!panel->isInResizeHandle(10, 10), "the panel interior is not part of the resize handle");
+    expect_true(panel->beginResize(195, 145), "an opted-in panel should start a resize from the handle");
+    expect_true(panel->isResizing(), "beginResize should latch the resizing state");
+
+    // Grab offset was (200-195, 150-145) = (5, 5); dragging to (255, 195) => 260x200.
+    panel->updateResize(255, 195);
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "dragging the handle should grow the panel jump-free");
+    expect_true(layout->getW() == "200" && layout->getH() == "150",
+                "runtime resize must not rewrite the serialized layout width/height");
+
+    // Shrinking past the minimum clamps to the floor (RESIZE_MIN_SIZE = 32).
+    panel->updateResize(0, 0);
+    expect_rect(layout->getRect(panel), 0, 0, 32, 32, "shrinking past the minimum should clamp to the size floor");
+
+    // Growing past the parent clamps to the room inside the parent rectangle (800x600 from origin).
+    panel->updateResize(5000, 5000);
+    expect_rect(layout->getRect(panel), 0, 0, 800, 600, "growing past the parent should clamp to the parent bounds");
+
+    panel->endResize();
+    expect_true(!panel->isResizing(), "endResize should clear the resizing state");
+    // After the drag ends, further motion must not keep resizing.
+    panel->updateResize(100, 100);
+    expect_rect(layout->getRect(panel), 0, 0, 800, 600, "motion after endResize must not change the size");
+
+    // A configured layout minimum raises the size floor above RESIZE_MIN_SIZE.
+    layout->setMinW(120);
+    layout->setMinH(90);
+    panel->beginResize(int(layout->getRect(panel)->w) - 1, int(layout->getRect(panel)->h) - 1);
+    panel->updateResize(0, 0);
+    expect_rect(layout->getRect(panel), 0, 0, 120, 90, "the layout minimum should raise the resize floor");
+    panel->endResize();
+}
+
 } // namespace
 
 int main() {
@@ -2381,6 +2442,7 @@ int main() {
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
     test_character_panel_sheet_lines_render_race_and_class_labels();
     test_dialog_panel_current_options_preserve_numeric_display_order();
+    test_panel_opt_in_resize_handle_drag_resizes_within_bounds();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();
