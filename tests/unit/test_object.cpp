@@ -889,6 +889,149 @@ void test_creature_class_main_stat_is_authoritative_over_race() {
                 "clearing the creatureClass restores the legacy no-archetype main stat selection");
 }
 
+void test_player_composed_stats_reflect_race_and_class_archetype() {
+    // [EPIC_06][STORY_02][SUBSTORY_04] Implement composed player stats.
+    // A CPlayer's effective stats are COMPOSED from its own base stats PLUS the
+    // contributions of its archetype (race + creatureClass), not a single flat stat
+    // block. CPlayer inherits the shared composition primitive CCreature::getStats
+    // (docs/design/creature_archetypes.md, "Creature stat precedence contract"), so a
+    // player that carries a race and/or a creatureClass folds them in at the documented
+    // positions:
+    //   race.baseStats -> creatureClass.baseStats -> player.baseStats ->
+    //   creatureClass.levelStats (per level) -> player.levelStats (per level).
+    // The composed mainStat is class-authoritative (falls back to the player's base
+    // mainStat only when the class declares none). This pins that contract for the
+    // player type exactly as the creature-stat tests pin it for creatures.
+    auto player = std::make_shared<CPlayer>();
+
+    // Player's own base: declares a mainStat that CONFLICTS with the class main stat so
+    // the class-authoritative selection is observable, and contributes intelligence.
+    auto playerBase = std::make_shared<CStats>();
+    playerBase->setMainStat("strength");
+    playerBase->setStrength(4);
+    playerBase->setIntelligence(6);
+    playerBase->setStamina(5);
+    player->setBaseStats(playerBase);
+
+    // Race archetype contribution (flat baseline every member of the race has).
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStrength(2);
+    raceBase->setStamina(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    player->setRace(race);
+    player->setRaceId("humanRace");
+
+    // Class archetype contribution (base + per-level growth) and the authoritative main
+    // stat for the composed block.
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(7);
+    classBase->setStrength(1);
+    auto classLevel = std::make_shared<CStats>();
+    classLevel->setIntelligence(2);
+    classLevel->setStamina(1);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    klass->setLevelStats(classLevel);
+    player->setCreatureClass(klass);
+    player->setPlayerClassId("mageClass");
+
+    // Player's own per-level growth, layered after the class growth.
+    auto playerLevel = std::make_shared<CStats>();
+    playerLevel->setStrength(1);
+    player->setLevelStats(playerLevel);
+
+    const int level = 2;
+    player->setLevel(level);
+
+    expect_true(player->usesArchetypeComposition(),
+                "a player carrying a race and/or creatureClass should use the composed stat path");
+
+    // Independently recompute the expected composition in the documented order (no
+    // equipment/effects here so the archetype contribution is isolated).
+    auto expected = std::make_shared<CStats>();
+    expected->setMainStat(klass->getMainStat()); // class is authoritative for mainStat
+    expected->addBonus(raceBase);
+    expected->addBonus(classBase);
+    expected->addBonus(playerBase);
+    for (int i = 0; i < level; ++i) {
+        expected->addBonus(classLevel);
+    }
+    for (int i = 0; i < level; ++i) {
+        expected->addBonus(playerLevel);
+    }
+
+    auto actual = player->getStats();
+
+    expect_true(actual->getMainStat() == "intelligence",
+                "composed player mainStat should be the class-authoritative main stat over the base main stat");
+
+    actual->meta()->for_all_properties(actual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = actual->getProperty<int>(property->name());
+        int expected_value = expected->getProperty<int>(property->name());
+        if (actual_value != expected_value) {
+            std::cerr << "PLAYER STAT DIFF [" << property->name() << "] expected " << expected_value << " but got "
+                      << actual_value << "\n";
+        }
+        expect_true(actual_value == expected_value,
+                    "composed player getStats should equal race + class base + player base + "
+                    "level*(class + player) level growth");
+    });
+
+    // Sanity: the class contribution is really part of the composition -- clearing the
+    // creatureClass drops exactly the class base + class per-level growth from the total.
+    player->setCreatureClass(nullptr);
+    const int classIntContribution = 7 /*classBase*/ + level * 2 /*classLevel*/;
+    expect_true(player->getStats()->getIntelligence() == actual->getIntelligence() - classIntContribution,
+                "removing the creatureClass should remove exactly the class intelligence contribution");
+}
+
+void test_player_without_archetype_falls_back_to_base_stats() {
+    // [EPIC_06][STORY_02][SUBSTORY_04] Legacy fallback for players.
+    // A player with NO race and NO creatureClass archetype object must fall back to its
+    // own base stats unchanged (docs/design/creature_archetypes.md, "Legacy fallback
+    // compatibility contract"). The string identity fields (raceId / playerClassId) are
+    // metadata only: on their own -- with no backing archetype object -- they must NOT
+    // inject any stat contribution, so the composed block is bit-for-bit the base block.
+    auto player = std::make_shared<CPlayer>();
+
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("agility");
+    base->setStrength(8);
+    base->setAgility(9);
+    base->setStamina(7);
+    base->setIntelligence(3);
+    base->setArmor(2);
+    player->setBaseStats(base);
+
+    // Identity strings without backing archetype objects: these describe the player's
+    // archetype but must not contribute stats by themselves.
+    player->setRaceId("humanRace");
+    player->setPlayerClassId("WarriorClass");
+
+    expect_true(!player->usesArchetypeComposition(),
+                "a player with only identity strings (no race/class object) must stay on the legacy stat path");
+
+    auto stats = player->getStats();
+
+    expect_true(stats->getMainStat() == base->getMainStat(),
+                "no-archetype player getStats should keep the base mainStat unchanged");
+
+    stats->meta()->for_all_properties(stats, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        int actual_value = stats->getProperty<int>(property->name());
+        int expected_value = base->getProperty<int>(property->name());
+        expect_true(actual_value == expected_value,
+                    "no-archetype player getStats should equal the base stats unchanged (no archetype bonus)");
+    });
+}
+
 void test_creature_archetype_identity_accessors_use_fallbacks() {
     auto creature = std::make_shared<CCreature>();
 
@@ -1721,6 +1864,8 @@ int main() {
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();
     test_creature_class_main_stat_is_authoritative_over_race();
+    test_player_composed_stats_reflect_race_and_class_archetype();
+    test_player_without_archetype_falls_back_to_base_stats();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_effective_interactions_compose_archetype_sources();
