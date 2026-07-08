@@ -144,6 +144,7 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
     "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
     "PanelLayoutManifestTest.test_gui_window_is_created_resizable_with_minimum_size",
+    "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
     "ConsoleEventIsolationTest.",
@@ -20150,6 +20151,41 @@ class PanelLayoutManifestTest(unittest.TestCase):
             gui_source,
             r"SDL_SetWindowMinimumSize\s*\(\s*rawWindow\s*,\s*GUI_MIN_WIDTH\s*,\s*GUI_MIN_HEIGHT\s*\)",
         )
+
+    def test_reactive_list_views_subscribe_to_model_signals(self):
+        # EPIC_05/STORY_04 reactive refresh wiring: the inventory and effects list views
+        # must stay subscribed to their model change signals (refreshEvent +
+        # refreshObject on CListView) instead of relying on manual refresh calls. The
+        # quest view's reactive rebuild is covered by the C++ gui unit tests
+        # (test_quest_panel_rebuilds_text_only_when_quest_data_changes).
+        panel_defs = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
+
+        def collect_list_views(node, results):
+            if isinstance(node, dict):
+                if node.get("class") == "CListView":
+                    results.append(node.get("properties", {}))
+                for value in node.values():
+                    collect_list_views(value, results)
+            elif isinstance(node, list):
+                for value in node:
+                    collect_list_views(value, results)
+
+        expected_subscriptions = {
+            ("inventoryPanel", "inventoryCollection"): "inventoryChanged",
+            ("inventoryPanel", "equippedCollection"): "equippedChanged",
+            ("creatureView", "getEffects"): "effectsChanged",
+        }
+        for (panel_id, collection), refresh_event in expected_subscriptions.items():
+            with self.subTest(panel=panel_id, collection=collection):
+                list_views = []
+                collect_list_views(panel_defs[panel_id], list_views)
+                properties = next(view for view in list_views if view.get("collection") == collection)
+                self.assertEqual(refresh_event, properties.get("refreshEvent"))
+                self.assertEqual("CScript", properties.get("refreshObject", {}).get("class"))
+                self.assertTrue(
+                    properties["refreshObject"]["properties"]["script"],
+                    "the refresh subscription needs a script resolving the observed model object",
+                )
 
     def test_panel_layout_manifest_matches_panels_json(self):
         panel_defs = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())

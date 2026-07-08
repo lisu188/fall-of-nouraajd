@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
 #include "gui/panel/CGamePanel.h"
+#include "gui/panel/CGameQuestPanel.h"
 #define GAME_UNIT_TESTS
 #include "gui/panel/CGameDialogPanel.h"
 #undef GAME_UNIT_TESTS
@@ -48,6 +49,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
+#include "object/CQuest.h"
 #include "object/CTile.h"
 #include "test_harness.h"
 
@@ -166,6 +168,40 @@ class RefreshCountingListView : public CListView {
 
   private:
     std::shared_ptr<CGameObject> resolvedRefreshTarget;
+};
+
+// Counts quest-journal text rebuilds so the tests can assert the quest panel only
+// rebuilds when its underlying quest data actually changed (reactive refresh), never
+// per read/frame. Mirrors RefreshCountingListView: the quest source is injected so no
+// full map boot is needed.
+class QuestTextCountingPanel : public CGameQuestPanel {
+    V_META(QuestTextCountingPanel, CGameQuestPanel, vstd::meta::empty())
+
+  public:
+    void setResolvedQuestSource(std::shared_ptr<CPlayer> player) { resolvedQuestSource = std::move(player); }
+
+    void setResolvedQuestStateSource(std::shared_ptr<CGameObject> questState) {
+        resolvedQuestStateSource = std::move(questState);
+    }
+
+    int build_count = 0;
+
+  protected:
+    std::shared_ptr<CPlayer> resolveQuestSource(const std::shared_ptr<CGui> &) override { return resolvedQuestSource; }
+
+    std::shared_ptr<CGameObject> resolveQuestStateSource(const std::shared_ptr<CGui> &) override {
+        return resolvedQuestStateSource;
+    }
+
+    std::string buildText(const std::shared_ptr<CPlayer> &player) override {
+        ++build_count;
+        return CGameQuestPanel::buildText(player);
+    }
+
+  private:
+    std::shared_ptr<CPlayer> resolvedQuestSource;
+
+    std::shared_ptr<CGameObject> resolvedQuestStateSource;
 };
 
 class DragCallbackPanel : public CGamePanel {
@@ -316,6 +352,8 @@ std::shared_ptr<CGame> create_gui_game(const std::shared_ptr<CGui> &gui) {
     type_registration::registerGuiTypes();
     type_registration::registerGuiPanelTypes();
     CTypes::register_type_metadata<RefreshCountingListView, CListView, CProxyTargetGraphicsObject, CGameGraphicsObject,
+                                   CGameObject>();
+    CTypes::register_type_metadata<QuestTextCountingPanel, CGameQuestPanel, CGamePanel, CGameGraphicsObject,
                                    CGameObject>();
     CTypes::register_type_metadata<DragCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
     CTypes::register_type_metadata<WidgetCallbackPanel, CGamePanel, CGameGraphicsObject, CGameObject>();
@@ -785,6 +823,168 @@ void test_list_view_refresh_property_collision_fails_closed() {
     drain_event_loop();
     expect_true(list->refresh_count == after_initial_refresh + 1,
                 "a non-colliding configured refreshProperty must still refresh the list");
+}
+
+void test_quest_panel_rebuilds_text_only_when_quest_data_changes() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(player);
+    gui->pushChild(panel);
+
+    auto active = std::make_shared<CQuest>();
+    active->setName("reactiveQuest");
+    active->setDescription("Recover the sunken sigil");
+    player->setQuests({active});
+    drain_event_loop();
+
+    const auto initial = panel->getText(gui);
+    expect_true(initial.find("[Active] Recover the sunken sigil") != std::string::npos,
+                "quest panel should render the active quest description");
+    expect_true(panel->build_count == 1, "the first quest journal read should build the text exactly once");
+
+    expect_true(panel->getText(gui) == initial, "repeated reads should serve the cached quest text");
+    drain_event_loop();
+    expect_true(panel->getText(gui) == initial, "cached quest text should survive idle event-loop turns");
+    expect_true(panel->build_count == 1, "quest text must not be rebuilt while the quest log is unchanged");
+
+    player->setNumericProperty("threat", 7);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 1, "unrelated player property changes must not rebuild the quest text");
+
+    auto completed = std::make_shared<CQuest>();
+    completed->setName("finishedQuest");
+    completed->setDescription("Silence the bell tower");
+    player->setCompletedQuests({completed});
+    drain_event_loop();
+    const auto updated = panel->getText(gui);
+    expect_true(updated.find("[Completed] Silence the bell tower") != std::string::npos,
+                "quest panel should render newly completed quests after the change notification");
+    expect_true(updated.find("[Active] Recover the sunken sigil") != std::string::npos,
+                "quest panel should keep rendering still-active quests after a rebuild");
+    expect_true(panel->build_count == 2, "a quest-log change should trigger exactly one coalesced rebuild");
+}
+
+void test_quest_panel_resubscribes_when_quest_source_changes() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto first_player = std::make_shared<CPlayer>();
+    auto second_player = std::make_shared<CPlayer>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(first_player);
+    gui->pushChild(panel);
+
+    auto first_quest = std::make_shared<CQuest>();
+    first_quest->setName("firstQuest");
+    first_quest->setDescription("Chart the first road");
+    first_player->setQuests({first_quest});
+
+    expect_true(panel->getText(gui).find("Chart the first road") != std::string::npos,
+                "quest panel should render the first player's quest log");
+    expect_true(panel->build_count == 1, "the first player's journal should build once");
+
+    auto second_quest = std::make_shared<CQuest>();
+    second_quest->setName("secondQuest");
+    second_quest->setDescription("Chart the second road");
+    second_player->setQuests({second_quest});
+    panel->setResolvedQuestSource(second_player);
+
+    const auto swapped = panel->getText(gui);
+    expect_true(swapped.find("Chart the second road") != std::string::npos &&
+                    swapped.find("Chart the first road") == std::string::npos,
+                "quest panel should rebuild from the new player after the quest source changes");
+    expect_true(panel->build_count == 2, "swapping the quest source should rebuild the journal once");
+
+    first_quest->setDescription("Chart the forgotten road");
+    first_player->setQuests({first_quest});
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 2,
+                "quest changes on the disconnected previous player must not rebuild the journal");
+
+    auto second_completed = std::make_shared<CQuest>();
+    second_completed->setName("secondCompletedQuest");
+    second_completed->setDescription("Seal the second gate");
+    second_player->setCompletedQuests({second_completed});
+    drain_event_loop();
+    expect_true(panel->getText(gui).find("[Completed] Seal the second gate") != std::string::npos,
+                "quest panel should follow completed-quest changes on the new player");
+    expect_true(panel->build_count == 3, "the new player's quest changes should drive rebuilds");
+}
+
+void test_quest_panel_rebuilds_when_quest_state_properties_change() {
+    // Quest objective/reward/hint text is derived by map scripts from quest-state
+    // properties (QuestStateStore.set_state writes "quest_state_*" on the map) and
+    // from map object/turn state — the quest set membership never changes in those
+    // transitions. The journal cache must invalidate through the map's propertyChanged
+    // / turnPassed / objectChanged channels, not only through quest membership.
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto quest_state = std::make_shared<CGameObject>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(player);
+    panel->setResolvedQuestStateSource(quest_state);
+    gui->pushChild(panel);
+
+    auto quest = std::make_shared<CQuest>();
+    quest->setName("victorQuest");
+    quest->setDescription("Find Victor's missing daughter.");
+    quest->setObjective("Find Victor's missing daughter.");
+    player->setQuests({quest});
+    drain_event_loop();
+
+    const auto initial = panel->getText(gui);
+    expect_true(initial.find("Objective: Find Victor's missing daughter.") != std::string::npos,
+                "quest panel should render the initial state-derived objective");
+    expect_true(panel->build_count == 1, "the first read should build the journal once");
+
+    panel->getText(gui);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 1, "the journal must stay cached while quest state is unchanged");
+
+    // Quest-state transition: the same quest object stays active (no membership
+    // change), only a state property on the quest-state source flips and the script
+    // would now derive different objective text.
+    quest->setObjective("Defeat the cultists in the courtyard.");
+    quest_state->setStringProperty("quest_state_victor", "encounter_active");
+    drain_event_loop();
+    const auto transitioned = panel->getText(gui);
+    expect_true(transitioned.find("Objective: Defeat the cultists in the courtyard.") != std::string::npos &&
+                    transitioned.find("Objective: Find Victor's missing daughter.") == std::string::npos,
+                "a quest-state property change must refresh state-derived journal text");
+    expect_true(panel->build_count == 2, "a quest-state property change should trigger exactly one rebuild");
+
+    // Turn-driven quest text (typed no-argument map signal).
+    quest->setHint("The cultists began their rite; hurry.");
+    quest_state->signal("turnPassed");
+    drain_event_loop();
+    expect_true(panel->getText(gui).find("Hint: The cultists began their rite; hurry.") != std::string::npos,
+                "a passed turn must refresh turn-derived journal text");
+    expect_true(panel->build_count == 3, "turnPassed should trigger exactly one rebuild");
+
+    // Object-driven quest text (typed map signal carrying coordinates).
+    quest->setObjective("Seal every siege gate (1/4 sealed).");
+    quest_state->signal("objectChanged", Coords(1, 2, 0));
+    drain_event_loop();
+    expect_true(panel->getText(gui).find("Objective: Seal every siege gate (1/4 sealed).") != std::string::npos,
+                "a map object change must refresh object-derived journal text");
+    expect_true(panel->build_count == 4, "objectChanged should trigger exactly one rebuild");
 }
 
 std::shared_ptr<CStats> player_stats() {
@@ -2587,6 +2787,9 @@ int main() {
     test_list_view_refresh_event_compatibility();
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_list_view_refresh_property_collision_fails_closed();
+    test_quest_panel_rebuilds_text_only_when_quest_data_changes();
+    test_quest_panel_resubscribes_when_quest_source_changes();
+    test_quest_panel_rebuilds_when_quest_state_properties_change();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_inventory_right_click_uses_usable_item_once_and_consumes_it();
     test_inventory_right_click_full_resource_item_not_consumed();
