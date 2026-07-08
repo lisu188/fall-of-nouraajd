@@ -2194,6 +2194,44 @@ void test_render_context_rejects_null_texture_and_copies_valid_texture() {
     expect_true(stats.failedCopies == 0, "render context should not count failed copies for valid smoke path");
 }
 
+void test_render_context_copy_ex_rotates_and_tracks_stats() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto &renderContext = gui->getRenderContext();
+    renderContext.resetStats();
+
+    // copyEx must fail closed on missing texture, exactly like copy().
+    SDL_Rect target = {2, 3, 4, 5};
+    expect_true(!renderContext.copyEx(nullptr, nullptr, &target, 90.0, nullptr, SDL_FLIP_NONE),
+                "render context copyEx should reject null textures");
+
+    auto surface = fn::sdl::SurfacePtr(SDL_SAFE(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32)));
+    expect_true(surface != nullptr, "render context copyEx smoke test should create an SDL surface");
+    if (!surface) {
+        return;
+    }
+    SDL_SAFE(SDL_FillRect(surface.get(), nullptr, SDL_MapRGBA(surface->format, 0, 255, 0, 255)));
+    auto texture = fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get())));
+    expect_true(texture != nullptr, "render context copyEx smoke test should create an SDL texture");
+    if (!texture) {
+        return;
+    }
+
+    // Negative extents must be normalized before reaching SDL, mirroring copy().
+    SDL_Rect flippedTarget = {10, 12, -4, -5};
+    SDL_Rect clip = {0, 0, 8, 8};
+    expect_true(renderContext.copyEx(texture.get(), nullptr, &flippedTarget, 45.0, nullptr, SDL_FLIP_HORIZONTAL, &clip),
+                "render context copyEx should rotate and copy valid textures");
+
+    const auto &stats = renderContext.getStats();
+    expect_true(stats.attemptedCopies == 2, "render context copyEx should count attempted copies");
+    expect_true(stats.successfulCopies == 1, "render context copyEx should count successful copies");
+    expect_true(stats.skippedCopies == 1, "render context copyEx should count skipped copies for null texture");
+    expect_true(stats.failedCopies == 0, "render context copyEx should not count failed copies for valid smoke path");
+}
+
 void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -2427,6 +2465,7 @@ int main() {
     test_render_traversal_stops_after_detach();
     test_texture_cache_without_gui_fails_closed();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
+    test_render_context_copy_ex_rotates_and_tracks_stats();
     test_minimap_bounds_extreme_metadata_fails_closed();
     test_minimap_bounds_overflow_prone_extents_fail_closed();
     test_minimap_bounds_sparse_coordinates_fail_closed();
