@@ -2406,6 +2406,165 @@ void test_dialog_panel_current_options_preserve_numeric_display_order() {
                 "dialog panel should display options from lowest dialog number to highest");
 }
 
+// Exercises the opt-in resize handle purely through geometry/state: no renderer, no real SDL input.
+// A default panel must ignore the handle entirely; an opted-in panel must resize from a bottom-right
+// handle drag and clamp within [min, parent] bounds without rewriting its serialized layout.
+void test_panel_opt_in_resize_handle_drag_resizes_within_bounds() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    parent->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    parent->addChild(panel);
+
+    // Default (not opted in): the corner is not a handle and a click there must not start a resize.
+    expect_true(!panel->isResizable(), "panels should not be resizable by default (opt-in only)");
+    expect_true(!panel->isInResizeHandle(195, 145),
+                "a non-resizable panel must not treat its bottom-right corner as a handle");
+    expect_true(!panel->beginResize(195, 145), "a non-resizable panel must not start a resize drag");
+    expect_true(!panel->isResizing(), "a non-resizable panel must never enter the resizing state");
+    // A left press on the corner is still consumed (modal) but changes no size.
+    expect_true(panel->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 195, 145),
+                "a modal panel still consumes clicks even when resizing is disabled");
+    expect_rect(layout->getRect(panel), 0, 0, 200, 150,
+                "a non-resizable panel must keep its size after a corner click");
+
+    // Opt in and drive a handle drag directly (pointer coordinates are panel-local; top-left is fixed).
+    panel->setResizable(true);
+    expect_true(panel->isInResizeHandle(195, 145),
+                "an opted-in panel's bottom-right corner should hit-test as the resize handle");
+    expect_true(!panel->isInResizeHandle(10, 10), "the panel interior is not part of the resize handle");
+    expect_true(panel->beginResize(195, 145), "an opted-in panel should start a resize from the handle");
+    expect_true(panel->isResizing(), "beginResize should latch the resizing state");
+
+    // Grab offset was (200-195, 150-145) = (5, 5); dragging to (255, 195) => 260x200.
+    panel->updateResize(255, 195);
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "dragging the handle should grow the panel jump-free");
+    expect_true(layout->getW() == "200" && layout->getH() == "150",
+                "runtime resize must not rewrite the serialized layout width/height");
+
+    // Shrinking past the minimum clamps to the floor (RESIZE_MIN_SIZE = 32).
+    panel->updateResize(0, 0);
+    expect_rect(layout->getRect(panel), 0, 0, 32, 32, "shrinking past the minimum should clamp to the size floor");
+
+    // Growing past the parent clamps to the room inside the parent rectangle (800x600 from origin).
+    panel->updateResize(5000, 5000);
+    expect_rect(layout->getRect(panel), 0, 0, 800, 600, "growing past the parent should clamp to the parent bounds");
+
+    panel->endResize();
+    expect_true(!panel->isResizing(), "endResize should clear the resizing state");
+    // After the drag ends, further motion must not keep resizing.
+    panel->updateResize(100, 100);
+    expect_rect(layout->getRect(panel), 0, 0, 800, 600, "motion after endResize must not change the size");
+
+    // A configured layout minimum raises the size floor above RESIZE_MIN_SIZE.
+    layout->setMinW(120);
+    layout->setMinH(90);
+    panel->beginResize(int(layout->getRect(panel)->w) - 1, int(layout->getRect(panel)->h) - 1);
+    panel->updateResize(0, 0);
+    expect_rect(layout->getRect(panel), 0, 0, 120, 90, "the layout minimum should raise the resize floor");
+    panel->endResize();
+}
+
+// Drives the resize handle through real CGui event dispatch with a child covering the whole panel
+// (list views consume left button-downs even on empty cells, so before the panel-level interception
+// a covering child would swallow the grab). Also proves the resize state cannot go stale: a release
+// over the child still ends the resize, and a resize whose pointer capture ends externally is
+// dropped by the next motion instead of resizing with no button held.
+void test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    gui->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    auto layout = fixed_layout(0, 0, 200, 150);
+    panel->setLayout(layout);
+    panel->setResizable(true);
+    gui->pushChild(panel);
+
+    auto child = std::make_shared<MouseEventRecorder>();
+    child->setLayout(fixed_layout(0, 0, 200, 150)); // covers the panel, including the handle corner
+    panel->pushChild(child);
+
+    // Press on the handle must start the resize instead of being consumed by the covering child.
+    SDL_Event down{};
+    down.type = SDL_MOUSEBUTTONDOWN;
+    down.button.button = SDL_BUTTON_LEFT;
+    down.button.x = 195;
+    down.button.y = 145;
+    expect_true(gui->event(&down), "a handle press should be handled by the panel");
+    expect_true(panel->isResizing(), "a handle press must start the resize even under a covering child");
+    expect_true(child->button_count == 0, "a handle press must not reach the covering child");
+    expect_true(gui->isPointerCapturedBy(panel), "a handle press should capture the pointer for the panel");
+
+    // Captured motion resizes the panel (grab offset was 5,5 so (255,195) => 260x200).
+    SDL_Event motion{};
+    motion.type = SDL_MOUSEMOTION;
+    motion.motion.x = 255;
+    motion.motion.y = 195;
+    gui->event(&motion);
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "captured motion should resize the panel");
+    expect_true(child->motion_count == 0, "captured resize motion must not reach the covering child");
+
+    // Releasing inside the panel over the covering child must still end the resize and the capture.
+    SDL_Event up{};
+    up.type = SDL_MOUSEBUTTONUP;
+    up.button.button = SDL_BUTTON_LEFT;
+    up.button.x = 100;
+    up.button.y = 100;
+    gui->event(&up);
+    expect_true(!panel->isResizing(), "a release over a covering child must still end the resize");
+    expect_true(!gui->hasPointerCapture(), "a release over a covering child must still release the capture");
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "the release must keep the resized rectangle");
+
+    // If the capture ends without the panel seeing the release, the next motion drops the stale
+    // resize instead of applying it.
+    down.button.x = 255;
+    down.button.y = 195;
+    gui->event(&down);
+    expect_true(panel->isResizing(), "a second handle press should start another resize");
+    gui->releasePointerCapture();
+    motion.motion.x = 230; // inside the panel, outside the covering child
+    motion.motion.y = 180;
+    gui->event(&motion);
+    expect_true(!panel->isResizing(), "losing the pointer capture must clear the resize state");
+    expect_rect(layout->getRect(panel), 0, 0, 260, 200, "a stale resize must not change the panel size");
+}
+
+// A centered layout recomputes x/y from the current size, so runtime W/H alone would move the
+// panel's origin (and its panel-local pointer space) on every drag update. The resize must pin the
+// top-left corner for the whole drag and keep it pinned after the drag ends.
+void test_panel_resize_centered_layout_keeps_origin_pinned() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    parent->setLayout(fixed_layout(0, 0, 800, 600));
+
+    auto panel = std::make_shared<CGamePanel>();
+    auto layout = std::make_shared<CCenteredLayout>();
+    layout->setW("200");
+    layout->setH("150");
+    panel->setLayout(layout);
+    panel->setResizable(true);
+    parent->addChild(panel);
+
+    expect_rect(layout->getRect(panel), 300, 225, 200, 150, "the centered panel should start centered");
+
+    expect_true(panel->beginResize(195, 145), "the centered panel should start a resize from its handle");
+    panel->updateResize(255, 195);
+    expect_rect(layout->getRect(panel), 300, 225, 260, 200,
+                "growing a centered panel must keep its top-left corner pinned");
+    panel->updateResize(155, 120);
+    expect_rect(layout->getRect(panel), 300, 225, 160, 125,
+                "shrinking a centered panel must keep its top-left corner pinned");
+    panel->endResize();
+    expect_rect(layout->getRect(panel), 300, 225, 160, 125,
+                "the origin must stay pinned after the drag ends instead of re-centering");
+    expect_true(layout->getW() == "200" && layout->getH() == "150",
+                "pinning the origin must not rewrite the serialized centered layout");
+}
+
 } // namespace
 
 int main() {
@@ -2419,6 +2578,9 @@ int main() {
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
     test_character_panel_sheet_lines_render_race_and_class_labels();
     test_dialog_panel_current_options_preserve_numeric_display_order();
+    test_panel_opt_in_resize_handle_drag_resizes_within_bounds();
+    test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture();
+    test_panel_resize_centered_layout_keeps_origin_pinned();
     test_list_view_refreshes_from_generic_property_notifications();
     test_list_view_coalesces_property_refreshes_per_event_loop_tick();
     test_list_view_skips_queued_property_refresh_after_detach();
