@@ -180,10 +180,18 @@ class QuestTextCountingPanel : public CGameQuestPanel {
   public:
     void setResolvedQuestSource(std::shared_ptr<CPlayer> player) { resolvedQuestSource = std::move(player); }
 
+    void setResolvedQuestStateSource(std::shared_ptr<CGameObject> questState) {
+        resolvedQuestStateSource = std::move(questState);
+    }
+
     int build_count = 0;
 
   protected:
     std::shared_ptr<CPlayer> resolveQuestSource(const std::shared_ptr<CGui> &) override { return resolvedQuestSource; }
+
+    std::shared_ptr<CGameObject> resolveQuestStateSource(const std::shared_ptr<CGui> &) override {
+        return resolvedQuestStateSource;
+    }
 
     std::string buildText(const std::shared_ptr<CPlayer> &player) override {
         ++build_count;
@@ -192,6 +200,8 @@ class QuestTextCountingPanel : public CGameQuestPanel {
 
   private:
     std::shared_ptr<CPlayer> resolvedQuestSource;
+
+    std::shared_ptr<CGameObject> resolvedQuestStateSource;
 };
 
 class DragCallbackPanel : public CGamePanel {
@@ -910,6 +920,71 @@ void test_quest_panel_resubscribes_when_quest_source_changes() {
     expect_true(panel->getText(gui).find("[Completed] Seal the second gate") != std::string::npos,
                 "quest panel should follow completed-quest changes on the new player");
     expect_true(panel->build_count == 3, "the new player's quest changes should drive rebuilds");
+}
+
+void test_quest_panel_rebuilds_when_quest_state_properties_change() {
+    // Quest objective/reward/hint text is derived by map scripts from quest-state
+    // properties (QuestStateStore.set_state writes "quest_state_*" on the map) and
+    // from map object/turn state — the quest set membership never changes in those
+    // transitions. The journal cache must invalidate through the map's propertyChanged
+    // / turnPassed / objectChanged channels, not only through quest membership.
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto quest_state = std::make_shared<CGameObject>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(player);
+    panel->setResolvedQuestStateSource(quest_state);
+    gui->pushChild(panel);
+
+    auto quest = std::make_shared<CQuest>();
+    quest->setName("victorQuest");
+    quest->setDescription("Find Victor's missing daughter.");
+    quest->setObjective("Find Victor's missing daughter.");
+    player->setQuests({quest});
+    drain_event_loop();
+
+    const auto initial = panel->getText(gui);
+    expect_true(initial.find("Objective: Find Victor's missing daughter.") != std::string::npos,
+                "quest panel should render the initial state-derived objective");
+    expect_true(panel->build_count == 1, "the first read should build the journal once");
+
+    panel->getText(gui);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 1, "the journal must stay cached while quest state is unchanged");
+
+    // Quest-state transition: the same quest object stays active (no membership
+    // change), only a state property on the quest-state source flips and the script
+    // would now derive different objective text.
+    quest->setObjective("Defeat the cultists in the courtyard.");
+    quest_state->setStringProperty("quest_state_victor", "encounter_active");
+    drain_event_loop();
+    const auto transitioned = panel->getText(gui);
+    expect_true(transitioned.find("Objective: Defeat the cultists in the courtyard.") != std::string::npos &&
+                    transitioned.find("Objective: Find Victor's missing daughter.") == std::string::npos,
+                "a quest-state property change must refresh state-derived journal text");
+    expect_true(panel->build_count == 2, "a quest-state property change should trigger exactly one rebuild");
+
+    // Turn-driven quest text (typed no-argument map signal).
+    quest->setHint("The cultists began their rite; hurry.");
+    quest_state->signal("turnPassed");
+    drain_event_loop();
+    expect_true(panel->getText(gui).find("Hint: The cultists began their rite; hurry.") != std::string::npos,
+                "a passed turn must refresh turn-derived journal text");
+    expect_true(panel->build_count == 3, "turnPassed should trigger exactly one rebuild");
+
+    // Object-driven quest text (typed map signal carrying coordinates).
+    quest->setObjective("Seal every siege gate (1/4 sealed).");
+    quest_state->signal("objectChanged", Coords(1, 2, 0));
+    drain_event_loop();
+    expect_true(panel->getText(gui).find("Objective: Seal every siege gate (1/4 sealed).") != std::string::npos,
+                "a map object change must refresh object-derived journal text");
+    expect_true(panel->build_count == 4, "objectChanged should trigger exactly one rebuild");
 }
 
 std::shared_ptr<CStats> player_stats() {
@@ -2552,6 +2627,7 @@ int main() {
     test_list_view_refresh_property_collision_fails_closed();
     test_quest_panel_rebuilds_text_only_when_quest_data_changes();
     test_quest_panel_resubscribes_when_quest_source_changes();
+    test_quest_panel_rebuilds_when_quest_state_properties_change();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_inventory_right_click_uses_usable_item_once_and_consumes_it();
     test_inventory_right_click_full_resource_item_not_consumed();
