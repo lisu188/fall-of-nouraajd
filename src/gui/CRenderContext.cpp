@@ -76,6 +76,7 @@ bool CRenderContext::copy(SDL_Texture *texture, const SDL_Rect *sourceRect, cons
         ++stats.failedCopies;
         return false;
     }
+    // Single sanctioned direct SDL_RenderCopy site; all call sites route texture blits through this wrapper.
     return finishCopy(SDL_RenderCopy(renderer, texture, sourceRect, &normalizedTarget), "CRenderContext::copy");
 }
 
@@ -95,6 +96,7 @@ bool CRenderContext::copyEx(SDL_Texture *texture, const SDL_Rect *sourceRect, co
         ++stats.failedCopies;
         return false;
     }
+    // Single sanctioned direct SDL_RenderCopyEx site; all rotated/flipped blits route through this wrapper.
     return finishCopy(SDL_RenderCopyEx(renderer, texture, sourceRect, &normalizedTarget, angle, center, flip),
                       "CRenderContext::copyEx");
 }
