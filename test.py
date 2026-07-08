@@ -20402,46 +20402,64 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
     def test_panel_resize_handle_drag_resizes_and_clamps(self):
         # [EPIC_05][STORY_02][SUBSTORY_05] Corner-drag resize (#1430) through REAL SDL input
-        # events: the press at (1350, 830) lands inside the default 24px bottom-right handle AND
-        # inside the equipped list view, so the panel's handle claim must beat the covering child;
-        # captured motion then resizes the panel from its pinned origin, clamped between the
-        # layout minimum (800x600) and the parent window bounds. The runtime resize must never
-        # rewrite the serialized panel layout.
+        # events: the press lands inside the default 24px bottom-right handle AND inside the
+        # equipped list view, so the panel's handle claim must beat the covering child (through
+        # the panel-level interception, which subclass mouseEvent overrides like the inventory
+        # right-click reset must not swallow); captured motion then resizes the panel from its
+        # pinned origin, clamped between the layout minimum (800x600) and the parent window
+        # bounds. The runtime resize must never rewrite the serialized panel layout.
         game, g, _, _ = create_xvfb_gameplay_session(self)
+        gui = g.getGui()
         panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
         try:
             panel.setBoolProperty("resizable", True)
             self.assertTrue(panel.getBoolProperty("resizable"))
-            self.assertEqual((560, 240, 800, 600), resolved_rect(panel))
+            panel_rect = resolved_rect(panel)
+            self.assertEqual((560, 240, 800, 600), panel_rect)
             equipped_list = find_list_view(panel, "equippedCollection")
             self.assertEqual((1160, 240, 200, 600), resolved_rect(equipped_list))
 
-            # Press panel-local (790, 590): the grab offset to the panel's edges is (10, 10).
+            panel_x, panel_y, panel_w, panel_h = panel_rect
+            _, _, gui_w, gui_h = resolved_rect(gui)
+            # The press lands 10px inside the panel's bottom-right corner: within the default 24px
+            # handle AND within the equipped list rectangle, and the grab offset to the panel's
+            # edges is (10, 10), so every motion target below maps directly to a panel size.
+            press = (panel_x + panel_w - 10, panel_y + panel_h - 10)
+            # The parent-bounds clamp leaves exactly the room from the pinned origin to the window
+            # edges, so a maximally-dragged panel ends flush with the window and fully onscreen.
+            max_w, max_h = gui_w - panel_x, gui_h - panel_y
+
             drag_panel_resize_handle(
                 self,
                 g,
                 panel,
-                (1350, 830),
+                press,
                 (
-                    # Grow: pointer (1450, 910) -> 900x680 from the pinned (560, 240) origin.
-                    (1450, 910, (560, 240, 900, 680)),
-                    # Minimum clamp: dragging far above/left floors at the 800x600 layout minimum.
-                    (600, 300, (560, 240, 800, 600)),
-                    # Maximum clamp: a far outside pointer clamps to the parent bounds, so the
-                    # panel's right/bottom edges stop exactly at the 1920x1080 window edges.
-                    (5000, 4000, (560, 240, 1360, 840)),
-                    # Back inside the bounds: 950x720.
-                    (1500, 950, (560, 240, 950, 720)),
+                    # Grow by (100, 80) from the pinned origin.
+                    (press[0] + 100, press[1] + 80, (panel_x, panel_y, panel_w + 100, panel_h + 80)),
+                    # Minimum clamp: dragging far above/left floors at the 800x600 layout minimum,
+                    # which is the design size, so the panel returns to its opening rectangle.
+                    (panel_x + 40, panel_y + 60, (panel_x, panel_y, panel_w, panel_h)),
+                    # Maximum clamp: a pointer far outside the window clamps to the parent bounds,
+                    # so the panel's right/bottom edges stop exactly at the window edges.
+                    (gui_w + 3000, gui_h + 3000, (panel_x, panel_y, max_w, max_h)),
+                    # Back inside the bounds: grow by (150, 120) over the design size.
+                    (press[0] + 150, press[1] + 120, (panel_x, panel_y, panel_w + 150, panel_h + 120)),
                 ),
-                (1500, 950),
+                (press[0] + 150, press[1] + 120),
             )
-            # The child list view keeps tracking the resized panel (75% x offset, 25% width).
-            self.assertEqual((560 + 712, 240, 237, 720), resolved_rect(equipped_list))
+            final_w, final_h = panel_w + 150, panel_h + 120
+            # The child list view keeps tracking the resized panel (75% x offset and 25% width,
+            # truncated exactly like the C++ percent layout math).
+            self.assertEqual(
+                (panel_x + final_w * 75 // 100, panel_y, final_w * 25 // 100, final_h),
+                resolved_rect(equipped_list),
+            )
 
             # Motion after the release must not resize: the drag ended with the button release.
-            push_sdl_mouse_motion_event(1400, 900)
+            push_sdl_mouse_motion_event(*rect_center(resolved_rect(panel)))
             pump_event_loop(3)
-            self.assertEqual((560, 240, 950, 720), resolved_rect(panel))
+            self.assertEqual((panel_x, panel_y, final_w, final_h), resolved_rect(panel))
 
             # The resize is a runtime override only: the serialized layout stays untouched.
             panel_json = json.loads(game.jsonify(panel))
@@ -20467,31 +20485,48 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         )
         try:
             panel.setBoolProperty("resizable", True)
-            self.assertEqual((560, 240, 200, 600), resolved_rect(inventory_list))
+            panel_rect = resolved_rect(panel)
+            self.assertEqual((560, 240, 800, 600), panel_rect)
+            inventory_rect = resolved_rect(inventory_list)
+            self.assertEqual((560, 240, 200, 600), inventory_rect)
             self.assertEqual((4, 12), list_runtime_grid(inventory_list, gui))
 
-            # (785, 265) is the center of inventory grid cell (4, 0) AFTER the resize. Before the
-            # resize it is panel background between the two lists: the panel consumes the click
-            # and nothing gets selected.
-            push_sdl_mouse_click(785, 265)
+            panel_x, panel_y, panel_w, panel_h = panel_rect
+            _, _, gui_w, gui_h = resolved_rect(gui)
+            tile = inventory_list.getTileSize()
+            # Probe the center of what becomes inventory grid cell (4, 0) AFTER the resize (the
+            # origin stays pinned, so the point is fixed). Before the resize it is panel
+            # background between the two lists: the panel consumes the click, nothing selects.
+            probe = (inventory_rect[0] + 4 * tile + tile // 2, inventory_rect[1] + tile // 2)
+            self.assertEqual((785, 265), probe)
+
+            push_sdl_mouse_click(*probe)
             pump_event_loop(5)
             selections = get_panel_selection_box_counts_by_collection(panel)
             self.assertEqual(0, selections.get("inventoryCollection", 0))
             self.assertEqual(0, selections.get("equippedCollection", 0))
 
-            # Enlarge to the parent-bounds maximum: 1360x840 from the pinned (560, 240) origin.
-            drag_panel_resize_handle(self, g, panel, (1350, 830), ((5000, 4000, (560, 240, 1360, 840)),), (1900, 1060))
-            self.assertEqual((560, 240, 340, 840), resolved_rect(inventory_list))
+            # Enlarge to the parent-bounds maximum from the pinned origin.
+            max_w, max_h = gui_w - panel_x, gui_h - panel_y
+            drag_panel_resize_handle(
+                self,
+                g,
+                panel,
+                (panel_x + panel_w - 10, panel_y + panel_h - 10),
+                ((gui_w + 3000, gui_h + 3000, (panel_x, panel_y, max_w, max_h)),),
+                (gui_w - 20, gui_h - 20),
+            )
+            self.assertEqual((panel_x, panel_y, max_w * 25 // 100, max_h), resolved_rect(inventory_list))
             self.assertEqual((6, 16), list_runtime_grid(inventory_list, gui))
             # The list's proxy grid re-grids through its configured refresh path (the
             # inventoryChanged model event), populating the columns the resize exposed.
             player.addItem("LesserLifePotion")
             pump_event_loop(5)
             # With six item types the grid places an item in newly exposed column 4 of row 0.
-            self.assertEqual((785, 265), list_cell_center(inventory_list, 4, 0))
+            self.assertEqual(probe, list_cell_center(inventory_list, 4, 0))
             self.assertTrue(list_cell_objects(inventory_list, gui, 4, 0))
 
-            push_sdl_mouse_click(785, 265)
+            push_sdl_mouse_click(*probe)
             pump_event_loop(5)
             self.assertEqual(1, get_panel_selection_box_counts_by_collection(panel).get("inventoryCollection", 0))
         finally:
@@ -20508,8 +20543,21 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         gui = g.getGui()
         panel = open_panel_for_screenshot(self, g, "inventoryPanel", "CGameInventoryPanel")
         panel.setBoolProperty("resizable", True)
-        drag_panel_resize_handle(self, g, panel, (1350, 830), ((5000, 4000, (560, 240, 1360, 840)),), (1900, 1060))
-        assert_rect_on_screen(self, "resized inventoryPanel", resolved_rect(panel))
+        panel_rect = resolved_rect(panel)
+        self.assertEqual((560, 240, 800, 600), panel_rect)
+        panel_x, panel_y, panel_w, panel_h = panel_rect
+        _, _, gui_w, gui_h = resolved_rect(gui)
+
+        # Drag to the parent-bounds maximum; the drag end records the geometry in the session store.
+        drag_panel_resize_handle(
+            self,
+            g,
+            panel,
+            (panel_x + panel_w - 10, panel_y + panel_h - 10),
+            ((gui_w + 3000, gui_h + 3000, (panel_x, panel_y, gui_w - panel_x, gui_h - panel_y)),),
+            (gui_w - 20, gui_h - 20),
+        )
+        assert_rect_on_screen(self, "resized inventoryPanel", resolved_rect(panel), width=gui_w, height=gui_h)
         panel.close()
         wait_for_panel_closed(self, g, "CGameInventoryPanel")
 
@@ -20526,16 +20574,17 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         try:
             # The fresh panel instance has not opted into resizing, so the stored geometry is
             # ignored: it opens at its design rectangle (800x600 minimum centered in 1024x768).
-            self.assertEqual((112, 84, 800, 600), resolved_rect(reopened))
+            self.assertEqual(((1024 - 800) // 2, (768 - 600) // 2, 800, 600), resolved_rect(reopened))
 
             # Opting back in and re-attaching re-applies the stored geometry clamped against the
-            # CURRENT window: the recorded (560, 240, 1360, 840) is pulled back to origin
-            # (224, 168) and shrunk to the 800x600 room left, fully inside the 1024x768 window.
+            # CURRENT window: the recorded origin exceeds the room the new window leaves, so it is
+            # pulled back to exactly (window - minimum), and the stored size shrinks to the room
+            # left from there - the panel lands fully inside the 1024x768 window.
             reopened.setBoolProperty("resizable", True)
             gui.removeChild(reopened)
             gui.addChild(reopened)
             pump_event_loop(3)
-            self.assertEqual((224, 168, 800, 600), resolved_rect(reopened))
+            self.assertEqual((1024 - 800, 768 - 600, 800, 600), resolved_rect(reopened))
             assert_rect_on_screen(self, "reopened inventoryPanel", resolved_rect(reopened), width=1024, height=768)
         finally:
             reopened.close()
