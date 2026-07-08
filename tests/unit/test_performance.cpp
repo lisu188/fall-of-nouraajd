@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 void run_pathfinder_performance_tests();
 void run_engine_hotspot_performance_tests();
 void run_serialization_performance_tests();
+void run_render_context_performance_tests();
 
 int main() {
     pybind11::scoped_interpreter guard{};
@@ -32,6 +33,7 @@ int main() {
     run_pathfinder_performance_tests();
     run_engine_hotspot_performance_tests();
     run_serialization_performance_tests();
+    run_render_context_performance_tests();
 
     return finish_tests();
 }
