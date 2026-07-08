@@ -67,17 +67,21 @@ bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
         // consume left button-downs even on empty cells, so a child covering the bottom-right corner
         // would otherwise swallow the grab. Same for the matching release while a resize is active,
         // which CGui routes through normal hit testing when it lands inside the captured panel.
+        // The calls are qualified (non-virtual): subclass mouseEvent overrides (the inventory, fight,
+        // and trade right-click selection resets) do not delegate to the base implementation, so a
+        // virtual call would consume the claimed handle press without ever reaching the panel-level
+        // resize state machine, leaving an opted-in panel impossible to resize by real input.
         if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT) {
             auto rect = getSelfRect();
             if (isInResizeHandle(event->button.x - rect->x, event->button.y - rect->y)) {
-                return mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, event->button.x - rect->x,
-                                  event->button.y - rect->y);
+                return CGamePanel::mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, event->button.x - rect->x,
+                                              event->button.y - rect->y);
             }
         }
         if (event->type == SDL_MOUSEBUTTONUP && event->button.button == SDL_BUTTON_LEFT && isResizing()) {
             auto rect = getSelfRect();
-            return mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, event->button.x - rect->x,
-                              event->button.y - rect->y);
+            return CGamePanel::mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, event->button.x - rect->x,
+                                          event->button.y - rect->y);
         }
     }
     return CGameGraphicsObject::event(gui, event);
