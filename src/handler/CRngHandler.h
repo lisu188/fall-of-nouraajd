@@ -28,9 +28,24 @@ class CCreature;
 
 class CRngHandler : public CGameObject {
   public:
+    // [EPIC_08][STORY_05] How a creature's class relates to its race's natural role
+    // (docs/design/creature_archetypes.md): Associated when the race lists the class in
+    // its associatedClasses metadata, NonAssociated when it does not, NoArchetype when
+    // the creature lacks a race and/or class (every legacy creature).
+    enum class ClassAssociation { NoArchetype, Associated, NonAssociated };
+
     CRngHandler() = default;
 
     explicit CRngHandler(const std::shared_ptr<CGame> &map);
+
+    // Classifies the race/class pairing the encounter-scale hook below consumes.
+    static ClassAssociation classifyClassAssociation(const std::shared_ptr<CCreature> &creature);
+
+    // Future-gated encounter-scale hook: maps a creature's concrete power (getSw()) to
+    // its encounter power-table key by class association. Every association currently
+    // maps to the neutral multiplier 1 -- the returned power is bit-identical to the
+    // input for all content -- until the associated-class balance design is approved.
+    static int scaleEncounterPower(int power, ClassAssociation association);
 
     std::set<std::shared_ptr<CItem>> getRandomLoot(int value) const;
 
