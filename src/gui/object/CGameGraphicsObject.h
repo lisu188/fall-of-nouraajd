@@ -134,10 +134,14 @@ class CGameGraphicsObject : public CGameObject {
 
     int getTileSize(const std::shared_ptr<CGameGraphicsObject> &object);
 
+  protected:
+    // Called by the parent before this object's own mouse/keyboard hooks; the default forwards to the
+    // children (highest priority first) and only then to this object. Overridable so a subclass can
+    // claim an event ahead of its children (e.g. a panel's resize handle under a covering child).
+    virtual bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
+
   private:
     virtual void render(std::shared_ptr<CGui> renderer, int frameTime);
-
-    bool event(std::shared_ptr<CGui> gui, SDL_Event *event);
 
     int getTopPriority();
 
