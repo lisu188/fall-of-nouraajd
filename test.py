@@ -132,6 +132,7 @@ FAST_TEST_PREFIXES = (
     "TestRunnerSuiteTest.",
 )
 FAST_TEST_NAMES = {
+    "GameTest.test_direct_rendercopy_calls_stay_inside_render_context_wrapper",
     "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
     "McpServerTest.test_engine_handle_call_rejects_private_methods",
     "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
@@ -852,8 +853,7 @@ class SaveFixtureTest(unittest.TestCase):
         # Both fixtures declare the same expected logical wrapper values.
         self.assertEqual(legacy["primitiveWrappers"]["values"], flattened["primitiveWrappers"]["values"])
         canonical = {
-            key: primitive_wrapper_logical_value(value)
-            for key, value in legacy["primitiveWrappers"]["values"].items()
+            key: primitive_wrapper_logical_value(value) for key, value in legacy["primitiveWrappers"]["values"].items()
         }
 
         persisted = {}
@@ -2909,6 +2909,33 @@ def iter_cpp_source_files():
             continue
         if path.suffix in {".h", ".hpp", ".c", ".cc", ".cpp", ".cxx"}:
             yield path
+
+
+def iter_tracked_cpp_source_files():
+    for file_path in git_tracked_files("*.h", "*.hpp", "*.c", "*.cc", "*.cpp", "*.cxx"):
+        if file_path.split("/", 1)[0] == "third_party":
+            continue
+        yield REPO_ROOT / file_path
+
+
+def strip_cpp_comments_and_strings(text):
+    # Strip comments first (mirrors strip_cpp_comments in scripts/validate_content.py)
+    # so commented-out calls are not counted as live ones, then drop string and
+    # character literals so quoted tokens (e.g. log messages) are not counted either.
+    text = re.sub(r"/\*.*?\*/|//[^\n\r]*", "", text, flags=re.DOTALL)
+    return re.sub(r"\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", "", text)
+
+
+RENDER_COPY_TOKEN_PATTERN = re.compile(r"\bSDL_RenderCopy(?:Ex)?\b")
+# Sanctioned direct SDL_RenderCopy/SDL_RenderCopyEx call sites: the CRenderContext
+# copy/copyEx wrapper internals are the only code allowed to blit textures directly.
+# Every other call site must route through the wrapper. If the wrapper internals
+# legitimately change, update these expected counts in the same commit so the drift
+# is a conscious decision in either direction (new direct call, or lost sanctioned
+# site).
+SANCTIONED_RENDER_COPY_SITES = {
+    "src/gui/CRenderContext.cpp": {"SDL_RenderCopy": 1, "SDL_RenderCopyEx": 1},
+}
 
 
 def run_command(args):
@@ -17695,6 +17722,27 @@ class GameTest(unittest.TestCase):
                         if stripped and (len(line) - len(stripped)) % 4 != 0:
                             offenders.append(f"{path}:{i}")
         return offenders == [], json.dumps(offenders)
+
+    @game_test
+    def test_direct_rendercopy_calls_stay_inside_render_context_wrapper(self):
+        observed = {}
+        for path in iter_tracked_cpp_source_files():
+            text = strip_cpp_comments_and_strings(path.read_text(encoding="utf-8", errors="replace"))
+            counts = {}
+            for match in RENDER_COPY_TOKEN_PATTERN.finditer(text):
+                counts[match.group(0)] = counts.get(match.group(0), 0) + 1
+            if counts:
+                observed[path.relative_to(REPO_ROOT).as_posix()] = counts
+        log = {
+            "sanctioned": SANCTIONED_RENDER_COPY_SITES,
+            "observed": observed,
+            "hint": (
+                "Route texture blits through CRenderContext::copy/copyEx instead of calling "
+                "SDL_RenderCopy/SDL_RenderCopyEx directly; if the wrapper internals legitimately "
+                "changed, update SANCTIONED_RENDER_COPY_SITES in the same commit."
+            ),
+        }
+        return observed == SANCTIONED_RENDER_COPY_SITES, json.dumps(log, indent=2, sort_keys=True)
 
     @game_test
     def test_resource_paths(self):
