@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
+#include "object/CPlayer.h"
 #include "object/CQuest.h"
 
 namespace {
@@ -64,13 +65,29 @@ void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SD
 }
 
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
-    std::string text = "";
-    auto game = ptr ? ptr->getGame() : nullptr;
+    // Reactive read path: the journal text is only rebuilt when the quest-change
+    // subscription (see refreshQuestSubscription) marked it stale, instead of
+    // re-walking the quest log on every rendered frame.
+    auto player = resolveQuestSource(ptr);
+    refreshQuestSubscription(player);
+    if (questTextDirty) {
+        cachedQuestText = buildText(player);
+        questTextDirty = false;
+    }
+    return cachedQuestText;
+}
+
+std::shared_ptr<CPlayer> CGameQuestPanel::resolveQuestSource(const std::shared_ptr<CGui> &gui) {
+    auto game = gui ? gui->getGame() : nullptr;
     auto map = game ? game->getMap() : nullptr;
-    auto player = map ? map->getPlayer() : nullptr;
+    return map ? map->getPlayer() : nullptr;
+}
+
+std::string CGameQuestPanel::buildText(const std::shared_ptr<CPlayer> &player) {
     if (!player) {
         return "No active quests.\n";
     }
+    std::string text = "";
     for (auto quest : player->getCompletedQuests()) {
         append_quest_line(text, quest, true);
     }
@@ -81,4 +98,31 @@ std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
         text = "No active quests.\n";
     }
     return text;
+}
+
+void CGameQuestPanel::refreshFromQuestsChanged() { questTextDirty = true; }
+
+void CGameQuestPanel::refreshQuestSubscription(const std::shared_ptr<CPlayer> &player) {
+    auto subscribed = subscribedQuestSource.lock();
+    if (subscribed == player) {
+        return;
+    }
+
+    // CPlayer records every quest-log mutation through recordDirectPropertyChanged
+    // ("quests" / "completedQuests"), which emits the derived "questsChanged" /
+    // "completedQuestsChanged" property channels this panel subscribes to — the same
+    // dynamic-property notification mechanism CListView refresh subscriptions ride on.
+    auto self = this->ptr<CGameQuestPanel>();
+    if (subscribed) {
+        subscribed->disconnect("questsChanged", self, "refreshFromQuestsChanged");
+        subscribed->disconnect("completedQuestsChanged", self, "refreshFromQuestsChanged");
+    }
+    subscribedQuestSource = player;
+    if (player) {
+        player->connect("questsChanged", self, "refreshFromQuestsChanged");
+        player->connect("completedQuestsChanged", self, "refreshFromQuestsChanged");
+    }
+    // The quest source changed (first resolve, detach, or a new player after a game
+    // load / map transition): whatever was cached belongs to the old source.
+    questTextDirty = true;
 }
