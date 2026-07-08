@@ -136,8 +136,38 @@ void CGui::shutdown() {
         }
     }
     setChildren({});
+    // The GUI shutdown is the session boundary (CGameContext drives it when the game session ends):
+    // user-adjusted panel geometry must not survive into the next session.
+    clearSessionPanelGeometry();
     _textureCache.clear();
     _textManager.clear();
+}
+
+void CGui::setSessionPanelGeometry(const std::string &panelType, const PanelGeometry &geometry) {
+    if (panelType.empty()) {
+        return;
+    }
+    sessionPanelGeometry[panelType] = geometry;
+}
+
+std::optional<CGui::PanelGeometry> CGui::getSessionPanelGeometry(const std::string &panelType) const {
+    auto found = sessionPanelGeometry.find(panelType);
+    if (found == sessionPanelGeometry.end()) {
+        return std::nullopt;
+    }
+    return found->second;
+}
+
+void CGui::clearSessionPanelGeometry() { sessionPanelGeometry.clear(); }
+
+void CGui::addChild(const std::shared_ptr<CGameGraphicsObject> &child) {
+    CGameGraphicsObject::addChild(child);
+    // A panel joining the GUI gets any geometry the user gave it earlier this session, so a
+    // closed/reopened or rebuilt panel keeps its adjusted size. The panel clamps against its
+    // current parent bounds, so a window resized in between cannot restore an out-of-range rect.
+    if (auto panel = vstd::cast<CGamePanel>(child)) {
+        panel->applySessionGeometry(this->ptr<CGui>());
+    }
 }
 
 bool CGui::isActive() const { return active.load(std::memory_order_acquire); }
