@@ -791,6 +791,7 @@ add_executable(performance_guard_tests
     tests/unit/test_pathfinder_performance.cpp
     tests/unit/test_engine_hotspot_performance.cpp
     tests/unit/test_serialization_performance.cpp
+    tests/unit/test_render_context_performance.cpp
 )
 if (WIN32)
     target_sources(performance_guard_tests PRIVATE $<TARGET_OBJECTS:game_core_objects>)
