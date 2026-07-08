@@ -1691,6 +1691,7 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_fight_panel_select_interaction_cancels_on_sdl_quit",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_screenshot_repeated_render_frames_are_identical",
     "test_panel_harness_info_artifacts",
     "test_all_panel_root_layout_contracts",
     "test_all_top_level_panels_block_outside_map_clicks",
@@ -1719,6 +1720,7 @@ XVFB_BATCHABLE_CHILD_TESTS = {
     "test_window_resize_event_updates_gui_dimensions",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_screenshot_repeated_render_frames_are_identical",
     "test_panel_harness_info_artifacts",
     "test_all_panel_root_layout_contracts",
 }
@@ -20840,6 +20842,47 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.addQuest("mainQuest")
         open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
+
+    def test_screenshot_repeated_render_frames_are_identical(self):
+        # Rendering regression guard for the CRenderContext copy path: an
+        # unchanged, isolated scene must reproduce the exact same frame when
+        # re-rendered, and the panel region must contain rendered pixels.
+        _, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = open_panel_for_screenshot(self, g, "infoPanel", "CGameTextPanel")
+        panel.setStringProperty("text", "render context frame stability verification")
+        pump_event_loop(5)
+        try:
+            with isolated_gui_panel(g, panel):
+                panel_rect = resolved_rect(panel)
+                first_path = TEST_OUTPUT_DIR / "xvfb_repeated_render_first_frame.png"
+                try:
+                    first_data, first_width, first_height = capture_sdl_screenshot(first_path, g.getGui())
+                except RuntimeError as exc:
+                    self.skipTest(f"SDL renderer is not available for screenshot readback: {exc}")
+                pump_event_loop(5)
+                second_path = TEST_OUTPUT_DIR / "xvfb_repeated_render_second_frame.png"
+                second_data, second_width, second_height = capture_sdl_screenshot(second_path, g.getGui())
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
+        self.assertEqual(gui_logical_size(g), (first_width, first_height))
+        self.assertEqual((first_width, first_height), (second_width, second_height))
+        self.assertTrue(first_path.exists())
+        self.assertGreater(first_path.stat().st_size, 0)
+        self.assertTrue(second_path.exists())
+        self.assertGreater(second_path.stat().st_size, 0)
+
+        panel_summary = screenshot_rect_summary(first_data, first_width, panel_rect)
+        panel_area = panel_rect[2] * panel_rect[3]
+        self.assertGreater(panel_summary["unique_rgb"], 3)
+        self.assertGreater(panel_summary["non_black_pixels"], panel_area // 100)
+
+        self.assertTrue(
+            first_data == second_data,
+            "Re-rendering an unchanged isolated panel scene produced a different frame; "
+            "the render context copy path is no longer deterministic.",
+        )
 
     def test_panel_harness_info_artifacts(self):
         _, g, _, _ = create_xvfb_gameplay_session(self)
