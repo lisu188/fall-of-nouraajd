@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CObjectHandler.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
+#include "object/CCreatureTemplate.h"
 #include "object/CDialog.h"
 #include "object/CMarket.h"
 #include "object/CObject.h"
@@ -165,6 +166,10 @@ bool register_creatures(const NativePluginHostV1 *host) {
     // The creature class definition is likewise a CGameObject-derived archetype,
     // not a CCreature, so it stays out of the encounter / subtype enumeration.
     registered = register_type<CCreatureClass, CGameObject>(game) && registered;
+    // The template overlay definition (elite/undead/... variants, EPIC_08) is also
+    // a CGameObject-derived metadata definition referenced via CCreature.templates;
+    // it is never spawnable and never a CCreature subtype.
+    registered = register_type<CCreatureTemplate, CGameObject>(game) && registered;
     registered = register_type<CCreature, CMapObject, CGameObject>(game) && registered;
     registered = register_type<CPlayer, CCreature, CMapObject, CGameObject>(game) && registered;
     if (registered) {

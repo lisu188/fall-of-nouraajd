@@ -572,6 +572,41 @@ stat block); the level-up and no-default-archetype guarantees here are pinned by
 this approved contract and must be covered by a regression test alongside any
 change that introduces the archetype objects.
 
+---
+
+# Creature template overlay layer (future mechanics, EPIC_08)
+
+Status: Scaffolding (definition object + composition hook landed; no content uses
+it). Scope: an OPTIONAL, ORDERED transformation layer for variant overlays --
+elite, undead, cult-touched, diseased, boss -- applied AFTER race/class
+composition. Templates never replace the race or the `creatureClass` reference;
+boss/cult status is expressly NOT modeled as a race.
+
+- **Definition object** — `CCreatureTemplate` (`src/object/CCreatureTemplate.h`),
+  a CGameObject-derived metadata definition like `CCreatureRace`/`CCreatureClass`
+  (registered in `NativePlugin::register_creatures`, never spawnable, never a
+  `CCreature` subtype). Properties, all optional with neutral defaults:
+  `statAdjustments` (additive `CStats` delta), `actions` (action additions),
+  `subtypes` (data-only classification tags), `scaleAdjustment` (delta to
+  `getScale`), and `order` (the ordering key).
+- **Attachment** — `CCreature.templates` (`std::set` V_PROPERTY, so template
+  references serialize/clone exactly like the race/class references). Templates
+  apply in ascending `order`, ties broken by configured identity
+  (`CCreature::getOrderedTemplates`).
+- **Stat hook** — `CCreature::buildComposedStats` folds `statAdjustments` in
+  template order after the race/class/creature base+level stack (position 6),
+  before equipment/effects. **Action hook** — `getEffectiveInteractions` merges
+  template actions after class sources and before the concrete template's own
+  sources, under the same dedupe key as the action merge contract. **Scale
+  hook** — `getScale` adds the accumulated `scaleAdjustment`.
+- **Neutrality invariant** — a creature with NO templates composes bit-identically
+  to the contracts above; example definitions in
+  `res/config/creature_templates.json` are intentionally unreferenced. Pinned by
+  `test_no_template_creature_composes_bit_identically_to_baseline`,
+  `test_creature_templates_compose_after_race_and_class_in_order`,
+  `test_creature_templates_do_not_replace_race_or_class` and
+  `test_creature_template_metadata_round_trip` in `tests/unit/test_object.cpp`.
+
 # Developer guide: adding a race, a class, or a monster
 
 Status: Reference. Scope: the concrete, file-level steps for extending the

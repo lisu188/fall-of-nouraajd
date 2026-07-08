@@ -1,0 +1,37 @@
+{
+  "eliteTemplate": {
+    "class": "CCreatureTemplate",
+    "properties": {
+      "label": "Elite",
+      "description": "A hardened veteran variant: tougher, more accurate and worth a larger reward. Example template definition; not referenced by any creature yet.",
+      "order": 10,
+      "scaleAdjustment": 1,
+      "subtypes": ["elite"],
+      "statAdjustments": {
+        "class": "CStats",
+        "properties": {
+          "strength": 2,
+          "stamina": 2,
+          "hit": 5
+        }
+      }
+    }
+  },
+  "diseasedTemplate": {
+    "class": "CCreatureTemplate",
+    "properties": {
+      "label": "Diseased",
+      "description": "A sickly variant: frail but unnaturally resistant to shadow. Example template definition; not referenced by any creature yet.",
+      "order": 20,
+      "subtypes": ["diseased"],
+      "statAdjustments": {
+        "class": "CStats",
+        "properties": {
+          "stamina": -1,
+          "agility": -1,
+          "shadowResist": 10
+        }
+      }
+    }
+  }
+}

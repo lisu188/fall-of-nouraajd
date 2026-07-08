@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
+#include "object/CCreatureTemplate.h"
 #include "object/CDialog.h"
 #include "object/CEffect.h"
 #include "object/CGameObject.h"
@@ -1032,6 +1033,382 @@ void test_player_without_archetype_falls_back_to_base_stats() {
     });
 }
 
+void test_no_template_creature_composes_bit_identically_to_baseline() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] Introduce CCreatureTemplate definition object.
+    // Neutrality invariant: the template layer is OPTIONAL, and a creature with NO
+    // templates (every creature on current content) composes bit-identically to the
+    // pre-template contracts -- both on the legacy path (no race/class) and on the
+    // composed race/class path. Explicitly assigning an empty template set must be
+    // exactly as neutral as never touching the property.
+
+    // Legacy creature: same source values as the pinned legacy composition tests.
+    auto legacy = std::make_shared<CCreature>();
+    auto legacyBase = std::make_shared<CStats>();
+    legacyBase->setMainStat("intelligence");
+    legacyBase->setIntelligence(10);
+    legacyBase->setStrength(4);
+    legacyBase->setStamina(6);
+    legacy->setBaseStats(legacyBase);
+    auto legacyLevelStats = std::make_shared<CStats>();
+    legacyLevelStats->setIntelligence(2);
+    legacyLevelStats->setStrength(1);
+    legacy->setLevelStats(legacyLevelStats);
+    const int legacyLevel = 3;
+    legacy->setLevel(legacyLevel);
+
+    legacy->setTemplates({}); // explicit empty set == never configured
+    expect_true(legacy->getTemplates().empty(), "an explicitly empty template set stays empty");
+    expect_true(!legacy->usesArchetypeComposition(),
+                "a creature with no race/class and no templates must stay on the legacy stat path");
+    expect_true(legacy->getScale() == legacyLevel, "getScale of a no-template creature stays level + sw exactly");
+
+    auto legacyExpected = std::make_shared<CStats>();
+    legacyExpected->setMainStat(legacyBase->getMainStat());
+    legacyExpected->addBonus(legacyBase);
+    for (int i = 0; i < legacyLevel; ++i) {
+        legacyExpected->addBonus(legacyLevelStats);
+    }
+    auto legacyActual = legacy->getStats();
+    expect_true(legacyActual->getMainStat() == legacyExpected->getMainStat(),
+                "no-template legacy creature getStats should keep the baseStats mainStat");
+    legacyActual->meta()->for_all_properties(legacyActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(legacyActual->getProperty<int>(property->name()) ==
+                        legacyExpected->getProperty<int>(property->name()),
+                    "no-template legacy creature getStats should match the legacy composition bit-identically");
+    });
+
+    // Composed creature (race + class): the template stage contributes nothing.
+    auto composed = std::make_shared<CCreature>();
+    auto composedBase = std::make_shared<CStats>();
+    composedBase->setMainStat("strength");
+    composedBase->setStrength(4);
+    composedBase->setIntelligence(6);
+    composed->setBaseStats(composedBase);
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStrength(2);
+    raceBase->setStamina(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    composed->setRace(race);
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(7);
+    auto classLevel = std::make_shared<CStats>();
+    classLevel->setIntelligence(2);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    klass->setLevelStats(classLevel);
+    composed->setCreatureClass(klass);
+    const int composedLevel = 2;
+    composed->setLevel(composedLevel);
+
+    composed->setTemplates({}); // explicit empty set == never configured
+
+    auto composedExpected = std::make_shared<CStats>();
+    composedExpected->setMainStat(klass->getMainStat());
+    composedExpected->addBonus(raceBase);
+    composedExpected->addBonus(classBase);
+    composedExpected->addBonus(composedBase);
+    for (int i = 0; i < composedLevel; ++i) {
+        composedExpected->addBonus(classLevel);
+    }
+    auto composedActual = composed->getStats();
+    expect_true(composedActual->getMainStat() == "intelligence",
+                "no-template composed creature keeps the class-authoritative mainStat");
+    composedActual->meta()->for_all_properties(composedActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(composedActual->getProperty<int>(property->name()) ==
+                        composedExpected->getProperty<int>(property->name()),
+                    "no-template composed creature getStats should match the race/class composition bit-identically");
+    });
+    expect_true(composed->getScale() == composedLevel,
+                "getScale of a no-template composed creature stays level + sw exactly");
+    expect_true(composed->getEffectiveInteractions().empty(),
+                "an empty template set adds no actions to the effective interaction set");
+}
+
+void test_creature_templates_compose_after_race_and_class_in_order() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] Capability: templates are an ORDERED,
+    // optional overlay applied AFTER race/class composition. Stat adjustments fold
+    // in after the race/class/creature stack; template actions merge after class
+    // sources (so they override class duplicates) but before the creature's own
+    // concrete actions (which stay most specific); multiple templates apply in
+    // ascending `order`; scale adjustments accumulate.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("intelligence");
+    base->setIntelligence(10);
+    creature->setBaseStats(base);
+    auto levelStats = std::make_shared<CStats>();
+    levelStats->setIntelligence(2);
+    creature->setLevelStats(levelStats);
+    const int level = 2;
+    creature->setLevel(level);
+
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setIntelligence(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    creature->setRace(race);
+
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(4);
+    auto classAttack = interaction("Attack", "classAttack");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setBaseStats(classBase);
+    klass->setActions({classAttack});
+    creature->setCreatureClass(klass);
+
+    // Two template overlays with distinct ordering keys; inserted out of order to
+    // prove getOrderedTemplates sorts by the `order` key, not insertion order.
+    auto first = std::make_shared<CCreatureTemplate>();
+    first->setTypeId("eliteTemplate");
+    first->setOrder(10);
+    first->setScaleAdjustment(1);
+    auto firstStats = std::make_shared<CStats>();
+    firstStats->setIntelligence(5);
+    first->setStatAdjustments(firstStats);
+    auto firstEmpower = interaction("Empower", "firstEmpower");
+    auto templateAttack = interaction("Attack", "templateAttack");
+    first->setActions({firstEmpower, templateAttack});
+
+    auto second = std::make_shared<CCreatureTemplate>();
+    second->setTypeId("diseasedTemplate");
+    second->setOrder(20);
+    second->setScaleAdjustment(2);
+    auto secondStats = std::make_shared<CStats>();
+    secondStats->setIntelligence(7);
+    second->setStatAdjustments(secondStats);
+    auto secondEmpower = interaction("Empower", "secondEmpower");
+    second->setActions({secondEmpower});
+
+    creature->setTemplates({second, first});
+
+    auto orderedTemplates = creature->getOrderedTemplates();
+    expect_true(orderedTemplates.size() == 2 && orderedTemplates[0] == first && orderedTemplates[1] == second,
+                "getOrderedTemplates should sort templates by ascending order key, not insertion order");
+
+    // Stats: race + class + creature base + level growth + both templates.
+    const int expected_intelligence = 3 /*race*/ + 4 /*class*/ + 10 /*base*/ + level * 2 /*levelStats*/ +
+                                      5 /*first template*/ + 7 /*second template*/;
+    auto stats = creature->getStats();
+    expect_true(stats->getIntelligence() == expected_intelligence,
+                "template stat adjustments should layer on top of the race/class/creature composition");
+    expect_true(stats->getMainStat() == "intelligence", "templates must not disturb the composed mainStat selection");
+
+    // Scale: level + sw + the accumulated template scale adjustments.
+    expect_true(creature->getScale() == level + 1 + 2,
+                "template scale adjustments should accumulate on top of level + sw");
+
+    auto effectiveContains = [&creature](const std::shared_ptr<CInteraction> &action) {
+        auto effective = creature->getEffectiveInteractions();
+        return effective.find(action) != effective.end();
+    };
+
+    // Template actions apply AFTER class sources: the first template's Attack
+    // overrides the class Attack; the later-ordered template wins the Empower
+    // duplicate between the two templates.
+    expect_true(effectiveContains(templateAttack) && !effectiveContains(classAttack),
+                "a template action should override a duplicate class action (templates apply after race/class)");
+    expect_true(effectiveContains(secondEmpower) && !effectiveContains(firstEmpower),
+                "the later-ordered template should win duplicate action keys between templates");
+
+    // The ordering key drives the fold-in: raising the first template's order past
+    // the second flips the Empower winner.
+    first->setOrder(30);
+    expect_true(effectiveContains(firstEmpower) && !effectiveContains(secondEmpower),
+                "changing the order key must change the template application order");
+    first->setOrder(10);
+
+    // The creature's own concrete actions stay most specific over template additions.
+    auto concreteAttack = interaction("Attack", "concreteAttack");
+    creature->addAction(concreteAttack);
+    expect_true(effectiveContains(concreteAttack) && !effectiveContains(templateAttack),
+                "concrete creature actions should stay most specific over template action additions");
+
+    // A template-only creature (no race/class) also composes through the template
+    // layer instead of silently dropping it.
+    auto templateOnly = std::make_shared<CCreature>();
+    auto templateOnlyBase = std::make_shared<CStats>();
+    templateOnlyBase->setMainStat("intelligence");
+    templateOnlyBase->setIntelligence(6);
+    templateOnly->setBaseStats(templateOnlyBase);
+    auto boost = std::make_shared<CCreatureTemplate>();
+    auto boostStats = std::make_shared<CStats>();
+    boostStats->setIntelligence(4);
+    boost->setStatAdjustments(boostStats);
+    templateOnly->setTemplates({boost});
+    expect_true(templateOnly->usesArchetypeComposition(),
+                "a creature carrying only a template overlay uses the composed stat path");
+    expect_true(templateOnly->getStats()->getIntelligence() == 6 + 4,
+                "a template-only creature folds the template adjustments over its own base stats");
+    expect_true(templateOnly->getStats()->getMainStat() == "intelligence",
+                "a template-only creature keeps its legacy mainStat fallback");
+}
+
+void test_creature_templates_do_not_replace_race_or_class() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] "Does not replace race/class": attaching a
+    // template keeps the race/creatureClass references and their contributions
+    // fully intact, and clearing the templates returns the composed stat block
+    // bit-identically to the race/class baseline.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("strength");
+    base->setIntelligence(10);
+    creature->setBaseStats(base);
+
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setIntelligence(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    auto raceClaw = interaction("Claw", "raceClaw");
+    race->setActions({raceClaw});
+    creature->setRace(race);
+
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(4);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    creature->setCreatureClass(klass);
+
+    // Race/class baseline snapshot before any template is attached.
+    auto baseline = creature->getStats();
+
+    auto overlay = std::make_shared<CCreatureTemplate>();
+    auto overlayStats = std::make_shared<CStats>();
+    overlayStats->setIntelligence(5);
+    overlay->setStatAdjustments(overlayStats);
+    auto empower = interaction("Empower", "templateEmpower");
+    overlay->setActions({empower});
+    creature->setTemplates({overlay});
+
+    // Identity: the archetype references are untouched by the template layer.
+    expect_true(CGameObject::sameInstance(creature->getRace(), race),
+                "attaching a template must not replace the race reference");
+    expect_true(CGameObject::sameInstance(creature->getCreatureClass(), klass),
+                "attaching a template must not replace the creatureClass reference");
+
+    // Contributions: race/class stats and actions remain part of the composition,
+    // and the class-authoritative mainStat selection is untouched.
+    auto withTemplate = creature->getStats();
+    expect_true(withTemplate->getMainStat() == "intelligence",
+                "the class mainStat stays authoritative when a template is attached");
+    expect_true(withTemplate->getIntelligence() == baseline->getIntelligence() + 5,
+                "the template adds exactly its adjustment on top of the intact race/class composition");
+    auto effective = creature->getEffectiveInteractions();
+    expect_true(effective.find(raceClaw) != effective.end(), "race actions remain exposed when a template is attached");
+    expect_true(effective.find(empower) != effective.end(),
+                "template actions are added alongside (not instead of) race/class actions");
+
+    // Clearing the templates restores the race/class baseline bit-identically.
+    creature->setTemplates({});
+    auto restored = creature->getStats();
+    expect_true(restored->getMainStat() == baseline->getMainStat(),
+                "clearing templates restores the baseline mainStat selection");
+    restored->meta()->for_all_properties(restored, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(restored->getProperty<int>(property->name()) == baseline->getProperty<int>(property->name()),
+                    "clearing templates should restore the race/class composed stats bit-identically");
+    });
+}
+
+void test_creature_template_metadata_round_trip() {
+    // [EPIC_08][STORY_02][SUBSTORY_01] CCreatureTemplate is a CGameObject-derived
+    // metadata definition that serializes like CCreatureRace/CCreatureClass: all of
+    // its metadata (stat adjustments, action additions, subtypes, scale adjustment,
+    // order, plus inherited label) survives a CSerialization round-trip, it
+    // deserializes back into a CCreatureTemplate, its setters are null-safe, and it
+    // is never enumerated as a CCreature subtype.
+    CTypes::register_type_metadata<CCreatureTemplate, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CCreatureTemplate::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureTemplate>(); });
+    game->getObjectHandler()->registerType(CStats::static_meta()->name(), []() { return std::make_shared<CStats>(); });
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    // Neutral defaults: a bare template is a no-op overlay.
+    auto fresh = std::make_shared<CCreatureTemplate>();
+    expect_true(fresh->getOrder() == 0 && fresh->getScaleAdjustment() == 0,
+                "order and scaleAdjustment should default to the neutral 0");
+    expect_true(fresh->getStatAdjustments() != nullptr && fresh->getActions().empty() && fresh->getSubtypes().empty(),
+                "a fresh template defaults to empty stat adjustments, actions and subtypes");
+
+    auto adjustments = std::make_shared<CStats>();
+    adjustments->setStrength(2);
+    adjustments->setHit(5);
+    auto action = std::make_shared<CInteraction>();
+    action->setTypeId("templateEmpower");
+
+    auto overlay = std::make_shared<CCreatureTemplate>();
+    overlay->setGame(game);
+    overlay->setStatAdjustments(adjustments);
+    overlay->setActions({action});
+    overlay->setSubtypes({"elite"});
+    overlay->setScaleAdjustment(1);
+    overlay->setOrder(10);
+    overlay->setLabel("Elite");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(overlay);
+    expect_true((*serialized)["class"].get<std::string>() == CCreatureTemplate::static_meta()->name(),
+                "a serialized CCreatureTemplate should keep its metadata class identity");
+
+    auto round_trip = std::dynamic_pointer_cast<CCreatureTemplate>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+    expect_true(round_trip != nullptr,
+                "a CCreatureTemplate should deserialize back into a CCreatureTemplate, not a creature or map object");
+    expect_true(round_trip->getStatAdjustments() && round_trip->getStatAdjustments()->getStrength() == 2 &&
+                    round_trip->getStatAdjustments()->getHit() == 5,
+                "stat adjustments should survive the round-trip");
+    expect_true(round_trip->getActions().size() == 1, "action additions should survive the round-trip");
+    expect_true(round_trip->getSubtypes() == std::set<std::string>({"elite"}),
+                "subtypes should survive the round-trip");
+    expect_true(round_trip->getScaleAdjustment() == 1, "scaleAdjustment should survive the round-trip");
+    expect_true(round_trip->getOrder() == 10, "the ordering key should survive the round-trip");
+    expect_true(round_trip->getLabel() == "Elite", "inherited label should survive the round-trip");
+
+    // Null-safety: null stats normalize to a neutral block and null actions drop.
+    auto bare = std::make_shared<CCreatureTemplate>();
+    bare->setStatAdjustments(nullptr);
+    expect_true(bare->getStatAdjustments() != nullptr, "null statAdjustments should normalize to an empty CStats");
+    bare->setActions({nullptr});
+    expect_true(bare->getActions().empty(), "null actions should be filtered out");
+
+    // A template definition is not a creature subtype, so it must never appear in
+    // the CCreature subtype enumeration (random encounters / spawn tables).
+    auto creatureSubtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(), CCreatureTemplate::static_meta()->name()) ==
+                    creatureSubtypes.end(),
+                "CCreatureTemplate must not be enumerated as a CCreature subtype");
+}
+
 void test_creature_archetype_identity_accessors_use_fallbacks() {
     auto creature = std::make_shared<CCreature>();
 
@@ -1866,6 +2243,10 @@ int main() {
     test_creature_class_main_stat_is_authoritative_over_race();
     test_player_composed_stats_reflect_race_and_class_archetype();
     test_player_without_archetype_falls_back_to_base_stats();
+    test_no_template_creature_composes_bit_identically_to_baseline();
+    test_creature_templates_compose_after_race_and_class_in_order();
+    test_creature_templates_do_not_replace_race_or_class();
+    test_creature_template_metadata_round_trip();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_effective_interactions_compose_archetype_sources();
