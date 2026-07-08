@@ -46,6 +46,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
 #include "object/CDialog.h"
+#include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
@@ -992,6 +993,218 @@ std::shared_ptr<CStats> player_stats() {
     stats->setMainStat("stamina");
     stats->setStamina(10);
     return stats;
+}
+
+// Refresh-count coverage for every list view migrated to the reactive mechanism:
+// inventory, equipped, and effects lists subscribe exactly as res/config/panels.json
+// wires them (refreshEvent inventoryChanged/equippedChanged/effectsChanged with the
+// refreshObject script resolving to the player creature, injected directly here like
+// the other subscription tests) and real model mutations must drive exactly one
+// coalesced rebuild per affected view — never a rebuild of an unaffected view, never
+// a rebuild from an idle rendered frame.
+void test_reactive_list_views_refresh_counts_match_model_changes_exactly() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    // equipItem validates slots through the game's slot configuration, so register the
+    // same single-weapon-slot setup the drag-drop harness uses.
+    game->getObjectHandler()->registerConfig("slotConfiguration", CJsonUtil::from_string(R"({
+            "class": "CSlotConfig",
+            "properties": {
+                "configuration": {
+                    "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}}
+                }
+            }
+        })",
+                                                                                         "slotConfiguration"));
+
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setBaseStats(player_stats());
+    player->setHp(player->getHpMax());
+    game->getMap()->setPlayer(player);
+
+    auto inventory_list = std::make_shared<RefreshCountingListView>();
+    auto equipped_list = std::make_shared<RefreshCountingListView>();
+    auto effects_list = std::make_shared<RefreshCountingListView>();
+    auto attach_counting_list = [&gui, &player](const std::shared_ptr<RefreshCountingListView> &list,
+                                                const std::string &refreshEvent) {
+        gui->pushChild(list);
+        list->setResolvedRefreshTarget(player);
+        list->setRefreshEvent(refreshEvent);
+        list->refresh();
+    };
+    attach_counting_list(inventory_list, "inventoryChanged");
+    attach_counting_list(equipped_list, "equippedChanged");
+    attach_counting_list(effects_list, "effectsChanged");
+
+    auto make_weapon = [&game](const std::string &name) {
+        auto weapon = std::make_shared<CWeapon>();
+        weapon->setGame(game);
+        weapon->setName(name);
+        weapon->setTypeId(name + "Type");
+        // Stat composition folds equipped item bonuses without a null guard, so every
+        // equippable test item carries an (empty) bonus block like configured items do.
+        weapon->setBonus(std::make_shared<CStats>());
+        return weapon;
+    };
+
+    const int inventory_base = inventory_list->refresh_count;
+    const int equipped_base = equipped_list->refresh_count;
+    const int effects_base = effects_list->refresh_count;
+
+    // One model change rebuilds only the affected view, exactly once, and only after
+    // the queued refresh work is flushed by the event loop.
+    auto sword = make_weapon("refreshCountSword");
+    player->addItem(sword);
+    expect_true(inventory_list->refresh_count == inventory_base,
+                "an inventory change must queue the list rebuild instead of rebuilding synchronously");
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 1,
+                "one inventory change should rebuild the inventory list exactly once");
+    expect_true(equipped_list->refresh_count == equipped_base && effects_list->refresh_count == effects_base,
+                "an inventory change must not rebuild the equipped or effects lists");
+
+    // Equipping moves the item between the two lists: each affected view rebuilds
+    // exactly once (equippedChanged plus the removeItem-driven inventoryChanged).
+    player->equipItem("0", sword);
+    drain_event_loop();
+    expect_true(equipped_list->refresh_count == equipped_base + 1,
+                "equipping an item should rebuild the equipped list exactly once");
+    expect_true(inventory_list->refresh_count == inventory_base + 2,
+                "equipping an item leaves the inventory, rebuilding the inventory list exactly once");
+    expect_true(effects_list->refresh_count == effects_base, "equipment changes must not rebuild the effects list");
+
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(game);
+    effect->setName("refreshCountEffect");
+    effect->setTypeId("refreshCountEffectType");
+    player->addEffect(effect);
+    drain_event_loop();
+    expect_true(effects_list->refresh_count == effects_base + 1,
+                "adding an effect should rebuild the effects list exactly once");
+    expect_true(inventory_list->refresh_count == inventory_base + 2 &&
+                    equipped_list->refresh_count == equipped_base + 1,
+                "effect changes must not rebuild the inventory or equipped lists");
+
+    // N rapid model changes in one event-loop turn coalesce into exactly one rebuild.
+    auto axe = make_weapon("refreshCountAxe");
+    auto dagger = make_weapon("refreshCountDagger");
+    player->addItem(axe);
+    player->addItem(dagger);
+    player->removeItem(dagger);
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 3,
+                "three inventory changes in one event-loop turn must coalesce into exactly one rebuild");
+
+    // Unrelated model changes rebuild nothing (no over-refresh). The names must be
+    // dynamic-only properties: a name owned by a typed V_META property (e.g. "gold" on
+    // CCreature) would route setProperty through the typed reflective setter, which
+    // needs object-type any-cast registrations this GUI suite does not perform.
+    player->setNumericProperty("threat", 42);
+    player->setStringProperty("warCry", "warden");
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 3 &&
+                    equipped_list->refresh_count == equipped_base + 1 &&
+                    effects_list->refresh_count == effects_base + 1,
+                "unrelated player property changes must not rebuild any reactive list view");
+
+    // Idle frames render from the cached proxy children: zero rebuilds per frame.
+    for (int frame = 0; frame < 3; ++frame) {
+        gui->render(0);
+    }
+    drain_event_loop();
+    expect_true(inventory_list->refresh_count == inventory_base + 3 &&
+                    equipped_list->refresh_count == equipped_base + 1 &&
+                    effects_list->refresh_count == effects_base + 1,
+                "rendering idle frames must not rebuild any reactive list view");
+}
+
+// Refresh-count coverage for the migrated quest panel: rapid invalidations across
+// every subscribed channel (quest membership on the player plus the map's quest-state
+// property / turnPassed / objectChanged channels) coalesce into exactly one rebuild,
+// each map-channel invalidation on its own counts exactly one rebuild, and reads
+// without a pending invalidation always serve the cache (the render path is a read).
+void test_quest_panel_refresh_count_coalesces_rapid_invalidations() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto quest_state = std::make_shared<CGameObject>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 200, 100));
+    panel->setResolvedQuestSource(player);
+    panel->setResolvedQuestStateSource(quest_state);
+    gui->pushChild(panel);
+
+    auto quest = std::make_shared<CQuest>();
+    quest->setName("countedQuest");
+    quest->setDescription("Recover the ledger of debts");
+    quest->setObjective("Search the counting house.");
+    player->setQuests({quest});
+    drain_event_loop();
+
+    expect_true(panel->getText(gui).find("[Active] Recover the ledger of debts") != std::string::npos,
+                "quest panel should render the active quest before counting rebuilds");
+    expect_true(panel->build_count == 1, "the first quest journal read should count exactly one rebuild");
+
+    // Rapid invalidations across every subscribed channel in one event-loop turn.
+    auto completed = std::make_shared<CQuest>();
+    completed->setName("countedCompletedQuest");
+    completed->setDescription("Bar the western gate");
+    quest->setObjective("Confront the ledger keeper.");
+    player->setQuests({quest});
+    player->setCompletedQuests({completed});
+    quest_state->setStringProperty("quest_state_ledger", "keeper_revealed");
+    quest_state->signal("turnPassed");
+    quest_state->signal("objectChanged", Coords(3, 4, 0));
+    expect_true(panel->build_count == 1, "invalidations must mark the cache stale without rebuilding synchronously");
+    drain_event_loop();
+    expect_true(panel->build_count == 1, "invalidations alone must not rebuild the journal before the next read");
+
+    const auto rebuilt = panel->getText(gui);
+    expect_true(rebuilt.find("[Completed] Bar the western gate") != std::string::npos &&
+                    rebuilt.find("Objective: Confront the ledger keeper.") != std::string::npos,
+                "the coalesced rebuild should reflect every change from the rapid turn");
+    expect_true(panel->build_count == 2,
+                "five invalidation signals in one event-loop turn must coalesce into exactly one rebuild");
+
+    panel->getText(gui);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 2, "reads after the coalesced rebuild must serve the cache with zero rebuilds");
+
+    // Each map-channel invalidation counts exactly one rebuild across repeated reads.
+    quest_state->setStringProperty("quest_state_ledger", "keeper_defeated");
+    drain_event_loop();
+    panel->getText(gui);
+    panel->getText(gui);
+    expect_true(panel->build_count == 3, "a quest-state property change must count exactly one rebuild");
+
+    quest_state->signal("turnPassed");
+    drain_event_loop();
+    panel->getText(gui);
+    panel->getText(gui);
+    expect_true(panel->build_count == 4, "turnPassed must count exactly one rebuild");
+
+    quest_state->signal("objectChanged", Coords(5, 6, 0));
+    drain_event_loop();
+    panel->getText(gui);
+    panel->getText(gui);
+    expect_true(panel->build_count == 5, "objectChanged must count exactly one rebuild");
+
+    // Unrelated changes on the unsubscribed channels count zero rebuilds.
+    player->setNumericProperty("threat", 3);
+    drain_event_loop();
+    panel->getText(gui);
+    expect_true(panel->build_count == 5, "unrelated player property changes must not count a quest journal rebuild");
 }
 
 struct MinimapHarness {
@@ -2960,6 +3173,8 @@ int main() {
     test_quest_panel_rebuilds_text_only_when_quest_data_changes();
     test_quest_panel_resubscribes_when_quest_source_changes();
     test_quest_panel_rebuilds_when_quest_state_properties_change();
+    test_reactive_list_views_refresh_counts_match_model_changes_exactly();
+    test_quest_panel_refresh_count_coalesces_rapid_invalidations();
     test_inventory_double_select_uses_selected_item_and_clears_selection();
     test_inventory_right_click_uses_usable_item_once_and_consumes_it();
     test_inventory_right_click_full_resource_item_not_consumed();
