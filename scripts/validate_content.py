@@ -208,19 +208,41 @@ BUFF_EFFECT_TAG = "buff"
 # metadata property (a typo such as "strenght" would be silently dropped at load
 # time), "actions" is a list of object nodes that must each resolve to a CInteraction
 # (the same resolution the class actions validator enforces), and "creatureType" /
-# "subtypes" tag the race for type-driven lookups.  For now the type fields are
-# DATA-ONLY -- the only rule is that "creatureType" is a non-empty string and every
-# "subtypes" entry is a non-empty string; no mechanical type semantics are invented.
-# The allowed baseStats keys are derived from the live CStats metadata schema so they
-# stay in lockstep with src/core/CStats.h, and CInteraction resolution reuses the
-# class-action helper.  CCreatureRace configs do not exist on current content, so this
-# check is vacuously satisfied (forward-guarding) until such archetypes are authored.
+# "subtypes" tag the race for type-driven lookups.  The type fields stay
+# mechanically DATA-ONLY: "creatureType" must be a non-empty string that names a
+# catalogued creature type (see the creature type catalog below) and every
+# "subtypes" entry must be a non-empty string; no mechanical type semantics are
+# invented.  The allowed baseStats keys are derived from the live CStats metadata
+# schema so they stay in lockstep with src/core/CStats.h, and CInteraction
+# resolution reuses the class-action helper.
 CREATURE_RACE_CONSTRUCTOR_CLASS = "CCreatureRace"
 CREATURE_RACE_BASE_STATS_PROPERTY = "baseStats"
 CREATURE_RACE_ACTIONS_PROPERTY = "actions"
 CREATURE_RACE_TYPE_PROPERTY = "creatureType"
 CREATURE_RACE_SUBTYPES_PROPERTY = "subtypes"
 CREATURE_RACE_STATS_SCHEMA_CLASS = "CStats"
+
+# Creature type catalog (EPIC_08/STORY_01/SUBSTORY_01).
+# "creatureType" strings were previously free-form data tags; they are now validated
+# against a canonical catalog, res/config/creature_types.json, whose single
+# "creatureTypeCatalog" entry maps every known type id to a short description.  This
+# is a VALIDATION-ONLY promotion: no runtime mechanic (immunities, targeting, ...)
+# reads the catalog and current combat behavior is unchanged -- the catalog is
+# exactly the set of creatureType strings observed in current content, so validation
+# passes by construction.  The membership check fails closed: a creatureType that
+# cannot be checked because the catalog file is missing or malformed is reported
+# rather than silently accepted.  Content that declares no creatureType does not
+# require the catalog file (synthetic fixture repos stay valid), and the catalog
+# file itself is schema-checked whenever it exists.  The catalog is data-only (no
+# "class"/"ref"), so the engine's config loader skips it the same way it skips the
+# player class/race profile files.
+CREATURE_TYPES_CONFIG = "creature_types.json"
+CREATURE_TYPE_CATALOG_ENTRY = "creatureTypeCatalog"
+CREATURE_TYPE_CATALOG_KIND_KEY = "catalogKind"
+CREATURE_TYPE_CATALOG_KIND = "creatureType"
+CREATURE_TYPE_CATALOG_TYPES_KEY = "types"
+CREATURE_TYPE_CATALOG_ENTRY_KEYS = {CREATURE_TYPE_CATALOG_KIND_KEY, CREATURE_TYPE_CATALOG_TYPES_KEY}
+CREATURE_TYPE_DESCRIPTION_KEY = "description"
 
 # Archetype-definition base classes (EPIC_06/STORY_04/SUBSTORY_02).
 # CCreatureRace and CCreatureClass configs are *referenced definitions* (a race or
@@ -1371,6 +1393,10 @@ class ContentValidator:
         self.issues: list[ValidationIssue] = []
         self.global_entries: dict[str, ConfigEntry] = {}
         self.global_files: dict[Path, Any] = {}
+        # Parsed creature type catalog (the set of canonical creatureType ids), or None
+        # while unparsed / when res/config/creature_types.json is missing or malformed.
+        # Populated by _validate_creature_type_catalog before config entries are checked.
+        self.creature_type_catalog: set[str] | None = None
         self.map_contexts: list[MapContext] = []
         self.campaign_contexts: list[CampaignContext] = []
         self.plugin_info: list[ScriptInfo] = []
@@ -1939,6 +1965,9 @@ class ContentValidator:
         return analyzer.info
 
     def _validate_global_configs(self) -> None:
+        # Parse the creature type catalog first so every subsequent config entry check
+        # (global and map-local) sees the resolved canonical type set.
+        self._validate_creature_type_catalog()
         visible = dict(self.global_entries)
         known_classes = self._constructible_classes()
         for entry in self.global_entries.values():
@@ -4391,9 +4420,10 @@ class ContentValidator:
         chain or another object is still checked.  For every node whose effective class
         is ``CCreatureRace`` it verifies that each ``baseStats`` key names a ``CStats``
         metadata property, that each ``actions`` entry resolves to a ``CInteraction``,
-        and that ``creatureType`` / every ``subtypes`` entry is a non-empty string. The
-        type fields stay DATA-ONLY (non-empty-string checks only); no mechanical type
-        semantics are inferred.
+        that ``creatureType`` is a non-empty string naming a catalogued creature type
+        (res/config/creature_types.json), and that every ``subtypes`` entry is a
+        non-empty string.  The type fields stay mechanically DATA-ONLY; the catalog is
+        validation-only metadata and no mechanical type semantics are inferred.
         """
         if isinstance(value, dict):
             if self._effective_object_class(value, visible) == CREATURE_RACE_CONSTRUCTOR_CLASS:
@@ -4509,6 +4539,131 @@ class ContentValidator:
                 path,
                 location,
                 f'"{CREATURE_RACE_TYPE_PROPERTY}" expected a non-empty string; got {json_value_kind(creature_type)}',
+            )
+            return
+        # Catalog membership (EPIC_08/STORY_01/SUBSTORY_01): every creatureType string
+        # must name a canonical type from res/config/creature_types.json.  The check
+        # fails closed -- a type that cannot be verified because the catalog is missing
+        # or malformed is reported instead of silently accepted.
+        if self.creature_type_catalog is None:
+            self._issue(
+                path,
+                location,
+                f'{CREATURE_RACE_TYPE_PROPERTY} "{creature_type}" cannot be validated: the creature type '
+                f"catalog res/config/{CREATURE_TYPES_CONFIG} is missing or malformed; declare a "
+                f'"{CREATURE_TYPE_CATALOG_ENTRY}" entry listing every canonical creature type',
+            )
+            return
+        if creature_type not in self.creature_type_catalog:
+            self._issue(
+                path,
+                location,
+                f'unknown {CREATURE_RACE_TYPE_PROPERTY} "{creature_type}"; expected one of '
+                f"{', '.join(sorted(self.creature_type_catalog))} "
+                f"(add the new type to res/config/{CREATURE_TYPES_CONFIG} or fix the value)",
+            )
+
+    def _validate_creature_type_catalog(self) -> None:
+        """Parse and schema-check the creature type catalog config.
+
+        The catalog file res/config/creature_types.json declares a single data-only
+        entry, ``creatureTypeCatalog``, whose ``types`` object maps every canonical
+        ``creatureType`` id to a definition carrying a short human-readable
+        ``description``.  On success ``self.creature_type_catalog`` becomes the set of
+        canonical type ids used by _validate_creature_race_type; when the file is
+        absent, unreadable, or its ``types`` map is unusable, the catalog stays None
+        and every creatureType usage in content is reported as unverifiable (fail
+        closed).  A missing catalog file alone is NOT an issue -- content that never
+        declares a creatureType (e.g. synthetic fixture repos) does not need one --
+        but a catalog file that exists is always schema-checked.  Validation-only:
+        nothing at runtime reads the catalog.
+        """
+        catalog_path = None
+        data = None
+        for path, file_data in self.global_files.items():
+            if path.name == CREATURE_TYPES_CONFIG:
+                catalog_path = path
+                data = file_data
+                break
+        if catalog_path is None or not isinstance(data, dict):
+            # Absent file, unreadable JSON, or a non-object document; the latter two are
+            # already reported by the loader, and creatureType usages fail closed.
+            return
+        unexpected_entries = sorted(set(data) - {CREATURE_TYPE_CATALOG_ENTRY})
+        if unexpected_entries:
+            self._issue(
+                catalog_path,
+                "$",
+                f'creature type catalog must declare only the "{CREATURE_TYPE_CATALOG_ENTRY}" entry; '
+                f"unexpected entries: {', '.join(unexpected_entries)}",
+            )
+        entry = data.get(CREATURE_TYPE_CATALOG_ENTRY)
+        if entry is None:
+            self._issue(
+                catalog_path,
+                "$",
+                f'creature type catalog is missing the "{CREATURE_TYPE_CATALOG_ENTRY}" entry',
+            )
+            return
+        if not isinstance(entry, dict):
+            self._issue(
+                catalog_path,
+                CREATURE_TYPE_CATALOG_ENTRY,
+                f"expected object; got {json_value_kind(entry)}",
+            )
+            return
+        if entry.get(CREATURE_TYPE_CATALOG_KIND_KEY) != CREATURE_TYPE_CATALOG_KIND:
+            self._issue(
+                catalog_path,
+                append_field(CREATURE_TYPE_CATALOG_ENTRY, CREATURE_TYPE_CATALOG_KIND_KEY),
+                f'expected "{CREATURE_TYPE_CATALOG_KIND}"',
+            )
+        unexpected_keys = sorted(set(entry) - CREATURE_TYPE_CATALOG_ENTRY_KEYS)
+        if unexpected_keys:
+            self._issue(
+                catalog_path,
+                CREATURE_TYPE_CATALOG_ENTRY,
+                f"unsupported catalog keys: {', '.join(unexpected_keys)}",
+            )
+        types = entry.get(CREATURE_TYPE_CATALOG_TYPES_KEY)
+        types_location = append_field(CREATURE_TYPE_CATALOG_ENTRY, CREATURE_TYPE_CATALOG_TYPES_KEY)
+        if not isinstance(types, dict):
+            self._issue(
+                catalog_path,
+                types_location,
+                f"expected object mapping creature type ids to definitions; got {json_value_kind(types)}",
+            )
+            return
+        if not types:
+            self._issue(catalog_path, types_location, "creature type catalog must declare at least one type")
+            return
+        for type_id, definition in types.items():
+            self._validate_creature_type_definition(
+                catalog_path, append_field(types_location, type_id), type_id, definition
+            )
+        self.creature_type_catalog = {type_id for type_id in types if type_id}
+
+    def _validate_creature_type_definition(self, path: Path, location: str, type_id: str, definition: Any) -> None:
+        """Check one catalog type entry: non-empty id plus a described definition object.
+
+        A malformed definition is reported but does not invalidate the whole catalog --
+        the sibling type ids stay usable for membership checks, and the validation run
+        already fails through the definition issue itself.
+        """
+        if not type_id:
+            self._issue(path, location, "creature type ids must be non-empty strings")
+        if not isinstance(definition, dict):
+            self._issue(path, location, f"expected object; got {json_value_kind(definition)}")
+            return
+        unexpected = sorted(set(definition) - {CREATURE_TYPE_DESCRIPTION_KEY})
+        if unexpected:
+            self._issue(path, location, f"unsupported creature type keys: {', '.join(unexpected)}")
+        description = definition.get(CREATURE_TYPE_DESCRIPTION_KEY)
+        if not isinstance(description, str) or not description:
+            self._issue(
+                path,
+                append_field(location, CREATURE_TYPE_DESCRIPTION_KEY),
+                f"expected non-empty string; got {json_value_kind(description)}",
             )
 
     def _validate_creature_race_subtypes(self, path: Path, location: str, subtypes: Any) -> None:
