@@ -1757,6 +1757,66 @@ class ContentValidatorTest(unittest.TestCase):
             "cannot be used as a concrete spawn target",
         )
 
+    def test_creature_template_id_as_spawn_target_is_rejected(self):
+        # CCreatureTemplate overlays (EPIC_08) are referenced definitions carried via
+        # CCreature.templates; runtime createObject<CMapObject> on one returns null and
+        # silently skips the spawn, so the validator must reject them as spawn targets
+        # exactly like race/class definitions.
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/creature_templates.json",
+            {"eliteTemplate": {"class": "CCreatureTemplate", "properties": {"label": "Elite"}}},
+        )
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"][0]["type"] = "eliteTemplate"
+        write_json(map_path, map_data)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/map.json",
+            "layers[1].objects[0].type",
+            'object type "eliteTemplate" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
+    def test_class_track_id_as_create_object_target_is_rejected(self):
+        # CCreatureClassTrack multiclass records (EPIC_08) are referenced definitions
+        # carried via CCreature.classTracks; they are constructible metadata, never
+        # spawnable actors, so a script spawn ref naming one must be rejected. Track
+        # records have no dedicated config file, so the guard must catch them purely by
+        # effective engine class.
+        root = self.make_fixture()
+        write_json(
+            root / "res/config/monsters.json",
+            {
+                "warriorTrack": {
+                    "class": "CCreatureClassTrack",
+                    "properties": {"label": "Warrior track", "level": 2},
+                }
+            },
+        )
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("warriorTrack")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'createObject("warriorTrack")',
+            'object ref or class "warriorTrack" is a creature archetype definition',
+            "cannot be used as a concrete spawn target",
+        )
+
     def test_concrete_creature_spawn_alongside_archetype_definitions_passes(self):
         root = self.make_fixture()
         write_json(

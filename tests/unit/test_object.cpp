@@ -1982,6 +1982,76 @@ void test_single_class_track_matches_single_creature_class() {
                 "the single creatureClass reference is preserved (not replaced) when tracks are present");
 }
 
+void test_same_order_class_tracks_tie_break_deterministically() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Determinism for equal `order` keys: the
+    // tie-break chain exhausts every stable configured field before touching names
+    // -- track typeId, then referenced-class typeId, then per-track level -- so
+    // same-order tracks never fall to the backing set's pointer order. Each case
+    // asserts the fold order for BOTH insertion orders of the same two records.
+    auto orderedFor = [](const std::shared_ptr<CCreatureClassTrack> &a, const std::shared_ptr<CCreatureClassTrack> &b) {
+        auto creature = std::make_shared<CCreature>();
+        creature->setClassTracks({a, b});
+        auto forward = creature->getOrderedClassTracks();
+        creature->setClassTracks({b, a});
+        auto reversed = creature->getOrderedClassTracks();
+        expect_true(forward.size() == 2 && reversed.size() == 2 && forward[0] == reversed[0] &&
+                        forward[1] == reversed[1],
+                    "same-order tracks must sort identically regardless of insertion order");
+        return forward;
+    };
+
+    // Case 1: equal order, distinct track typeIds -- the track typeId decides.
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setTypeId("warriorClass");
+    auto trackA = std::make_shared<CCreatureClassTrack>();
+    trackA->setTypeId("aTrack");
+    trackA->setCreatureClass(klass);
+    auto trackB = std::make_shared<CCreatureClassTrack>();
+    trackB->setTypeId("bTrack");
+    trackB->setCreatureClass(klass);
+    auto byTypeId = orderedFor(trackA, trackB);
+    expect_true(byTypeId.size() == 2 && byTypeId[0] == trackA && byTypeId[1] == trackB,
+                "equal-order tracks tie-break on the track typeId first");
+
+    // Case 2: equal order, anonymous tracks, distinct class typeIds -- the
+    // referenced class's typeId decides.
+    auto mage = std::make_shared<CCreatureClass>();
+    mage->setTypeId("mageClass");
+    mage->setMainStat("intelligence");
+    auto warrior = std::make_shared<CCreatureClass>();
+    warrior->setTypeId("warriorClass");
+    warrior->setMainStat("strength");
+    auto mageTrack = std::make_shared<CCreatureClassTrack>();
+    mageTrack->setCreatureClass(mage);
+    auto warriorTrack = std::make_shared<CCreatureClassTrack>();
+    warriorTrack->setCreatureClass(warrior);
+    auto byClass = orderedFor(mageTrack, warriorTrack);
+    expect_true(byClass.size() == 2 && byClass[0] == mageTrack && byClass[1] == warriorTrack,
+                "anonymous equal-order tracks tie-break on the referenced class typeId");
+    // The stable tie-break drives observable composition: the first track's class
+    // mainStat is authoritative for both insertion orders.
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("stamina");
+    creature->setBaseStats(base);
+    creature->setClassTracks({warriorTrack, mageTrack});
+    expect_true(creature->getStats()->getMainStat() == "intelligence",
+                "mainStat authority follows the deterministic tie-break, not insertion or pointer order");
+
+    // Case 3: equal order, anonymous tracks of the SAME class -- the per-track
+    // level decides (ascending), keeping the fold reproducible; and because the
+    // class is the same, either relative order composes identical stats anyway.
+    auto low = std::make_shared<CCreatureClassTrack>();
+    low->setCreatureClass(warrior);
+    low->setLevel(1);
+    auto high = std::make_shared<CCreatureClassTrack>();
+    high->setCreatureClass(warrior);
+    high->setLevel(3);
+    auto byLevel = orderedFor(low, high);
+    expect_true(byLevel.size() == 2 && byLevel[0] == low && byLevel[1] == high,
+                "same-class equal-order tracks tie-break on the per-track level");
+}
+
 void test_creature_class_track_metadata_round_trip() {
     // [EPIC_08][STORY_03][SUBSTORY_01] CCreatureClassTrack is a CGameObject-derived
     // record that serializes like the other archetype definitions: its class
@@ -2891,6 +2961,7 @@ int main() {
     test_no_class_track_creature_composes_bit_identically_to_baseline();
     test_creature_class_tracks_fold_deterministically_in_order();
     test_single_class_track_matches_single_creature_class();
+    test_same_order_class_tracks_tie_break_deterministically();
     test_creature_class_track_metadata_round_trip();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();

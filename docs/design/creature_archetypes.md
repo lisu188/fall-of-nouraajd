@@ -640,9 +640,19 @@ creature has an empty track set and keeps the single-class paths bit-identically
   level, default 0) and `order` (the ordering key, default 0).
 - **Attachment** — `CCreature.classTracks` (`std::set` V_PROPERTY, so track
   records serialize/clone exactly like the race/class/template references; no
-  bespoke serializer needed). Tracks apply in ascending `order`, ties broken by
-  configured identity then referenced-class identity
-  (`CCreature::getOrderedClassTracks`).
+  bespoke serializer needed). Tracks apply in ascending `order`; ties break on an
+  explicit chain that exhausts every stable configured field before touching
+  names: track `typeId`, then referenced-class `typeId`, then the per-track
+  `level`, then track/class names (`CCreature::getOrderedClassTracks`).
+  Config-referenced records always carry a stable `typeId`, so distinctly
+  configured tracks always order deterministically; same-order tracks that tie on
+  the whole configured chain (same class identity, same level) contribute
+  identically, so their relative order cannot change the composed result. The one
+  residual shape — same-order fully-anonymous tracks referencing *different*
+  anonymous inline classes — falls back to engine-generated names (stable within
+  a run and across save/load, but not across fresh loads) and is therefore
+  documented-unsupported: give such tracks distinct `order` keys or reference
+  their classes by id.
 - **Precedence vs the single `creatureClass`** — when `classTracks` is non-empty
   the tracks SUBSUME the single `creatureClass` for every class-derived
   contribution (base stats, level growth, actions, mainStat); the `creatureClass`
@@ -673,7 +683,8 @@ creature has an empty track set and keeps the single-class paths bit-identically
   to the contracts above. Pinned by
   `test_no_class_track_creature_composes_bit_identically_to_baseline`,
   `test_creature_class_tracks_fold_deterministically_in_order`,
-  `test_single_class_track_matches_single_creature_class` and
+  `test_single_class_track_matches_single_creature_class`,
+  `test_same_order_class_tracks_tie_break_deterministically` and
   `test_creature_class_track_metadata_round_trip` in
   `tests/unit/test_object.cpp`, plus the clone round-trip
   `test_creature_clone_preserves_class_tracks` in `tests/unit/test_core.cpp`.

@@ -226,14 +226,27 @@ CREATURE_RACE_STATS_SCHEMA_CLASS = "CStats"
 # CCreatureRace and CCreatureClass configs are *referenced definitions* (a race or
 # class template carried by a creature via the "creatureClass"/race reference
 # property), never actors that can be instantiated onto a map or spawned at
-# runtime.  Any config whose effective engine class is one of these -- or which is
-# declared in the dedicated archetype config files -- must therefore be rejected
-# when used as a concrete spawn target: map object types, map tile types, and
-# createObject/addObjectByName script calls.
+# runtime.  The future-mechanics metadata layers (EPIC_08) are referenced
+# definitions in exactly the same sense: CCreatureTemplate overlays (carried via
+# the "templates" set) and CCreatureClassTrack multiclass records (carried via the
+# "classTracks" set) are registered as constructible CGameObjects but are never
+# spawnable actors -- runtime createObject<CMapObject> on one returns null and the
+# spawn is silently skipped.  Any config whose effective engine class is one of
+# these -- or which is declared in the dedicated archetype config files -- must
+# therefore be rejected when used as a concrete spawn target: map object types,
+# map tile types, and createObject/addObjectByName script calls.
 CREATURE_RACE_BASE_CLASS = "CCreatureRace"
 CREATURE_CLASS_BASE_CLASS = "CCreatureClass"
-CREATURE_ARCHETYPE_BASE_CLASSES = (CREATURE_RACE_BASE_CLASS, CREATURE_CLASS_BASE_CLASS)
-CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG)
+CREATURE_TEMPLATE_BASE_CLASS = "CCreatureTemplate"
+CREATURE_CLASS_TRACK_BASE_CLASS = "CCreatureClassTrack"
+CREATURE_TEMPLATES_CONFIG = "creature_templates.json"
+CREATURE_ARCHETYPE_BASE_CLASSES = (
+    CREATURE_RACE_BASE_CLASS,
+    CREATURE_CLASS_BASE_CLASS,
+    CREATURE_TEMPLATE_BASE_CLASS,
+    CREATURE_CLASS_TRACK_BASE_CLASS,
+)
+CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG, CREATURE_TEMPLATES_CONFIG)
 
 # CCreature.creatureClass reference resolution policy (EPIC_06/STORY_01/SUBSTORY_02).
 # A CCreature config carries its class template through the JSON *property*
@@ -4543,14 +4556,16 @@ class ContentValidator:
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
 
     def _archetype_definition_ids(self, visible: dict[str, ConfigEntry]) -> set[str]:
-        """Resolve config ids that name a CCreatureRace/CCreatureClass *definition*.
+        """Resolve config ids that name an archetype/metadata *definition*.
 
         An id is an archetype definition when its effective engine class (following
-        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES or inherits from
+        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES (CCreatureRace,
+        CCreatureClass, CCreatureTemplate, CCreatureClassTrack) or inherits from
         one, or when it is a top-level entry declared in the dedicated archetype
-        config files (creature_races.json / creature_classes.json).  Such ids are
-        referenced definitions, not actors, so using them as a concrete spawn target
-        is rejected.  Resolution is purely structural -- never from id name strings.
+        config files (creature_races.json / creature_classes.json /
+        creature_templates.json).  Such ids are referenced definitions, not actors,
+        so using them as a concrete spawn target is rejected.  Resolution is purely
+        structural -- never from id name strings.
         """
         archetype_ids: set[str] = set()
         for key, entry in visible.items():
@@ -4589,7 +4604,7 @@ class ContentValidator:
             path,
             location,
             f'{label} "{name}" is a creature archetype definition '
-            f"(CCreatureRace/CCreatureClass) and cannot be used as a concrete spawn target",
+            f"({'/'.join(CREATURE_ARCHETYPE_BASE_CLASSES)}) and cannot be used as a concrete spawn target",
         )
         return True
 

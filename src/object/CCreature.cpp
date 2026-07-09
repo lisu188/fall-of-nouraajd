@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CCreature.h"
 #include <algorithm>
+#include <tuple>
 #include <vector>
 
 #include "object/CCreatureClass.h"
@@ -1249,23 +1250,29 @@ void CCreature::setClassTracks(std::set<std::shared_ptr<CCreatureClassTrack>> va
 
 std::vector<std::shared_ptr<CCreatureClassTrack>> CCreature::getOrderedClassTracks() {
     std::vector<std::shared_ptr<CCreatureClassTrack>> ordered(classTracks.begin(), classTracks.end());
-    // Deterministic multiclass progression order: ascending `order` key, ties
-    // broken by the track's configured identity (typeId, then name), then by the
-    // referenced class's identity so inline anonymous records still fold in
-    // reproducibly (mirrors getOrderedTemplates).
+    // Deterministic multiclass progression order (docs/design/creature_archetypes.md,
+    // "Multiclass class-track layer"): ascending `order` key, ties broken by an
+    // explicit chain that exhausts every STABLE configured field before touching
+    // names -- track typeId, then referenced-class typeId, then the per-track level.
+    // Config-referenced records always carry a stable typeId, so any tie between
+    // distinctly configured tracks resolves on stable fields; two same-order tracks
+    // that tie on the whole configured chain (same class identity, same level)
+    // contribute identically to stats/actions/mainStat, so their relative order
+    // cannot change the composed result. Only after that do the track/class names
+    // participate: for inline anonymous records those names are engine-generated
+    // (stable within a run and across save/load, but not across fresh loads of the
+    // same authored config), so two same-order fully-anonymous tracks referencing
+    // DIFFERENT anonymous inline classes are a documented-unsupported authoring
+    // shape -- give such tracks distinct `order` keys or reference their classes
+    // by id.
     auto identity = [](const std::shared_ptr<CCreatureClassTrack> &track) {
-        std::string key = track->getTypeId().empty() ? track->getName() : track->getTypeId();
-        if (auto trackClass = track->getCreatureClass()) {
-            key += "/" + (trackClass->getTypeId().empty() ? trackClass->getName() : trackClass->getTypeId());
-        }
-        return key;
+        auto trackClass = track->getCreatureClass();
+        return std::make_tuple(track->getOrder(), track->getTypeId(),
+                               trackClass ? trackClass->getTypeId() : std::string(), track->getLevel(),
+                               track->getName(), trackClass ? trackClass->getName() : std::string());
     };
-    std::sort(ordered.begin(), ordered.end(), [&identity](const auto &lhs, const auto &rhs) {
-        if (lhs->getOrder() != rhs->getOrder()) {
-            return lhs->getOrder() < rhs->getOrder();
-        }
-        return identity(lhs) < identity(rhs);
-    });
+    std::sort(ordered.begin(), ordered.end(),
+              [&identity](const auto &lhs, const auto &rhs) { return identity(lhs) < identity(rhs); });
     return ordered;
 }
 
