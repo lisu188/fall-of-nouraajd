@@ -1343,6 +1343,24 @@ def taskPayload(task: TaskRecord, state: QueueState | None = None, now: datetime
     return payload
 
 
+def preflightClaimPayload(task: TaskRecord, headBranch: str | None = None) -> dict[str, Any]:
+    """Read-only claim identity in the exact shape `pr_review_audit.py preflight` consumes.
+
+    Correlates the queue row (issue name, claim ID, owner, claimed target files)
+    with the intended head branch so the controller can run the duplicate/scope
+    preflight before opening an implementation PR. Never mutates the workbook.
+    """
+    payload: dict[str, Any] = {
+        "issueName": task.issueName,
+        "claimId": str(task.values.get("Claim ID") or "").strip(),
+        "owner": str(task.values.get("Owner") or "").strip(),
+        "targetFiles": sorted(task.targetFiles),
+    }
+    if headBranch:
+        payload["headBranch"] = str(headBranch).strip()
+    return payload
+
+
 def ageMinutes(now: datetime, then: datetime | None) -> int | None:
     if then is None:
         return None
@@ -2011,17 +2029,13 @@ def buildParser() -> argparse.ArgumentParser:
         "propose", help="Append a new NOT_STARTED issue (e.g. an autonomously discovered bug)"
     )
     addCommonArguments(proposeParser)
-    proposeParser.add_argument(
-        "--issue-name", required=True, help="[EPIC_NN][STORY_NN][SUBSTORY_NN]<title>"
-    )
+    proposeParser.add_argument("--issue-name", required=True, help="[EPIC_NN][STORY_NN][SUBSTORY_NN]<title>")
     proposeParser.add_argument("--epic-title", required=True)
     proposeParser.add_argument("--story-title", required=True)
     proposeParser.add_argument("--substory-title", required=True)
     proposeParser.add_argument("--priority", required=True, help="P0, P1, or P2")
     proposeParser.add_argument("--component", required=True)
-    proposeParser.add_argument(
-        "--target-file", action="append", default=[], help="Target file/module; may be repeated"
-    )
+    proposeParser.add_argument("--target-file", action="append", default=[], help="Target file/module; may be repeated")
     proposeParser.add_argument("--issue-type", default="Bug")
     proposeParser.add_argument("--dependencies", default="None")
     proposeParser.add_argument("--description")
@@ -2030,9 +2044,7 @@ def buildParser() -> argparse.ArgumentParser:
     proposeParser.add_argument("--acceptance-file")
     proposeParser.add_argument("--validation")
     proposeParser.add_argument("--validation-file")
-    proposeParser.add_argument(
-        "--source-url", action="append", default=[], help="Evidence/source URL; may be repeated"
-    )
+    proposeParser.add_argument("--source-url", action="append", default=[], help="Evidence/source URL; may be repeated")
     proposeParser.add_argument("--sprint", default="None")
 
     listParser = subparsers.add_parser("list", help="List tasks")

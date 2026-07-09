@@ -599,6 +599,26 @@ git commit -m "$COMMIT_MESSAGE"
 git push -u origin "$IMPL_BRANCH"
 ```
 
+Before `gh pr create`, run the read-only duplicate/scope preflight and gate on its exit code. Build the claim identity
+from the queue row (`issue_queue.preflightClaimPayload`), snapshot open/merged PRs read-only, and never open a second
+PR for the same live claim:
+
+```bash
+gh pr list --state all --limit 100 \
+  --json number,state,title,headRefName,mergedAt > /tmp/pr-snapshot.json
+# Assemble request.json: {"claim": {issueName, claimId, owner, headBranch, targetFiles},
+#   "pullRequests": [...snapshot...], "candidate": {"files": [...changed files...]}}
+# exit 0: allow / allow_replacement (declare an explicit replacement with "replaces": <pr#> in request.json)
+# exit 1: reject_duplicate_open (adopt or replace the open PR), already_delivered (go to terminal publication),
+#         or cannot_verify (collect missing identity evidence). Do not open the PR; the preflight mutates nothing.
+if ! python3 scripts/pr_review_audit.py preflight --input request.json; then
+  echo "preflight blocked PR creation; resolve the verdict before gh pr create"
+  exit 1
+fi
+```
+
+Scope findings (files outside the claimed target files, broad diffs) are advisory warnings, never rejections.
+
 Open a ready implementation pull request targeting `main` after focused local checks. Do not run or wait for local
 native builds, `ctest`, full Python suites, native performance guards, or local coverage when the GitHub Actions PR
 workflow can provide that evidence. Its body must include:
