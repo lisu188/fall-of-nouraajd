@@ -1372,13 +1372,25 @@ class ContentValidatorTest(unittest.TestCase):
 
     def test_creature_archetype_naming_policy_accepts_conforming_ids(self):
         root = self.make_fixture()
+        # Register the archetype classes statically (without V_META) so the object
+        # nodes are constructible: entries must carry "class"/"ref" to be registered
+        # by the runtime config loader at all, like the real archetype content.
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() {\n"
+            "    CTypes::register_type<CCreatureRace, CGameObject>();\n"
+            "    CTypes::register_type<CCreatureClass, CGameObject>();\n"
+            "}\n",
+            encoding="utf-8",
+        )
         write_json(
             root / "res/config/creature_races.json",
-            {"humanRace": {"properties": {"creatureClass": {"ref": "warriorClass"}}}},
+            {"humanRace": {"class": "CCreatureRace", "properties": {"creatureClass": {"ref": "warriorClass"}}}},
         )
         write_json(
             root / "res/config/creature_classes.json",
-            {"warriorClass": {"properties": {"label": "Warrior"}}},
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
         )
 
         issues = validate_repo(root)
@@ -3095,6 +3107,71 @@ class ContentValidatorTest(unittest.TestCase):
         )
         issue_text = "\n".join(str(issue) for issue in issues)
         self.assertNotIn("cannot be validated", issue_text)
+
+    def test_script_spawn_of_data_only_config_is_reported(self):
+        # The runtime config loader (CObjectHandler::registerConfig) skips data-only
+        # entries such as the creature type catalog, so a createObject against one
+        # can never resolve at runtime and must be rejected here.
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("creatureTypeCatalog")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'createObject("creatureTypeCatalog")',
+            'object ref or class "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_item_grant_of_data_only_config_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'event.getCause().addItem("LifePotion")',
+                'event.getCause().addItem("creatureTypeCatalog")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'addItem("creatureTypeCatalog")',
+            'item ref "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_object_node_ref_to_data_only_config_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["catalogCave"] = {"class": "CBuilding", "properties": {"monster": {"ref": "creatureTypeCatalog"}}}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "catalogCave.properties.monster.ref",
+            'ref "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
 
     def test_creature_type_catalog_matches_observed_content_types(self):
         # The catalog is the observed creatureType set by construction: every type

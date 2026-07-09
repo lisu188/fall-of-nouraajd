@@ -1368,6 +1368,21 @@ class TriggerAnalyzer(ast.NodeVisitor):
             )
 
 
+def is_runtime_registered_config(data: Any) -> bool:
+    """Whether the runtime config loader registers this top-level config entry.
+
+    Mirrors CObjectHandler::registerConfig (src/handler/CObjectHandler.cpp): a
+    top-level entry that is a JSON object with neither "class" nor "ref" is a
+    DATA-ONLY definition (player class/race profiles, crafting recipes, artifact
+    sets, the creature type catalog) that the runtime skips at registration, so
+    it can never be resolved by createObject/addObjectByName/addItem calls or by
+    an object-node ref.  The validator's visibility maps must exclude such
+    entries, otherwise a script or config referencing a data-only id would
+    validate here yet silently fail to resolve at runtime.
+    """
+    return not (isinstance(data, dict) and "class" not in data and "ref" not in data)
+
+
 def is_safe_map_relative_path(path: str) -> bool:
     """Return True when ``path`` is a safe POSIX-style relative path under a map directory.
 
@@ -1397,6 +1412,9 @@ class ContentValidator:
         # while unparsed / when res/config/creature_types.json is missing or malformed.
         # Populated by _validate_creature_type_catalog before config entries are checked.
         self.creature_type_catalog: set[str] | None = None
+        # Top-level config ids the runtime loader never registers (data-only entries,
+        # see is_runtime_registered_config); used to explain unresolvable references.
+        self.data_only_config_ids: set[str] = set()
         self.map_contexts: list[MapContext] = []
         self.campaign_contexts: list[CampaignContext] = []
         self.plugin_info: list[ScriptInfo] = []
@@ -1731,6 +1749,8 @@ class ContentValidator:
             if isinstance(data, dict):
                 for key, value in data.items():
                     self.global_entries[key] = ConfigEntry(key=key, data=value, path=path)
+                    if not is_runtime_registered_config(value):
+                        self.data_only_config_ids.add(key)
             else:
                 self._issue(path, "$", "expected top-level JSON object")
 
@@ -1753,6 +1773,8 @@ class ContentValidator:
                 if isinstance(data, dict):
                     for key, value in data.items():
                         config_entries[key] = ConfigEntry(key=key, data=value, path=path)
+                        if not is_runtime_registered_config(value):
+                            self.data_only_config_ids.add(key)
                 else:
                     self._issue(path, "$", "expected top-level JSON object")
             script_info = self._parse_script(directory / "script.py")
@@ -1968,7 +1990,7 @@ class ContentValidator:
         # Parse the creature type catalog first so every subsequent config entry check
         # (global and map-local) sees the resolved canonical type set.
         self._validate_creature_type_catalog()
-        visible = dict(self.global_entries)
+        visible = self._registered_entries(self.global_entries)
         known_classes = self._constructible_classes()
         for entry in self.global_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
@@ -2244,7 +2266,35 @@ class ContentValidator:
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)
         visible.update(context.config_entries)
-        return visible
+        return self._registered_entries(visible)
+
+    def _registered_entries(self, entries: dict[str, ConfigEntry]) -> dict[str, ConfigEntry]:
+        """The subset of config entries the runtime loader actually registers.
+
+        Mirrors CObjectHandler::registerConfig via is_runtime_registered_config:
+        data-only entries (an object without "class"/"ref") are dropped from the
+        visibility map so that script spawn/item calls and object-node refs which
+        name them are rejected here instead of silently failing at runtime.  The
+        entries themselves still live in global_entries/config_entries, so their
+        dedicated file-level validators (profiles, crafting, artifact sets, the
+        creature type catalog) keep running.
+        """
+        return {key: entry for key, entry in entries.items() if is_runtime_registered_config(entry.data)}
+
+    def _unresolvable_config_message(self, label: str, name: str) -> str:
+        """Message for a config reference the runtime cannot resolve.
+
+        Distinguishes a reference to a DATA-ONLY entry -- one the runtime config
+        loader skips at registration (CObjectHandler::registerConfig), so it can
+        never be instantiated, granted, or resolved -- from a plain unknown id.
+        """
+        if name in self.data_only_config_ids:
+            return (
+                f'{label} "{name}" names a data-only config entry (an object without "class"/"ref"); '
+                f"the runtime config loader never registers such entries, so the reference cannot "
+                f"resolve at runtime"
+            )
+        return f'unknown {label} "{name}"'
 
     def _known_classes(self, context: MapContext) -> set[str]:
         return self._constructible_classes(context.script_info.registered_classes if context.script_info else set())
@@ -2321,7 +2371,7 @@ class ContentValidator:
                 if not isinstance(ref, str):
                     self._issue(path, ref_location, "expected string ref")
                 elif ref not in visible:
-                    self._issue(path, ref_location, f'unknown ref "{ref}"')
+                    self._issue(path, ref_location, self._unresolvable_config_message("ref", ref))
             for key, child in value.items():
                 self._validate_refs(path, append_field(location, key), child, visible)
         elif isinstance(value, list):
@@ -3380,7 +3430,11 @@ class ContentValidator:
                     )
             elif call.name in SCRIPT_ITEM_CALLS:
                 if call.value not in visible:
-                    self._issue(context.script_info.path, call.location, f'unknown item ref "{call.value}"')
+                    self._issue(
+                        context.script_info.path,
+                        call.location,
+                        self._unresolvable_config_message("item ref", call.value),
+                    )
             elif call.name in SCRIPT_QUEST_CALLS:
                 if call.value not in visible:
                     self._issue(context.script_info.path, call.location, f'unknown quest id "{call.value}"')
@@ -4760,7 +4814,7 @@ class ContentValidator:
             return f'{label} "{class_name}" is registered by native plugin code but no manifest entry loads {owners}'
         if class_name in self.metadata_declared_classes:
             return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
-        return f'unknown {label} "{class_name}"'
+        return self._unresolvable_config_message(label, class_name)
 
     def _excluded_use_is_allowed(self, path: Path, location: str, class_name: str) -> bool:
         exclusion = self.registration_exclusions.get(class_name)
