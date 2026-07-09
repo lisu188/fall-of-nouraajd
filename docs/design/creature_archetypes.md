@@ -449,6 +449,24 @@ contribution is layered on top of (added after) the earlier sources. The
 ordering still matters for any non-commutative or selecting step (notably the
 main stat below) and to give a single, reproducible composition.
 
+### Racial advancement (racialLevel) — future-gated growth source
+
+Racial advancement is modeled **separately from the class-driven `level`**
+(EPIC_08/STORY_04/SUBSTORY_01): `CCreatureRace.racialLevelStats` is a
+hit-dice-style per-racial-level growth block and `CCreature.racialLevel` counts
+racial levels, distinct from `CCreature.level`. It folds in **between positions
+3 and 4** above (position "3a"): race-derived growth is the least-specific
+per-level source, so it opens the growth block ahead of
+`creatureClass.levelStats` and `creature.levelStats`, mirroring how
+`race.baseStats` leads the base block. Both default neutral (`racialLevel = 0`,
+empty progression), so the fold is a strict no-op for all existing content, and
+there is deliberately **no XP or level-up wiring** for `racialLevel` yet —
+raising it requires explicit XP/scale design and is deferred. The legacy path
+(`race == null`) has no racial source by construction. Pinned by
+`test_racial_progression_defaults_keep_composition_neutral` and
+`test_racial_level_composes_race_progression_independently_of_class_level` in
+`tests/unit/test_object.cpp`.
+
 ## Main stat selection (class first, then legacy creature baseStats)
 
 The composed block's **`mainStat`** is a *selected* (not accumulated) field. It

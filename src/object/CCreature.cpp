@@ -950,6 +950,16 @@ void CCreature::useItem(std::shared_ptr<CItem> item) {
 
 void CCreature::setLevel(int level) { this->level = level; }
 
+// Racial advancement (EPIC_08/STORY_04/SUBSTORY_01), modeled separately from the
+// class-driven `level`: racialLevel counts hit-dice-style racial levels and only
+// contributes when the creature's race defines racialLevelStats. It defaults to 0
+// (zero contribution) and deliberately has NO XP or level-up wiring yet -- gaining
+// racial levels requires explicit XP/scale design (deferred); today only
+// serialization and the composed-stat fold in buildComposedStats read it.
+int CCreature::getRacialLevel() { return racialLevel; }
+
+void CCreature::setRacialLevel(int value) { racialLevel = value; }
+
 int CCreature::getExpForLevel(int level) { return (level - 1) * level * 500; }
 
 void CCreature::removeQuestItem(std::shared_ptr<CItem> item) { removeItem(item, true); }
@@ -970,6 +980,7 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     //   1. race.baseStats
     //   2. creatureClass.baseStats
     //   3. creature.baseStats
+    //   3a. race.racialLevelStats per racialLevel (racial advancement; 0 by default)
     //   4. creatureClass.levelStats per level
     //   5. creature.levelStats per level
     //   6. template overlays (ordered) -- CCreatureTemplate.statAdjustments applied
@@ -1004,6 +1015,19 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     }
     // 3. creature.baseStats (concrete template's own base).
     ret->addBonus(getBaseStats());
+    // 3a. race.racialLevelStats per racialLevel -- racial advancement, modeled
+    // separately from the class-driven `level` (EPIC_08/STORY_04/SUBSTORY_01).
+    // Race-derived growth is the least-specific per-level source, so it opens the
+    // growth block ahead of creatureClass.levelStats and creature.levelStats,
+    // mirroring how race.baseStats leads the base block. No-op unless the race
+    // defines progression AND the creature has racial levels: the default
+    // racialLevel of 0 (and the default-empty progression) contributes nothing,
+    // so every existing creature composes bit-identically to today.
+    if (race && race->getRacialLevelStats()) {
+        for (int i = 0; i < racialLevel; i++) {
+            ret->addBonus(race->getRacialLevelStats());
+        }
+    }
     // 4. creatureClass.levelStats per level.
     if (creatureClass && creatureClass->getLevelStats()) {
         for (int i = 0; i < level; i++) {
@@ -1072,6 +1096,9 @@ std::shared_ptr<CStats> CCreature::buildLegacyStats() {
     // 1-2. race / creature-class baseStats: extension point (nothing to add yet).
     // 3. creature.baseStats (legacy concrete base).
     ret->addBonus(getBaseStats());
+    // 3a. racial advancement (race.racialLevelStats per racialLevel) is race-carried,
+    // so the legacy path (race == null) has no racial source by construction: a
+    // racialLevel on a legacy creature contributes nothing, exactly as before.
     // 4. creatureClass.levelStats per level: extension point (nothing to add yet).
     // 5. creature.levelStats per level (legacy concrete growth).
     for (int i = 0; i < level; i++) {

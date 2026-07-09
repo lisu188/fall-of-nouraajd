@@ -56,6 +56,7 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     V_META(CCreature, CMapObject, V_PROPERTY(CCreature, int, exp, getExp, setExp),
            V_PROPERTY(CCreature, int, gold, getGold, setGold), V_PROPERTY(CCreature, int, level, getLevel, setLevel),
+           V_PROPERTY(CCreature, int, racialLevel, getRacialLevel, setRacialLevel),
            V_PROPERTY(CCreature, int, mana, getMana, setMana), V_PROPERTY(CCreature, int, hp, getHp, setHp),
            V_PROPERTY(CCreature, int, sw, getSw, setSw),
            V_PROPERTY(CCreature, CInteractionMap, levelling, getLevelling, setLevelling),
@@ -159,6 +160,15 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     int getLevel();
 
     void setLevel(int level);
+
+    // Racial advancement, modeled separately from the class-driven `level`
+    // (EPIC_08/STORY_04/SUBSTORY_01). Counts hit-dice-style racial levels that
+    // apply race->racialLevelStats once each in the composed-stat fold. Defaults
+    // to 0 (zero contribution) and has NO XP or level-up wiring yet; the class
+    // level semantics, XP curve, and levelUp flow are untouched.
+    int getRacialLevel();
+
+    void setRacialLevel(int value);
 
     void addExpScaled(int scale);
 
@@ -328,6 +338,9 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     int gold = 0;
     int exp = 0;
     int level = 0;
+    // Racial (hit-dice-style) level, distinct from the class-driven `level`.
+    // 0 by default so existing creatures compose bit-identically to today.
+    int racialLevel = 0;
     int sw = 0;
     int mana = 0;
     int hp = 0;
