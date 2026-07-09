@@ -1132,5 +1132,298 @@ class PrReviewAuditTest(unittest.TestCase):
             self.assertIn("#112", stdout.getvalue())
 
 
+class PrPreflightTest(unittest.TestCase):
+    ISSUE = "[EPIC_01][STORY_04][SUBSTORY_01] Add pull-request preflight duplicate and scope guard"
+    CLAIM_ID = "claim-623-abc"
+    OWNER = "controller/ctrl-a/subagent-1"
+    HEAD = "codex/e01-s04-ss01-preflight"
+
+    def claim(self, **overrides: object) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "issueName": self.ISSUE,
+            "claimId": self.CLAIM_ID,
+            "owner": self.OWNER,
+            "headBranch": self.HEAD,
+        }
+        payload.update(overrides)
+        return payload
+
+    def preflight(self, **request: object) -> dict[str, object]:
+        request.setdefault("claim", self.claim())
+        return pr_review_audit.preflightVerdict(request)
+
+    def test_no_snapshot_conflicts_allows_pr(self) -> None:
+        verdict = self.preflight(pullRequests=[])
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertTrue(verdict["allowed"])
+        self.assertTrue(verdict["readOnly"])
+        self.assertEqual([], verdict["openDuplicates"])
+        self.assertEqual([], verdict["mergedDuplicates"])
+        self.assertEqual([], verdict["reasons"])
+
+    def test_second_open_pr_for_same_live_claim_is_rejected(self) -> None:
+        verdict = self.preflight(
+            pullRequests=[{"number": 1490, "state": "open", "claimId": self.CLAIM_ID, "headBranch": "codex/other-head"}]
+        )
+
+        self.assertEqual("reject_duplicate_open", verdict["verdict"])
+        self.assertFalse(verdict["allowed"])
+        self.assertEqual([1490], [dup["number"] for dup in verdict["openDuplicates"]])
+        self.assertIn("open PR #1490 duplicates this live claim: open PR carries the same claim id", verdict["reasons"])
+
+    def test_open_pr_with_same_issue_name_and_different_claim_is_rejected(self) -> None:
+        verdict = self.preflight(
+            pullRequests=[
+                {
+                    "number": 1491,
+                    "state": "open",
+                    "claimId": "stale-claim",
+                    "issueName": self.ISSUE,
+                    "headBranch": "codex/old",
+                }
+            ]
+        )
+
+        self.assertEqual("reject_duplicate_open", verdict["verdict"])
+        self.assertEqual("open PR references the same issue name", verdict["openDuplicates"][0]["reason"])
+
+    def test_open_pr_on_same_head_branch_is_rejected(self) -> None:
+        verdict = self.preflight(pullRequests=[{"number": 1492, "state": "open", "headRefName": self.HEAD}])
+
+        self.assertEqual("reject_duplicate_open", verdict["verdict"])
+        self.assertEqual("open PR uses the same head branch", verdict["openDuplicates"][0]["reason"])
+
+    def test_merged_pr_for_same_claim_short_circuits_as_already_delivered(self) -> None:
+        verdict = self.preflight(
+            pullRequests=[{"number": 1480, "state": "merged", "claimId": self.CLAIM_ID, "headBranch": self.HEAD}]
+        )
+
+        self.assertEqual("already_delivered", verdict["verdict"])
+        self.assertFalse(verdict["allowed"])
+        self.assertEqual([1480], [dup["number"] for dup in verdict["mergedDuplicates"]])
+        self.assertIn("terminal queue publication", verdict["recommendedActions"][0])
+
+    def test_merged_pr_on_same_head_without_claim_id_short_circuits(self) -> None:
+        verdict = self.preflight(
+            pullRequests=[{"number": 1481, "state": "closed", "merged": True, "branch": self.HEAD}]
+        )
+
+        self.assertEqual("already_delivered", verdict["verdict"])
+        self.assertEqual("merged PR matches the same head branch", verdict["mergedDuplicates"][0]["reason"])
+
+    def test_open_and_merged_prs_with_different_heads_and_claims_do_not_match(self) -> None:
+        verdict = self.preflight(
+            pullRequests=[
+                {
+                    "number": 1470,
+                    "state": "open",
+                    "claimId": "other-claim",
+                    "issueName": "[EPIC_02][STORY_01][SUBSTORY_01] Other",
+                    "headBranch": "codex/other",
+                },
+                {
+                    "number": 1471,
+                    "state": "merged",
+                    "claimId": "third-claim",
+                    "issueName": "[EPIC_03][STORY_01][SUBSTORY_01] Third",
+                    "headBranch": "codex/third",
+                },
+            ]
+        )
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertEqual([], verdict["openDuplicates"])
+        self.assertEqual([], verdict["mergedDuplicates"])
+
+    def test_merged_same_head_under_different_claim_warns_but_allows(self) -> None:
+        verdict = self.preflight(
+            pullRequests=[{"number": 1482, "state": "merged", "claimId": "other-claim", "headBranch": self.HEAD}]
+        )
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertTrue(any("under a different claim id" in warning for warning in verdict["warnings"]))
+
+    def test_explicit_replacement_of_open_duplicate_is_allowed(self) -> None:
+        verdict = self.preflight(
+            replaces=1490,
+            pullRequests=[{"number": 1490, "state": "open", "claimId": self.CLAIM_ID, "headBranch": "codex/old-head"}],
+        )
+
+        self.assertEqual("allow_replacement", verdict["verdict"])
+        self.assertTrue(verdict["allowed"])
+        self.assertEqual(1490, verdict["replaces"])
+        self.assertIn(
+            "request explicit human approval before closing the superseded PR", verdict["recommendedActions"][0]
+        )
+
+    def test_replacement_covers_only_declared_pr_and_other_open_duplicate_still_rejects(self) -> None:
+        verdict = self.preflight(
+            replaces=1490,
+            pullRequests=[
+                {"number": 1490, "state": "open", "claimId": self.CLAIM_ID},
+                {"number": 1493, "state": "open", "issueName": self.ISSUE},
+            ],
+        )
+
+        self.assertEqual("reject_duplicate_open", verdict["verdict"])
+        self.assertTrue(any("not covered by the declared replacement" in reason for reason in verdict["reasons"]))
+
+    def test_replacement_target_missing_from_snapshot_cannot_verify(self) -> None:
+        verdict = self.preflight(replaces=999, pullRequests=[])
+
+        self.assertEqual("cannot_verify", verdict["verdict"])
+        self.assertFalse(verdict["allowed"])
+        self.assertIn("declared replacement PR #999 is not present in the snapshot; cannot verify", verdict["reasons"])
+
+    def test_replacement_target_unrelated_to_claim_cannot_verify(self) -> None:
+        verdict = self.preflight(
+            replaces=1470,
+            pullRequests=[
+                {
+                    "number": 1470,
+                    "state": "open",
+                    "claimId": "other",
+                    "issueName": "[EPIC_02][STORY_01][SUBSTORY_01] Other",
+                    "headBranch": "codex/other",
+                }
+            ],
+        )
+
+        self.assertEqual("cannot_verify", verdict["verdict"])
+        self.assertIn(
+            "declared replacement PR #1470 does not match this claim identity; cannot verify", verdict["reasons"]
+        )
+
+    def test_replacement_of_merged_duplicate_allows_re_delivery_with_warning(self) -> None:
+        verdict = self.preflight(
+            replaces=1480,
+            pullRequests=[{"number": 1480, "state": "merged", "claimId": self.CLAIM_ID, "headBranch": self.HEAD}],
+        )
+
+        self.assertEqual("allow_replacement", verdict["verdict"])
+        self.assertIn("explicit replacement of merged PR #1480 re-delivers already-merged work", verdict["warnings"])
+
+    def test_title_collision_alone_is_advisory_not_rejecting(self) -> None:
+        verdict = self.preflight(
+            claim=self.claim(title="[EPIC_01][STORY_04][SUBSTORY_01] #623 Add preflight guard"),
+            pullRequests=[
+                {
+                    "number": 1494,
+                    "state": "open",
+                    "title": "[EPIC_01][STORY_04][SUBSTORY_01]  #623 add Preflight guard",
+                    "headBranch": "codex/unrelated",
+                }
+            ],
+        )
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertEqual([], verdict["openDuplicates"])
+        self.assertIn("title collision with open PR #1494; titles are not authoritative identity", verdict["warnings"])
+
+    def test_missing_claim_identity_fails_closed_to_cannot_verify(self) -> None:
+        verdict = pr_review_audit.preflightVerdict(
+            {"claim": {"owner": self.OWNER, "headBranch": self.HEAD}, "pullRequests": []}
+        )
+
+        self.assertEqual("cannot_verify", verdict["verdict"])
+        self.assertFalse(verdict["allowed"])
+        self.assertIn("claim identity is missing: issueName, claimId; cannot verify duplicates", verdict["reasons"])
+
+    def test_missing_head_branch_is_warned_but_claim_matching_still_works(self) -> None:
+        verdict = self.preflight(
+            claim=self.claim(headBranch=""),
+            pullRequests=[{"number": 1490, "state": "open", "claimId": self.CLAIM_ID}],
+        )
+
+        self.assertEqual("reject_duplicate_open", verdict["verdict"])
+        self.assertTrue(any("head branch is missing" in warning for warning in verdict["warnings"]))
+
+    def test_out_of_scope_files_produce_advisory_scope_warning(self) -> None:
+        verdict = self.preflight(
+            claim=self.claim(targetFiles=["scripts/pr_review_audit.py", "tests/test_pr_review_audit.py"]),
+            candidate={"files": ["scripts/pr_review_audit.py", "src/core/CGameContext.cpp"]},
+            pullRequests=[],
+        )
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertTrue(verdict["allowed"])
+        self.assertTrue(
+            any(
+                "outside the claimed target files: src/core/CGameContext.cpp" in warning
+                for warning in verdict["warnings"]
+            )
+        )
+
+    def test_broad_diff_file_count_warns_without_rejecting(self) -> None:
+        files = [f"src/generated/file_{index}.cpp" for index in range(pr_review_audit.BROAD_DIFF_FILE_LIMIT + 1)]
+        verdict = self.preflight(candidate={"files": files}, pullRequests=[])
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertTrue(any("broad diff with" in warning for warning in verdict["warnings"]))
+
+    def test_workbook_in_candidate_diff_warns(self) -> None:
+        verdict = self.preflight(candidate={"files": [pr_review_audit.WORKBOOK_PATH]}, pullRequests=[])
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertTrue(any("touches the queue workbook" in warning for warning in verdict["warnings"]))
+
+    def test_closed_unmerged_matching_pr_warns_but_allows(self) -> None:
+        verdict = self.preflight(pullRequests=[{"number": 1483, "state": "closed", "claimId": self.CLAIM_ID}])
+
+        self.assertEqual("allow", verdict["verdict"])
+        self.assertIn(
+            "closed unmerged PR #1483 previously matched this claim; verify it was superseded", verdict["warnings"]
+        )
+
+    def test_verdict_is_deterministic_and_side_effect_free(self) -> None:
+        request = {
+            "claim": self.claim(targetFiles=["scripts/pr_review_audit.py"]),
+            "candidate": {"files": ["scripts/pr_review_audit.py", "docs/extra.md"]},
+            "pullRequests": [
+                {"number": 1490, "state": "open", "claimId": self.CLAIM_ID},
+                {"number": 1480, "state": "merged", "claimId": self.CLAIM_ID, "headBranch": self.HEAD},
+            ],
+        }
+        snapshotBefore = json.dumps(request, sort_keys=True)
+
+        first = pr_review_audit.preflightVerdict(json.loads(snapshotBefore))
+        second = pr_review_audit.preflightVerdict(json.loads(snapshotBefore))
+
+        self.assertEqual(first, second)
+        self.assertEqual(snapshotBefore, json.dumps(request, sort_keys=True))
+        self.assertTrue(first["readOnly"])
+
+    def test_cli_preflight_subcommand_reports_verdict_and_exit_codes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            allowPath = Path(temp_dir) / "allow.json"
+            allowPath.write_text(
+                json.dumps({"claim": self.claim(), "pullRequests": []}),
+                encoding="utf-8",
+            )
+            rejectPath = Path(temp_dir) / "reject.json"
+            rejectPath.write_text(
+                json.dumps(
+                    {
+                        "claim": self.claim(),
+                        "pullRequests": [{"number": 1490, "state": "open", "claimId": self.CLAIM_ID}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exitCode = pr_review_audit.main(["preflight", "--input", str(allowPath)])
+            self.assertEqual(0, exitCode)
+            self.assertEqual("allow", json.loads(stdout.getvalue())["verdict"])
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                exitCode = pr_review_audit.main(["preflight", "--input", str(rejectPath)])
+            self.assertEqual(1, exitCode)
+            self.assertEqual("reject_duplicate_open", json.loads(stdout.getvalue())["verdict"])
+
+
 if __name__ == "__main__":
     unittest.main()

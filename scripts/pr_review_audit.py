@@ -41,6 +41,21 @@ AUTO_MERGE_DISABLED_MARKERS = (
     "enablepullrequestautomerge",
 )
 
+# Pull-request preflight verdicts. The preflight is strictly read-only: it
+# correlates a claim identity against a PR-state snapshot and returns a verdict;
+# it never mutates the queue workbook or any pull request.
+PREFLIGHT_ALLOW = "allow"
+PREFLIGHT_ALLOW_REPLACEMENT = "allow_replacement"
+PREFLIGHT_REJECT_DUPLICATE_OPEN = "reject_duplicate_open"
+PREFLIGHT_ALREADY_DELIVERED = "already_delivered"
+PREFLIGHT_CANNOT_VERIFY = "cannot_verify"
+
+PREFLIGHT_ALLOWED_VERDICTS = frozenset({PREFLIGHT_ALLOW, PREFLIGHT_ALLOW_REPLACEMENT})
+
+# Advisory scope heuristic: warn (never reject) when the candidate diff exceeds
+# this many files, matching the queue's advisory target-file-overlap philosophy.
+BROAD_DIFF_FILE_LIMIT = 25
+
 
 @dataclass(frozen=True)
 class CheckSummary:
@@ -799,6 +814,238 @@ def auditPayload(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def normalizeTitle(value: Any) -> str:
+    return " ".join(str(value or "").split()).lower()
+
+
+def parsePrNumber(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def prIsMerged(record: dict[str, Any]) -> bool:
+    state = normalizeToken(firstValue(record, "state", default=""))
+    return (
+        state == "merged"
+        or truthy(firstValue(record, "merged", "isMerged", default=False))
+        or bool(firstValue(record, "mergedAt", "merged_at", "mergeCommit", "merge_commit", default=None))
+    )
+
+
+def prHeadBranch(record: dict[str, Any]) -> str:
+    return str(
+        firstValue(record, "headBranch", "head_branch", "headRefName", "head_ref_name", "headRef", "branch", default="")
+        or ""
+    ).strip()
+
+
+def prClaimId(record: dict[str, Any]) -> str:
+    return str(firstValue(record, "claimId", "claim_id", default="") or "").strip()
+
+
+def prIssueName(record: dict[str, Any]) -> str:
+    return str(firstValue(record, "issueName", "issue", "linkedIssue", "linked_issue", default="") or "").strip()
+
+
+def duplicateRecord(record: dict[str, Any], number: int | None, reason: str, state: str) -> dict[str, Any]:
+    return {
+        "number": number,
+        "title": str(firstValue(record, "title", default="") or ""),
+        "headBranch": prHeadBranch(record),
+        "claimId": prClaimId(record),
+        "reason": reason,
+        "state": state,
+    }
+
+
+def preflightScopeWarnings(candidateFiles: Sequence[str], targetFiles: Sequence[str]) -> list[str]:
+    """Advisory-only diff scope heuristics; a broad scope warns but never rejects."""
+    warnings: list[str] = []
+    if not candidateFiles:
+        return warnings
+    if WORKBOOK_PATH in candidateFiles:
+        warnings.append(f"candidate diff touches the queue workbook {WORKBOOK_PATH}; implementation PRs must not")
+    targets = set(targetFiles)
+    if targets:
+        outOfScope = sorted(path for path in candidateFiles if path not in targets and path != WORKBOOK_PATH)
+        if outOfScope:
+            shown = ", ".join(outOfScope[:10])
+            suffix = ", ..." if len(outOfScope) > 10 else ""
+            warnings.append(
+                f"scope warning: {len(outOfScope)} changed file(s) outside the claimed target files: {shown}{suffix}"
+            )
+    if len(candidateFiles) > BROAD_DIFF_FILE_LIMIT:
+        warnings.append(
+            f"scope warning: broad diff with {len(candidateFiles)} changed files "
+            f"(advisory limit {BROAD_DIFF_FILE_LIMIT})"
+        )
+    return warnings
+
+
+def preflightRecommendedActions(verdict: str, reasons: Sequence[str]) -> list[str]:
+    if verdict == PREFLIGHT_REJECT_DUPLICATE_OPEN:
+        return ["do not open a second PR for this live claim; adopt the open PR or declare it with replaces"]
+    if verdict == PREFLIGHT_ALREADY_DELIVERED:
+        return ["do not re-deliver merged work; verify the merged PR and proceed to terminal queue publication"]
+    if verdict == PREFLIGHT_CANNOT_VERIFY:
+        return ["collect the missing claim identity or snapshot evidence before opening a PR"]
+    if verdict == PREFLIGHT_ALLOW_REPLACEMENT:
+        return ["open the replacement PR; request explicit human approval before closing the superseded PR"]
+    if reasons:
+        return ["resolve the listed reasons before opening the PR"]
+    return ["open the implementation PR for this claim"]
+
+
+def preflightVerdict(request: dict[str, Any]) -> dict[str, Any]:
+    """Read-only duplicate/scope preflight for opening an implementation PR.
+
+    Correlates the claim identity (issue name + claim ID + owner + intended head
+    branch) against a PR-state snapshot by exact identity. Title matching alone
+    is never authoritative. Missing identity fails closed to ``cannot_verify``
+    rather than guessing. The verdict never mutates the queue or any PR.
+    """
+    if not isinstance(request, dict):
+        raise ValueError("preflight request must be a JSON object")
+    claim = firstValue(request, "claim", "identity", default={})
+    if not isinstance(claim, dict):
+        claim = {}
+    issueName = str(firstValue(claim, "issueName", "issue", default="") or "").strip()
+    claimId = str(firstValue(claim, "claimId", "claim_id", default="") or "").strip()
+    owner = str(firstValue(claim, "owner", default="") or "").strip()
+    headBranch = prHeadBranch(claim)
+    intendedTitle = normalizeTitle(firstValue(claim, "title", "prTitle", "pr_title", default=""))
+    targetFiles = normalizeFiles({"files": firstValue(claim, "targetFiles", "target_files", default=())})
+    candidate = firstValue(request, "candidate", "diff", default={})
+    candidateFiles = normalizeFiles(candidate if isinstance(candidate, dict) else {})
+    replaces = parsePrNumber(firstValue(request, "replaces", "replacesPr", "replaces_pr", default=None))
+
+    rawRecords = firstValue(request, "pullRequests", "pull_requests", "prs", "snapshot", default=())
+    records = loadRecords(rawRecords if isinstance(rawRecords, list) else [])
+
+    reasons: list[str] = []
+    warnings: list[str] = []
+    claimEcho = {"issueName": issueName, "claimId": claimId, "owner": owner, "headBranch": headBranch}
+
+    def payload(verdict: str, openDup: list[dict[str, Any]], mergedDup: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "readOnly": True,
+            "verdict": verdict,
+            "allowed": verdict in PREFLIGHT_ALLOWED_VERDICTS,
+            "claim": claimEcho,
+            "replaces": replaces,
+            "openDuplicates": openDup,
+            "mergedDuplicates": mergedDup,
+            "reasons": list(dict.fromkeys(reasons)),
+            "warnings": list(dict.fromkeys(warnings)),
+            "recommendedActions": preflightRecommendedActions(verdict, reasons),
+        }
+
+    missing = [name for name, value in (("issueName", issueName), ("claimId", claimId)) if not value]
+    if missing:
+        reasons.append("claim identity is missing: " + ", ".join(missing) + "; cannot verify duplicates")
+        return payload(PREFLIGHT_CANNOT_VERIFY, [], [])
+    if not headBranch:
+        warnings.append("intended head branch is missing; head-branch duplicate detection is skipped")
+
+    openDuplicates: list[dict[str, Any]] = []
+    mergedDuplicates: list[dict[str, Any]] = []
+    replacesRecord: dict[str, Any] | None = None
+    replacesMatchesClaim = False
+    for record in records:
+        number = parsePrNumber(firstValue(record, "number", "prNumber", "id", default=None))
+        recordClaim = prClaimId(record)
+        recordIssue = prIssueName(record)
+        recordHead = prHeadBranch(record)
+        sameClaim = bool(recordClaim) and recordClaim == claimId
+        claimConflict = bool(recordClaim) and recordClaim != claimId
+        sameIssue = bool(recordIssue) and recordIssue == issueName
+        sameHead = bool(recordHead) and bool(headBranch) and recordHead == headBranch
+        # For replacement verification any exact identity link (claim id, issue
+        # name, or head branch) validates the declared target; title alone never does.
+        matchesClaim = sameClaim or sameIssue or sameHead
+        if replaces is not None and number == replaces:
+            replacesRecord = record
+            replacesMatchesClaim = matchesClaim
+        state = normalizeToken(firstValue(record, "state", default="open")) or "open"
+        merged = prIsMerged(record)
+        prLabel = f"#{number}" if number is not None else "with unknown number"
+
+        if merged:
+            if sameClaim or (sameHead and not claimConflict):
+                match = "claim id" if sameClaim else "head branch"
+                mergedDuplicates.append(
+                    duplicateRecord(record, number, f"merged PR matches the same {match}", "merged")
+                )
+            elif sameHead and claimConflict:
+                warnings.append(
+                    f"head branch {headBranch!r} was already merged by PR {prLabel} under a different claim id"
+                )
+            elif sameIssue:
+                warnings.append(
+                    f"merged PR {prLabel} references the same issue name under a different claim/head; "
+                    "verify the queue row before re-delivering"
+                )
+            continue
+        if state in OPEN_STATES:
+            if sameClaim:
+                openDuplicates.append(duplicateRecord(record, number, "open PR carries the same claim id", "open"))
+            elif sameHead:
+                openDuplicates.append(duplicateRecord(record, number, "open PR uses the same head branch", "open"))
+            elif sameIssue:
+                openDuplicates.append(duplicateRecord(record, number, "open PR references the same issue name", "open"))
+            elif intendedTitle and normalizeTitle(firstValue(record, "title", default="")) == intendedTitle:
+                # Title matching alone is never authoritative identity: advisory only.
+                warnings.append(f"title collision with open PR {prLabel}; titles are not authoritative identity")
+            continue
+        if sameClaim or sameHead or sameIssue:
+            warnings.append(f"closed unmerged PR {prLabel} previously matched this claim; verify it was superseded")
+
+    warnings.extend(preflightScopeWarnings(candidateFiles, targetFiles))
+
+    if replaces is not None:
+        # An explicit replacement must be verifiable against the snapshot and the
+        # claim identity; otherwise fail closed instead of trusting the flag.
+        if replacesRecord is None:
+            reasons.append(f"declared replacement PR #{replaces} is not present in the snapshot; cannot verify")
+            return payload(PREFLIGHT_CANNOT_VERIFY, openDuplicates, mergedDuplicates)
+        if not replacesMatchesClaim:
+            reasons.append(f"declared replacement PR #{replaces} does not match this claim identity; cannot verify")
+            return payload(PREFLIGHT_CANNOT_VERIFY, openDuplicates, mergedDuplicates)
+
+    uncoveredMerged = [dup for dup in mergedDuplicates if dup["number"] != replaces or dup["number"] is None]
+    if uncoveredMerged:
+        for dup in uncoveredMerged:
+            prLabel = f"#{dup['number']}" if dup["number"] is not None else "with unknown number"
+            reasons.append(f"merged PR {prLabel} already delivered this claim: {dup['reason']}")
+        return payload(PREFLIGHT_ALREADY_DELIVERED, openDuplicates, mergedDuplicates)
+    if mergedDuplicates:
+        warnings.append(f"explicit replacement of merged PR #{replaces} re-delivers already-merged work")
+
+    uncoveredOpen = [dup for dup in openDuplicates if dup["number"] != replaces or dup["number"] is None]
+    if replaces is None and uncoveredOpen:
+        for dup in uncoveredOpen:
+            prLabel = f"#{dup['number']}" if dup["number"] is not None else "with unknown number"
+            reasons.append(f"open PR {prLabel} duplicates this live claim: {dup['reason']}")
+        return payload(PREFLIGHT_REJECT_DUPLICATE_OPEN, openDuplicates, mergedDuplicates)
+    if replaces is not None and uncoveredOpen:
+        for dup in uncoveredOpen:
+            prLabel = f"#{dup['number']}" if dup["number"] is not None else "with unknown number"
+            reasons.append(
+                f"open PR {prLabel} duplicates this live claim and is not covered by the declared replacement"
+            )
+        return payload(PREFLIGHT_REJECT_DUPLICATE_OPEN, openDuplicates, mergedDuplicates)
+
+    if replaces is not None:
+        if not openDuplicates and not mergedDuplicates:
+            warnings.append(f"declared replacement PR #{replaces} is not currently a duplicate of this claim")
+        return payload(PREFLIGHT_ALLOW_REPLACEMENT, openDuplicates, mergedDuplicates)
+    return payload(PREFLIGHT_ALLOW, openDuplicates, mergedDuplicates)
+
+
 def staleColumn(review: dict[str, Any]) -> str:
     notes = [
         f"ignored stale {record['state']} attempt of {record['name']} (current: {record['effectiveState']})"
@@ -849,8 +1096,32 @@ def parseArgs(argv: Sequence[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def parsePreflightArgs(argv: Sequence[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="pr_review_audit.py preflight",
+        description="Read-only duplicate/scope preflight before opening an implementation PR.",
+    )
+    parser.add_argument("--input", help="JSON file containing the preflight request; defaults to stdin")
+    return parser.parse_args(argv)
+
+
+def preflightMain(argv: Sequence[str]) -> int:
+    args = parsePreflightArgs(argv)
+    try:
+        payload = preflightVerdict(readInput(args.input))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"pr_review_audit: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    # Non-zero without crashing lets shell callers gate PR creation on the verdict.
+    return 0 if payload["allowed"] else 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    args = parseArgs(argv or sys.argv[1:])
+    arguments = list(argv if argv is not None else sys.argv[1:])
+    if arguments and arguments[0] == "preflight":
+        return preflightMain(arguments[1:])
+    args = parseArgs(arguments)
     try:
         payload = auditPayload(loadRecords(readInput(args.input)))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
