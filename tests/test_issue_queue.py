@@ -273,6 +273,37 @@ class IssueQueueTest(unittest.TestCase):
         self.assertIn("dependencies-not-done", rejected[self.issue_c][0])
         self.assertNotIn("active-file-overlap", issue_queue.rejectionSummary(rejected))
 
+    def test_preflight_claim_payload_matches_pr_review_audit_contract(self) -> None:
+        from scripts import pr_review_audit
+
+        claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1")
+        state = issue_queue.loadQueue(self.workbook_path)
+        task = issue_queue.taskByName(state, claim["Issue Name"])
+
+        payload = issue_queue.preflightClaimPayload(task, headBranch="codex/e01-s01-ss02-head")
+
+        self.assertEqual(claim["Issue Name"], payload["issueName"])
+        self.assertEqual(claim["claimId"], payload["claimId"])
+        self.assertEqual("controller/subagent-1", payload["owner"])
+        self.assertEqual(["src/shared.cpp"], payload["targetFiles"])
+        self.assertEqual("codex/e01-s01-ss02-head", payload["headBranch"])
+
+        clean = pr_review_audit.preflightVerdict({"claim": payload, "pullRequests": []})
+        self.assertEqual("allow", clean["verdict"])
+        self.assertTrue(clean["readOnly"])
+
+        duplicate = pr_review_audit.preflightVerdict(
+            {
+                "claim": payload,
+                "pullRequests": [{"number": 42, "state": "open", "claimId": claim["claimId"]}],
+            }
+        )
+        self.assertEqual("reject_duplicate_open", duplicate["verdict"])
+
+        # The preflight consumed queue evidence without mutating the workbook row.
+        after = issue_queue.taskByName(issue_queue.loadQueue(self.workbook_path), claim["Issue Name"])
+        self.assertEqual(task.values, after.values)
+
     def test_target_file_overlap_advisory_keeps_unresolved_stale_claim_scope(self) -> None:
         claim = issue_queue.claimTask(self.workbook_path, owner="controller/subagent-1", leaseMinutes=30)
         self.set_claim_times(claim["Issue Name"], lease_minutes_from_now=30, updated_minutes_ago=241)

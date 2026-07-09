@@ -12,7 +12,8 @@ concurrent controllers can be distinguished.
 - `planning/workflow_observations/` — immutable workflow-observation records and resolution receipts; not a task queue.
 - `scripts/issue_queue.py` — atomic claim/progress/completion CLI.
 - `scripts/write_leases.py` — separate write-lease CLI over `planning/write_leases.json`; see "Write leases" below.
-- `scripts/pr_review_audit.py` — read-only stale/open PR classification helper for merge, cleanup, and dispatch review.
+- `scripts/pr_review_audit.py` — read-only stale/open PR classification helper for merge, cleanup, and dispatch
+  review, plus the `preflight` duplicate/scope guard run before opening an implementation PR.
 - `scripts/workflow_observations.py` — read-only/append-only workflow-observation ledger CLI.
 - `scripts/worker_report.py` — versioned structured worker-report schema, identity/CI-SHA validation, and deterministic
   bounded restart-handoff CLI; see "Structured worker reports and restart handoffs" below.
@@ -496,6 +497,36 @@ Contradictory evidence (a merged claim PR against an unclaimed row, a DONE row w
 claim ID does not match) fails closed to `recovery_required` with the conflicting evidence instead of guessing a write;
 `reconcile` then exits non-zero so callers can branch. Read-only `snapshot`, `reconcile`, and `next-action` never call
 workbook save, git write commands, or GitHub mutations.
+
+## Pull-request preflight duplicate and scope guard
+
+A controller restart can lose track of an already-open or already-merged implementation PR. Before opening any
+implementation PR, run the read-only preflight built into `scripts/pr_review_audit.py`:
+
+```bash
+python3 scripts/pr_review_audit.py preflight --input request.json   # or pipe the request JSON on stdin
+```
+
+The request carries a `claim` identity (`issueName` and `claimId` required; `owner`, `headBranch`, `title`, and the
+claimed `targetFiles` optional — `issue_queue.preflightClaimPayload(task, headBranch=...)` builds it from the queue
+row), a `pullRequests` snapshot (each record may carry `number`, `state`, `merged`, `claimId`, `issueName`,
+`headBranch`, `title`), an optional `candidate.files` list for the intended diff, and an optional `replaces` PR number.
+The verdict is exactly one of:
+
+- `allow` — no open or merged PR matches this live claim; open the PR.
+- `allow_replacement` — an explicit `replaces` PR number was declared and verified against the snapshot by exact
+  identity; superseded-PR closure still requires explicit human approval.
+- `reject_duplicate_open` — a second open PR matches the same claim ID, head branch, or issue name; adopt it or
+  declare it with `replaces` instead of opening another.
+- `already_delivered` — a merged PR already delivered the same claim or head branch; skip to terminal queue
+  publication.
+- `cannot_verify` — the claim identity is missing or a declared replacement cannot be verified; fail closed and
+  collect evidence instead of opening the PR.
+
+Correlation is by exact identity; title collisions are advisory warnings only. Diff scope is advisory per the
+target-file-overlap policy: files outside the claimed target files, diffs over 25 files, or a workbook file in an
+implementation diff warn without rejecting. The preflight is deterministic and strictly read-only — it never mutates
+the queue workbook or any PR. Exit codes: 0 allowed, 1 not allowed, 2 invalid input.
 
 ## Structured worker reports and restart handoffs
 

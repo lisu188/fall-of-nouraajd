@@ -228,6 +228,16 @@ restarted controller never duplicates a claim, PR, merge, or DONE write. It is s
 workbook, git, or GitHub — and contradictory evidence fails closed to `recovery_required` rather than guessing a write.
 See `docs/codex-agent-queue.md` for the evidence schema and states.
 
+Before opening any implementation PR (especially after a restart), run the read-only preflight
+`python3 scripts/pr_review_audit.py preflight --input request.json`. It correlates the claim identity (issue name,
+claim ID, owner, intended head branch — built from the queue row with `issue_queue.preflightClaimPayload`) against a
+PR-state snapshot and returns one verdict: `allow`, `allow_replacement` (an explicit `replaces` PR number verified
+against the snapshot), `reject_duplicate_open` (a second open PR for the same live claim, head branch, or issue name),
+`already_delivered` (a merged PR for the same claim/head — proceed to terminal queue publication instead), or
+`cannot_verify` (missing claim identity or unverifiable replacement — fail closed, do not open the PR). Broad or
+out-of-scope diffs produce advisory warnings only, and title matches alone are never authoritative identity. The
+preflight never mutates the queue or any PR; exit code 0 means allowed, 1 means do not open the PR.
+
 Scarce local resources shared between concurrent controllers (heavy build/test/coverage jobs, Xvfb displays, TCP
 ports, build directories, memory budgets, MCP server slots) are coordinated through the resource broker built into the
 same script. `python3 scripts/controller_resource_audit.py probe` reports read-only availability
