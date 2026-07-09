@@ -1304,6 +1304,33 @@ class PrPreflightTest(unittest.TestCase):
         self.assertEqual("allow_replacement", verdict["verdict"])
         self.assertIn("explicit replacement of merged PR #1480 re-delivers already-merged work", verdict["warnings"])
 
+    def test_object_shaped_snapshot_with_open_duplicate_is_rejected(self) -> None:
+        verdict = self.preflight(
+            snapshot={"pullRequests": [{"number": 1490, "state": "open", "claimId": self.CLAIM_ID}]}
+        )
+
+        self.assertEqual("reject_duplicate_open", verdict["verdict"])
+        self.assertFalse(verdict["allowed"])
+        self.assertEqual([1490], [dup["number"] for dup in verdict["openDuplicates"]])
+
+    def test_object_shaped_snapshot_with_merged_duplicate_short_circuits(self) -> None:
+        verdict = self.preflight(
+            pullRequests={"nodes": [{"number": 1480, "state": "merged", "claimId": self.CLAIM_ID}]}
+        )
+
+        self.assertEqual("already_delivered", verdict["verdict"])
+        self.assertFalse(verdict["allowed"])
+        self.assertEqual([1480], [dup["number"] for dup in verdict["mergedDuplicates"]])
+
+    def test_unrecognized_snapshot_shape_fails_closed_to_cannot_verify(self) -> None:
+        for badSnapshot in ("not-a-list", [42], {"pullRequests": "still-not-a-list"}):
+            with self.subTest(snapshot=badSnapshot):
+                verdict = self.preflight(pullRequests=badSnapshot)
+
+                self.assertEqual("cannot_verify", verdict["verdict"])
+                self.assertFalse(verdict["allowed"])
+                self.assertTrue(any("snapshot has an unrecognized shape" in reason for reason in verdict["reasons"]))
+
     def test_title_collision_alone_is_advisory_not_rejecting(self) -> None:
         verdict = self.preflight(
             claim=self.claim(title="[EPIC_01][STORY_04][SUBSTORY_01] #623 Add preflight guard"),

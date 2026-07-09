@@ -608,10 +608,13 @@ gh pr list --state all --limit 100 \
   --json number,state,title,headRefName,mergedAt > /tmp/pr-snapshot.json
 # Assemble request.json: {"claim": {issueName, claimId, owner, headBranch, targetFiles},
 #   "pullRequests": [...snapshot...], "candidate": {"files": [...changed files...]}}
-python3 scripts/pr_review_audit.py preflight --input request.json || exit_code=$?
 # exit 0: allow / allow_replacement (declare an explicit replacement with "replaces": <pr#> in request.json)
 # exit 1: reject_duplicate_open (adopt or replace the open PR), already_delivered (go to terminal publication),
 #         or cannot_verify (collect missing identity evidence). Do not open the PR; the preflight mutates nothing.
+if ! python3 scripts/pr_review_audit.py preflight --input request.json; then
+  echo "preflight blocked PR creation; resolve the verdict before gh pr create"
+  exit 1
+fi
 ```
 
 Scope findings (files outside the claimed target files, broad diffs) are advisory warnings, never rejections.

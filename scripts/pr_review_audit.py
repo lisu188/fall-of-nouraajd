@@ -923,8 +923,17 @@ def preflightVerdict(request: dict[str, Any]) -> dict[str, Any]:
     candidateFiles = normalizeFiles(candidate if isinstance(candidate, dict) else {})
     replaces = parsePrNumber(firstValue(request, "replaces", "replacesPr", "replaces_pr", default=None))
 
-    rawRecords = firstValue(request, "pullRequests", "pull_requests", "prs", "snapshot", default=())
-    records = loadRecords(rawRecords if isinstance(rawRecords, list) else [])
+    rawRecords = firstValue(request, "pullRequests", "pull_requests", "prs", "snapshot", default=None)
+    snapshotError: str | None = None
+    records: list[dict[str, Any]] = []
+    if rawRecords is not None:
+        try:
+            # Reuse loadRecords so object-shaped snapshots (e.g. {"pullRequests":
+            # [...]}) keep their evidence. Unrecognized shapes fail closed to
+            # cannot_verify below; duplicate evidence is never silently discarded.
+            records = loadRecords(rawRecords)
+        except ValueError as exc:
+            snapshotError = str(exc)
 
     reasons: list[str] = []
     warnings: list[str] = []
@@ -947,6 +956,9 @@ def preflightVerdict(request: dict[str, Any]) -> dict[str, Any]:
     missing = [name for name, value in (("issueName", issueName), ("claimId", claimId)) if not value]
     if missing:
         reasons.append("claim identity is missing: " + ", ".join(missing) + "; cannot verify duplicates")
+        return payload(PREFLIGHT_CANNOT_VERIFY, [], [])
+    if snapshotError is not None:
+        reasons.append(f"pull-request snapshot has an unrecognized shape ({snapshotError}); cannot verify duplicates")
         return payload(PREFLIGHT_CANNOT_VERIFY, [], [])
     if not headBranch:
         warnings.append("intended head branch is missing; head-branch duplicate detection is skipped")
