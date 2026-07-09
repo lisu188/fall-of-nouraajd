@@ -43,7 +43,9 @@ class CCreatureRace : public CGameObject {
            V_PROPERTY(CCreatureRace, std::set<std::string>, subtypes, getSubtypes, setSubtypes),
            V_PROPERTY(CCreatureRace, bool, playerSelectable, isPlayerSelectable, setPlayerSelectable),
            V_PROPERTY(CCreatureRace, std::set<std::string>, associatedClasses, getAssociatedClasses,
-                      setAssociatedClasses))
+                      setAssociatedClasses),
+           V_PROPERTY(CCreatureRace, std::shared_ptr<CStats>, racialLevelStats, getRacialLevelStats,
+                      setRacialLevelStats))
 
   public:
     CCreatureRace();
@@ -83,6 +85,10 @@ class CCreatureRace : public CGameObject {
 
     bool isAssociatedClass(const std::shared_ptr<CCreatureClass> &creatureClass);
 
+    std::shared_ptr<CStats> getRacialLevelStats();
+
+    void setRacialLevelStats(std::shared_ptr<CStats> value);
+
   private:
     std::shared_ptr<CStats> baseStats = std::make_shared<CStats>();
     std::set<std::shared_ptr<CInteraction>> actions;
@@ -90,4 +96,13 @@ class CCreatureRace : public CGameObject {
     std::set<std::string> subtypes;
     bool playerSelectable = false;
     std::set<std::string> associatedClasses;
+    // Hit-dice-style racial progression: the flat stat growth ONE racial level
+    // contributes, applied once per CCreature::racialLevel by the composed-stat
+    // fold. Racial advancement is modeled separately from the class-driven
+    // CCreature::level (EPIC_08/STORY_04/SUBSTORY_01) and is future-gated
+    // scaffolding: the default is an empty CStats, so a race without authored
+    // progression contributes exactly zero and every existing creature composes
+    // bit-identically to today. No XP or level-up flow raises racialLevel yet --
+    // that requires explicit XP/scale design and is deliberately deferred.
+    std::shared_ptr<CStats> racialLevelStats = std::make_shared<CStats>();
 };
