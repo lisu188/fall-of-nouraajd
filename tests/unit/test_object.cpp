@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CTooltipHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
+#include "object/CCreatureClassTrack.h"
 #include "object/CCreatureRace.h"
 #include "object/CCreatureTemplate.h"
 #include "object/CDialog.h"
@@ -1644,6 +1645,478 @@ void test_creature_template_metadata_round_trip() {
                 "CCreatureTemplate must not be enumerated as a CCreature subtype");
 }
 
+void test_no_class_track_creature_composes_bit_identically_to_baseline() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Multiclass class-track records. Neutrality
+    // invariant: the track layer is FUTURE-ONLY, and a creature with NO class
+    // tracks (every creature on current content) composes bit-identically to the
+    // pre-track contracts -- both on the legacy path (no race/class) and on the
+    // composed single-class path. Explicitly assigning an empty track set must be
+    // exactly as neutral as never touching the property.
+
+    // Legacy creature: same source values as the pinned legacy composition tests.
+    auto legacy = std::make_shared<CCreature>();
+    auto legacyBase = std::make_shared<CStats>();
+    legacyBase->setMainStat("intelligence");
+    legacyBase->setIntelligence(10);
+    legacyBase->setStrength(4);
+    legacyBase->setStamina(6);
+    legacy->setBaseStats(legacyBase);
+    auto legacyLevelStats = std::make_shared<CStats>();
+    legacyLevelStats->setIntelligence(2);
+    legacyLevelStats->setStrength(1);
+    legacy->setLevelStats(legacyLevelStats);
+    const int legacyLevel = 3;
+    legacy->setLevel(legacyLevel);
+
+    legacy->setClassTracks({}); // explicit empty set == never configured
+    expect_true(legacy->getClassTracks().empty(), "an explicitly empty class-track set stays empty");
+    expect_true(!legacy->usesArchetypeComposition(),
+                "a creature with no race/class/templates and no class tracks must stay on the legacy stat path");
+
+    auto legacyExpected = std::make_shared<CStats>();
+    legacyExpected->setMainStat(legacyBase->getMainStat());
+    legacyExpected->addBonus(legacyBase);
+    for (int i = 0; i < legacyLevel; ++i) {
+        legacyExpected->addBonus(legacyLevelStats);
+    }
+    auto legacyActual = legacy->getStats();
+    expect_true(legacyActual->getMainStat() == legacyExpected->getMainStat(),
+                "no-track legacy creature getStats should keep the baseStats mainStat");
+    legacyActual->meta()->for_all_properties(legacyActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(legacyActual->getProperty<int>(property->name()) ==
+                        legacyExpected->getProperty<int>(property->name()),
+                    "no-track legacy creature getStats should match the legacy composition bit-identically");
+    });
+
+    // Composed creature (race + single class): the single-class path is untouched
+    // by the (empty) track layer.
+    auto composed = std::make_shared<CCreature>();
+    auto composedBase = std::make_shared<CStats>();
+    composedBase->setMainStat("strength");
+    composedBase->setStrength(4);
+    composedBase->setIntelligence(6);
+    composed->setBaseStats(composedBase);
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStrength(2);
+    raceBase->setStamina(3);
+    auto race = std::make_shared<CCreatureRace>();
+    race->setBaseStats(raceBase);
+    composed->setRace(race);
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(7);
+    auto classLevel = std::make_shared<CStats>();
+    classLevel->setIntelligence(2);
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    klass->setBaseStats(classBase);
+    klass->setLevelStats(classLevel);
+    composed->setCreatureClass(klass);
+    const int composedLevel = 2;
+    composed->setLevel(composedLevel);
+
+    composed->setClassTracks({}); // explicit empty set == never configured
+
+    auto composedExpected = std::make_shared<CStats>();
+    composedExpected->setMainStat(klass->getMainStat());
+    composedExpected->addBonus(raceBase);
+    composedExpected->addBonus(classBase);
+    composedExpected->addBonus(composedBase);
+    for (int i = 0; i < composedLevel; ++i) {
+        composedExpected->addBonus(classLevel);
+    }
+    auto composedActual = composed->getStats();
+    expect_true(composedActual->getMainStat() == "intelligence",
+                "no-track composed creature keeps the class-authoritative mainStat");
+    composedActual->meta()->for_all_properties(composedActual, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(composedActual->getProperty<int>(property->name()) ==
+                        composedExpected->getProperty<int>(property->name()),
+                    "no-track composed creature getStats should match the single-class composition bit-identically");
+    });
+    expect_true(composed->getEffectiveInteractions().empty(),
+                "an empty class-track set adds no actions to the effective interaction set");
+}
+
+void test_creature_class_tracks_fold_deterministically_in_order() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Capability: class tracks are an ORDERED
+    // multiclass progression. Stat growth folds each track's class.baseStats and
+    // class.levelStats x the TRACK's own level in ascending `order`; track actions
+    // merge in the same order (later tracks win duplicate keys, concrete creature
+    // actions stay most specific); the first track's class mainStat is
+    // authoritative; and the layer coexists with race/racialLevel/templates.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("stamina");
+    base->setStamina(6);
+    base->setStrength(1);
+    base->setIntelligence(1);
+    creature->setBaseStats(base);
+    auto levelStats = std::make_shared<CStats>();
+    levelStats->setStamina(1);
+    creature->setLevelStats(levelStats);
+    const int level = 1;
+    creature->setLevel(level);
+
+    // Coexisting layers: race with racial advancement, plus a template overlay.
+    auto race = std::make_shared<CCreatureRace>();
+    auto raceBase = std::make_shared<CStats>();
+    raceBase->setStamina(2);
+    race->setBaseStats(raceBase);
+    auto racialGrowth = std::make_shared<CStats>();
+    racialGrowth->setStamina(3);
+    race->setRacialLevelStats(racialGrowth);
+    creature->setRace(race);
+    const int racialLevel = 2;
+    creature->setRacialLevel(racialLevel);
+
+    auto overlay = std::make_shared<CCreatureTemplate>();
+    auto overlayStats = std::make_shared<CStats>();
+    overlayStats->setStamina(4);
+    overlay->setStatAdjustments(overlayStats);
+    creature->setTemplates({overlay});
+
+    // Two class tracks with distinct ordering keys; inserted out of order to prove
+    // getOrderedClassTracks sorts by the `order` key, not insertion order.
+    auto warriorAttack = interaction("Attack", "warriorAttack");
+    auto warriorEmpower = interaction("Empower", "warriorEmpower");
+    auto warriorCleave = interaction("Cleave", "warriorCleave");
+    auto warrior = std::make_shared<CCreatureClass>();
+    warrior->setMainStat("strength");
+    auto warriorBase = std::make_shared<CStats>();
+    warriorBase->setStrength(2);
+    warrior->setBaseStats(warriorBase);
+    auto warriorGrowth = std::make_shared<CStats>();
+    warriorGrowth->setStrength(1);
+    warrior->setLevelStats(warriorGrowth);
+    warrior->setActions({warriorAttack, warriorEmpower});
+    warrior->setLevelling({{"2", warriorCleave}});
+
+    auto mageEmpower = interaction("Empower", "mageEmpower");
+    auto mage = std::make_shared<CCreatureClass>();
+    mage->setMainStat("intelligence");
+    auto mageBase = std::make_shared<CStats>();
+    mageBase->setIntelligence(4);
+    mage->setBaseStats(mageBase);
+    auto mageGrowth = std::make_shared<CStats>();
+    mageGrowth->setIntelligence(2);
+    mage->setLevelStats(mageGrowth);
+    mage->setActions({mageEmpower});
+
+    auto warriorTrack = std::make_shared<CCreatureClassTrack>();
+    warriorTrack->setTypeId("warriorTrack");
+    warriorTrack->setOrder(10);
+    warriorTrack->setCreatureClass(warrior);
+    warriorTrack->setLevel(3);
+
+    auto mageTrack = std::make_shared<CCreatureClassTrack>();
+    mageTrack->setTypeId("mageTrack");
+    mageTrack->setOrder(20);
+    mageTrack->setCreatureClass(mage);
+    mageTrack->setLevel(2);
+
+    creature->setClassTracks({mageTrack, warriorTrack});
+    expect_true(creature->usesArchetypeComposition(), "a creature carrying class tracks uses the composed stat path");
+
+    auto orderedTracks = creature->getOrderedClassTracks();
+    expect_true(orderedTracks.size() == 2 && orderedTracks[0] == warriorTrack && orderedTracks[1] == mageTrack,
+                "getOrderedClassTracks should sort tracks by ascending order key, not insertion order");
+
+    // Stats: each track folds its class.baseStats plus class.levelStats x its OWN
+    // track level; race base, racial advancement, the creature's own base/level
+    // growth and the template overlay all keep their documented positions.
+    auto stats = creature->getStats();
+    expect_true(stats->getStamina() ==
+                    2 /*race*/ + 6 /*base*/ + racialLevel * 3 /*racial*/ + level * 1 /*own growth*/ + 4 /*template*/,
+                "class tracks must not disturb race/racial/own-growth/template stat sources");
+    expect_true(stats->getStrength() == 1 /*base*/ + 2 /*warrior base*/ + 3 * 1 /*warrior growth x track level*/,
+                "the first track folds its class base stats and level growth by the track's own level");
+    expect_true(stats->getIntelligence() == 1 /*base*/ + 4 /*mage base*/ + 2 * 2 /*mage growth x track level*/,
+                "the second track folds its class base stats and level growth by the track's own level");
+    expect_true(stats->getMainStat() == "strength",
+                "the first track's class mainStat is authoritative over the creature's baseStats mainStat");
+
+    auto effectiveContains = [&creature](const std::shared_ptr<CInteraction> &action) {
+        auto effective = creature->getEffectiveInteractions();
+        return effective.find(action) != effective.end();
+    };
+
+    // Track level unlocks gate on the TRACK's level, not the creature level: the
+    // warrior unlock opens at class level 2 while the creature level is only 1.
+    expect_true(effectiveContains(warriorCleave),
+                "a track's class levelling unlocks gate on the track's own level, not the creature level");
+    // Later tracks win duplicate action keys over earlier tracks.
+    expect_true(effectiveContains(mageEmpower) && !effectiveContains(warriorEmpower),
+                "the later-ordered track should win duplicate action keys between tracks");
+
+    // The ordering key drives the fold-in: pushing the warrior track past the mage
+    // track flips both the duplicate-action winner and the authoritative mainStat.
+    warriorTrack->setOrder(30);
+    expect_true(effectiveContains(warriorEmpower) && !effectiveContains(mageEmpower),
+                "changing the order key must change the track application order");
+    expect_true(creature->getStats()->getMainStat() == "intelligence",
+                "changing the order key must move the mainStat authority to the new first track");
+    warriorTrack->setOrder(10);
+
+    // Concrete creature actions stay most specific over track class actions.
+    auto concreteAttack = interaction("Attack", "concreteAttack");
+    creature->addAction(concreteAttack);
+    expect_true(effectiveContains(concreteAttack) && !effectiveContains(warriorAttack),
+                "concrete creature actions should stay most specific over track class actions");
+}
+
+void test_single_class_track_matches_single_creature_class() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Single-class compatibility: one track
+    // referencing class K at level L composes exactly like the legacy single
+    // creatureClass = K at creature level L -- stats, mainStat and effective
+    // actions. And when tracks and the single creatureClass are BOTH set, the
+    // tracks subsume the single class's contributions without replacing the
+    // reference.
+    auto interaction = [](const std::string &typeId, const std::string &name) {
+        auto action = std::make_shared<CInteraction>();
+        action->setType("CInteraction");
+        action->setTypeId(typeId);
+        action->setName(name);
+        return action;
+    };
+
+    auto classAttack = interaction("Attack", "classAttack");
+    auto classUnlock = interaction("Cleave", "classUnlock");
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("intelligence");
+    auto classBase = std::make_shared<CStats>();
+    classBase->setIntelligence(4);
+    classBase->setStamina(1);
+    klass->setBaseStats(classBase);
+    auto classGrowth = std::make_shared<CStats>();
+    classGrowth->setIntelligence(2);
+    klass->setLevelStats(classGrowth);
+    klass->setActions({classAttack});
+    klass->setLevelling({{"2", classUnlock}});
+
+    const int level = 2;
+    auto makeCreature = [&level]() {
+        auto creature = std::make_shared<CCreature>();
+        auto base = std::make_shared<CStats>();
+        base->setMainStat("strength");
+        base->setStrength(5);
+        base->setIntelligence(10);
+        creature->setBaseStats(base);
+        auto growth = std::make_shared<CStats>();
+        growth->setIntelligence(1);
+        creature->setLevelStats(growth);
+        creature->setLevel(level);
+        return creature;
+    };
+
+    // Baseline: legacy single creatureClass at creature level 2.
+    auto single = makeCreature();
+    single->setCreatureClass(klass);
+
+    // Equivalent: one class track (same class, track level == creature level).
+    auto track = std::make_shared<CCreatureClassTrack>();
+    track->setCreatureClass(klass);
+    track->setLevel(level);
+    auto tracked = makeCreature();
+    tracked->setClassTracks({track});
+
+    auto singleStats = single->getStats();
+    auto trackedStats = tracked->getStats();
+    expect_true(trackedStats->getMainStat() == singleStats->getMainStat(),
+                "a single class track selects the same authoritative mainStat as the single creatureClass");
+    trackedStats->meta()->for_all_properties(trackedStats, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(trackedStats->getProperty<int>(property->name()) == singleStats->getProperty<int>(property->name()),
+                    "a single class track composes stats identically to the same single creatureClass");
+    });
+
+    auto actionKeys = [](const std::shared_ptr<CCreature> &creature) {
+        std::set<std::string> keys;
+        for (const auto &action : creature->getEffectiveInteractions()) {
+            keys.insert(action->getTypeId());
+        }
+        return keys;
+    };
+    expect_true(actionKeys(tracked) == actionKeys(single),
+                "a single class track exposes the same effective actions (starting + level unlocks) as the single "
+                "creatureClass");
+    expect_true(actionKeys(tracked).count("Cleave") == 1,
+                "the class level unlock is exposed in both the single-class and single-track compositions");
+
+    // Precedence when both are set: non-empty tracks subsume the single class's
+    // contributions -- setting an additional single creatureClass changes nothing
+    // -- while the reference itself is preserved, not replaced.
+    auto other = std::make_shared<CCreatureClass>();
+    other->setMainStat("stamina");
+    auto otherBase = std::make_shared<CStats>();
+    otherBase->setStamina(50);
+    other->setBaseStats(otherBase);
+    tracked->setCreatureClass(other);
+
+    auto subsumedStats = tracked->getStats();
+    expect_true(subsumedStats->getMainStat() == singleStats->getMainStat(),
+                "non-empty tracks keep mainStat authority over an additionally set single creatureClass");
+    subsumedStats->meta()->for_all_properties(subsumedStats, [&](auto property) {
+        if (property->value_type() != std::type_index(typeid(int))) {
+            return;
+        }
+        expect_true(subsumedStats->getProperty<int>(property->name()) ==
+                        singleStats->getProperty<int>(property->name()),
+                    "non-empty tracks subsume the single creatureClass stat contributions entirely");
+    });
+    expect_true(CGameObject::sameInstance(tracked->getCreatureClass(), other),
+                "the single creatureClass reference is preserved (not replaced) when tracks are present");
+}
+
+void test_same_order_class_tracks_tie_break_deterministically() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] Determinism for equal `order` keys: the
+    // tie-break chain exhausts every stable configured field before touching names
+    // -- track typeId, then referenced-class typeId, then per-track level -- so
+    // same-order tracks never fall to the backing set's pointer order. Each case
+    // asserts the fold order for BOTH insertion orders of the same two records.
+    auto orderedFor = [](const std::shared_ptr<CCreatureClassTrack> &a, const std::shared_ptr<CCreatureClassTrack> &b) {
+        auto creature = std::make_shared<CCreature>();
+        creature->setClassTracks({a, b});
+        auto forward = creature->getOrderedClassTracks();
+        creature->setClassTracks({b, a});
+        auto reversed = creature->getOrderedClassTracks();
+        expect_true(forward.size() == 2 && reversed.size() == 2 && forward[0] == reversed[0] &&
+                        forward[1] == reversed[1],
+                    "same-order tracks must sort identically regardless of insertion order");
+        return forward;
+    };
+
+    // Case 1: equal order, distinct track typeIds -- the track typeId decides.
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setTypeId("warriorClass");
+    auto trackA = std::make_shared<CCreatureClassTrack>();
+    trackA->setTypeId("aTrack");
+    trackA->setCreatureClass(klass);
+    auto trackB = std::make_shared<CCreatureClassTrack>();
+    trackB->setTypeId("bTrack");
+    trackB->setCreatureClass(klass);
+    auto byTypeId = orderedFor(trackA, trackB);
+    expect_true(byTypeId.size() == 2 && byTypeId[0] == trackA && byTypeId[1] == trackB,
+                "equal-order tracks tie-break on the track typeId first");
+
+    // Case 2: equal order, anonymous tracks, distinct class typeIds -- the
+    // referenced class's typeId decides.
+    auto mage = std::make_shared<CCreatureClass>();
+    mage->setTypeId("mageClass");
+    mage->setMainStat("intelligence");
+    auto warrior = std::make_shared<CCreatureClass>();
+    warrior->setTypeId("warriorClass");
+    warrior->setMainStat("strength");
+    auto mageTrack = std::make_shared<CCreatureClassTrack>();
+    mageTrack->setCreatureClass(mage);
+    auto warriorTrack = std::make_shared<CCreatureClassTrack>();
+    warriorTrack->setCreatureClass(warrior);
+    auto byClass = orderedFor(mageTrack, warriorTrack);
+    expect_true(byClass.size() == 2 && byClass[0] == mageTrack && byClass[1] == warriorTrack,
+                "anonymous equal-order tracks tie-break on the referenced class typeId");
+    // The stable tie-break drives observable composition: the first track's class
+    // mainStat is authoritative for both insertion orders.
+    auto creature = std::make_shared<CCreature>();
+    auto base = std::make_shared<CStats>();
+    base->setMainStat("stamina");
+    creature->setBaseStats(base);
+    creature->setClassTracks({warriorTrack, mageTrack});
+    expect_true(creature->getStats()->getMainStat() == "intelligence",
+                "mainStat authority follows the deterministic tie-break, not insertion or pointer order");
+
+    // Case 3: equal order, anonymous tracks of the SAME class -- the per-track
+    // level decides (ascending), keeping the fold reproducible; and because the
+    // class is the same, either relative order composes identical stats anyway.
+    auto low = std::make_shared<CCreatureClassTrack>();
+    low->setCreatureClass(warrior);
+    low->setLevel(1);
+    auto high = std::make_shared<CCreatureClassTrack>();
+    high->setCreatureClass(warrior);
+    high->setLevel(3);
+    auto byLevel = orderedFor(low, high);
+    expect_true(byLevel.size() == 2 && byLevel[0] == low && byLevel[1] == high,
+                "same-class equal-order tracks tie-break on the per-track level");
+}
+
+void test_creature_class_track_metadata_round_trip() {
+    // [EPIC_08][STORY_03][SUBSTORY_01] CCreatureClassTrack is a CGameObject-derived
+    // record that serializes like the other archetype definitions: its class
+    // reference, per-track level and ordering key (plus inherited label) survive a
+    // CSerialization round-trip, it deserializes back into a CCreatureClassTrack,
+    // and it is never enumerated as a CCreature subtype.
+    CTypes::register_type_metadata<CCreatureClassTrack, CGameObject>();
+    CTypes::register_type_metadata<CCreatureClass, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CInteraction, CGameObject>();
+
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType(CCreatureClassTrack::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureClassTrack>(); });
+    game->getObjectHandler()->registerType(CCreatureClass::static_meta()->name(),
+                                           []() { return std::make_shared<CCreatureClass>(); });
+    game->getObjectHandler()->registerType(CStats::static_meta()->name(), []() { return std::make_shared<CStats>(); });
+    game->getObjectHandler()->registerType(CInteraction::static_meta()->name(),
+                                           []() { return std::make_shared<CInteraction>(); });
+
+    // Neutral defaults: a bare track is a no-op record.
+    auto fresh = std::make_shared<CCreatureClassTrack>();
+    expect_true(fresh->getLevel() == 0 && fresh->getOrder() == 0, "level and order should default to the neutral 0");
+    expect_true(fresh->getCreatureClass() == nullptr,
+                "a fresh track carries no class reference (a null class contributes nothing)");
+
+    auto klass = std::make_shared<CCreatureClass>();
+    klass->setMainStat("strength");
+    auto classBase = std::make_shared<CStats>();
+    classBase->setStrength(3);
+    klass->setBaseStats(classBase);
+
+    auto track = std::make_shared<CCreatureClassTrack>();
+    track->setGame(game);
+    track->setCreatureClass(klass);
+    track->setLevel(3);
+    track->setOrder(10);
+    track->setLabel("Warrior track");
+
+    auto serialized = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::serialize(track);
+    expect_true((*serialized)["class"].get<std::string>() == CCreatureClassTrack::static_meta()->name(),
+                "a serialized CCreatureClassTrack should keep its record class identity");
+
+    auto round_trip = std::dynamic_pointer_cast<CCreatureClassTrack>(
+        CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>::deserialize(game, serialized));
+    expect_true(round_trip != nullptr,
+                "a CCreatureClassTrack should deserialize back into a CCreatureClassTrack, not a creature");
+    expect_true(round_trip->getCreatureClass() != nullptr &&
+                    round_trip->getCreatureClass()->getMainStat() == "strength",
+                "the class reference (and its mainStat identity) should survive the round-trip");
+    expect_true(round_trip->getCreatureClass()->getBaseStats() &&
+                    round_trip->getCreatureClass()->getBaseStats()->getStrength() == 3,
+                "the referenced class's base stats should survive the round-trip");
+    expect_true(round_trip->getLevel() == 3, "the per-track level should survive the round-trip");
+    expect_true(round_trip->getOrder() == 10, "the ordering key should survive the round-trip");
+    expect_true(round_trip->getLabel() == "Warrior track", "inherited label should survive the round-trip");
+
+    // A track record is not a creature subtype, so it must never appear in the
+    // CCreature subtype enumeration (random encounters / spawn tables).
+    auto creatureSubtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(std::find(creatureSubtypes.begin(), creatureSubtypes.end(),
+                          CCreatureClassTrack::static_meta()->name()) == creatureSubtypes.end(),
+                "CCreatureClassTrack must not be enumerated as a CCreature subtype");
+}
+
 void test_creature_archetype_identity_accessors_use_fallbacks() {
     auto creature = std::make_shared<CCreature>();
 
@@ -2485,6 +2958,11 @@ int main() {
     test_creature_templates_compose_after_race_and_class_in_order();
     test_creature_templates_do_not_replace_race_or_class();
     test_creature_template_metadata_round_trip();
+    test_no_class_track_creature_composes_bit_identically_to_baseline();
+    test_creature_class_tracks_fold_deterministically_in_order();
+    test_single_class_track_matches_single_creature_class();
+    test_same_order_class_tracks_tie_break_deterministically();
+    test_creature_class_track_metadata_round_trip();
     test_creature_archetype_identity_accessors_use_fallbacks();
     test_creature_effective_interactions_compose_and_dedupe_sources();
     test_creature_effective_interactions_compose_archetype_sources();

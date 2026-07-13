@@ -47,6 +47,8 @@ class CCreatureRace;
 
 class CCreatureClass;
 
+class CCreatureClassTrack;
+
 class CCreatureTemplate;
 
 typedef std::map<std::string, std::shared_ptr<CInteraction>> CInteractionMap;
@@ -71,6 +73,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
                       setFightController),
            V_PROPERTY(CCreature, std::shared_ptr<CCreatureRace>, race, getRace, setRace),
            V_PROPERTY(CCreature, std::shared_ptr<CCreatureClass>, creatureClass, getCreatureClass, setCreatureClass),
+           V_PROPERTY(CCreature, std::set<std::shared_ptr<CCreatureClassTrack>>, classTracks, getClassTracks,
+                      setClassTracks),
            V_PROPERTY(CCreature, std::set<std::shared_ptr<CCreatureTemplate>>, templates, getTemplates, setTemplates),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
            V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
@@ -294,6 +298,21 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     void setCreatureClass(std::shared_ptr<CCreatureClass> value);
 
+    // Ordered multiclass class-track records (future mechanics, EPIC_08; empty on
+    // every current creature). Each CCreatureClassTrack pairs a CCreatureClass
+    // reference with a per-track level plus an `order` key. When the set is empty
+    // the single creatureClass path above is used untouched; when one or more
+    // tracks are present they SUBSUME the single creatureClass for class-derived
+    // contributions (stats, actions, mainStat) without replacing the reference.
+    std::set<std::shared_ptr<CCreatureClassTrack>> getClassTracks();
+
+    void setClassTracks(std::set<std::shared_ptr<CCreatureClassTrack>> value);
+
+    // The creature's class tracks in their defined application order: ascending
+    // `order` key, ties broken by configured identity so the multiclass fold is
+    // deterministic (mirrors getOrderedTemplates).
+    std::vector<std::shared_ptr<CCreatureClassTrack>> getOrderedClassTracks();
+
     // Optional template overlays (empty on every current creature). Templates are
     // CCreatureTemplate metadata definitions layered AFTER race/class composition;
     // they never replace the race or the creatureClass reference.
@@ -306,10 +325,10 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     // fold-in is deterministic.
     std::vector<std::shared_ptr<CCreatureTemplate>> getOrderedTemplates();
 
-    // True when this creature carries an archetype definition (race/creatureClass)
-    // or a template overlay. Composed stat/action/level behavior branches on this
-    // so partial migrations are explicit and creatures without archetypes or
-    // templates keep the legacy paths exactly.
+    // True when this creature carries an archetype definition (race/creatureClass),
+    // a class-track record, or a template overlay. Composed stat/action/level
+    // behavior branches on this so partial migrations are explicit and creatures
+    // without archetypes, tracks or templates keep the legacy paths exactly.
     bool usesArchetypeComposition();
 
   protected:
@@ -330,6 +349,8 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     std::shared_ptr<CCreatureRace> race;
 
     std::shared_ptr<CCreatureClass> creatureClass;
+
+    std::set<std::shared_ptr<CCreatureClassTrack>> classTracks;
 
     std::set<std::shared_ptr<CCreatureTemplate>> templates;
 

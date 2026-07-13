@@ -35,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CSdlResources.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
+#include "object/CCreatureClassTrack.h"
 #include "object/CCreatureRace.h"
 #include "object/CCreatureTemplate.h"
 #include "object/CEffect.h"
@@ -2571,6 +2572,88 @@ void test_creature_clone_preserves_composed_archetypes() {
                 "mutating the clone's scalar state leaves the source unchanged");
 }
 
+// [EPIC_08][STORY_03][SUBSTORY_01] Multiclass class-track records round-trip
+// through the clone's serialize -> deserialize cycle like the race/class/template
+// references: the track set survives with each record's class reference, per-track
+// level and ordering key intact, and the clone owns independent track instances.
+// Uses the same loaded-game harness as the composed-archetype clone test above so
+// every property type the creature serializes through has a registered serializer.
+void test_creature_clone_preserves_class_tracks() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGame(game, "empty");
+
+    auto subtypes = game->getObjectHandler()->getAllSubTypes("CCreature");
+    expect_true(!subtypes.empty(), "a normally loaded game registers concrete CCreature subtypes to clone");
+    std::sort(subtypes.begin(), subtypes.end());
+    std::shared_ptr<CCreature> source;
+    for (const auto &type : subtypes) {
+        source = game->createObject<CCreature>(type);
+        if (source) {
+            break;
+        }
+    }
+    expect_true(source != nullptr, "a registered CCreature subtype constructs a concrete creature to clone");
+
+    // Register the track type in THIS test binary's CTypes registry first: on
+    // Windows the native plugin is a DLL with its own copy of the CTypes static
+    // registries, so the serializers the plugin registers for CCreatureClassTrack
+    // are invisible to the executable's serialize path (see the CCreatureTemplate
+    // note in the composed-archetype clone test above). Register the class type
+    // too so the nested creatureClass reference serializes regardless of which
+    // tests ran earlier in main().
+    CTypes::register_type_metadata<CCreatureClassTrack, CGameObject>();
+    CTypes::register_type_metadata<CCreatureClass, CGameObject>();
+
+    auto klass = game->createObject<CCreatureClass>("CCreatureClass");
+    expect_true(klass != nullptr, "CCreatureClass is registered and constructs in the loaded game");
+    klass->setMainStat("strength");
+    auto classGrowth = std::make_shared<CStats>();
+    classGrowth->setStrength(2);
+    klass->setLevelStats(classGrowth);
+
+    auto track = game->createObject<CCreatureClassTrack>("CCreatureClassTrack");
+    expect_true(track != nullptr, "CCreatureClassTrack is registered and constructs in the loaded game");
+    track->setCreatureClass(klass);
+    track->setLevel(2);
+    track->setOrder(10);
+
+    source->setName("classTrackSource");
+    source->setClassTracks({track});
+    source->setLevel(1);
+    expect_true(source->usesArchetypeComposition(), "a creature carrying a class track is composed");
+
+    auto clone = source->clone<CCreature>();
+    drain_event_loop();
+
+    expect_true(clone != nullptr, "cloning a class-tracked creature yields a CCreature instance");
+    expect_true(clone->usesArchetypeComposition(), "the clone remains composed after cloning");
+
+    // Track preserved: the record round-trips with its class reference, per-track
+    // level and ordering key. Guard the dereference so a dropped record reports a
+    // FAIL instead of dereferencing an empty set.
+    expect_true(clone->getClassTracks().size() == 1, "the clone retains the class-track record");
+    if (clone->getClassTracks().size() == 1) {
+        auto clonedTrack = *clone->getClassTracks().begin();
+        expect_true(clonedTrack->getLevel() == 2 && clonedTrack->getOrder() == 10,
+                    "the clone's track keeps its per-track level and ordering key");
+        expect_true(clonedTrack->getCreatureClass() != nullptr &&
+                        clonedTrack->getCreatureClass()->getMainStat() == "strength",
+                    "the clone's track keeps its class reference (mainStat identity)");
+        expect_true(clonedTrack->getCreatureClass() && clonedTrack->getCreatureClass()->getLevelStats() &&
+                        clonedTrack->getCreatureClass()->getLevelStats()->getStrength() == 2,
+                    "the clone's track keeps the referenced class's level growth");
+        // The clone owns an independent track instance: mutating it must not write
+        // back through to the source's record.
+        clonedTrack->setLevel(99);
+        expect_true(track->getLevel() == 2, "mutating the clone's track does not write back to the source's track");
+        if (clonedTrack->getCreatureClass()) {
+            clonedTrack->getCreatureClass()->setMainStat("intelligence");
+            expect_true(klass->getMainStat() == "strength",
+                        "mutating the clone's track class does not write back to the source's class");
+        }
+    }
+}
+
 // Build a CStats with the four primary attributes set (the others stay zero).
 static std::shared_ptr<CStats> archetype_stats(int strength, int agility, int stamina, int intelligence) {
     auto stats = std::make_shared<CStats>();
@@ -2735,6 +2818,7 @@ int main() {
     test_levelup_legacy_path_serializes_unlock_into_actions();
     test_levelup_composed_path_unlocks_via_effective_interactions_without_serializing();
     test_creature_clone_preserves_composed_archetypes();
+    test_creature_clone_preserves_class_tracks();
     test_creature_composed_stat_order();
     test_creature_composed_main_stat_selection();
 

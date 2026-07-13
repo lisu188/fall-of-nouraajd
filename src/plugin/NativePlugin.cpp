@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CWrapper.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreatureClass.h"
+#include "object/CCreatureClassTrack.h"
 #include "object/CCreatureRace.h"
 #include "object/CCreatureTemplate.h"
 #include "object/CDialog.h"
@@ -166,6 +167,10 @@ bool register_creatures(const NativePluginHostV1 *host) {
     // The creature class definition is likewise a CGameObject-derived archetype,
     // not a CCreature, so it stays out of the encounter / subtype enumeration.
     registered = register_type<CCreatureClass, CGameObject>(game) && registered;
+    // The multiclass class-track record (EPIC_08 future mechanics) pairs a
+    // CCreatureClass reference with a per-track level; like the other metadata
+    // definitions it is never spawnable and never a CCreature subtype.
+    registered = register_type<CCreatureClassTrack, CGameObject>(game) && registered;
     // The template overlay definition (elite/undead/... variants, EPIC_08) is also
     // a CGameObject-derived metadata definition referenced via CCreature.templates;
     // it is never spawnable and never a CCreature subtype.
