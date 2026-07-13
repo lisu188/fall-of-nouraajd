@@ -1372,13 +1372,25 @@ class ContentValidatorTest(unittest.TestCase):
 
     def test_creature_archetype_naming_policy_accepts_conforming_ids(self):
         root = self.make_fixture()
+        # Register the archetype classes statically (without V_META) so the object
+        # nodes are constructible: entries must carry "class"/"ref" to be registered
+        # by the runtime config loader at all, like the real archetype content.
+        type_registration = root / "src/object/CObjectTypeRegistration.cpp"
+        type_registration.parent.mkdir(parents=True, exist_ok=True)
+        type_registration.write_text(
+            "void registerObjectTypes() {\n"
+            "    CTypes::register_type<CCreatureRace, CGameObject>();\n"
+            "    CTypes::register_type<CCreatureClass, CGameObject>();\n"
+            "}\n",
+            encoding="utf-8",
+        )
         write_json(
             root / "res/config/creature_races.json",
-            {"humanRace": {"properties": {"creatureClass": {"ref": "warriorClass"}}}},
+            {"humanRace": {"class": "CCreatureRace", "properties": {"creatureClass": {"ref": "warriorClass"}}}},
         )
         write_json(
             root / "res/config/creature_classes.json",
-            {"warriorClass": {"properties": {"label": "Warrior"}}},
+            {"warriorClass": {"class": "CCreatureClass", "properties": {"label": "Warrior"}}},
         )
 
         issues = validate_repo(root)
@@ -2841,9 +2853,16 @@ class ContentValidatorTest(unittest.TestCase):
             {"humanRace": {"class": "CCreatureRace", "properties": properties}},
         )
 
+    def _write_creature_type_catalog(self, root, types):
+        write_json(
+            root / "res/config/creature_types.json",
+            {"creatureTypeCatalog": {"catalogKind": "creatureType", "types": types}},
+        )
+
     def test_creature_race_valid_base_stats_actions_and_types_pass(self):
         root = self.make_fixture()
         self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
         self._write_creature_race(
             root,
             {
@@ -2934,6 +2953,238 @@ class ContentValidatorTest(unittest.TestCase):
             "humanRace.properties.subtypes[1]",
             "expected a non-empty string; got string",
         )
+
+    # --- Creature type catalog (EPIC_08/STORY_01/SUBSTORY_01) -------------------------
+    # creatureType strings are validated against res/config/creature_types.json.
+    # Validation-only: no runtime mechanic reads the catalog.
+
+    def test_creature_race_unknown_creature_type_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        self._write_creature_race(root, {"creatureType": "demon"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.creatureType",
+            'unknown creatureType "demon"; expected one of humanoid',
+            "add the new type to res/config/creature_types.json or fix the value",
+        )
+
+    def test_creature_type_without_catalog_file_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_races.json",
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated: the creature type catalog '
+            "res/config/creature_types.json is missing or malformed",
+        )
+
+    def test_creature_race_without_creature_type_needs_no_catalog(self):
+        # Absent creatureType keeps the current content rules: nothing to check against
+        # the catalog, so a fixture repo without creature_types.json stays valid.
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_race(root, {"subtypes": ["human"]})
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_creature_type_catalog_missing_entry_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        # Types authored as top-level keys instead of under the "creatureTypeCatalog"
+        # entry would collide with the global config id namespace; reject the shape.
+        write_json(root / "res/config/creature_types.json", {"humanoid": {"description": "Human-shaped folk."}})
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            'creature type catalog must declare only the "creatureTypeCatalog" entry; unexpected entries: humanoid',
+            'creature type catalog is missing the "creatureTypeCatalog" entry',
+        )
+        self.assertIssueContains(
+            issues,
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated',
+        )
+
+    def test_creature_type_catalog_malformed_types_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        write_json(
+            root / "res/config/creature_types.json",
+            {"creatureTypeCatalog": {"catalogKind": "creatureType", "types": ["humanoid"]}},
+        )
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.types",
+            "expected object mapping creature type ids to definitions; got array",
+        )
+        self.assertIssueContains(
+            issues,
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated',
+        )
+
+    def test_creature_type_catalog_empty_types_fails_closed(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {})
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.types",
+            "creature type catalog must declare at least one type",
+        )
+        self.assertIssueContains(
+            issues,
+            "humanRace.properties.creatureType",
+            'creatureType "humanoid" cannot be validated',
+        )
+
+    def test_creature_type_catalog_wrong_kind_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        write_json(
+            root / "res/config/creature_types.json",
+            {
+                "creatureTypeCatalog": {
+                    "catalogKind": "monsterType",
+                    "types": {"humanoid": {"description": "Human-shaped folk."}},
+                }
+            },
+        )
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        # The kind mismatch is reported, but the parsed type set stays usable so the
+        # valid usage is not double-flagged as unverifiable.
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.catalogKind",
+            'expected "creatureType"',
+        )
+        issue_text = "\n".join(str(issue) for issue in issues)
+        self.assertNotIn("cannot be validated", issue_text)
+        self.assertNotIn("unknown creatureType", issue_text)
+
+    def test_creature_type_catalog_bad_description_is_reported(self):
+        root = self.make_fixture()
+        self.write_creature_race_stats_fixture(root)
+        self._write_creature_type_catalog(root, {"humanoid": {"description": ""}})
+        self._write_creature_race(root, {"creatureType": "humanoid"})
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/config/creature_types.json",
+            "creatureTypeCatalog.types.humanoid.description",
+            "expected non-empty string; got string",
+        )
+        issue_text = "\n".join(str(issue) for issue in issues)
+        self.assertNotIn("cannot be validated", issue_text)
+
+    def test_script_spawn_of_data_only_config_is_reported(self):
+        # The runtime config loader (CObjectHandler::registerConfig) skips data-only
+        # entries such as the creature type catalog, so a createObject against one
+        # can never resolve at runtime and must be rejected here.
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'self.getGame().createObject("validMarket")',
+                'self.getGame().createObject("creatureTypeCatalog")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'createObject("creatureTypeCatalog")',
+            'object ref or class "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_item_grant_of_data_only_config_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text(encoding="utf-8").replace(
+                'event.getCause().addItem("LifePotion")',
+                'event.getCause().addItem("creatureTypeCatalog")',
+            ),
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/script.py",
+            'addItem("creatureTypeCatalog")',
+            'item ref "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_object_node_ref_to_data_only_config_is_reported(self):
+        root = self.make_fixture()
+        self._write_creature_type_catalog(root, {"humanoid": {"description": "Human-shaped folk."}})
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["catalogCave"] = {"class": "CBuilding", "properties": {"monster": {"ref": "creatureTypeCatalog"}}}
+        write_json(config_path, config)
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "res/maps/broken/config.json",
+            "catalogCave.properties.monster.ref",
+            'ref "creatureTypeCatalog" names a data-only config entry',
+            "the runtime config loader never registers such entries",
+        )
+
+    def test_creature_type_catalog_matches_observed_content_types(self):
+        # The catalog is the observed creatureType set by construction: every type
+        # declared by real content is catalogued, and the catalog carries no extras.
+        catalog = read_json(REPO_ROOT / "res/config/creature_types.json")
+        catalogued = set(catalog["creatureTypeCatalog"]["types"])
+        races = read_json(REPO_ROOT / "res/config/creature_races.json")
+        observed = {
+            race["properties"]["creatureType"]
+            for race in races.values()
+            if isinstance(race, dict) and "creatureType" in race.get("properties", {})
+        }
+        self.assertEqual(observed, catalogued)
 
     def test_amulet_quest_carrier_and_runtime_actor_pass_validation(self):
         root = self.make_amulet_fixture()

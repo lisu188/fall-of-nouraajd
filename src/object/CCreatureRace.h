@@ -34,6 +34,12 @@ class CInteraction;
 // character creation. It is deliberately NOT a CMapObject/CCreature, so it can
 // never be spawned onto a map or appear in getAllSubTypes("CCreature") / random
 // encounter tables; it only carries data that the composition layer reads.
+//
+// creatureType strings are validated against the canonical catalog in
+// res/config/creature_types.json by scripts/validate_content.py
+// (EPIC_08/STORY_01/SUBSTORY_01). The catalog is validation-only metadata: no
+// runtime mechanic (immunities, targeting, ...) reads it, and this class treats
+// creatureType as an opaque string exactly as before.
 class CCreatureRace : public CGameObject {
 
     V_META(CCreatureRace, CGameObject,
