@@ -5156,10 +5156,20 @@ def walkthrough_hearthfall_map():
     player.checkQuests()
     assert "hearthfallQuest" in completed_quest_names(player), "The Hearthfall quest should complete."
 
+    # Reporting the victory opens the road north: standalone play follows the
+    # fallback route to the Gravemoor once the chapter is complete.
+    captain_defeated = game_map.getBoolProperty("captain_defeated")
+    victory_reported = game_map.getBoolProperty("victory_reported")
+    scene_manager = g.getSceneManager()
+    assert scene_manager.getTransitionStateName() == "TransitionPending", "Victory should request the road north."
+    pump_event_loop(10)
+    assert g.getMap().mapName == "gravemoor", "Standalone victory should travel to the Gravemoor."
+    assert g.getMap().getPlayer() == player, "The same player should walk the road north."
+
     return {
-        "map": "hearthfall",
-        "captain_defeated": game_map.getBoolProperty("captain_defeated"),
-        "victory_reported": game_map.getBoolProperty("victory_reported"),
+        "map": g.getMap().mapName,
+        "captain_defeated": captain_defeated,
+        "victory_reported": victory_reported,
         "gold": player.getGold(),
         "quest_completed": "hearthfallQuest" in completed_quest_names(player),
     }
@@ -5201,11 +5211,22 @@ def walkthrough_gravemoor_map():
     player.checkQuests()
     assert "gravemoorQuest" in completed_quest_names(player), "The Gravemoor quest should complete."
 
+    # Passing judgment opens the road to the Usurper's Gate: standalone play
+    # follows the fallback route once the chapter is complete.
+    loyalists_freed = game_map.getNumericProperty("loyalists_freed")
+    voss_judged = game_map.getBoolProperty("voss_judged")
+    voss_spared = game_map.getBoolProperty("voss_spared")
+    scene_manager = g.getSceneManager()
+    assert scene_manager.getTransitionStateName() == "TransitionPending", "Judgment should request the road onward."
+    pump_event_loop(10)
+    assert g.getMap().mapName == "usurpergate", "Standalone judgment should travel to the Usurper's Gate."
+    assert g.getMap().getPlayer() == player, "The same player should walk the road onward."
+
     return {
-        "map": "gravemoor",
-        "loyalists_freed": game_map.getNumericProperty("loyalists_freed"),
-        "voss_judged": game_map.getBoolProperty("voss_judged"),
-        "voss_spared": game_map.getBoolProperty("voss_spared"),
+        "map": g.getMap().mapName,
+        "loyalists_freed": loyalists_freed,
+        "voss_judged": voss_judged,
+        "voss_spared": voss_spared,
         "gold": player.getGold(),
         "quest_completed": "gravemoorQuest" in completed_quest_names(player),
     }
@@ -17897,6 +17918,60 @@ class GameTest(unittest.TestCase):
                 "player_name": player.getName(),
                 "quests": quest_names(player),
                 "wands": player.countItems("magicWand"),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_standalone_hearthfall_victory_travels_to_gravemoor(self):
+        g, game_map, player = load_game_map_with_player("hearthfall")
+        scene_manager = g.getSceneManager()
+
+        game_map.removeObjectByName("watchCaptain")
+        self.assertTrue(game_map.getBoolProperty("captain_defeated"))
+
+        g.createObject("elderDialog").report_victory()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "manager": scene_manager.getTransitionStateName(),
+                "player_name": player.getName(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_standalone_gravemoor_judgment_travels_to_usurpergate(self):
+        g, game_map, player = load_game_map_with_player("gravemoor")
+        scene_manager = g.getSceneManager()
+
+        for cage in ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth"):
+            definition = find_map_object_definition("gravemoor", cage)
+            player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        voss = g.createObject("vossDialog")
+        self.assertTrue(voss.ready_to_judge())
+        voss.spare_voss()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("usurpergate", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "manager": scene_manager.getTransitionStateName(),
+                "player_name": player.getName(),
             },
             sort_keys=True,
         )
