@@ -17,9 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CCreature.h"
 #include <algorithm>
+#include <tuple>
 #include <vector>
 
 #include "object/CCreatureClass.h"
+#include "object/CCreatureClassTrack.h"
 #include "object/CCreatureRace.h"
 #include "object/CCreatureTemplate.h"
 
@@ -170,6 +172,14 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
     //   2. class starting actions   -- creatureClass.actions (null on legacy)
     //   3. class level unlocks       -- creatureClass.levelling entries unlocked
     //                                   up to the current level
+    //   2-3 multiclass variant       -- when classTracks is non-empty (future
+    //                                   mechanics, EPIC_08; empty on all current
+    //                                   content) the tracks SUBSUME the single
+    //                                   creatureClass: each track contributes its
+    //                                   class's starting actions then its level
+    //                                   unlocks gated by the TRACK's own level, in
+    //                                   ascending track `order`, so a later track
+    //                                   wins duplicate keys over an earlier one
     //   4. template overlays         -- CCreatureTemplate action additions, applied
     //                                   in ascending template `order` (future
     //                                   mechanics, EPIC_08; empty on all current
@@ -194,11 +204,12 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
         return "N:" + action->getName();
     };
 
-    // Appends every levelling entry whose unlock level is at or below the current
-    // level. Keys are the level at which the entry unlocks (see getLevelAction /
-    // levelUp); a non-numeric key is treated as ungated so no configured action
-    // is silently dropped.
-    auto appendUnlockedLevelling = [&](const CInteractionMap &source) {
+    // Appends every levelling entry whose unlock level is at or below the given
+    // gate level. Keys are the level at which the entry unlocks (see
+    // getLevelAction / levelUp); a non-numeric key is treated as ungated so no
+    // configured action is silently dropped. Single-class and concrete sources
+    // gate on the creature `level`; a multiclass track gates on its own level.
+    auto appendUnlockedLevelling = [&](const CInteractionMap &source, int gateLevel) {
         for (const auto &[levelKey, action] : source) {
             if (!action) {
                 continue;
@@ -209,7 +220,7 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
             } catch (...) {
                 unlockLevel = 0;
             }
-            if (unlockLevel <= level) {
+            if (unlockLevel <= gateLevel) {
                 ordered.push_back(action);
             }
         }
@@ -224,15 +235,33 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
         }
     }
 
-    // 2. class starting actions.
-    if (creatureClass) {
+    // 2-3. class contributions. Non-empty class tracks (multiclass, future-only)
+    // subsume the single creatureClass: class actions come solely from the tracks,
+    // in ascending track order, each track's level unlocks gated by the track's
+    // own level. With no tracks (every current creature) the single-class path
+    // below runs untouched.
+    if (!classTracks.empty()) {
+        for (const auto &track : getOrderedClassTracks()) {
+            auto trackClass = track->getCreatureClass();
+            if (!trackClass) {
+                continue;
+            }
+            for (const auto &action : trackClass->getActions()) {
+                if (action) {
+                    ordered.push_back(action);
+                }
+            }
+            appendUnlockedLevelling(trackClass->getLevelling(), track->getLevel());
+        }
+    } else if (creatureClass) {
+        // 2. class starting actions.
         for (const auto &action : creatureClass->getActions()) {
             if (action) {
                 ordered.push_back(action);
             }
         }
         // 3. class level unlocks: the class's own levelling map, level-gated.
-        appendUnlockedLevelling(creatureClass->getLevelling());
+        appendUnlockedLevelling(creatureClass->getLevelling(), level);
     }
 
     // 4. template overlays: action additions in ascending template order, so a
@@ -247,7 +276,7 @@ std::set<std::shared_ptr<CInteraction>> CCreature::getEffectiveInteractions() {
     }
 
     // 5a. concrete template level unlocks: the creature's own levelling map.
-    appendUnlockedLevelling(levelling);
+    appendUnlockedLevelling(levelling, level);
 
     // 5b. concrete own actions: added last so they win duplicate-key conflicts.
     for (const auto &action : actions) {
@@ -983,6 +1012,13 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     //   3a. race.racialLevelStats per racialLevel (racial advancement; 0 by default)
     //   4. creatureClass.levelStats per level
     //   5. creature.levelStats per level
+    // Multiclass variant (future mechanics, EPIC_08; classTracks is empty on all
+    // current content): when the creature carries class-track records, the tracks
+    // SUBSUME the single creatureClass at positions 2 and 4 -- position 2 folds
+    // each track's class.baseStats in ascending track `order`, position 4 folds
+    // each track's class.levelStats multiplied by that TRACK's own level, in the
+    // same order -- so class-derived stats come solely and deterministically from
+    // the tracks. With no tracks, the single-class code runs untouched.
     //   6. template overlays (ordered) -- CCreatureTemplate.statAdjustments applied
     //      in ascending template `order`, AFTER the race/class/creature stack and
     //      before the external-modifier tail (future mechanics, EPIC_08; empty on
@@ -994,13 +1030,28 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     // set independently empty-guarded: usesArchetypeComposition() only guarantees
     // at least one of race / creatureClass / templates is present.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
+    const auto orderedTracks = getOrderedClassTracks();
     // Main stat is a *selected* (not accumulated) field, so it must be set explicitly
     // (CStats::addBonus copies only numeric properties). The creatureClass is
     // authoritative for it (E02/S04/SS03): a class that names a main stat wins over the
     // legacy/race creature.baseStats main stat; with no class, or a class that leaves it
     // empty, this falls back to the legacy creature.baseStats main stat. The composed
     // path must apply this here because archetype creatures never run buildLegacyStats().
-    if (creatureClass && !creatureClass->getMainStat().empty()) {
+    // Multiclass rule: with non-empty classTracks the FIRST track (in `order`) whose
+    // class names a main stat is authoritative -- the tracks subsume the single
+    // creatureClass here too; if no track names one, this falls back to the legacy
+    // creature.baseStats main stat.
+    if (!orderedTracks.empty()) {
+        std::string trackMainStat;
+        for (const auto &track : orderedTracks) {
+            auto trackClass = track->getCreatureClass();
+            if (trackClass && !trackClass->getMainStat().empty()) {
+                trackMainStat = trackClass->getMainStat();
+                break;
+            }
+        }
+        ret->setMainStat(trackMainStat.empty() ? getBaseStats()->getMainStat() : trackMainStat);
+    } else if (creatureClass && !creatureClass->getMainStat().empty()) {
         ret->setMainStat(creatureClass->getMainStat());
     } else {
         ret->setMainStat(getBaseStats()->getMainStat());
@@ -1009,8 +1060,17 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     if (race && race->getBaseStats()) {
         ret->addBonus(race->getBaseStats());
     }
-    // 2. creatureClass.baseStats.
-    if (creatureClass && creatureClass->getBaseStats()) {
+    // 2. class baseStats: each track's class in ascending track order when tracks
+    // are present (subsuming the single creatureClass), otherwise the single
+    // creatureClass exactly as before.
+    if (!orderedTracks.empty()) {
+        for (const auto &track : orderedTracks) {
+            auto trackClass = track->getCreatureClass();
+            if (trackClass && trackClass->getBaseStats()) {
+                ret->addBonus(trackClass->getBaseStats());
+            }
+        }
+    } else if (creatureClass && creatureClass->getBaseStats()) {
         ret->addBonus(creatureClass->getBaseStats());
     }
     // 3. creature.baseStats (concrete template's own base).
@@ -1028,8 +1088,20 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
             ret->addBonus(race->getRacialLevelStats());
         }
     }
-    // 4. creatureClass.levelStats per level.
-    if (creatureClass && creatureClass->getLevelStats()) {
+    // 4. class levelStats: each track's class.levelStats multiplied by that
+    // track's own level, in ascending track order, when tracks are present
+    // (subsuming the single creatureClass); otherwise the single
+    // creatureClass.levelStats per creature level exactly as before.
+    if (!orderedTracks.empty()) {
+        for (const auto &track : orderedTracks) {
+            auto trackClass = track->getCreatureClass();
+            if (trackClass && trackClass->getLevelStats()) {
+                for (int i = 0; i < track->getLevel(); i++) {
+                    ret->addBonus(trackClass->getLevelStats());
+                }
+            }
+        }
+    } else if (creatureClass && creatureClass->getLevelStats()) {
         for (int i = 0; i < level; i++) {
             ret->addBonus(creatureClass->getLevelStats());
         }
@@ -1161,6 +1233,49 @@ std::shared_ptr<CCreatureClass> CCreature::getCreatureClass() { return creatureC
 // A null creatureClass is valid: it marks a legacy (non-archetype) creature.
 void CCreature::setCreatureClass(std::shared_ptr<CCreatureClass> value) { creatureClass = value; }
 
+std::set<std::shared_ptr<CCreatureClassTrack>> CCreature::getClassTracks() { return classTracks; }
+
+// An empty class-track set is valid (and is the state of every current creature):
+// it keeps the single creatureClass path bit-identical. Null entries are dropped
+// so the ordered multiclass fold and serialization stay well-formed.
+void CCreature::setClassTracks(std::set<std::shared_ptr<CCreatureClassTrack>> value) {
+    std::set<std::shared_ptr<CCreatureClassTrack>> filtered;
+    for (const auto &track : value) {
+        if (track) {
+            filtered.insert(track);
+        }
+    }
+    classTracks = filtered;
+}
+
+std::vector<std::shared_ptr<CCreatureClassTrack>> CCreature::getOrderedClassTracks() {
+    std::vector<std::shared_ptr<CCreatureClassTrack>> ordered(classTracks.begin(), classTracks.end());
+    // Deterministic multiclass progression order (docs/design/creature_archetypes.md,
+    // "Multiclass class-track layer"): ascending `order` key, ties broken by an
+    // explicit chain that exhausts every STABLE configured field before touching
+    // names -- track typeId, then referenced-class typeId, then the per-track level.
+    // Config-referenced records always carry a stable typeId, so any tie between
+    // distinctly configured tracks resolves on stable fields; two same-order tracks
+    // that tie on the whole configured chain (same class identity, same level)
+    // contribute identically to stats/actions/mainStat, so their relative order
+    // cannot change the composed result. Only after that do the track/class names
+    // participate: for inline anonymous records those names are engine-generated
+    // (stable within a run and across save/load, but not across fresh loads of the
+    // same authored config), so two same-order fully-anonymous tracks referencing
+    // DIFFERENT anonymous inline classes are a documented-unsupported authoring
+    // shape -- give such tracks distinct `order` keys or reference their classes
+    // by id.
+    auto identity = [](const std::shared_ptr<CCreatureClassTrack> &track) {
+        auto trackClass = track->getCreatureClass();
+        return std::make_tuple(track->getOrder(), track->getTypeId(),
+                               trackClass ? trackClass->getTypeId() : std::string(), track->getLevel(),
+                               track->getName(), trackClass ? trackClass->getName() : std::string());
+    };
+    std::sort(ordered.begin(), ordered.end(),
+              [&identity](const auto &lhs, const auto &rhs) { return identity(lhs) < identity(rhs); });
+    return ordered;
+}
+
 std::set<std::shared_ptr<CCreatureTemplate>> CCreature::getTemplates() { return templates; }
 
 // An empty template set is valid (and is the state of every current creature): it
@@ -1194,4 +1309,6 @@ std::vector<std::shared_ptr<CCreatureTemplate>> CCreature::getOrderedTemplates()
     return ordered;
 }
 
-bool CCreature::usesArchetypeComposition() { return race != nullptr || creatureClass != nullptr || !templates.empty(); }
+bool CCreature::usesArchetypeComposition() {
+    return race != nullptr || creatureClass != nullptr || !classTracks.empty() || !templates.empty();
+}

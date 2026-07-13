@@ -625,6 +625,70 @@ boss/cult status is expressly NOT modeled as a race.
   `test_creature_templates_do_not_replace_race_or_class` and
   `test_creature_template_metadata_round_trip` in `tests/unit/test_object.cpp`.
 
+# Multiclass class-track layer (future mechanics, EPIC_08)
+
+Status: Scaffolding (record object + composition hooks landed; no content uses
+it). Scope: support multiclass creatures by storing ORDERED class-level records
+alongside — not instead of — the single `creatureClass` reference. Every current
+creature has an empty track set and keeps the single-class paths bit-identically.
+
+- **Record object** — `CCreatureClassTrack` (`src/object/CCreatureClassTrack.h`),
+  a CGameObject-derived record like the other archetype definitions (registered
+  in `NativePlugin::register_creatures`, never spawnable, never a `CCreature`
+  subtype). Properties, all with neutral defaults: `creatureClass` (the class the
+  track advances; a null class contributes nothing), `level` (the per-track class
+  level, default 0) and `order` (the ordering key, default 0).
+- **Attachment** — `CCreature.classTracks` (`std::set` V_PROPERTY, so track
+  records serialize/clone exactly like the race/class/template references; no
+  bespoke serializer needed). Tracks apply in ascending `order`; ties break on an
+  explicit chain that exhausts every stable configured field before touching
+  names: track `typeId`, then referenced-class `typeId`, then the per-track
+  `level`, then track/class names (`CCreature::getOrderedClassTracks`).
+  Config-referenced records always carry a stable `typeId`, so distinctly
+  configured tracks always order deterministically; same-order tracks that tie on
+  the whole configured chain (same class identity, same level) contribute
+  identically, so their relative order cannot change the composed result. The one
+  residual shape — same-order fully-anonymous tracks referencing *different*
+  anonymous inline classes — falls back to engine-generated names (stable within
+  a run and across save/load, but not across fresh loads) and is therefore
+  documented-unsupported: give such tracks distinct `order` keys or reference
+  their classes by id.
+- **Precedence vs the single `creatureClass`** — when `classTracks` is non-empty
+  the tracks SUBSUME the single `creatureClass` for every class-derived
+  contribution (base stats, level growth, actions, mainStat); the `creatureClass`
+  reference itself is preserved untouched (never replaced, still serialized).
+  This keeps mixed configurations deterministic: class contributions come from
+  exactly one source — the tracks when present, the single class otherwise. A
+  single track referencing class `K` with level `L` composes identically to the
+  legacy single `creatureClass = K` at creature level `L`.
+- **Stat growth merge** — `CCreature::buildComposedStats` folds, in ascending
+  track order, each track's `class.baseStats` at position 2 and each track's
+  `class.levelStats` multiplied by that TRACK's own `level` at position 4. All
+  other positions (race, creature base, racial advancement, creature levelStats,
+  templates, equipment, effects) are unchanged.
+- **Action merge** — `getEffectiveInteractions` replaces the single-class
+  positions 2-3 with the tracks in ascending order: each track contributes its
+  class's starting actions then its `levelling` unlocks gated by the TRACK's own
+  level. Later tracks win duplicate keys over earlier ones (same dedupe key as
+  the action merge contract), and the concrete creature's own levelling/actions
+  stay most specific, mirroring the template layer's semantics.
+- **Main stat rule** — the FIRST track (in `order`) whose class names a
+  non-empty `mainStat` is authoritative; if no track names one, the composed
+  block falls back to the legacy `creature.baseStats.mainStat`. With no tracks
+  the existing class-first/legacy-fallback rule is untouched.
+- **Deferred (not wired yet)** — XP/level-up flow for tracks: `levelUp()` still
+  advances only the legacy `level`; per-track levels change only via
+  configuration/serialization, exactly like `racialLevel` before its XP design.
+- **Neutrality invariant** — a creature with NO tracks composes bit-identically
+  to the contracts above. Pinned by
+  `test_no_class_track_creature_composes_bit_identically_to_baseline`,
+  `test_creature_class_tracks_fold_deterministically_in_order`,
+  `test_single_class_track_matches_single_creature_class`,
+  `test_same_order_class_tracks_tie_break_deterministically` and
+  `test_creature_class_track_metadata_round_trip` in
+  `tests/unit/test_object.cpp`, plus the clone round-trip
+  `test_creature_clone_preserves_class_tracks` in `tests/unit/test_core.cpp`.
+
 # Developer guide: adding a race, a class, or a monster
 
 Status: Reference. Scope: the concrete, file-level steps for extending the
