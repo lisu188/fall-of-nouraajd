@@ -125,7 +125,7 @@ def load(self, context):
                     f"{SPARE_GOLD_REWARD} gold - and swears his ledgers to the Warden's cause. "
                     "The loyalists watch you spare him, and remember."
                 )
-            campaign.complete_scenario(self.getGame(), "spared")
+            campaign.complete_scenario(self.getGame(), "spared", fallback_map="usurpergate")
 
         def execute_voss(self):
             game_map = self.getGame().getMap()
@@ -137,7 +137,7 @@ def load(self, context):
                     f"The moor takes the traitor. His purse - {EXECUTE_GOLD_REWARD} gold - goes to the freed. "
                     "The loyalists watch you do it, and remember that too."
                 )
-            campaign.complete_scenario(self.getGame(), "executed")
+            campaign.complete_scenario(self.getGame(), "executed", fallback_map="usurpergate")
 
     @trigger(context, "onEnter", "quartermasterVoss")
     class VossTrigger(CTrigger):

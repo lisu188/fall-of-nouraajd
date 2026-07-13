@@ -54,6 +54,7 @@ def load(self, context):
             if not game_map.getBoolProperty("victory_reported"):
                 return "Bring word of the captain's fall to Elder Maren."
             return "Hearthfall is free. The road leads north into the Gravemoor."
+
         def getReward(self):
             return f"{VICTORY_GOLD_REWARD} gold from the village's hidden purse, and the road north."
 
@@ -88,7 +89,7 @@ def load(self, context):
                     "Maren presses the village's hidden purse into your hands. 'The Gravemoor holds our people. "
                     "Bring them home, Warden.'"
                 )
-            campaign.complete_scenario(self.getGame(), "completed")
+            campaign.complete_scenario(self.getGame(), "completed", fallback_map="gravemoor")
 
     @trigger(context, "onEnter", "elderMaren")
     class ElderTrigger(CTrigger):
@@ -111,6 +112,4 @@ def load(self, context):
     @trigger(context, "onDestroy", "occupierGate")
     class GateSentryTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage(
-                "The gate sentry falls. The road into Hearthfall stands open."
-            )
+            object.getGame().getGuiHandler().showMessage("The gate sentry falls. The road into Hearthfall stands open.")
