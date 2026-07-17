@@ -4919,6 +4919,16 @@ def walkthrough_vhulmarn_map():
     assert player.countItems("tiaraOfTheDrownedTithe") == tiaras_before + 1, "The tiara should enter the inventory."
     assert find_runtime_object(game_map, "theNamelessBoss") is not None, "The Nameless should rise on the altar."
 
+    # The finale requires the boss defeat as well as the pickup: the tiara alone must not complete it.
+    player.checkQuests()
+    assert (
+        "drownedTitheQuest" not in completed_quest_names(player)
+    ), "The Drowned Tithe quest must not complete on the tiara pickup alone."
+
+    # Defeating The Nameless (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theNamelessBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating The Nameless should record the boss defeat."
     player.checkQuests()
     assert "drownedTitheQuest" in completed_quest_names(player), "The Drowned Tithe quest should complete."
 
@@ -4928,6 +4938,7 @@ def walkthrough_vhulmarn_map():
         "bell_tolled": game_map.getBoolProperty("bell_tolled"),
         "tithe_taken": game_map.getBoolProperty("tithe_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "tiara_count": player.countItems("tiaraOfTheDrownedTithe"),
         "boss_present": find_runtime_object(game_map, "theNamelessBoss") is not None,
         "quest_completed": "drownedTitheQuest" in completed_quest_names(player),
@@ -4964,6 +4975,16 @@ def walkthrough_kadath_map():
     assert player.countItems("onyxSignetOfNyarlathotep") == signets_before + 1, "The signet should enter the inventory."
     assert find_runtime_object(game_map, "theCrawlingChaosBoss") is not None, "Nyarlathotep should rise at the throne."
 
+    # The finale requires the boss defeat as well as the pickup: the signet alone must not complete it.
+    player.checkQuests()
+    assert (
+        "kadathAscentQuest" not in completed_quest_names(player)
+    ), "The Kadath ascent quest must not complete on the signet pickup alone."
+
+    # Defeating the Crawling Chaos (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theCrawlingChaosBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Crawling Chaos should record the boss defeat."
     player.checkQuests()
     assert "kadathAscentQuest" in completed_quest_names(player), "The Kadath ascent quest should complete."
 
@@ -4973,6 +4994,7 @@ def walkthrough_kadath_map():
         "gate_opened": game_map.getBoolProperty("gate_opened"),
         "throne_taken": game_map.getBoolProperty("throne_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "signet_count": player.countItems("onyxSignetOfNyarlathotep"),
         "boss_present": find_runtime_object(game_map, "theCrawlingChaosBoss") is not None,
         "quest_completed": "kadathAscentQuest" in completed_quest_names(player),
@@ -5024,6 +5046,16 @@ def walkthrough_sunderedmarch_map():
         find_runtime_object(game_map, "theBarrowWarlordBoss") is not None
     ), "The Barrow-Warlord should rise at the dig."
 
+    # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
+    player.checkQuests()
+    assert (
+        "sunderedMarchQuest" not in completed_quest_names(player)
+    ), "The Sundered March quest must not complete on the crown pickup alone."
+
+    # Defeating the Barrow-Warlord (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theBarrowWarlordBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Barrow-Warlord should record the boss defeat."
     player.checkQuests()
     assert "sunderedMarchQuest" in completed_quest_names(player), "The Sundered March quest should complete."
 
@@ -5033,6 +5065,7 @@ def walkthrough_sunderedmarch_map():
         "sigils_found": game_map.getNumericProperty("sigils_found"),
         "crown_taken": game_map.getBoolProperty("crown_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("barrowCrown"),
         "boss_present": find_runtime_object(game_map, "theBarrowWarlordBoss") is not None,
         "quest_completed": "sunderedMarchQuest" in completed_quest_names(player),
@@ -5106,9 +5139,19 @@ def walkthrough_ninemarches_map():
     assert find_runtime_object(game_map, "theNinefoldKingBoss") is not None, "The Ninefold King should rise at the dig."
     assert game_map.getNumericProperty("chapter") == 4, "The dig should advance to the final chapter."
 
+    # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
+    player.checkQuests()
+    assert (
+        "ninemarchesQuest" not in completed_quest_names(player)
+    ), "The Nine Marches quest must not complete on the crown pickup alone."
+    assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
+
+    # Defeating the Ninefold King (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theNinefoldKingBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Ninefold King should record the boss defeat."
     player.checkQuests()
     assert "ninemarchesQuest" in completed_quest_names(player), "The Nine Marches quest should complete."
-    assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
 
     return {
         "map": "ninemarches",
@@ -5119,6 +5162,7 @@ def walkthrough_ninemarches_map():
         "obelisks_read": game_map.getNumericProperty("obelisks_read"),
         "crown_taken": game_map.getBoolProperty("crown_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("ninefoldCrown"),
         "boss_present": find_runtime_object(game_map, "theNinefoldKingBoss") is not None,
         "quest_completed": "ninemarchesQuest" in completed_quest_names(player),
@@ -17058,6 +17102,101 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_map_walkthrough_ninemarches(self):
         return execute_walkthrough("ninemarches")
+
+    @game_test
+    def test_map_finales_require_boss_defeat_and_pickup(self):
+        # [EPIC_10][STORY_02][SUBSTORY_01] The four finale quests (Kadath, Vhul'Marn, Sundered
+        # March, Nine Marches) must require BOTH the artifact/throne/crown pickup and the named
+        # finale boss defeat before completing. Neither transition alone completes the quest, and
+        # both in either order do. While only the pickup is recorded the objective names the
+        # remaining boss requirement, completion is idempotent across repeated checkQuests, and
+        # the completed state survives a save/load round-trip. Flags are driven directly so the
+        # ordering matrix stays deterministic and fast (the full pickup->defeat path is covered
+        # by the per-map walkthroughs).
+        game = load_game_module()
+
+        def active_objective(pl, qid):
+            for quest in pl.getQuests():
+                quest_id = quest.getTypeId() if hasattr(quest, "getTypeId") else quest.getName()
+                if quest_id == qid:
+                    return quest.getObjective()
+            return None
+
+        finales = (
+            ("kadath", "kadathAscentQuest", "throne_taken"),
+            ("vhulmarn", "drownedTitheQuest", "tithe_taken"),
+            ("sunderedmarch", "sunderedMarchQuest", "crown_taken"),
+            ("ninemarches", "ninemarchesQuest", "crown_taken"),
+        )
+
+        results = {}
+        for map_name, quest_id, pickup in finales:
+            # --- pickup-first: the pickup alone must not complete the finale ---
+            g, game_map, player = load_game_map_with_player(map_name)
+            if quest_id not in quest_names(player):
+                player.addQuest(quest_id)
+
+            game_map.setBoolProperty("boss_defeated", False)
+            game_map.setBoolProperty(pickup, True)
+            player.checkQuests()
+            self.assertNotIn(
+                quest_id, completed_quest_names(player), f"{map_name}: pickup alone must not complete the finale"
+            )
+            # Objective reflects the remaining requirement (put the finale boss down).
+            objective = active_objective(player, quest_id)
+            self.assertTrue(objective, f"{map_name}: an active finale objective should be present")
+            self.assertIn("put", objective.lower(), f"{map_name}: objective should name the remaining boss: {objective!r}")
+
+            # Adding the boss defeat completes it.
+            game_map.setBoolProperty("boss_defeated", True)
+            player.checkQuests()
+            self.assertIn(
+                quest_id, completed_quest_names(player), f"{map_name}: pickup + boss defeat should complete the finale"
+            )
+
+            # Idempotent across repeated triggers: exactly one completion, never doubled.
+            for _ in range(3):
+                player.checkQuests()
+            self.assertEqual(
+                1, completed_quest_names(player).count(quest_id), f"{map_name}: finale completion must be idempotent"
+            )
+
+            # The completed finale survives a save/load round-trip.
+            save_name = unique_save_name(f"finale_{map_name}")
+            cleanup_save_slot(save_name)
+            try:
+                game.CMapLoader.save(game_map, save_name)
+                reloaded = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(reloaded, save_name)
+                reloaded_player = reloaded.getMap().getPlayer()
+                self.assertIn(
+                    quest_id,
+                    completed_quest_names(reloaded_player),
+                    f"{map_name}: finale completion should survive save/load",
+                )
+            finally:
+                cleanup_save_slot(save_name)
+
+            # --- defeat-first: the boss defeat alone must not complete the finale ---
+            _g2, game_map2, player2 = load_game_map_with_player(map_name)
+            if quest_id not in quest_names(player2):
+                player2.addQuest(quest_id)
+            game_map2.setBoolProperty(pickup, False)
+            game_map2.setBoolProperty("boss_defeated", True)
+            player2.checkQuests()
+            self.assertNotIn(
+                quest_id, completed_quest_names(player2), f"{map_name}: boss defeat alone must not complete the finale"
+            )
+            # Adding the pickup completes it in the reverse order.
+            game_map2.setBoolProperty(pickup, True)
+            player2.checkQuests()
+            self.assertIn(
+                quest_id, completed_quest_names(player2), f"{map_name}: boss defeat + pickup should complete the finale"
+            )
+
+            results[map_name] = {"quest": quest_id, "pickup_flag": pickup, "completed_both_orders": True}
+
+        return True, json.dumps(results, sort_keys=True)
 
     @game_test
     def test_map_walkthrough_hearthfall(self):
