@@ -4929,6 +4929,7 @@ def walkthrough_vhulmarn_map():
     game_map.removeObjectByName("theNamelessBoss")
     pump_event_loop(5)
     assert game_map.getBoolProperty("boss_defeated"), "Defeating The Nameless should record the boss defeat."
+    assert game_map.getObjectByName("theNamelessBoss") is None, "The defeated Nameless should be gone from the map."
     player.checkQuests()
     assert "drownedTitheQuest" in completed_quest_names(player), "The Drowned Tithe quest should complete."
 
@@ -4940,7 +4941,7 @@ def walkthrough_vhulmarn_map():
         "boss_woken": game_map.getBoolProperty("boss_woken"),
         "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "tiara_count": player.countItems("tiaraOfTheDrownedTithe"),
-        "boss_present": find_runtime_object(game_map, "theNamelessBoss") is not None,
+        "boss_present": game_map.getObjectByName("theNamelessBoss") is not None,
         "quest_completed": "drownedTitheQuest" in completed_quest_names(player),
     }
 
@@ -4985,6 +4986,7 @@ def walkthrough_kadath_map():
     game_map.removeObjectByName("theCrawlingChaosBoss")
     pump_event_loop(5)
     assert game_map.getBoolProperty("boss_defeated"), "Defeating the Crawling Chaos should record the boss defeat."
+    assert game_map.getObjectByName("theCrawlingChaosBoss") is None, "The defeated Crawling Chaos should be gone."
     player.checkQuests()
     assert "kadathAscentQuest" in completed_quest_names(player), "The Kadath ascent quest should complete."
 
@@ -4996,7 +4998,7 @@ def walkthrough_kadath_map():
         "boss_woken": game_map.getBoolProperty("boss_woken"),
         "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "signet_count": player.countItems("onyxSignetOfNyarlathotep"),
-        "boss_present": find_runtime_object(game_map, "theCrawlingChaosBoss") is not None,
+        "boss_present": game_map.getObjectByName("theCrawlingChaosBoss") is not None,
         "quest_completed": "kadathAscentQuest" in completed_quest_names(player),
     }
 
@@ -5056,6 +5058,7 @@ def walkthrough_sunderedmarch_map():
     game_map.removeObjectByName("theBarrowWarlordBoss")
     pump_event_loop(5)
     assert game_map.getBoolProperty("boss_defeated"), "Defeating the Barrow-Warlord should record the boss defeat."
+    assert game_map.getObjectByName("theBarrowWarlordBoss") is None, "The defeated Barrow-Warlord should be gone."
     player.checkQuests()
     assert "sunderedMarchQuest" in completed_quest_names(player), "The Sundered March quest should complete."
 
@@ -5067,7 +5070,7 @@ def walkthrough_sunderedmarch_map():
         "boss_woken": game_map.getBoolProperty("boss_woken"),
         "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("barrowCrown"),
-        "boss_present": find_runtime_object(game_map, "theBarrowWarlordBoss") is not None,
+        "boss_present": game_map.getObjectByName("theBarrowWarlordBoss") is not None,
         "quest_completed": "sunderedMarchQuest" in completed_quest_names(player),
     }
 
@@ -5150,6 +5153,7 @@ def walkthrough_ninemarches_map():
     game_map.removeObjectByName("theNinefoldKingBoss")
     pump_event_loop(5)
     assert game_map.getBoolProperty("boss_defeated"), "Defeating the Ninefold King should record the boss defeat."
+    assert game_map.getObjectByName("theNinefoldKingBoss") is None, "The defeated Ninefold King should be gone."
     player.checkQuests()
     assert "ninemarchesQuest" in completed_quest_names(player), "The Nine Marches quest should complete."
 
@@ -5164,7 +5168,7 @@ def walkthrough_ninemarches_map():
         "boss_woken": game_map.getBoolProperty("boss_woken"),
         "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("ninefoldCrown"),
-        "boss_present": find_runtime_object(game_map, "theNinefoldKingBoss") is not None,
+        "boss_present": game_map.getObjectByName("theNinefoldKingBoss") is not None,
         "quest_completed": "ninemarchesQuest" in completed_quest_names(player),
     }
 
