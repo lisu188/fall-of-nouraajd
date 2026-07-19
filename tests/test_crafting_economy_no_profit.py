@@ -82,8 +82,9 @@ class CraftingEconomyNoProfitTest(unittest.TestCase):
         for name, recipe in self.recipes.items():
             if not isinstance(recipe, dict) or "output" not in recipe:
                 continue
-            input_cost = sum(_buy_price(self._require_power(inp["item"])) * inp.get("count", 1)
-                             for inp in recipe.get("inputs", []))
+            input_cost = 0
+            for inp in recipe.get("inputs", []):
+                input_cost += _buy_price(self._require_power(inp["item"])) * inp.get("count", 1)
             fee = int(recipe.get("gold", 0))
             output = recipe["output"]
             buyback = _vendor_buyback(self._require_power(output["item"])) * output.get("count", 1)
