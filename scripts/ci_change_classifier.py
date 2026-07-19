@@ -41,14 +41,16 @@ NATIVE_PATH_PATTERNS = (
     "vstd/*",
 )
 
-# Paths whose content can change how required validation is routed, polled, or
-# scored: the build workflow definition, the poller, and this classifier itself.
+# Paths whose content can change how required validation or auto-merge is
+# routed, polled, scored, or authorized.
 # A pull request that edits these files must not be allowed to classify its own
 # change as lightweight and thereby skip native/coverage validation. Touching any
 # of these forces strict native + coverage validation and human review, so the
 # authority for "what is required" never comes solely from PR-controlled logic.
 CI_AUTHORITY_PATH_PATTERNS = (
+    ".github/workflows/auto-merge.yml",
     ".github/workflows/build.yml",
+    "scripts/auto_merge_policy.py",
     "scripts/ci_change_classifier.py",
     "scripts/poll_pr_checks.py",
 )
@@ -168,8 +170,8 @@ class ChangeClassification:
 
     @property
     def humanReviewRequired(self) -> bool:
-        # Changes to the validation-authority files (workflow/poller/classifier)
-        # cannot be merged on PR-controlled logic alone; they require human review.
+        # Changes to validation or merge authority cannot be trusted solely from
+        # PR-controlled logic.
         return self.authorityChange
 
 

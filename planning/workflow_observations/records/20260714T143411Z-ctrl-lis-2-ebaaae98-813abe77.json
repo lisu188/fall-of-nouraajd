@@ -1,0 +1,45 @@
+{
+  "affectedPaths": [
+    ".github/workflows/auto-merge.yml",
+    "scripts/auto_merge_policy.py"
+  ],
+  "branch": "observations/auto-merge-empty-target",
+  "category": "ci",
+  "controllerId": "ctrl-lis-2-ebaaae98",
+  "createdAtUtc": "2026-07-14T14:34:11Z",
+  "details": "The auto-merge workflow added by PR #1461 reads github.event.workflow_run.pull_requests[0].html_url and passes it to gh pr merge. The successful pull-request build for PR #1462 produced a workflow_run payload whose pull-request association contains url, id, number, head, and base fields but no html_url. The environment value was therefore empty and the enable-auto-merge job failed instead of resolving exactly one pull request by number and checking policy prerequisites.\n",
+  "evidence": [
+    {
+      "autoMergeRun": {
+        "conclusion": "failure",
+        "id": 29234770564,
+        "job": 86766797360,
+        "step": "Enable squash auto-merge"
+      },
+      "buildRun": {
+        "conclusion": "success",
+        "event": "pull_request",
+        "headSha": "1307698124790198a1cb72bb80819f2c52e3d642",
+        "id": 29234039147,
+        "pullRequestAssociation": {
+          "hasHtmlUrl": false,
+          "number": 1462,
+          "url": "https://api.github.com/repos/lisu188/fall-of-nouraajd/pulls/1462"
+        }
+      },
+      "sourceCommit": "4f7762d2cdc06bcf22b0893881d03ade6826e4b8",
+      "workflowPath": ".github/workflows/auto-merge.yml"
+    }
+  ],
+  "fingerprint": "workflow-run pull request association lacks html-url and auto-merge target is empty",
+  "id": "20260714T143411Z-ctrl-lis-2-ebaaae98-813abe77",
+  "impact": "Successful required CI did not schedule PR #1462 for policy-gated squash auto-merge, leaving delivery stalled and demonstrating that the workflow does not fail closed on unverifiable PR evidence.",
+  "phase": "merge",
+  "queueIssue": "[EPIC_09][STORY_01][SUBSTORY_01] Repair policy-gated auto-merge after successful build",
+  "role": "controller",
+  "schemaVersion": 1,
+  "severity": "high",
+  "sourceCommit": "4f7762d2cdc06bcf22b0893881d03ade6826e4b8",
+  "suggestedImprovement": "Resolve exactly one pull request by number, verify current PR and repository policy evidence, and expose a stable allow/reason decision before invoking gh pr merge.",
+  "summary": "Auto-merge workflow passed an empty pull-request target"
+}
