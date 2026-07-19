@@ -35,6 +35,7 @@ def load(self, context):
         "brass_gate_open",
         "crown_taken",
         "boss_woken",
+        "boss_defeated",
         "shrine_used",
         "witch_used",
         "mine_claimed",
@@ -232,19 +233,25 @@ def load(self, context):
                 game_map.addObject(boss)
                 boss.moveTo(*BOSS_SPAWN)
                 game_map.setBoolProperty("boss_woken", True)
+            # Refresh objectives/completion so pickup-first ordering converges with a
+            # later boss defeat. The quest still needs the Ninefold King put down.
+            player.checkQuests()
 
     # ---- Quests ----
     @register(context)
     class NineMarchesQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("crown_taken")
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("crown_taken") and game_map.getBoolProperty("boss_defeated")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
             chapter = int(game_map.getNumericProperty("chapter"))
             read = int(game_map.getNumericProperty("obelisks_read"))
+            if game_map.getBoolProperty("crown_taken") and game_map.getBoolProperty("boss_defeated"):
+                return "Chapter IV. You wear the Ninefold Crown, and the Crowned God is down. The Nine Marches are quiet at last."
             if game_map.getBoolProperty("crown_taken"):
-                return "Chapter IV. You wear the Ninefold Crown. End what the Ninefold Crowning began."
+                return "Chapter IV. You wear the Ninefold Crown. End what the Ninefold Crowning began - put down the Ninefold King."
             if read >= 6:
                 return "Chapter IV. All six obelisks are read. Dig the grave-crown at the Cyclopean Citadel."
             if chapter >= 2:
@@ -535,8 +542,13 @@ def load(self, context):
     @trigger(context, "onDestroy", "theNinefoldKingBoss")
     class NinefoldKingTrigger(CTrigger):
         def trigger(self, obj, event):
+            game_map = obj.getGame().getMap()
+            game_map.setBoolProperty("boss_defeated", True)
             obj.getGame().getGuiHandler().showMessage(
                 "The Crowned God falls, and nine circlets of black iron crack apart on the Citadel stones. For the "
                 "first time in nine hundred years the Nine Marches are only quiet - not waiting. You still wear a "
                 "shard of its crown; the marches will remember that, too."
             )
+            # Boss-defeat transition: converge with the crown pickup so the finale
+            # completes once both requirements are met, in either order.
+            game_map.getPlayer().checkQuests()

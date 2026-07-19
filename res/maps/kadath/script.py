@@ -17,7 +17,7 @@ def load(self, context):
         player.addQuest(quest_name)
 
     def quest_flags_default(game_map):
-        for flag in ("ascent_heard", "gate_opened", "throne_taken", "boss_woken"):
+        for flag in ("ascent_heard", "gate_opened", "throne_taken", "boss_woken", "boss_defeated"):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
 
@@ -85,16 +85,22 @@ def load(self, context):
                 game_map.addObject(boss)
                 boss.moveTo(*BOSS_SPAWN)
                 game_map.setBoolProperty("boss_woken", True)
+            # Refresh objectives/completion so pickup-first ordering converges with a
+            # later boss defeat. The quest still needs the Crawling Chaos put down.
+            player.checkQuests()
 
     @register(context)
     class KadathAscentQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("throne_taken")
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("throne_taken") and game_map.getBoolProperty("boss_defeated")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
-            if game_map.getBoolProperty("throne_taken"):
+            if game_map.getBoolProperty("throne_taken") and game_map.getBoolProperty("boss_defeated"):
                 return "You wear the Onyx Signet of the Crawling Chaos. The dream will not release you unmarked."
+            if game_map.getBoolProperty("throne_taken"):
+                return "The Crawling Chaos walks the summit in your shape. Put the Messenger down to end the dream."
             if game_map.getBoolProperty("ascent_heard"):
                 return "Climb the basalt road to the onyx castle on the summit of Kadath."
             if game_map.getBoolProperty("gate_opened"):
@@ -157,7 +163,12 @@ def load(self, context):
     @trigger(context, "onDestroy", "theCrawlingChaosBoss")
     class CrawlingChaosTrigger(CTrigger):
         def trigger(self, obj, event):
+            game_map = obj.getGame().getMap()
+            game_map.setBoolProperty("boss_defeated", True)
             obj.getGame().getGuiHandler().showMessage(
                 "The last shape sloughs away and the Crawling Chaos withdraws into the dark between dreams. You "
                 "are still wearing his signet. Somewhere, in the ultimate void, an idiot flute keeps your time."
             )
+            # Boss-defeat transition: converge with the throne pickup so the finale
+            # completes once both requirements are met, in either order.
+            game_map.getPlayer().checkQuests()
