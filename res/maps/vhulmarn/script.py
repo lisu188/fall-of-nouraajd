@@ -17,7 +17,7 @@ def load(self, context):
         player.addQuest(quest_name)
 
     def quest_system_flags_default(game_map):
-        for flag in ("tithe_heard", "bell_tolled", "tithe_taken", "boss_woken"):
+        for flag in ("tithe_heard", "bell_tolled", "tithe_taken", "boss_woken", "boss_defeated"):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
 
@@ -89,16 +89,22 @@ def load(self, context):
                 game_map.addObject(boss)
                 boss.moveTo(*BOSS_SPAWN)
                 game_map.setBoolProperty("boss_woken", True)
+            # Refresh objectives/completion so pickup-first ordering converges with a
+            # later boss defeat. The quest still needs the Nameless put down.
+            player.checkQuests()
 
     @register(context)
     class DrownedTitheQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("tithe_taken")
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("tithe_taken") and game_map.getBoolProperty("boss_defeated")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
-            if game_map.getBoolProperty("tithe_taken"):
+            if game_map.getBoolProperty("tithe_taken") and game_map.getBoolProperty("boss_defeated"):
                 return "You carry the Tiara of the Drowned Tithe. The deep knows your name now."
+            if game_map.getBoolProperty("tithe_taken"):
+                return "The deep has sent up the Nameless in your shape. Put it back beneath the tarn to end the tithe."
             if game_map.getBoolProperty("tithe_heard"):
                 return "Cross the pilgrim causeway to the cyclopean altar at the tarn's heart."
             return "Find someone in Vhul'Marn who still remembers what the town owed the deep."
@@ -158,7 +164,12 @@ def load(self, context):
     @trigger(context, "onDestroy", "theNamelessBoss")
     class NamelessTrigger(CTrigger):
         def trigger(self, obj, event):
+            game_map = obj.getGame().getMap()
+            game_map.setBoolProperty("boss_defeated", True)
             obj.getGame().getGuiHandler().showMessage(
                 "The Nameless folds back into the tarn, and for one held breath the drowned bell will not ring. "
                 "It is not death. The deep is patient, and the stars will come right again."
             )
+            # Boss-defeat transition: converge with the tithe pickup so the finale
+            # completes once both requirements are met, in either order.
+            game_map.getPlayer().checkQuests()

@@ -19,7 +19,7 @@ def load(self, context):
         return player.hasItem(lambda it: it.getName() == item_name)
 
     def quest_flags_default(game_map):
-        for flag in ("gate_open", "crown_taken", "boss_woken", "shrine_used", "seer_started", "seer_done"):
+        for flag in ("gate_open", "crown_taken", "boss_woken", "boss_defeated", "shrine_used", "seer_started", "seer_done"):
             if not hasattr(game_map, flag):
                 game_map.setBoolProperty(flag, False)
         if not hasattr(game_map, "sigils_found"):
@@ -168,16 +168,22 @@ def load(self, context):
                 game_map.addObject(boss)
                 boss.moveTo(*BOSS_SPAWN)
                 game_map.setBoolProperty("boss_woken", True)
+            # Refresh objectives/completion so pickup-first ordering converges with a
+            # later boss defeat. The quest still needs the Barrow-Warlord put down.
+            player.checkQuests()
 
     @register(context)
     class SunderedMarchQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("crown_taken")
+            game_map = self.getGame().getMap()
+            return game_map.getBoolProperty("crown_taken") and game_map.getBoolProperty("boss_defeated")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
+            if game_map.getBoolProperty("crown_taken") and game_map.getBoolProperty("boss_defeated"):
+                return "The Crown of the Barrow-Warlord is yours and its king is down. The Sundered March is only quiet now."
             if game_map.getBoolProperty("crown_taken"):
-                return "You wear the Crown of the Barrow-Warlord. The March has its king; end what the cult began."
+                return "You wear the Crown of the Barrow-Warlord. The March has its king; end what the cult began - put down the Barrow-Warlord."
             found = game_map.getNumericProperty("sigils_found")
             if game_map.getBoolProperty("gate_open"):
                 return f"Read the three barrow-obelisks, then dig beneath the central barrow. ({found}/3 sigils read.)"
@@ -276,7 +282,12 @@ def load(self, context):
     @trigger(context, "onDestroy", "theBarrowWarlordBoss")
     class BarrowWarlordTrigger(CTrigger):
         def trigger(self, obj, event):
+            game_map = obj.getGame().getMap()
+            game_map.setBoolProperty("boss_defeated", True)
             obj.getGame().getGuiHandler().showMessage(
                 "The Crowned Barrow-Warlord falls a second and final time. The plague-crown cracks on the stones, "
                 "and for the first time in a hundred years the Sundered March is only quiet - not waiting."
             )
+            # Boss-defeat transition: converge with the crown pickup so the finale
+            # completes once both requirements are met, in either order.
+            game_map.getPlayer().checkQuests()
