@@ -1581,7 +1581,14 @@ MINIMAP_VIEWPORT_RGB = (255, 255, 255)
 ROOT_800_600 = (560, 240, 800, 600)
 ROOT_400_300 = (760, 390, 400, 300)
 ROOT_SELECTION_BASE = (810, 390, 300, 300)
+ROOT_FULL_WINDOW = (0, 0, GUI_WIDTH, GUI_HEIGHT)
 PANEL_LAYOUT_CASES = {
+    "campaignPanel": {
+        "kind": "panel",
+        "class": "CGameCampaignPanel",
+        "root": ROOT_FULL_WINDOW,
+        "tests": ("test_campaign_panel_layout_blocking_and_resize",),
+    },
     "characterPanel": {
         "kind": "panel",
         "class": "CGameCharacterPanel",
@@ -1664,6 +1671,7 @@ PANEL_LAYOUT_CASES = {
 COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
 XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
+    "test_campaign_panel_layout_blocking_and_resize",
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
     "test_window_resize_event_updates_gui_dimensions",
@@ -18465,6 +18473,70 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_campaign_presentation_screens_flow_in_required_order(self):
+        # [EPIC_10][STORY_04][SUBSTORY_01] The campaign driver must present the initial
+        # briefing (BEGIN), each scenario epilogue (CONTINUE), the next briefing (BEGIN),
+        # and terminal campaign completion (RETURN) through the blocking
+        # CGuiHandler.showCampaignScreen surface, in that order. The Warden's Road
+        # manifest drives the real flow: homecoming (briefing + epilogue), rescue
+        # (briefing, no epilogue), assault_mercy (briefing, terminal), completion.
+        # Headless execution of the native binding logs and returns immediately.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        screens = []
+        original = game.CGuiHandler.showCampaignScreen
+
+        def capture_screen(self_, title, body, action_label):
+            self.assertTrue(body, "campaign screens always carry body text")
+            screens.append((title, action_label))
+
+        game.CGuiHandler.showCampaignScreen = capture_screen
+        try:
+            g = game.CGameLoader.loadGame()
+            campaign_module.start(g, "wardensRoad", "Warrior")
+            self.assertEqual([("Chapter I - Hearthfall", "BEGIN")], screens)
+
+            campaign_module.complete_scenario(g, "completed")
+            pump_event_loop(10)
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "BEGIN"),
+                    ("Chapter I - Hearthfall", "CONTINUE"),
+                    ("Chapter II - The Gravemoor", "BEGIN"),
+                ],
+                screens,
+            )
+
+            campaign_module.complete_scenario(g, "spared")
+            pump_event_loop(10)
+            campaign_module.complete_scenario(g, "completed")
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "BEGIN"),
+                    ("Chapter I - Hearthfall", "CONTINUE"),
+                    ("Chapter II - The Gravemoor", "BEGIN"),
+                    ("Chapter III - The Usurper's Gate", "BEGIN"),
+                    ("The Warden's Road", "RETURN"),
+                ],
+                screens,
+            )
+            self.assertEqual(
+                ["BEGIN", "CONTINUE", "BEGIN", "BEGIN", "RETURN"],
+                [action for _, action in screens],
+                "presentation actions must flow briefing/epilogue/briefing/completion",
+            )
+
+            # The native binding is exposed and headless execution (no GUI attached)
+            # logs the content and returns immediately instead of blocking.
+            game.CGuiHandler.showCampaignScreen = original
+            g.getGuiHandler().showCampaignScreen("Headless Title", "Headless body", "BEGIN")
+        finally:
+            game.CGuiHandler.showCampaignScreen = original
+
+        return True, json.dumps({"screens": [f"{title}|{action}" for title, action in screens]}, sort_keys=True)
+
+    @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
         game = load_game_module()
 
@@ -21542,7 +21614,13 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 panel = open_layout_panel(self, g, resource_id)
                 try:
                     panel_rect = resolved_rect(panel)
-                    click_point = next(point for point in candidates if not rect_contains_point(panel_rect, *point))
+                    # Full-window panels (campaign screens) have no point outside their
+                    # rect; any click must still be swallowed by the panel instead of
+                    # reaching the map, so fall back to an arbitrary candidate.
+                    click_point = next(
+                        (point for point in candidates if not rect_contains_point(panel_rect, *point)),
+                        candidates[0],
+                    )
                     before = player.getCoords()
                     before_turn = game_map.getTurn()
                     push_sdl_mouse_click(*click_point)
@@ -21554,6 +21632,84 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 finally:
                     panel.close()
                     pump_event_loop(3)
+
+    def test_campaign_panel_layout_blocking_and_resize(self):
+        # [EPIC_10][STORY_04][SUBSTORY_01] The campaign presentation screen fills the
+        # window, lays out title / body / action button inside it per the theme config,
+        # renders nonblank body text, blocks until its action dismisses it, and remains
+        # usable after a window resize. Key-dismissal semantics (Enter/Space yes,
+        # Escape never) are covered by the native test_gui.cpp panel test.
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        body_text = (
+            "Ten years of exile end at the village where your name was outlawed. "
+            "Break the watch, light the hearths, and give the marches their Warden back."
+        )
+
+        def inspect(panel):
+            root = assert_runtime_rect(self, "campaignPanel", panel, ROOT_FULL_WINDOW)
+            self.assertEqual("Chapter Screen", panel.getTitle())
+            self.assertEqual("BEGIN", panel.getActionLabel())
+            widgets = sorted(
+                (child for child in panel.getChildren() if child.getType() == "CWidget"),
+                key=lambda child: resolved_rect(child)[1],
+            )
+            self.assertEqual(2, len(widgets))
+            title_rect = assert_runtime_rect(self, "campaign title", widgets[0], (0, 0, 1920, 162))
+            body_rect = assert_runtime_rect(self, "campaign body", widgets[1], (192, 162, 1536, 756))
+            buttons = find_descendants_by_type(panel, "CButton")
+            self.assertEqual(1, len(buttons))
+            button = buttons[0]
+            self.assertEqual("BEGIN", button.text, "the action button carries the caller's label")
+            button_rect = assert_runtime_rect(self, "campaign action", button, (672, 972, 576, 108))
+            for label, rect in (("title", title_rect), ("body", body_rect), ("action", button_rect)):
+                assert_child_inside(self, "campaignPanel", root, label, rect)
+            assert_no_overlap(self, "campaign body", body_rect, "campaign action", button_rect)
+            assert_no_overlap(self, "campaign title", title_rect, "campaign body", body_rect)
+            with isolated_gui_panel(g, panel):
+                panel.setStringProperty("body", "")
+                pump_event_loop(3)
+                empty_data, width, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_campaign_panel_empty.png", g.getGui()
+                )
+                panel.setStringProperty("body", body_text)
+                pump_event_loop(3)
+                text_data, _, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_campaign_panel_text.png", g.getGui()
+                )
+                text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, body_rect)
+                self.assertGreater(changed, 0, "campaign body text must render nonblank pixels")
+                assert_child_inside(self, "campaign body", body_rect, "rendered body", text_bounds)
+                capture_panel_layout(self, g, "layout_campaign_panel", panel)
+            activate_widget(button, g.getGui())
+            return {"body": body_rect}
+
+        _, regions = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignPanel",
+            lambda: g.getGuiHandler().showCampaignScreen("Chapter Screen", body_text, "BEGIN"),
+            inspect,
+            lambda panel: None,
+        )
+        self.assertIn("body", regions)
+        self.assertFalse(
+            gui_contains_class(g, "CGameCampaignPanel"), "the action must dismiss the campaign screen"
+        )
+
+        # Usable after resize: a reopened campaign panel follows the new window size
+        # (full-window at 800x600 after the resize event).
+        panel = g.getGuiHandler().openPanel("campaignPanel")
+        wait_for_panel_class(self, g, "CGameCampaignPanel")
+        width, height = push_sdl_window_size_changed_event(800, 600)
+        self.assertTrue(
+            pump_event_loop_until(lambda: resolved_rect(panel) == (0, 0, width, height), timeout=5.0),
+            "the campaign screen must track the resized window",
+        )
+        panel.close()
+        pump_event_loop(3)
+        self.assertFalse(gui_contains_class(g, "CGameCampaignPanel"))
 
     def test_text_centric_panel_layouts(self):
         _, g, _, player = create_xvfb_gameplay_session(self)

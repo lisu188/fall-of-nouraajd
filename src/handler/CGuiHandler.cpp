@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CTooltip.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CGameCampaignPanel.h"
 #include "gui/panel/CGameDialogPanel.h"
 #include "gui/panel/CGameLootPanel.h"
 #include "gui/panel/CGameQuestionPanel.h"
@@ -317,6 +318,39 @@ std::pair<std::string, std::string> CGuiHandler::showCharacterCreation(std::shar
         return {"", ""};
     }
     return {*selectedClass, *selectedRace};
+}
+
+void CGuiHandler::showCampaignScreen(std::string title, std::string body, std::string actionLabel) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        // Headless execution: log the full presentation content and return
+        // immediately so automated campaign runs never block on input.
+        vstd::logger::info("Campaign screen:", title, body, actionLabel);
+        return;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"actionLabel", actionLabel},
+                       {"blocking", true},
+                       {"bodyLength", static_cast<unsigned long long>(body.size())},
+                       {"panel", "campaignPanel"},
+                       {"panelKind", "campaign"},
+                       {"title", title}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
+    std::shared_ptr<CGameCampaignPanel> panel = game->createObject<CGameCampaignPanel>("campaignPanel");
+    panel->setTitle(title);
+    panel->setBody(body);
+    panel->setActionLabel(actionLabel);
+    // The configured action button carries a placeholder label; stamp the
+    // caller-supplied one (BEGIN / CONTINUE / RETURN) before showing.
+    for (const auto &child : panel->getChildren()) {
+        if (auto button = vstd::cast<CButton>(child)) {
+            button->setText(actionLabel);
+        }
+    }
+    game->getGui()->pushChild(panel);
+    panel->awaitDismissal();
 }
 
 void CGuiHandler::showTooltip(std::string text, int x, int y) {

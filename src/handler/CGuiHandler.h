@@ -63,6 +63,14 @@ class CGuiHandler : public CGameObject {
     std::pair<std::string, std::string> showCharacterCreation(std::shared_ptr<CListString> classes,
                                                               std::shared_ptr<CListString> races);
 
+    // Full-window blocking campaign presentation screen (briefing / epilogue /
+    // completion): title band, body text, and one action button whose label the
+    // campaign driver supplies (BEGIN / CONTINUE / RETURN). Enter, Space, or the
+    // action button dismiss it; closing/cancel input cannot cancel campaign
+    // progression. Headless execution (no GUI) logs the title/body/action
+    // content and returns immediately.
+    void showCampaignScreen(std::string title, std::string body, std::string actionLabel);
+
     void showTooltip(std::string text, int x, int y);
 
     std::shared_ptr<CGamePanel> openPanel(std::string panel);
