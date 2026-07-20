@@ -99,6 +99,68 @@
       "proxyLayout": "CParentLayout"
     }
   },
+  "campaignPanel": {
+    "class": "CGameCampaignPanel",
+    "properties": {
+      "children": [
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "15%",
+                "w": "100%",
+                "x": "0%",
+                "y": "0%"
+              }
+            },
+            "render": "renderTitle"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "70%",
+                "w": "80%",
+                "x": "10%",
+                "y": "15%"
+              }
+            },
+            "render": "renderBody"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickAction",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "10%",
+                "w": "30%",
+                "x": "35%",
+                "y": "90%"
+              }
+            },
+            "text": "CONTINUE"
+          }
+        }
+      ],
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "100%",
+          "w": "100%",
+          "x": "0%",
+          "y": "0%"
+        }
+      }
+    }
+  },
   "questionPanel": {
     "class": "CGameQuestionPanel",
     "properties": {

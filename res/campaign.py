@@ -339,6 +339,32 @@ def _scenario_intro(scenario):
     return f'{scenario["title"]}. {scenario["briefing"]}'
 
 
+# Presentation-screen action labels, in required flow order: each briefing is
+# dismissed with BEGIN, a scenario epilogue with CONTINUE, and the terminal
+# campaign completion with RETURN.
+ACTION_BEGIN = "BEGIN"
+ACTION_CONTINUE = "CONTINUE"
+ACTION_RETURN = "RETURN"
+
+
+def _show_screen(game, title, body, action_label, fallback_text=None):
+    """Show a blocking full-window campaign presentation screen.
+
+    Uses CGuiHandler.showCampaignScreen when the GUI handler provides it (the
+    engine's handler always does; headless runs log and return immediately).
+    Pure-Python test doubles without the method fall back to the legacy
+    showMessage flow so this module stays unit-testable without the engine.
+    """
+    if not body:
+        return
+    gui = game.getGuiHandler()
+    show = getattr(gui, "showCampaignScreen", None)
+    if callable(show):
+        show(title, body, action_label)
+        return
+    _show_message(game, fallback_text if fallback_text is not None else body)
+
+
 def start(game, campaign_id, player_class, race_id=""):
     """Begin a campaign: start its first scenario map with a fresh player of
     the given class/race, stamp campaign state onto that player, and show the
@@ -355,7 +381,7 @@ def start(game, campaign_id, player_class, race_id=""):
     store = state(game)
     _require(store is not None, f'campaign "{campaign_id}" failed to start map "{scenario["map"]}" with a player')
     store.begin(campaign_id, first_id)
-    _show_message(game, _scenario_intro(scenario))
+    _show_screen(game, scenario["title"], scenario["briefing"], ACTION_BEGIN, fallback_text=_scenario_intro(scenario))
     return store
 
 
@@ -375,14 +401,17 @@ def complete_scenario(game, outcome, fallback_map=None):
         return None
     manifest = get_manifest(store.campaign_id())
     current_id = store.scenario()
+    current = manifest["scenarios"][current_id]
     target_id = next_scenario(manifest, current_id, outcome)
     store.record_outcome(current_id, outcome)
-    _show_message(game, manifest["scenarios"][current_id].get("epilogue", ""))
+    _show_screen(game, current["title"], current.get("epilogue", ""), ACTION_CONTINUE)
     if target_id is None:
         store.finish()
-        _show_message(
+        _show_screen(
             game,
+            manifest["title"],
             manifest.get("completionText") or f'The campaign "{manifest["title"]}" is complete.',
+            ACTION_RETURN,
         )
         return ""
     target = manifest["scenarios"][target_id]
@@ -390,6 +419,6 @@ def complete_scenario(game, outcome, fallback_map=None):
     # object is re-attached to the destination map by CSceneManager.
     apply_carryover(game.getMap().getPlayer(), target.get("carryover"))
     store.advance(target_id)
-    _show_message(game, _scenario_intro(target))
+    _show_screen(game, target["title"], target["briefing"], ACTION_BEGIN, fallback_text=_scenario_intro(target))
     game.changeMap(target["map"])
     return target_id
