@@ -18358,6 +18358,113 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_usurpergate_mercy_route_diverges_from_wrath_and_standalone(self):
+        # [EPIC_10][STORY_03][SUBSTORY_01] The Warden's Road mercy finale must materially
+        # diverge from wrath: when the active campaign scenario is wardensRoad/assault_mercy,
+        # exactly curtainWallWest1, curtainWallWest2, and housecarlWest are removed BEFORE the
+        # first Usurpergate introduction, mercy_route_applied is recorded, and mercy-specific
+        # arrival copy is shown once. Wrath and standalone entry keep the full assault (all
+        # three defenders present, standard arrival text), the final Usurper/throne objective,
+        # and the 500-gold reward. Route application is idempotent across save/load.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        mercy_defenders = ("curtainWallWest1", "curtainWallWest2", "housecarlWest")
+        kept_defenders = ("curtainWallEast1", "curtainWallEast2", "housecarlEast", "theUsurper")
+        start_definition = find_map_object_definition("usurpergate", "usurpergateStart")
+        throne_definition = find_map_object_definition("usurpergate", "obsidianThrone")
+
+        messages = []
+        original_show_message = game.CGuiHandler.showMessage
+        game.CGuiHandler.showMessage = lambda self_, message: messages.append(message)
+
+        def enter_start(g, player):
+            player.moveTo(start_definition["x"] // 32, start_definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        try:
+            # --- Standalone: no active campaign -> full assault, standard arrival text.
+            g, game_map, player = load_game_map_with_player("usurpergate")
+            enter_start(g, player)
+            for name in mercy_defenders + kept_defenders:
+                self.assertIsNotNone(game_map.getObjectByName(name), f"standalone keeps {name}")
+            self.assertFalse(game_map.getBoolProperty("mercy_route_applied"))
+            self.assertFalse(any("Voss's ledgers named" in m for m in messages), "no mercy copy standalone")
+
+            # --- Wrath: assault_wrath scenario -> full assault, standard arrival text.
+            messages.clear()
+            g2, map2, player2 = load_game_map_with_player("usurpergate")
+            campaign_module.CampaignStateStore(player2).begin("wardensRoad", "assault_wrath")
+            enter_start(g2, player2)
+            for name in mercy_defenders + kept_defenders:
+                self.assertIsNotNone(map2.getObjectByName(name), f"wrath keeps {name}")
+            self.assertFalse(map2.getBoolProperty("mercy_route_applied"))
+            self.assertFalse(any("Voss's ledgers named" in m for m in messages), "no mercy copy on wrath")
+
+            # --- Mercy: assault_mercy scenario -> the three named defenders stand down
+            # before the first introduction, the flag is recorded, mercy copy shows once.
+            messages.clear()
+            g3, map3, player3 = load_game_map_with_player("usurpergate")
+            store = campaign_module.CampaignStateStore(player3)
+            store.begin("wardensRoad", "assault_mercy")
+            for name in mercy_defenders:
+                self.assertIsNotNone(map3.getObjectByName(name), f"{name} present before intro")
+            enter_start(g3, player3)
+            for name in mercy_defenders:
+                self.assertIsNone(map3.getObjectByName(name), f"mercy removes {name}")
+            for name in kept_defenders:
+                self.assertIsNotNone(map3.getObjectByName(name), f"mercy keeps {name}")
+            self.assertTrue(map3.getBoolProperty("mercy_route_applied"))
+            mercy_copies = [m for m in messages if "Voss's ledgers named" in m]
+            self.assertEqual(1, len(mercy_copies), "mercy arrival copy shows exactly once")
+
+            # Repeated entry after the intro re-applies nothing (start event is consumed
+            # and the intro flag guards the hook).
+            messages.clear()
+            enter_start(g3, player3)
+            self.assertEqual([], [m for m in messages if "Voss's ledgers named" in m])
+
+            # Save/load: route flags persist and side effects are not reapplied.
+            save_name = unique_save_name("usurpergate_mercy_route")
+            cleanup_save_slot(save_name)
+            try:
+                game.CMapLoader.save(map3, save_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_map = loaded_game.getMap()
+                loaded_player = loaded_map.getPlayer()
+                self.assertTrue(loaded_map.getBoolProperty("mercy_route_applied"))
+                for name in mercy_defenders:
+                    self.assertIsNone(loaded_map.getObjectByName(name), f"{name} stays removed after reload")
+                for name in kept_defenders:
+                    self.assertIsNotNone(loaded_map.getObjectByName(name), f"{name} survives reload")
+
+                # The mercy route still ends the assault the same way: fell the Usurper,
+                # take the throne, and the 500-gold treasury reward is granted once.
+                gold_before = loaded_player.getGold()
+                loaded_map.removeObjectByName("theUsurper")
+                pump_event_loop(5)
+                self.assertTrue(loaded_map.getBoolProperty("usurper_defeated"))
+                loaded_player.moveTo(throne_definition["x"] // 32, throne_definition["y"] // 32, 0)
+                pump_event_loop(5)
+                self.assertTrue(loaded_map.getBoolProperty("throne_taken"))
+                self.assertEqual(gold_before + 500, loaded_player.getGold(), "throne reward stays 500 gold")
+            finally:
+                cleanup_save_slot(save_name)
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+
+        return True, json.dumps(
+            {
+                "mercy_removed": list(mercy_defenders),
+                "kept": list(kept_defenders),
+                "mercy_route_applied": True,
+                "throne_reward": 500,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
         game = load_game_module()
 
