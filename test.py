@@ -21614,7 +21614,13 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 panel = open_layout_panel(self, g, resource_id)
                 try:
                     panel_rect = resolved_rect(panel)
-                    click_point = next(point for point in candidates if not rect_contains_point(panel_rect, *point))
+                    # Full-window panels (campaign screens) have no point outside their
+                    # rect; any click must still be swallowed by the panel instead of
+                    # reaching the map, so fall back to an arbitrary candidate.
+                    click_point = next(
+                        (point for point in candidates if not rect_contains_point(panel_rect, *point)),
+                        candidates[0],
+                    )
                     before = player.getCoords()
                     before_turn = game_map.getTurn()
                     push_sdl_mouse_click(*click_point)
