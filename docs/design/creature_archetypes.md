@@ -772,3 +772,27 @@ class/race invariant rather than relying on runtime discovery.
 - **Compose, don't special-case.** Stats and actions must flow through the
   documented precedence/merge order (see the *stat precedence* and *action merge*
   contracts), not through player-type or class-name branches in gameplay code.
+
+## Approved player-selectable races
+
+Content-owner approval (recorded 2026-07-20, session-directed by the repository
+owner): the playable race roster is the set below — exactly the races already
+shipped as `playerSelectable: true` in `res/config/creature_races.json`. This
+list is the deliverable of `[EPIC_01][STORY_03][SUBSTORY_01]` (creature-archetype
+plan): it was **not** inferred from art, labels, or assumptions; it records the
+owner-ratified as-shipped roster. Any future addition to (or removal from) this
+roster remains content-owner-gated per the rules above.
+
+| Race id | Label | Description | Stat identity (`baseStats`) |
+|---|---|---|---|
+| `humanRace` | Human | The marches' baseline people; the neutral default every player template carries when no race is chosen. | Balanced (no modifiers) |
+| `outlanderRace` | Outlander | Hardy settlers from beyond the marches; enduring and strong, but unlettered and deliberate. | STR +1, STA +2, AGI −1, INT −2 |
+| `highlanderRace` | Highlander | Clansfolk of the high passes; raw strength and endurance over grace and book-learning. | STR +2, STA +1, AGI −1, INT −2 |
+| `wandererRace` | Wanderer | Road-worn travellers living by wit and quickness rather than muscle. | AGI +2, INT +1, STR −1, STA −2 |
+
+Monster race families (`goobyRace`, `octoBogzRace`, `pritzRace`, `goblinRace`)
+stay `playerSelectable: false` and are intentionally outside the playable
+roster. The JSON implementation of this list already exists and round-trips
+through the class/race separation (see `res/config/creature_races.json` and the
+player-selectable race menu in `res/game.py`); this section is the design record
+that approves it.
