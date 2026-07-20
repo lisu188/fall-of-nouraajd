@@ -1583,6 +1583,12 @@ ROOT_400_300 = (760, 390, 400, 300)
 ROOT_SELECTION_BASE = (810, 390, 300, 300)
 ROOT_FULL_WINDOW = (0, 0, GUI_WIDTH, GUI_HEIGHT)
 PANEL_LAYOUT_CASES = {
+    "campaignBrowserPanel": {
+        "kind": "panel",
+        "class": "CGameCampaignBrowserPanel",
+        "root": ROOT_FULL_WINDOW,
+        "tests": ("test_campaign_browser_layout_selection_and_cancel",),
+    },
     "campaignPanel": {
         "kind": "panel",
         "class": "CGameCampaignPanel",
@@ -1671,6 +1677,7 @@ PANEL_LAYOUT_CASES = {
 COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
 XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
+    "test_campaign_browser_layout_selection_and_cancel",
     "test_campaign_panel_layout_blocking_and_resize",
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
@@ -18537,6 +18544,61 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"screens": [f"{title}|{action}" for title, action in screens]}, sort_keys=True)
 
     @game_test
+    def test_campaign_browser_resolves_stable_ids_before_character_creation(self):
+        # [EPIC_10][STORY_05][SUBSTORY_01] game.choose_campaign feeds the stable-ID browser
+        # maps keyed by campaignId (titles, descriptions, scenario counts straight from the
+        # manifests), passes a confirmed stable id through unchanged, and resolves cancel or
+        # unknown ids to "" so game.new() never reaches character creation without a valid
+        # campaign. Headless native showCampaignSelection resolves to "" immediately.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+
+        titles = g.createObject("CMapStringString")
+        titles.setValues({"wardensRoad": "The Warden's Road"})
+        descriptions = g.createObject("CMapStringString")
+        descriptions.setValues({"wardensRoad": "An exile's homecoming."})
+        counts = g.createObject("CMapStringInt")
+        counts.setValues({"wardensRoad": 4})
+        self.assertEqual(
+            "",
+            g.getGuiHandler().showCampaignSelection(titles, descriptions, counts),
+            "headless campaign selection must resolve to the empty stable id",
+        )
+
+        captured = {}
+        original = game.CGuiHandler.showCampaignSelection
+
+        def fake_selection(self_, titles_, descriptions_, counts_):
+            captured["titles"] = dict(titles_.getValues())
+            captured["descriptions"] = dict(descriptions_.getValues())
+            captured["counts"] = dict(counts_.getValues())
+            return captured["returning"]
+
+        game.CGuiHandler.showCampaignSelection = fake_selection
+        try:
+            manifests = {m["campaignId"]: m for m in campaign_module.list_campaigns()}
+            self.assertGreater(len(manifests), 0)
+
+            captured["returning"] = sorted(manifests)[0]
+            self.assertEqual(sorted(manifests)[0], game.choose_campaign(g))
+            self.assertEqual({cid: m["title"] for cid, m in manifests.items()}, captured["titles"])
+            self.assertEqual(
+                {cid: m.get("description", "") for cid, m in manifests.items()}, captured["descriptions"]
+            )
+            self.assertEqual({cid: len(m["scenarios"]) for cid, m in manifests.items()}, captured["counts"])
+
+            captured["returning"] = ""
+            self.assertEqual("", game.choose_campaign(g), "a cancelled browse resolves to the empty id")
+            captured["returning"] = "notARealCampaignId"
+            self.assertEqual("", game.choose_campaign(g), "unknown stable ids are rejected")
+        finally:
+            game.CGuiHandler.showCampaignSelection = original
+
+        return True, json.dumps({"campaigns": sorted(captured["titles"])}, sort_keys=True)
+
+    @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
         game = load_game_module()
 
@@ -21632,6 +21694,97 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 finally:
                     panel.close()
                     pump_event_loop(3)
+
+    def test_campaign_browser_layout_selection_and_cancel(self):
+        # [EPIC_10][STORY_05][SUBSTORY_01] The stable-ID campaign browser fills the window,
+        # lists campaigns by title on the left while staying keyed by stable campaign id
+        # (duplicate titles cannot collide), shows the highlighted description + chapter
+        # count on the right, begins selection only after SELECT, and resolves every
+        # cancel path (CANCEL here; Escape is covered natively) to the empty id.
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        def build_maps(entries):
+            titles = g.createObject("CMapStringString")
+            titles.setValues({cid: title for cid, (title, _desc, _count) in entries.items()})
+            descriptions = g.createObject("CMapStringString")
+            descriptions.setValues({cid: desc for cid, (_title, desc, _count) in entries.items()})
+            counts = g.createObject("CMapStringInt")
+            counts.setValues({cid: count for cid, (_title, _desc, count) in entries.items()})
+            return titles, descriptions, counts
+
+        # Two campaigns with the SAME display title: only stable ids can tell them apart.
+        entries = {
+            "alpha": ("Twin Road", "The first twin road.", 2),
+            "beta": ("Twin Road", "The second twin road.", 5),
+        }
+
+        def inspect_select(panel):
+            root = assert_runtime_rect(self, "campaignBrowserPanel", panel, ROOT_FULL_WINDOW)
+            detail = next(child for child in panel.getChildren() if child.getType() == "CWidget")
+            detail_rect = assert_runtime_rect(self, "browser detail", detail, (960, 0, 960, 972))
+            buttons = find_descendants_by_type(panel, "CButton")
+            select_button = next(button for button in buttons if button.text == "SELECT")
+            cancel_button = next(button for button in buttons if button.text == "CANCEL")
+            select_rect = assert_runtime_rect(self, "browser select", select_button, (960, 972, 480, 108))
+            cancel_rect = assert_runtime_rect(self, "browser cancel", cancel_button, (1440, 972, 480, 108))
+            assert_no_overlap(self, "SELECT", select_rect, "CANCEL", cancel_rect)
+            title_buttons = sorted(
+                (button for button in buttons if button.text == "Twin Road"),
+                key=lambda child: resolved_rect(child)[1],
+            )
+            self.assertEqual(2, len(title_buttons), "both same-titled campaigns must be listed")
+            for index, button in enumerate(title_buttons):
+                rect = resolved_rect(button)
+                assert_child_inside(self, "campaignBrowserPanel", root, f"title {index}", rect)
+                self.assertLessEqual(rect[0] + rect[2], 960, "title column stays in the left half")
+
+            # SELECT before highlighting anything is inert: selection has not begun.
+            activate_widget(select_button, g.getGui())
+            self.assertFalse(panel.hasChoice(), "SELECT must be inert until a campaign is highlighted")
+
+            # Highlight the top (alpha) entry: the detail pane shows its description
+            # and chapter count, keyed by stable id despite the duplicate title.
+            activate_widget(title_buttons[0], g.getGui())
+            self.assertEqual("alpha", panel.getSelectedId())
+            self.assertIn("The first twin road.", panel.getDetailText())
+            self.assertIn("Chapters: 2", panel.getDetailText())
+            pump_event_loop(3)
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_campaign_browser", panel)
+            activate_widget(select_button, g.getGui())
+            return {"detail": detail_rect}
+
+        chosen, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showCampaignSelection(*build_maps(entries)),
+            inspect_select,
+            lambda panel: None,
+        )
+        self.assertEqual("alpha", chosen, "SELECT must return the highlighted stable campaign id")
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+
+        # Cancel path: CANCEL resolves to the empty id even with a highlighted campaign.
+        def inspect_cancel(panel):
+            buttons = find_descendants_by_type(panel, "CButton")
+            title_button = next(button for button in buttons if button.text == "Twin Road")
+            activate_widget(title_button, g.getGui())
+            activate_widget(next(button for button in buttons if button.text == "CANCEL"), g.getGui())
+            return {}
+
+        cancelled, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showCampaignSelection(*build_maps(entries)),
+            inspect_cancel,
+            lambda panel: None,
+        )
+        self.assertEqual("", cancelled, "CANCEL must resolve to the empty stable id")
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
 
     def test_campaign_panel_layout_blocking_and_resize(self):
         # [EPIC_10][STORY_04][SUBSTORY_01] The campaign presentation screen fills the
