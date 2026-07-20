@@ -18465,6 +18465,70 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_campaign_presentation_screens_flow_in_required_order(self):
+        # [EPIC_10][STORY_04][SUBSTORY_01] The campaign driver must present the initial
+        # briefing (BEGIN), each scenario epilogue (CONTINUE), the next briefing (BEGIN),
+        # and terminal campaign completion (RETURN) through the blocking
+        # CGuiHandler.showCampaignScreen surface, in that order. The Warden's Road
+        # manifest drives the real flow: homecoming (briefing + epilogue), rescue
+        # (briefing, no epilogue), assault_mercy (briefing, terminal), completion.
+        # Headless execution of the native binding logs and returns immediately.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        screens = []
+        original = game.CGuiHandler.showCampaignScreen
+
+        def capture_screen(self_, title, body, action_label):
+            self.assertTrue(body, "campaign screens always carry body text")
+            screens.append((title, action_label))
+
+        game.CGuiHandler.showCampaignScreen = capture_screen
+        try:
+            g = game.CGameLoader.loadGame()
+            campaign_module.start(g, "wardensRoad", "Warrior")
+            self.assertEqual([("Chapter I - Hearthfall", "BEGIN")], screens)
+
+            campaign_module.complete_scenario(g, "completed")
+            pump_event_loop(10)
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "BEGIN"),
+                    ("Chapter I - Hearthfall", "CONTINUE"),
+                    ("Chapter II - The Gravemoor", "BEGIN"),
+                ],
+                screens,
+            )
+
+            campaign_module.complete_scenario(g, "spared")
+            pump_event_loop(10)
+            campaign_module.complete_scenario(g, "completed")
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "BEGIN"),
+                    ("Chapter I - Hearthfall", "CONTINUE"),
+                    ("Chapter II - The Gravemoor", "BEGIN"),
+                    ("Chapter III - The Usurper's Gate", "BEGIN"),
+                    ("The Warden's Road", "RETURN"),
+                ],
+                screens,
+            )
+            self.assertEqual(
+                ["BEGIN", "CONTINUE", "BEGIN", "BEGIN", "RETURN"],
+                [action for _, action in screens],
+                "presentation actions must flow briefing/epilogue/briefing/completion",
+            )
+
+            # The native binding is exposed and headless execution (no GUI attached)
+            # logs the content and returns immediately instead of blocking.
+            game.CGuiHandler.showCampaignScreen = original
+            g.getGuiHandler().showCampaignScreen("Headless Title", "Headless body", "BEGIN")
+        finally:
+            game.CGuiHandler.showCampaignScreen = original
+
+        return True, json.dumps({"screens": [f"{title}|{action}" for title, action in screens]}, sort_keys=True)
+
+    @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
         game = load_game_module()
 
