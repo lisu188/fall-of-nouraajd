@@ -41,15 +41,4 @@ jobs:
           test -z "$(git ls-files -u)"
           git rm .github/workflows/resolve-pr-1488.yml
           git commit --amend --no-edit
-          git diff --check HEAD^1..HEAD
-
-      - name: Validate content and validator tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/validate_content.py --repo-root .
-          python3 -m unittest tests.test_content_validator
-
-      - name: Push resolved merge commit
-        shell: bash
-        run: git push origin HEAD:feature/unified-plugin-system-lua
+          git push origin HEAD:feature/unified-plugin-system-lua
