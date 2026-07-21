@@ -170,13 +170,11 @@ The vendored Lua 5.4 interpreter lives in `third_party/lua` (static
 
 ## Repository conventions
 
-- **`AGENTS.md` is the authoritative process doc** for pull-request, merge, and the
-  Codex "queue controller" workflow (workbook at
-  `planning/fall_of_nouraajd_issue_proposals.xlsx`, scripts under `scripts/` like
-  `issue_queue.py`, `poll_pr_checks.py`, `pr_review_audit.py`,
-  `controller_resource_audit.py`, `workflow_observations.py`). The default branch is
-  `main`; never push directly to it; squash-merge only. Consult AGENTS.md before any
-  PR/merge/queue action.
+- **`AGENTS.md` is the authoritative process doc** for pull-request and merge
+  conventions and validation expectations. The default branch is `main`; never
+  push directly to it; squash-merge only. Consult AGENTS.md before any PR/merge
+  action. (The historical Codex "queue controller" workbook workflow has been
+  retired and removed from the repository.)
 - Keep changes narrow: do not modify unrelated files, build output, dependency
   locks, or submodule SHAs (`vstd`, `random-dungeon-generator`) unless the task
   requires it — and if it does, say so and rerun the full validation workflow.
