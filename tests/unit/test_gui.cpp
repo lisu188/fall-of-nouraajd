@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
 #include "gui/panel/CGameCampaignPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameFightPanel.h"
@@ -3225,9 +3226,38 @@ void test_campaign_panel_dismisses_via_action_and_keys_but_never_escape() {
     expect_true(clickPanel->isDismissed(), "the action button dismisses the campaign screen");
 }
 
+void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
+    // [EPIC_10][STORY_05][SUBSTORY_01] SELECT is inert until a campaign is highlighted,
+    // confirms the highlighted STABLE id once one is, and CANCEL/Escape resolve the
+    // browser to the empty id.
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    expect_true(!browser->hasChoice(), "browser starts with no resolved choice");
+    browser->clickSelect(nullptr);
+    expect_true(!browser->hasChoice(), "SELECT must be inert until a campaign is highlighted");
+
+    browser->setSelectedId("wardensRoad");
+    browser->setDetailText("An exile's homecoming.\n\nChapters: 4");
+    browser->clickSelect(nullptr);
+    expect_true(browser->hasChoice(), "SELECT confirms the highlighted campaign");
+    expect_true(browser->awaitChoice() == "wardensRoad", "the confirmed choice is the stable campaign id");
+
+    auto cancelled = std::make_shared<CGameCampaignBrowserPanel>();
+    cancelled->setSelectedId("wardensRoad");
+    cancelled->clickCancel(nullptr);
+    expect_true(cancelled->awaitChoice().empty(), "CANCEL resolves to the empty id even when highlighted");
+
+    auto escaped = std::make_shared<CGameCampaignBrowserPanel>();
+    escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a);
+    expect_true(!escaped->hasChoice(), "unrelated keys leave the browser open");
+    escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
+    expect_true(escaped->hasChoice() && escaped->awaitChoice().empty(),
+                "escape cancels the browser with the empty id");
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_campaign_browser_selects_by_stable_id_and_cancels_via_escape();
     test_campaign_panel_dismisses_via_action_and_keys_but_never_escape();
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
     test_layout_fractional_percentages_resolve_exact_design_pixels();
