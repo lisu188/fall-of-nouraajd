@@ -205,6 +205,28 @@ def choose_character(g):
     return class_options.get(class_label, class_label), race_display.get(race_label, "")
 
 
+def choose_campaign(g):
+    # Stable-ID campaign browser: the GUI lists campaigns by display title while
+    # every map stays keyed by the stable campaignId, so duplicate titles cannot
+    # collide and the returned value is always a validated stable id. Returns ""
+    # when no campaign exists, the browser is cancelled (CANCEL/Escape/close),
+    # or an unknown id comes back.
+    manifests = campaign.list_campaigns()
+    if not manifests:
+        g.getGuiHandler().showInfo("No campaigns are available.", True)
+        return ""
+    titles = g.createObject("CMapStringString")
+    titles.setValues({manifest["campaignId"]: manifest["title"] for manifest in manifests})
+    descriptions = g.createObject("CMapStringString")
+    descriptions.setValues({manifest["campaignId"]: manifest.get("description", "") for manifest in manifests})
+    scenario_counts = g.createObject("CMapStringInt")
+    scenario_counts.setValues({manifest["campaignId"]: len(manifest["scenarios"]) for manifest in manifests})
+    campaign_id = g.getGuiHandler().showCampaignSelection(titles, descriptions, scenario_counts)
+    if campaign_id not in {manifest["campaignId"] for manifest in manifests}:
+        return ""
+    return campaign_id
+
+
 def new():
     g = CGameLoader.loadGame()
     CGameLoader.loadGui(g)
@@ -222,17 +244,16 @@ def new():
             return
         CGameLoader.startGameWithPlayer(g, map, player, race)
     elif selection == "CAMPAIGN":
-        campaigns = {manifest["title"]: manifest["campaignId"] for manifest in campaign.list_campaigns()}
-        if not campaigns:
-            g.getGuiHandler().showInfo("No campaigns are available.", True)
-            return
-        title = g.getGuiHandler().showSelection(list_string(g, list(campaigns.keys())))
-        if title not in campaigns:
+        # Resolve the stable campaign id through the browser BEFORE character
+        # creation: a cancelled or invalid browse never reaches the class/race
+        # chooser.
+        campaign_id = choose_campaign(g)
+        if not campaign_id:
             return
         player, race = choose_character(g)
         if not player:
             return
-        campaign.start(g, campaigns[title], player, race)
+        campaign.start(g, campaign_id, player, race)
     elif selection == "LOAD":
         saves = CResourcesProvider.getInstance().getFiles("SAVE")
         if not saves:
