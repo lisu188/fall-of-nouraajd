@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSlotConfig.h"
 #include "gui/CGui.h"
 #include "handler/CGuiHandler.h"
+#include "handler/CLuaHandler.h"
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
@@ -60,6 +61,14 @@ std::shared_ptr<CScriptHandler> CGameContext::getScriptHandler() {
         scriptHandler = std::make_shared<CScriptHandler>();
     }
     return scriptHandler;
+}
+
+std::shared_ptr<CLuaHandler> CGameContext::getLuaHandler() {
+    requireActiveService("CLuaHandler");
+    if (!luaHandler) {
+        luaHandler = std::make_shared<CLuaHandler>();
+    }
+    return luaHandler;
 }
 
 std::shared_ptr<CRngHandler> CGameContext::getRngHandler() {
@@ -170,6 +179,12 @@ void CGameContext::shutdown(CGame *owner) {
         owner->map.reset();
     }
     performance_guard::clearTargetFlowCache();
+    // Close the Lua state before the Python script handler releases: Lua-registered factories
+    // and hook tables die with the state, and retained objects fall back to base behavior
+    // through the expired weak_ptr guard in CLuaOverrides.
+    if (luaHandler) {
+        luaHandler->releaseState();
+    }
     if (scriptHandler) {
         scriptHandler->releaseState();
     }
@@ -180,6 +195,7 @@ void CGameContext::shutdown(CGame *owner) {
     mapSessionStore.reset();
     configurationProvider.reset();
     resourcesProvider.reset();
+    luaHandler.reset();
     scriptHandler.reset();
     guiHandler.reset();
     rngHandler.reset();

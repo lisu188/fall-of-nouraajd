@@ -20,26 +20,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CExport.h"
 #include "plugin/CPluginAbi.h"
 
-using NativePluginHostV1 = CPluginHostV1;
-
-constexpr int NATIVE_PLUGIN_API_VERSION = GAME_PLUGIN_API_VERSION;
+class CPluginRegistrar;
 
 #define NATIVE_PLUGIN_EXPORT GAME_PLUGIN_EXPORT
 
 namespace native_plugin {
 
-GAME_CORE_EXPORT bool register_effects(const NativePluginHostV1 *host);
-
-GAME_CORE_EXPORT bool register_interactions(const NativePluginHostV1 *host);
-
-GAME_CORE_EXPORT bool register_items(const NativePluginHostV1 *host);
-
-GAME_CORE_EXPORT bool register_tiles(const NativePluginHostV1 *host);
-
-GAME_CORE_EXPORT bool register_map_content(const NativePluginHostV1 *host);
-
-GAME_CORE_EXPORT bool register_controllers(const NativePluginHostV1 *host);
-
-GAME_CORE_EXPORT bool register_creatures(const NativePluginHostV1 *host);
+// Registers every content-constructible gameplay type from plugin/CGameplayTypeTable.h.
+// Invoked by the native_gameplay plugin's game_plugin_load_v2 entry point.
+GAME_CORE_EXPORT bool register_gameplay_types(CPluginRegistrar &registrar);
 
 } // namespace native_plugin

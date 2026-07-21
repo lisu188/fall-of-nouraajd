@@ -122,22 +122,14 @@ in `res/game.py:11` and `test.py:114`.
 The engine-level debt. Each story here should be proposed as an EPIC_08+ story
 with substories sized to one PR each.
 
-### 2.1 Unify type registration (L effort, HIGH value — top structural item)
+### 2.1 Unify type registration — DONE (unified plugin system)
 
-The type hierarchy is maintained in **three parallel hand-edited lists**:
-
-1. `src/core/CModule.cpp:329-384` — `CTypes::register_type_metadata<...>` for the
-   Python binding;
-2. `src/plugin/NativePlugin.cpp:57-174` — `register_type<...>` for the plugin ABI;
-3. `scripts/type_registration_exclusions.json` — a 15-class allowlist of V_META
-   types deliberately not content-registered.
-
-Plus an 11-branch manual downcast chain in `CModule.cpp:288-323`
-(`cast_registered_python_object`). A new V_META type can be registered in one
-list but not the other, or in neither, and only fail at runtime — exactly the
-audit `todo.txt:1` asks for. **Fix:** one shared type-list (X-macro table or
-generated source) that drives both registration paths and the downcast dispatch,
-making the exclusion audit mechanical. Do this before adding more object types.
+Resolved by the plugin-system redesign: `src/plugin/CGameplayTypeTable.h` is the
+single X-macro list that drives native registration
+(`native_plugin::register_gameplay_types`), the pybind metadata registration and
+the downcast dispatch in `src/core/CModule.cpp`, and the validator cross-check
+(`scripts/validate_content.py`). `scripts/type_registration_exclusions.json`
+remains as the intentional-exclusion list — it encodes intent, not duplication.
 
 ### 2.2 Finish the `CGameContext` provider migration [queued: EPIC_02_STORY_01]
 
@@ -161,10 +153,9 @@ Ranked by TODO density and mixed responsibilities:
   dispatch, RNG bridge, logging config. Shrinks substantially if 2.1 lands first.
 - `src/object/CCreature.cpp` (1067 lines) — 8 TODOs about inventory/equip/level/
   action logic; largest concentration of "rethink" comments.
-- `native_plugins/native_gameplay_*.cpp` — 7 near-identical 22-line boilerplate
-  files plus `native_gameplay.cpp` re-exporting all 7; collapse behind a macro.
-  Also extract the repeated `register_*` scaffold in `NativePlugin.cpp:57-174`
-  into a variadic helper (S, pairs naturally with 2.1).
+- ~~`native_plugins/native_gameplay_*.cpp` boilerplate~~ — DONE with 2.1: the 7
+  dead per-category files were deleted and `native_gameplay.cpp` is now a single
+  `game_plugin_load_v2` entry over the shared type table.
 
 ### 2.4 Split the Python monoliths (L effort)
 

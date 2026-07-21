@@ -16,16 +16,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CPlugin.h"
-#include "core/CGame.h"
-#include "handler/CObjectHandler.h"
+#include "plugin/CPluginRegistrar.h"
 
-void CPlugin::load(std::shared_ptr<CGame>) {}
+void CPlugin::load(CPluginRegistrar &) {}
 
-void CNativeContentPlugin::load(std::shared_ptr<CGame> game) {
-    auto config = std::make_shared<json>();
-    (*config)["class"] = "CGameObject";
-    (*config)["properties"]["label"] = "Native plugin marker";
-    (*config)["properties"]["description"] = "Registered by a compiled C++ plugin.";
-    (*config)["properties"]["nativePluginLoaded"] = true;
-    game->getObjectHandler()->registerConfig("nativePluginMarker", config);
+void CNativeContentPlugin::load(CPluginRegistrar &registrar) {
+    registrar.registerConfigJson("nativePluginMarker", R"json({
+  "class": "CGameObject",
+  "properties": {
+    "label": "Native plugin marker",
+    "description": "Registered by a compiled C++ plugin.",
+    "nativePluginLoaded": true
+  }
+})json");
 }

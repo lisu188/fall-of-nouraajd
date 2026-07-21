@@ -16,31 +16,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "plugin/NativePlugin.h"
+#include "plugin/CPluginRegistrar.h"
 
-extern "C" NATIVE_PLUGIN_EXPORT bool native_gameplay_effects_load_v1(const NativePluginHostV1 *host) {
-    return native_plugin::register_effects(host);
-}
-
-extern "C" NATIVE_PLUGIN_EXPORT bool native_gameplay_interactions_load_v1(const NativePluginHostV1 *host) {
-    return native_plugin::register_interactions(host);
-}
-
-extern "C" NATIVE_PLUGIN_EXPORT bool native_gameplay_items_load_v1(const NativePluginHostV1 *host) {
-    return native_plugin::register_items(host);
-}
-
-extern "C" NATIVE_PLUGIN_EXPORT bool native_gameplay_tiles_load_v1(const NativePluginHostV1 *host) {
-    return native_plugin::register_tiles(host);
-}
-
-extern "C" NATIVE_PLUGIN_EXPORT bool native_gameplay_map_content_load_v1(const NativePluginHostV1 *host) {
-    return native_plugin::register_map_content(host);
-}
-
-extern "C" NATIVE_PLUGIN_EXPORT bool native_gameplay_controllers_load_v1(const NativePluginHostV1 *host) {
-    return native_plugin::register_controllers(host);
-}
-
-extern "C" NATIVE_PLUGIN_EXPORT bool native_gameplay_creatures_load_v1(const NativePluginHostV1 *host) {
-    return native_plugin::register_creatures(host);
+extern "C" NATIVE_PLUGIN_EXPORT bool game_plugin_load_v2(const CPluginHostV2 *host) {
+    auto *registrar = game_plugin_registrar(host);
+    if (registrar == nullptr) {
+        return false;
+    }
+    return native_plugin::register_gameplay_types(*registrar);
 }

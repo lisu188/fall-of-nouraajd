@@ -7,6 +7,41 @@ Reference for author-facing content declarations validated by
 python3 scripts/validate_content.py --repo-root .
 ```
 
+## Plugin manifest (`res/plugins/manifest.json`)
+
+Version 2 of the manifest is a top-level object with `"version": 2` and one
+uniform `"plugins"` array. Python (`res/plugins/*.py`) and Lua
+(`res/plugins/*.lua`) plugins are auto-discovered and normally need no entry;
+the manifest declares native/cpp plugins, explicit ordering, and map scoping.
+
+```json
+{
+  "version": 2,
+  "plugins": [
+    { "id": "nativeGameplay", "kind": "native", "library": "plugins/native/native_gameplay" },
+    { "id": "nativeContent",  "kind": "cpp",    "type": "CNativeContentPlugin" },
+    { "id": "extraTiles",     "kind": "lua",    "path": "plugins/tile.lua" },
+    { "id": "siegeOnly",      "kind": "python", "path": "plugins/siege_extra.py",
+      "scope": { "map": "siege" } }
+  ]
+}
+```
+
+| Field     | Required | Description |
+| --------- | -------- | ----------- |
+| `id`      | yes      | Unique entry id; duplicate ids are diagnosed and deduplicated at load. |
+| `kind`    | yes      | One of `native`, `cpp`, `python`, `lua`. |
+| `library` | native   | Shared library under `plugins/native/` (extension optional). |
+| `type`    | cpp      | Registered `CPlugin` subclass name. |
+| `path`    | python/lua | Resource path under the trusted plugin roots. |
+| `entry`   | no (native) | Entry symbol, default `game_plugin_load_v2`. |
+| `scope`   | no       | `{ "map": "<name>" }` loads the entry with that map's plugins instead of globally. |
+
+The validator schema-checks the manifest (unknown kinds, missing source fields,
+duplicate ids, unknown scope maps, missing plugin files) and cross-checks that
+the native gameplay entry actually loads every class row of
+`src/plugin/CGameplayTypeTable.h`.
+
 ## Map assets (`map.json` → `assets`)
 
 Each map lives in `res/maps/<name>/` and is described by a Tiled-style
