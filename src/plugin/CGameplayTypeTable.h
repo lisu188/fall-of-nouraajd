@@ -73,12 +73,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     FN_TYPE(CRangeController, CController, CGameObject)                                            \
     FN_TYPE(CNpcRandomController, CController, CGameObject)                                        \
     FN_TYPE(CPlayerController, CController, CGameObject)                                           \
-    /* CCreatureRace/CCreatureClass/CCreatureTemplate are CGameObject-derived archetype        */  \
+    /* CCreatureRace/CCreatureClass/CCreatureClassTrack/CCreatureTemplate are CGameObject-derived archetype        */  \
     /* definitions, not CCreature subtypes, so configured IDs stay constructible while the     */  \
     /* classes stay out of random-encounter / getAllSubTypes("CCreature") enumeration.         */  \
     /* CCreatureTemplate is the elite/undead/... overlay referenced via CCreature.templates.   */  \
     FN_TYPE(CCreatureRace, CGameObject)                                                            \
     FN_TYPE(CCreatureClass, CGameObject)                                                           \
+    FN_TYPE(CCreatureClassTrack, CGameObject)                                                      \
     FN_TYPE(CCreatureTemplate, CGameObject)                                                        \
     FN_TYPE(CCreature, CMapObject, CGameObject)                                                    \
     FN_TYPE(CPlayer, CCreature, CMapObject, CGameObject)
