@@ -46,6 +46,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../handler/CRngHandler.h"
 #include "../object/CCreature.h"
 #include "../object/CCreatureClass.h"
+#include "../object/CCreatureClassTrack.h"
 #include "../object/CCreatureRace.h"
 #include "../object/CCreatureTemplate.h"
 #include "../object/CDialog.h"
