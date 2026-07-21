@@ -99,6 +99,131 @@
       "proxyLayout": "CParentLayout"
     }
   },
+  "campaignBrowserPanel": {
+    "class": "CGameCampaignBrowserPanel",
+    "properties": {
+      "children": [
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "90%",
+                "w": "50%",
+                "x": "50%",
+                "y": "0%"
+              }
+            },
+            "render": "renderDetail"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickSelect",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "10%",
+                "w": "25%",
+                "x": "50%",
+                "y": "90%"
+              }
+            },
+            "text": "SELECT"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickCancel",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "10%",
+                "w": "25%",
+                "x": "75%",
+                "y": "90%"
+              }
+            },
+            "text": "CANCEL"
+          }
+        }
+      ],
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "100%",
+          "w": "100%",
+          "x": "0%",
+          "y": "0%"
+        }
+      }
+    }
+  },
+  "campaignPanel": {
+    "class": "CGameCampaignPanel",
+    "properties": {
+      "children": [
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "15%",
+                "w": "100%",
+                "x": "0%",
+                "y": "0%"
+              }
+            },
+            "render": "renderTitle"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "70%",
+                "w": "80%",
+                "x": "10%",
+                "y": "15%"
+              }
+            },
+            "render": "renderBody"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickAction",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "10%",
+                "w": "30%",
+                "x": "35%",
+                "y": "90%"
+              }
+            },
+            "text": "CONTINUE"
+          }
+        }
+      ],
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "100%",
+          "w": "100%",
+          "x": "0%",
+          "y": "0%"
+        }
+      }
+    }
+  },
   "questionPanel": {
     "class": "CGameQuestionPanel",
     "properties": {

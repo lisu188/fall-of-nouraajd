@@ -123,6 +123,22 @@ class FakeGuiHandler:
         self.messages.append(text)
 
 
+class ScreenFakeGuiHandler(FakeGuiHandler):
+    """A GUI double exposing the engine's blocking campaign-presentation call.
+
+    When showCampaignScreen exists the driver must route every briefing,
+    epilogue, and completion through it (with BEGIN/CONTINUE/RETURN action
+    labels) instead of the legacy showMessage fallback.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.screens = []
+
+    def showCampaignScreen(self, title, body, action_label):
+        self.screens.append((title, body, action_label))
+
+
 class FakeMap:
     def __init__(self, player):
         self.player = player
@@ -435,6 +451,34 @@ class CompleteScenarioTest(unittest.TestCase):
         # A repeated completion report after the campaign finished is inert.
         self.assertIsNone(campaign.complete_scenario(game, "completed"))
         self.assertEqual([], game.map_changes)
+
+    def test_presentation_screens_flow_with_begin_continue_return_labels(self):
+        # [EPIC_10][STORY_04][SUBSTORY_01] With a screen-capable GUI handler the driver
+        # presents epilogues (CONTINUE), the next briefing (BEGIN), and the terminal
+        # completion (RETURN) as blocking campaign screens, in order, and never falls
+        # back to showMessage. A scenario without an epilogue shows no CONTINUE screen.
+        game, player = self.start_campaign()
+        game.gui_handler = ScreenFakeGuiHandler()
+
+        self.assertEqual("two", campaign.complete_scenario(game, "completed"))
+        self.assertEqual(
+            [
+                ("Chapter I", "Onward.", "CONTINUE"),
+                ("Chapter II", "End.", "BEGIN"),
+            ],
+            game.gui_handler.screens,
+        )
+        self.assertEqual([], game.gui_handler.messages, "screen-capable handlers bypass showMessage")
+
+        # Terminal completion: scenario two has no epilogue, so the only screen is
+        # the campaign completion with RETURN.
+        game.gui_handler.screens.clear()
+        self.assertEqual("", campaign.complete_scenario(game, "completed"))
+        self.assertEqual(
+            [("Trial Campaign", "The trial ends.", "RETURN")],
+            game.gui_handler.screens,
+        )
+        self.assertEqual([], game.gui_handler.messages)
 
     def test_unrouted_outcome_raises(self):
         game, _player = self.start_campaign()

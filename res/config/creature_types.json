@@ -1,0 +1,22 @@
+{
+  "creatureTypeCatalog": {
+    "catalogKind": "creatureType",
+    "types": {
+      "goblin": {
+        "description": "Goblinoid monsters: the goblin warrens, raiders, and the amulet thief."
+      },
+      "gooby": {
+        "description": "The gooby cave-beast family hunted around Nouraajd."
+      },
+      "human": {
+        "description": "Humans, including the player-selectable Outlander, Highlander, and Wanderer peoples."
+      },
+      "octoBogz": {
+        "description": "The octoBogz bog-dwelling horrors."
+      },
+      "pritz": {
+        "description": "The pritz creature family, including the pritz mages."
+      }
+    }
+  }
+}

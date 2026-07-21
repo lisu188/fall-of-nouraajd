@@ -23,6 +23,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CListString;
 
+class CMapStringString;
+
+class CMapStringInt;
+
 class CGamePanel;
 
 class CDialog;
@@ -62,6 +66,24 @@ class CGuiHandler : public CGameObject {
     // building the labels and mapping them back to ids.
     std::pair<std::string, std::string> showCharacterCreation(std::shared_ptr<CListString> classes,
                                                               std::shared_ptr<CListString> races);
+
+    // Full-window blocking campaign presentation screen (briefing / epilogue /
+    // completion): title band, body text, and one action button whose label the
+    // campaign driver supplies (BEGIN / CONTINUE / RETURN). Enter, Space, or the
+    // action button dismiss it; closing/cancel input cannot cancel campaign
+    // progression. Headless execution (no GUI) logs the title/body/action
+    // content and returns immediately.
+    void showCampaignScreen(std::string title, std::string body, std::string actionLabel);
+
+    // Stable-ID campaign browser: titles/descriptions/scenarioCounts are keyed
+    // by stable campaign id. Shows a two-column blocking browser (titles left,
+    // selected description + chapter count right); selection begins only after
+    // SELECT confirms a highlighted campaign. Returns the confirmed stable
+    // campaign id, or "" for CANCEL, Escape, close, empty data, or headless
+    // execution.
+    std::string showCampaignSelection(std::shared_ptr<CMapStringString> titles,
+                                      std::shared_ptr<CMapStringString> descriptions,
+                                      std::shared_ptr<CMapStringInt> scenarioCounts);
 
     void showTooltip(std::string text, int x, int y);
 

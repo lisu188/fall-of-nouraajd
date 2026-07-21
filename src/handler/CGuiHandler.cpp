@@ -24,6 +24,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTextManager.h"
 #include "gui/CTooltip.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
+#include "gui/panel/CGameCampaignPanel.h"
 #include "gui/panel/CGameDialogPanel.h"
 #include "gui/panel/CGameLootPanel.h"
 #include "gui/panel/CGameQuestionPanel.h"
@@ -317,6 +319,117 @@ std::pair<std::string, std::string> CGuiHandler::showCharacterCreation(std::shar
         return {"", ""};
     }
     return {*selectedClass, *selectedRace};
+}
+
+void CGuiHandler::showCampaignScreen(std::string title, std::string body, std::string actionLabel) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        // Headless execution: log the full presentation content and return
+        // immediately so automated campaign runs never block on input.
+        vstd::logger::info("Campaign screen:", title, body, actionLabel);
+        return;
+    }
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"actionLabel", actionLabel},
+                       {"blocking", true},
+                       {"bodyLength", static_cast<unsigned long long>(body.size())},
+                       {"panel", "campaignPanel"},
+                       {"panelKind", "campaign"},
+                       {"title", title}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
+    std::shared_ptr<CGameCampaignPanel> panel = game->createObject<CGameCampaignPanel>("campaignPanel");
+    panel->setTitle(title);
+    panel->setBody(body);
+    panel->setActionLabel(actionLabel);
+    // The configured action button carries a placeholder label; stamp the
+    // caller-supplied one (BEGIN / CONTINUE / RETURN) before showing.
+    for (const auto &child : panel->getChildren()) {
+        if (auto button = vstd::cast<CButton>(child)) {
+            button->setText(actionLabel);
+        }
+    }
+    game->getGui()->pushChild(panel);
+    panel->awaitDismissal();
+}
+
+std::string CGuiHandler::showCampaignSelection(std::shared_ptr<CMapStringString> titles,
+                                               std::shared_ptr<CMapStringString> descriptions,
+                                               std::shared_ptr<CMapStringInt> scenarioCounts) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        // Headless execution cannot browse; resolve to the empty stable id.
+        return "";
+    }
+
+    auto titleValues = titles ? titles->getValues() : string_string_map();
+    if (titleValues.empty()) {
+        vstd::logger::warning("Campaign selection requested with no campaigns.");
+        return "";
+    }
+    auto descriptionValues = descriptions ? descriptions->getValues() : string_string_map();
+    auto countValues = scenarioCounts ? scenarioCounts->getValues() : string_int_map();
+
+    if (CPlaytestTrace::enabled()) {
+        json fields = {{"blocking", true},
+                       {"campaignCount", static_cast<unsigned long long>(titleValues.size())},
+                       {"panel", "campaignBrowserPanel"},
+                       {"panelKind", "campaignBrowser"}};
+        CPlaytestTrace::addMapContext(fields, game->getMap());
+        CPlaytestTrace::record("gui_panel_opened", fields);
+    }
+
+    std::shared_ptr<CGameCampaignBrowserPanel> panel =
+        game->createObject<CGameCampaignBrowserPanel>("campaignBrowserPanel");
+
+    // Left column: one button per campaign, keyed by the STABLE campaign id.
+    // Duplicate display titles cannot collide because the click handler carries
+    // the id, never the title.
+    std::set<std::shared_ptr<CGameGraphicsObject>> widgets = panel->getChildren();
+    CGameCampaignBrowserPanel *browser = panel.get();
+    int i = 0;
+    const std::size_t count = titleValues.size();
+    for (const auto &[campaignId, title] : titleValues) {
+        std::string clickName = "clickCampaign" + vstd::str(i);
+        std::string description;
+        auto descriptionIt = descriptionValues.find(campaignId);
+        if (descriptionIt != descriptionValues.end()) {
+            description = descriptionIt->second;
+        }
+        int scenarios = 0;
+        auto countIt = countValues.find(campaignId);
+        if (countIt != countValues.end()) {
+            scenarios = countIt->second;
+        }
+        std::string detail = title + "\n\n" + description + "\n\nChapters: " + vstd::str(scenarios);
+
+        panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
+            clickName, panel, [campaignId, detail, browser](CGameGraphicsObject *self, std::shared_ptr<CGui> gui) {
+                browser->setSelectedId(campaignId);
+                browser->setDetailText(detail);
+            });
+
+        std::shared_ptr<CButton> widget = game->createObject<CButton>("CButton");
+        widget->setClick(clickName);
+        widget->setText(title);
+
+        std::shared_ptr<CLayout> layout = game->createObject<CLayout>("CLayout");
+        const int y0 = 100 * i / count;
+        const int y1 = 100 * (i + 1) / count;
+        layout->setX("0%");
+        layout->setY(vstd::str(y0) + "%");
+        layout->setW("50%");
+        layout->setH(vstd::str(y1 - y0) + "%");
+        widget->setLayout(layout);
+        widgets.insert(widget);
+        i++;
+    }
+
+    panel->setChildren(widgets);
+    game->getGui()->pushChild(panel);
+
+    return panel->awaitChoice();
 }
 
 void CGuiHandler::showTooltip(std::string text, int x, int y) {

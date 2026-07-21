@@ -1581,7 +1581,20 @@ MINIMAP_VIEWPORT_RGB = (255, 255, 255)
 ROOT_800_600 = (560, 240, 800, 600)
 ROOT_400_300 = (760, 390, 400, 300)
 ROOT_SELECTION_BASE = (810, 390, 300, 300)
+ROOT_FULL_WINDOW = (0, 0, GUI_WIDTH, GUI_HEIGHT)
 PANEL_LAYOUT_CASES = {
+    "campaignBrowserPanel": {
+        "kind": "panel",
+        "class": "CGameCampaignBrowserPanel",
+        "root": ROOT_FULL_WINDOW,
+        "tests": ("test_campaign_browser_layout_selection_and_cancel",),
+    },
+    "campaignPanel": {
+        "kind": "panel",
+        "class": "CGameCampaignPanel",
+        "root": ROOT_FULL_WINDOW,
+        "tests": ("test_campaign_panel_layout_blocking_and_resize",),
+    },
     "characterPanel": {
         "kind": "panel",
         "class": "CGameCharacterPanel",
@@ -1664,6 +1677,8 @@ PANEL_LAYOUT_CASES = {
 COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
 XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
+    "test_campaign_browser_layout_selection_and_cancel",
+    "test_campaign_panel_layout_blocking_and_resize",
     "test_keyboard_input_moves_player",
     "test_mouse_click_moves_player",
     "test_window_resize_event_updates_gui_dimensions",
@@ -4919,6 +4934,17 @@ def walkthrough_vhulmarn_map():
     assert player.countItems("tiaraOfTheDrownedTithe") == tiaras_before + 1, "The tiara should enter the inventory."
     assert find_runtime_object(game_map, "theNamelessBoss") is not None, "The Nameless should rise on the altar."
 
+    # The finale requires the boss defeat as well as the pickup: the tiara alone must not complete it.
+    player.checkQuests()
+    assert (
+        "drownedTitheQuest" not in completed_quest_names(player)
+    ), "The Drowned Tithe quest must not complete on the tiara pickup alone."
+
+    # Defeating The Nameless (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theNamelessBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating The Nameless should record the boss defeat."
+    assert game_map.getObjectByName("theNamelessBoss") is None, "The defeated Nameless should be gone from the map."
     player.checkQuests()
     assert "drownedTitheQuest" in completed_quest_names(player), "The Drowned Tithe quest should complete."
 
@@ -4928,8 +4954,9 @@ def walkthrough_vhulmarn_map():
         "bell_tolled": game_map.getBoolProperty("bell_tolled"),
         "tithe_taken": game_map.getBoolProperty("tithe_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "tiara_count": player.countItems("tiaraOfTheDrownedTithe"),
-        "boss_present": find_runtime_object(game_map, "theNamelessBoss") is not None,
+        "boss_present": game_map.getObjectByName("theNamelessBoss") is not None,
         "quest_completed": "drownedTitheQuest" in completed_quest_names(player),
     }
 
@@ -4964,6 +4991,17 @@ def walkthrough_kadath_map():
     assert player.countItems("onyxSignetOfNyarlathotep") == signets_before + 1, "The signet should enter the inventory."
     assert find_runtime_object(game_map, "theCrawlingChaosBoss") is not None, "Nyarlathotep should rise at the throne."
 
+    # The finale requires the boss defeat as well as the pickup: the signet alone must not complete it.
+    player.checkQuests()
+    assert (
+        "kadathAscentQuest" not in completed_quest_names(player)
+    ), "The Kadath ascent quest must not complete on the signet pickup alone."
+
+    # Defeating the Crawling Chaos (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theCrawlingChaosBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Crawling Chaos should record the boss defeat."
+    assert game_map.getObjectByName("theCrawlingChaosBoss") is None, "The defeated Crawling Chaos should be gone."
     player.checkQuests()
     assert "kadathAscentQuest" in completed_quest_names(player), "The Kadath ascent quest should complete."
 
@@ -4973,8 +5011,9 @@ def walkthrough_kadath_map():
         "gate_opened": game_map.getBoolProperty("gate_opened"),
         "throne_taken": game_map.getBoolProperty("throne_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "signet_count": player.countItems("onyxSignetOfNyarlathotep"),
-        "boss_present": find_runtime_object(game_map, "theCrawlingChaosBoss") is not None,
+        "boss_present": game_map.getObjectByName("theCrawlingChaosBoss") is not None,
         "quest_completed": "kadathAscentQuest" in completed_quest_names(player),
     }
 
@@ -5024,6 +5063,17 @@ def walkthrough_sunderedmarch_map():
         find_runtime_object(game_map, "theBarrowWarlordBoss") is not None
     ), "The Barrow-Warlord should rise at the dig."
 
+    # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
+    player.checkQuests()
+    assert (
+        "sunderedMarchQuest" not in completed_quest_names(player)
+    ), "The Sundered March quest must not complete on the crown pickup alone."
+
+    # Defeating the Barrow-Warlord (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theBarrowWarlordBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Barrow-Warlord should record the boss defeat."
+    assert game_map.getObjectByName("theBarrowWarlordBoss") is None, "The defeated Barrow-Warlord should be gone."
     player.checkQuests()
     assert "sunderedMarchQuest" in completed_quest_names(player), "The Sundered March quest should complete."
 
@@ -5033,8 +5083,9 @@ def walkthrough_sunderedmarch_map():
         "sigils_found": game_map.getNumericProperty("sigils_found"),
         "crown_taken": game_map.getBoolProperty("crown_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("barrowCrown"),
-        "boss_present": find_runtime_object(game_map, "theBarrowWarlordBoss") is not None,
+        "boss_present": game_map.getObjectByName("theBarrowWarlordBoss") is not None,
         "quest_completed": "sunderedMarchQuest" in completed_quest_names(player),
     }
 
@@ -5106,9 +5157,20 @@ def walkthrough_ninemarches_map():
     assert find_runtime_object(game_map, "theNinefoldKingBoss") is not None, "The Ninefold King should rise at the dig."
     assert game_map.getNumericProperty("chapter") == 4, "The dig should advance to the final chapter."
 
+    # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
+    player.checkQuests()
+    assert (
+        "ninemarchesQuest" not in completed_quest_names(player)
+    ), "The Nine Marches quest must not complete on the crown pickup alone."
+    assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
+
+    # Defeating the Ninefold King (its onDestroy trigger) records the boss defeat and completes the finale.
+    game_map.removeObjectByName("theNinefoldKingBoss")
+    pump_event_loop(5)
+    assert game_map.getBoolProperty("boss_defeated"), "Defeating the Ninefold King should record the boss defeat."
+    assert game_map.getObjectByName("theNinefoldKingBoss") is None, "The defeated Ninefold King should be gone."
     player.checkQuests()
     assert "ninemarchesQuest" in completed_quest_names(player), "The Nine Marches quest should complete."
-    assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
 
     return {
         "map": "ninemarches",
@@ -5119,8 +5181,9 @@ def walkthrough_ninemarches_map():
         "obelisks_read": game_map.getNumericProperty("obelisks_read"),
         "crown_taken": game_map.getBoolProperty("crown_taken"),
         "boss_woken": game_map.getBoolProperty("boss_woken"),
+        "boss_defeated": game_map.getBoolProperty("boss_defeated"),
         "crown_count": player.countItems("ninefoldCrown"),
-        "boss_present": find_runtime_object(game_map, "theNinefoldKingBoss") is not None,
+        "boss_present": game_map.getObjectByName("theNinefoldKingBoss") is not None,
         "quest_completed": "ninemarchesQuest" in completed_quest_names(player),
     }
 
@@ -5156,10 +5219,20 @@ def walkthrough_hearthfall_map():
     player.checkQuests()
     assert "hearthfallQuest" in completed_quest_names(player), "The Hearthfall quest should complete."
 
+    # Reporting the victory opens the road north: standalone play follows the
+    # fallback route to the Gravemoor once the chapter is complete.
+    captain_defeated = game_map.getBoolProperty("captain_defeated")
+    victory_reported = game_map.getBoolProperty("victory_reported")
+    scene_manager = g.getSceneManager()
+    assert scene_manager.getTransitionStateName() == "TransitionPending", "Victory should request the road north."
+    pump_event_loop(10)
+    assert g.getMap().mapName == "gravemoor", "Standalone victory should travel to the Gravemoor."
+    assert g.getMap().getPlayer() == player, "The same player should walk the road north."
+
     return {
-        "map": "hearthfall",
-        "captain_defeated": game_map.getBoolProperty("captain_defeated"),
-        "victory_reported": game_map.getBoolProperty("victory_reported"),
+        "map": g.getMap().mapName,
+        "captain_defeated": captain_defeated,
+        "victory_reported": victory_reported,
         "gold": player.getGold(),
         "quest_completed": "hearthfallQuest" in completed_quest_names(player),
     }
@@ -5201,11 +5274,22 @@ def walkthrough_gravemoor_map():
     player.checkQuests()
     assert "gravemoorQuest" in completed_quest_names(player), "The Gravemoor quest should complete."
 
+    # Passing judgment opens the road to the Usurper's Gate: standalone play
+    # follows the fallback route once the chapter is complete.
+    loyalists_freed = game_map.getNumericProperty("loyalists_freed")
+    voss_judged = game_map.getBoolProperty("voss_judged")
+    voss_spared = game_map.getBoolProperty("voss_spared")
+    scene_manager = g.getSceneManager()
+    assert scene_manager.getTransitionStateName() == "TransitionPending", "Judgment should request the road onward."
+    pump_event_loop(10)
+    assert g.getMap().mapName == "usurpergate", "Standalone judgment should travel to the Usurper's Gate."
+    assert g.getMap().getPlayer() == player, "The same player should walk the road onward."
+
     return {
-        "map": "gravemoor",
-        "loyalists_freed": game_map.getNumericProperty("loyalists_freed"),
-        "voss_judged": game_map.getBoolProperty("voss_judged"),
-        "voss_spared": game_map.getBoolProperty("voss_spared"),
+        "map": g.getMap().mapName,
+        "loyalists_freed": loyalists_freed,
+        "voss_judged": voss_judged,
+        "voss_spared": voss_spared,
         "gold": player.getGold(),
         "quest_completed": "gravemoorQuest" in completed_quest_names(player),
     }
@@ -17102,6 +17186,101 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("ninemarches")
 
     @game_test
+    def test_map_finales_require_boss_defeat_and_pickup(self):
+        # [EPIC_10][STORY_02][SUBSTORY_01] The four finale quests (Kadath, Vhul'Marn, Sundered
+        # March, Nine Marches) must require BOTH the artifact/throne/crown pickup and the named
+        # finale boss defeat before completing. Neither transition alone completes the quest, and
+        # both in either order do. While only the pickup is recorded the objective names the
+        # remaining boss requirement, completion is idempotent across repeated checkQuests, and
+        # the completed state survives a save/load round-trip. Flags are driven directly so the
+        # ordering matrix stays deterministic and fast (the full pickup->defeat path is covered
+        # by the per-map walkthroughs).
+        game = load_game_module()
+
+        def active_objective(pl, qid):
+            for quest in pl.getQuests():
+                quest_id = quest.getTypeId() if hasattr(quest, "getTypeId") else quest.getName()
+                if quest_id == qid:
+                    return quest.getObjective()
+            return None
+
+        finales = (
+            ("kadath", "kadathAscentQuest", "throne_taken"),
+            ("vhulmarn", "drownedTitheQuest", "tithe_taken"),
+            ("sunderedmarch", "sunderedMarchQuest", "crown_taken"),
+            ("ninemarches", "ninemarchesQuest", "crown_taken"),
+        )
+
+        results = {}
+        for map_name, quest_id, pickup in finales:
+            # --- pickup-first: the pickup alone must not complete the finale ---
+            g, game_map, player = load_game_map_with_player(map_name)
+            if quest_id not in quest_names(player):
+                player.addQuest(quest_id)
+
+            game_map.setBoolProperty("boss_defeated", False)
+            game_map.setBoolProperty(pickup, True)
+            player.checkQuests()
+            self.assertNotIn(
+                quest_id, completed_quest_names(player), f"{map_name}: pickup alone must not complete the finale"
+            )
+            # Objective reflects the remaining requirement (put the finale boss down).
+            objective = active_objective(player, quest_id)
+            self.assertTrue(objective, f"{map_name}: an active finale objective should be present")
+            self.assertIn("put", objective.lower(), f"{map_name}: objective should name the remaining boss: {objective!r}")
+
+            # Adding the boss defeat completes it.
+            game_map.setBoolProperty("boss_defeated", True)
+            player.checkQuests()
+            self.assertIn(
+                quest_id, completed_quest_names(player), f"{map_name}: pickup + boss defeat should complete the finale"
+            )
+
+            # Idempotent across repeated triggers: exactly one completion, never doubled.
+            for _ in range(3):
+                player.checkQuests()
+            self.assertEqual(
+                1, completed_quest_names(player).count(quest_id), f"{map_name}: finale completion must be idempotent"
+            )
+
+            # The completed finale survives a save/load round-trip.
+            save_name = unique_save_name(f"finale_{map_name}")
+            cleanup_save_slot(save_name)
+            try:
+                game.CMapLoader.save(game_map, save_name)
+                reloaded = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(reloaded, save_name)
+                reloaded_player = reloaded.getMap().getPlayer()
+                self.assertIn(
+                    quest_id,
+                    completed_quest_names(reloaded_player),
+                    f"{map_name}: finale completion should survive save/load",
+                )
+            finally:
+                cleanup_save_slot(save_name)
+
+            # --- defeat-first: the boss defeat alone must not complete the finale ---
+            _g2, game_map2, player2 = load_game_map_with_player(map_name)
+            if quest_id not in quest_names(player2):
+                player2.addQuest(quest_id)
+            game_map2.setBoolProperty(pickup, False)
+            game_map2.setBoolProperty("boss_defeated", True)
+            player2.checkQuests()
+            self.assertNotIn(
+                quest_id, completed_quest_names(player2), f"{map_name}: boss defeat alone must not complete the finale"
+            )
+            # Adding the pickup completes it in the reverse order.
+            game_map2.setBoolProperty(pickup, True)
+            player2.checkQuests()
+            self.assertIn(
+                quest_id, completed_quest_names(player2), f"{map_name}: boss defeat + pickup should complete the finale"
+            )
+
+            results[map_name] = {"quest": quest_id, "pickup_flag": pickup, "completed_both_orders": True}
+
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
     def test_map_walkthrough_hearthfall(self):
         return execute_walkthrough("hearthfall")
 
@@ -17965,6 +18144,60 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_standalone_hearthfall_victory_travels_to_gravemoor(self):
+        g, game_map, player = load_game_map_with_player("hearthfall")
+        scene_manager = g.getSceneManager()
+
+        game_map.removeObjectByName("watchCaptain")
+        self.assertTrue(game_map.getBoolProperty("captain_defeated"))
+
+        g.createObject("elderDialog").report_victory()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "manager": scene_manager.getTransitionStateName(),
+                "player_name": player.getName(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_standalone_gravemoor_judgment_travels_to_usurpergate(self):
+        g, game_map, player = load_game_map_with_player("gravemoor")
+        scene_manager = g.getSceneManager()
+
+        for cage in ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth"):
+            definition = find_map_object_definition("gravemoor", cage)
+            player.moveTo(definition["x"] // 32, definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        voss = g.createObject("vossDialog")
+        self.assertTrue(voss.ready_to_judge())
+        voss.spare_voss()
+        self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
+        pump_event_loop(10)
+
+        self.assertEqual("usurpergate", g.getMap().mapName)
+        self.assertTrue(g.getMap().getPlayer() == player)
+        self.assertEqual("Idle", scene_manager.getTransitionStateName())
+
+        return True, json.dumps(
+            {
+                "current_map": g.getMap().mapName,
+                "manager": scene_manager.getTransitionStateName(),
+                "player_name": player.getName(),
+            },
+            sort_keys=True,
+        )
+
+    @game_test
     def test_campaign_driver_routes_full_campaign_with_carryover(self):
         game = load_game_module()
         import campaign as campaign_module
@@ -18201,6 +18434,232 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_usurpergate_mercy_route_diverges_from_wrath_and_standalone(self):
+        # [EPIC_10][STORY_03][SUBSTORY_01] The Warden's Road mercy finale must materially
+        # diverge from wrath: when the active campaign scenario is wardensRoad/assault_mercy,
+        # exactly curtainWallWest1, curtainWallWest2, and housecarlWest are removed BEFORE the
+        # first Usurpergate introduction, mercy_route_applied is recorded, and mercy-specific
+        # arrival copy is shown once. Wrath and standalone entry keep the full assault (all
+        # three defenders present, standard arrival text), the final Usurper/throne objective,
+        # and the 500-gold reward. Route application is idempotent across save/load.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        mercy_defenders = ("curtainWallWest1", "curtainWallWest2", "housecarlWest")
+        kept_defenders = ("curtainWallEast1", "curtainWallEast2", "housecarlEast", "theUsurper")
+        start_definition = find_map_object_definition("usurpergate", "usurpergateStart")
+        throne_definition = find_map_object_definition("usurpergate", "obsidianThrone")
+
+        messages = []
+        original_show_message = game.CGuiHandler.showMessage
+        game.CGuiHandler.showMessage = lambda self_, message: messages.append(message)
+
+        def enter_start(g, player):
+            player.moveTo(start_definition["x"] // 32, start_definition["y"] // 32, 0)
+            pump_event_loop(5)
+
+        try:
+            # --- Standalone: no active campaign -> full assault, standard arrival text.
+            g, game_map, player = load_game_map_with_player("usurpergate")
+            enter_start(g, player)
+            for name in mercy_defenders + kept_defenders:
+                self.assertIsNotNone(game_map.getObjectByName(name), f"standalone keeps {name}")
+            self.assertFalse(game_map.getBoolProperty("mercy_route_applied"))
+            self.assertFalse(any("Voss's ledgers named" in m for m in messages), "no mercy copy standalone")
+
+            # --- Wrath: assault_wrath scenario -> full assault, standard arrival text.
+            messages.clear()
+            g2, map2, player2 = load_game_map_with_player("usurpergate")
+            campaign_module.CampaignStateStore(player2).begin("wardensRoad", "assault_wrath")
+            enter_start(g2, player2)
+            for name in mercy_defenders + kept_defenders:
+                self.assertIsNotNone(map2.getObjectByName(name), f"wrath keeps {name}")
+            self.assertFalse(map2.getBoolProperty("mercy_route_applied"))
+            self.assertFalse(any("Voss's ledgers named" in m for m in messages), "no mercy copy on wrath")
+
+            # --- Mercy: assault_mercy scenario -> the three named defenders stand down
+            # before the first introduction, the flag is recorded, mercy copy shows once.
+            messages.clear()
+            g3, map3, player3 = load_game_map_with_player("usurpergate")
+            store = campaign_module.CampaignStateStore(player3)
+            store.begin("wardensRoad", "assault_mercy")
+            for name in mercy_defenders:
+                self.assertIsNotNone(map3.getObjectByName(name), f"{name} present before intro")
+            enter_start(g3, player3)
+            for name in mercy_defenders:
+                self.assertIsNone(map3.getObjectByName(name), f"mercy removes {name}")
+            for name in kept_defenders:
+                self.assertIsNotNone(map3.getObjectByName(name), f"mercy keeps {name}")
+            self.assertTrue(map3.getBoolProperty("mercy_route_applied"))
+            mercy_copies = [m for m in messages if "Voss's ledgers named" in m]
+            self.assertEqual(1, len(mercy_copies), "mercy arrival copy shows exactly once")
+
+            # Repeated entry after the intro re-applies nothing (start event is consumed
+            # and the intro flag guards the hook).
+            messages.clear()
+            enter_start(g3, player3)
+            self.assertEqual([], [m for m in messages if "Voss's ledgers named" in m])
+
+            # Save/load: route flags persist and side effects are not reapplied.
+            save_name = unique_save_name("usurpergate_mercy_route")
+            cleanup_save_slot(save_name)
+            try:
+                game.CMapLoader.save(map3, save_name)
+                loaded_game = game.CGameLoader.loadGame()
+                game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                loaded_map = loaded_game.getMap()
+                loaded_player = loaded_map.getPlayer()
+                self.assertTrue(loaded_map.getBoolProperty("mercy_route_applied"))
+                for name in mercy_defenders:
+                    self.assertIsNone(loaded_map.getObjectByName(name), f"{name} stays removed after reload")
+                for name in kept_defenders:
+                    self.assertIsNotNone(loaded_map.getObjectByName(name), f"{name} survives reload")
+
+                # The mercy route still ends the assault the same way: fell the Usurper,
+                # take the throne, and the 500-gold treasury reward is granted once.
+                gold_before = loaded_player.getGold()
+                loaded_map.removeObjectByName("theUsurper")
+                pump_event_loop(5)
+                self.assertTrue(loaded_map.getBoolProperty("usurper_defeated"))
+                loaded_player.moveTo(throne_definition["x"] // 32, throne_definition["y"] // 32, 0)
+                pump_event_loop(5)
+                self.assertTrue(loaded_map.getBoolProperty("throne_taken"))
+                self.assertEqual(gold_before + 500, loaded_player.getGold(), "throne reward stays 500 gold")
+            finally:
+                cleanup_save_slot(save_name)
+        finally:
+            game.CGuiHandler.showMessage = original_show_message
+
+        return True, json.dumps(
+            {
+                "mercy_removed": list(mercy_defenders),
+                "kept": list(kept_defenders),
+                "mercy_route_applied": True,
+                "throne_reward": 500,
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_campaign_presentation_screens_flow_in_required_order(self):
+        # [EPIC_10][STORY_04][SUBSTORY_01] The campaign driver must present the initial
+        # briefing (BEGIN), each scenario epilogue (CONTINUE), the next briefing (BEGIN),
+        # and terminal campaign completion (RETURN) through the blocking
+        # CGuiHandler.showCampaignScreen surface, in that order. The Warden's Road
+        # manifest drives the real flow: homecoming (briefing + epilogue), rescue
+        # (briefing, no epilogue), assault_mercy (briefing, terminal), completion.
+        # Headless execution of the native binding logs and returns immediately.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        screens = []
+        original = game.CGuiHandler.showCampaignScreen
+
+        def capture_screen(self_, title, body, action_label):
+            self.assertTrue(body, "campaign screens always carry body text")
+            screens.append((title, action_label))
+
+        game.CGuiHandler.showCampaignScreen = capture_screen
+        try:
+            g = game.CGameLoader.loadGame()
+            campaign_module.start(g, "wardensRoad", "Warrior")
+            self.assertEqual([("Chapter I - Hearthfall", "BEGIN")], screens)
+
+            campaign_module.complete_scenario(g, "completed")
+            pump_event_loop(10)
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "BEGIN"),
+                    ("Chapter I - Hearthfall", "CONTINUE"),
+                    ("Chapter II - The Gravemoor", "BEGIN"),
+                ],
+                screens,
+            )
+
+            campaign_module.complete_scenario(g, "spared")
+            pump_event_loop(10)
+            campaign_module.complete_scenario(g, "completed")
+            self.assertEqual(
+                [
+                    ("Chapter I - Hearthfall", "BEGIN"),
+                    ("Chapter I - Hearthfall", "CONTINUE"),
+                    ("Chapter II - The Gravemoor", "BEGIN"),
+                    ("Chapter III - The Usurper's Gate", "BEGIN"),
+                    ("The Warden's Road", "RETURN"),
+                ],
+                screens,
+            )
+            self.assertEqual(
+                ["BEGIN", "CONTINUE", "BEGIN", "BEGIN", "RETURN"],
+                [action for _, action in screens],
+                "presentation actions must flow briefing/epilogue/briefing/completion",
+            )
+
+            # The native binding is exposed and headless execution (no GUI attached)
+            # logs the content and returns immediately instead of blocking.
+            game.CGuiHandler.showCampaignScreen = original
+            g.getGuiHandler().showCampaignScreen("Headless Title", "Headless body", "BEGIN")
+        finally:
+            game.CGuiHandler.showCampaignScreen = original
+
+        return True, json.dumps({"screens": [f"{title}|{action}" for title, action in screens]}, sort_keys=True)
+
+    @game_test
+    def test_campaign_browser_resolves_stable_ids_before_character_creation(self):
+        # [EPIC_10][STORY_05][SUBSTORY_01] game.choose_campaign feeds the stable-ID browser
+        # maps keyed by campaignId (titles, descriptions, scenario counts straight from the
+        # manifests), passes a confirmed stable id through unchanged, and resolves cancel or
+        # unknown ids to "" so game.new() never reaches character creation without a valid
+        # campaign. Headless native showCampaignSelection resolves to "" immediately.
+        game = load_game_module()
+        import campaign as campaign_module
+
+        g = game.CGameLoader.loadGame()
+
+        titles = g.createObject("CMapStringString")
+        titles.setValues({"wardensRoad": "The Warden's Road"})
+        descriptions = g.createObject("CMapStringString")
+        descriptions.setValues({"wardensRoad": "An exile's homecoming."})
+        counts = g.createObject("CMapStringInt")
+        counts.setValues({"wardensRoad": 4})
+        self.assertEqual(
+            "",
+            g.getGuiHandler().showCampaignSelection(titles, descriptions, counts),
+            "headless campaign selection must resolve to the empty stable id",
+        )
+
+        captured = {}
+        original = game.CGuiHandler.showCampaignSelection
+
+        def fake_selection(self_, titles_, descriptions_, counts_):
+            captured["titles"] = dict(titles_.getValues())
+            captured["descriptions"] = dict(descriptions_.getValues())
+            captured["counts"] = dict(counts_.getValues())
+            return captured["returning"]
+
+        game.CGuiHandler.showCampaignSelection = fake_selection
+        try:
+            manifests = {m["campaignId"]: m for m in campaign_module.list_campaigns()}
+            self.assertGreater(len(manifests), 0)
+
+            captured["returning"] = sorted(manifests)[0]
+            self.assertEqual(sorted(manifests)[0], game.choose_campaign(g))
+            self.assertEqual({cid: m["title"] for cid, m in manifests.items()}, captured["titles"])
+            self.assertEqual(
+                {cid: m.get("description", "") for cid, m in manifests.items()}, captured["descriptions"]
+            )
+            self.assertEqual({cid: len(m["scenarios"]) for cid, m in manifests.items()}, captured["counts"])
+
+            captured["returning"] = ""
+            self.assertEqual("", game.choose_campaign(g), "a cancelled browse resolves to the empty id")
+            captured["returning"] = "notARealCampaignId"
+            self.assertEqual("", game.choose_campaign(g), "unknown stable ids are rejected")
+        finally:
+            game.CGuiHandler.showCampaignSelection = original
+
+        return True, json.dumps({"campaigns": sorted(captured["titles"])}, sort_keys=True)
 
     @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
@@ -21280,7 +21739,13 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 panel = open_layout_panel(self, g, resource_id)
                 try:
                     panel_rect = resolved_rect(panel)
-                    click_point = next(point for point in candidates if not rect_contains_point(panel_rect, *point))
+                    # Full-window panels (campaign screens) have no point outside their
+                    # rect; any click must still be swallowed by the panel instead of
+                    # reaching the map, so fall back to an arbitrary candidate.
+                    click_point = next(
+                        (point for point in candidates if not rect_contains_point(panel_rect, *point)),
+                        candidates[0],
+                    )
                     before = player.getCoords()
                     before_turn = game_map.getTurn()
                     push_sdl_mouse_click(*click_point)
@@ -21292,6 +21757,175 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 finally:
                     panel.close()
                     pump_event_loop(3)
+
+    def test_campaign_browser_layout_selection_and_cancel(self):
+        # [EPIC_10][STORY_05][SUBSTORY_01] The stable-ID campaign browser fills the window,
+        # lists campaigns by title on the left while staying keyed by stable campaign id
+        # (duplicate titles cannot collide), shows the highlighted description + chapter
+        # count on the right, begins selection only after SELECT, and resolves every
+        # cancel path (CANCEL here; Escape is covered natively) to the empty id.
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        def build_maps(entries):
+            titles = g.createObject("CMapStringString")
+            titles.setValues({cid: title for cid, (title, _desc, _count) in entries.items()})
+            descriptions = g.createObject("CMapStringString")
+            descriptions.setValues({cid: desc for cid, (_title, desc, _count) in entries.items()})
+            counts = g.createObject("CMapStringInt")
+            counts.setValues({cid: count for cid, (_title, _desc, count) in entries.items()})
+            return titles, descriptions, counts
+
+        # Two campaigns with the SAME display title: only stable ids can tell them apart.
+        entries = {
+            "alpha": ("Twin Road", "The first twin road.", 2),
+            "beta": ("Twin Road", "The second twin road.", 5),
+        }
+
+        def inspect_select(panel):
+            root = assert_runtime_rect(self, "campaignBrowserPanel", panel, ROOT_FULL_WINDOW)
+            detail = next(child for child in panel.getChildren() if child.getType() == "CWidget")
+            detail_rect = assert_runtime_rect(self, "browser detail", detail, (960, 0, 960, 972))
+            buttons = find_descendants_by_type(panel, "CButton")
+            select_button = next(button for button in buttons if button.text == "SELECT")
+            cancel_button = next(button for button in buttons if button.text == "CANCEL")
+            select_rect = assert_runtime_rect(self, "browser select", select_button, (960, 972, 480, 108))
+            cancel_rect = assert_runtime_rect(self, "browser cancel", cancel_button, (1440, 972, 480, 108))
+            assert_no_overlap(self, "SELECT", select_rect, "CANCEL", cancel_rect)
+            title_buttons = sorted(
+                (button for button in buttons if button.text == "Twin Road"),
+                key=lambda child: resolved_rect(child)[1],
+            )
+            self.assertEqual(2, len(title_buttons), "both same-titled campaigns must be listed")
+            for index, button in enumerate(title_buttons):
+                rect = resolved_rect(button)
+                assert_child_inside(self, "campaignBrowserPanel", root, f"title {index}", rect)
+                self.assertLessEqual(rect[0] + rect[2], 960, "title column stays in the left half")
+
+            # SELECT before highlighting anything is inert: selection has not begun.
+            activate_widget(select_button, g.getGui())
+            self.assertFalse(panel.hasChoice(), "SELECT must be inert until a campaign is highlighted")
+
+            # Highlight the top (alpha) entry: the detail pane shows its description
+            # and chapter count, keyed by stable id despite the duplicate title.
+            activate_widget(title_buttons[0], g.getGui())
+            self.assertEqual("alpha", panel.getSelectedId())
+            self.assertIn("The first twin road.", panel.getDetailText())
+            self.assertIn("Chapters: 2", panel.getDetailText())
+            pump_event_loop(3)
+            with isolated_gui_panel(g, panel):
+                capture_panel_layout(self, g, "layout_campaign_browser", panel)
+            activate_widget(select_button, g.getGui())
+            return {"detail": detail_rect}
+
+        chosen, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showCampaignSelection(*build_maps(entries)),
+            inspect_select,
+            lambda panel: None,
+        )
+        self.assertEqual("alpha", chosen, "SELECT must return the highlighted stable campaign id")
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+
+        # Cancel path: CANCEL resolves to the empty id even with a highlighted campaign.
+        def inspect_cancel(panel):
+            buttons = find_descendants_by_type(panel, "CButton")
+            title_button = next(button for button in buttons if button.text == "Twin Road")
+            activate_widget(title_button, g.getGui())
+            activate_widget(next(button for button in buttons if button.text == "CANCEL"), g.getGui())
+            return {}
+
+        cancelled, _ = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            lambda: g.getGuiHandler().showCampaignSelection(*build_maps(entries)),
+            inspect_cancel,
+            lambda panel: None,
+        )
+        self.assertEqual("", cancelled, "CANCEL must resolve to the empty stable id")
+        self.assertFalse(gui_contains_class(g, "CGameCampaignBrowserPanel"))
+
+    def test_campaign_panel_layout_blocking_and_resize(self):
+        # [EPIC_10][STORY_04][SUBSTORY_01] The campaign presentation screen fills the
+        # window, lays out title / body / action button inside it per the theme config,
+        # renders nonblank body text, blocks until its action dismisses it, and remains
+        # usable after a window resize. Key-dismissal semantics (Enter/Space yes,
+        # Escape never) are covered by the native test_gui.cpp panel test.
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+
+        body_text = (
+            "Ten years of exile end at the village where your name was outlawed. "
+            "Break the watch, light the hearths, and give the marches their Warden back."
+        )
+
+        def inspect(panel):
+            root = assert_runtime_rect(self, "campaignPanel", panel, ROOT_FULL_WINDOW)
+            self.assertEqual("Chapter Screen", panel.getTitle())
+            self.assertEqual("BEGIN", panel.getActionLabel())
+            widgets = sorted(
+                (child for child in panel.getChildren() if child.getType() == "CWidget"),
+                key=lambda child: resolved_rect(child)[1],
+            )
+            self.assertEqual(2, len(widgets))
+            title_rect = assert_runtime_rect(self, "campaign title", widgets[0], (0, 0, 1920, 162))
+            body_rect = assert_runtime_rect(self, "campaign body", widgets[1], (192, 162, 1536, 756))
+            buttons = find_descendants_by_type(panel, "CButton")
+            self.assertEqual(1, len(buttons))
+            button = buttons[0]
+            self.assertEqual("BEGIN", button.text, "the action button carries the caller's label")
+            button_rect = assert_runtime_rect(self, "campaign action", button, (672, 972, 576, 108))
+            for label, rect in (("title", title_rect), ("body", body_rect), ("action", button_rect)):
+                assert_child_inside(self, "campaignPanel", root, label, rect)
+            assert_no_overlap(self, "campaign body", body_rect, "campaign action", button_rect)
+            assert_no_overlap(self, "campaign title", title_rect, "campaign body", body_rect)
+            with isolated_gui_panel(g, panel):
+                panel.setStringProperty("body", "")
+                pump_event_loop(3)
+                empty_data, width, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_campaign_panel_empty.png", g.getGui()
+                )
+                panel.setStringProperty("body", body_text)
+                pump_event_loop(3)
+                text_data, _, _ = capture_sdl_screenshot(
+                    TEST_OUTPUT_DIR / "layout_campaign_panel_text.png", g.getGui()
+                )
+                text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, body_rect)
+                self.assertGreater(changed, 0, "campaign body text must render nonblank pixels")
+                assert_child_inside(self, "campaign body", body_rect, "rendered body", text_bounds)
+                capture_panel_layout(self, g, "layout_campaign_panel", panel)
+            activate_widget(button, g.getGui())
+            return {"body": body_rect}
+
+        _, regions = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignPanel",
+            lambda: g.getGuiHandler().showCampaignScreen("Chapter Screen", body_text, "BEGIN"),
+            inspect,
+            lambda panel: None,
+        )
+        self.assertIn("body", regions)
+        self.assertFalse(
+            gui_contains_class(g, "CGameCampaignPanel"), "the action must dismiss the campaign screen"
+        )
+
+        # Usable after resize: a reopened campaign panel follows the new window size
+        # (full-window at 800x600 after the resize event).
+        panel = g.getGuiHandler().openPanel("campaignPanel")
+        wait_for_panel_class(self, g, "CGameCampaignPanel")
+        width, height = push_sdl_window_size_changed_event(800, 600)
+        self.assertTrue(
+            pump_event_loop_until(lambda: resolved_rect(panel) == (0, 0, width, height), timeout=5.0),
+            "the campaign screen must track the resized window",
+        )
+        panel.close()
+        pump_event_loop(3)
+        self.assertFalse(gui_contains_class(g, "CGameCampaignPanel"))
 
     def test_text_centric_panel_layouts(self):
         _, g, _, player = create_xvfb_gameplay_session(self)

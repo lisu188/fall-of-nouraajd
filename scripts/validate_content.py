@@ -208,13 +208,13 @@ BUFF_EFFECT_TAG = "buff"
 # metadata property (a typo such as "strenght" would be silently dropped at load
 # time), "actions" is a list of object nodes that must each resolve to a CInteraction
 # (the same resolution the class actions validator enforces), and "creatureType" /
-# "subtypes" tag the race for type-driven lookups.  For now the type fields are
-# DATA-ONLY -- the only rule is that "creatureType" is a non-empty string and every
-# "subtypes" entry is a non-empty string; no mechanical type semantics are invented.
-# The allowed baseStats keys are derived from the live CStats metadata schema so they
-# stay in lockstep with src/core/CStats.h, and CInteraction resolution reuses the
-# class-action helper.  CCreatureRace configs do not exist on current content, so this
-# check is vacuously satisfied (forward-guarding) until such archetypes are authored.
+# "subtypes" tag the race for type-driven lookups.  The type fields stay
+# mechanically DATA-ONLY: "creatureType" must be a non-empty string that names a
+# catalogued creature type (see the creature type catalog below) and every
+# "subtypes" entry must be a non-empty string; no mechanical type semantics are
+# invented.  The allowed baseStats keys are derived from the live CStats metadata
+# schema so they stay in lockstep with src/core/CStats.h, and CInteraction
+# resolution reuses the class-action helper.
 CREATURE_RACE_CONSTRUCTOR_CLASS = "CCreatureRace"
 CREATURE_RACE_BASE_STATS_PROPERTY = "baseStats"
 CREATURE_RACE_ACTIONS_PROPERTY = "actions"
@@ -222,18 +222,53 @@ CREATURE_RACE_TYPE_PROPERTY = "creatureType"
 CREATURE_RACE_SUBTYPES_PROPERTY = "subtypes"
 CREATURE_RACE_STATS_SCHEMA_CLASS = "CStats"
 
+# Creature type catalog (EPIC_08/STORY_01/SUBSTORY_01).
+# "creatureType" strings were previously free-form data tags; they are now validated
+# against a canonical catalog, res/config/creature_types.json, whose single
+# "creatureTypeCatalog" entry maps every known type id to a short description.  This
+# is a VALIDATION-ONLY promotion: no runtime mechanic (immunities, targeting, ...)
+# reads the catalog and current combat behavior is unchanged -- the catalog is
+# exactly the set of creatureType strings observed in current content, so validation
+# passes by construction.  The membership check fails closed: a creatureType that
+# cannot be checked because the catalog file is missing or malformed is reported
+# rather than silently accepted.  Content that declares no creatureType does not
+# require the catalog file (synthetic fixture repos stay valid), and the catalog
+# file itself is schema-checked whenever it exists.  The catalog is data-only (no
+# "class"/"ref"), so the engine's config loader skips it the same way it skips the
+# player class/race profile files.
+CREATURE_TYPES_CONFIG = "creature_types.json"
+CREATURE_TYPE_CATALOG_ENTRY = "creatureTypeCatalog"
+CREATURE_TYPE_CATALOG_KIND_KEY = "catalogKind"
+CREATURE_TYPE_CATALOG_KIND = "creatureType"
+CREATURE_TYPE_CATALOG_TYPES_KEY = "types"
+CREATURE_TYPE_CATALOG_ENTRY_KEYS = {CREATURE_TYPE_CATALOG_KIND_KEY, CREATURE_TYPE_CATALOG_TYPES_KEY}
+CREATURE_TYPE_DESCRIPTION_KEY = "description"
+
 # Archetype-definition base classes (EPIC_06/STORY_04/SUBSTORY_02).
 # CCreatureRace and CCreatureClass configs are *referenced definitions* (a race or
 # class template carried by a creature via the "creatureClass"/race reference
 # property), never actors that can be instantiated onto a map or spawned at
-# runtime.  Any config whose effective engine class is one of these -- or which is
-# declared in the dedicated archetype config files -- must therefore be rejected
-# when used as a concrete spawn target: map object types, map tile types, and
-# createObject/addObjectByName script calls.
+# runtime.  The future-mechanics metadata layers (EPIC_08) are referenced
+# definitions in exactly the same sense: CCreatureTemplate overlays (carried via
+# the "templates" set) and CCreatureClassTrack multiclass records (carried via the
+# "classTracks" set) are registered as constructible CGameObjects but are never
+# spawnable actors -- runtime createObject<CMapObject> on one returns null and the
+# spawn is silently skipped.  Any config whose effective engine class is one of
+# these -- or which is declared in the dedicated archetype config files -- must
+# therefore be rejected when used as a concrete spawn target: map object types,
+# map tile types, and createObject/addObjectByName script calls.
 CREATURE_RACE_BASE_CLASS = "CCreatureRace"
 CREATURE_CLASS_BASE_CLASS = "CCreatureClass"
-CREATURE_ARCHETYPE_BASE_CLASSES = (CREATURE_RACE_BASE_CLASS, CREATURE_CLASS_BASE_CLASS)
-CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG)
+CREATURE_TEMPLATE_BASE_CLASS = "CCreatureTemplate"
+CREATURE_CLASS_TRACK_BASE_CLASS = "CCreatureClassTrack"
+CREATURE_TEMPLATES_CONFIG = "creature_templates.json"
+CREATURE_ARCHETYPE_BASE_CLASSES = (
+    CREATURE_RACE_BASE_CLASS,
+    CREATURE_CLASS_BASE_CLASS,
+    CREATURE_TEMPLATE_BASE_CLASS,
+    CREATURE_CLASS_TRACK_BASE_CLASS,
+)
+CREATURE_ARCHETYPE_DEFINITION_CONFIGS = (CREATURE_RACES_CONFIG, CREATURE_CLASSES_CONFIG, CREATURE_TEMPLATES_CONFIG)
 
 # CCreature.creatureClass reference resolution policy (EPIC_06/STORY_01/SUBSTORY_02).
 # A CCreature config carries its class template through the JSON *property*
@@ -1346,6 +1381,21 @@ class TriggerAnalyzer(ast.NodeVisitor):
             )
 
 
+def is_runtime_registered_config(data: Any) -> bool:
+    """Whether the runtime config loader registers this top-level config entry.
+
+    Mirrors CObjectHandler::registerConfig (src/handler/CObjectHandler.cpp): a
+    top-level entry that is a JSON object with neither "class" nor "ref" is a
+    DATA-ONLY definition (player class/race profiles, crafting recipes, artifact
+    sets, the creature type catalog) that the runtime skips at registration, so
+    it can never be resolved by createObject/addObjectByName/addItem calls or by
+    an object-node ref.  The validator's visibility maps must exclude such
+    entries, otherwise a script or config referencing a data-only id would
+    validate here yet silently fail to resolve at runtime.
+    """
+    return not (isinstance(data, dict) and "class" not in data and "ref" not in data)
+
+
 def is_safe_map_relative_path(path: str) -> bool:
     """Return True when ``path`` is a safe POSIX-style relative path under a map directory.
 
@@ -1371,6 +1421,13 @@ class ContentValidator:
         self.issues: list[ValidationIssue] = []
         self.global_entries: dict[str, ConfigEntry] = {}
         self.global_files: dict[Path, Any] = {}
+        # Parsed creature type catalog (the set of canonical creatureType ids), or None
+        # while unparsed / when res/config/creature_types.json is missing or malformed.
+        # Populated by _validate_creature_type_catalog before config entries are checked.
+        self.creature_type_catalog: set[str] | None = None
+        # Top-level config ids the runtime loader never registers (data-only entries,
+        # see is_runtime_registered_config); used to explain unresolvable references.
+        self.data_only_config_ids: set[str] = set()
         self.map_contexts: list[MapContext] = []
         self.campaign_contexts: list[CampaignContext] = []
         self.plugin_info: list[ScriptInfo] = []
@@ -1786,6 +1843,8 @@ class ContentValidator:
             if isinstance(data, dict):
                 for key, value in data.items():
                     self.global_entries[key] = ConfigEntry(key=key, data=value, path=path)
+                    if not is_runtime_registered_config(value):
+                        self.data_only_config_ids.add(key)
             else:
                 self._issue(path, "$", "expected top-level JSON object")
 
@@ -1808,6 +1867,8 @@ class ContentValidator:
                 if isinstance(data, dict):
                     for key, value in data.items():
                         config_entries[key] = ConfigEntry(key=key, data=value, path=path)
+                        if not is_runtime_registered_config(value):
+                            self.data_only_config_ids.add(key)
                 else:
                     self._issue(path, "$", "expected top-level JSON object")
             script_info = self._parse_script(directory / "script.py")
@@ -2020,7 +2081,10 @@ class ContentValidator:
         return analyzer.info
 
     def _validate_global_configs(self) -> None:
-        visible = dict(self.global_entries)
+        # Parse the creature type catalog first so every subsequent config entry check
+        # (global and map-local) sees the resolved canonical type set.
+        self._validate_creature_type_catalog()
+        visible = self._registered_entries(self.global_entries)
         known_classes = self._constructible_classes()
         for entry in self.global_entries.values():
             self._validate_config_entry(entry, visible, known_classes)
@@ -2296,7 +2360,35 @@ class ContentValidator:
     def _visible_entries(self, context: MapContext) -> dict[str, ConfigEntry]:
         visible = dict(self.global_entries)
         visible.update(context.config_entries)
-        return visible
+        return self._registered_entries(visible)
+
+    def _registered_entries(self, entries: dict[str, ConfigEntry]) -> dict[str, ConfigEntry]:
+        """The subset of config entries the runtime loader actually registers.
+
+        Mirrors CObjectHandler::registerConfig via is_runtime_registered_config:
+        data-only entries (an object without "class"/"ref") are dropped from the
+        visibility map so that script spawn/item calls and object-node refs which
+        name them are rejected here instead of silently failing at runtime.  The
+        entries themselves still live in global_entries/config_entries, so their
+        dedicated file-level validators (profiles, crafting, artifact sets, the
+        creature type catalog) keep running.
+        """
+        return {key: entry for key, entry in entries.items() if is_runtime_registered_config(entry.data)}
+
+    def _unresolvable_config_message(self, label: str, name: str) -> str:
+        """Message for a config reference the runtime cannot resolve.
+
+        Distinguishes a reference to a DATA-ONLY entry -- one the runtime config
+        loader skips at registration (CObjectHandler::registerConfig), so it can
+        never be instantiated, granted, or resolved -- from a plain unknown id.
+        """
+        if name in self.data_only_config_ids:
+            return (
+                f'{label} "{name}" names a data-only config entry (an object without "class"/"ref"); '
+                f"the runtime config loader never registers such entries, so the reference cannot "
+                f"resolve at runtime"
+            )
+        return f'unknown {label} "{name}"'
 
     def _known_classes(self, context: MapContext) -> set[str]:
         return self._constructible_classes(context.script_info.registered_classes if context.script_info else set())
@@ -2373,7 +2465,7 @@ class ContentValidator:
                 if not isinstance(ref, str):
                     self._issue(path, ref_location, "expected string ref")
                 elif ref not in visible:
-                    self._issue(path, ref_location, f'unknown ref "{ref}"')
+                    self._issue(path, ref_location, self._unresolvable_config_message("ref", ref))
             for key, child in value.items():
                 self._validate_refs(path, append_field(location, key), child, visible)
         elif isinstance(value, list):
@@ -3432,7 +3524,11 @@ class ContentValidator:
                     )
             elif call.name in SCRIPT_ITEM_CALLS:
                 if call.value not in visible:
-                    self._issue(context.script_info.path, call.location, f'unknown item ref "{call.value}"')
+                    self._issue(
+                        context.script_info.path,
+                        call.location,
+                        self._unresolvable_config_message("item ref", call.value),
+                    )
             elif call.name in SCRIPT_QUEST_CALLS:
                 if call.value not in visible:
                     self._issue(context.script_info.path, call.location, f'unknown quest id "{call.value}"')
@@ -4474,9 +4570,10 @@ class ContentValidator:
         chain or another object is still checked.  For every node whose effective class
         is ``CCreatureRace`` it verifies that each ``baseStats`` key names a ``CStats``
         metadata property, that each ``actions`` entry resolves to a ``CInteraction``,
-        and that ``creatureType`` / every ``subtypes`` entry is a non-empty string. The
-        type fields stay DATA-ONLY (non-empty-string checks only); no mechanical type
-        semantics are inferred.
+        that ``creatureType`` is a non-empty string naming a catalogued creature type
+        (res/config/creature_types.json), and that every ``subtypes`` entry is a
+        non-empty string.  The type fields stay mechanically DATA-ONLY; the catalog is
+        validation-only metadata and no mechanical type semantics are inferred.
         """
         if isinstance(value, dict):
             if self._effective_object_class(value, visible) == CREATURE_RACE_CONSTRUCTOR_CLASS:
@@ -4593,6 +4690,131 @@ class ContentValidator:
                 location,
                 f'"{CREATURE_RACE_TYPE_PROPERTY}" expected a non-empty string; got {json_value_kind(creature_type)}',
             )
+            return
+        # Catalog membership (EPIC_08/STORY_01/SUBSTORY_01): every creatureType string
+        # must name a canonical type from res/config/creature_types.json.  The check
+        # fails closed -- a type that cannot be verified because the catalog is missing
+        # or malformed is reported instead of silently accepted.
+        if self.creature_type_catalog is None:
+            self._issue(
+                path,
+                location,
+                f'{CREATURE_RACE_TYPE_PROPERTY} "{creature_type}" cannot be validated: the creature type '
+                f"catalog res/config/{CREATURE_TYPES_CONFIG} is missing or malformed; declare a "
+                f'"{CREATURE_TYPE_CATALOG_ENTRY}" entry listing every canonical creature type',
+            )
+            return
+        if creature_type not in self.creature_type_catalog:
+            self._issue(
+                path,
+                location,
+                f'unknown {CREATURE_RACE_TYPE_PROPERTY} "{creature_type}"; expected one of '
+                f"{', '.join(sorted(self.creature_type_catalog))} "
+                f"(add the new type to res/config/{CREATURE_TYPES_CONFIG} or fix the value)",
+            )
+
+    def _validate_creature_type_catalog(self) -> None:
+        """Parse and schema-check the creature type catalog config.
+
+        The catalog file res/config/creature_types.json declares a single data-only
+        entry, ``creatureTypeCatalog``, whose ``types`` object maps every canonical
+        ``creatureType`` id to a definition carrying a short human-readable
+        ``description``.  On success ``self.creature_type_catalog`` becomes the set of
+        canonical type ids used by _validate_creature_race_type; when the file is
+        absent, unreadable, or its ``types`` map is unusable, the catalog stays None
+        and every creatureType usage in content is reported as unverifiable (fail
+        closed).  A missing catalog file alone is NOT an issue -- content that never
+        declares a creatureType (e.g. synthetic fixture repos) does not need one --
+        but a catalog file that exists is always schema-checked.  Validation-only:
+        nothing at runtime reads the catalog.
+        """
+        catalog_path = None
+        data = None
+        for path, file_data in self.global_files.items():
+            if path.name == CREATURE_TYPES_CONFIG:
+                catalog_path = path
+                data = file_data
+                break
+        if catalog_path is None or not isinstance(data, dict):
+            # Absent file, unreadable JSON, or a non-object document; the latter two are
+            # already reported by the loader, and creatureType usages fail closed.
+            return
+        unexpected_entries = sorted(set(data) - {CREATURE_TYPE_CATALOG_ENTRY})
+        if unexpected_entries:
+            self._issue(
+                catalog_path,
+                "$",
+                f'creature type catalog must declare only the "{CREATURE_TYPE_CATALOG_ENTRY}" entry; '
+                f"unexpected entries: {', '.join(unexpected_entries)}",
+            )
+        entry = data.get(CREATURE_TYPE_CATALOG_ENTRY)
+        if entry is None:
+            self._issue(
+                catalog_path,
+                "$",
+                f'creature type catalog is missing the "{CREATURE_TYPE_CATALOG_ENTRY}" entry',
+            )
+            return
+        if not isinstance(entry, dict):
+            self._issue(
+                catalog_path,
+                CREATURE_TYPE_CATALOG_ENTRY,
+                f"expected object; got {json_value_kind(entry)}",
+            )
+            return
+        if entry.get(CREATURE_TYPE_CATALOG_KIND_KEY) != CREATURE_TYPE_CATALOG_KIND:
+            self._issue(
+                catalog_path,
+                append_field(CREATURE_TYPE_CATALOG_ENTRY, CREATURE_TYPE_CATALOG_KIND_KEY),
+                f'expected "{CREATURE_TYPE_CATALOG_KIND}"',
+            )
+        unexpected_keys = sorted(set(entry) - CREATURE_TYPE_CATALOG_ENTRY_KEYS)
+        if unexpected_keys:
+            self._issue(
+                catalog_path,
+                CREATURE_TYPE_CATALOG_ENTRY,
+                f"unsupported catalog keys: {', '.join(unexpected_keys)}",
+            )
+        types = entry.get(CREATURE_TYPE_CATALOG_TYPES_KEY)
+        types_location = append_field(CREATURE_TYPE_CATALOG_ENTRY, CREATURE_TYPE_CATALOG_TYPES_KEY)
+        if not isinstance(types, dict):
+            self._issue(
+                catalog_path,
+                types_location,
+                f"expected object mapping creature type ids to definitions; got {json_value_kind(types)}",
+            )
+            return
+        if not types:
+            self._issue(catalog_path, types_location, "creature type catalog must declare at least one type")
+            return
+        for type_id, definition in types.items():
+            self._validate_creature_type_definition(
+                catalog_path, append_field(types_location, type_id), type_id, definition
+            )
+        self.creature_type_catalog = {type_id for type_id in types if type_id}
+
+    def _validate_creature_type_definition(self, path: Path, location: str, type_id: str, definition: Any) -> None:
+        """Check one catalog type entry: non-empty id plus a described definition object.
+
+        A malformed definition is reported but does not invalidate the whole catalog --
+        the sibling type ids stay usable for membership checks, and the validation run
+        already fails through the definition issue itself.
+        """
+        if not type_id:
+            self._issue(path, location, "creature type ids must be non-empty strings")
+        if not isinstance(definition, dict):
+            self._issue(path, location, f"expected object; got {json_value_kind(definition)}")
+            return
+        unexpected = sorted(set(definition) - {CREATURE_TYPE_DESCRIPTION_KEY})
+        if unexpected:
+            self._issue(path, location, f"unsupported creature type keys: {', '.join(unexpected)}")
+        description = definition.get(CREATURE_TYPE_DESCRIPTION_KEY)
+        if not isinstance(description, str) or not description:
+            self._issue(
+                path,
+                append_field(location, CREATURE_TYPE_DESCRIPTION_KEY),
+                f"expected non-empty string; got {json_value_kind(description)}",
+            )
 
     def _validate_creature_race_subtypes(self, path: Path, location: str, subtypes: Any) -> None:
         if not isinstance(subtypes, list):
@@ -4626,14 +4848,16 @@ class ContentValidator:
         return has_ref or (has_class and ("properties" in value or set(value) <= OBJECT_SCHEMA_KEYS))
 
     def _archetype_definition_ids(self, visible: dict[str, ConfigEntry]) -> set[str]:
-        """Resolve config ids that name a CCreatureRace/CCreatureClass *definition*.
+        """Resolve config ids that name an archetype/metadata *definition*.
 
         An id is an archetype definition when its effective engine class (following
-        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES or inherits from
+        ``ref`` chains) is one of CREATURE_ARCHETYPE_BASE_CLASSES (CCreatureRace,
+        CCreatureClass, CCreatureTemplate, CCreatureClassTrack) or inherits from
         one, or when it is a top-level entry declared in the dedicated archetype
-        config files (creature_races.json / creature_classes.json).  Such ids are
-        referenced definitions, not actors, so using them as a concrete spawn target
-        is rejected.  Resolution is purely structural -- never from id name strings.
+        config files (creature_races.json / creature_classes.json /
+        creature_templates.json).  Such ids are referenced definitions, not actors,
+        so using them as a concrete spawn target is rejected.  Resolution is purely
+        structural -- never from id name strings.
         """
         archetype_ids: set[str] = set()
         for key, entry in visible.items():
@@ -4672,7 +4896,7 @@ class ContentValidator:
             path,
             location,
             f'{label} "{name}" is a creature archetype definition '
-            f"(CCreatureRace/CCreatureClass) and cannot be used as a concrete spawn target",
+            f"({'/'.join(CREATURE_ARCHETYPE_BASE_CLASSES)}) and cannot be used as a concrete spawn target",
         )
         return True
 
@@ -4688,7 +4912,7 @@ class ContentValidator:
             return f'{label} "{class_name}" is registered by native plugin code but no manifest entry loads {owners}'
         if class_name in self.metadata_declared_classes:
             return f'{label} "{class_name}" is declared in metadata but is not registered as constructible content'
-        return f'unknown {label} "{class_name}"'
+        return self._unresolvable_config_message(label, class_name)
 
     def _excluded_use_is_allowed(self, path: Path, location: str, class_name: str) -> bool:
         exclusion = self.registration_exclusions.get(class_name)

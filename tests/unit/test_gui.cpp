@@ -34,6 +34,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
+#include "gui/panel/CGameCampaignPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "gui/panel/CGameInventoryPanel.h"
@@ -3192,9 +3194,71 @@ void test_panel_session_geometry_clears_at_session_shutdown() {
 
 } // namespace
 
+void test_campaign_panel_dismisses_via_action_and_keys_but_never_escape() {
+    // [EPIC_10][STORY_04][SUBSTORY_01] The campaign presentation screen dismisses via
+    // its action (button/Enter/Space) and must NOT be cancellable: Escape and other
+    // keys leave it up, so campaign progression cannot be aborted from the screen.
+    auto panel = std::make_shared<CGameCampaignPanel>();
+    panel->setTitle("Chapter I - Hearthfall");
+    panel->setBody("Ten years of exile end at the village where your name was outlawed.");
+    panel->setActionLabel("BEGIN");
+    expect_true(panel->getTitle() == "Chapter I - Hearthfall", "campaign panel keeps its title");
+    expect_true(panel->getActionLabel() == "BEGIN", "campaign panel keeps its action label");
+    expect_true(!panel->isDismissed(), "campaign panel starts undismissed");
+
+    panel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
+    expect_true(!panel->isDismissed(), "escape must not dismiss the campaign screen");
+    panel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a);
+    expect_true(!panel->isDismissed(), "unrelated keys must not dismiss the campaign screen");
+    panel->keyboardEvent(nullptr, SDL_KEYUP, SDLK_SPACE);
+    expect_true(!panel->isDismissed(), "key releases must not dismiss the campaign screen");
+
+    panel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(panel->isDismissed(), "space dismisses the campaign screen");
+    expect_true(panel->awaitDismissal(), "awaitDismissal reports the action dismissal without blocking");
+
+    auto enterPanel = std::make_shared<CGameCampaignPanel>();
+    enterPanel->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(enterPanel->isDismissed(), "enter dismisses the campaign screen");
+
+    auto clickPanel = std::make_shared<CGameCampaignPanel>();
+    clickPanel->clickAction(nullptr);
+    expect_true(clickPanel->isDismissed(), "the action button dismisses the campaign screen");
+}
+
+void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
+    // [EPIC_10][STORY_05][SUBSTORY_01] SELECT is inert until a campaign is highlighted,
+    // confirms the highlighted STABLE id once one is, and CANCEL/Escape resolve the
+    // browser to the empty id.
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    expect_true(!browser->hasChoice(), "browser starts with no resolved choice");
+    browser->clickSelect(nullptr);
+    expect_true(!browser->hasChoice(), "SELECT must be inert until a campaign is highlighted");
+
+    browser->setSelectedId("wardensRoad");
+    browser->setDetailText("An exile's homecoming.\n\nChapters: 4");
+    browser->clickSelect(nullptr);
+    expect_true(browser->hasChoice(), "SELECT confirms the highlighted campaign");
+    expect_true(browser->awaitChoice() == "wardensRoad", "the confirmed choice is the stable campaign id");
+
+    auto cancelled = std::make_shared<CGameCampaignBrowserPanel>();
+    cancelled->setSelectedId("wardensRoad");
+    cancelled->clickCancel(nullptr);
+    expect_true(cancelled->awaitChoice().empty(), "CANCEL resolves to the empty id even when highlighted");
+
+    auto escaped = std::make_shared<CGameCampaignBrowserPanel>();
+    escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a);
+    expect_true(!escaped->hasChoice(), "unrelated keys leave the browser open");
+    escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
+    expect_true(escaped->hasChoice() && escaped->awaitChoice().empty(),
+                "escape cancels the browser with the empty id");
+}
+
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_campaign_browser_selects_by_stable_id_and_cancels_via_escape();
+    test_campaign_panel_dismisses_via_action_and_keys_but_never_escape();
     test_layout_runtime_overrides_preserve_serialized_percentage_layouts();
     test_layout_fractional_percentages_resolve_exact_design_pixels();
     test_layout_minimum_size_floors_percentage_panels();

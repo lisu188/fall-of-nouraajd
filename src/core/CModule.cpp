@@ -31,6 +31,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../gui/object/CSideBar.h"
 #include "../gui/object/CStatsGraphicsObject.h"
 #include "../gui/panel/CCreatureView.h"
+#include "../gui/panel/CGameCampaignBrowserPanel.h"
+#include "../gui/panel/CGameCampaignPanel.h"
 #include "../gui/panel/CGameCharacterPanel.h"
 #include "../gui/panel/CGameDialogPanel.h"
 #include "../gui/panel/CGameFightPanel.h"
@@ -670,6 +672,12 @@ void init_game_module(py::module_ &m) {
         .def("showSelection", &CGuiHandler::showSelection, "Open a selection panel.")
         .def("showCharacterCreation", &CGuiHandler::showCharacterCreation, py::arg("classes"), py::arg("races"),
              "Open the class+race character-creation panel; returns a (classLabel, raceLabel) tuple.")
+        .def("showCampaignScreen", &CGuiHandler::showCampaignScreen, py::arg("title"), py::arg("body"),
+             py::arg("actionLabel"),
+             "Show a full-window blocking campaign presentation screen; headless runs log and return.")
+        .def("showCampaignSelection", &CGuiHandler::showCampaignSelection, py::arg("titles"), py::arg("descriptions"),
+             py::arg("scenarioCounts"),
+             "Show the stable-ID campaign browser; returns the confirmed campaign id or \"\" on cancel/headless.")
         .def("showInfo", &CGuiHandler::showInfo, py::arg("message"), py::arg("centered") = false, "Open an info panel.")
         .def("openPanel", &CGuiHandler::openPanel, "Open a configured panel without blocking for user input.")
         .def("showLoot", &CGuiHandler::showLoot, "Show loot acquisition UI.")
@@ -1244,6 +1252,22 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CGameQuestionPanel, CGamePanel, std::shared_ptr<CGameQuestionPanel>>(m, "CGameQuestionPanel",
                                                                                     "Question/choice panel.");
+
+    py::class_<CGameCampaignPanel, CGamePanel, std::shared_ptr<CGameCampaignPanel>>(
+        m, "CGameCampaignPanel", "Full-window blocking campaign presentation screen.")
+        .def("getTitle", &CGameCampaignPanel::getTitle, "Return the screen title.")
+        .def("getBody", &CGameCampaignPanel::getBody, "Return the screen body text.")
+        .def("getActionLabel", &CGameCampaignPanel::getActionLabel, "Return the action button label.")
+        .def("isDismissed", &CGameCampaignPanel::isDismissed, "Return whether the action dismissed the screen.")
+        .def("clickAction", &CGameCampaignPanel::clickAction, "Dismiss the screen via its action.");
+
+    py::class_<CGameCampaignBrowserPanel, CGamePanel, std::shared_ptr<CGameCampaignBrowserPanel>>(
+        m, "CGameCampaignBrowserPanel", "Stable-ID two-column campaign browser panel.")
+        .def("getSelectedId", &CGameCampaignBrowserPanel::getSelectedId, "Return the highlighted campaign id.")
+        .def("getDetailText", &CGameCampaignBrowserPanel::getDetailText, "Return the rendered detail text.")
+        .def("hasChoice", &CGameCampaignBrowserPanel::hasChoice, "Return whether the browser resolved a choice.")
+        .def("clickSelect", &CGameCampaignBrowserPanel::clickSelect, "Confirm the highlighted campaign.")
+        .def("clickCancel", &CGameCampaignBrowserPanel::clickCancel, "Cancel the browser with an empty id.");
 
     py::class_<CGameDialogPanel, CGamePanel, std::shared_ptr<CGameDialogPanel>>(m, "CGameDialogPanel",
                                                                                 "Dialog conversation panel.");

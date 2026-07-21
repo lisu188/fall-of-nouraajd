@@ -231,6 +231,16 @@ class CiChangeClassifierTest(unittest.TestCase):
                 self.assertTrue(classification.coverageNeeded)
                 self.assertTrue(classification.humanReviewRequired)
 
+    def test_auto_merge_workflow_and_policy_are_authority_changes(self) -> None:
+        for path in (".github/workflows/auto-merge.yml", "scripts/auto_merge_policy.py"):
+            with self.subTest(path=path):
+                classification = self.classify(path)
+                self.assertTrue(classification.authorityChange)
+                self.assertTrue(classification.nativeNeeded)
+                self.assertTrue(classification.coverageNeeded)
+                self.assertTrue(classification.humanReviewRequired)
+                self.assertEqual((path,), classification.authorityPaths)
+
     def test_authority_change_cannot_self_classify_as_lightweight(self) -> None:
         # A PR that only edits the routing/poller/classifier logic must not be able
         # to claim a lightweight (linux-only, no-coverage) validation class.

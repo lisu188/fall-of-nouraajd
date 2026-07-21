@@ -317,6 +317,12 @@ void test_handler_constructors_are_covered_by_native_tests() {
     expect_true(gui_handler.meta()->inherits("CGameObject"), "GUI handler metadata should preserve its object base");
     gui_handler.showMessage("native handler constructor coverage");
     gui_handler.showInfo("native handler info coverage");
+    // Headless campaign screens log the title/body/action content and return
+    // immediately instead of blocking on input.
+    gui_handler.showCampaignScreen("Chapter I - Hearthfall", "Ten years of exile end here.", "BEGIN");
+    // The headless campaign browser resolves to the empty stable id immediately.
+    expect_true(gui_handler.showCampaignSelection(nullptr, nullptr, nullptr).empty(),
+                "headless campaign selection should resolve to the empty stable id");
     expect_true(!gui_handler.showQuestion("native handler question coverage"),
                 "headless GUI handler questions should return false");
     expect_true(rng_handler.getRandomLoot(0).empty(), "default RNG handler should return no loot without a game");
