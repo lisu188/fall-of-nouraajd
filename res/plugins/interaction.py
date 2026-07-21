@@ -89,7 +89,10 @@ def load(self, context):
             dmg = first.getDmg()
             if dmg:
                 second.hurt(dmg)
-                first.healProc((dmg * 75) // max(first.getHpMax(), 1))
+                # Heal 75% of the damage dealt directly: routing it through an
+                # integer percent of hpMax floors to healProc(0) (= full heal)
+                # whenever dmg * 75 < hpMax.
+                first.heal(max(1, dmg * 75 // 100))
             first.getStats().setNumericProperty("crit", crit)
 
     @register(context)

@@ -2923,6 +2923,35 @@ void test_interaction_effect_routes_to_caster_via_self_target() {
     expect_true(interaction->effectRoutesToCaster(buff), "selfTarget keeps a buff on the caster");
 }
 
+// healProc/addManaProc convert a percentage into an absolute restore amount, while
+// heal(0)/addMana(0) are the documented "restore to full" sentinels. A positive
+// percentage whose truncated amount is 0 (small percent and/or a low maximum) must
+// restore exactly 1 point instead of collapsing into the sentinel; an explicit 0
+// percentage keeps the full-restore call relied upon by existing callers.
+void test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentinel() {
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(stats_with_main(1, 1)); // hpMax = manaMax = 7
+
+    creature->setHp(3);
+    creature->healProc(2); // 2% of 7 truncates to 0
+    expect_true(creature->getHp() == 4, "a positive heal percentage must restore at least 1 hp, never heal to full");
+
+    creature->healProc(0);
+    expect_true(creature->getHp() == 7, "healProc(0) must keep the restore-to-full sentinel behavior");
+
+    creature->setHp(3);
+    creature->healProc(100);
+    expect_true(creature->getHp() == 7, "healProc(100) must still restore to full hp");
+
+    creature->setMana(2);
+    creature->addManaProc(4); // 4% of 7 truncates to 0
+    expect_true(creature->getMana() == 3,
+                "a positive mana percentage must restore at least 1 mana, never restore to full");
+
+    creature->addManaProc(0);
+    expect_true(creature->getMana() == 7, "addManaProc(0) must keep the restore-to-full sentinel behavior");
+}
+
 } // namespace
 
 int main() {
@@ -2931,6 +2960,7 @@ int main() {
     test_dynamic_property_cannot_spoof_typed_engine_signal();
     test_typed_engine_signal_still_fires_directly();
     test_effect_applies_for_exactly_its_duration_without_underflow();
+    test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentinel();
     test_creature_get_dmg_hit_chance_is_not_inverted();
     test_interaction_effect_routes_to_caster_via_self_target();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();

@@ -4936,8 +4936,8 @@ def walkthrough_vhulmarn_map():
 
     # The finale requires the boss defeat as well as the pickup: the tiara alone must not complete it.
     player.checkQuests()
-    assert (
-        "drownedTitheQuest" not in completed_quest_names(player)
+    assert "drownedTitheQuest" not in completed_quest_names(
+        player
     ), "The Drowned Tithe quest must not complete on the tiara pickup alone."
 
     # Defeating The Nameless (its onDestroy trigger) records the boss defeat and completes the finale.
@@ -4993,8 +4993,8 @@ def walkthrough_kadath_map():
 
     # The finale requires the boss defeat as well as the pickup: the signet alone must not complete it.
     player.checkQuests()
-    assert (
-        "kadathAscentQuest" not in completed_quest_names(player)
+    assert "kadathAscentQuest" not in completed_quest_names(
+        player
     ), "The Kadath ascent quest must not complete on the signet pickup alone."
 
     # Defeating the Crawling Chaos (its onDestroy trigger) records the boss defeat and completes the finale.
@@ -5065,8 +5065,8 @@ def walkthrough_sunderedmarch_map():
 
     # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
     player.checkQuests()
-    assert (
-        "sunderedMarchQuest" not in completed_quest_names(player)
+    assert "sunderedMarchQuest" not in completed_quest_names(
+        player
     ), "The Sundered March quest must not complete on the crown pickup alone."
 
     # Defeating the Barrow-Warlord (its onDestroy trigger) records the boss defeat and completes the finale.
@@ -5159,8 +5159,8 @@ def walkthrough_ninemarches_map():
 
     # The finale requires the boss defeat as well as the pickup: the crown alone must not complete it.
     player.checkQuests()
-    assert (
-        "ninemarchesQuest" not in completed_quest_names(player)
+    assert "ninemarchesQuest" not in completed_quest_names(
+        player
     ), "The Nine Marches quest must not complete on the crown pickup alone."
     assert "haldaQuest" in completed_quest_names(player), "Ser Halda's companion quest should complete on recruit."
 
@@ -10022,6 +10022,79 @@ class GameTest(unittest.TestCase):
         self.assertEqual(missing, [])
 
         return True, ""
+
+    @game_test
+    def test_small_percentage_restores_do_not_collapse_into_full_restores(self):
+        # healProc/addManaProc used to truncate a small positive percentage to 0 and
+        # accidentally invoke the heal(0)/addMana(0) "restore to full" sentinels: a
+        # low-stamina Wayfarer ticking Wayfarer's Stride (2% hp regen per round) was
+        # fully healed every combat round instead of gaining 1 hp.
+        g, _game_map, player = load_game_map_with_player("test", "Wayfarer")
+        player.equipItem("0", None)
+        player.unequipArmor()
+        player.baseStats.stamina = 5
+
+        player.setMana(50)  # cover the cast's mana cost
+        stride = g.createObject("WayfarersStride")
+        stride.onAction(player, None)
+        effects = [e for e in player.getEffects() if e and e.getTypeId() == "WayfarersStrideEffect"]
+        self.assertEqual(1, len(effects))
+
+        # Measure the maxima with the buff active: its configureEffect bonus is part
+        # of the composed stats the regen tick sees.
+        hp_max = player.getHpMax()
+        stats = player.getStats()
+        mana_max = stats.getNumericProperty(stats.getStringProperty("mainStat")) * 7
+        # Precondition: the 2% tick lands in the truncation zone (2% of hpMax < 1).
+        self.assertEqual(0, int(2 / 100.0 * hp_max))
+
+        player.setHp(10)
+        player.setMana(5)
+        effects[0].onEffect()
+
+        self.assertEqual(11, player.getHp())
+        expected_mana_gain = int(6 / 100.0 * mana_max) or 1
+        self.assertEqual(min(5 + expected_mana_gain, mana_max), player.getMana())
+
+        return True, json.dumps({"hp_max": hp_max, "mana_max": mana_max}, sort_keys=True)
+
+    @game_test
+    def test_devour_heals_fraction_of_damage_dealt_not_full(self):
+        # Devour heals 75% of the damage dealt. The old formula converted that into
+        # an integer percent of hpMax, which floored to healProc(0) (= full heal)
+        # whenever dmg * 75 < hpMax -- a weak bite fully healed the devourer.
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        game.CGameLoader.startGame(g, "empty")
+
+        attacker = g.createObject("Sorcerer")
+        attacker.moveTo(0, 0, 0)
+        g.getMap().addObject(attacker)
+        attacker.equipItem("0", None)
+        attacker.unequipArmor()
+        attacker.baseStats.hit = 100
+        attacker.baseStats.crit = 0
+        attacker.baseStats.dmgMin = 1
+        attacker.baseStats.dmgMax = 1
+        attacker.baseStats.stamina = 20
+
+        defender = g.createObject("GoblinThief")
+        defender.moveTo(1, 0, 0)
+        g.getMap().addObject(defender)
+
+        hp_max = attacker.getHpMax()
+        # Precondition: a 1-damage bite is in the old full-heal zone (1 * 75 < hpMax).
+        self.assertGreater(hp_max, 75)
+
+        attacker.setHp(50)
+        devour = g.createObject("Devour")
+        devour.performAction(attacker, defender)
+
+        # dmg is deterministically 1 (dmgMin == dmgMax == 1, hit 100, crit 0), so the
+        # heal is max(1, 1 * 75 // 100) == 1, never a full restore.
+        self.assertEqual(51, attacker.getHp())
+
+        return True, json.dumps({"hp_max": hp_max}, sort_keys=True)
 
     def make_multi_enemy_combat_fixture(self):
         game = load_game_module()
@@ -17164,7 +17237,9 @@ class GameTest(unittest.TestCase):
             # Objective reflects the remaining requirement (put the finale boss down).
             objective = active_objective(player, quest_id)
             self.assertTrue(objective, f"{map_name}: an active finale objective should be present")
-            self.assertIn("put", objective.lower(), f"{map_name}: objective should name the remaining boss: {objective!r}")
+            self.assertIn(
+                "put", objective.lower(), f"{map_name}: objective should name the remaining boss: {objective!r}"
+            )
 
             # Adding the boss defeat completes it.
             game_map.setBoolProperty("boss_defeated", True)
@@ -18584,9 +18659,7 @@ class GameTest(unittest.TestCase):
             captured["returning"] = sorted(manifests)[0]
             self.assertEqual(sorted(manifests)[0], game.choose_campaign(g))
             self.assertEqual({cid: m["title"] for cid, m in manifests.items()}, captured["titles"])
-            self.assertEqual(
-                {cid: m.get("description", "") for cid, m in manifests.items()}, captured["descriptions"]
-            )
+            self.assertEqual({cid: m.get("description", "") for cid, m in manifests.items()}, captured["descriptions"])
             self.assertEqual({cid: len(m["scenarios"]) for cid, m in manifests.items()}, captured["counts"])
 
             captured["returning"] = ""
@@ -21827,9 +21900,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 )
                 panel.setStringProperty("body", body_text)
                 pump_event_loop(3)
-                text_data, _, _ = capture_sdl_screenshot(
-                    TEST_OUTPUT_DIR / "layout_campaign_panel_text.png", g.getGui()
-                )
+                text_data, _, _ = capture_sdl_screenshot(TEST_OUTPUT_DIR / "layout_campaign_panel_text.png", g.getGui())
                 text_bounds, changed = pixel_diff_bounds(empty_data, text_data, width, body_rect)
                 self.assertGreater(changed, 0, "campaign body text must render nonblank pixels")
                 assert_child_inside(self, "campaign body", body_rect, "rendered body", text_bounds)
@@ -21847,9 +21918,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             lambda panel: None,
         )
         self.assertIn("body", regions)
-        self.assertFalse(
-            gui_contains_class(g, "CGameCampaignPanel"), "the action must dismiss the campaign screen"
-        )
+        self.assertFalse(gui_contains_class(g, "CGameCampaignPanel"), "the action must dismiss the campaign screen")
 
         # Usable after resize: a reopened campaign panel follows the new window size
         # (full-window at 800x600 after the resize event).
