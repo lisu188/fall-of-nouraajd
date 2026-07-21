@@ -1,0 +1,49 @@
+name: Resolve PR 1488 merge conflicts
+
+on:
+  push:
+    branches:
+      - feature/unified-plugin-system-lua
+    paths:
+      - .github/workflows/resolve-pr-1488.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: resolve-pr-1488
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/unified-plugin-system-lua
+          fetch-depth: 0
+
+      - name: Merge current main and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-ff -X ours origin/main -m "Merge main into feature/unified-plugin-system-lua"
+          test -z "$(git ls-files -u)"
+          git rm .github/workflows/resolve-pr-1488.yml
+          git commit --amend --no-edit
+          git diff --check HEAD^1..HEAD
+
+      - name: Validate content and validator tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/validate_content.py --repo-root .
+          python3 -m unittest tests.test_content_validator
+
+      - name: Push resolved merge commit
+        shell: bash
+        run: git push origin HEAD:feature/unified-plugin-system-lua
