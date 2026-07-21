@@ -41,6 +41,7 @@
                 "properties": {
                   "number": 3,
                   "condition": "contract_completed",
+                  "action": "accept_quest",
                   "nextStateId": "COMPLETED_THANKS",
                   "text": "The cave is quiet now. The OctoBogz are dead."
                 }

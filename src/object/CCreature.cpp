@@ -350,7 +350,13 @@ void CCreature::heal(int i) {
 
 void CCreature::healProc(float i) {
     int tmp = hp;
-    heal(i / 100.0 * getHpMax());
+    int amount = i / 100.0 * getHpMax();
+    // A positive percentage must restore at least 1 hp: truncating to 0 would
+    // accidentally invoke heal(0), whose sentinel meaning is "restore to full".
+    if (i > 0 && amount == 0) {
+        amount = 1;
+    }
+    heal(amount);
     vstd::logger::debug(to_string(), "restored", hp - tmp, "hp");
 }
 
@@ -413,8 +419,10 @@ void CCreature::hurt(std::shared_ptr<CDamage> damage) {
     vstd::logger::debug(getType(), "took damage:", JSONIFY(damage));
 }
 
-int CCreature::getDmg() {
+int CCreature::getDmg(bool allowCrit) {
     auto stats = getStats();
+    // critDice is rolled unconditionally so the RNG stream stays identical whether or not
+    // crit is allowed; allowCrit only gates whether a rolled crit is applied.
     int critDice = rand() % 100;
     int attDice = rand() % 100;
     int dmgMin = std::min(stats->getDmgMin(), stats->getDmgMax());
@@ -423,7 +431,7 @@ int CCreature::getDmg() {
     dmg += stats->getDamage();
     attDice -= stats->getAttack();
     if (attDice < stats->getHit()) {
-        if (critDice < stats->getCrit()) {
+        if (allowCrit && critDice < stats->getCrit()) {
             dmg *= 2;
             vstd::logger::debug("Critical!");
         }
@@ -523,7 +531,13 @@ void CCreature::addMana(int i) {
 
 void CCreature::addManaProc(float i) {
     int tmp = mana;
-    addMana(i / 100.0 * getManaMax());
+    int amount = i / 100.0 * getManaMax();
+    // A positive percentage must restore at least 1 mana: truncating to 0 would
+    // accidentally invoke addMana(0), whose sentinel meaning is "restore to full".
+    if (i > 0 && amount == 0) {
+        amount = 1;
+    }
+    addMana(amount);
     vstd::logger::debug(to_string(), "restored", mana - tmp, "mana");
 }
 
