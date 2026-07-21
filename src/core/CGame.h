@@ -47,6 +47,8 @@ class CGuiHandler;
 
 class CScriptHandler;
 
+class CLuaHandler;
+
 class CSlotConfig;
 
 struct CMapTransitionRequest;
@@ -76,6 +78,8 @@ class CGame : public CGameObject {
     std::shared_ptr<CGuiHandler> getGuiHandler();
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
+
+    std::shared_ptr<CLuaHandler> getLuaHandler();
 
     std::shared_ptr<CObjectHandler> getObjectHandler();
 

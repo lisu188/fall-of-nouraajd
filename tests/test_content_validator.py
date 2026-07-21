@@ -2434,15 +2434,15 @@ class ContentValidatorTest(unittest.TestCase):
         write_json(
             root / "res/plugins/manifest.json",
             {
-                "global": [
+                "version": 2,
+                "plugins": [
                     {
-                        "kind": "dynamic",
+                        "kind": "native",
                         "id": "nativeOptional",
                         "library": "plugins/native/native_optional",
-                        "entry": "native_optional_load_v1",
+                        "entry": "native_optional_load_v2",
                     }
                 ],
-                "maps": {},
             },
         )
         config_path = root / "res/maps/broken/config.json"
@@ -2457,7 +2457,7 @@ class ContentValidatorTest(unittest.TestCase):
     def test_unloaded_native_plugin_registration_reports_manifest_diagnostic(self):
         root = self.make_fixture()
         self.write_native_registration_fixture(root, "CUnloadedNative")
-        write_json(root / "res/plugins/manifest.json", {"global": [], "maps": {}})
+        write_json(root / "res/plugins/manifest.json", {"version": 2, "plugins": []})
         config_path = root / "res/maps/broken/config.json"
         config = read_json(config_path)
         config["unloadedNative"] = {"class": "CUnloadedNative"}
@@ -2470,7 +2470,57 @@ class ContentValidatorTest(unittest.TestCase):
             "res/maps/broken/config.json",
             "unloadedNative.class",
             'class "CUnloadedNative" is registered by native plugin code',
-            "native_optional:native_optional_load_v1",
+            "native_optional:native_optional_load_v2",
+        )
+
+    def test_plugin_manifest_schema_diagnostics(self):
+        root = self.make_fixture()
+        write_json(
+            root / "res/plugins/manifest.json",
+            {
+                "plugins": [
+                    {"kind": "mystery", "id": "unknownKind"},
+                    {"kind": "cpp", "id": "missingType"},
+                    {"kind": "native", "id": "escapee", "library": "plugins/escapee"},
+                    {"kind": "python", "id": "missingPath", "path": "plugins/absent.py"},
+                    {"kind": "lua", "id": "wrongSuffix", "path": "plugins/wrong.py"},
+                    {"kind": "cpp", "id": "missingType", "type": "CPlugin"},
+                    {"kind": "cpp", "id": "badScope", "type": "CPlugin", "scope": {"map": "missingmap"}},
+                ]
+            },
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "version", "must declare version 2")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[0]", 'unknown plugin kind "mystery"')
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[1]", 'non-empty "type" field')
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[2]", "must live under plugins/native/")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[3]", "does not exist under res/")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[4]", "must end with .lua")
+        self.assertIssueContains(issues, "res/plugins/manifest.json", "plugins[5]", 'duplicate plugin id "missingType"')
+        self.assertIssueContains(
+            issues, "res/plugins/manifest.json", "plugins[6]", 'references unknown map "missingmap"'
+        )
+
+    def test_gameplay_type_table_diagnoses_unparseable_rows(self):
+        root = self.make_fixture()
+        table = root / "src/plugin/CGameplayTypeTable.h"
+        table.parent.mkdir(parents=True, exist_ok=True)
+        table.write_text(
+            "#define FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)                \\\n"
+            "    FN_TYPE(CFixtureThing, CGameObject)                       \\\n"
+            "    FN_WRAPPED(lowercase_name, CGameObject)\n",
+            encoding="utf-8",
+        )
+
+        issues = validate_repo(root)
+
+        self.assertIssueContains(
+            issues,
+            "src/plugin/CGameplayTypeTable.h",
+            "line 3",
+            "unparseable gameplay type table row",
         )
 
     def write_declared_cpp_class(self, root, class_name):
@@ -2487,17 +2537,12 @@ class ContentValidatorTest(unittest.TestCase):
 
     def write_native_registration_fixture(self, root, class_name):
         self.write_declared_cpp_class(root, class_name)
-        native_plugin = root / "src/plugin/NativePlugin.cpp"
-        native_plugin.parent.mkdir(parents=True, exist_ok=True)
-        native_plugin.write_text(
+        type_table = root / "src/plugin/CGameplayTypeTable.h"
+        type_table.parent.mkdir(parents=True, exist_ok=True)
+        type_table.write_text(
             textwrap.dedent(f"""
-                namespace native_plugin {{
-                bool register_optional(const NativePluginHostV1 *host) {{
-                    bool registered = true;
-                    registered = register_type<{class_name}, CGameObject>(host) && registered;
-                    return registered;
-                }}
-                }}
+                #define FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)                 \\
+                    FN_TYPE({class_name}, CGameObject)
             """).lstrip(),
             encoding="utf-8",
         )
@@ -2505,8 +2550,9 @@ class ContentValidatorTest(unittest.TestCase):
         native_entry.parent.mkdir(parents=True, exist_ok=True)
         native_entry.write_text(
             textwrap.dedent("""
-                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v1(const NativePluginHostV1 *host) {
-                    return native_plugin::register_optional(host);
+                extern "C" NATIVE_PLUGIN_EXPORT bool native_optional_load_v2(const CPluginHostV2 *host) {
+                    auto *registrar = game_plugin_registrar(host);
+                    return registrar != nullptr && native_plugin::register_gameplay_types(*registrar);
                 }
             """).lstrip(),
             encoding="utf-8",
@@ -3351,7 +3397,10 @@ class ContentValidatorTest(unittest.TestCase):
             "properties": {
                 "configuration": {
                     "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}},
-                    "1": {"class": "CSlot", "properties": {"slotName": "LeftHand", "types": ["CSmallWeapon", "CShield"]}},
+                    "1": {
+                        "class": "CSlot",
+                        "properties": {"slotName": "LeftHand", "types": ["CSmallWeapon", "CShield"]},
+                    },
                     "2": {"class": "CSlot", "properties": {"slotName": "Head", "types": ["CHelmet"]}},
                     "3": {"class": "CSlot", "properties": {"slotName": "Chest", "types": ["CArmor"]}},
                     "5": {"class": "CSlot", "properties": {"slotName": "Feet", "types": ["CBoots"]}},

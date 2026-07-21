@@ -45,6 +45,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "../object/CCreature.h"
 #include "../object/CCreatureClass.h"
 #include "../object/CCreatureRace.h"
+#include "../object/CCreatureTemplate.h"
 #include "../object/CDialog.h"
 #include "../object/CEffect.h"
 #include "../object/CInteraction.h"
@@ -73,6 +74,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CTypes.h"
 #include "core/CUtil.h"
 #include "core/CWrapper.h"
+#include "plugin/CGameplayTypeTable.h"
+#include "plugin/CPluginRegistrar.h"
 #include <pybind11/stl_bind.h>
 #include <pybind11/stl.h>
 
@@ -285,40 +288,25 @@ std::vector<std::shared_ptr<CCreature>> creature_iterable_to_vector(const py::it
     return creatures;
 }
 
+template <typename T> bool try_downcast(const py::object &instance, std::shared_ptr<CGameObject> &out) {
+    if (!py::isinstance<T>(instance)) {
+        return false;
+    }
+    out = std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<T>>());
+    return true;
+}
+
 std::shared_ptr<CGameObject> cast_registered_python_object(const py::object &instance) {
-    if (py::isinstance<CBuilding>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CBuilding>>());
+    std::shared_ptr<CGameObject> result;
+#define FN_IGNORE(T, ...)
+#define FN_DOWNCAST(T, ...)                                                                                            \
+    if (try_downcast<T>(instance, result)) {                                                                           \
+        return result;                                                                                                 \
     }
-    if (py::isinstance<CEvent>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CEvent>>());
-    }
-    if (py::isinstance<CInteraction>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CInteraction>>());
-    }
-    if (py::isinstance<CEffect>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CEffect>>());
-    }
-    if (py::isinstance<CTile>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CTile>>());
-    }
-    if (py::isinstance<CPotion>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CPotion>>());
-    }
-    if (py::isinstance<CScroll>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CScroll>>());
-    }
-    if (py::isinstance<CTrigger>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CTrigger>>());
-    }
-    if (py::isinstance<CQuest>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CQuest>>());
-    }
-    if (py::isinstance<CPlugin>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CPlugin>>());
-    }
-    if (py::isinstance<CDialog>(instance)) {
-        return std::static_pointer_cast<CGameObject>(instance.cast<std::shared_ptr<CDialog>>());
-    }
+    FN_GAMEPLAY_TYPES(FN_IGNORE, FN_DOWNCAST)
+    FN_DOWNCAST(CPlugin)
+#undef FN_DOWNCAST
+#undef FN_IGNORE
     return instance.cast<std::shared_ptr<CGameObject>>();
 }
 
@@ -327,62 +315,16 @@ extern void initModule1();
 #define PY_WRAP_GENERIC_DOC(fcn, doc) m.def(#fcn, fcn, doc)
 
 void register_python_binding_type_metadata() {
-    CTypes::register_type_metadata<CStats, CGameObject>();
-    CTypes::register_type_metadata<CDamage, CGameObject>();
-
-    CTypes::register_type_metadata<CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CBuilding, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CBuilding>, CBuilding, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CEvent, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CEvent>, CEvent, CMapObject, CGameObject>();
-
-    CTypes::register_type_metadata<CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CWeapon, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CSmallWeapon, CWeapon, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CArmor, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CHelmet, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CBoots, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CBelt, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CGloves, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CPants, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CShield, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CPotion, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CPotion>, CPotion, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CScroll, CItem, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CScroll>, CScroll, CItem, CMapObject, CGameObject>();
-
-    CTypes::register_type_metadata<CEffect, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CEffect>, CEffect, CGameObject>();
-    CTypes::register_type_metadata<CInteraction, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CInteraction>, CInteraction, CGameObject>();
-    CTypes::register_type_metadata<CCreatureRace, CGameObject>();
-    CTypes::register_type_metadata<CCreatureClass, CGameObject>();
-    CTypes::register_type_metadata<CTile, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CTile>, CTile, CGameObject>();
-
-    CTypes::register_type_metadata<CMarket, CGameObject>();
-    CTypes::register_type_metadata<CDialog, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CDialog>, CDialog, CGameObject>();
-    CTypes::register_type_metadata<CDialogOption, CGameObject>();
-    CTypes::register_type_metadata<CDialogState, CGameObject>();
-    CTypes::register_type_metadata<CTrigger, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CTrigger>, CTrigger, CGameObject>();
-    CTypes::register_type_metadata<CQuest, CGameObject>();
-    CTypes::register_type_metadata<CWrapper<CQuest>, CQuest, CGameObject>();
-
-    CTypes::register_type_metadata<CFightController, CGameObject>();
-    CTypes::register_type_metadata<CPlayerFightController, CFightController, CGameObject>();
-    CTypes::register_type_metadata<CMonsterFightController, CFightController, CGameObject>();
-    CTypes::register_type_metadata<CController, CGameObject>();
-    CTypes::register_type_metadata<CPlayerController, CController, CGameObject>();
-    CTypes::register_type_metadata<CTargetController, CController, CGameObject>();
-    CTypes::register_type_metadata<CRandomController, CController, CGameObject>();
-    CTypes::register_type_metadata<CGroundController, CController, CGameObject>();
-    CTypes::register_type_metadata<CRangeController, CController, CGameObject>();
-    CTypes::register_type_metadata<CNpcRandomController, CController, CGameObject>();
-
-    CTypes::register_type_metadata<CCreature, CMapObject, CGameObject>();
-    CTypes::register_type_metadata<CPlayer, CCreature, CMapObject, CGameObject>();
+    // Metadata only (serializers/casts) — deliberately not builders, so gameplay types stay
+    // non-constructible until the native gameplay plugin actually loads. The row list is the
+    // shared plugin/CGameplayTypeTable.h; CStats/CDamage are covered by registerCoreTypes().
+#define FN_TYPE(T, ...) CTypes::register_type_metadata<T, __VA_ARGS__>();
+#define FN_WRAPPED(T, ...)                                                                                             \
+    CTypes::register_type_metadata<T, __VA_ARGS__>();                                                                  \
+    CTypes::register_type_metadata<CWrapper<T>, T, __VA_ARGS__>();
+    FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)
+#undef FN_WRAPPED
+#undef FN_TYPE
 }
 
 void init_game_module(py::module_ &m) {
@@ -1070,15 +1012,23 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CPluginLoader, std::shared_ptr<CPluginLoader>>(m, "CPluginLoader", "Helpers for loading plugins.")
         .def("loadPlugin", &CPluginLoader::loadPlugin, "Load a Python plugin resource into the game.")
+        .def("loadLuaPlugin", &CPluginLoader::loadLuaPlugin, "Load a Lua plugin resource into the game.")
         .def("loadCppPlugin", &CPluginLoader::loadCppPlugin, "Load a compiled C++ plugin type into the game.")
         .def_static("loadDynamicPlugin", &CPluginLoader::loadDynamicPlugin, py::arg("game"), py::arg("library"),
-                    py::arg("entry") = "game_plugin_load_v1", "Load a dynamic C++ plugin shared library into the game.")
+                    py::arg("entry") = "game_plugin_load_v2", "Load a dynamic C++ plugin shared library into the game.")
         .def("loadGlobalPlugins", &CPluginLoader::loadGlobalPlugins, "Load configured global plugins.")
         .def("loadMapPlugins", &CPluginLoader::loadMapPlugins, "Load configured plugins for a map.");
 
+    py::class_<CPluginRegistrar>(m, "CPluginRegistrar", "The unified host surface plugins register content through.")
+        .def(py::init<std::shared_ptr<CGame>>(), py::arg("game"))
+        .def("log", &CPluginRegistrar::log, "Log a plugin message.")
+        .def("registerConfigJson", &CPluginRegistrar::registerConfigJson, py::arg("id"), py::arg("jsonText"),
+             "Register an object config from JSON text.")
+        .def("game", &CPluginRegistrar::game, "Return the game this registrar loads plugins into.");
+
     auto cplugin = py::class_<CPlugin, CWrapper<CPlugin>, std::shared_ptr<CPlugin>, CGameObject>(m, "CPlugin",
                                                                                                  "Base plugin class.");
-    cplugin.def(py::init_alias<>()).def("load", &CPlugin::load, "Load plugin content into a game.");
+    cplugin.def(py::init_alias<>()).def("load", &CPlugin::load, "Load plugin content through a registrar.");
     m.attr("CPluginBase") = cplugin;
 
     py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
@@ -1120,8 +1070,8 @@ void init_game_module(py::module_ &m) {
         .def("onEquip", &CWeapon::onEquip, "Handle equip event.")
         .def("onUnequip", &CWeapon::onUnequip, "Handle unequip event.")
         .def("onUse", &CWeapon::onUse, "Handle use event.");
-    py::class_<CSmallWeapon, CWrapper<CSmallWeapon>, std::shared_ptr<CSmallWeapon>, CWeapon>(m, "CSmallWeapon",
-                                                                                            "Off-hand small weapon item.")
+    py::class_<CSmallWeapon, CWrapper<CSmallWeapon>, std::shared_ptr<CSmallWeapon>, CWeapon>(
+        m, "CSmallWeapon", "Off-hand small weapon item.")
         .def(py::init_alias<>());
 
     void (CCreature::*hurtInt)(int) = &CCreature::hurt;

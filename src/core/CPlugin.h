@@ -25,14 +25,16 @@ class CGame;
 
 class CMap;
 
+class CPluginRegistrar;
+
 class CPlugin : public CGameObject {
     V_META(CPlugin, CGameObject, vstd::meta::empty())
   public:
-    virtual void load(std::shared_ptr<CGame> game);
+    virtual void load(CPluginRegistrar &registrar);
 };
 
 class CNativeContentPlugin : public CPlugin {
     V_META(CNativeContentPlugin, CPlugin, vstd::meta::empty())
   public:
-    void load(std::shared_ptr<CGame> game) override;
+    void load(CPluginRegistrar &registrar) override;
 };
