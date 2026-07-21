@@ -219,11 +219,10 @@ steps and Windows jobs are skipped after focused workflow validation. The workfl
 path-gated, do not configure it as an always-present branch-protection check.
 
 Alongside the `native-needed` / `coverage-needed` gate outputs, `scripts/ci_change_classifier.py` also emits an
-additive change-**kind** taxonomy consumed by the workflow and poller: `coverage-relevant`, `native-gui`,
-`native-engine`, `content-json-python`, `workflow-python`, `prompts-docs`, and `queue-state-only`. Each changed path is
+additive change-**kind** taxonomy: `coverage-relevant`, `native-gui`,
+`native-engine`, `content-json-python`, `workflow-python`, and `prompts-docs`. Each changed path is
 assigned exactly one primary kind (GUI C++ before generic engine code, `res/` content before tooling), and **every
-`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. `queue-state-only` is a legacy kind retained by the classifier for the retired workbook workflow and no longer
-matches any tracked paths. These booleans do not change native/coverage need (still taken from the
+`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. These booleans do not change native/coverage need (still taken from the
 `NATIVE`/`COVERAGE` pattern sets); they let the workflow route jobs by kind and are covered by a path-matrix test in
 `tests/test_ci_change_classifier.py`.
 
