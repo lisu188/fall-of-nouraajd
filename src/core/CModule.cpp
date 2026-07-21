@@ -1128,8 +1128,8 @@ void init_game_module(py::module_ &m) {
         .def("onEquip", &CWeapon::onEquip, "Handle equip event.")
         .def("onUnequip", &CWeapon::onUnequip, "Handle unequip event.")
         .def("onUse", &CWeapon::onUse, "Handle use event.");
-    py::class_<CSmallWeapon, CWrapper<CSmallWeapon>, std::shared_ptr<CSmallWeapon>, CWeapon>(m, "CSmallWeapon",
-                                                                                            "Off-hand small weapon item.")
+    py::class_<CSmallWeapon, CWrapper<CSmallWeapon>, std::shared_ptr<CSmallWeapon>, CWeapon>(
+        m, "CSmallWeapon", "Off-hand small weapon item.")
         .def(py::init_alias<>());
 
     void (CCreature::*hurtInt)(int) = &CCreature::hurt;
@@ -1142,7 +1142,7 @@ void init_game_module(py::module_ &m) {
     void (CCreature::*removeQuestItem)(std::function<bool(std::shared_ptr<CItem>)>) = &CCreature::removeQuestItem;
     py::class_<CCreature, CMapObject, std::shared_ptr<CCreature>>(
         m, "CCreature", "Creature that can move, fight, and manage inventory.")
-        .def("getDmg", &CCreature::getDmg, "Roll outgoing attack damage.")
+        .def("getDmg", &CCreature::getDmg, py::arg("allowCrit") = true, "Roll outgoing attack damage.")
         .def("hurt", hurtInt, "Apply raw damage value (int).")
         .def("hurt", hurtDmg, "Apply structured CDamage object.")
         .def("hurt", hurtFloat, "Apply damage value (float), rounded to int.")

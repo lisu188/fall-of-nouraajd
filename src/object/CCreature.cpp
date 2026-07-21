@@ -419,8 +419,10 @@ void CCreature::hurt(std::shared_ptr<CDamage> damage) {
     vstd::logger::debug(getType(), "took damage:", JSONIFY(damage));
 }
 
-int CCreature::getDmg() {
+int CCreature::getDmg(bool allowCrit) {
     auto stats = getStats();
+    // critDice is rolled unconditionally so the RNG stream stays identical whether or not
+    // crit is allowed; allowCrit only gates whether a rolled crit is applied.
     int critDice = rand() % 100;
     int attDice = rand() % 100;
     int dmgMin = std::min(stats->getDmgMin(), stats->getDmgMax());
@@ -429,7 +431,7 @@ int CCreature::getDmg() {
     dmg += stats->getDamage();
     attDice -= stats->getAttack();
     if (attDice < stats->getHit()) {
-        if (critDice < stats->getCrit()) {
+        if (allowCrit && critDice < stats->getCrit()) {
             dmg *= 2;
             vstd::logger::debug("Critical!");
         }

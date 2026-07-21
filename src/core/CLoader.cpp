@@ -1267,7 +1267,7 @@ std::shared_ptr<CMap> CRandomMapGenerator::loadRandomMap(const std::shared_ptr<C
 void CRandomMapGenerator::generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
                                              const std::vector<rdg::Room> &rooms) {
     for (const auto &room : rooms) {
-        auto roomCoords = Coords(room.row + room.width / 2, room.col + room.height / 2, 0);
+        auto roomCoords = Coords(room.row + room.height / 2, room.col + room.width / 2, 0);
         if (roomCoords.getDist(map->getEntry()) > 5) {
             for (const auto &creature : game->getRngHandler()->getRandomEncounter(5)) {
                 map->addObject(creature, roomCoords);

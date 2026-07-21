@@ -2896,6 +2896,30 @@ void test_creature_get_dmg_hit_chance_is_not_inverted() {
     expect_true(highConnects == iterations, "attack=100 fully offsets a 0-99 dice roll, so every swing connects");
 }
 
+// getDmg(allowCrit) gates whether a rolled critical is applied. Interactions that must
+// never crit (e.g. Devour) pass allowCrit=false; the crit die is still consumed so the RNG
+// stream is identical either way. With hit=100 and crit=100 every swing connects and would
+// crit, so the flag deterministically decides between the doubled and un-doubled damage.
+void test_creature_get_dmg_allow_crit_flag_gates_the_crit_double() {
+    srand(20260701u);
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setHit(100);  // always connects
+    stats->setCrit(100); // would always crit when crit is allowed
+    stats->setDmgMin(5);
+    stats->setDmgMax(5); // fixed base damage of exactly 5
+    stats->setDamage(0);
+    auto creature = std::make_shared<CCreature>();
+    creature->setBaseStats(stats);
+    creature->setLevelStats(std::make_shared<CStats>());
+    creature->setLevel(0); // getStats() == baseStats: no level/equipment/effect bonuses
+
+    for (int i = 0; i < 50; ++i) {
+        expect_true(creature->getDmg(true) == 10, "with crit allowed a guaranteed crit doubles 5 to 10");
+        expect_true(creature->getDmg(false) == 5, "with crit disallowed the same guaranteed-hit swing stays at 5");
+    }
+}
+
 // CInteraction routes its effect to the caster or the opponent via effectRoutesToCaster
 // (EPIC_06/STORY_01/SUBSTORY_02): an explicit selfTarget always routes to the caster, a
 // legacy Buff-tagged effect without selfTarget stays a self-buff, and every other effect
@@ -2961,6 +2985,7 @@ int main() {
     test_typed_engine_signal_still_fires_directly();
     test_effect_applies_for_exactly_its_duration_without_underflow();
     test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentinel();
+    test_creature_get_dmg_allow_crit_flag_gates_the_crit_double();
     test_creature_get_dmg_hit_chance_is_not_inverted();
     test_interaction_effect_routes_to_caster_via_self_target();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();

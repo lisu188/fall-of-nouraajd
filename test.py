@@ -10096,6 +10096,56 @@ class GameTest(unittest.TestCase):
 
         return True, json.dumps({"hp_max": hp_max}, sort_keys=True)
 
+    @game_test
+    def test_octobogz_completed_dialog_option_claims_stranded_bounty(self):
+        # Regression: clearing the OctoBogz cave BEFORE accepting the refugees' bounty completes
+        # the contract, which gated the accept option off -- so the late-claim path (accept_quest,
+        # guarded by OCTOBOGZ_REWARD_CLAIMED) was unreachable through the dialog and the 1000 gold
+        # + Shadow Blade reward was stranded forever, even as the refugees declared the debt "paid
+        # in full". The completed dialog option now carries the accept_quest action.
+        g, game_map, player = load_game_map_with_player("nouraajd")
+
+        game_map.removeObjectByName("cave2")
+        self.assertEqual("completed", game_map.getStringProperty("quest_state_octobogz_contract"))
+        # Clearing the cave must NOT silently pay the bounty; it is claimed by talking to the
+        # refugees (the intended late-claim design, per accept_quest).
+        self.assertFalse(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+        self.assertNotIn("octoBogzQuest", quest_names(player))
+
+        # The completed branch's dialog option is wired to the late-claim action.
+        dialog_cfg = json.loads((REPO_ROOT / "res/maps/nouraajd/dialog2.json").read_text())
+        entry = next(
+            s["properties"]
+            for s in dialog_cfg["dialog"]["properties"]["states"]
+            if s["properties"]["stateId"] == "ENTRY"
+        )
+        completed_option = next(
+            o["properties"]
+            for o in entry["options"]
+            if o.get("properties", {}).get("condition") == "contract_completed"
+        )
+        self.assertEqual("accept_quest", completed_option.get("action"))
+
+        start_gold = player.getGold()
+        start_blades = player.countItems("ShadowBlade")
+
+        # Selecting that option runs its action on the dialog -> the late claim settles the bounty.
+        travelers = g.createObject("dialog")
+        travelers.invokeAction(completed_option["action"])
+
+        self.assertEqual(start_gold + 1000, player.getGold(), "the late claim must pay the 1000 gold bounty")
+        self.assertEqual(
+            start_blades + 1, player.countItems("ShadowBlade"), "the late claim must grant the Shadow Blade"
+        )
+        self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
+
+        # Claim-once: invoking the action again must never double-pay.
+        travelers.invokeAction(completed_option["action"])
+        self.assertEqual(start_gold + 1000, player.getGold())
+        self.assertEqual(start_blades + 1, player.countItems("ShadowBlade"))
+
+        return True, json.dumps({"gold_delta": player.getGold() - start_gold}, sort_keys=True)
+
     def make_multi_enemy_combat_fixture(self):
         game = load_game_module()
 
