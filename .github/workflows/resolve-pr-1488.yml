@@ -6,6 +6,11 @@ on:
       - feature/unified-plugin-system-lua
     paths:
       - .github/workflows/resolve-pr-1488.yml
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
 
 permissions:
   contents: write
@@ -16,6 +21,7 @@ concurrency:
 
 jobs:
   resolve:
+    if: github.event_name == 'push' || github.event.pull_request.number == 1488
     runs-on: ubuntu-latest
     steps:
       - name: Check out PR branch
