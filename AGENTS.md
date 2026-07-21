@@ -12,17 +12,11 @@ Keep changes narrow. Do not modify unrelated files, generated build output, pack
 
 Never push directly to `main`. Publish reviewable pull requests and use squash merging only.
 
-For ordinary implementation or workflow-optimization PRs, run focused local validation, open the PR, and use GitHub
-Actions polling when the workflow covers the required evidence. If CI polling supplies the full validation evidence, run
-`python3 scripts/poll_pr_checks.py <PR_NUMBER>` to success before enabling auto-merge; it selects `linux` for
-lightweight PRs and `linux`, `windows-deps`, and `windows` for native validation PRs. Add `--require-step coverage` for
-coverage-relevant changes when you need to force that step.
+For every PR, run focused local validation, open the PR, and let the GitHub Actions `build` workflow supply
+compilation, full-suite, and coverage evidence. Wait for the selected required checks to succeed before merging.
 
-Auto-merge for implementation PRs is not an unconditional default; it requires explicit, repo-verified authorization
-before you run `gh pr merge <PR_NUMBER> --auto --squash`. After the required validation evidence is present, resolve the
-authorization state from the repository merge policy and branch protection — for example with
-`python3 scripts/controller_resource_audit.py` (`mergePolicy.allowAutoMerge`, branch protection required checks) and the
-`pr_review_audit.py` `merge_policy_blocked` signal — and act on one of four states:
+Auto-merge is not an unconditional default; it requires explicit authorization before you run
+`gh pr merge <PR_NUMBER> --auto --squash`:
 
 - allowed: the repository reports `allow_auto_merge=true` and branch protection/check state permits it, so enable
   squash auto-merge.
@@ -35,233 +29,6 @@ authorization state from the repository merge policy and branch protection — f
 
 If validation or auto-merge is blocked, or the authorization state is disallowed or unknown, report the exact blocker
 and leave the PR intact.
-
-For workbook-only queue-state PRs that update only `planning/fall_of_nouraajd_issue_proposals.xlsx`, first confirm the
-diff is XLSX-only and `python3 scripts/issue_queue.py validate` passed. Then merge the claim, terminal-status,
-heartbeat, reclaim, priority, dependency, or other approved queue-state PR immediately with
-`gh pr merge <PR_NUMBER> --squash`; do not wait for GitHub Actions on these CI-exempt controller coordination PRs. If
-repository settings block direct merge, enable auto-merge and continue supervising other safe work, but do not treat the
-queue update as durable until the PR is actually merged.
-
-Do not treat queued auto-merge as merged. If a PR merges while checks are still being polled, stop waiting on that
-Actions run, fetch `origin/main`, verify the merge, and continue from the merged commit. When newer user or system
-instructions say not to merge or not to enable auto-merge, follow those instructions and leave the PR open with the
-validation evidence.
-
-Before closing stale PRs, deleting branches, merging old work, or using open PRs as dispatch evidence, classify the PR
-debt with the read-only audit:
-
-```bash
-python3 scripts/pr_review_audit.py --input /tmp/pr-review-snapshot.json --format table
-```
-
-Feed it a normalized JSON snapshot containing changed files, merge state, check rollup, queue linkage, and recovery
-state. Include `autoMergeError` or `autoMergeRequest.error` when an attempted auto-merge fails. The audit separates
-`actionCategory` from `prType` so workbook-only queue PRs, active-claim implementation PRs, workflow PRs, stale linked
-claims, and cleanup candidates can be reviewed consistently. It reports `merge_policy_blocked` when repository settings
-or permissions prevent auto-merge; request the repository setting change or explicit alternate merge authorization
-instead of repeatedly retrying the same merge command. Its output is advisory and read-only: it must never close PRs,
-delete branches, edit the workbook, or override failed checks. Destructive cleanup, obsolete/duplicate PR closure,
-stale-claim recovery, dirty worktree recovery, and any merge with missing signals require explicit human approval. A
-controller-owned implementation PR marked `failing_ci`, `merge_policy_blocked`, `needs_update_rebase`,
-`human_review_required`, or `never_touch` is controller attention debt; resolve or assign recovery for that PR, but do
-not use source overlap alone to leave the controller below its four owned implementation slots when eligible work exists.
-Unresolved heartbeat-overdue, lease-expired, suspect, or reclaimable rows remain occupied recovery slots until a workbook
-heartbeat, release, reclaim, or terminal-status update has actually merged.
-
-## Workflow observation ledger
-
-Use `scripts/workflow_observations.py` and `docs/codex-workflow-observations.md` for durable workflow-problem evidence.
-The ledger is separate from `planning/fall_of_nouraajd_issue_proposals.xlsx`; it records queue/lease faults, stale state,
-PR or merge failures, CI waste, prompt drift, resource or recovery failures, missing worker status, unsafe ambiguity, and
-repeated manual intervention. It is not an implementation backlog and must not be used as queue authority.
-
-Observation records live under `planning/workflow_observations/records/`; resolution receipts live under
-`planning/workflow_observations/resolutions/`. Files are immutable one-record-per-file JSON. Do not edit or delete old
-records or receipts. Each queue controller may publish controller-discovered workflow observations directly after
-evidence and secret review. Workers, QA, and project-manager agents report observations to their controller; they do not
-publish ledger files themselves. Observation updates are append-only: add a new record or resolution receipt, never
-mutate existing evidence. The controller reviews evidence and publishes observation-only or resolution-only PRs.
-
-Record-only and resolution-only PRs are not CI-exempt under the current repository policy. They need not be globally
-serialized because each ID maps to a unique immutable file, but they must run `python3 scripts/workflow_observations.py
-validate` and follow the normal PR merge policy unless a future repository instruction explicitly exempts them.
-
-When this file conflicts with the current code, tests, or build scripts, trust the code and update this file as part of the fix.
-
-## Queue controller workflow
-
-When acting as the Codex queue controller for `planning/fall_of_nouraajd_issue_proposals.xlsx`, also follow
-`prompts/codex-queue-controller.md` and `docs/codex-agent-queue.md`.
-
-The workbook on `main` is the single queue source of truth. Controller instances are the only writers of the workbook;
-worker implementation branches must never modify it. Workbook-only queue-state PRs that update only
-`planning/fall_of_nouraajd_issue_proposals.xlsx` are CI-exempt controller coordination changes: after reviewing the diff
-and running queue validation, merge them immediately with squash merge instead of waiting for GitHub Actions. Every
-controller instance must start by generating or recording a
-unique controller ID with `python3 scripts/issue_queue.py controller-id` and use owner names under that prefix, such as
-`controller/<controller-id>/subagent-1`, so concurrent controllers do not collide. Serialize queue state changes through
-workbook-only pull requests. Each claim or terminal status PR should mark exactly one issue unless the controller
-workflow explicitly permits batching and all selected issues are proven independent.
-
-The authoritative mechanical policy values -- the eight active-worker floor, the four-slot controller floor/limit, the
-heartbeat cadence, lease durations, the reclaim age, and the advisory target-file overlap policy -- live in
-`scripts/controller_policy.py`. The numbers restated below mirror that source; change a value there, not here.
-
-Keep at least eight live subagents attached to the controller whenever the subagent interface is available. Keep at least
-eight implementation issues active whenever eight status-and-dependency eligible implementation issues exist. Treat eight
-active issues as the minimum operating target, not a best-effort aspiration. Before filling any implementation slot, note current RAM,
-free disk space, existing run/worktree usage, and running heavy jobs so the controller avoids obvious resource pressure,
-but do not impose a fixed RAM cap or rewrite build parallelism solely by workflow policy. Dispatch work whenever issue
-eligibility, live worker status, and repository safety allow it. Use standby subagents only when fewer than eight
-implementation issues are safe for non-source reasons; they may do lightweight status, eligibility, or review-prep tasks,
-but must not claim issues, edit files, or run heavy validation. Each controller instance must keep exactly four owned
-implementation claim slots under its own `controller/<controller-id>` owner prefix whenever status-and-dependency
-eligible issues are available for that controller. Healthy claims are rows whose heartbeat is not overdue and whose lease
-has not expired. Heartbeat-overdue, lease-expired, suspect, and reclaimable rows do not count as healthy work, but they
-still occupy capacity until the controller durably heartbeats, releases, reclaims, blocks, fails, completes, or otherwise
-reconciles the row. A controller must not claim a fifth implementation issue or refill through unresolved recovery work.
-Before filling each free worker slot, fetch the latest `origin/main`,
-recalculate the full eligible set from the merged workbook, and exclude:
-
-- rows whose status is not `NOT_STARTED`;
-- rows with dependencies that are not `DONE`.
-
-Treat exact `Target Files / Modules` overlap, shared source areas, open implementation PRs, shared headers, bindings,
-tests, CMake, map scripts, dialog/config files, serialization, generated resources, and shared runtime systems as
-advisory coordination evidence, not automatic claim exclusions. Use these signals to shape worker prompts, expected
-merge/rebase risk, review order, and validation focus. Do not leave an implementation slot empty solely because the next
-status-and-dependency eligible issue overlaps active work; claim it and manage the overlap unless a non-source blocker
-such as missing live worker status, repository safety, resource pressure, authentication, queue validation failure, or an
-unmerged workbook-state PR prevents safe dispatch.
-
-Queue claims grant issue ownership only, not write permission on shared source. `scripts/write_leases.py` manages a
-separate JSON write-lease store (`planning/write_leases.json`, never the XLSX) with
-`acquire`/`renew`/`release`/`recover`/`list`/`validate` subcommands. Leases normalize scope from PR changed files, dirty
-worktree paths, worker-declared files, and workbook targets with confidence metadata, expand coupled areas
-deterministically (header/implementation pairs, type-registration and CMake units, `res/maps/<map>/` bundles,
-serialization and generated-resource pairs), and reject any two ACTIVE unexpired leases whose expanded scopes overlap.
-Batches are all-or-nothing under one lock file; read-only inspection never needs a lease, and expiry/recovery is
-lease-lifecycle-only — canonical workbook claims are never touched.
-
-After exclusions, keep only the highest currently available priority tier. Group candidates by `(Epic #, Story #)`,
-randomly select one story with equal probability, then randomly select one eligible substory in that story. Do not fall
-back to spreadsheet order, do not include status/dependency-ineligible rows in the random choice, and do not fall back to
-a lower priority tier merely to avoid source overlap. Use
-`python3 scripts/issue_queue.py shortlist --seed "$CONTROLLER_ID-<utc-cycle-id>" --controller-id "$CONTROLLER_ID" --include-rejected --json`
-as the read-only mechanical selector before each claim; it reports eligible highest-priority story groups, stale claims,
-`activeClaims.total`, `activeClaims.unexpired`, `activeClaims.healthy`, `activeClaims.stale`,
-`activeClaims.leaseExpired`, `activeClaims.suspect`, `activeClaims.reclaimable`, `activeClaims.inactive`,
-`controllerCapacity`, target-file overlap advisories, rejection summaries, and a seeded recommendation without mutating
-the workbook. `activeClaims.unexpired` is retained as the healthy live-claim count: heartbeat not overdue and lease not
-expired. Use the unexpired/healthy count, not raw
-`activeCount`, when deciding whether the global active-worker floor is genuinely satisfied. Use
-`controllerCapacity.healthyOwned`, `controllerCapacity.suspectOwned`, `controllerCapacity.reclaimableOwned`,
-`controllerCapacity.recoveryRequired`, `controllerCapacity.refillBlockedByRecovery`,
-`controllerCapacity.deficitToFloor`, `controllerCapacity.fillableDeficit`, `controllerCapacity.activeLimit`,
-`controllerCapacity.availableSlots`, `controllerCapacity.overLimitBy`, and `controllerCapacity.overCapacity` to decide
-whether this controller must refill to four, reconcile recovery work first, stop at four, or report over-capacity. The
-controller and project manager must still inspect and record target-file/source-overlap advisories, then claim the final
-exact issue with
-`claim --issue` so status and dependency eligibility is rechecked under the workbook lock.
-
-Assign a read-only project manager role whenever subagent capacity permits. Before dispatch/refill decisions, the
-project manager should summarize the highest available priority tier, candidate story groups, dependency unlocks, stale
-or blocked work, validation and resource cost, scope-overlap advisories, and any source-backed priority-change recommendations.
-The role is advisory: it must not claim work, edit files, touch the workbook, start validation, or override dependency,
-priority-tier, randomized selection, resource, cleanup, or PR requirements. Priority, dependency, status, or scope
-changes affect dispatch only after an approved workbook-only pull request merges into `main`.
-
-Assign one read-only QA subagent whenever subagent capacity permits. The QA role reviews diffs, regression coverage,
-validation plans, CI results, and merge readiness; it must not claim issues, edit files, touch the workbook, or run heavy
-validation unless the controller explicitly assigns a bounded QA validation task.
-
-For each selected issue, merge a workbook-only `IN_PROGRESS` claim PR before implementation starts. After the claim PR
-actually merges, create a fresh implementation worktree from updated `origin/main`, assign exactly one worker subagent,
-and pass it the generated issue prompt plus any controller overrides. Workers must inspect source, verify root cause,
-make the smallest backward-compatible change, add regression coverage, run focused and required validation where
-feasible, and report exact commands and outcomes. The controller reviews the diff, commits, pushes, opens the
-implementation PR, polls required CI first when CI supplies full validation evidence, and enables squash auto-merge
-according to the pull request merge policy; do not mark the issue `DONE` until that implementation PR actually merges.
-
-After every controller loop iteration, claim/PR status check, cleanup audit, and before dispatching new work, print a
-concise live status table. Include controller ID, worker owner, issue key, phase, progress estimate, last action,
-changed files, running validation command, branch, PR state, resource state, cleanup state, project-manager brief state,
-QA review state, open-PR audit summary, pending workflow observation IDs, blockers, and next controller action. Use
-subagent status polling or structured worker updates for live status; the workbook is durable queue state, not the
-live worker-status channel.
-
-When a controller loop does not publish any new claim, still fetch and inspect `origin/main` before the next decision.
-Check whether claim, implementation, status, or reclaim PRs merged elsewhere and update live state from the merged
-workbook before dispatching, stopping, or declaring that no eligible work remains.
-
-For PR delivery, do not run local native builds, `ctest`, full Python suites, or coverage unless a focused local
-reproduction is necessary or GitHub Actions cannot provide the needed evidence. Use cheap focused local checks for fast
-feedback, then outsource compilation, native tests, performance guards, full Python suites, and coverage to GitHub
-Actions polling. Report the exact local commands used.
-
-For local repository and disk safety, run `python3 scripts/controller_resource_audit.py --json` before dispatch/refill
-decisions, before any necessary local heavy validation, after every controller loop iteration, and after any merged
-checkpoint cleanup. Treat unreadable Git state, unresolved `HEAD` or `origin/main`, zero-byte loose Git objects,
-zero-byte Git ref files, low free disk, high filesystem usage, large accumulated run/worktrees, or prunable worktree
-metadata as blockers to new work until reported or cleaned safely. Remove only completed clean worktrees, use
-`git worktree prune` only for prunable metadata after review, and do not delete branches unless explicitly asked.
-For merge-policy or cleanup-readiness audits, add `--github-repo lisu188/fall-of-nouraajd` to include live branch
-protection and required-check drift in the report.
-
-For live agent state, use the controller-local subagent lifecycle registry `scripts/subagent_registry.py`
-(default file under the system temp directory, overridable via `GAME_SUBAGENT_REGISTRY_FILE` or `--registry`; it is
-local live state, separate from the XLSX, and must never be committed). Register every subagent with `register` before
-it consumes a controller slot, advance `lastSeen` only through schema-validated `report` payloads from verified polls or
-structured worker reports, and release capacity only with explicit `finalize`. `sweep` is a strictly read-only
-reconciliation against worktrees, `git rev-parse --verify` branch evidence, and read-only workbook claim evidence; it
-only recommends UNREACHABLE/ORPHANED transitions, which are applied with the explicit `mark` subcommand. The sweeper
-never deletes worktrees, kills processes, or mutates the workbook.
-
-After a restart or container suspension, derive the single deterministic next action per issue with the read-only
-`scripts/controller_reconciler.py` (`snapshot`/`reconcile`/`next-action` over a JSON evidence blob). It correlates the
-XLSX row, claim ID, claim PR, implementation PR/CI, and terminal PR by exact identity into one lifecycle state
-(`claim_selected`, `claim_pr_open`, `claim_pr_merged`, `worktree_ready`, `worker_running`, `implementation_pr_open`,
-`ci_pending`/`ci_passed`/`ci_failed`, `implementation_merged`, `terminal_pr_open`, `done`, `blocked`,
-`recovery_required`) and attaches an idempotency key (exact claim ID plus transition) to every write action so a
-restarted controller never duplicates a claim, PR, merge, or DONE write. It is strictly read-only — it never touches the
-workbook, git, or GitHub — and contradictory evidence fails closed to `recovery_required` rather than guessing a write.
-See `docs/codex-agent-queue.md` for the evidence schema and states.
-
-Before opening any implementation PR (especially after a restart), run the read-only preflight
-`python3 scripts/pr_review_audit.py preflight --input request.json`. It correlates the claim identity (issue name,
-claim ID, owner, intended head branch — built from the queue row with `issue_queue.preflightClaimPayload`) against a
-PR-state snapshot and returns one verdict: `allow`, `allow_replacement` (an explicit `replaces` PR number verified
-against the snapshot), `reject_duplicate_open` (a second open PR for the same live claim, head branch, or issue name),
-`already_delivered` (a merged PR for the same claim/head — proceed to terminal queue publication instead), or
-`cannot_verify` (missing claim identity or unverifiable replacement — fail closed, do not open the PR). Broad or
-out-of-scope diffs produce advisory warnings only, and title matches alone are never authoritative identity. The
-preflight never mutates the queue or any PR; exit code 0 means allowed, 1 means do not open the PR.
-
-Scarce local resources shared between concurrent controllers (heavy build/test/coverage jobs, Xvfb displays, TCP
-ports, build directories, memory budgets, MCP server slots) are coordinated through the resource broker built into the
-same script. `python3 scripts/controller_resource_audit.py probe` reports read-only availability
-(`available`/`unavailable`/`unknown`/`unsupported`, never raising on unsupported platforms), and
-`reserve`/`renew`/`release`/`recover`/`list` manage typed reservations in `planning/resource_reservations.json`
-(override with `--store` or `GAME_RESOURCE_RESERVATION_FILE`). Reservation batches are all-or-nothing under one
-sidecar lock, exclusive keys are hard conflicts while independent resources stay concurrent, memory reservations are
-advisory unless `--exclusive` is requested, and `recover` only marks expired reservation records — it never deletes
-records, kills processes, or removes worktrees. The default `--json` audit stays read-only and additionally reports
-probe results plus expired reservations under the additive `resources` key.
-
-## Structured worker reports and restart handoffs
-
-Worker milestone and end-of-task reports follow the versioned JSON schema in `scripts/worker_report.py` (schema
-version 1, stdlib-only): worker identity (`owner` as `controller/<controller-id>/<agent>` plus the exact claim ID),
-issue name, branch, files changed, validation commands with precise per-command outcomes (`passed`/`failed`/`skipped`/
-`blocked`/`not_run`, exit codes for passed/failed, bounded output summaries), the CI head SHA the evidence applies to,
-and an outcome status. `worker_report.py validate` rejects schema violations, internally inconsistent or mismatched
-owner/claim/issue/branch identity, and stale CI SHAs that do not match the branch head or explicit SHA evidence.
-`worker_report.py handoff` generates the deterministic bounded restart handoff (content derives only from the report,
-never wall-clock time; each section is capped, 10 items per section by default with explicit omitted counts), and
-`registry-payload` feeds accepted reports into the `scripts/subagent_registry.py` lifecycle registry. Reports are worker
-assertions and never advance queue state; queue mutations still go through `scripts/issue_queue.py` workbook-only PRs.
-See `docs/codex-agent-queue.md` and `tests/test_worker_report.py`.
 
 ## Project overview
 
@@ -371,50 +138,28 @@ GAME_XVFB_JOBS=4 python3 test.py --suite ui
 `python3 test.py` and `python3 test.py --suite full` both run the full Python suite. `./scripts/run_coverage.sh` uses
 `python3 test.py --suite coverage-safe` for the coverage Python phase.
 
-Prefer GitHub Actions polling as the default path for heavy validation. Run focused local checks that exercise the
-changed behavior, open the pull request, and poll the GitHub Actions `build` workflow to a final successful conclusion
-instead of running local compilation, native tests, the full Python suite, and required coverage locally:
+Prefer GitHub Actions as the default path for heavy validation. Run focused local checks that exercise the
+changed behavior, open the pull request, and wait for the GitHub Actions `build` workflow to reach a final successful
+conclusion instead of running local compilation, native tests, the full Python suite, and required coverage locally.
+Passing the selected build workflow checks is sufficient PR delivery evidence for the validation class selected by
+`scripts/ci_change_classifier.py`: native/source/content changes require `linux`, `windows-deps`, and `windows`;
+workflow-only docs/tooling changes require the terminal `linux` check and skip unrelated native-heavy steps after
+focused workflow validation. Coverage is satisfied by CI only when the workflow's path rule runs the `coverage` step
+somewhere in the selected build workflow run, currently in the conditional `linux-coverage` job. Run heavy local
+validation only when the PR workflow cannot cover the required evidence, a focused local reproduction is necessary
+before opening the PR, or GitHub Actions is unavailable or blocked. Report local commands, skipped or blocked local
+commands, and CI job names/conclusions separately; never imply a skipped local command passed. If GitHub merges before
+checks finish being observed, fetch `origin/main`, verify the merge, and continue from the merged state.
 
-```sh
-python3 scripts/poll_pr_checks.py <PR_NUMBER>
-```
+### CI validation authority for workflow/classifier changes
 
-For coverage-relevant changes, the poller auto-requires the CI `coverage` step when changed paths match the workflow
-coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that check:
-
-```sh
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --require-step coverage
-```
-
-Run heavy local validation only when the PR workflow cannot cover the required evidence, a focused local
-reproduction is necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the PR
-selected build workflow checks, polled with `python3 scripts/poll_pr_checks.py <PR_NUMBER>`, is sufficient PR delivery
-evidence for the validation class selected by `scripts/ci_change_classifier.py`: native/source/content changes require
-`linux`, `windows-deps`, and `windows`; workflow-only docs/prompts/tooling changes require the terminal `linux` check
-and skip unrelated native-heavy steps after focused workflow validation. Coverage is satisfied by CI only when the
-workflow's path rule runs the `coverage` step somewhere in the selected build workflow run, currently in the conditional
-`linux-coverage` job; the poller auto-adds this step for coverage-relevant PR paths. Use explicit `--check` values only
-when intentionally narrowing or expanding the required jobs for a documented reason. Report local commands, skipped or
-blocked local commands, and CI job names/conclusions separately; never imply a skipped local command passed.
-When CI polling supplies the full validation evidence, wait for the selected check(s) to pass before enabling auto-merge.
-If GitHub merges before polling finishes, stop waiting on that Actions run, fetch `origin/main`, verify the merge, and
-continue from the merged state.
-
-### CI validation authority for workflow/poller/classifier changes
-
-A pull request must not be able to weaken its own required validation. The poller binds required checks to the PR head:
-`scripts/poll_pr_checks.py` only trusts a build workflow run whose recorded head SHA matches the PR head SHA, whose
-triggering event is `pull_request`, and whose workflow identity matches; a head-SHA mismatch, a non-`pull_request` event,
-a missing/ambiguous run identity, or a required job name that resolves to more than one job all fail closed and block the
-merge instead of passing. Coverage is tied to a stable `coverage` step identity, not to a relabeled or skipped step.
-
-Changes that touch the validation-authority files — `.github/workflows/build.yml`, `scripts/poll_pr_checks.py`, and
-`scripts/ci_change_classifier.py` — cannot self-classify as lightweight. `scripts/ci_change_classifier.py` marks them as
-an authority change (`authority-change=true`, `human-review-required=true`) and forces strict native + coverage
-validation regardless of the edited logic, and the poller forces the strict `linux`/`windows-deps`/`windows` job set plus
-the `coverage` step even when `--check` narrowed the requested jobs. A PR editing the routing/poller/classifier therefore
-cannot drop required native/coverage checks by relabeling, skipping, or re-routing. Such changes additionally require
-explicit human review before merge; do not auto-merge an authority change on PR-controlled logic alone.
+A pull request must not be able to weaken its own required validation. Changes that touch the validation-authority
+files — `.github/workflows/build.yml` and `scripts/ci_change_classifier.py` — cannot self-classify as lightweight.
+`scripts/ci_change_classifier.py` marks them as an authority change (`authority-change=true`,
+`human-review-required=true`) and forces strict native + coverage validation regardless of the edited logic. A PR
+editing the routing/classifier therefore cannot drop required native/coverage checks by relabeling, skipping, or
+re-routing. Such changes additionally require explicit human review before merge; do not auto-merge an authority
+change on PR-controlled logic alone.
 
 Windows Release equivalent:
 
@@ -809,17 +554,14 @@ After finishing a change, always complete the repository delivery workflow:
 3. Commit the change with a clear, specific commit message.
 4. Push the branch to the remote.
 5. Open a pull request targeting `main`.
-6. For implementation PRs, poll the selected GitHub Actions evidence to success before auto-merge when CI polling is
-   replacing local heavy validation.
-7. After required evidence is present, resolve the implementation-PR auto-merge authorization state per the pull request
-   merge policy (allowed / user-authorized / disallowed / unknown). Run `gh pr merge <PR_NUMBER> --auto --squash` only
-   when the state is allowed or user-authorized; when it is disallowed or unknown, leave the PR open and report the
-   blocker instead of auto-merging. Replace `<PR_NUMBER>` with the pull request just opened.
-8. For workbook-only queue-state PRs, use the immediate squash-merge rule in the pull request merge policy after
-   confirming the diff is XLSX-only and queue validation passed.
-9. If GitHub queues auto-merge, do not wait for checks to finish unless those checks are the selected CI-polled
-   validation evidence and the PR is still open. If the PR has already merged, stop waiting on its Actions run, fetch
-   `origin/main`, and continue from the merged commit.
+6. Wait for the selected GitHub Actions evidence to succeed before merging when CI is replacing local heavy
+   validation.
+7. After required evidence is present, resolve the auto-merge authorization state per the pull request merge policy
+   (allowed / user-authorized / disallowed / unknown). Run `gh pr merge <PR_NUMBER> --auto --squash` only when the
+   state is allowed or user-authorized; when it is disallowed or unknown, leave the PR open and report the blocker
+   instead of auto-merging. Replace `<PR_NUMBER>` with the pull request just opened.
+8. If GitHub queues auto-merge and the PR has already merged, stop waiting on its Actions run, fetch `origin/main`,
+   and continue from the merged commit.
 
 Keep one logical change per commit where practical. Do not bundle unrelated cleanup with feature or bug-fix work. Do not bypass failing required checks or unresolved merge conflicts unless the user explicitly instructs that specific bypass. If pushing, opening, merging, or enabling auto-merge is blocked by missing remotes, authentication, permissions, unavailable checks, merge conflicts, or platform failures, report the exact blocker and leave the branch and pull request intact.
 
@@ -833,14 +575,6 @@ Before finishing, summarize:
 - any risky assumptions;
 - any follow-up work that is genuinely required.
 
-## Controller capability probe
-
-Controller prompts must not assume merge methods, GitHub auth, required checks, formatters, build trees, or polling
-support. Before dispatch or publication steps that depend on such a capability, run the read-only snapshot
-`python3 scripts/controller_capability_probe.py --json` (optionally with repeated `--section` filters). Every field
-reports `available`, `unavailable`, `unknown`, or `unsupported` with short redacted evidence, and the command exits 0
-even when capabilities are missing. Branch on the reported fields: when a capability a step depends on is `unknown` or
-`unavailable`, block that dispatch or publication step and report the blocker instead of defaulting to a guessed path.
 
 ## Copyright
 

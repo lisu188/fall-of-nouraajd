@@ -213,7 +213,7 @@ Recommended required status checks:
 
 These jobs cover the current PR build, native C++ tests, native performance guards, Python regression suite, dependency
 cache validation, and packaging on Linux and Windows when `scripts/ci_change_classifier.py` marks native validation
-necessary. Workflow-only docs/prompts/tooling PRs still produce terminal `linux` check evidence, but native-heavy Linux
+necessary. Workflow-only docs/tooling PRs still produce terminal `linux` check evidence, but native-heavy Linux
 steps and Windows jobs are skipped after focused workflow validation. The workflow also has a conditional
 `linux-coverage` job that runs `./scripts/run_coverage.sh` when changed paths match the coverage rule; because it is
 path-gated, do not configure it as an always-present branch-protection check.
@@ -222,8 +222,8 @@ Alongside the `native-needed` / `coverage-needed` gate outputs, `scripts/ci_chan
 additive change-**kind** taxonomy consumed by the workflow and poller: `coverage-relevant`, `native-gui`,
 `native-engine`, `content-json-python`, `workflow-python`, `prompts-docs`, and `queue-state-only`. Each changed path is
 assigned exactly one primary kind (GUI C++ before generic engine code, `res/` content before tooling), and **every
-`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. `queue-state-only` is true only when the
-entire diff is workbook/observation state. These booleans do not change native/coverage need (still taken from the
+`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. `queue-state-only` is a legacy kind retained by the classifier for the retired workbook workflow and no longer
+matches any tracked paths. These booleans do not change native/coverage need (still taken from the
 `NATIVE`/`COVERAGE` pattern sets); they let the workflow route jobs by kind and are covered by a path-matrix test in
 `tests/test_ci_change_classifier.py`.
 
@@ -231,41 +231,18 @@ The campaign-specific PR gates run inside `linux` when native validation is requ
 scheduled, manual, or label-selected gates inside the same job, so they do not add a separate always-present branch
 protection check.
 
-## CI-Polled Validation
-For local agents, prefer the PR build workflow as the default delivery path for heavy validation. Run focused local
-checks first, open the pull request, and poll the path-selected required checks to a successful conclusion instead of
-duplicating local compilation, native tests, full Python tests, or coverage:
-
-```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER>
-```
-
-When no `--check` is supplied, the poller inspects PR paths with `scripts/ci_change_classifier.py`: lightweight
-workflow/docs/tooling PRs, including workflow-observation record/receipt JSON-only PRs, require `linux`, while
-native/source/content PRs require `linux`, `windows-deps`, and `windows`. Use explicit `--check` values only to
-intentionally override the path-selected set for a documented reason:
-
-```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --check linux --check windows-deps --check windows
-```
-
-For coverage-relevant changes, the poller auto-requires the conditional coverage step when changed paths match the
-workflow coverage rule. Passing `--require-step coverage` explicitly is still valid when the caller wants to force that
-check:
-
-```bash
-python3 scripts/poll_pr_checks.py <PR_NUMBER> --require-step coverage
-```
+## CI Validation Delivery
+Prefer the PR build workflow as the default delivery path for heavy validation. Run focused local checks first, open
+the pull request, and wait for the path-selected required checks to reach a successful conclusion instead of
+duplicating local compilation, native tests, full Python tests, or coverage. `scripts/ci_change_classifier.py`
+selects the validation class from PR paths: lightweight workflow/docs/tooling PRs require `linux`, while
+native/source/content PRs require `linux`, `windows-deps`, and `windows`. For coverage-relevant changes the
+conditional `coverage` step runs inside the path-gated `linux-coverage` job.
 
 Run heavy local validation only when CI cannot cover the required evidence, a focused local reproduction is
-necessary before opening the PR, or GitHub Actions polling is unavailable or blocked. Passing the path-selected checks
-is sufficient PR delivery evidence for the classifier-selected validation class: native/source/content changes require
-Linux and Windows build jobs, while workflow-only changes keep a terminal Linux check and skip unrelated native-heavy
-steps. It proves coverage only when the workflow's changed-path rule runs the `coverage` step somewhere in the selected
-build workflow run, currently in `linux-coverage`; the poller auto-adds that step for coverage-relevant PR paths. Record
-the polled job names, conclusions, and URLs separately from local commands. Do not report skipped local commands as
-passed, and do not enable auto-merge until the selected CI-polled validation has passed when it is the only
-full-validation evidence.
+necessary before opening the PR, or GitHub Actions is unavailable or blocked. Record the observed job names,
+conclusions, and URLs separately from local commands. Do not report skipped local commands as passed, and do not
+enable auto-merge until the selected CI validation has passed when it is the only full-validation evidence.
 
 Manual repository settings for `main`:
 - require a pull request before merging
@@ -273,11 +250,6 @@ Manual repository settings for `main`:
 - require branches to be up to date before merging
 - select the `linux`, `windows-deps`, and `windows` checks from the `build` workflow
 
-Audit the live repository settings before merge-policy or cleanup decisions with:
-
-```bash
-python3 scripts/controller_resource_audit.py --json --skip-run-tree-sizes --github-repo lisu188/fall-of-nouraajd
-```
 
 Do not use `Release / build` as a required PR check; `.github/workflows/release.yml` runs only for version tags.
 If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR jobs, add those jobs to branch
