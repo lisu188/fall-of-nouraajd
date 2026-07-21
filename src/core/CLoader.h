@@ -93,12 +93,17 @@ class CPluginLoader {
     // runtime (the game_core unit-test binary has no _game bindings to execute plugins with).
     static bool isTrustedPluginPath(const std::string &path);
 
+    // Lua counterpart of isTrustedPluginPath: plugins/**.lua only (no map script.lua yet).
+    static bool isTrustedLuaPluginPath(const std::string &path);
+
     static bool loadPlugin(const std::shared_ptr<CGame> &game, const std::string &path);
+
+    static bool loadLuaPlugin(const std::shared_ptr<CGame> &game, const std::string &path);
 
     static bool loadCppPlugin(const std::shared_ptr<CGame> &game, const std::string &type);
 
     static bool loadDynamicPlugin(const std::shared_ptr<CGame> &game, const std::string &library,
-                                  const std::string &entry = "game_plugin_load_v1");
+                                  const std::string &entry = "game_plugin_load_v2");
 
     static bool loadGlobalPlugins(const std::shared_ptr<CGame> &game);
 

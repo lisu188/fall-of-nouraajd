@@ -682,6 +682,15 @@ Follow this workflow:
 
 Mismatched ids cause runtime loading or spawning failures.
 
+Plugins may also be authored in Lua (`res/plugins/*.lua`, auto-discovered like
+Python): define `load(context)` and call `context.registerType(name, {base =
+"CTile", onStep = function(self, creature) ... end})`. Lua supports the bases
+CTile, CEffect, CPotion, CScroll, CInteraction, CTrigger, CBuilding, and CEvent
+with a curated object API (property get/set, heal/hurt/healProc, getCause,
+createObject, randint, log); prefer Python for anything beyond that surface. A
+brand-new C++ gameplay class instead needs an `FN_TYPE`/`FN_WRAPPED` row in
+`src/plugin/CGameplayTypeTable.h`.
+
 ## Adding a creature race, class, or monster archetype
 
 The creature archetype model (races/classes composed onto concrete monster and
@@ -692,8 +701,8 @@ archetype content. Key rules:
 - Author races in `res/config/creature_races.json` (`CCreatureRace`), classes in
   `res/config/creature_classes.json` (`CCreatureClass`), and assign them on
   concrete templates in `res/config/monsters.json` via `{"ref": "..."}`. Both
-  archetype objects are already registered in `src/core/CModule.cpp`; new *ids*
-  need only JSON.
+  archetype objects are already registered through
+  `src/plugin/CGameplayTypeTable.h`; new *ids* need only JSON.
 - Follow the naming policy (suffix `Race` / `Class`, lowerCamelCase) and never let
   a class id duplicate a concrete template id.
 - **Do not rename** concrete monster/player template ids, or any quest/dialog id.
@@ -739,10 +748,9 @@ When exposing a new C++ class to Python:
 1. Add or update a `CWrapper<YourClass>` specialization in `src/core/CWrapper.h` if Python subclasses need to override virtual behavior.
 2. Add the pybind11 binding in `src/core/CModule.cpp` inside `PYBIND11_MODULE(_game, m)`.
 3. Use `py::class_<...>` with the correct base class, wrapper class when needed, and `std::shared_ptr<...>`.
-4. Register the type hierarchy in the owning module registration unit with `CTypes::register_type<...>()`.
-5. Register wrapper types in the owning module registration unit when wrapped Python-overridable types are involved.
-6. Add or update Python plugin classes under `res/plugins/` when the new type is intended to be instantiated from scripts or config.
-7. Build `_game`, run C++ tests, and run `python3 test.py`.
+4. For gameplay object types, add the `FN_TYPE` row (or `FN_WRAPPED` when a `CWrapper<T>` trampoline exists) to `src/plugin/CGameplayTypeTable.h` — it feeds native registration, pybind metadata, and the Python downcast dispatch from one list. Core/GUI framework types register in the owning `C*TypeRegistration.cpp` unit with `CTypes::register_type<...>()`.
+5. Add or update Python plugin classes under `res/plugins/` when the new type is intended to be instantiated from scripts or config.
+6. Build `_game`, run C++ tests, and run `python3 test.py`.
 
 Do not use Boost.Python patterns for new bindings.
 

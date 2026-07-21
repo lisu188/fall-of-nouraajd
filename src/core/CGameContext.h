@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CGame;
 class CGuiHandler;
 class CConfigurationProvider;
+class CLuaHandler;
 class CMap;
 class CObjectHandler;
 class CResourcesProvider;
@@ -75,6 +76,8 @@ class CGameContext {
 
     std::shared_ptr<CScriptHandler> getScriptHandler();
 
+    std::shared_ptr<CLuaHandler> getLuaHandler();
+
     std::shared_ptr<CRngHandler> getRngHandler();
 
     std::shared_ptr<CSlotConfig> getSlotConfiguration();
@@ -106,6 +109,7 @@ class CGameContext {
     std::shared_ptr<CGuiHandler> guiHandler;
     std::shared_ptr<CObjectHandler> objectHandler;
     std::shared_ptr<CScriptHandler> scriptHandler;
+    std::shared_ptr<CLuaHandler> luaHandler;
     std::shared_ptr<CRngHandler> rngHandler;
     std::shared_ptr<CResourcesProvider> resourcesProvider;
     std::shared_ptr<CConfigurationProvider> configurationProvider;

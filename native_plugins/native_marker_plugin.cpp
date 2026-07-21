@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "plugin/CPluginAbi.h"
+#include "plugin/CPluginRegistrar.h"
 
 namespace {
 
@@ -40,29 +41,27 @@ constexpr const char *DIRECT_MARKER_CONFIG = R"json({
   }
 })json";
 
-bool register_marker(const CPluginHostV1 *host, const char *id, const char *config) {
-    if (host == nullptr || host->api_version != GAME_PLUGIN_API_VERSION || host->game == nullptr ||
-        host->register_config_json == nullptr) {
+bool register_marker(const CPluginHostV2 *host, const char *id, const char *config) {
+    auto *registrar = game_plugin_registrar(host);
+    if (registrar == nullptr) {
         return false;
     }
-    if (host->log != nullptr) {
-        host->log(host->game, "registering dynamic native marker content");
-    }
-    return host->register_config_json(host->game, id, config);
+    registrar->log("registering dynamic native marker content");
+    return registrar->registerConfigJson(id, config);
 }
 
 } // namespace
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_v1(const CPluginHostV1 *host) {
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_v2(const CPluginHostV2 *host) {
     return register_marker(host, "dynamicNativePluginMarker", DYNAMIC_MARKER_CONFIG);
 }
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_direct_v1(const CPluginHostV1 *host) {
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_direct_v2(const CPluginHostV2 *host) {
     return register_marker(host, "directDynamicPluginMarker", DIRECT_MARKER_CONFIG);
 }
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_bad_api_v1(const CPluginHostV1 *host) {
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_bad_api_v2(const CPluginHostV2 *host) {
     return host != nullptr && host->api_version == GAME_PLUGIN_API_VERSION + 1;
 }
 
-extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_false_v1(const CPluginHostV1 *) { return false; }
+extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_false_v2(const CPluginHostV2 *) { return false; }

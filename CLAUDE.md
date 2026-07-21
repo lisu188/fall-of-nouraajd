@@ -83,8 +83,11 @@ C++ formatting uses `.clang-format` (LLVM base, 4-space indent, 120 col, no incl
   `CScriptHandler`, `CRngHandler`, `CTooltipHandler`.
 - **`src/gui/`** — SDL rendering, layout, animation, texture/text caching, and
   panel/widget objects under `src/gui/object/`.
-- **`src/plugin/`** — the native-plugin ABI (`CPluginAbi.h`, `NativePlugin`) used
-  to load `native_plugins/*` MODULE libs at runtime.
+- **`src/plugin/`** — the unified plugin model: the native entry ABI
+  (`CPluginAbi.h`, `CPluginHostV2`/`game_plugin_load_v2`), the host surface every
+  plugin kind registers through (`CPluginRegistrar`), the per-kind loading
+  backends (`CPluginRuntime.h`, `CNativePluginRuntime.cpp`), and the gameplay
+  type table (`CGameplayTypeTable.h`) expanded by `NativePlugin.cpp`.
 
 ### Reflection & type registration
 The engine uses a reflection macro from the **`vstd`** submodule: `V_META(Class,
@@ -96,17 +99,19 @@ through the meta system. Registration is split across two mechanisms:
   `src/core/CTypeRegistration.h`, implemented in the `C*TypeRegistration.cpp`
   files).
 - **Gameplay object types** (`src/object/`: creatures, items, effects,
-  interactions, tiles, dialogs, quests, controllers, …) register via the
-  `native_plugin::register_*` helpers in `src/plugin/NativePlugin.cpp`, invoked
-  through the `native_gameplay*` dynamic-plugin entry points
-  (`native_plugins/native_gameplay*.cpp`, `*_load_v1`) declared in
-  `res/plugins/manifest.json`. `registerObjectTypes()` registers only the
-  `CGameObject` base.
+  interactions, tiles, dialogs, quests, controllers, …) are listed once in the
+  X-macro table `src/plugin/CGameplayTypeTable.h` — the single source of truth
+  consumed by `native_plugin::register_gameplay_types`
+  (`src/plugin/NativePlugin.cpp`, invoked through the `native_gameplay` plugin's
+  `game_plugin_load_v2` entry), by the pybind metadata/downcast registration in
+  `src/core/CModule.cpp`, and by `scripts/validate_content.py`.
+  `registerObjectTypes()` registers only the `CGameObject` base.
 
-When adding a new gameplay object type, wire it into the matching
-`register_*` function in `src/plugin/NativePlugin.cpp`; core/GUI types go into
-the matching `C*TypeRegistration.cpp` file. Either way, an unregistered type
-won't be constructible from content.
+When adding a new gameplay object type, add one `FN_TYPE` row (or `FN_WRAPPED`,
+if Python scripting needs a `CWrapper<T>` trampoline) to
+`src/plugin/CGameplayTypeTable.h`; core/GUI types go into the matching
+`C*TypeRegistration.cpp` file. Either way, an unregistered type won't be
+constructible from content.
 
 ### Content pipeline (`res/`)
 - **`res/config/*.json`** — global definitions (items, weapons, armors, monsters,
@@ -117,19 +122,32 @@ won't be constructible from content.
   `set_state`/`state_in`/`get_state`). Maps: `nouraajd`, `ritual`, `siege`,
   `multilevel`, `ninemarches`, `hearthfall`, `gravemoor`, `usurpergate`,
   `sunderedmarch`, `kadath`, `vhulmarn`, `test`.
-- **`res/plugins/*.py`** — Python gameplay plugins (crafting, interactions,
-  effects, potions, tiles, objects). Every `.py` in the directory is
-  auto-discovered by `CPluginLoader`; `res/plugins/manifest.json` declares
-  native/dynamic plugin entries and optional per-map plugin lists.
+- **`res/plugins/*.py` / `*.lua`** — Python and Lua gameplay plugins (crafting,
+  interactions, effects, potions, tiles, objects). Every `.py` and `.lua` in the
+  directory is auto-discovered by `CPluginLoader`; `res/plugins/manifest.json`
+  (version 2: a `plugins` array of `{id, kind, source…}` entries, kinds
+  `native`/`cpp`/`python`/`lua`, optional `scope: {"map": …}`) declares the
+  native/cpp entries and any explicitly ordered or map-scoped plugins.
 - **`res/game.py`** — the Python-side facade over `_game`; wraps native trace
   helpers and quest-state integration (`quest_state.py`).
 - Content schemas are documented in `docs/content.md`; the authoritative checker
   is `scripts/validate_content.py`.
 
-### Native vs. Python plugins
-Gameplay behavior exists in two forms: C++ in `native_plugins/` (registered
-through the `NativePluginHostV1` ABI, `*_load_v1` entry points) and Python in
-`res/plugins/`. Both extend the same object/interaction/effect surface.
+### Plugin runtimes
+Gameplay behavior exists in three forms, all funneled through one host surface
+(`CPluginRegistrar`: type factories + config JSON + logging) by per-kind
+runtimes (`IPluginRuntime` registry in `src/plugin/CPluginRuntime.cpp`):
+- **native** — C++ in `native_plugins/` (MODULE libs, `extern "C"
+  game_plugin_load_v2(const CPluginHostV2*)` handshake, load-only by design);
+- **python** — `res/plugins/*.py` (sandboxed `load(self, context)`, engine→Python
+  dispatch via `CWrapper<T>` + `CPythonOverrides`);
+- **lua** — `res/plugins/*.lua` (sandboxed per-game `lua_State` in
+  `src/handler/CLuaHandler.cpp`, `load(context)` with
+  `context.registerType(name, {base = "CTile", onStep = …})`, engine→Lua
+  dispatch via `CLuaWrapper<T>` + `CLuaOverrides`; scriptable bases: CTile,
+  CEffect, CPotion, CScroll, CInteraction, CTrigger, CBuilding, CEvent).
+The vendored Lua 5.4 interpreter lives in `third_party/lua` (static
+`lua_vendor` lib).
 
 ## Entry points & tooling
 

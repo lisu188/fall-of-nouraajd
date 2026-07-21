@@ -5716,22 +5716,60 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         sample_library = "plugins/native/native_marker_plugin"
 
-        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v1"))
+        self.assertTrue(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_direct_v2"))
         marker = g.createObject("directDynamicPluginMarker")
         self.assertIsNotNone(marker)
         self.assertEqual("Direct dynamic plugin marker", marker.getStringProperty("label"))
         self.assertTrue(marker.getBoolProperty("directDynamicPluginLoaded"))
 
         self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, "plugins/native/definitely_missing_plugin"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v1"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v1"))
-        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v1"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_missing_v2"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_bad_api_v2"))
+        self.assertFalse(game.CPluginLoader.loadDynamicPlugin(g, sample_library, "game_plugin_load_false_v2"))
 
         report = {
             "direct": marker.getBoolProperty("directDynamicPluginLoaded"),
             "marker": marker.getStringProperty("label"),
         }
         return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_lua_plugin_auto_discovery_registers_tile_type(self):
+        game = load_game_module()
+
+        g = game.CGameLoader.loadGame()
+        tile = g.createObject("LuaRoadTile")
+
+        self.assertIsNotNone(tile)
+        self.assertEqual("LuaRoadTile", tile.getType())
+
+        report = {"lua_tile": tile.getType()}
+        return True, json.dumps(report, sort_keys=True)
+
+    @game_test
+    def test_lua_plugin_loader_rejects_non_resource_paths(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+
+        with tempfile.NamedTemporaryFile("w", suffix=".lua", delete=False) as tmp:
+            tmp.write("function load(context)\nend\n")
+            absolute_path = tmp.name
+
+        try:
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, absolute_path))
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "../res/plugins/tile.lua"))
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "maps/test/script.lua"))
+            self.assertFalse(game.CPluginLoader.loadLuaPlugin(g, "plugins/definitely_missing.lua"))
+            self.assertTrue(game.CPluginLoader.loadLuaPlugin(g, "plugins/tile.lua"))
+
+            report = {
+                "absolute_path_rejected": absolute_path,
+                "relative_parent_rejected": "../res/plugins/tile.lua",
+                "map_script_rejected": "maps/test/script.lua",
+            }
+            return True, json.dumps(report, sort_keys=True)
+        finally:
+            os.unlink(absolute_path)
 
     @game_test
     def test_dynamic_domain_plugins_register_gameplay_classes(self):
@@ -7265,6 +7303,31 @@ class GameTest(unittest.TestCase):
                 "hp_before_step": hp_before_step,
                 "hp_after_step": player.getNumericProperty("hp"),
                 "coords_after_step": [player.getCoords().x, player.getCoords().y, player.getCoords().z],
+            },
+            sort_keys=True,
+        )
+
+    @game_test
+    def test_lua_road_tile_heals_on_step(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("test", "Warrior")
+        game_map.removeAll(lambda obj: obj.getName() != "player")
+
+        start = player.getCoords()
+        road = game.Coords(start.x + 1, start.y, start.z)
+        game_map.replaceTile("LuaRoadTile", road)
+
+        player.setHp(max(1, player.getHpMax() - 3))
+        hp_before_step = player.getNumericProperty("hp")
+        set_player_target(player, road)
+        game_map.move()
+        self.assertEqual(player.getNumericProperty("hp"), hp_before_step + 1)
+        self.assertEqual((player.getCoords().x, player.getCoords().y, player.getCoords().z), (road.x, road.y, road.z))
+
+        return True, json.dumps(
+            {
+                "hp_before_step": hp_before_step,
+                "hp_after_step": player.getNumericProperty("hp"),
             },
             sort_keys=True,
         )
@@ -12565,8 +12628,8 @@ class GameTest(unittest.TestCase):
                 return "Python registered objective"
 
         class PyPlugin(game.CPlugin):
-            def load(self, context):
-                calls.append(("plugin_load", context.getType()))
+            def load(self, registrar):
+                calls.append(("plugin_load", registrar.game().getType()))
 
         class PyDialog(game.CDialog):
             def invokeAction(self, action):
@@ -12612,7 +12675,7 @@ class GameTest(unittest.TestCase):
         game.CTrigger.trigger(created["PyTrigger"], None, None)
         self.assertTrue(game.CQuest.isCompleted(created["PyQuest"]))
         self.assertEqual("Python registered objective", game.CQuest.getObjective(created["PyQuest"]))
-        game.CPlugin.load(created["PyPlugin"], g)
+        game.CPlugin.load(created["PyPlugin"], game.CPluginRegistrar(g))
         game.CDialogBase2.invokeAction(created["PyDialog"], "open")
         self.assertTrue(game.CDialogBase2.invokeCondition(created["PyDialog"], "ready"))
 
@@ -13163,7 +13226,7 @@ class GameTest(unittest.TestCase):
                 fail("quest_complete")
 
         class RaisingPlugin(game.CPlugin):
-            def load(self, game_instance):
+            def load(self, registrar):
                 fail("plugin")
 
         class RaisingDialog(game.CDialogBase):
@@ -13201,7 +13264,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(game.CQuest.isCompleted(quest))
         game.CQuest.onComplete(quest)
 
-        game.CPlugin.load(RaisingPlugin(), g)
+        game.CPlugin.load(RaisingPlugin(), game.CPluginRegistrar(g))
 
         dialog = RaisingDialog()
         game.CDialogBase.invokeAction(dialog, "open")

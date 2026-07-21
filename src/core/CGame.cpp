@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CSceneManager.h"
+#include "plugin/CPluginRegistrar.h"
 #include "gui/CGui.h"
 
 CGame::CGame() {}
@@ -50,6 +51,8 @@ std::shared_ptr<CGuiHandler> CGame::getGuiHandler() { return getContext()->getGu
 
 std::shared_ptr<CScriptHandler> CGame::getScriptHandler() { return getContext()->getScriptHandler(); }
 
+std::shared_ptr<CLuaHandler> CGame::getLuaHandler() { return getContext()->getLuaHandler(); }
+
 std::shared_ptr<CObjectHandler> CGame::getObjectHandler() { return getContext()->getObjectHandler(); }
 
 std::shared_ptr<CSceneManager> CGame::getSceneManager() {
@@ -59,7 +62,10 @@ std::shared_ptr<CSceneManager> CGame::getSceneManager() {
     return sceneManager;
 }
 
-void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) { plugin()->load(this->ptr<CGame>()); }
+void CGame::loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin) {
+    CPluginRegistrar registrar(this->ptr<CGame>());
+    plugin()->load(registrar);
+}
 
 std::shared_ptr<CGui> CGame::getGui() const { return _gui; }
 

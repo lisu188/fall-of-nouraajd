@@ -1460,6 +1460,7 @@ class ContentValidator:
         self._collect_plugin_classes()
         self._load_type_registration_exclusions()
         self._validate_type_registration_coverage()
+        self._validate_plugin_manifest()
         self._load_global_configs()
         self._load_maps()
         self._load_campaigns()
@@ -1468,6 +1469,69 @@ class ContentValidator:
             self._validate_map_context(context)
         self._validate_campaigns()
         return sorted(self.issues, key=lambda issue: (issue.path, issue.location, issue.message))
+
+    def _validate_plugin_manifest(self) -> None:
+        """Schema-check the version 2 plugin manifest (res/plugins/manifest.json): a
+        top-level ``version: 2`` plus a ``plugins`` array of uniform entries
+        ``{id, kind, <source>, entry?, scope?}``. Kind-specific source fields are
+        ``library`` (native, under plugins/native/), ``type`` (cpp), and ``path``
+        (python/lua, an existing res/ resource). Unknown kinds and duplicate ids are
+        diagnosed here so a typo fails validation instead of silently skipping the
+        plugin at runtime (the loader only warns)."""
+        path = self.repo_root / "res" / "plugins" / "manifest.json"
+        if not path.exists():
+            return
+        data = self._load_json(path)
+        if data is None:
+            return
+        if not isinstance(data, dict):
+            self._issue(path, "$", "expected top-level JSON object")
+            return
+        if data.get("version") != 2:
+            self._issue(path, "version", "plugin manifest must declare version 2")
+        entries = data.get("plugins")
+        if not isinstance(entries, list):
+            self._issue(path, "plugins", "plugin manifest must contain a plugins array")
+            return
+        source_fields = {"native": "library", "cpp": "type", "python": "path", "lua": "path"}
+        seen_ids: set[str] = set()
+        for index, entry in enumerate(entries):
+            location = f"plugins[{index}]"
+            if not isinstance(entry, dict):
+                self._issue(path, location, "expected plugin entry object")
+                continue
+            entry_id = entry.get("id")
+            if not isinstance(entry_id, str) or not entry_id:
+                self._issue(path, location, "plugin entry requires a non-empty string id")
+            elif entry_id in seen_ids:
+                self._issue(path, location, f'duplicate plugin id "{entry_id}"')
+            else:
+                seen_ids.add(entry_id)
+            kind = entry.get("kind")
+            if kind not in source_fields:
+                known = ", ".join(sorted(source_fields))
+                self._issue(path, location, f'unknown plugin kind "{kind}"; expected one of: {known}')
+                continue
+            source_field = source_fields[kind]
+            source = entry.get(source_field)
+            if not isinstance(source, str) or not source:
+                self._issue(path, location, f'{kind} plugin entry requires a non-empty "{source_field}" field')
+                continue
+            if kind == "native" and not source.startswith("plugins/native/"):
+                self._issue(path, location, f'native plugin library "{source}" must live under plugins/native/')
+            if kind in ("python", "lua"):
+                expected_suffix = ".py" if kind == "python" else ".lua"
+                if not source.endswith(expected_suffix):
+                    self._issue(path, location, f'{kind} plugin path "{source}" must end with {expected_suffix}')
+                elif not (self.repo_root / "res" / source).exists():
+                    self._issue(path, location, f'{kind} plugin path "{source}" does not exist under res/')
+            scope = entry.get("scope")
+            if scope is not None:
+                map_name = scope.get("map") if isinstance(scope, dict) else None
+                if not isinstance(map_name, str) or not map_name:
+                    self._issue(path, location, 'plugin scope must be an object with a non-empty "map" name')
+                elif not (self.repo_root / "res" / "maps" / map_name).is_dir():
+                    self._issue(path, location, f'plugin scope references unknown map "{map_name}"')
 
     def inventory_creature_overrides(self) -> list[CreatureOverride]:
         """Enumerate every map-local creature reference that overrides template behavior.
@@ -1685,22 +1749,39 @@ class ContentValidator:
                 self.native_plugin_registered_classes.add(class_name)
 
     def _native_plugin_helper_classes(self) -> dict[str, set[str]]:
-        path = self.repo_root / "src" / "plugin" / "NativePlugin.cpp"
+        """Parse the single-source-of-truth gameplay type table consumed by
+        ``native_plugin::register_gameplay_types`` (src/plugin/NativePlugin.cpp expands
+        src/plugin/CGameplayTypeTable.h). Rows are one-per-line by contract; a row that
+        contains an FN_TYPE/FN_WRAPPED call this parser cannot read is diagnosed instead
+        of silently dropped."""
+        path = self.repo_root / "src" / "plugin" / "CGameplayTypeTable.h"
         if not path.exists():
             return {}
-        text = read_text_lossy(path)
-        helper_classes: dict[str, set[str]] = {}
-        for name, body in iter_cpp_function_bodies(text):
-            if not name.startswith("register_"):
+        text = strip_cpp_comments(read_text_lossy(path))
+        row_pattern = re.compile(r"\bFN_(?:TYPE|WRAPPED)\(\s*([A-Za-z_]\w*)")
+        classes: set[str] = set()
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            calls = re.findall(r"\bFN_(?:TYPE|WRAPPED)\(", line)
+            if not calls:
                 continue
-            classes = iter_cpp_template_type_names(body, "register_type")
-            if classes:
-                helper_classes[name] = classes
-                for class_name in classes:
-                    self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
-                        f"native_plugin::{name}"
-                    )
-        return helper_classes
+            matches = row_pattern.findall(line)
+            row_classes = {name for name in matches if is_concrete_cpp_class_name(name)}
+            if len(calls) != len(row_classes):
+                self._issue(
+                    path,
+                    f"line {line_number}",
+                    "unparseable gameplay type table row; rows must be one per line as "
+                    "FN_TYPE(Class, Bases...) or FN_WRAPPED(Class, Bases...)",
+                )
+                continue
+            classes.update(row_classes)
+        if not classes:
+            return {}
+        for class_name in classes:
+            self.native_plugin_declared_class_sources.setdefault(class_name, set()).add(
+                "native_plugin::register_gameplay_types"
+            )
+        return {"register_gameplay_types": classes}
 
     def _native_plugin_entry_helpers(self, helper_classes: dict[str, set[str]]) -> dict[tuple[str, str], set[str]]:
         native_dir = self.repo_root / "native_plugins"
@@ -1733,12 +1814,12 @@ class ContentValidator:
         if not isinstance(data, dict):
             return loaded_entries
         for entry in iter_manifest_plugin_entries(data):
-            if entry.get("kind") != "dynamic":
+            if entry.get("kind") != "native":
                 continue
             library = entry.get("library")
             if not isinstance(library, str) or not library:
                 continue
-            function_name = entry.get("entry", "game_plugin_load_v1")
+            function_name = entry.get("entry", "game_plugin_load_v2")
             if isinstance(function_name, str) and function_name:
                 loaded_entries.add((Path(library).name, function_name))
         return loaded_entries
@@ -4060,7 +4141,9 @@ class ContentValidator:
                     f'combined item "{combined}" occupies slot {primary_slot}, which no set piece uses',
                 )
 
-            combined_props = self._entry_properties(self.global_entries[combined].data) if combined in self.global_entries else {}
+            combined_props = (
+                self._entry_properties(self.global_entries[combined].data) if combined in self.global_entries else {}
+            )
             covered = combined_props.get("coveredSlots", [])
             covered_set = {str(slot) for slot in covered} if isinstance(covered, list) else set()
             expected_covered = set(piece_slots.values()) - ({primary_slot} if primary_slot else set())
@@ -5186,19 +5269,14 @@ def python_base_class_name(base: ast.expr) -> str | None:
 
 def iter_manifest_plugin_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    global_entries = data.get("global")
-    if isinstance(global_entries, list):
-        entries.extend(entry for entry in global_entries if isinstance(entry, dict))
-    map_entries = data.get("maps")
-    if isinstance(map_entries, dict):
-        for map_plugins in map_entries.values():
-            if isinstance(map_plugins, list):
-                entries.extend(entry for entry in map_plugins if isinstance(entry, dict))
+    plugin_entries = data.get("plugins")
+    if isinstance(plugin_entries, list):
+        entries.extend(entry for entry in plugin_entries if isinstance(entry, dict))
     return entries
 
 
 def is_concrete_cpp_class_name(name: str) -> bool:
-    return name != "CWrapper" and re.match(r"^C[A-Za-z_]\w*$", name) is not None
+    return name not in ("CWrapper", "CLuaWrapper") and re.match(r"^C[A-Za-z_]\w*$", name) is not None
 
 
 def append_field(location: str, key: Any) -> str:

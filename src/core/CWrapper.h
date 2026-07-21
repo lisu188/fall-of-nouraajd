@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlugin.h"
 #include "object/CDialog.h"
 #include "object/CObject.h"
+#include "plugin/CPluginRegistrar.h"
 
 namespace py = pybind11;
 
@@ -255,9 +256,9 @@ template <> class CWrapper<CPlugin> : public CPlugin {
   public:
     using CPlugin::CPlugin;
 
-    void load(std::shared_ptr<CGame> game) override final {
+    void load(CPluginRegistrar &registrar) override final {
         try {
-            PYBIND11_OVERRIDE(void, CPlugin, load, game);
+            PYBIND11_OVERRIDE(void, CPlugin, load, registrar);
         } catch (const py::error_already_set &) {
             PYTHON_LOG;
             PyErr_Clear();
@@ -295,7 +296,7 @@ template <> class CWrapper<CDialog> : public CDialog {
 // overrides -- the generic CWrapper<T> only trampolines the map-object lifecycle events, so
 // without these specializations a Python-subclassed piece/artifact (res/plugins/artifact_sets.py)
 // would never see its equip/use handler called. Mirrors the CScroll/CPotion onUse pattern.
-#define CWRAPPER_EQUIPMENT_TRAMPOLINE(ITEM)                                                                             \
+#define CWRAPPER_EQUIPMENT_TRAMPOLINE(ITEM)                                                                            \
     template <> class CWrapper<ITEM> : public ITEM {                                                                   \
         V_META(CWrapper<ITEM>, ITEM, vstd::meta::empty())                                                              \
       public:                                                                                                          \
@@ -307,7 +308,7 @@ template <> class CWrapper<CDialog> : public CDialog {
                 PYTHON_LOG;                                                                                            \
                 PyErr_Clear();                                                                                         \
             }                                                                                                          \
-        }                                                                                                             \
+        }                                                                                                              \
         void onUnequip(std::shared_ptr<CGameEvent> event) override final {                                             \
             try {                                                                                                      \
                 PYBIND11_OVERRIDE(void, ITEM, onUnequip, event);                                                       \
@@ -315,7 +316,7 @@ template <> class CWrapper<CDialog> : public CDialog {
                 PYTHON_LOG;                                                                                            \
                 PyErr_Clear();                                                                                         \
             }                                                                                                          \
-        }                                                                                                             \
+        }                                                                                                              \
         void onUse(std::shared_ptr<CGameEvent> event) override final {                                                 \
             try {                                                                                                      \
                 PYBIND11_OVERRIDE(void, ITEM, onUse, event);                                                           \
@@ -323,7 +324,7 @@ template <> class CWrapper<CDialog> : public CDialog {
                 PYTHON_LOG;                                                                                            \
                 PyErr_Clear();                                                                                         \
             }                                                                                                          \
-        }                                                                                                             \
+        }                                                                                                              \
     };
 
 CWRAPPER_EQUIPMENT_TRAMPOLINE(CArmor)
