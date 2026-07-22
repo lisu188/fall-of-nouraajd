@@ -74,3 +74,6 @@ std::shared_ptr<CResourcesProvider> CGame::getResourcesProvider() { return getCo
 std::shared_ptr<CConfigurationProvider> CGame::getConfigurationProvider() {
     return getContext()->getConfigurationProvider();
 }
+
+// CI control experiment: comment-only touch so the change classifier requests the
+// coverage job. No behavioural change.
