@@ -459,7 +459,6 @@ configure_file(res/plugins/crafting.py plugins/crafting.py)
 configure_file(res/plugins/artifact_sets.py plugins/artifact_sets.py)
 configure_file(res/plugins/potion.py plugins/potion.py)
 configure_file(res/plugins/tile.py plugins/tile.py)
-configure_file(res/plugins/tile.lua plugins/tile.lua)
 configure_file(res/plugins/manifest.json plugins/manifest.json)
 
 configure_file(res/images/interactions/backstab.png images/interactions/backstab.png COPYONLY)
