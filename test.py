@@ -13484,6 +13484,62 @@ class GameTest(unittest.TestCase):
         self.assertLess(time.monotonic() - started_at, 1.0)
         return True, json.dumps({"ok": True})
 
+    @game_test
+    def test_character_creation_uses_separate_class_and_race_screens(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+
+        class_options = game.player_class_options(g)
+        race_options = game.player_race_options(g)
+        self.assertTrue(class_options)
+        self.assertTrue(race_options)
+
+        class_label = sorted(class_options)[0]
+        race_display = {
+            f"{label} - {game.race_stat_preview(g.createObject(race_type))}": race_type
+            for label, race_type in race_options.items()
+        }
+        race_label = sorted(race_display)[0]
+
+        calls = []
+        responses = []
+        original_selection = game.CGuiHandler.showSelection
+        original_race_options = game.player_race_options
+
+        def queued_selection(self_, values):
+            calls.append(sorted(values.getValues()))
+            return responses.pop(0)
+
+        game.CGuiHandler.showSelection = queued_selection
+        try:
+            responses[:] = [class_label, race_label]
+            self.assertEqual(
+                (class_options[class_label], race_display[race_label]),
+                game.choose_character(g),
+            )
+            self.assertEqual([sorted(class_options), sorted(race_display)], calls)
+
+            calls.clear()
+            responses[:] = [""]
+            self.assertEqual(("", ""), game.choose_character(g))
+            self.assertEqual([sorted(class_options)], calls)
+
+            calls.clear()
+            responses[:] = [class_label, ""]
+            self.assertEqual(("", ""), game.choose_character(g))
+            self.assertEqual([sorted(class_options), sorted(race_display)], calls)
+
+            calls.clear()
+            responses[:] = [class_label]
+            game.player_race_options = lambda game_: {}
+            self.assertEqual((class_options[class_label], ""), game.choose_character(g))
+            self.assertEqual([sorted(class_options)], calls)
+        finally:
+            game.player_race_options = original_race_options
+            game.CGuiHandler.showSelection = original_selection
+
+        return True, json.dumps({"class": class_label, "race": race_label}, sort_keys=True)
+
     def test_new_game_load_with_no_saves_reports_message(self):
         game = load_game_module()
 
@@ -13562,6 +13618,122 @@ class GameTest(unittest.TestCase):
         self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
         self.assertEqual([("No saved games are available.", True)], fake_game.gui_handler.messages)
         self.assertIsNone(FakeGameLoader.loaded_save)
+
+    def test_new_game_map_menu_excludes_campaign_scenarios(self):
+        game = load_game_module()
+
+        class FakeListString:
+            def __init__(self):
+                self.values = []
+
+            def addValue(self, value):
+                self.values.append(value)
+
+            def getValues(self):
+                return set(self.values)
+
+        class FakeGuiHandler:
+            def __init__(self, responses):
+                self.messages = []
+                self.responses = list(responses)
+                self.selections = []
+
+            def showSelection(self, list_string):
+                self.selections.append(sorted(list_string.getValues()))
+                return self.responses.pop(0)
+
+            def showInfo(self, message, centered):
+                self.messages.append((message, centered))
+
+        class FakeGame:
+            def __init__(self, responses):
+                self.gui_handler = FakeGuiHandler(responses)
+
+            def createObject(self, type_id):
+                if type_id != "CListString":
+                    raise AssertionError(f"unexpected fake object type: {type_id}")
+                return FakeListString()
+
+            def getGuiHandler(self):
+                return self.gui_handler
+
+        fake_game = FakeGame(["NEW", "standalone"])
+        started = []
+
+        class FakeGameLoader:
+            @staticmethod
+            def loadGame():
+                return fake_game
+
+            @staticmethod
+            def loadGui(g):
+                pass
+
+            @staticmethod
+            def startGameWithPlayer(g, map_name, player, race):
+                started.append((g, map_name, player, race))
+
+        class FakeResourcesProvider:
+            maps = ["nouraajd", "ritual", "standalone"]
+
+            @staticmethod
+            def getInstance():
+                return FakeResourcesProvider()
+
+            def getFiles(self, kind):
+                if kind != "MAP":
+                    raise AssertionError(f"unexpected resource kind: {kind}")
+                return list(self.maps)
+
+        manifests = [
+            {
+                "scenarios": {
+                    "first": {"map": "nouraajd"},
+                    "second": {"map": "ritual"},
+                }
+            },
+            {"scenarios": {"shared": {"map": "ritual"}}},
+        ]
+        fake_campaign = types.SimpleNamespace(list_campaigns=lambda: manifests)
+        choose_calls = []
+
+        def fake_choose_character(g):
+            choose_calls.append(g)
+            return "Warrior", "humanRace"
+
+        original_loader = game.CGameLoader
+        original_provider = game.CResourcesProvider
+        original_campaign = game.campaign
+        original_choose_character = game.choose_character
+        original_event_loop = game.event_loop
+        try:
+            game.CGameLoader = FakeGameLoader
+            game.CResourcesProvider = FakeResourcesProvider
+            game.campaign = fake_campaign
+            game.choose_character = fake_choose_character
+            game.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(run=lambda: False))
+
+            game.new()
+            self.assertEqual(
+                [["CAMPAIGN", "LOAD", "NEW", "RANDOM"], ["standalone"]],
+                fake_game.gui_handler.selections,
+            )
+            self.assertEqual([(fake_game, "standalone", "Warrior", "humanRace")], started)
+            self.assertEqual([fake_game], choose_calls)
+
+            fake_game = FakeGame(["NEW"])
+            FakeResourcesProvider.maps = ["nouraajd", "ritual"]
+            game.new()
+            self.assertEqual([["CAMPAIGN", "LOAD", "NEW", "RANDOM"]], fake_game.gui_handler.selections)
+            self.assertEqual([("No maps are available.", True)], fake_game.gui_handler.messages)
+            self.assertEqual(1, len(started))
+            self.assertEqual(1, len(choose_calls))
+        finally:
+            game.CGameLoader = original_loader
+            game.CResourcesProvider = original_provider
+            game.campaign = original_campaign
+            game.choose_character = original_choose_character
+            game.event_loop = original_event_loop
 
     def test_new_game_campaign_with_no_campaigns_reports_message(self):
         game = load_game_module()
@@ -22201,6 +22373,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1]
             )
             self.assertGreaterEqual(len(entry_widgets), 2)
+            main_widget = next(widget for widget in entry_widgets if widget.text.startswith("Entry dialog text"))
+            option_widgets = [widget for widget in entry_widgets if widget.text.startswith("1: ")]
+            self.assertEqual(1, len(option_widgets))
+            main_rect = resolved_rect(main_widget)
+            option_rect = resolved_rect(option_widgets[0])
+            self.assertEqual(main_rect[1] + main_rect[3], option_rect[1])
+            self.assertEqual(root[1] + root[3], option_rect[1] + option_rect[3])
+            self.assertGreater(main_rect[3], root[3] * 20 // 100)
+            self.assertLess(option_rect[3], root[3] // 2)
             previous = None
             for widget in entry_widgets:
                 widget_rect = resolved_rect(widget)
@@ -22237,17 +22418,17 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             lambda panel: None,
         )
 
-        dense_options = [
+        dense_options = ["Short option"] + [
             (
                 f"Dense option {index} with wrapped text that should receive a positive non-overlapping rectangle "
                 "inside the dialog option area."
             )
-            for index in range(6)
+            for index in range(1, 6)
         ]
         dense_state = make_dialog_state(
             g,
             "ENTRY",
-            "Dense dialog state with enough options to exercise proportional option layout.",
+            "Dense dialog state with enough options to exercise compact bottom-aligned option layout.",
             dense_options,
             next_state="EXIT",
         )
@@ -22258,10 +22439,19 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             widgets = sorted(find_descendants_by_type(panel, "CTextWidget"), key=lambda child: resolved_rect(child)[1])
             self.assertEqual(1 + len(dense_options), len(widgets))
             self.assertEqual(
-                ["Dense dialog state with enough options to exercise proportional option layout."]
+                ["Dense dialog state with enough options to exercise compact bottom-aligned option layout."]
                 + [f"{index + 1}: {text}" for index, text in enumerate(dense_options)],
                 [widget.text for widget in widgets],
             )
+            main_widget = widgets[0]
+            option_widgets = widgets[1:]
+            main_rect = resolved_rect(main_widget)
+            option_rects = [resolved_rect(widget) for widget in option_widgets]
+            self.assertEqual(main_rect[1] + main_rect[3], option_rects[0][1])
+            self.assertEqual(root[1] + root[3], option_rects[-1][1] + option_rects[-1][3])
+            for previous_rect, current_rect in zip(option_rects, option_rects[1:]):
+                self.assertEqual(previous_rect[1] + previous_rect[3], current_rect[1])
+            self.assertGreater(max(rect[3] for rect in option_rects), min(rect[3] for rect in option_rects))
             previous = None
             for widget in widgets:
                 widget_rect = resolved_rect(widget)
