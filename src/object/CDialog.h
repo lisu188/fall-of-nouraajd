@@ -99,6 +99,8 @@ class CDialog : public CGameObject {
 
     virtual void invokeAction(std::string action);
 
+    bool invokeActionChecked(std::string action);
+
     virtual bool invokeCondition(std::string action);
 
   private:

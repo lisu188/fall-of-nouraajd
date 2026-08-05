@@ -294,10 +294,11 @@ class CDialog(CDialogBase2):
                 reason="unknown_action",
             )
             logger(f"Rejected unknown dialog action: {action}")
-            return
+            return False
         try:
             record_playtest_trace("dialog_action", action=action, dialog=playtest_object_ref(self))
             callback()
+            return True
         except Exception as exc:
             record_playtest_trace(
                 "dialog_action_failed",
@@ -306,6 +307,7 @@ class CDialog(CDialogBase2):
                 error=type(exc).__name__,
             )
             logger(f"Dialog action failed closed: {action}: {exc}")
+            return False
 
     def invokeCondition(self, condition):
         callback = self._get_public_callback(condition)
