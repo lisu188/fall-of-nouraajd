@@ -5,7 +5,7 @@ Copyright (C) 2025  Andrzej Lis
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+        (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
         but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -27,11 +27,14 @@ std::shared_ptr<CDialogState> CDialog::getState(std::string stateId) {
     return state != states.end() ? *state : nullptr;
 }
 
-void CDialog::invokeAction(std::string action) {
+void CDialog::invokeAction(std::string action) { invokeActionChecked(std::move(action)); }
+
+bool CDialog::invokeActionChecked(std::string action) {
     pybind11::gil_scoped_acquire gil;
     if (auto override = CPythonOverrides::find_override(this, "invokeAction"); !override.is_none()) {
-        PY_SAFE(override(action); return;)
+        PY_SAFE_RET_VAL(return override(action).cast<bool>();, false)
     }
+    return false;
 }
 
 bool CDialog::invokeCondition(std::string condition) {
