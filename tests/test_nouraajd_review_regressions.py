@@ -32,7 +32,11 @@ def _method(class_node, name):
 
 def _returned_string(method):
     for node in ast.walk(method):
-        if isinstance(node, ast.Return) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+        if (
+            isinstance(node, ast.Return)
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str)
+        ):
             return node.value.value
     raise AssertionError(f"missing literal string return in {method.name}")
 
@@ -97,7 +101,10 @@ class NouraajdReviewRegressionTest(unittest.TestCase):
         self.assertIn("getReturnCoords", context_h)
         self.assertIn("returnCoordinates", context_h)
         self.assertIn("returnCoordinates.clear();", context_cpp)
-        self.assertIn("store->setReturnCoords(oldMap->getMapName(), request.returnAnchor, player->getCoords())", scene_cpp)
+        self.assertIn(
+            "store->setReturnCoords(oldMap->getMapName(), request.returnAnchor, player->getCoords())",
+            scene_cpp,
+        )
         self.assertIn("reusedSession && retainedReturnCoords", scene_cpp)
         self.assertIn("game->getMap()->attachPlayer(player, *retainedReturnCoords)", scene_cpp)
 
