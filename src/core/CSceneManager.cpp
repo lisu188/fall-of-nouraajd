@@ -5,7 +5,7 @@ Copyright (C) 2026  Andrzej Lis
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+        (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
         but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -162,6 +162,7 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const C
     try {
         transitionState = TransitionState::Transitioning;
         std::shared_ptr<CMap> oldMap = game->getMap();
+        std::shared_ptr<CPlayer> player = oldMap ? oldMap->getPlayer() : nullptr;
         json traceFields = json::object();
         if (CPlaytestTrace::enabled()) {
             traceFields["fromMap"] = oldMap ? oldMap->getMapName() : "";
@@ -170,11 +171,17 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const C
         }
         std::shared_ptr<CMap> map;
         bool reusedSession = false;
+        std::optional<Coords> retainedReturnCoords;
         if (request.reuseLoadedMap) {
             auto store = game->getContext()->getMapSessionStore();
-            map = store->get(mapName, request.returnAnchor);
+            std::string matchedAnchor = request.returnAnchor;
+            map = store->get(mapName, matchedAnchor);
             if (!map && !request.returnAnchor.empty()) {
+                matchedAnchor.clear();
                 map = store->get(mapName);
+            }
+            if (map) {
+                retainedReturnCoords = store->getReturnCoords(mapName, matchedAnchor);
             }
             reusedSession = map != nullptr;
         }
@@ -182,20 +189,25 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const C
             map = CMapLoader::loadNewMap(game, mapName);
         }
         if (request.retainSourceMap && oldMap) {
-            game->getContext()->getMapSessionStore()->put(oldMap, request.returnAnchor);
+            auto store = game->getContext()->getMapSessionStore();
+            store->put(oldMap, request.returnAnchor);
+            if (player) {
+                store->setReturnCoords(oldMap->getMapName(), request.returnAnchor, player->getCoords());
+            }
         }
         game->setMap(map);
         if (oldMap && game->getMap()) {
             // Transfer the existing player into the destination map without mutating the
             // source map. Detaching the player here would remove an object from the source
             // map mid-transition, which scene-manager regression tests assert must stay
-            // untouched (the source map is preserved so it can be revisited). attachPlayer
-            // still performs the canonical destination-side setup (controllers, entry
-            // placement, lifecycle triggers); the source map keeps its player reference.
-            std::shared_ptr<CPlayer> player = oldMap->getPlayer();
+            // untouched (the source map is preserved so it can be revisited). Explicit
+            // targetCoords always win; otherwise a reused retained session returns to the
+            // coordinate where it was left instead of replaying the destination entry tile.
             if (player) {
                 if (request.targetCoords) {
                     game->getMap()->attachPlayer(player, *request.targetCoords);
+                } else if (reusedSession && retainedReturnCoords) {
+                    game->getMap()->attachPlayer(player, *retainedReturnCoords);
                 } else {
                     game->getMap()->attachPlayer(player);
                 }
