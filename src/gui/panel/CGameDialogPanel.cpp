@@ -163,8 +163,8 @@ void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option
         CPlaytestTrace::addMapContext(fields, getGame() ? getGame()->getMap() : nullptr);
         CPlaytestTrace::record("dialog_option_selected", fields);
     }
-    if (!option->getAction().empty()) {
-        dialog->invokeAction(option->getAction());
+    if (!option->getAction().empty() && !dialog->invokeActionChecked(option->getAction())) {
+        return;
     }
     currentStateId = option->getNextStateId().empty() ? "EXIT" : option->getNextStateId();
     reload();

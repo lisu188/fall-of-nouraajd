@@ -27,11 +27,14 @@ std::shared_ptr<CDialogState> CDialog::getState(std::string stateId) {
     return state != states.end() ? *state : nullptr;
 }
 
-void CDialog::invokeAction(std::string action) {
+void CDialog::invokeAction(std::string action) { invokeActionChecked(action); }
+
+bool CDialog::invokeActionChecked(std::string action) {
     pybind11::gil_scoped_acquire gil;
     if (auto override = CPythonOverrides::find_override(this, "invokeAction"); !override.is_none()) {
-        PY_SAFE(override(action); return;)
+        PY_SAFE_RET_VAL(return override(action).cast<bool>();, false)
     }
+    return false;
 }
 
 bool CDialog::invokeCondition(std::string condition) {

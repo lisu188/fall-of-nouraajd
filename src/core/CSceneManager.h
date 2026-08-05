@@ -34,12 +34,14 @@ class CGameContext;
 struct CMapTransitionRequest {
     // Destination map name (a map directory under res/maps).
     std::string targetMap;
-    // Player placement on the destination map; std::nullopt places the player at the map entry.
+    // Explicit player placement on the destination map. When unset, a reused retained session
+    // restores the coordinate where that session was left; otherwise the destination map entry is used.
     std::optional<Coords> targetCoords;
     // Reuse an already-loaded destination session from CMapSessionStore instead of reloading it
     // from content. Falls back to a fresh load when no matching session is stored.
     bool reuseLoadedMap = false;
-    // Retain the source map in CMapSessionStore when leaving it, so it can be revisited later.
+    // Retain the source map in CMapSessionStore when leaving it, including the player's departure
+    // coordinate so a later reuse does not replay entry-only initialization.
     bool retainSourceMap = false;
     // Optional session anchor: a retained source session is stored under this instance id, and a
     // reuseLoadedMap lookup prefers this instance id before falling back to the default session.

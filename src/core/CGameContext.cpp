@@ -128,7 +128,9 @@ void CMapSessionStore::put(const std::string &mapName, const std::string &instan
     if (!map) {
         return;
     }
-    sessions[makeKey(mapName, instanceId)] = map;
+    const auto key = makeKey(mapName, instanceId);
+    sessions[key] = map;
+    returnCoordinates.erase(key);
 }
 
 void CMapSessionStore::put(const std::shared_ptr<CMap> &map, const std::string &instanceId) {
@@ -143,15 +145,33 @@ std::shared_ptr<CMap> CMapSessionStore::get(const std::string &mapName, const st
     return it != sessions.end() ? it->second : nullptr;
 }
 
+void CMapSessionStore::setReturnCoords(const std::string &mapName, const std::string &instanceId, Coords coords) {
+    const auto key = makeKey(mapName, instanceId);
+    if (sessions.contains(key)) {
+        returnCoordinates[key] = coords;
+    }
+}
+
+std::optional<Coords> CMapSessionStore::getReturnCoords(const std::string &mapName,
+                                                        const std::string &instanceId) const {
+    auto it = returnCoordinates.find(makeKey(mapName, instanceId));
+    return it != returnCoordinates.end() ? std::optional<Coords>(it->second) : std::nullopt;
+}
+
 bool CMapSessionStore::contains(const std::string &mapName, const std::string &instanceId) const {
     return sessions.find(makeKey(mapName, instanceId)) != sessions.end();
 }
 
 bool CMapSessionStore::evict(const std::string &mapName, const std::string &instanceId) {
-    return sessions.erase(makeKey(mapName, instanceId)) > 0;
+    const auto key = makeKey(mapName, instanceId);
+    returnCoordinates.erase(key);
+    return sessions.erase(key) > 0;
 }
 
-void CMapSessionStore::clear() { sessions.clear(); }
+void CMapSessionStore::clear() {
+    sessions.clear();
+    returnCoordinates.clear();
+}
 
 std::size_t CMapSessionStore::size() const { return sessions.size(); }
 
