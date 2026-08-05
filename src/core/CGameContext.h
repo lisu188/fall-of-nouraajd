@@ -5,7 +5,7 @@ Copyright (C) 2026  Andrzej Lis
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+        (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
         but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,10 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
 #include "core/CGlobal.h"
+#include "core/CUtil.h"
 
 class CGame;
 class CGuiHandler;
@@ -39,7 +41,8 @@ class CSlotConfig;
 
 // Context-owned cache of loaded maps that should outlive a single transition. Sessions are keyed by
 // map name plus an optional instance id so multiple live copies of the same map can be retained. The
-// store only retains and hands back maps; it does not change transition semantics on its own.
+// store also remembers the coordinate from which a retained session was left so reuse can return the
+// player to that session without replaying destination entry initialization.
 class CMapSessionStore {
   public:
     static std::string makeKey(const std::string &mapName, const std::string &instanceId = "");
@@ -49,6 +52,10 @@ class CMapSessionStore {
     void put(const std::shared_ptr<CMap> &map, const std::string &instanceId = "");
 
     std::shared_ptr<CMap> get(const std::string &mapName, const std::string &instanceId = "") const;
+
+    void setReturnCoords(const std::string &mapName, const std::string &instanceId, Coords coords);
+
+    std::optional<Coords> getReturnCoords(const std::string &mapName, const std::string &instanceId = "") const;
 
     bool contains(const std::string &mapName, const std::string &instanceId = "") const;
 
@@ -60,6 +67,7 @@ class CMapSessionStore {
 
   private:
     std::unordered_map<std::string, std::shared_ptr<CMap>> sessions;
+    std::unordered_map<std::string, Coords> returnCoordinates;
 };
 
 class CGameContext {
