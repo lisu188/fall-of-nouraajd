@@ -42,6 +42,7 @@
                   "number": 3,
                   "condition": "contract_completed",
                   "nextStateId": "COMPLETED_THANKS",
+                  "action": "accept_quest",
                   "text": "The cave is quiet now. The OctoBogz are dead."
                 }
               },
