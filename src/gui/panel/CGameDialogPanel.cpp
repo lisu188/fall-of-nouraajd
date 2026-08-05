@@ -5,7 +5,7 @@ Copyright (C) 2025-2026  Andrzej Lis
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+        (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
         but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -163,8 +163,8 @@ void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option
         CPlaytestTrace::addMapContext(fields, getGame() ? getGame()->getMap() : nullptr);
         CPlaytestTrace::record("dialog_option_selected", fields);
     }
-    if (!option->getAction().empty()) {
-        dialog->invokeAction(option->getAction());
+    if (!option->getAction().empty() && !dialog->invokeActionChecked(option->getAction())) {
+        return;
     }
     currentStateId = option->getNextStateId().empty() ? "EXIT" : option->getNextStateId();
     reload();
