@@ -319,8 +319,20 @@ extern void initModule1();
 
 void register_python_binding_type_metadata() {
     // Metadata only (serializers/casts) — deliberately not builders, so gameplay types stay
-    // non-constructible until the native gameplay plugin actually loads. The row list is the
-    // shared plugin/CGameplayTypeTable.h; CStats/CDamage are covered by registerCoreTypes().
+    // non-constructible until the native gameplay plugin actually loads. The gameplay row list is
+    // the shared plugin/CGameplayTypeTable.h.
+    //
+    // CStats/CDamage are NOT gameplay table rows (they are core value types registered by
+    // registerCoreTypes), but their metadata must also be registered from this translation unit.
+    // On Linux this file is compiled into the _game extension rather than game_core (see
+    // GAME_CORE_SRC in CMakeLists.txt), so registering here populates the conversion tables the
+    // extension module itself resolves against. Dropping these two lines broke deserialization of
+    // the shared_ptr<CDamage>/shared_ptr<CStats> properties carried by items and creatures
+    // ("bad any_cast" while loading saved maps) on Linux only, while Windows kept working because
+    // there CModule.cpp is part of game_core.
+    CTypes::register_type_metadata<CStats, CGameObject>();
+    CTypes::register_type_metadata<CDamage, CGameObject>();
+
 #define FN_TYPE(T, ...) CTypes::register_type_metadata<T, __VA_ARGS__>();
 #define FN_WRAPPED(T, ...)                                                                                             \
     CTypes::register_type_metadata<T, __VA_ARGS__>();                                                                  \
