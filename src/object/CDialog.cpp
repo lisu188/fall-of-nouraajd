@@ -27,7 +27,7 @@ std::shared_ptr<CDialogState> CDialog::getState(std::string stateId) {
     return state != states.end() ? *state : nullptr;
 }
 
-void CDialog::invokeAction(std::string action) { invokeActionChecked(std::move(action)); }
+void CDialog::invokeAction(std::string action) { invokeActionChecked(action); }
 
 bool CDialog::invokeActionChecked(std::string action) {
     pybind11::gil_scoped_acquire gil;
