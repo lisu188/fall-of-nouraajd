@@ -73,6 +73,10 @@ struct Coords {
 
     friend constexpr Coords operator*(int scalar, Coords coords) { return coords *= scalar; }
 
+    [[deprecated("dereferencing Coords is retained only for compatibility")]] constexpr Coords operator*() const {
+        return *this;
+    }
+
     double getDist(const Coords &a) const {
         const double dx = x - a.x;
         const double dy = y - a.y;
@@ -101,6 +105,10 @@ inline constexpr Coords UP{0, 0, 1};
 inline constexpr Coords DOWN{0, 0, -1};
 inline constexpr std::array<Coords, 4> CARDINAL_DIRECTIONS{EAST, WEST, SOUTH, NORTH};
 inline constexpr std::array<Coords, 6> AXIAL_DIRECTIONS{EAST, WEST, SOUTH, NORTH, UP, DOWN};
+
+static_assert(-NORTH == SOUTH);
+static_assert(3 * EAST == Coords(3, 0, 0));
+static_assert(DOWN * 2 == Coords(0, 0, -2));
 
 namespace CColors {
 inline constexpr SDL_Color Blue{0, 0, 255, 0};
