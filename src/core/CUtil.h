@@ -73,10 +73,6 @@ struct Coords {
 
     friend constexpr Coords operator*(int scalar, Coords coords) { return coords *= scalar; }
 
-    [[deprecated("dereferencing Coords is retained only for compatibility")]] constexpr Coords operator*() const {
-        return *this;
-    }
-
     double getDist(const Coords &a) const {
         const double dx = x - a.x;
         const double dy = y - a.y;
