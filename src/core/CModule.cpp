@@ -79,6 +79,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CWrapper.h"
 #include "plugin/CGameplayTypeTable.h"
 #include "plugin/CPluginRegistrar.h"
+#include <pybind11/operators.h>
 #include <pybind11/stl_bind.h>
 #include <pybind11/stl.h>
 
@@ -394,7 +395,18 @@ void init_game_module(py::module_ &m) {
         .def(py::init<int, int, int>())
         .def_readonly("x", &Coords::x)
         .def_readonly("y", &Coords::y)
-        .def_readonly("z", &Coords::z);
+        .def_readonly("z", &Coords::z)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def(py::self < py::self)
+        .def(py::self <= py::self)
+        .def(py::self > py::self)
+        .def(py::self >= py::self)
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(-py::self)
+        .def(py::self * int())
+        .def(int() * py::self);
 
     std::shared_ptr<CGameObject> (CGame::*createObject)(std::string) = &CGame::createObject<CGameObject>;
 
@@ -771,8 +783,64 @@ void init_game_module(py::module_ &m) {
         .def("configureEffect", &CInteraction::configureEffect, "Configure an effect instance before it is applied.");
     m.attr("CInteractionBase") = cinteraction;
 
+    py::class_<StatsModifier>(m, "StatsModifier", "Pure numeric stat modifier value.")
+        .def(py::init<>())
+        .def_readwrite("strength", &StatsModifier::strength)
+        .def_readwrite("agility", &StatsModifier::agility)
+        .def_readwrite("stamina", &StatsModifier::stamina)
+        .def_readwrite("intelligence", &StatsModifier::intelligence)
+        .def_readwrite("armor", &StatsModifier::armor)
+        .def_readwrite("block", &StatsModifier::block)
+        .def_readwrite("dmgMin", &StatsModifier::dmgMin)
+        .def_readwrite("dmgMax", &StatsModifier::dmgMax)
+        .def_readwrite("attack", &StatsModifier::attack)
+        .def_readwrite("hit", &StatsModifier::hit)
+        .def_readwrite("crit", &StatsModifier::crit)
+        .def_readwrite("fireResist", &StatsModifier::fireResist)
+        .def_readwrite("frostResist", &StatsModifier::frostResist)
+        .def_readwrite("normalResist", &StatsModifier::normalResist)
+        .def_readwrite("thunderResist", &StatsModifier::thunderResist)
+        .def_readwrite("shadowResist", &StatsModifier::shadowResist)
+        .def_readwrite("damage", &StatsModifier::damage)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(-py::self);
+
+    py::class_<DamageValue>(m, "DamageValue", "Pure typed damage value.")
+        .def(py::init<>())
+        .def_readwrite("normal", &DamageValue::normal)
+        .def_readwrite("fire", &DamageValue::fire)
+        .def_readwrite("frost", &DamageValue::frost)
+        .def_readwrite("thunder", &DamageValue::thunder)
+        .def_readwrite("shadow", &DamageValue::shadow)
+        .def("scale", &DamageValue::scale, py::return_value_policy::reference_internal)
+        .def("scaled", &DamageValue::scaled)
+        .def(py::self == py::self)
+        .def(py::self != py::self)
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(-py::self);
+
     py::class_<CDamage, CGameObject, std::shared_ptr<CDamage>>(m, "CDamage",
-                                                               "CDamage packet with typed damage components.");
+                                                               "CDamage packet with typed damage components.")
+        .def("getNormal", &CDamage::getNormal, "Return normal damage.")
+        .def("setNormal", &CDamage::setNormal, "Set normal damage.")
+        .def("getFire", &CDamage::getFire, "Return fire damage.")
+        .def("setFire", &CDamage::setFire, "Set fire damage.")
+        .def("getFrost", &CDamage::getFrost, "Return frost damage.")
+        .def("setFrost", &CDamage::setFrost, "Set frost damage.")
+        .def("getThunder", &CDamage::getThunder, "Return thunder damage.")
+        .def("setThunder", &CDamage::setThunder, "Set thunder damage.")
+        .def("getShadow", &CDamage::getShadow, "Return shadow damage.")
+        .def("setShadow", &CDamage::setShadow, "Set shadow damage.")
+        .def("value", &CDamage::value, "Return this packet as a pure DamageValue.")
+        .def("apply", &CDamage::apply, py::return_value_policy::reference_internal,
+             "Add a pure DamageValue to this packet.")
+        .def("__iadd__", [](CDamage &self, const CDamage &other) -> CDamage & { return self += other; },
+             py::return_value_policy::reference_internal);
+
     py::class_<CStats, CGameObject, std::shared_ptr<CStats>>(m, "CStats",
                                                              "Creature stat container used for combat calculations.")
         .def("setStrength", &CStats::setStrength, "Set strength.")
@@ -790,6 +858,13 @@ void init_game_module(py::module_ &m) {
         .def("getStamina", &CStats::getStamina, "Return stamina.")
         .def("getIntelligence", &CStats::getIntelligence, "Return intelligence.")
         .def("getMainValue", &CStats::getMainValue, "Return current value of the configured main stat.")
+        .def("modifier", &CStats::modifier, "Return numeric stats as a pure StatsModifier.")
+        .def("apply", &CStats::apply, py::return_value_policy::reference_internal,
+             "Add a pure StatsModifier to this stat container.")
+        .def("__iadd__", [](CStats &self, const CStats &other) -> CStats & { return self += other; },
+             py::return_value_policy::reference_internal)
+        .def("__isub__", [](CStats &self, const CStats &other) -> CStats & { return self -= other; },
+             py::return_value_policy::reference_internal)
         .def("addBonus", &CStats::addBonus, "Add all numeric stats from another CStats object.")
         .def("removeBonus", &CStats::removeBonus, "Remove all numeric stats from another CStats object.")
         .def("getText", &CStats::getText, "Return formatted stat summary text.");
