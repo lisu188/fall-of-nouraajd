@@ -21,12 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 
 class CGameObject;
-
 class CMapObject;
 
 struct Coords {
     constexpr Coords() = default;
-
     constexpr Coords(int x, int y, int z) : x(x), y(y), z(z) {}
 
     int x = 0;
@@ -35,11 +33,45 @@ struct Coords {
 
     constexpr auto operator<=>(const Coords &other) const = default;
 
-    constexpr Coords operator-(const Coords &other) const { return {x - other.x, y - other.y, z - other.z}; }
+    constexpr Coords &operator+=(const Coords &other) {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        return *this;
+    }
 
-    constexpr Coords operator+(const Coords &other) const { return {x + other.x, y + other.y, z + other.z}; }
+    constexpr Coords &operator-=(const Coords &other) {
+        x -= other.x;
+        y -= other.y;
+        z -= other.z;
+        return *this;
+    }
 
-    constexpr Coords operator*() const { return *this; }
+    constexpr Coords &operator*=(int scalar) {
+        x *= scalar;
+        y *= scalar;
+        z *= scalar;
+        return *this;
+    }
+
+    constexpr Coords operator+(const Coords &other) const {
+        auto result = *this;
+        return result += other;
+    }
+
+    constexpr Coords operator-(const Coords &other) const {
+        auto result = *this;
+        return result -= other;
+    }
+
+    constexpr Coords operator-() const { return {-x, -y, -z}; }
+
+    constexpr Coords operator*(int scalar) const {
+        auto result = *this;
+        return result *= scalar;
+    }
+
+    friend constexpr Coords operator*(int scalar, Coords coords) { return coords *= scalar; }
 
     double getDist(const Coords &a) const {
         const double dx = x - a.x;
@@ -81,19 +113,12 @@ class CUtil {
   public:
     static std::shared_ptr<SDL_Rect> boxInBox(const std::shared_ptr<SDL_Rect> &out,
                                               const std::shared_ptr<SDL_Rect> &in);
-
     static std::shared_ptr<SDL_Rect> rect(int x, int y, int w, int h);
-
     static std::shared_ptr<SDL_Rect> centeredRect(int centerX, int centerY, int w, int h);
-
     static std::shared_ptr<SDL_Rect> bounds(const std::shared_ptr<SDL_Rect> &rect);
-
     static bool isIn(const std::shared_ptr<SDL_Rect> &rect, int x, int y);
-
     static int parseKey(SDL_Keycode i);
-
     static Coords::Direction getDirection(Coords coords);
-
     static int setRenderDrawColor(SDL_Renderer *renderer, SDL_Color color);
 
     template <fn::FilePredicate Predicate> static std::set<std::string> findFiles(std::string dir, Predicate pred) {
@@ -118,7 +143,6 @@ template <> struct less<std::weak_ptr<CMapObject>> {
         return a.lock() < b.lock();
     }
 };
-
 } // namespace std
 
 namespace vstd {
@@ -144,6 +168,5 @@ template <fn::SdlStatusCallable F> auto sdl_safe(F f) {
 template <fn::SdlVoidCallable F> void sdl_safe(F f) { f(); }
 
 #define SDL_SAFE(x) sdl_safe([&]() { return x; })
-
 #define JSONIFY(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x))
 #define JSONIFY_STYLED(x) CJsonUtil::to_string(CSerialization::serialize<std::shared_ptr<json>>(x), -1)
