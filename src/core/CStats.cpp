@@ -198,7 +198,6 @@ StatsModifier CStats::modifier() const {
 }
 
 CStats &CStats::apply(const StatsModifier &value) {
-    PropertyNotificationBatch batch(*this);
     incProperty("strength", value.strength);
     incProperty("agility", value.agility);
     incProperty("stamina", value.stamina);
@@ -255,7 +254,6 @@ DamageValue CDamage::value() const {
 }
 
 CDamage &CDamage::apply(const DamageValue &value) {
-    PropertyNotificationBatch batch(*this);
     incProperty("normal", value.normal);
     incProperty("fire", value.fire);
     incProperty("frost", value.frost);
