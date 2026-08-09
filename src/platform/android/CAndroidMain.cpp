@@ -55,28 +55,22 @@ std::optional<std::filesystem::path> find_python_stdlib(const std::filesystem::p
     return errorCode ? std::nullopt : result;
 }
 
-bool append_module_path(PyConfig &config, const std::filesystem::path &path) {
-    wchar_t *decoded = Py_DecodeLocale(path.string().c_str(), nullptr);
-    if (decoded == nullptr) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to decode Python module path: %s", path.string().c_str());
+bool prepend_runtime_path(const std::filesystem::path &runtimeRoot) {
+    PyObject *sysPath = PySys_GetObject("path");
+    if (sysPath == nullptr || !PyList_Check(sysPath)) {
         return false;
     }
-    const PyStatus status = PyWideStringList_Append(&config.module_search_paths, decoded);
-    PyMem_RawFree(decoded);
-    if (PyStatus_Exception(status)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to append Python module path: %s", path.string().c_str());
+
+    PyObject *runtimePath = PyUnicode_DecodeFSDefault(runtimeRoot.string().c_str());
+    if (runtimePath == nullptr) {
         return false;
     }
-    return true;
+    const int result = PyList_Insert(sysPath, 0, runtimePath);
+    Py_DECREF(runtimePath);
+    return result == 0;
 }
 
-bool append_optional_module_path(PyConfig &config, const std::filesystem::path &path) {
-    std::error_code errorCode;
-    return !std::filesystem::is_directory(path, errorCode) || errorCode || append_module_path(config, path);
-}
-
-int run_python_game(const std::filesystem::path &runtimeRoot, const std::filesystem::path &pythonRoot,
-                    const std::filesystem::path &stdlibRoot) {
+int run_python_game(const std::filesystem::path &runtimeRoot, const std::filesystem::path &pythonRoot) {
     if (PyImport_AppendInittab("_game", &PyInit__game) == -1) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to register built-in _game Python module");
         return 20;
@@ -88,22 +82,8 @@ int run_python_game(const std::filesystem::path &runtimeRoot, const std::filesys
     config.use_environment = 0;
     config.parse_argv = 0;
     config.install_signal_handlers = 0;
-    config.module_search_paths_set = 1;
 
     PyStatus status = PyConfig_SetBytesString(&config, &config.home, pythonRoot.string().c_str());
-    if (!PyStatus_Exception(status) && !append_module_path(config, runtimeRoot)) {
-        status = PyStatus_Error("failed to configure game runtime path");
-    }
-    if (!PyStatus_Exception(status) && !append_module_path(config, stdlibRoot)) {
-        status = PyStatus_Error("failed to configure Python standard-library path");
-    }
-    if (!PyStatus_Exception(status) && !append_optional_module_path(config, stdlibRoot / "lib-dynload")) {
-        status = PyStatus_Error("failed to configure Python extension-module path");
-    }
-    if (!PyStatus_Exception(status) && !append_optional_module_path(config, stdlibRoot / "site-packages")) {
-        status = PyStatus_Error("failed to configure Python site-packages path");
-    }
-
     if (PyStatus_Exception(status)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to configure embedded Python: %s",
                      status.err_msg == nullptr ? "unknown error" : status.err_msg);
@@ -120,24 +100,30 @@ int run_python_game(const std::filesystem::path &runtimeRoot, const std::filesys
     }
 
     int result = 0;
-    PyObject *gameModule = PyImport_ImportModule("game");
-    if (gameModule == nullptr) {
+    if (!prepend_runtime_path(runtimeRoot)) {
         PyErr_Print();
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to import game.py");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to prepend the game runtime to sys.path");
         result = 23;
     } else {
-        PyObject *callResult = PyObject_CallMethod(gameModule, "new", nullptr);
-        if (callResult == nullptr) {
+        PyObject *gameModule = PyImport_ImportModule("game");
+        if (gameModule == nullptr) {
             PyErr_Print();
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "game.new() failed");
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to import game.py");
             result = 24;
+        } else {
+            PyObject *callResult = PyObject_CallMethod(gameModule, "new", nullptr);
+            if (callResult == nullptr) {
+                PyErr_Print();
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "game.new() failed");
+                result = 25;
+            }
+            Py_XDECREF(callResult);
+            Py_DECREF(gameModule);
         }
-        Py_XDECREF(callResult);
-        Py_DECREF(gameModule);
     }
 
     if (Py_FinalizeEx() < 0 && result == 0) {
-        result = 25;
+        result = 26;
     }
     return result;
 }
@@ -164,8 +150,7 @@ int main(int, char **) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Extracted Python runtime is missing: %s", pythonRoot.string().c_str());
         return 12;
     }
-    const auto stdlibRoot = find_python_stdlib(pythonRoot);
-    if (!stdlibRoot) {
+    if (!find_python_stdlib(pythonRoot)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Expected exactly one extracted python3.* standard-library directory");
         return 13;
     }
@@ -173,7 +158,7 @@ int main(int, char **) {
         return 14;
     }
 
-    const int result = run_python_game(runtimeRoot, pythonRoot, *stdlibRoot);
+    const int result = run_python_game(runtimeRoot, pythonRoot);
     CResourcesProvider::clearPlatformRoots();
     return result;
 }
