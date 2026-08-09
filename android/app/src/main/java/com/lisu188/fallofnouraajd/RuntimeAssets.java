@@ -3,6 +3,7 @@ package com.lisu188.fallofnouraajd;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.res.AssetManager;
+import android.os.Build;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,7 +36,7 @@ final class RuntimeAssets {
         try {
             copyAssetTree(context.getAssets(), RUNTIME_ASSET, runtimeDir);
             copyAssetTree(context.getAssets(), PYTHON_ASSET, pythonDir);
-            Files.writeString(versionFile.toPath(), version, StandardCharsets.UTF_8);
+            Files.write(versionFile.toPath(), version.getBytes(StandardCharsets.UTF_8));
         } catch (IOException exception) {
             deleteTree(runtimeDir);
             deleteTree(pythonDir);
@@ -46,7 +47,7 @@ final class RuntimeAssets {
     private static long packageVersion(Context context) {
         try {
             PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            return info.getLongVersionCode();
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? info.getLongVersionCode() : info.versionCode;
         } catch (Exception exception) {
             throw new IllegalStateException("Failed to read package version", exception);
         }
@@ -57,7 +58,7 @@ final class RuntimeAssets {
             return "";
         }
         try {
-            return Files.readString(file.toPath(), StandardCharsets.UTF_8).trim();
+            return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8).trim();
         } catch (IOException ignored) {
             return "";
         }
@@ -74,7 +75,11 @@ final class RuntimeAssets {
                 throw new IOException("Cannot create asset directory: " + parent);
             }
             try (InputStream input = assets.open(assetPath); FileOutputStream output = new FileOutputStream(destination)) {
-                input.transferTo(output);
+                byte[] buffer = new byte[64 * 1024];
+                int count;
+                while ((count = input.read(buffer)) >= 0) {
+                    output.write(buffer, 0, count);
+                }
             }
             return;
         }
