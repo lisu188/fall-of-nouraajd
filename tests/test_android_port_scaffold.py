@@ -57,6 +57,18 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('VCPKG_REF="${GAME_ANDROID_VCPKG_REF:-2026.05.25}"', bootstrap)
         self.assertIn('VCPKG_TRIPLET="arm64-android-dynamic"', bootstrap)
         self.assertIn('--overlay-triplets="${SCRIPT_DIR}/triplets"', bootstrap)
+        self.assertIn('--x-manifest-root="${REPO_ROOT}"', bootstrap)
+        self.assertNotIn('"pybind11:${VCPKG_TRIPLET}"', bootstrap)
+        for dependency in (
+            "boost-algorithm",
+            "boost-filesystem",
+            "boost-pool",
+            "pybind11",
+            "sdl2",
+            "sdl2-image",
+            "sdl2-ttf",
+        ):
+            self.assertIn(dependency, bootstrap)
         self.assertIn('lib/libSDL2.so', bootstrap)
         self.assertIn('set(VCPKG_LIBRARY_LINKAGE dynamic)', triplet)
         self.assertIn('set(VCPKG_CMAKE_SYSTEM_NAME Android)', triplet)
