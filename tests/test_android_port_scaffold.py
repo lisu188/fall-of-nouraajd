@@ -45,6 +45,7 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('ignoreAssetsPattern = "fall-of-nouraajd-dont-ignore-anything"', gradle)
         self.assertIn('File(repositoryRoot, "android/CMakeLists.txt")', gradle)
         self.assertIn('abiFilters += "arm64-v8a"', gradle)
+        self.assertIn('minSdk = 28', gradle)
 
     def test_manifest_launches_sdl_activity_in_landscape(self):
         root = ET.parse(ROOT / "android/app/src/main/AndroidManifest.xml").getroot()
