@@ -58,8 +58,8 @@ At first launch `RuntimeAssets` extracts the packaged Python and game payloads i
 1. obtains SDL's app-private internal storage path;
 2. configures `CResourcesProvider` with `files/runtime` and `files/user`;
 3. registers the existing `_game` module as a built-in CPython module;
-4. sets an isolated CPython configuration rooted at `files/python`;
-5. adds the game runtime, standard library, `lib-dynload`, and `site-packages` paths when present;
+4. sets an isolated CPython configuration with `files/python` as Python home and lets CPython derive its standard-library and native-module paths from that prefix;
+5. prepends only the extracted game runtime to `sys.path`;
 6. imports `game` and calls `game.new()`.
 
 The packaged manifest's existing `plugins/native/native_gameplay` and `plugins/native/native_marker_plugin` ids are preserved. On Android they resolve to code linked into `libmain.so`; desktop builds retain the existing `dlopen`/`LoadLibrary` behavior.
