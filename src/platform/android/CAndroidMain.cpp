@@ -24,10 +24,36 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL_system.h>
 
 #include <filesystem>
+#include <optional>
+#include <string>
 
 extern "C" PyObject *PyInit__game();
 
 namespace {
+
+std::optional<std::filesystem::path> find_python_stdlib(const std::filesystem::path &pythonRoot) {
+    const auto libraryRoot = pythonRoot / "lib";
+    std::error_code errorCode;
+    if (!std::filesystem::is_directory(libraryRoot, errorCode) || errorCode) {
+        return std::nullopt;
+    }
+
+    std::optional<std::filesystem::path> result;
+    for (std::filesystem::directory_iterator it(libraryRoot, errorCode), end; !errorCode && it != end; it.increment(errorCode)) {
+        if (!it->is_directory(errorCode) || errorCode) {
+            continue;
+        }
+        const std::string name = it->path().filename().string();
+        if (name.rfind("python3.", 0) != 0) {
+            continue;
+        }
+        if (result) {
+            return std::nullopt;
+        }
+        result = it->path();
+    }
+    return errorCode ? std::nullopt : result;
+}
 
 bool append_module_path(PyConfig &config, const std::filesystem::path &path) {
     wchar_t *decoded = Py_DecodeLocale(path.string().c_str(), nullptr);
@@ -44,7 +70,13 @@ bool append_module_path(PyConfig &config, const std::filesystem::path &path) {
     return true;
 }
 
-int run_python_game(const std::filesystem::path &runtimeRoot, const std::filesystem::path &pythonRoot) {
+bool append_optional_module_path(PyConfig &config, const std::filesystem::path &path) {
+    std::error_code errorCode;
+    return !std::filesystem::is_directory(path, errorCode) || errorCode || append_module_path(config, path);
+}
+
+int run_python_game(const std::filesystem::path &runtimeRoot, const std::filesystem::path &pythonRoot,
+                    const std::filesystem::path &stdlibRoot) {
     if (PyImport_AppendInittab("_game", &PyInit__game) == -1) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to register built-in _game Python module");
         return 20;
@@ -62,8 +94,14 @@ int run_python_game(const std::filesystem::path &runtimeRoot, const std::filesys
     if (!PyStatus_Exception(status) && !append_module_path(config, runtimeRoot)) {
         status = PyStatus_Error("failed to configure game runtime path");
     }
-    if (!PyStatus_Exception(status) && !append_module_path(config, pythonRoot)) {
+    if (!PyStatus_Exception(status) && !append_module_path(config, stdlibRoot)) {
         status = PyStatus_Error("failed to configure Python standard-library path");
+    }
+    if (!PyStatus_Exception(status) && !append_optional_module_path(config, stdlibRoot / "lib-dynload")) {
+        status = PyStatus_Error("failed to configure Python extension-module path");
+    }
+    if (!PyStatus_Exception(status) && !append_optional_module_path(config, stdlibRoot / "site-packages")) {
+        status = PyStatus_Error("failed to configure Python site-packages path");
     }
 
     if (PyStatus_Exception(status)) {
@@ -126,11 +164,16 @@ int main(int, char **) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Extracted Python runtime is missing: %s", pythonRoot.string().c_str());
         return 12;
     }
-    if (!CResourcesProvider::configurePlatformRoots(runtimeRoot.string(), writableRoot.string())) {
+    const auto stdlibRoot = find_python_stdlib(pythonRoot);
+    if (!stdlibRoot) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Expected exactly one extracted python3.* standard-library directory");
         return 13;
     }
+    if (!CResourcesProvider::configurePlatformRoots(runtimeRoot.string(), writableRoot.string())) {
+        return 14;
+    }
 
-    const int result = run_python_game(runtimeRoot, pythonRoot);
+    const int result = run_python_game(runtimeRoot, pythonRoot, *stdlibRoot);
     CResourcesProvider::clearPlatformRoots();
     return result;
 }
