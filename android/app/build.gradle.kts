@@ -46,7 +46,7 @@ val prepareRuntimeAssets by tasks.registering(Sync::class) {
         into("runtime")
     }
     from(pythonStdlibDir) {
-        into("python")
+        into("python/lib/${pythonStdlibDir.name}")
     }
 }
 
