@@ -12,11 +12,14 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         source = (ROOT / "src/platform/android/CAndroidMain.cpp").read_text(encoding="utf-8")
         self.assertIn('PyImport_AppendInittab("_game", &PyInit__game)', source)
         self.assertIn('CResourcesProvider::configurePlatformRoots(runtimeRoot.string(), writableRoot.string())', source)
+        self.assertIn('PyConfig_SetBytesString(&config, &config.home, pythonRoot.string().c_str())', source)
+        self.assertIn('PyList_Insert(sysPath, 0, runtimePath)', source)
         self.assertIn('PyImport_ImportModule("game")', source)
         self.assertIn('PyObject_CallMethod(gameModule, "new", nullptr)', source)
         self.assertIn('filesRoot / "runtime"', source)
         self.assertIn('filesRoot / "user"', source)
         self.assertIn('filesRoot / "python"', source)
+        self.assertNotIn("module_search_paths_set", source)
 
     def test_android_cmake_builds_monolithic_sdl_main_without_duplicate_module_entry(self):
         cmake = (ROOT / "android/CMakeLists.txt").read_text(encoding="utf-8")
@@ -25,6 +28,8 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('game_android_python', cmake)
         self.assertIn('pybind11::headers', cmake)
         self.assertIn('${SDL2_ANDROID_LIBS}', cmake)
+        self.assertIn('${SDL2_ANDROID_MAIN_LIBS}', cmake)
+        self.assertIn('SDL2::SDL2main', cmake)
         self.assertIn('${SDL2_IMAGE_ANDROID_LIBS}', cmake)
         self.assertIn('${SDL2_TTF_ANDROID_LIBS}', cmake)
 
