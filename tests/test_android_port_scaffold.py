@@ -42,6 +42,7 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('into("python/lib/${pythonStdlibDir.name}")', gradle)
         self.assertIn('include("libpython*.*.so")', gradle)
         self.assertIn('include("lib*_python.so")', gradle)
+        self.assertIn('ignoreAssetsPattern = "fall-of-nouraajd-dont-ignore-anything"', gradle)
         self.assertIn('File(repositoryRoot, "android/CMakeLists.txt")', gradle)
         self.assertIn('abiFilters += "arm64-v8a"', gradle)
 
