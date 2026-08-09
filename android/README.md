@@ -5,11 +5,13 @@ The Android port keeps the existing C++/SDL engine, Python map/quest scripts, Lu
 ## Current target
 
 - ABI: `arm64-v8a`
-- minimum Android API: 26
+- minimum Android API: 28
 - orientation: landscape
 - Android Gradle Plugin: 9.3.1
 - Java: 17
 - game native code: C++23
+
+API 28 matches vcpkg's current tested `arm64-android` triplet. Lower Android versions are not claimed by this MVP until the dependency triplet is explicitly rebuilt/tested for a lower API level.
 
 The Gradle wrapper is not committed yet. AGP 9.3 requires Gradle 9.5.0 or newer in the 9.5 line.
 
@@ -29,7 +31,7 @@ Official CPython Android distributions are supported by the layout above. The ap
 
 ## Dependency prefix with vcpkg
 
-The repository already declares `pybind11`, `sdl2`, `sdl2-image`, and `sdl2-ttf` in `vcpkg.json`. An `arm64-android` vcpkg installation can therefore be used as `GAME_ANDROID_DEPENDENCY_PREFIX` when `ANDROID_NDK_HOME` is configured and the installed tree provides the matching Android CMake packages and libraries.
+The repository already declares `pybind11`, `sdl2`, `sdl2-image`, and `sdl2-ttf` in `vcpkg.json`. An `arm64-android` vcpkg installation can therefore be used as `GAME_ANDROID_DEPENDENCY_PREFIX` when `ANDROID_NDK_HOME` is configured and the installed tree provides the matching Android CMake packages and libraries. The current vcpkg `arm64-android` triplet builds static libraries and targets Android API 28; the app's `minSdk` is kept at the same level.
 
 The Android CMake build itself is `android/CMakeLists.txt`; it does not modify or replace the desktop `CMakeLists.txt` build graph.
 
@@ -46,7 +48,7 @@ The Gradle build:
 1. stages `res/` at `assets/runtime/`;
 2. adds root `quest_state.py` to the runtime payload;
 3. stages the CPython standard library under `assets/python/lib/pythonX.Y`;
-4. packages the required CPython JNI libraries plus ARM64 shared dependencies from the dependency prefix;
+4. packages the required CPython JNI libraries plus any ARM64 shared dependencies from the dependency prefix;
 5. invokes `android/CMakeLists.txt` to produce `libmain.so`.
 
 At first launch `RuntimeAssets` extracts the packaged Python and game payloads into app-private storage. A package-version marker avoids repeating the extraction until the app version changes. The `files/user` directory is intentionally not deleted during upgrades and is the writable resource/save root.
@@ -67,7 +69,7 @@ The packaged manifest's existing `plugins/native/native_gameplay` and `plugins/n
 
 ## First device acceptance gate
 
-Before touch-layout work starts, verify on a physical ARM64 device:
+Before touch-layout work starts, verify on a physical ARM64 device running Android 9 / API 28 or newer:
 
 - APK installs and launches without linker errors;
 - runtime extraction completes once and survives restart;
