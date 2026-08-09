@@ -1,0 +1,3 @@
+gameAndroidPythonPrefix=/absolute/path/to/python-android/prefix
+gameAndroidDependencyPrefix=/absolute/path/to/vcpkg_installed/arm64-android
+gameAndroidSdlJavaDir=/absolute/path/to/SDL/android-project/app/src/main/java
