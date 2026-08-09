@@ -66,6 +66,14 @@ if (TARGET SDL2::SDL2)
     set(SDL2_ANDROID_LIBS SDL2::SDL2)
 endif ()
 
+set(SDL2_ANDROID_MAIN_LIBS ${SDL2MAIN_LIBRARY})
+if (TARGET SDL2::SDL2main)
+    set(SDL2_ANDROID_MAIN_LIBS SDL2::SDL2main)
+endif ()
+if (NOT SDL2_ANDROID_MAIN_LIBS)
+    message(FATAL_ERROR "Android SDL2 package must provide SDL2::SDL2main or SDL2MAIN_LIBRARY")
+endif ()
+
 set(SDL2_IMAGE_ANDROID_LIBS ${SDL2_IMAGE_LIBRARY})
 if (TARGET SDL2_image::SDL2_image)
     set(SDL2_IMAGE_ANDROID_LIBS SDL2_image::SDL2_image)
@@ -106,6 +114,7 @@ target_link_libraries(main PRIVATE
     game_android_python
     pybind11::headers
     ${SDL2_ANDROID_LIBS}
+    ${SDL2_ANDROID_MAIN_LIBS}
     ${SDL2_IMAGE_ANDROID_LIBS}
     ${SDL2_TTF_ANDROID_LIBS}
     simdjson_android
