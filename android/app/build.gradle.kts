@@ -53,7 +53,8 @@ val prepareRuntimeAssets by tasks.registering(Sync::class) {
 val prepareNativeLibraries by tasks.registering(Sync::class) {
     into(generatedJniLibsDir.map { it.dir("arm64-v8a") })
     from(File(pythonPrefix, "lib")) {
-        include("*.so")
+        include("libpython*.*.so")
+        include("lib*_python.so")
     }
     from(File(dependencyPrefix, "lib")) {
         include("*.so")
