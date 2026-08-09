@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL.h>
 #include <SDL_system.h>
 
+#include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -53,6 +54,27 @@ std::optional<std::filesystem::path> find_python_stdlib(const std::filesystem::p
         result = it->path();
     }
     return errorCode ? std::nullopt : result;
+}
+
+bool configure_python_temp_directory(const std::filesystem::path &writableRoot) {
+    const char *existing = std::getenv("TMPDIR");
+    if (existing != nullptr && *existing != '\0') {
+        return true;
+    }
+
+    const auto tempRoot = writableRoot / "tmp";
+    std::error_code errorCode;
+    std::filesystem::create_directories(tempRoot, errorCode);
+    if (errorCode) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create Python temporary directory: %s",
+                     tempRoot.string().c_str());
+        return false;
+    }
+    if (::setenv("TMPDIR", tempRoot.string().c_str(), 0) != 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to configure TMPDIR for embedded Python");
+        return false;
+    }
+    return true;
 }
 
 bool prepend_runtime_path(const std::filesystem::path &runtimeRoot) {
@@ -156,6 +178,10 @@ int main(int, char **) {
     }
     if (!CResourcesProvider::configurePlatformRoots(runtimeRoot.string(), writableRoot.string())) {
         return 14;
+    }
+    if (!configure_python_temp_directory(writableRoot)) {
+        CResourcesProvider::clearPlatformRoots();
+        return 15;
     }
 
     const int result = run_python_game(runtimeRoot, pythonRoot);
