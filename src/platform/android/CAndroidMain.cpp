@@ -15,6 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#if defined(__ANDROID__)
+
 #include "core/CProvider.h"
 
 #include <Python.h>
@@ -22,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL_system.h>
 
 #include <filesystem>
-#include <string>
 
 extern "C" PyObject *PyInit__game();
 
@@ -133,3 +134,5 @@ int main(int, char **) {
     CResourcesProvider::clearPlatformRoots();
     return result;
 }
+
+#endif
