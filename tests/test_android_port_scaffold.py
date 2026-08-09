@@ -12,6 +12,8 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         source = (ROOT / "src/platform/android/CAndroidMain.cpp").read_text(encoding="utf-8")
         self.assertIn('PyImport_AppendInittab("_game", &PyInit__game)', source)
         self.assertIn('CResourcesProvider::configurePlatformRoots(runtimeRoot.string(), writableRoot.string())', source)
+        self.assertIn('std::getenv("TMPDIR")', source)
+        self.assertIn('::setenv("TMPDIR", tempRoot.string().c_str(), 0)', source)
         self.assertIn('PyConfig_SetBytesString(&config, &config.home, pythonRoot.string().c_str())', source)
         self.assertIn('PyList_Insert(sysPath, 0, runtimePath)', source)
         self.assertIn('PyImport_ImportModule("game")', source)
@@ -38,6 +40,8 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('File(repositoryRoot, "res")', gradle)
         self.assertIn('File(repositoryRoot, "quest_state.py")', gradle)
         self.assertIn('into("python/lib/${pythonStdlibDir.name}")', gradle)
+        self.assertIn('include("libpython*.*.so")', gradle)
+        self.assertIn('include("lib*_python.so")', gradle)
         self.assertIn('File(repositoryRoot, "android/CMakeLists.txt")', gradle)
         self.assertIn('abiFilters += "arm64-v8a"', gradle)
 
