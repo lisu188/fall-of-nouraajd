@@ -42,10 +42,26 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('into("python/lib/${pythonStdlibDir.name}")', gradle)
         self.assertIn('include("libpython*.*.so")', gradle)
         self.assertIn('include("lib*_python.so")', gradle)
+        self.assertIn('from(File(dependencyPrefix, "lib"))', gradle)
+        self.assertIn('include("*.so")', gradle)
         self.assertIn('ignoreAssetsPattern = "fall-of-nouraajd-dont-ignore-anything"', gradle)
         self.assertIn('File(repositoryRoot, "android/CMakeLists.txt")', gradle)
         self.assertIn('abiFilters += "arm64-v8a"', gradle)
         self.assertIn('minSdk = 28', gradle)
+
+    def test_dependency_bootstrap_pins_python_and_dynamic_sdl(self):
+        bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
+        triplet = (ROOT / "android/triplets/arm64-android-dynamic.cmake").read_text(encoding="utf-8")
+        self.assertIn('PYTHON_VERSION="${GAME_ANDROID_PYTHON_VERSION:-3.14.7}"', bootstrap)
+        self.assertIn('6d50cc3aa66e414a439594089bcdfb5f1264358155c70c1f00471c24cfb477fb', bootstrap)
+        self.assertIn('VCPKG_REF="${GAME_ANDROID_VCPKG_REF:-2026.05.25}"', bootstrap)
+        self.assertIn('VCPKG_TRIPLET="arm64-android-dynamic"', bootstrap)
+        self.assertIn('--overlay-triplets="${SCRIPT_DIR}/triplets"', bootstrap)
+        self.assertIn('lib/libSDL2.so', bootstrap)
+        self.assertIn('set(VCPKG_LIBRARY_LINKAGE dynamic)', triplet)
+        self.assertIn('set(VCPKG_CMAKE_SYSTEM_NAME Android)', triplet)
+        self.assertIn('set(VCPKG_CMAKE_SYSTEM_VERSION 28)', triplet)
+        self.assertIn('set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=arm64-v8a)', triplet)
 
     def test_manifest_launches_sdl_activity_in_landscape(self):
         root = ET.parse(ROOT / "android/app/src/main/AndroidManifest.xml").getroot()
