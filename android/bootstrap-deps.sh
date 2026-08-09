@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 DEPS_ROOT="${GAME_ANDROID_DEPS_DIR:-${SCRIPT_DIR}/.deps}"
 PYTHON_VERSION="${GAME_ANDROID_PYTHON_VERSION:-3.14.7}"
 PYTHON_SHA256="${GAME_ANDROID_PYTHON_SHA256:-6d50cc3aa66e414a439594089bcdfb5f1264358155c70c1f00471c24cfb477fb}"
@@ -67,11 +68,9 @@ fi
 
 VCPKG_INSTALL_ROOT="${DEPS_ROOT}/vcpkg_installed"
 "${VCPKG_ROOT}/vcpkg" install \
-    "pybind11:${VCPKG_TRIPLET}" \
-    "sdl2:${VCPKG_TRIPLET}" \
-    "sdl2-image:${VCPKG_TRIPLET}" \
-    "sdl2-ttf:${VCPKG_TRIPLET}" \
+    --triplet="${VCPKG_TRIPLET}" \
     --overlay-triplets="${SCRIPT_DIR}/triplets" \
+    --x-manifest-root="${REPO_ROOT}" \
     --x-install-root="${VCPKG_INSTALL_ROOT}" \
     --disable-metrics
 
@@ -80,11 +79,17 @@ if [[ ! -f "${DEPENDENCY_PREFIX}/lib/libSDL2.so" || ! -d "${DEPENDENCY_PREFIX}/s
     echo "Dynamic vcpkg Android SDL2 installation is missing: ${DEPENDENCY_PREFIX}" >&2
     exit 8
 fi
+for dependency in boost-algorithm boost-filesystem boost-pool pybind11 sdl2 sdl2-image sdl2-ttf; do
+    if ! grep -Fq "${dependency}" "${VCPKG_INSTALL_ROOT}/vcpkg/status"; then
+        echo "vcpkg manifest dependency was not installed for Android: ${dependency}" >&2
+        exit 9
+    fi
+done
 
 mapfile -t SDL_JAVA_DIRS < <(find "${VCPKG_ROOT}/buildtrees/sdl2/src" -type f -path "*/android-project/app/src/main/java/org/libsdl/app/SDLActivity.java" -print | sed 's#/org/libsdl/app/SDLActivity.java$##')
 if [[ ${#SDL_JAVA_DIRS[@]} -eq 0 ]]; then
     echo "Could not locate SDLActivity.java in the SDL2 source tree built by vcpkg." >&2
-    exit 9
+    exit 10
 fi
 SDL_JAVA_DIR="${SDL_JAVA_DIRS[0]}"
 for candidate in "${SDL_JAVA_DIRS[@]}"; do
