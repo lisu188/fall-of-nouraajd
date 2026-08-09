@@ -99,6 +99,10 @@ android {
         jniLibs.srcDir(generatedJniLibsDir)
     }
 
+    androidResources {
+        ignoreAssetsPattern = "fall-of-nouraajd-dont-ignore-anything"
+    }
+
     packaging {
         jniLibs {
             useLegacyPackaging = true
