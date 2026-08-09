@@ -24,7 +24,9 @@ __pycache__/
 /coverage/
 /htmlcov/
 /build/
+/android/.deps/
 /android/.gradle/
+/android/gradle.properties
 /android/local.properties
 /android/app/.cxx/
 /android/app/build/
