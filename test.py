@@ -171,6 +171,7 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
+    "GameTest.test_inventory_right_click_uses_scroll_and_keeps_it",
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
     "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
@@ -15615,7 +15616,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(town_hall.can_discuss_victor_records())
         self.assertTrue(town_hall.victor_encounter_active())
         victor_quest = find_player_quest(player, "victorQuest")
-        self.assertIn("Defeat the cultists in the courtyard", victor_quest.getObjective())
+        self.assertIn("Defeat the cult leader in the courtyard", victor_quest.getObjective())
         self.assertIn("75 turns", victor_quest.getHint())
         self.assertEqual(leader.getName(), "cultLeaderQuest")
         self.assertTrue(cultists)
@@ -22903,7 +22904,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             active=("cleanseCaveQuest", "victorQuest"),
             completed=completed_quests,
         )
-        self.assertIn("Objective: Defeat the cultists in the courtyard", victor_text)
+        self.assertIn("Objective: Defeat the cult leader in the courtyard", victor_text)
 
         captured_reward_ui = {"dialogs": [], "trades": []}
         heal_amounts = []
@@ -23516,6 +23517,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 is_serial_test_name(test_name),
                 f"{test_name} should be parallelizable, not forced onto the serial shard",
             )
+
+    def test_blocking_scroll_modal_test_runs_in_serial_worker(self):
+        self.assertTrue(is_serial_test_name("GameTest.test_inventory_right_click_uses_scroll_and_keeps_it"))
         # The genuinely order-sensitive save-directory tests must stay serial.
         self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
 
