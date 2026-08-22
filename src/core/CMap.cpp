@@ -326,14 +326,31 @@ void CMap::bumpNavigationRevision() {
 }
 
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
+    if (!tile) {
+        return;
+    }
     Coords coords = normalizeCoords(tile->getCoords());
     Coords target = normalizeCoords(Coords(x, y, z));
-    tile->setOwningMap(this->ptr<CMap>());
-    auto it = tiles.find(coords);
-    if (it != tiles.end()) {
-        tiles.erase(it);
+    auto source = tiles.find(coords);
+    if (source == tiles.end() || source->second != tile) {
+        return;
     }
-    tiles.insert(std::make_pair(target, tile));
+    if (coords == target) {
+        tile->setOwningMap(this->ptr<CMap>());
+        tile->setPosx(target.x);
+        tile->setPosy(target.y);
+        tile->setPosz(target.z);
+        return;
+    }
+    if (!tiles.emplace(target, tile).second) {
+        return;
+    }
+
+    tiles.erase(coords);
+    tile->setOwningMap(this->ptr<CMap>());
+    tile->setPosx(target.x);
+    tile->setPosy(target.y);
+    tile->setPosz(target.z);
     bumpNavigationRevision();
     recordDirectPropertyChanged("tiles");
     signal("tileChanged", target);

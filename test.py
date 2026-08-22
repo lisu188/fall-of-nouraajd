@@ -5207,6 +5207,13 @@ def walkthrough_hearthfall_map():
     gold_before = player.getGold()
     game_map.removeObjectByName("watchCaptain")
     assert game_map.getBoolProperty("captain_defeated"), "Killing Osric should mark the captain defeated."
+    player.checkQuests()
+    assert (
+        "hearthfallQuest" in quest_names(player)
+    ), "The Hearthfall quest should stay active until victory is reported."
+    assert (
+        "hearthfallQuest" not in completed_quest_names(player)
+    ), "Killing Osric alone must not complete the Hearthfall quest."
 
     # Reporting to Elder Maren pays the village purse and completes the chapter.
     elder = g.createObject("elderDialog")
@@ -16763,6 +16770,10 @@ class GameTest(unittest.TestCase):
         captured = g.createObject("capturedSoulDialog")
         self.assertTrue(captured.can_free_captive())
         captured.free_captive()
+        self.assertNotIn("rescueCaptiveQuest", quest_names(player))
+        self.assertNotIn("finalResolutionQuest", quest_names(player))
+        self.assertIn("rescueCaptiveQuest", completed_quest_names(player))
+        self.assertIn("finalResolutionQuest", completed_quest_names(player))
         pump_event_loop(10)
 
         self.assertEqual("siege", g.getMap().mapName)
@@ -16773,6 +16784,8 @@ class GameTest(unittest.TestCase):
         self.assertEqual(start_gold + 300, player.getGold())
         self.assertEqual(start_life_potions + 1, player.countItems("LifePotion"))
         self.assertIn("defendSiegeQuest", quest_names(player))
+        self.assertNotIn("rescueCaptiveQuest", quest_names(player))
+        self.assertNotIn("finalResolutionQuest", quest_names(player))
 
         return True, json.dumps(
             {
@@ -18148,10 +18161,21 @@ class GameTest(unittest.TestCase):
         g, game_map, player = load_game_map_with_player("hearthfall")
         scene_manager = g.getSceneManager()
 
+        start = find_map_object_definition("hearthfall", "hearthfallStart")
+        player.moveTo(start["x"] // 32, start["y"] // 32, 0)
+        pump_event_loop(5)
+        self.assertIn("hearthfallQuest", quest_names(player))
+
+        game_map.setBoolProperty("victory_reward_claimed", True)
+        gold_before = player.getGold()
+
         game_map.removeObjectByName("watchCaptain")
         self.assertTrue(game_map.getBoolProperty("captain_defeated"))
 
         g.createObject("elderDialog").report_victory()
+        self.assertEqual(gold_before, player.getGold())
+        self.assertNotIn("hearthfallQuest", quest_names(player))
+        self.assertIn("hearthfallQuest", completed_quest_names(player))
         self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
         pump_event_loop(10)
 
