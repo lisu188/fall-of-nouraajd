@@ -171,7 +171,6 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
-    "GameTest.test_inventory_right_click_uses_scroll_and_keeps_it",
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
     "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
@@ -13803,8 +13802,8 @@ class GameTest(unittest.TestCase):
     def test_inventory_right_click_uses_scroll_and_keeps_it(self):
         # [EPIC_03][STORY_01][SUBSTORY_04] #628: right-click delegates to CCreature::useItem,
         # so right-clicking a scroll reads it (opens the blocking CGameTextPanel with its text)
-        # and the non-disposable scroll stays in the inventory. The panel is dismissed with a
-        # queued space key, the same pattern test_blocking_modal_gui_helpers_drive_panels uses.
+        # and the non-disposable scroll stays in the inventory. Observe and close the blocking
+        # panel directly so the regression does not depend on process-global SDL input state.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
         game.CGameLoader.loadGui(g)
@@ -13841,14 +13840,20 @@ class GameTest(unittest.TestCase):
 
         captured = {}
 
-        def capture_text_panel():
-            # Runs on the event loop while mouseEvent blocks in awaitClosing, so it
-            # observes the text panel the scroll's onUse opened before space closes it.
+        def capture_text_panel(panel):
             captured["text_panel_open"] = gui_contains_class(g, "CGameTextPanel")
+            return panel.getType()
 
-        queue_sdl_inputs(game, capture_text_panel, push_space_key)
-        target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
-        pump_event_loop(2)
+        _, panel_type = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameTextPanel",
+            lambda: target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1),
+            capture_text_panel,
+            lambda panel: panel.close(),
+        )
+        self.assertEqual("CGameTextPanel", panel_type)
         self.assertTrue(captured.get("text_panel_open"), "right-click should read the scroll")
         self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
         self.assertEqual(1, player.countItems("letterFromRolf"))
@@ -23513,8 +23518,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 f"{test_name} should be parallelizable, not forced onto the serial shard",
             )
 
-    def test_blocking_scroll_modal_test_runs_in_serial_worker(self):
-        self.assertTrue(is_serial_test_name("GameTest.test_inventory_right_click_uses_scroll_and_keeps_it"))
+    def test_only_order_sensitive_save_tests_run_in_serial_worker(self):
+        self.assertFalse(is_serial_test_name("GameTest.test_inventory_right_click_uses_scroll_and_keeps_it"))
         # The genuinely order-sensitive save-directory tests must stay serial.
         self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
 
