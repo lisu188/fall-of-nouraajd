@@ -14299,20 +14299,15 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_render_only_widget_ignores_mouse_clicks(self):
         game = load_game_module()
-        drain_sdl_events()
         g = game.CGameLoader.loadGame()
-        game.CGameLoader.loadGui(g)
-        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
-        panel = g.getGuiHandler().openPanel("questionPanel")
-        panel.setStringProperty("question", "Render-only widget event coverage?")
-        pump_event_loop(5)
+        panel = g.createObject("questionPanel")
+        widget = next(child for child in panel.getChildren() if child.getType() == "CWidget")
 
-        push_sdl_mouse_click(960, 500, SDL_BUTTON_RIGHT)
-        push_sdl_mouse_click(960, 500, SDL_BUTTON_LEFT)
-        pump_event_loop(5)
-
-        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
-        panel.close()
+        self.assertEqual("renderQuestion", widget.getStringProperty("render"))
+        self.assertEqual("", widget.getStringProperty("click"))
+        for button in (SDL_BUTTON_RIGHT, SDL_BUTTON_LEFT):
+            self.assertFalse(widget.mouseEvent(None, SDL_MOUSEBUTTONDOWN, button, 1, 1))
+            self.assertFalse(widget.mouseEvent(None, SDL_MOUSEBUTTONUP, button, 1, 1))
 
         return True, ""
 
