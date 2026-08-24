@@ -55,18 +55,26 @@ void CGameDialogPanel::reload() {
         auto currentOptions = getCurrentOptions();
         const auto panelRect = getLayout()->getRect(self);
         const auto width = std::max(1, panelRect ? panelRect->w : 1);
+        const auto panelHeight = std::max(1, panelRect ? panelRect->h : 1);
         const int minimumMainPercent = 20;
+        const auto textManager = getGame()->getGui()->getTextManager();
+        const int lineHeight = std::max(1, textManager->getTextureSize("Ag").second);
 
         std::vector<std::tuple<int, std::shared_ptr<CDialogOption>, int>> optionLayouts;
         int totalLines = 0;
         for (const auto &[index, option] : currentOptions) {
             auto optionText = vstd::str(index + 1) + ": " + option->getText();
-            int lines = std::max(1, getGame()->getGui()->getTextManager()->countLines(optionText, width));
+            int lines = std::max(1, textManager->countLines(optionText, width));
             optionLayouts.emplace_back(index, option, lines);
             totalLines += lines;
         }
 
-        const int optionAreaPercent = std::max(0, 100 - minimumMainPercent);
+        const int minimumMainHeight = panelHeight * minimumMainPercent / 100;
+        const int maximumOptionHeight = std::max(0, panelHeight - minimumMainHeight);
+        const int preferredOptionHeight = totalLines * lineHeight;
+        const int optionAreaHeight = std::min(preferredOptionHeight, maximumOptionHeight);
+        const int optionAreaY = panelHeight - optionAreaHeight;
+        const bool compactRowsFit = preferredOptionHeight <= maximumOptionHeight;
         int consumedLines = 0;
         for (const auto &[index, option, lines] : optionLayouts) {
             std::string clickName = vstd::to_hex_hash(option);
@@ -85,13 +93,15 @@ void CGameDialogPanel::reload() {
 
             std::shared_ptr<CLayout> optionWidgetLayout = getGame()->createObject<CLayout>("CLayout");
 
-            const int y0 = optionAreaPercent * consumedLines / std::max(1, totalLines);
+            const int y0 = compactRowsFit ? consumedLines * lineHeight
+                                          : optionAreaHeight * consumedLines / std::max(1, totalLines);
             consumedLines += lines;
-            const int y1 = optionAreaPercent * consumedLines / std::max(1, totalLines);
-            const int height = std::max(1, y1 - y0);
-            optionWidgetLayout->setY(vstd::str(minimumMainPercent + y0) + "%");
+            const int y1 = compactRowsFit ? consumedLines * lineHeight
+                                          : optionAreaHeight * consumedLines / std::max(1, totalLines);
+            const int rowHeight = std::max(1, y1 - y0);
+            optionWidgetLayout->setY(vstd::str(optionAreaY + y0));
             optionWidgetLayout->setW(vstd::str(100) + "%");
-            optionWidgetLayout->setH(vstd::str(height) + "%");
+            optionWidgetLayout->setH(vstd::str(rowHeight));
             optionWidget->setLayout(optionWidgetLayout);
 
             widgets.insert(optionWidget);
@@ -99,8 +109,7 @@ void CGameDialogPanel::reload() {
 
         std::shared_ptr<CLayout> mainWidgetLayout = getGame()->createObject<CLayout>("CLayout");
         mainWidgetLayout->setW(vstd::str(100) + "%");
-        int textSize = optionLayouts.empty() ? 100 : minimumMainPercent;
-        mainWidgetLayout->setH(vstd::str(textSize) + "%");
+        mainWidgetLayout->setH(optionLayouts.empty() ? "100%" : vstd::str(optionAreaY));
         mainWidget->setLayout(mainWidgetLayout);
 
         widgets.insert(mainWidget);
