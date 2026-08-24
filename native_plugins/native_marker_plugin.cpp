@@ -17,47 +17,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "plugin/CPluginAbi.h"
 #include "plugin/CPluginRegistrar.h"
-
-namespace {
-
-constexpr const char *DYNAMIC_MARKER_CONFIG = R"json({
-  "class": "CGameObject",
-  "properties": {
-    "label": "Dynamic native plugin marker",
-    "description": "Registered by a dynamic C++ plugin.",
-    "nativePluginLoaded": true,
-    "dynamicPluginLoaded": true
-  }
-})json";
-
-constexpr const char *DIRECT_MARKER_CONFIG = R"json({
-  "class": "CGameObject",
-  "properties": {
-    "label": "Direct dynamic plugin marker",
-    "description": "Registered by an explicit dynamic C++ plugin load.",
-    "nativePluginLoaded": true,
-    "dynamicPluginLoaded": true,
-    "directDynamicPluginLoaded": true
-  }
-})json";
-
-bool register_marker(const CPluginHostV2 *host, const char *id, const char *config) {
-    auto *registrar = game_plugin_registrar(host);
-    if (registrar == nullptr) {
-        return false;
-    }
-    registrar->log("registering dynamic native marker content");
-    return registrar->registerConfigJson(id, config);
-}
-
-} // namespace
+#include "plugin/NativeMarkerPlugin.h"
 
 extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_v2(const CPluginHostV2 *host) {
-    return register_marker(host, "dynamicNativePluginMarker", DYNAMIC_MARKER_CONFIG);
+    auto *registrar = game_plugin_registrar(host);
+    return registrar != nullptr && native_plugin::register_dynamic_marker(*registrar);
 }
 
 extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_direct_v2(const CPluginHostV2 *host) {
-    return register_marker(host, "directDynamicPluginMarker", DIRECT_MARKER_CONFIG);
+    auto *registrar = game_plugin_registrar(host);
+    return registrar != nullptr && native_plugin::register_direct_dynamic_marker(*registrar);
 }
 
 extern "C" GAME_PLUGIN_EXPORT bool game_plugin_load_bad_api_v2(const CPluginHostV2 *host) {

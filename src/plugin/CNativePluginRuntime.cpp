@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "plugin/CPluginAbi.h"
 #include "plugin/CPluginRegistrar.h"
 #include "plugin/CPluginRuntime.h"
+#include "plugin/NativeMarkerPlugin.h"
+#include "plugin/NativePlugin.h"
 
 #include <filesystem>
 #include <map>
@@ -41,6 +43,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace {
 
 constexpr const char *NATIVE_PLUGIN_DEFAULT_ENTRY = "game_plugin_load_v2";
+
+#if defined(__ANDROID__)
+std::optional<bool> load_android_builtin_plugin(const std::shared_ptr<CGame> &game, const std::string &library,
+                                                const std::string &symbolName) {
+    CPluginRegistrar registrar(game);
+
+    if (library == "plugins/native/native_gameplay" && symbolName == NATIVE_PLUGIN_DEFAULT_ENTRY) {
+        return native_plugin::register_gameplay_types(registrar);
+    }
+
+    if (library == "plugins/native/native_marker_plugin") {
+        if (symbolName == NATIVE_PLUGIN_DEFAULT_ENTRY) {
+            return native_plugin::register_dynamic_marker(registrar);
+        }
+        if (symbolName == "game_plugin_load_direct_v2") {
+            return native_plugin::register_direct_dynamic_marker(registrar);
+        }
+        if (symbolName == "game_plugin_load_bad_api_v2" || symbolName == "game_plugin_load_false_v2") {
+            return false;
+        }
+    }
+
+    return std::nullopt;
+}
+#endif
 
 class CDynamicLibrary {
   public:
@@ -198,6 +225,14 @@ bool loadNativePlugin(const std::shared_ptr<CGame> &game, const std::string &lib
     }
 
     const auto symbolName = entry.empty() ? std::string(NATIVE_PLUGIN_DEFAULT_ENTRY) : entry;
+
+#if defined(__ANDROID__)
+    if (auto loaded = load_android_builtin_plugin(game, library, symbolName)) {
+        return *loaded;
+    }
+    vstd::logger::warning("Android native plugin is not linked into the application:", library, symbolName);
+    return false;
+#else
     const auto resolvedPath = resolve_dynamic_library_path(game->getResourcesProvider(), library);
     if (resolvedPath.empty()) {
         vstd::logger::warning("Failed to resolve dynamic C++ plugin library:", library);
@@ -228,6 +263,7 @@ bool loadNativePlugin(const std::shared_ptr<CGame> &game, const std::string &lib
         vstd::logger::warning("Failed to load dynamic C++ plugin:", library, symbolName);
     }
     return false;
+#endif
 }
 
 } // namespace plugin_runtime
