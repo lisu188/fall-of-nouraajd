@@ -519,6 +519,59 @@ void test_game_object_property_helpers_and_owned_tile_movement() {
                 "public tile coordinate setters should update all tile coordinates");
 }
 
+void test_owned_tile_move_refuses_occupied_destination_atomically() {
+    auto map = std::make_shared<CMap>();
+    auto moving_tile = std::make_shared<CTile>();
+    auto destination_tile = std::make_shared<CTile>();
+
+    expect_true(map->addTile(moving_tile, 1, 1, 0), "moving tile fixture should be added at its origin");
+    expect_true(map->addTile(destination_tile, 2, 1, 0),
+                "destination tile fixture should be added at the contested coordinate");
+
+    const auto revision_before_move = map->getNavigationRevision();
+    moving_tile->moveTo(2, 1, 0);
+
+    expect_true(moving_tile->getCoords() == Coords(1, 1, 0),
+                "a refused tile move should preserve the moving tile coordinates");
+    const bool origin_preserved = map->contains(1, 1, 0);
+    expect_true(origin_preserved, "a refused tile move should preserve the moving tile origin");
+    if (origin_preserved) {
+        expect_true(map->getTile(1, 1, 0) == moving_tile,
+                    "a refused tile move should preserve the moving tile at its origin");
+    }
+    expect_true(map->getTile(2, 1, 0) == destination_tile, "a refused tile move should preserve the destination tile");
+    expect_true(map->getTiles().size() == 2, "a refused tile move should preserve both tiles");
+    expect_true(map->getNavigationRevision() == revision_before_move,
+                "a refused tile move should not report a navigation change");
+}
+
+void test_owned_tile_move_synchronizes_wrapped_equivalent_coordinates_without_navigation_change() {
+    auto map = std::make_shared<CMap>();
+    map->setXBounds({{0, 4}});
+    map->setYBounds({{0, 4}});
+    map->setWrapX({{0, 1}});
+
+    auto tile = std::make_shared<CTile>();
+    tile->setPosx(-1);
+    tile->setPosy(1);
+    tile->setPosz(0);
+    map->setTiles({tile});
+
+    expect_true(map->getTile(4, 1, 0) == tile, "setTiles should index a wrapped tile under its normalized coordinates");
+    expect_true(tile->getCoords() == Coords(-1, 1, 0),
+                "the fixture should retain non-normalized coordinates before movement");
+    const auto revision_before_move = map->getNavigationRevision();
+
+    tile->moveTo(4, 1, 0);
+
+    expect_true(tile->getCoords() == Coords(4, 1, 0),
+                "moveTo should synchronize a tile to wrapped-equivalent target coordinates");
+    expect_true(tile->getMap() == map, "normalization-only movement should preserve the owning map");
+    expect_true(map->getTile(4, 1, 0) == tile, "normalization-only movement should preserve the tile coordinate index");
+    expect_true(map->getNavigationRevision() == revision_before_move,
+                "normalization-only movement should not report a navigation change");
+}
+
 void test_animation_property_events_invalidate_cached_graphics_object() {
     auto game = game_with_registered_types();
     auto object = std::make_shared<PropertyChangeEmitter>();
@@ -2943,6 +2996,8 @@ int main() {
     test_game_object_get_map_prefers_owner_and_falls_back_to_active_map();
     test_game_object_equivalent_value_covers_supported_property_types();
     test_game_object_property_helpers_and_owned_tile_movement();
+    test_owned_tile_move_refuses_occupied_destination_atomically();
+    test_owned_tile_move_synchronizes_wrapped_equivalent_coordinates_without_navigation_change();
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_equip_item_same_instance_is_noop_and_keeps_cursed_lock();

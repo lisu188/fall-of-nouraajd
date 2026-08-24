@@ -377,6 +377,9 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
     const int itemTypeCount = getItemTypesCount(gui);
     clampShift(gui, itemTypeCount);
     const int safeTileSize = std::max(1, tileSize);
+    if (x < 0 || y < 0) {
+        return false;
+    }
     int xIndex = x / safeTileSize;
     int yIndex = y / safeTileSize;
     if (xIndex < 0 || yIndex < 0 || xIndex >= getSizeX(gui) || yIndex >= getSizeY(gui)) {
