@@ -1735,6 +1735,32 @@ void test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks() {
                 "drag-cancel should receive the source object");
 }
 
+void test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping() {
+    auto harness = create_drag_list_harness();
+    harness.source->setDragStart("sourceDragStart");
+    harness.source->setDragCancel("sourceDragCancel");
+    harness.source->setDragValidate("targetDragValidate");
+    harness.source->setDrop("targetDrop");
+
+    harness.source->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 25, 25);
+    expect_true(harness.gui->hasPointerCapture(), "source drag should capture the pointer");
+    harness.gui->updateDragSession(-1, 25);
+
+    SDL_Event release{};
+    release.type = SDL_MOUSEBUTTONUP;
+    release.button.button = SDL_BUTTON_LEFT;
+    release.button.x = -1;
+    release.button.y = 25;
+    harness.gui->event(&release);
+
+    expect_true(harness.panel->drag_validations == 0,
+                "a release just left of the source must not validate slot zero as a drop target");
+    expect_true(harness.panel->drops == 0, "a release just left of the source must not drop the item into slot zero");
+    expect_true(harness.panel->drag_cancels == 1, "a captured release outside the source must cancel the drag once");
+    expect_true(!harness.gui->hasDragSession(), "an outside release must clear the drag session");
+    expect_true(!harness.gui->hasPointerCapture(), "an outside release must clear pointer capture");
+}
+
 void test_list_view_legacy_click_callback_still_fires_without_drag_callbacks() {
     auto harness = create_drag_list_harness();
 
@@ -3296,6 +3322,7 @@ int main() {
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
+    test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping();
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
     test_list_view_non_draggable_does_click_only_press_motion_release();
     test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm();

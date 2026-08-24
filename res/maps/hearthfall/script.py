@@ -45,7 +45,7 @@ def load(self, context):
     @register(context)
     class HearthfallQuest(CQuest):
         def isCompleted(self):
-            return self.getGame().getMap().getBoolProperty("captain_defeated")
+            return self.getGame().getMap().getBoolProperty("victory_reported")
 
         def getObjective(self):
             game_map = self.getGame().getMap()
@@ -81,14 +81,14 @@ def load(self, context):
             if not self.captain_down():
                 return
             game_map.setBoolProperty("victory_reported", True)
+            player = game_map.getPlayer()
             if claim_once(game_map, "victory_reward_claimed"):
-                player = game_map.getPlayer()
                 player.addGold(VICTORY_GOLD_REWARD)
-                player.checkQuests()
                 self.getGame().getGuiHandler().showMessage(
                     "Maren presses the village's hidden purse into your hands. 'The Gravemoor holds our people. "
                     "Bring them home, Warden.'"
                 )
+            player.checkQuests()
             campaign.complete_scenario(self.getGame(), "completed", fallback_map="gravemoor")
 
     @trigger(context, "onEnter", "elderMaren")

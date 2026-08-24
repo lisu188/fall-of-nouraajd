@@ -258,10 +258,16 @@ def apply_carryover(player, carryover):
             player.addGold(gold_max - gold)
     if CARRYOVER_ITEMS_ALLOW in carryover:
         allowed = frozenset(carryover[CARRYOVER_ITEMS_ALLOW])
-        player.removeItem(lambda item: item.getName() not in allowed, True)
+        _remove_inventory_items(player, lambda item: item.getTypeId() not in allowed)
     if CARRYOVER_ITEMS_DENY in carryover:
         denied = frozenset(carryover[CARRYOVER_ITEMS_DENY])
-        player.removeItem(lambda item: item.getName() in denied, True)
+        _remove_inventory_items(player, lambda item: item.getTypeId() in denied)
+
+
+def _remove_inventory_items(player, predicate):
+    match_count = sum(1 for item in player.getItems() if predicate(item))
+    for _ in range(match_count):
+        player.removeItem(predicate, True)
 
 
 class CampaignStateStore:

@@ -5207,6 +5207,13 @@ def walkthrough_hearthfall_map():
     gold_before = player.getGold()
     game_map.removeObjectByName("watchCaptain")
     assert game_map.getBoolProperty("captain_defeated"), "Killing Osric should mark the captain defeated."
+    player.checkQuests()
+    assert (
+        "hearthfallQuest" in quest_names(player)
+    ), "The Hearthfall quest should stay active until victory is reported."
+    assert (
+        "hearthfallQuest" not in completed_quest_names(player)
+    ), "Killing Osric alone must not complete the Hearthfall quest."
 
     # Reporting to Elder Maren pays the village purse and completes the chapter.
     elder = g.createObject("elderDialog")
@@ -13795,8 +13802,8 @@ class GameTest(unittest.TestCase):
     def test_inventory_right_click_uses_scroll_and_keeps_it(self):
         # [EPIC_03][STORY_01][SUBSTORY_04] #628: right-click delegates to CCreature::useItem,
         # so right-clicking a scroll reads it (opens the blocking CGameTextPanel with its text)
-        # and the non-disposable scroll stays in the inventory. The panel is dismissed with a
-        # queued space key, the same pattern test_blocking_modal_gui_helpers_drive_panels uses.
+        # and the non-disposable scroll stays in the inventory. Observe and close the blocking
+        # panel directly so the regression does not depend on process-global SDL input state.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
         game.CGameLoader.loadGui(g)
@@ -13833,14 +13840,20 @@ class GameTest(unittest.TestCase):
 
         captured = {}
 
-        def capture_text_panel():
-            # Runs on the event loop while mouseEvent blocks in awaitClosing, so it
-            # observes the text panel the scroll's onUse opened before space closes it.
+        def capture_text_panel(panel):
             captured["text_panel_open"] = gui_contains_class(g, "CGameTextPanel")
+            return panel.getType()
 
-        queue_sdl_inputs(game, capture_text_panel, push_space_key)
-        target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1)
-        pump_event_loop(2)
+        _, panel_type = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameTextPanel",
+            lambda: target_graphic.mouseEvent(g.getGui(), SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 1, 1),
+            capture_text_panel,
+            lambda panel: panel.close(),
+        )
+        self.assertEqual("CGameTextPanel", panel_type)
         self.assertTrue(captured.get("text_panel_open"), "right-click should read the scroll")
         self.assertFalse(gui_contains_class(g, "CGameTextPanel"))
         self.assertEqual(1, player.countItems("letterFromRolf"))
@@ -14291,20 +14304,15 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_render_only_widget_ignores_mouse_clicks(self):
         game = load_game_module()
-        drain_sdl_events()
         g = game.CGameLoader.loadGame()
-        game.CGameLoader.loadGui(g)
-        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
-        panel = g.getGuiHandler().openPanel("questionPanel")
-        panel.setStringProperty("question", "Render-only widget event coverage?")
-        pump_event_loop(5)
+        panel = g.createObject("questionPanel")
+        widget = next(child for child in panel.getChildren() if child.getType() == "CWidget")
 
-        push_sdl_mouse_click(960, 500, SDL_BUTTON_RIGHT)
-        push_sdl_mouse_click(960, 500, SDL_BUTTON_LEFT)
-        pump_event_loop(5)
-
-        self.assertTrue(gui_contains_class(g, "CGameQuestionPanel"))
-        panel.close()
+        self.assertEqual("renderQuestion", widget.getStringProperty("render"))
+        self.assertEqual("", widget.getStringProperty("click"))
+        for button in (SDL_BUTTON_RIGHT, SDL_BUTTON_LEFT):
+            self.assertFalse(widget.mouseEvent(None, SDL_MOUSEBUTTONDOWN, button, 1, 1))
+            self.assertFalse(widget.mouseEvent(None, SDL_MOUSEBUTTONUP, button, 1, 1))
 
         return True, ""
 
@@ -15608,7 +15616,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(town_hall.can_discuss_victor_records())
         self.assertTrue(town_hall.victor_encounter_active())
         victor_quest = find_player_quest(player, "victorQuest")
-        self.assertIn("Defeat the cultists in the courtyard", victor_quest.getObjective())
+        self.assertIn("Defeat the cult leader in the courtyard", victor_quest.getObjective())
         self.assertIn("75 turns", victor_quest.getHint())
         self.assertEqual(leader.getName(), "cultLeaderQuest")
         self.assertTrue(cultists)
@@ -16763,6 +16771,10 @@ class GameTest(unittest.TestCase):
         captured = g.createObject("capturedSoulDialog")
         self.assertTrue(captured.can_free_captive())
         captured.free_captive()
+        self.assertNotIn("rescueCaptiveQuest", quest_names(player))
+        self.assertNotIn("finalResolutionQuest", quest_names(player))
+        self.assertIn("rescueCaptiveQuest", completed_quest_names(player))
+        self.assertIn("finalResolutionQuest", completed_quest_names(player))
         pump_event_loop(10)
 
         self.assertEqual("siege", g.getMap().mapName)
@@ -16773,6 +16785,8 @@ class GameTest(unittest.TestCase):
         self.assertEqual(start_gold + 300, player.getGold())
         self.assertEqual(start_life_potions + 1, player.countItems("LifePotion"))
         self.assertIn("defendSiegeQuest", quest_names(player))
+        self.assertNotIn("rescueCaptiveQuest", quest_names(player))
+        self.assertNotIn("finalResolutionQuest", quest_names(player))
 
         return True, json.dumps(
             {
@@ -18148,10 +18162,21 @@ class GameTest(unittest.TestCase):
         g, game_map, player = load_game_map_with_player("hearthfall")
         scene_manager = g.getSceneManager()
 
+        start = find_map_object_definition("hearthfall", "hearthfallStart")
+        player.moveTo(start["x"] // 32, start["y"] // 32, 0)
+        pump_event_loop(5)
+        self.assertIn("hearthfallQuest", quest_names(player))
+
+        game_map.setBoolProperty("victory_reward_claimed", True)
+        gold_before = player.getGold()
+
         game_map.removeObjectByName("watchCaptain")
         self.assertTrue(game_map.getBoolProperty("captain_defeated"))
 
         g.createObject("elderDialog").report_victory()
+        self.assertEqual(gold_before, player.getGold())
+        self.assertNotIn("hearthfallQuest", quest_names(player))
+        self.assertIn("hearthfallQuest", completed_quest_names(player))
         self.assertEqual("TransitionPending", scene_manager.getTransitionStateName())
         pump_event_loop(10)
 
@@ -22879,7 +22904,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             active=("cleanseCaveQuest", "victorQuest"),
             completed=completed_quests,
         )
-        self.assertIn("Objective: Defeat the cultists in the courtyard", victor_text)
+        self.assertIn("Objective: Defeat the cult leader in the courtyard", victor_text)
 
         captured_reward_ui = {"dialogs": [], "trades": []}
         heal_amounts = []
@@ -23492,6 +23517,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 is_serial_test_name(test_name),
                 f"{test_name} should be parallelizable, not forced onto the serial shard",
             )
+
+    def test_only_order_sensitive_save_tests_run_in_serial_worker(self):
+        self.assertFalse(is_serial_test_name("GameTest.test_inventory_right_click_uses_scroll_and_keeps_it"))
         # The genuinely order-sensitive save-directory tests must stay serial.
         self.assertTrue(is_serial_test_name("GameTest.test_missing_save_resource_directory_lists_empty"))
 
