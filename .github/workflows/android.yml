@@ -1,6 +1,16 @@
 name: android
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/android.yml"
+      - ".github/workflows/release.yml"
+      - "android/**"
+      - "src/**"
+      - "res/**"
+      - "quest_state.py"
   pull_request:
     types:
       - opened
@@ -9,6 +19,7 @@ on:
       - ready_for_review
     paths:
       - ".github/workflows/android.yml"
+      - ".github/workflows/release.yml"
       - "android/**"
       - "src/**"
       - "res/**"
