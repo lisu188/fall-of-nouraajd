@@ -183,26 +183,19 @@ def choose_player_race(g):
 
 
 def choose_character(g):
-    # Combined class + race character-creation screen: one panel with two columns
-    # of buttons (classes on the left, stat-previewed races on the right), closing
-    # once both are picked. Returns (class_type, race_id); an empty class_type means
-    # the choice was cancelled. Falls back to the sequential menus when either side
-    # has no options (e.g. no player-selectable races), preserving old behaviour.
-    class_options = player_class_options(g)  # {label: player_type}
-    race_options = player_race_options(g)  # {label: race_type}
-    race_display = {}
-    for label, race_type in race_options.items():
-        preview = race_stat_preview(g.createObject(race_type))
-        race_display[f"{label} - {preview}"] = race_type
-    if not class_options or not race_display:
-        return choose_player_class(g), choose_player_race(g)
-    class_label, race_label = g.getGuiHandler().showCharacterCreation(
-        list_string(g, list(class_options.keys())),
-        list_string(g, list(race_display.keys())),
-    )
-    if not class_label:
+    # Keep class and race selection as two distinct screens. Both choices are
+    # required when selectable races exist; closing either screen cancels the
+    # entire character-creation flow. A content set without selectable races
+    # keeps the selected class template's default race for compatibility.
+    player = choose_player_class(g)
+    if not player:
         return "", ""
-    return class_options.get(class_label, class_label), race_display.get(race_label, "")
+    if not player_race_options(g):
+        return player, ""
+    race = choose_player_race(g)
+    if not race:
+        return "", ""
+    return player, race
 
 
 def choose_campaign(g):
@@ -232,7 +225,12 @@ def new():
     CGameLoader.loadGui(g)
     selection = g.getGuiHandler().showSelection(list_string(g, ["NEW", "CAMPAIGN", "LOAD", "RANDOM"]))
     if selection == "NEW":
-        maps = CResourcesProvider.getInstance().getFiles("MAP")
+        campaign_maps = {
+            scenario["map"] for manifest in campaign.list_campaigns() for scenario in manifest["scenarios"].values()
+        }
+        maps = [
+            map_name for map_name in CResourcesProvider.getInstance().getFiles("MAP") if map_name not in campaign_maps
+        ]
         if not maps:
             g.getGuiHandler().showInfo("No maps are available.", True)
             return
