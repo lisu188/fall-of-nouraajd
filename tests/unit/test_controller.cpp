@@ -876,6 +876,28 @@ void test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage() {
                 "monster fight controller should spend the least powerful heal item first");
 }
 
+void test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_drink() {
+    auto game = fight_fixture_game();
+    // hpMax 70, hp 35 (50%, so healing is on the table). The AI spends the WEAKEST heal
+    // first, so the gate must weigh that potion, not the strongest. A power-1 heal restores
+    // ~14; a power-5 heal restores ~35 (capped by missing hp). Against an expected 16 hp hit,
+    // the power-1 potion it would actually drink is a net loss, so the monster must attack
+    // instead -- the old strongest-potion gate green-lit that net-loss drink.
+    auto monster = fight_fixture_monster(game, 10, 35);
+    auto opponent = fight_fixture_hitter(game, 16);
+    auto weak = heal_potion(game, 1);
+    auto strong = heal_potion(game, 5);
+    monster->addItem(weak);
+    monster->addItem(strong);
+    monster->addAction(std::make_shared<CInteraction>());
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent),
+                "monster should still take a turn (attack) when the drinkable heal cannot keep pace");
+    expect_true(monster->getItems().size() == 2 && monster->hasItem(weak) && monster->hasItem(strong),
+                "monster must not spend the weak heal the gate would drink when it is outpaced by the hit");
+}
+
 void test_monster_fight_controller_heals_when_next_hit_would_kill() {
     auto game = fight_fixture_game();
     // hpMax 70, hp 10: the expected 25 hp hit is lethal, so healing is the only play
@@ -1123,6 +1145,7 @@ int main() {
     test_monster_fight_controller_uses_mana_item_when_mana_is_low();
     test_monster_fight_controller_attacks_hard_hitter_instead_of_wasting_heal();
     test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
+    test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_drink();
     test_monster_fight_controller_heals_when_next_hit_would_kill();
     test_monster_fight_controller_ranks_interactions_by_weakening();
     test_monster_fight_controller_applies_missing_self_buff();

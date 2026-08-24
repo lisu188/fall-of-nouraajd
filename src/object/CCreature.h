@@ -123,7 +123,7 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
 
     void hurt(float i);
 
-    int getDmg();
+    int getDmg(bool allowCrit = true);
 
     int getScale();
 
