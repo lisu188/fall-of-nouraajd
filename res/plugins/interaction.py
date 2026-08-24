@@ -84,13 +84,15 @@ def load(self, context):
     @register(context)
     class Devour(CInteraction):
         def performAction(self, first, second):
-            crit = first.getStats().getNumericProperty("crit")
-            first.getStats().setNumericProperty("crit", 0)
-            dmg = first.getDmg()
+            # Devour never crits: ask getDmg to skip the crit roll. The old code tried to
+            # suppress crit by mutating first.getStats(), but getStats() returns a freshly
+            # composed copy on every call, so the mutation did nothing and Devour still crit.
+            dmg = first.getDmg(False)
             if dmg:
                 second.hurt(dmg)
-                first.healProc((dmg * 75) // max(first.getHpMax(), 1))
-            first.getStats().setNumericProperty("crit", crit)
+                # Heal 75% of the damage dealt directly: routing it through an integer percent
+                # of hpMax floors to healProc(0) (= full heal) when dmg*75 < hpMax.
+                first.heal(max(1, dmg * 75 // 100))
 
     @register(context)
     class FrostBolt(CInteraction):
