@@ -524,7 +524,7 @@ void init_game_module(py::module_ &m) {
             "Dispatch a mouse button event to this object.")
         .def(
             "getResolvedRect",
-            [](CGameGraphicsObject &self) {
+            [](CGameGraphicsObject &self) -> py::tuple {
                 auto layout = self.getLayout();
                 if (!layout) {
                     return py::make_tuple(0, 0, 0, 0);
@@ -632,7 +632,7 @@ void init_game_module(py::module_ &m) {
         .def("forObjects", &CMap::forObjects, "Apply a callback for objects matching an optional predicate.")
         .def("canStep", canStep, "Return whether coordinates are walkable.")
         .def("getMovementCost", getMovementCost, "Return the pathfinding movement cost at coordinates.")
-        .def("getTile", getTile, "Return the tile at coordinates, creating the layer default when missing.")
+        .def("getTile", getTile, "Return a tile at coordinates, creating the layer default when missing.")
         .def("dumpPaths", &CMap::dumpPaths, "Write pathfinding diagnostics to a file path.")
         .def("getNavigationRevision", &CMap::getNavigationRevision,
              "Return the revision counter for registered navigation edges.")
