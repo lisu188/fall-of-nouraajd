@@ -16185,6 +16185,70 @@ class GameTest(unittest.TestCase):
         )
 
     @game_test
+    def test_nouraajd_victor_journal_survives_map_transition_and_save_load(self):
+        game = load_game_module()
+        results = {}
+
+        def journalEntry(player):
+            quest = find_player_quest(player, "victorQuest")
+            self.assertIsNotNone(quest)
+            self.assertTrue(quest.isCompleted())
+            self.assertNotIn("victorQuest", quest_names(player))
+            self.assertIn("victorQuest", completed_quest_names(player))
+            return {
+                "objective": quest.getObjective(),
+                "reward": quest.getReward(),
+                "hint": quest.getHint(),
+            }
+
+        for ending in ("good_end", "bad_end"):
+            with self.subTest(ending=ending):
+                scenario = McpScenarioHarness.start("nouraajd")
+                g, game_map, player = scenario.gameInstance, scenario.gameMap, scenario.player
+                scenario.invokeDialogAction("tavernDialog2", "talked_to_victor")
+                town_hall = scenario.invokeDialogAction("townHallDialog", "spawn_cultists")
+                start_gold = player.getGold()
+                if ending == "good_end":
+                    scenario.removeObjectByName("cultLeaderQuest")
+                else:
+                    spawn_turn = game_map.getNumericProperty("VICTOR_COURTYARD_TURN")
+                    game_map.setNumericProperty("turn", spawn_turn + NOURAAJD_VICTOR_TIMEOUT)
+                    town_hall.spawn_cultists()
+                    scenario.pump(3).checkQuests()
+                self.assertEqual(ending, game_map.getStringProperty("quest_state_victor"))
+                self.assertEqual(start_gold + (500 if ending == "good_end" else 0), player.getGold())
+                before = journalEntry(player)
+                self.assertIn("survived" if ending == "good_end" else "was taken", before["objective"])
+                if ending == "bad_end":
+                    self.assertEqual("No reward if Victor's daughter is taken.", before["reward"])
+
+                g.changeMap("ritual")
+                scenario.pump(10)
+                ritual_map = g.getMap()
+                self.assertEqual("ritual", ritual_map.mapName)
+                self.assertTrue(ritual_map.getPlayer() == player)
+                self.assertEqual(before, journalEntry(player))
+                self.assertFalse(hasattr(ritual_map, "quest_state_victor"))
+
+                save_name = unique_save_name("victor_journal_" + ending)
+                cleanup_save_slot(save_name)
+                try:
+                    game.CMapLoader.save(ritual_map, save_name)
+                    loaded_game = game.CGameLoader.loadGame()
+                    game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                    loaded_map = loaded_game.getMap()
+                    loaded_player = loaded_map.getPlayer()
+                    self.assertEqual("ritual", loaded_map.mapName)
+                    self.assertEqual(before, journalEntry(loaded_player))
+                    self.assertEqual(player.getGold(), loaded_player.getGold())
+                    self.assertFalse(hasattr(loaded_map, "quest_state_victor"))
+                finally:
+                    cleanup_save_slot(save_name)
+                results[ending] = before
+
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
     def test_nouraajd_victor_optional_does_not_block_main_progression(self):
         g, game_map, player = load_game_map_with_player("nouraajd")
         town_hall = g.createObject("townHallDialog")
@@ -24662,6 +24726,96 @@ class McpServerTest(unittest.TestCase):
             )
             self.assertIn("ritualQuest", self._serialized_quest_ids(ritual_player))
             self.assertTrue(self._serialized_inventory_has(ritual_player, "LesserLifePotion"))
+        finally:
+            if proc is not None:
+                self._shutdown_process(proc)
+
+    def test_stdio_victor_journal_survives_map_transition(self):
+        proc = None
+        try:
+            proc = self._start_stdio_mcp_process()
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "nouraajd")
+
+            def moveToObject(object_name):
+                definition = find_map_object_definition("nouraajd", object_name)
+                self._mcp_handle_call(
+                    session, player_handle, "moveTo", [definition["x"] // 32, definition["y"] // 32, 0]
+                )
+                self._mcp_pump_event_loop(session)
+
+            def dialogAction(dialog_id, action):
+                source = require_source_dialog("nouraajd", dialog_id)
+                actions, _ = collect_source_dialog_hooks(source["definition"], source.get("document"))
+                self.assertIn(action, actions)
+                dialog = self._mcp_handle_call(session, game_handle, "createObject", [dialog_id])
+                self._mcp_handle_call(session, dialog, "invokeAction", [action])
+                self._mcp_pump_event_loop(session)
+
+            def journalEntry():
+                player_data = json.loads(self._mcp_engine_call(session, "jsonify", [player_handle]))
+                properties = player_data["properties"]
+                active_ids = [quest["properties"].get("typeId") for quest in properties.get("quests") or []]
+                self.assertNotIn("victorQuest", active_ids)
+                completed = [
+                    quest["properties"]
+                    for quest in properties.get("completedQuests") or []
+                    if quest["properties"].get("typeId") == "victorQuest"
+                ]
+                self.assertEqual(1, len(completed))
+                return {name: completed[0][name] for name in ("objective", "reward", "hint")}
+
+            start_event = next(
+                obj
+                for layer in load_map_data("nouraajd")["layers"]
+                for obj in layer.get("objects", [])
+                if obj.get("type") == "StartEvent"
+            )
+            self._mcp_handle_call(session, player_handle, "moveTo", [start_event["x"] // 32, start_event["y"] // 32, 0])
+            self._mcp_pump_event_loop(session)
+            moveToObject("nouraajdTavern")
+            dialogAction("tavernDialog2", "talked_to_victor")
+            moveToObject("nouraajdTownHall")
+            dialogAction("townHallDialog", "spawn_cultists")
+            self.assertEqual(
+                "encounter_active",
+                self._mcp_handle_call(session, map_handle, "getStringProperty", ["quest_state_victor"]),
+            )
+            leader = self._mcp_get_object_by_name(session, map_handle, "cultLeaderQuest")
+            leader_data = json.loads(self._mcp_engine_call(session, "jsonify", [leader]))
+            x, y, z = self._serialized_coords(leader_data)
+            self._mcp_handle_call(session, player_handle, "moveTo", [x + 1, y + 1, z])
+            self._mcp_pump_event_loop(session)
+            start_gold = self._mcp_handle_call(session, player_handle, "getGold")
+            spawn_turn = self._mcp_handle_call(session, map_handle, "getNumericProperty", ["VICTOR_COURTYARD_TURN"])
+            self._mcp_handle_call(
+                session, map_handle, "setNumericProperty", ["turn", spawn_turn + NOURAAJD_VICTOR_TIMEOUT]
+            )
+            moveToObject("nouraajdTownHall")
+            dialogAction("townHallDialog", "spawn_cultists")
+            self._mcp_handle_call(session, player_handle, "checkQuests")
+            self._mcp_pump_event_loop(session)
+            self.assertEqual(
+                "bad_end", self._mcp_handle_call(session, map_handle, "getStringProperty", ["quest_state_victor"])
+            )
+            self.assertIsNone(self._mcp_handle_call(session, map_handle, "getObjectByName", ["cultLeaderQuest"]))
+            before = journalEntry()
+            self.assertIn("was taken", before["objective"])
+            self.assertEqual("No reward if Victor's daughter is taken.", before["reward"])
+            self.assertIn("scrubbed clean", before["hint"])
+            self.assertEqual(start_gold, self._mcp_handle_call(session, player_handle, "getGold"))
+
+            self._mcp_handle_call(session, game_handle, "changeMap", ["ritual"])
+            for _ in range(10):
+                self._mcp_pump_event_loop(session)
+            ritual_map = self._mcp_handle_call(session, game_handle, "getMap")
+            player_handle = self._mcp_handle_call(session, ritual_map, "getPlayer")
+            self.assertEqual(before, journalEntry())
+            self.assertEqual(start_gold, self._mcp_handle_call(session, player_handle, "getGold"))
+            ritual_data = self._mcp_serialized_map(session, ritual_map)
+            self.assertEqual("ritual", ritual_data["properties"]["mapName"])
+            self.assertNotIn("quest_state_victor", ritual_data["properties"])
         finally:
             if proc is not None:
                 self._shutdown_process(proc)
