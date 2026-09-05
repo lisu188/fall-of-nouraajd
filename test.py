@@ -8967,6 +8967,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Sorcerer")
         pump_event_loop()
@@ -9048,6 +9049,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop()
@@ -13493,6 +13495,7 @@ class GameTest(unittest.TestCase):
     def test_empty_selection_list_returns_without_waiting(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
 
         empty_selection = g.createObject("CListString")
@@ -13507,6 +13510,7 @@ class GameTest(unittest.TestCase):
     def test_character_creation_empty_columns_return_without_waiting(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
 
         empty = g.createObject("CListString")
@@ -13779,6 +13783,7 @@ class GameTest(unittest.TestCase):
         # properties, which feed the root layout's runtime overrides.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         gui = g.getGui()
@@ -13890,6 +13895,7 @@ class GameTest(unittest.TestCase):
     def test_detached_inventory_list_view_ignores_stale_item_callbacks(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         player = g.getMap().getPlayer()
@@ -13935,6 +13941,7 @@ class GameTest(unittest.TestCase):
     def test_inventory_double_select_uses_selected_item(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         pump_event_loop(5)
@@ -13979,6 +13986,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop(5)
@@ -14234,6 +14242,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         gui = g.getGui()
@@ -14305,6 +14314,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         gui = g.getGui()
 
@@ -14332,6 +14342,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         panel = g.getGuiHandler().openPanel("questionPanel")
@@ -14405,6 +14416,7 @@ class GameTest(unittest.TestCase):
                 self.assertNotIn("zzFake", provider.getFiles("MAP"))
 
                 g = game.CGameLoader.loadGame()
+                self.addCleanup(g.getContext().shutdown)
                 game.CGameLoader.loadGui(g)
                 game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
                 self.assertEqual("test", g.getMap().mapName)
@@ -23678,6 +23690,70 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertIn("fixture setup failed", result.failures[0][1])
                 context.shutdown.assert_called_once_with()
                 self.assertFalse(context.active)
+
+    def test_gui_fixtures_shutdown_when_gui_loading_fails(self):
+        from unittest.mock import Mock, patch
+
+        methods = (
+            "test_map_proxy_cells_remain_populated_after_player_move",
+            "test_map_proxy_refresh_reuses_children_and_updates_changed_cells",
+            "test_empty_selection_list_returns_without_waiting",
+            "test_character_creation_empty_columns_return_without_waiting",
+            "test_window_resize_scales_percent_panels",
+            "test_detached_inventory_list_view_ignores_stale_item_callbacks",
+            "test_inventory_double_select_uses_selected_item",
+            "test_fight_panel_callbacks_and_list_views",
+            "test_fight_panel_enemy_list_pages_all_living_targets",
+            "test_graphics_object_tree_helpers_are_bound",
+            "test_render_only_widget_ignores_mouse_clicks",
+            "test_resource_provider_resolves_and_loads_known_files",
+        )
+        resources = {
+            "config/tiles.json": "GroundTile",
+            "config/items.json": "{}",
+            "maps/test/map.json": '{"layers": []}',
+            "plugins/effect.py": "def load(context): pass",
+            "fonts/ampersand.ttf": "font fixture",
+            "images/item.png": "image fixture",
+        }
+        with tempfile.TemporaryDirectory() as fixture_dir:
+            fixture_root = Path(fixture_dir)
+            for name, contents in resources.items():
+                path = fixture_root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(contents, encoding="utf-8")
+            provider = types.SimpleNamespace(
+                getPath=lambda name: str(fixture_root / name) if name in resources else "",
+                load=lambda name: resources[name],
+                getFiles=lambda kind: ["test"] if kind == "MAP" else [],
+            )
+            for method_name in methods:
+                with self.subTest(method=method_name):
+                    context = types.SimpleNamespace(active=True)
+                    context.shutdown = Mock(side_effect=lambda: setattr(context, "active", False))
+                    g = types.SimpleNamespace(getContext=lambda: context)
+                    loader = types.SimpleNamespace(
+                        loadGame=Mock(return_value=g),
+                        loadGui=Mock(side_effect=AssertionError("fixture GUI load failed")),
+                    )
+                    game = types.SimpleNamespace(
+                        CGameLoader=loader,
+                        CResourcesProvider=types.SimpleNamespace(getInstance=lambda: provider),
+                    )
+                    result = unittest.TestResult()
+                    with (
+                        patch(f"{__name__}.load_game_module", return_value=game),
+                        patch(f"{__name__}.drain_sdl_events"),
+                    ):
+                        GameTest(method_name).run(result)
+                    self.assertEqual(1, result.testsRun)
+                    self.assertEqual([], result.errors)
+                    self.assertEqual(1, len(result.failures))
+                    self.assertIn("fixture GUI load failed", result.failures[0][1])
+                    loader.loadGame.assert_called_once_with()
+                    loader.loadGui.assert_called_once_with(g)
+                    context.shutdown.assert_called_once_with()
+                    self.assertFalse(context.active)
 
     def test_quest_journal_fixture_shuts_down_every_created_session_after_failure(self):
         from unittest.mock import Mock, patch
