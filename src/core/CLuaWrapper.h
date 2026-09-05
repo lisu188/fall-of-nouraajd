@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CLuaOverrides.h"
 #include "handler/CLuaHandler.h"
 #include "object/CObject.h"
 
@@ -34,6 +35,8 @@ template <> class CLuaWrapper<CTile> : public CTile {
   public:
     using CTile::CTile;
 
+    ~CLuaWrapper() override { CLuaOverrides::release(this); }
+
     void onStep(std::shared_ptr<CCreature> creature) override final {
         if (CLuaHandler::dispatch(this, "onStep", {creature})) {
             return;
@@ -47,6 +50,8 @@ template <> class CLuaWrapper<CEffect> : public CEffect {
 
   public:
     using CEffect::CEffect;
+
+    ~CLuaWrapper() override { CLuaOverrides::release(this); }
 
     void onEffect() override final {
         if (CLuaHandler::dispatch(this, "onEffect")) {
@@ -62,6 +67,8 @@ template <> class CLuaWrapper<CPotion> : public CPotion {
   public:
     using CPotion::CPotion;
 
+    ~CLuaWrapper() override { CLuaOverrides::release(this); }
+
     void onUse(std::shared_ptr<CGameEvent> event) override final {
         if (CLuaHandler::dispatch(this, "onUse", {event})) {
             return;
@@ -75,6 +82,8 @@ template <> class CLuaWrapper<CScroll> : public CScroll {
 
   public:
     using CScroll::CScroll;
+
+    ~CLuaWrapper() override { CLuaOverrides::release(this); }
 
     void onUse(std::shared_ptr<CGameEvent> event) override final {
         if (CLuaHandler::dispatch(this, "onUse", {event})) {
@@ -98,6 +107,8 @@ template <> class CLuaWrapper<CInteraction> : public CInteraction {
   public:
     using CInteraction::CInteraction;
 
+    ~CLuaWrapper() override { CLuaOverrides::release(this); }
+
     void performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override final {
         if (CLuaHandler::dispatch(this, "performAction", {first, second})) {
             return;
@@ -120,6 +131,8 @@ template <> class CLuaWrapper<CTrigger> : public CTrigger {
   public:
     using CTrigger::CTrigger;
 
+    ~CLuaWrapper() override { CLuaOverrides::release(this); }
+
     void trigger(std::shared_ptr<CGameObject> object, std::shared_ptr<CGameEvent> event) override final {
         if (CLuaHandler::dispatch(this, "trigger", {object, event})) {
             return;
@@ -135,6 +148,7 @@ template <> class CLuaWrapper<CTrigger> : public CTrigger {
         V_META(CLuaWrapper<BASE>, BASE, vstd::meta::empty())                                                           \
       public:                                                                                                          \
         using BASE::BASE;                                                                                              \
+        ~CLuaWrapper() override { CLuaOverrides::release(this); }                                                      \
         void onEnter(std::shared_ptr<CGameEvent> event) override final {                                               \
             if (CLuaHandler::dispatch(this, "onEnter", {event})) {                                                     \
                 return;                                                                                                \

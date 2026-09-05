@@ -56,6 +56,19 @@ class CiChangeClassifierTest(unittest.TestCase):
                 self.assertTrue(classification.nativeNeeded)
                 self.assertTrue(classification.coverageNeeded)
 
+    def test_plugin_infrastructure_requires_native_and_coverage_validation(self) -> None:
+        for path in (
+            "src/plugin/CPluginRegistrar.cpp",
+            "src/plugin/CNativePluginRuntime.cpp",
+            "src/plugin/CPluginAbi.h",
+        ):
+            with self.subTest(path=path):
+                classification = self.classify(path)
+                self.assertTrue(classification.nativeNeeded)
+                self.assertTrue(classification.coverageNeeded)
+                self.assertTrue(classification.coverageRelevant)
+                self.assertTrue(classification.nativeEngine)
+
     def test_content_and_unknown_paths_fail_closed_to_native_validation(self) -> None:
         for path in ("res/maps/nouraajd/script.py", "requirements-dev.txt"):
             with self.subTest(path=path):

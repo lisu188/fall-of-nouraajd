@@ -397,6 +397,60 @@ void test_target_controller_flow_field_prefers_longer_lower_cost_route() {
     expect_true(chaser->getCoords() == target->getCoords(), "target weighted detour should reach the target");
 }
 
+void test_target_controller_concurrent_requests_extend_and_reuse_shared_flow() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 257, 1);
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("concurrentTarget");
+    target->setCanStep(true);
+    map->addObject(target);
+
+    std::vector<std::shared_ptr<CCreature>> chasers;
+    for (int x = 8; x <= 256; x += 8) {
+        auto chaser = creature_at(x, 0, 0);
+        chaser->setGame(game);
+        chaser->setName("concurrentChaser" + std::to_string(x));
+        chaser->setLevel(1);
+        chaser->setHp(1);
+        auto controller = std::make_shared<CTargetController>();
+        controller->setTarget(target->getName());
+        chaser->setController(controller);
+        map->addObject(chaser);
+        chasers.push_back(chaser);
+    }
+
+    auto verify_batch = [&](bool blocked) {
+        std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+        // Match map-turn scheduling: start every worker before awaiting any result.
+        // Increasing distances let later workers extend a field an earlier worker reads.
+        for (const auto &chaser : chasers) {
+            pending.push_back(chaser->getController()->control(chaser));
+        }
+        for (std::size_t i = 0; i < chasers.size(); ++i) {
+            const auto start = chasers[i]->getCoords();
+            const auto expected = blocked && start.x > 129 ? start : Coords(start.x - 1, 0, 0);
+            expect_true(pending[i]->get() == expected,
+                        "concurrent flow requests must return the correct corridor step or stay put when blocked");
+        }
+    };
+
+    performance_guard::clearTargetFlowCache();
+    const auto revision = map->getNavigationRevision();
+    verify_batch(false);
+    verify_batch(false);
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "concurrent cold and warm requests must share one flow field");
+    expect_true(map->getNavigationRevision() == revision, "concurrent flow requests must not mutate navigation");
+
+    map->removeTile(129, 0, 0);
+    map->addTile(tile(false), 129, 0, 0);
+    verify_batch(true);
+    expect_true(performance_guard::targetFlowCacheSize() == 2,
+                "concurrent requests after a topology change must share one replacement field");
+    performance_guard::clearTargetFlowCache();
+}
+
 void test_player_controller_prefers_cheap_navigation_edge_over_expensive_band() {
     auto game = std::make_shared<CGame>();
     auto map = weighted_detour_map(game);
@@ -1133,6 +1187,7 @@ int main() {
     test_player_controller_stops_and_clears_path_when_obstacle_appears();
     test_npc_random_controller_prefers_longer_lower_cost_route();
     test_target_controller_flow_field_prefers_longer_lower_cost_route();
+    test_target_controller_concurrent_requests_extend_and_reuse_shared_flow();
     test_player_controller_prefers_cheap_navigation_edge_over_expensive_band();
     test_player_controller_uses_navigation_neighbors_for_cross_level_route();
     test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();

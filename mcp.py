@@ -48,6 +48,7 @@ LOG_LEVELS = {
 MAX_MCP_MESSAGE_BYTES = 1024 * 1024
 MAX_HTTP_SESSIONS = 32
 MAX_HTTP_STREAMS_PER_SESSION = 4
+MAX_MCP_HANDLES_PER_SESSION = 10_000
 MAX_TRACE_STRING_BYTES = 512
 # Handle methods that trigger engine pathfinding from arbitrary, client-supplied coordinates.
 # These are validated against the loaded map extents before invocation so an MCP client cannot
@@ -242,6 +243,13 @@ class ClientStream:
 
 
 @dataclass
+class HandleRegistry:
+    handles: dict[str, Any] = field(default_factory=dict)
+    object_handles: dict[int, str] = field(default_factory=dict)
+    closed: bool = False
+
+
+@dataclass
 class ConnectionState:
     transport: str
     protocol_version: str
@@ -250,6 +258,7 @@ class ConnectionState:
     client_capabilities: dict[str, Any] = field(default_factory=dict)
     client_info: dict[str, Any] = field(default_factory=dict)
     streams: dict[str, ClientStream] = field(default_factory=dict)
+    handle_registry: HandleRegistry = field(default_factory=HandleRegistry)
 
 
 @dataclass
@@ -288,7 +297,8 @@ class EngineMcpServer:
         self.trace_messages = trace_messages
         self.native_log_sink = native_log_sink
         self.native_log_path = native_log_path
-        self.handles: dict[str, Any] = {}
+        self._stdio_handles = HandleRegistry()
+        self.handles = self._stdio_handles.handles
         self.next_handle = 1
         self.exports: dict[str, ExportedCallable] = {}
         self.game_module: Any | None = None
@@ -455,6 +465,12 @@ class EngineMcpServer:
         return None
 
     def serve_stdio(self) -> None:
+        try:
+            self._serveStdioMessages()
+        finally:
+            self._closeHandleRegistry(self._stdio_handles)
+
+    def _serveStdioMessages(self) -> None:
         logger.info("starting stdio MCP server")
         while True:
             try:
@@ -772,6 +788,11 @@ class EngineMcpServer:
 
         new_session_id: str | None = None
         if transport == "stdio":
+            if self.stdio_state is not None:
+                self._closeHandleRegistry(self._stdio_handles)
+                self._stdio_handles = HandleRegistry()
+                self.handles = self._stdio_handles.handles
+            state.handle_registry = self._stdio_handles
             self.stdio_state = state
         else:
             with self._lock:
@@ -866,6 +887,8 @@ class EngineMcpServer:
     def terminate_session(self, session_id: str) -> bool:
         with self._lock:
             state = self.http_sessions.pop(session_id, None)
+            if state is not None:
+                self._closeHandleRegistry(state.handle_registry)
         if state is None:
             return False
         for stream in list(state.streams.values()):
@@ -972,6 +995,29 @@ class EngineMcpServer:
                         "result": {},
                     },
                     "required": ["result"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "engine_release_handles",
+                "title": "Release engine handles",
+                "description": "Release handles no longer needed by this session. Released handles become invalid.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "handles": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "maxItems": MAX_MCP_HANDLES_PER_SESSION,
+                        }
+                    },
+                    "required": ["handles"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {"released": {"type": "integer"}},
+                    "required": ["released"],
                     "additionalProperties": False,
                 },
             },
@@ -1133,7 +1179,7 @@ class EngineMcpServer:
             return result
 
         if tool_name == "engine_call":
-            result = self._engine_call(arguments)
+            result = self._engine_call(arguments, self._handleRegistry(transport, session_id))
             self._emit_log(
                 transport=transport,
                 session_id=session_id,
@@ -1144,7 +1190,7 @@ class EngineMcpServer:
             return result
 
         if tool_name == "engine_handle_call":
-            result = self._engine_handle_call(arguments)
+            result = self._engine_handle_call(arguments, self._handleRegistry(transport, session_id))
             self._emit_log(
                 transport=transport,
                 session_id=session_id,
@@ -1153,6 +1199,24 @@ class EngineMcpServer:
                 data={"message": "tool call completed", "tool": tool_name},
             )
             return result
+
+        if tool_name == "engine_release_handles":
+            handles = arguments.get("handles")
+            if (
+                not isinstance(handles, list)
+                or len(handles) > MAX_MCP_HANDLES_PER_SESSION
+                or any(not isinstance(handle, str) or not handle for handle in handles)
+            ):
+                raise ProtocolError(-32602, "engine_release_handles requires a bounded array of handle strings")
+            registry = self._handleRegistry(transport, session_id)
+            with self._lock:
+                released = sum(self._releaseHandle(registry, handle) for handle in dict.fromkeys(handles))
+            structured = {"released": released}
+            return {
+                "content": [{"type": "text", "text": json.dumps(structured)}],
+                "structuredContent": structured,
+                "isError": False,
+            }
 
         if tool_name == "simulation_run":
             result = self._simulation_run(arguments)
@@ -1178,7 +1242,7 @@ class EngineMcpServer:
 
         raise ProtocolError(-32602, f"Unknown tool: {tool_name}")
 
-    def _engine_call(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _engine_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
         name = arguments.get("name")
         call_args = arguments.get("args", [])
         call_kwargs = arguments.get("kwargs", {})
@@ -1195,10 +1259,10 @@ class EngineMcpServer:
             raise ProtocolError(-32602, f"Callable not exported: {name}")
 
         try:
-            resolved_args = self._resolve_handle_references(call_args)
-            resolved_kwargs = self._resolve_handle_references(call_kwargs)
+            resolved_args = self._resolve_handle_references(call_args, registry)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs, registry)
             result = exported.callable_obj(*resolved_args, **resolved_kwargs)
-            serialized = self._serialize_result(result)
+            serialized = self._serialize_result(result, registry)
             structured = {
                 "name": name,
                 "source": exported.source,
@@ -1232,7 +1296,8 @@ class EngineMcpServer:
                 "isError": True,
             }
 
-    def _engine_handle_call(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _engine_handle_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
+        registry = registry if registry is not None else self._stdio_handles
         handle = arguments.get("handle")
         method = arguments.get("method")
         call_args = arguments.get("args", [])
@@ -1253,7 +1318,9 @@ class EngineMcpServer:
                 "structuredContent": result,
                 "isError": True,
             }
-        if handle not in self.handles:
+        with self._lock:
+            target = registry.handles.get(handle)
+        if target is None:
             result = {"error": f"Unknown handle: {handle}"}
             return {
                 "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
@@ -1261,7 +1328,6 @@ class EngineMcpServer:
                 "isError": True,
             }
 
-        target = self.handles[handle]
         # Authorize against the allowlist BEFORE dereferencing the client-supplied
         # method name. Doing getattr(target, method) first would fire the getter of
         # any non-allowlisted property/descriptor, and the ordering also leaked a
@@ -1294,8 +1360,8 @@ class EngineMcpServer:
             }
 
         try:
-            resolved_args = self._resolve_handle_references(call_args)
-            resolved_kwargs = self._resolve_handle_references(call_kwargs)
+            resolved_args = self._resolve_handle_references(call_args, registry)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs, registry)
         except Exception as exc:
             error_payload = {"error": str(exc)}
             return {
@@ -1314,7 +1380,7 @@ class EngineMcpServer:
 
         try:
             result = method_callable(*resolved_args, **resolved_kwargs)
-            serialized = self._serialize_result(result)
+            serialized = self._serialize_result(result, registry)
             structured = {"result": serialized}
             return {
                 "content": [
@@ -2113,18 +2179,39 @@ class EngineMcpServer:
         except Exception:
             return None
 
-    def _resolve_handle_references(self, value: Any) -> Any:
+    def _handleRegistry(self, transport: str, session_id: str | None) -> HandleRegistry:
+        if transport == "http":
+            return self._require_connection_state(transport, session_id).handle_registry
+        return self._stdio_handles
+
+    @staticmethod
+    def _releaseHandle(registry: HandleRegistry, handle: str) -> int:
+        value = registry.handles.pop(handle, None)
+        if value is None:
+            return 0
+        registry.object_handles.pop(id(value), None)
+        return 1
+
+    def _closeHandleRegistry(self, registry: HandleRegistry) -> None:
+        with self._lock:
+            registry.closed = True
+            registry.handles.clear()
+            registry.object_handles.clear()
+
+    def _resolve_handle_references(self, value: Any, registry: HandleRegistry | None = None) -> Any:
+        registry = registry if registry is not None else self._stdio_handles
         if isinstance(value, list):
-            return [self._resolve_handle_references(item) for item in value]
+            return [self._resolve_handle_references(item, registry) for item in value]
         if isinstance(value, tuple):
-            return tuple(self._resolve_handle_references(item) for item in value)
+            return tuple(self._resolve_handle_references(item, registry) for item in value)
         if isinstance(value, dict):
             handle = value.get("__handle__")
             if isinstance(handle, str):
-                if handle not in self.handles:
-                    raise ProtocolError(-32602, f"Unknown handle: {handle}")
-                return self.handles[handle]
-            return {str(key): self._resolve_handle_references(item) for key, item in value.items()}
+                with self._lock:
+                    if handle not in registry.handles:
+                        raise ProtocolError(-32602, f"Unknown handle: {handle}")
+                    return registry.handles[handle]
+            return {str(key): self._resolve_handle_references(item, registry) for key, item in value.items()}
         return value
 
     def _python_methods_for(self, value: Any) -> list[dict[str, str]]:
@@ -2149,16 +2236,37 @@ class EngineMcpServer:
             methods.update(MCP_ALLOWED_HANDLE_METHODS.get(class_name, set()))
         return methods
 
-    def _serialize_result(self, value: Any) -> Any:
+    def _serialize_result(self, value: Any, registry: HandleRegistry | None = None) -> Any:
+        registry = registry if registry is not None else self._stdio_handles
+        added = []
+        with self._lock:
+            if registry.closed:
+                raise ProtocolError(-32001, "Session has been terminated")
+            try:
+                return self._serializeValue(value, registry, added)
+            except Exception:
+                for handle in added:
+                    self._releaseHandle(registry, handle)
+                raise
+
+    def _serializeValue(self, value: Any, registry: HandleRegistry, added: list[str]) -> Any:
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
         if isinstance(value, (list, tuple)):
-            return [self._serialize_result(item) for item in value]
+            return [self._serializeValue(item, registry, added) for item in value]
         if isinstance(value, dict):
-            return {str(key): self._serialize_result(item) for key, item in value.items()}
-        handle = f"h_{self.next_handle}"
-        self.next_handle += 1
-        self.handles[handle] = value
+            return {str(key): self._serializeValue(item, registry, added) for key, item in value.items()}
+        handle = registry.object_handles.get(id(value))
+        if handle is None or registry.handles.get(handle) is not value:
+            if len(registry.handles) >= MAX_MCP_HANDLES_PER_SESSION:
+                raise ProtocolError(
+                    -32003, "Session handle limit reached; release unused handles with engine_release_handles"
+                )
+            handle = f"h_{self.next_handle}"
+            self.next_handle += 1
+            registry.handles[handle] = value
+            registry.object_handles[id(value)] = handle
+            added.append(handle)
         result = {"__handle__": handle, "__type__": value.__class__.__name__, "repr": repr(value)}
         python_methods = self._python_methods_for(value)
         if python_methods:
@@ -2281,7 +2389,10 @@ class EngineMcpServer:
                 while raw and not raw.endswith(b"\n"):
                     raw = sys.stdin.buffer.readline(8192)
                 raise ProtocolError(-32600, "MCP stdio message exceeds 1 MiB limit")
-            line = raw.decode("utf-8").strip()
+            try:
+                line = raw.decode("utf-8").strip()
+            except UnicodeDecodeError as exc:
+                raise ProtocolError(-32700, "Parse error: invalid UTF-8") from exc
             if not line:
                 continue
             return json.loads(line)
@@ -2524,7 +2635,7 @@ class EngineHttpRequestHandler(BaseHTTPRequestHandler):
         try:
             raw_body = self.rfile.read(length)
             payload = json.loads(raw_body.decode("utf-8"))
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32700, "Parse error")
             return
 

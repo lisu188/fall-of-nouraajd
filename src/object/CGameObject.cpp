@@ -28,6 +28,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <typeindex>
 #include <utility>
 
+std::unordered_map<const CGameObject *, pybind11::object> &CPythonOverrides::instances() {
+    // One exported registry serves both the engine and hidden-visibility Python
+    // extension. Keep it alive past Python finalization without destroying objects.
+    static auto *registry = new std::unordered_map<const CGameObject *, pybind11::object>();
+    return *registry;
+}
+
 namespace {
 
 using ObjectPair = std::pair<const CGameObject *, const CGameObject *>;

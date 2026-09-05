@@ -31,6 +31,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/CTextureCache.h"
+#include "gui/CTextManager.h"
+#include "gui/CTooltip.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
@@ -188,6 +190,7 @@ class QuestTextCountingPanel : public CGameQuestPanel {
     }
 
     int build_count = 0;
+    int paragraph_measure_count = 0;
 
   protected:
     std::shared_ptr<CPlayer> resolveQuestSource(const std::shared_ptr<CGui> &) override { return resolvedQuestSource; }
@@ -199,6 +202,12 @@ class QuestTextCountingPanel : public CGameQuestPanel {
     std::string buildText(const std::shared_ptr<CPlayer> &player) override {
         ++build_count;
         return CGameQuestPanel::buildText(player);
+    }
+
+    int measureParagraphHeight(const std::shared_ptr<CTextManager> &textManager, const std::string &text,
+                               int width) override {
+        ++paragraph_measure_count;
+        return CGameQuestPanel::measureParagraphHeight(textManager, text, width);
     }
 
   private:
@@ -506,6 +515,34 @@ void test_layout_minimum_size_floors_percentage_panels() {
     childLayout->setMinW(-50);
     childLayout->setMinH(-50);
     expect_rect(childLayout->getRect(child), 374, 160, 533, 400, "negative minimum sizes should be ignored");
+}
+
+void test_repeated_gui_creation_preserves_live_window_and_renderer() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto survivor = std::make_shared<CGui>();
+    auto window = SDL_RenderGetWindow(survivor->getRenderer());
+    expect_true(window != nullptr, "surviving GUI should own a window");
+    if (!window) {
+        return;
+    }
+    const auto windowId = SDL_GetWindowID(window);
+    // Cross SDL 2's eight-bit subsystem reference-count boundary while retaining
+    // a window whose renderer must remain usable after later GUI construction.
+    for (int index = 0; index < 270; ++index) {
+        auto transient = std::make_shared<CGui>();
+        expect_true(SDL_GetWindowFromID(windowId) == window, "later GUI construction must preserve live windows");
+    }
+    expect_true(SDL_SetRenderDrawColor(survivor->getRenderer(), 17, 34, 51, 255) == 0,
+                "the surviving renderer should still accept draw commands");
+    expect_true(SDL_RenderClear(survivor->getRenderer()) == 0, "the surviving renderer should clear its surface");
+    Uint32 pixel = 0;
+    SDL_Rect sample{0, 0, 1, 1};
+    expect_true(
+        SDL_RenderReadPixels(survivor->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel, sizeof(pixel)) == 0,
+        "the surviving renderer should support pixel readback");
+    expect_true((pixel & 0x00ffffffu) == 0x00112233u, "the surviving surface should contain the rendered color");
 }
 
 void test_gui_window_is_resizable_and_guard_paths_fail_closed() {
@@ -872,6 +909,157 @@ void test_quest_panel_rebuilds_text_only_when_quest_data_changes() {
     expect_true(updated.find("[Active] Recover the sunken sigil") != std::string::npos,
                 "quest panel should keep rendering still-active quests after a rebuild");
     expect_true(panel->build_count == 2, "a quest-log change should trigger exactly one coalesced rebuild");
+}
+
+void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 800, 600));
+    panel->setResolvedQuestSource(player);
+    gui->pushChild(panel);
+
+    std::set<std::shared_ptr<CQuest>> completed;
+    for (int i = 0; i < 60; ++i) {
+        auto quest = std::make_shared<CQuest>();
+        quest->setDescription("Completed campaign chapter " + std::to_string(i) + ": recover the town's lost relic.");
+        completed.insert(quest);
+    }
+    auto active = std::make_shared<CQuest>();
+    active->setDescription("FINAL ACTIVE OBJECTIVE");
+    player->setCompletedQuests(completed);
+    player->setQuests({active});
+    expect_true(panel->getText(gui).size() > 4096, "journal fixture should exceed the whole-text texture limit");
+    const auto firstPage = panel->getViewportText(gui);
+    const int firstMeasures = panel->paragraph_measure_count;
+    expect_true(firstMeasures > 0, "journal should measure its paragraphs on the first layout");
+    for (int frame = 0; frame < 20; ++frame) {
+        gui->render(frame);
+    }
+    expect_true(panel->paragraph_measure_count == firstMeasures && panel->build_count == 1,
+                "idle journal rendering must not rebuild text or remeasure paragraphs");
+    expect_true(firstPage.find("[Completed]") != std::string::npos &&
+                    firstPage.find("FINAL ACTIVE OBJECTIVE") == std::string::npos,
+                "the initial viewport should show history before the distant active objective");
+
+    SDL_Event key{};
+    key.type = SDL_KEYDOWN;
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() > 0 && panel->getScrollOffset() == panel->getScrollMaximum(),
+                "End should reach the bottom of a long journal through normal GUI input");
+    expect_true(panel->getViewportText(gui).find("FINAL ACTIVE OBJECTIVE") != std::string::npos,
+                "the final active objective must remain reachable beyond 4096 bytes of completed history");
+    const int bottom = panel->getScrollOffset();
+    key.key.keysym.sym = SDLK_PAGEUP;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() < bottom && panel->getScrollOffset() > 0,
+                "Page Up should move through intermediate journal history");
+    key.key.keysym.sym = SDLK_PAGEDOWN;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() == bottom, "Page Down should return to the final page");
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    expect_true(panel->getViewportText(gui) == firstPage && panel->getScrollOffset() == 0,
+                "Home should restore the initial viewport exactly");
+
+    SDL_Event wheel{};
+    wheel.type = SDL_MOUSEWHEEL;
+    wheel.wheel.y = -1;
+    gui->event(&wheel);
+    expect_true(panel->getScrollOffset() > 0, "mouse-wheel scrolling should navigate the journal");
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    key.key.keysym.sym = SDLK_DOWN;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() > 0, "Down should move by a line");
+    key.key.keysym.sym = SDLK_UP;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() == 0, "Up should restore the previous line");
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->paragraph_measure_count == firstMeasures, "scrolling must reuse all measured paragraph heights");
+    panel->getLayout()->setRuntimeW(400);
+    expect_true(panel->getViewportText(gui).size() > 0, "a resized journal should rebuild wrapping and retain content");
+    expect_true(panel->build_count == 1, "scrolling and resizing must reuse the cached quest text");
+    expect_true(panel->paragraph_measure_count == 2 * firstMeasures,
+                "a width change should remeasure every paragraph exactly once");
+
+    std::string unicodeDescription;
+    for (int i = 0; i < 1800; ++i) {
+        unicodeDescription += "\xe2\x98\x85";
+    }
+    unicodeDescription += " UNICODE JOURNAL END";
+    active->setDescription(unicodeDescription);
+    player->setCompletedQuests({});
+    panel->refreshFromQuestsChanged();
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    auto containsCompleteStars = [](const std::string &text) {
+        for (std::size_t i = 0; i < text.size(); ++i) {
+            if (static_cast<unsigned char>(text[i]) >= 0x80) {
+                if (text.compare(i, 3, "\xe2\x98\x85") != 0) {
+                    return false;
+                }
+                i += 2;
+            }
+        }
+        return true;
+    };
+    key.key.keysym.sym = SDLK_PAGEDOWN;
+    for (int page = 0; page < 100; ++page) {
+        expect_true(containsCompleteStars(panel->getViewportText(gui)),
+                    "journal texture chunks must never split UTF-8 codepoints");
+        if (panel->getScrollOffset() == panel->getScrollMaximum()) {
+            break;
+        }
+        gui->event(&key);
+    }
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->getViewportText(gui).find("UNICODE JOURNAL END") != std::string::npos,
+                "a single long Unicode paragraph must remain readable to its end");
+
+    player->setCompletedQuests({});
+    player->setQuests({});
+    drain_event_loop();
+    expect_true(panel->getViewportText(gui).find("No active quests.") != std::string::npos,
+                "a shortened journal should clamp the viewport back to its remaining text");
+    expect_true(panel->getScrollMaximum() == 0 && panel->getScrollOffset() == 0,
+                "clearing quests must not leave an empty scrolled viewport");
+}
+
+void test_populated_list_releases_owning_view_and_ignores_expired_callbacks() {
+    auto harness = create_drag_list_harness();
+    type_registration::registerGuiAnimationTypes();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        harness.game->getObjectHandler()->registerType(name, builder);
+    }
+    harness.panel->sourceItem->setAnimation("images/item");
+    harness.source->refresh();
+    expect_true(!harness.source->getChildren().empty(), "lifetime fixture should populate actual list proxy children");
+    std::shared_ptr<CAnimation> retainedAnimation;
+    for (auto graphic : harness.source->getProxiedObjects(harness.gui, 0, 0)) {
+        auto animation = vstd::cast<CAnimation>(graphic);
+        if (animation && animation->getObject() == harness.panel->sourceItem) {
+            retainedAnimation = animation;
+        }
+    }
+    expect_true(retainedAnimation != nullptr, "lifetime fixture should retain an actual item callback");
+    std::weak_ptr<CListView> weakList = harness.source;
+    harness.panel->close();
+    harness.source.reset();
+    harness.target.reset();
+    harness.panel.reset();
+    expect_true(weakList.expired(), "item callbacks must not retain a closed populated list view");
+    if (retainedAnimation) {
+        expect_true(retainedAnimation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0),
+                    "a retained item callback should safely consume input after its owner expires");
+    }
+    expect_true(!harness.gui->hasDragSession(), "an expired item callback must not start a drag");
 }
 
 void test_quest_panel_resubscribes_when_quest_source_changes() {
@@ -2673,6 +2861,132 @@ void test_render_context_copy_ex_rotates_and_tracks_stats() {
     expect_true(stats.failedCopies == 0, "render context copyEx should not count failed copies for valid smoke path");
 }
 
+void testTextMetricsCacheAndExpiredGuiFallbacks() {
+    auto gui = std::make_shared<CGui>();
+    auto manager = std::make_shared<CTextManager>(gui);
+    const auto shortSize = manager->getTextureSize("Short");
+    const auto longSize = manager->getTextureSize("A longer second line");
+    const auto multilineSize = manager->getTextureSize("Short\nA longer second line");
+    expect_true(shortSize.first > 0 && shortSize.second > 0, "the font must produce nonempty text metrics");
+    expect_true(multilineSize.first == longSize.first && multilineSize.second == shortSize.second + longSize.second,
+                "multiline metrics must use the widest line and sum line heights");
+    const std::string bounded(4096, 'W');
+    expect_true(manager->getWrappedTextureSize(bounded + "discarded suffix", 10000) ==
+                    manager->getWrappedTextureSize(bounded, 8192),
+                "oversized render requests must share the documented byte and wrap-width bounds");
+    for (int index = 0; index < 513; ++index) {
+        manager->getTextureSize("cache entry " + std::to_string(index));
+    }
+    expect_true(manager->getTextureSize("Short") == shortSize, "cache eviction must preserve recomputed metrics");
+
+    auto viewport = std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 80, 40});
+    manager->drawTextScrolled("ignored", nullptr, 0);
+    manager.reset();
+    manager = std::make_shared<CTextManager>(gui);
+    gui.reset();
+    expect_true(manager->getTextureSize("uncached after shutdown") == std::make_pair(0, 0),
+                "an expired GUI must not produce new text textures");
+    expect_true(manager->countLines("no renderer", 80) == 1,
+                "line counting without a renderer must retain the safe one-line fallback");
+    manager->drawText("no renderer", 0, 0, 80);
+    manager->drawTextCentered("no renderer", viewport);
+    manager->drawTextScrolled("no renderer", viewport, -10);
+}
+
+void testRenderContextRestoresClipAndRejectsInvalidCopies() {
+    auto gui = std::make_shared<CGui>();
+    auto otherGui = std::make_shared<CGui>();
+    auto &context = gui->getRenderContext();
+    CRenderContext detached;
+    SDL_Rect target{0, 0, 4, 4};
+    expect_true(!detached.copy(nullptr, nullptr, target) && detached.getStats().skippedCopies == 1,
+                "a detached render context must skip copies before calling SDL");
+    auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32));
+    expect_true(surface != nullptr, "copy validation needs a real source surface");
+    if (!surface) {
+        return;
+    }
+    auto texture = fn::sdl::TexturePtr(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get()));
+    auto foreignTexture = fn::sdl::TexturePtr(SDL_CreateTextureFromSurface(otherGui->getRenderer(), surface.get()));
+    expect_true(texture && foreignTexture, "copy validation needs textures from both renderers");
+    if (!texture || !foreignTexture) {
+        return;
+    }
+    const SDL_Rect previousClip{3, 4, 10, 11};
+    const SDL_Rect temporaryClip{1, 2, 5, 6};
+    SDL_RenderSetClipRect(gui->getRenderer(), &previousClip);
+    expect_true(context.copyEx(texture.get(), nullptr, target, 0, nullptr, SDL_FLIP_NONE, &temporaryClip),
+                "a clipped copyEx must accept its renderer's texture");
+    SDL_Rect restored{};
+    SDL_RenderGetClipRect(gui->getRenderer(), &restored);
+    expect_true(SDL_RenderIsClipEnabled(gui->getRenderer()) && restored.x == previousClip.x &&
+                    restored.y == previousClip.y && restored.w == previousClip.w && restored.h == previousClip.h,
+                "a temporary copy clip must restore the caller's enabled clip rectangle");
+    expect_true(!context.copy(texture.get(), nullptr, static_cast<const SDL_Rect *>(nullptr)),
+                "missing copy destinations must be rejected");
+    expect_true(!context.copy(texture.get(), nullptr, SDL_Rect{0, 0, 0, 4}),
+                "zero-width copy destinations must be rejected");
+    expect_true(!context.copy(foreignTexture.get(), nullptr, target),
+                "a texture from another renderer must report an SDL copy failure");
+    const auto stats = context.getStats();
+    expect_true(stats.attemptedCopies == 4 && stats.successfulCopies == 1 && stats.skippedCopies == 2 &&
+                    stats.failedCopies == 1,
+                "copy statistics must distinguish invalid arguments from SDL failures");
+    SDL_RenderSetClipRect(gui->getRenderer(), nullptr);
+}
+
+void testTextureMaskPreservesPixelsAcrossSurfaceFormats() {
+    auto gui = std::make_shared<CGui>();
+    expect_true(!CTextureUtil::calculateAlpha(gui->getRenderer(), nullptr), "missing alpha surfaces must be rejected");
+    for (Uint32 format :
+         {SDL_PIXELFORMAT_INDEX8, SDL_PIXELFORMAT_RGB565, SDL_PIXELFORMAT_RGB24, SDL_PIXELFORMAT_RGBA32}) {
+        auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 3, 3, SDL_BITSPERPIXEL(format), format));
+        expect_true(surface != nullptr, "each supported byte depth must create a real surface");
+        if (!surface) {
+            continue;
+        }
+        if (surface->format->palette) {
+            const SDL_Color colors[] = {{0, 0, 0, 255}, {255, 255, 255, 255}, {255, 0, 0, 255}};
+            SDL_SetPaletteColors(surface->format->palette, colors, 0, 3);
+        }
+        SDL_FillRect(surface.get(), nullptr, SDL_MapRGB(surface->format, 255, 255, 255));
+        CTextureUtil::setPixelColor(surface.get(), 1, 1, {255, 0, 0, 255});
+        auto texture = CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface));
+        expect_true(texture != nullptr, "mask conversion must preserve every supported surface format");
+        if (!texture) {
+            continue;
+        }
+        SDL_SetTextureBlendMode(texture.get(), SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(gui->getRenderer(), 0, 0, 255, 255);
+        SDL_RenderClear(gui->getRenderer());
+        SDL_Rect target{0, 0, 3, 3};
+        expect_true(gui->getRenderContext().copy(texture.get(), nullptr, target), "masked texture must render");
+        Uint32 pixels[9]{};
+        expect_true(SDL_RenderReadPixels(gui->getRenderer(), &target, SDL_PIXELFORMAT_ARGB8888, pixels,
+                                         3 * sizeof(Uint32)) == 0,
+                    "masked texture must support pixel readback");
+        expect_true((pixels[0] & 0x00ffffff) == 0x0000ff && (pixels[4] & 0x00ffffff) == 0xff0000,
+                    "the connected corner mask must be transparent while the red center remains visible");
+    }
+}
+
+void testTooltipConsumesInputAndClosesOnlyOnRightRelease() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto tooltip = std::make_shared<CTooltip>();
+    tooltip->setText("inspect item");
+    parent->addChild(tooltip);
+    expect_true(tooltip->getText() == "inspect item", "tooltip content must remain available to the renderer");
+    expect_true(tooltip->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a), "tooltips must consume keyboard input");
+    tooltip->renderObject(nullptr, nullptr, 0);
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0);
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0);
+    expect_true(tooltip->getParent() == parent, "other mouse phases must not close the tooltip");
+    expect_true(tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0),
+                "right release must be consumed when closing the tooltip");
+    expect_true(!tooltip->getParent(), "right release must detach the tooltip");
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0);
+}
+
 void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -2845,6 +3159,46 @@ void test_dialog_panel_current_options_preserve_numeric_display_order() {
 
     expect_true(displayedOptions == std::vector<std::string>({"1: first", "2: second", "3: third"}),
                 "dialog panel should display options from lowest dialog number to highest");
+}
+
+void test_dialog_option_callback_closes_and_releases_its_panel() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto option = std::make_shared<CDialogOption>();
+    option->setNumber(0);
+    option->setText("Leave");
+    option->setNextStateId("EXIT");
+    auto state = std::make_shared<CDialogState>();
+    state->setStateId("ENTRY");
+    state->setText("Welcome, traveler.");
+    state->setOptions({option});
+    auto dialog = std::make_shared<CDialog>();
+    dialog->setStates({state});
+    auto panel = std::make_shared<CGameDialogPanel>();
+    panel->setGame(game);
+    panel->setLayout(fixed_layout(0, 0, 800, 600));
+    panel->setDialog(dialog);
+    gui->pushChild(panel);
+    panel->reload();
+    std::string click;
+    for (const auto &child : panel->getChildren()) {
+        if (auto widget = vstd::cast<CWidget>(child); widget && !widget->getClick().empty()) {
+            click = widget->getClick();
+        }
+    }
+    expect_true(!click.empty(), "dialog reload should install a clickable option");
+    if (!click.empty()) {
+        panel->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(click, panel, gui);
+    }
+    expect_true(!panel->getGui(), "the installed option callback should still close its dialog");
+    std::weak_ptr<CGameDialogPanel> weakPanel = panel;
+    panel.reset();
+    expect_true(weakPanel.expired(), "a closed dialog must expire even after installing dynamic option callbacks");
 }
 
 // Exercises the opt-in resize handle purely through geometry/state: no renderer, no real SDL input.
@@ -3276,8 +3630,7 @@ void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
     escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a);
     expect_true(!escaped->hasChoice(), "unrelated keys leave the browser open");
     escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
-    expect_true(escaped->hasChoice() && escaped->awaitChoice().empty(),
-                "escape cancels the browser with the empty id");
+    expect_true(escaped->hasChoice() && escaped->awaitChoice().empty(), "escape cancels the browser with the empty id");
 }
 
 int main() {
@@ -3293,6 +3646,8 @@ int main() {
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
     test_character_panel_sheet_lines_render_race_and_class_labels();
     test_dialog_panel_current_options_preserve_numeric_display_order();
+    test_dialog_option_callback_closes_and_releases_its_panel();
+    test_populated_list_releases_owning_view_and_ignores_expired_callbacks();
     test_panel_opt_in_resize_handle_drag_resizes_within_bounds();
     test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture();
     test_panel_resize_handle_press_resizes_subclass_panel_with_mouse_override();
@@ -3307,6 +3662,7 @@ int main() {
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_list_view_refresh_property_collision_fails_closed();
     test_quest_panel_rebuilds_text_only_when_quest_data_changes();
+    test_quest_journal_navigation_reaches_history_beyond_texture_limit();
     test_quest_panel_resubscribes_when_quest_source_changes();
     test_quest_panel_rebuilds_when_quest_state_properties_change();
     test_reactive_list_views_refresh_counts_match_model_changes_exactly();
@@ -3320,6 +3676,7 @@ int main() {
     test_fight_panel_right_click_item_use_still_works();
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
+    test_repeated_gui_creation_preserves_live_window_and_renderer();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
     test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping();
@@ -3353,6 +3710,10 @@ int main() {
     test_texture_cache_without_gui_fails_closed();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
     test_render_context_copy_ex_rotates_and_tracks_stats();
+    testTextMetricsCacheAndExpiredGuiFallbacks();
+    testRenderContextRestoresClipAndRejectsInvalidCopies();
+    testTextureMaskPreservesPixelsAcrossSurfaceFormats();
+    testTooltipConsumesInputAndClosesOnlyOnRightRelease();
     test_minimap_bounds_extreme_metadata_fails_closed();
     test_minimap_bounds_overflow_prone_extents_fail_closed();
     test_minimap_bounds_sparse_coordinates_fail_closed();
