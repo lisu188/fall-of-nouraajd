@@ -245,6 +245,9 @@ class CSerialization {
 
     static std::string generateName(const std::shared_ptr<CGameObject> &object);
 
+    // Clone contained actors while retaining effect references to actors outside the cloned object.
+    static std::shared_ptr<CGameObject> cloneObject(const std::shared_ptr<CGameObject> &object);
+
     static std::string generateName(const std::shared_ptr<CGameObject> &object,
                                     const std::function<bool(const std::string &)> &isNameTaken);
 

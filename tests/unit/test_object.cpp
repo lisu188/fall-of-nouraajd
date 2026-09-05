@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
 #include "core/CStats.h"
@@ -50,6 +51,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <map>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <typeindex>
 #include <utility>
@@ -3000,6 +3002,332 @@ void test_interaction_effect_routes_to_caster_via_self_target() {
     expect_true(interaction->effectRoutesToCaster(buff), "selfTarget keeps a buff on the caster");
 }
 
+// Saved effect persistence regressions.
+using EffectObjectJson = CSerializerFunction<std::shared_ptr<json>, std::shared_ptr<CGameObject>>;
+
+std::shared_ptr<CGame> makeEffectSnapshotGame() {
+    CTypes::register_type<CGameObject>();
+    CTypes::register_type<CMapObject, CGameObject>();
+    CTypes::register_type<CMap, CGameObject>();
+    CTypes::register_type<CCreature, CMapObject, CGameObject>();
+    CTypes::register_type<CEffect, CGameObject>();
+    CTypes::register_type<CStats, CGameObject>();
+    CTypes::register_type<CController, CGameObject>();
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    return game;
+}
+
+std::shared_ptr<CCreature> makeEffectActor(const std::shared_ptr<CGame> &game, const std::string &name) {
+    auto actor = std::make_shared<CCreature>();
+    actor->setGame(game);
+    actor->setName(name);
+    actor->setLevel(1);
+    actor->getBaseStats()->setStamina(10);
+    actor->setHp(50);
+    return actor;
+}
+
+std::shared_ptr<CEffect> attachSavedEffect(const std::shared_ptr<CCreature> &victim,
+                                           const std::shared_ptr<CCreature> &caster, const std::string &name) {
+    auto effect = std::make_shared<CEffect>();
+    effect->setGame(victim->getGame());
+    effect->setName(name);
+    effect->setDuration(5);
+    effect->setCumulative(true);
+    effect->getBonus()->setArmor(7);
+    effect->setCaster(caster);
+    effect->setVictim(victim);
+    effect->apply(victim);
+    effect->apply(victim);
+    victim->addEffect(effect);
+    return effect;
+}
+
+std::shared_ptr<CEffect> findSavedEffect(const std::shared_ptr<CCreature> &actor, const std::string &name) {
+    if (actor) {
+        for (const auto &effect : actor->getEffects()) {
+            if (effect && effect->getName() == name) {
+                return effect;
+            }
+        }
+    }
+    expect_true(false, "a saved creature must retain its named active effect");
+    return nullptr;
+}
+
+void assertSavedEffectState(const std::shared_ptr<CEffect> &effect) {
+    if (!effect) {
+        return;
+    }
+    expect_true(effect->getDuration() == 5 && effect->getTimeTotal() == 5 && effect->getTimeLeft() == 3,
+                "saving or cloning must preserve the original duration and partially elapsed timer");
+    expect_true(effect->getBonus() && effect->getBonus()->getArmor() == 7,
+                "saving or cloning must preserve the configured defense bonus");
+    expect_true(effect->getCumulative(), "saving or cloning must preserve the cumulative flag");
+}
+
+void testSavedSelfEffectPreservesStateAndRemainingApplications() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "wardedActor");
+    auto effect = attachSavedEffect(actor, actor, "selfWard");
+    auto serialized = EffectObjectJson::serialize(actor);
+    CSerialization::StrictScope strict;
+    auto restored = std::dynamic_pointer_cast<CCreature>(EffectObjectJson::deserialize(game, serialized));
+    auto restored_effect = findSavedEffect(restored, "selfWard");
+    assertSavedEffectState(restored_effect);
+    if (restored_effect) {
+        expect_true(restored_effect->getCaster() == restored && restored_effect->getVictim() == restored,
+                    "self-targeted effect references must resolve to the restored creature");
+        expect_true(restored->getStats()->getArmor() == actor->getStats()->getArmor(),
+                    "the restored creature must receive the same active defense bonus");
+        expect_true(restored_effect->getBonus() != effect->getBonus(), "snapshot stats must be independent objects");
+        for (int remaining = 2; remaining >= 0; --remaining) {
+            restored_effect->apply(restored);
+            expect_true(restored_effect->getTimeLeft() == remaining,
+                        "restored effects must expire after remaining turns");
+        }
+        restored_effect->apply(restored);
+        expect_true(restored_effect->getTimeLeft() == 0, "an expired restored effect must not restart or underflow");
+    }
+    actor->setEffects({});
+    if (restored) {
+        restored->setEffects({});
+    }
+}
+
+void testSavedMapEffectResolvesForwardAndDetachedActorReferences() {
+    auto game = makeEffectSnapshotGame();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    auto victim = makeEffectActor(game, "aVictim");
+    auto caster = makeEffectActor(game, "zCaster");
+    auto detached = makeEffectActor(game, "zCaster");
+    detached->setHp(0);
+    attachSavedEffect(victim, caster, "externalWard");
+    attachSavedEffect(victim, detached, "departedCasterWard");
+    map->setObjects({victim, caster});
+
+    auto serialized = EffectObjectJson::serialize(map);
+    auto &actors = (*serialized)["properties"]["objects"];
+    std::sort(actors.begin(), actors.end(), [](const json &first, const json &second) {
+        return first["properties"]["name"].get<std::string>() < second["properties"]["name"].get<std::string>();
+    });
+    expect_true(actors[0]["properties"]["name"].get<std::string>() == "aVictim",
+                "the test must deserialize the victim before its caster");
+    CSerialization::StrictScope strict;
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    expect_true(restored && restored->getObjects().size() == 2, "snapshot loading must preserve map actor membership");
+    if (!restored) {
+        victim->setEffects({});
+        return;
+    }
+    auto restored_victim = std::dynamic_pointer_cast<CCreature>(restored->getObjectByName("aVictim"));
+    auto restored_caster = std::dynamic_pointer_cast<CCreature>(restored->getObjectByName("zCaster"));
+    auto external = findSavedEffect(restored_victim, "externalWard");
+    auto departed = findSavedEffect(restored_victim, "departedCasterWard");
+    assertSavedEffectState(external);
+    assertSavedEffectState(departed);
+    if (external) {
+        expect_true(external->getCaster() == restored_caster && external->getVictim() == restored_victim,
+                    "forward actor references must resolve to the actual restored map instances");
+        expect_true(external->getCaster() != caster, "save restoration must not retain actors from the source map");
+    }
+    if (departed) {
+        auto restored_detached = departed->getCaster();
+        expect_true(restored_detached && restored_detached != restored_caster && restored_detached != detached,
+                    "a detached caster sharing a live actor name must retain its distinct snapshot identity");
+        expect_true(restored_detached && restored_detached->getHp() == 0,
+                    "a dead caster retained by an effect must remain dead after loading");
+        expect_true(departed->getVictim() == restored_victim,
+                    "effects from detached casters must still target the restored victim");
+    }
+    map->setProperty("trackedActor", std::static_pointer_cast<CGameObject>(victim));
+    auto aliased_map =
+        std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, EffectObjectJson::serialize(map)));
+    auto aliased_victim =
+        aliased_map ? std::dynamic_pointer_cast<CCreature>(aliased_map->getObjectByName("aVictim")) : nullptr;
+    expect_true(aliased_victim && aliased_map->getObjectProperty<CGameObject>("trackedActor") == aliased_victim,
+                "a creature referenced by map properties and actor membership must deserialize only once");
+    auto cloned_map = map->clone<CMap>();
+    auto cloned_victim =
+        cloned_map ? std::dynamic_pointer_cast<CCreature>(cloned_map->getObjectByName("aVictim")) : nullptr;
+    auto cloned_caster =
+        cloned_map ? std::dynamic_pointer_cast<CCreature>(cloned_map->getObjectByName("zCaster")) : nullptr;
+    auto cloned_external = findSavedEffect(cloned_victim, "externalWard");
+    auto cloned_departed = findSavedEffect(cloned_victim, "departedCasterWard");
+    if (cloned_external && cloned_departed) {
+        expect_true(cloned_external->getCaster() == cloned_caster && cloned_external->getVictim() == cloned_victim,
+                    "map cloning must remap effect references between actors included in the clone");
+        expect_true(cloned_departed->getCaster() == detached && cloned_departed->getVictim() == cloned_victim,
+                    "map cloning must retain the live detached caster outside the cloned actor set");
+        expect_true(cloned_map->getObjectProperty<CGameObject>("trackedActor") == cloned_victim,
+                    "map cloning must preserve repeated aliases to the same cloned actor");
+    }
+    victim->setEffects({});
+    if (restored_victim) {
+        restored_victim->setEffects({});
+    }
+    if (cloned_victim) {
+        cloned_victim->setEffects({});
+    }
+    if (aliased_victim) {
+        aliased_victim->setEffects({});
+    }
+}
+
+void testEffectCloningRemapsOwnedActorsAndRetainsExternalActors() {
+    auto game = makeEffectSnapshotGame();
+    auto victim = makeEffectActor(game, "cloneVictim");
+    auto caster = makeEffectActor(game, "cloneCaster");
+    auto self = attachSavedEffect(victim, victim, "selfWard");
+    auto external = attachSavedEffect(victim, caster, "externalWard");
+    auto cloned = victim->clone<CCreature>();
+    expect_true(cloned && cloned != victim, "creature cloning must construct a new instance");
+    auto cloned_self = findSavedEffect(cloned, "selfWard");
+    auto cloned_external = findSavedEffect(cloned, "externalWard");
+    assertSavedEffectState(cloned_self);
+    assertSavedEffectState(cloned_external);
+    if (cloned_self && cloned_external) {
+        expect_true(cloned_self != self && cloned_external != external,
+                    "cloning must create independent active effects");
+        expect_true(cloned_self->getCaster() == cloned && cloned_self->getVictim() == cloned,
+                    "a creature clone must remap both self-targeted effect references to the clone");
+        expect_true(cloned_external->getCaster() == caster && cloned_external->getVictim() == cloned,
+                    "a creature clone must retain the live external caster and remap its victim");
+        expect_true(cloned->getStats()->getArmor() == victim->getStats()->getArmor(),
+                    "cloned active effects must preserve composed defense");
+    }
+    auto cloned_effect = external->clone<CEffect>();
+    assertSavedEffectState(cloned_effect);
+    expect_true(cloned_effect && cloned_effect != external && cloned_effect->getCaster() == caster &&
+                    cloned_effect->getVictim() == victim,
+                "cloning an effect alone must retain both live actor identities");
+    victim->setEffects({});
+    if (cloned) {
+        cloned->setEffects({});
+    }
+}
+
+void testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "forwardActor");
+    actor->setPosX(7);
+    actor->setPosY(11);
+    actor->setPosZ(2);
+    attachSavedEffect(actor, actor, "selfWard");
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    map->setObjects({actor});
+    auto serialized = EffectObjectJson::serialize(map);
+    json definition = (*serialized)["properties"]["objects"][0];
+    expect_true(definition.contains("effectActorId"), "a referenced actor must have a stable snapshot identity");
+    if (!definition.contains("effectActorId")) {
+        actor->setEffects({});
+        return;
+    }
+    (*serialized)["properties"]["objects"][0] = {{"class", "CCreature"},
+                                                 {"effectActorReference", definition["effectActorId"]}};
+    (*serialized)["properties"]["trackedActor"] = definition;
+    CSerialization::StrictScope strict;
+    auto restored = std::dynamic_pointer_cast<CMap>(EffectObjectJson::deserialize(game, serialized));
+    auto restored_actor = restored ? restored->getObjectProperty<CCreature>("trackedActor") : nullptr;
+    expect_true(restored_actor && restored->getObjectByName("forwardActor") == restored_actor,
+                "an actor alias preceding its definition must populate the map's final name index");
+    expect_true(restored_actor && restored->getObjectsAtCoords(Coords(7, 11, 2)).contains(restored_actor),
+                "an actor alias preceding its definition must populate the final spatial index");
+    expect_true(restored && restored->getObjectsAtCoords(Coords(0, 0, 0)).empty(),
+                "forward actors must not leave placeholder coordinates in the map cache");
+    actor->setEffects({});
+    if (restored_actor) {
+        restored_actor->setEffects({});
+    }
+}
+
+void testSavedEffectsRejectOrdinaryActorPropertyCycles() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "cyclicActor");
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    map->setObjects({actor});
+    actor->setProperty("anchorMap", std::static_pointer_cast<CGameObject>(map));
+    bool write_rejected = false;
+    try {
+        EffectObjectJson::serialize(actor);
+    } catch (const std::exception &) {
+        write_rejected = true;
+    }
+    expect_true(write_rejected,
+                "ordinary property cycles must be rejected instead of emitting partially initialized aliases");
+    actor->setProperty("anchorMap", std::shared_ptr<CGameObject>());
+    map->setObjects({});
+
+    json alias = {{"class", "CCreature"}, {"effectActorReference", 1}};
+    json nested_map = {{"class", "CMap"}, {"properties", {{"objects", json::array({alias})}}}};
+    json config = {
+        {"class", "CCreature"},
+        {"effectActorId", 1},
+        {"effectGraph", {{"version", 1}, {"actors", json::array()}}},
+        {"properties", {{"anchorMap", nested_map}, {"name", "cyclicActor"}, {"posx", 7}, {"posy", 11}, {"posz", 2}}}};
+    bool read_rejected = false;
+    try {
+        CSerialization::StrictScope strict;
+        EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+    } catch (const std::exception &) {
+        read_rejected = true;
+    }
+    expect_true(read_rejected, "strict loading must reject map membership aliases to an actor still being populated");
+    auto valid = EffectObjectJson::serialize(actor);
+    expect_true(EffectObjectJson::deserialize(game, valid) != nullptr,
+                "rejected property cycles must not poison the next serialization operation");
+}
+
+void testSavedEffectRejectsMalformedActorReferences() {
+    auto game = makeEffectSnapshotGame();
+    auto actor = makeEffectActor(game, "referenceVictim");
+    attachSavedEffect(actor, actor, "selfWard");
+    auto serialized = EffectObjectJson::serialize(actor);
+    expect_true(serialized->contains("effectActorId") &&
+                    (*serialized)["properties"]["effects"][0].contains("effectReferences"),
+                "saved effect graphs must declare actor identities and references");
+    if (!serialized->contains("effectActorId") ||
+        !(*serialized)["properties"]["effects"][0].contains("effectReferences")) {
+        actor->setEffects({});
+        return;
+    }
+    auto rejects = [&game](json config, const char *message) {
+        bool rejected = false;
+        try {
+            CSerialization::StrictScope strict;
+            EffectObjectJson::deserialize(game, std::make_shared<json>(std::move(config)));
+        } catch (const std::exception &) {
+            rejected = true;
+        }
+        expect_true(rejected, message);
+    };
+    for (const auto &invalid : {json(0), json(-1), json(1.5), json("1"), json(999999)}) {
+        json config = *serialized;
+        config["properties"]["effects"][0]["effectReferences"]["caster"] = invalid;
+        rejects(std::move(config), "strict loading must reject invalid or dangling effect actor references");
+    }
+    json duplicate = *serialized;
+    duplicate["effectGraph"] = {{"version", 1}, {"actors", json::array({*serialized})}};
+    duplicate["effectGraph"]["actors"][0].erase("effectGraph");
+    rejects(std::move(duplicate), "strict loading must reject duplicate actor definitions");
+
+    json noncreature = *serialized;
+    noncreature["effectGraph"] = {
+        {"version", 1},
+        {"actors", json::array({{{"class", "CStats"}, {"effectActorId", 999999}, {"properties", json::object()}}})}};
+    noncreature["properties"]["effects"][0]["effectReferences"]["caster"] = 999999;
+    rejects(std::move(noncreature), "strict loading must reject actor identities assigned to a non-creature");
+    actor->setEffects({});
+}
+// End saved effect persistence regressions.
+
 // healProc/addManaProc convert a percentage into an absolute restore amount, while
 // heal(0)/addMana(0) are the documented "restore to full" sentinels. A positive
 // percentage whose truncated amount is 0 (small percent and/or a low maximum) must
@@ -3037,6 +3365,12 @@ int main() {
     test_dynamic_property_cannot_spoof_typed_engine_signal();
     test_typed_engine_signal_still_fires_directly();
     test_effect_applies_for_exactly_its_duration_without_underflow();
+    testSavedSelfEffectPreservesStateAndRemainingApplications();
+    testSavedMapEffectResolvesForwardAndDetachedActorReferences();
+    testEffectCloningRemapsOwnedActorsAndRetainsExternalActors();
+    testSavedMapForwardActorAliasPreservesNameAndSpatialIndexes();
+    testSavedEffectsRejectOrdinaryActorPropertyCycles();
+    testSavedEffectRejectsMalformedActorReferences();
     test_proc_restores_clamp_positive_percentages_away_from_full_restore_sentinel();
     test_creature_get_dmg_allow_crit_flag_gates_the_crit_double();
     test_creature_get_dmg_hit_chance_is_not_inverted();

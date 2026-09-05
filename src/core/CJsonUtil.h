@@ -75,15 +75,20 @@ template <fn::JsonObjectPointer T> bool isRef(T object) {
 }
 
 template <fn::JsonObjectPointer T> bool isType(T object) {
-    if (object == nullptr || !object->is_object()) {
+    if (object == nullptr || !object->is_object() || !hasStringProp(object, "class")) {
         return false;
     }
-    if (object->size() == 1) {
-        return hasStringProp(object, "class");
-    } else if (object->size() == 2) {
-        return hasObjectProp(object, "properties") && hasStringProp(object, "class");
+    for (const auto &[key, value] : object->items()) {
+        if (key == "properties") {
+            if (!value.is_object()) {
+                return false;
+            }
+        } else if (key != "class" && key != "effectActorId" && key != "effectActorReference" &&
+                   key != "effectReferences" && key != "effectGraph") {
+            return false;
+        }
     }
-    return false;
+    return true;
 }
 
 template <fn::JsonObjectPointer T> bool isObject(T object) { return isRef(object) || isType(object); }

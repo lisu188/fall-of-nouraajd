@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,11 +19,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CCreature.h"
 #include "core/CPythonOverrides.h"
 
+#include <algorithm>
+
 CEffect::CEffect() {}
 
 CEffect::~CEffect() {}
 
 int CEffect::getTimeLeft() { return timeLeft; }
+
+void CEffect::setTimeLeft(int value) { timeLeft = std::clamp(value, 0, std::max(0, timeTotal)); }
 
 int CEffect::getTimeTotal() { return timeTotal; }
 
