@@ -9114,6 +9114,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         panel = g.getGuiHandler().openPanel("inventoryPanel")
@@ -13644,6 +13645,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         pump_event_loop(5)
@@ -23513,6 +23515,33 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+    def test_modal_gui_fixtures_shutdown_after_assertion_failure(self):
+        from unittest.mock import Mock, patch
+
+        for method_name in (
+            "test_inventory_panel_refreshes_only_after_event_loop_drains",
+            "test_blocking_modal_gui_helpers_drive_panels",
+        ):
+            with self.subTest(method=method_name):
+                context = types.SimpleNamespace(active=True)
+                context.shutdown = Mock(side_effect=lambda: setattr(context, "active", False))
+                g = types.SimpleNamespace(getContext=lambda: context)
+                loader = types.SimpleNamespace(
+                    loadGame=lambda: g,
+                    loadGui=Mock(),
+                    startGameWithPlayer=Mock(side_effect=AssertionError("fixture setup failed")),
+                )
+                game = types.SimpleNamespace(CGameLoader=loader)
+                result = unittest.TestResult()
+                with patch(f"{__name__}.load_game_module", return_value=game), patch(f"{__name__}.drain_sdl_events"):
+                    GameTest(method_name).run(result)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.errors)
+                self.assertEqual(1, len(result.failures))
+                self.assertIn("fixture setup failed", result.failures[0][1])
+                context.shutdown.assert_called_once_with()
+                self.assertFalse(context.active)
+
     def test_gui_queries_preserve_tree_assertions_without_serializing(self):
         from unittest.mock import Mock, patch
 

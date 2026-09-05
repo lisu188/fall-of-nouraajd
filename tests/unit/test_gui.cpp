@@ -516,6 +516,34 @@ void test_layout_minimum_size_floors_percentage_panels() {
     expect_rect(childLayout->getRect(child), 374, 160, 533, 400, "negative minimum sizes should be ignored");
 }
 
+void test_repeated_gui_creation_preserves_live_window_and_renderer() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+
+    auto survivor = std::make_shared<CGui>();
+    auto window = SDL_RenderGetWindow(survivor->getRenderer());
+    expect_true(window != nullptr, "surviving GUI should own a window");
+    if (!window) {
+        return;
+    }
+    const auto windowId = SDL_GetWindowID(window);
+    // Cross SDL 2's eight-bit subsystem reference-count boundary while retaining
+    // a window whose renderer must remain usable after later GUI construction.
+    for (int index = 0; index < 270; ++index) {
+        auto transient = std::make_shared<CGui>();
+        expect_true(SDL_GetWindowFromID(windowId) == window, "later GUI construction must preserve live windows");
+    }
+    expect_true(SDL_SetRenderDrawColor(survivor->getRenderer(), 17, 34, 51, 255) == 0,
+                "the surviving renderer should still accept draw commands");
+    expect_true(SDL_RenderClear(survivor->getRenderer()) == 0, "the surviving renderer should clear its surface");
+    Uint32 pixel = 0;
+    SDL_Rect sample{0, 0, 1, 1};
+    expect_true(
+        SDL_RenderReadPixels(survivor->getRenderer(), &sample, SDL_PIXELFORMAT_ARGB8888, &pixel, sizeof(pixel)) == 0,
+        "the surviving renderer should support pixel readback");
+    expect_true((pixel & 0x00ffffffu) == 0x00112233u, "the surviving surface should contain the rendered color");
+}
+
 void test_gui_window_is_resizable_and_guard_paths_fail_closed() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -3495,6 +3523,7 @@ int main() {
     test_fight_panel_right_click_item_use_still_works();
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
+    test_repeated_gui_creation_preserves_live_window_and_renderer();
     test_list_view_drag_callbacks_validate_and_drop_without_click_fallback();
     test_list_view_drag_callbacks_cancel_and_preserve_unmoved_clicks();
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
