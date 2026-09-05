@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CLuaOverrides.h"
+#include "handler/CEventHandler.h"
 #include "handler/CLuaHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
@@ -28,7 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/embed.h>
 
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -283,6 +286,351 @@ void test_lua_trusted_path_gate() {
     expect_true(!CPluginLoader::isTrustedLuaPluginPath(""), "empty paths are rejected");
 }
 
+void testLuaDispatchesEverySupportedHookAndReleasesObjects() {
+    auto game = std::make_shared<CGame>();
+    const char *plugin = R"lua(
+function load(context)
+    local function mark(self, event)
+        self.calls = (self.calls or 0) + 1
+        self.sawNil = event == nil
+    end
+    context.registerType("LuaEveryTile", {base = "CTile", onStep = mark})
+    context.registerType("LuaEveryEffect", {base = "CEffect", onEffect = mark})
+    context.registerType("LuaEveryPotion", {base = "CPotion", onUse = mark})
+    context.registerType("LuaEveryScroll", {
+        base = "CScroll", onUse = mark,
+        isDisposable = function(self) return self.consume == true end,
+    })
+    context.registerType("LuaEveryInteraction", {
+        base = "CInteraction",
+        performAction = function(self, first, second)
+            first.target = second
+            second.actor = first
+            mark(self, first)
+        end,
+        configureEffect = function(self, effect)
+            effect.configured = true
+            return self.allow == true
+        end,
+    })
+    context.registerType("LuaEveryTrigger", {
+        base = "CTrigger",
+        trigger = function(self, object, event)
+            object.triggerCause = event:getCause()
+            mark(self, event)
+        end,
+    })
+    for _, base in ipairs({"CBuilding", "CEvent"}) do
+        context.registerType("LuaEvery" .. base, {
+            base = base, onEnter = mark, onLeave = mark, onTurn = mark,
+            onCreate = mark, onDestroy = mark,
+        })
+    end
+end
+)lua";
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/every_hook.lua", plugin),
+                "all eight supported Lua bases must register");
+    const auto initial_entries = CLuaOverrides::instances().size();
+    std::vector<std::weak_ptr<CGameObject>> observers;
+    {
+        auto tile = game->createObject<CTile>("LuaEveryTile");
+        auto effect = game->createObject<CEffect>("LuaEveryEffect");
+        auto potion = game->createObject<CPotion>("LuaEveryPotion");
+        auto scroll = game->createObject<CScroll>("LuaEveryScroll");
+        auto interaction = game->createObject<CInteraction>("LuaEveryInteraction");
+        auto trigger = game->createObject<CTrigger>("LuaEveryTrigger");
+        auto building = game->createObject<CBuilding>("LuaEveryCBuilding");
+        auto event_object = game->createObject<CEvent>("LuaEveryCEvent");
+        expect_true(tile && effect && potion && scroll && interaction && trigger && building && event_object,
+                    "each supported Lua base must construct with its native type");
+        if (!(tile && effect && potion && scroll && interaction && trigger && building && event_object)) {
+            return;
+        }
+        observers = {tile, effect, potion, scroll, interaction, trigger, building, event_object};
+        auto first = std::make_shared<CCreature>();
+        auto second = std::make_shared<CCreature>();
+        first->setProperty("target", std::shared_ptr<CGameObject>());
+        second->setProperty("actor", std::shared_ptr<CGameObject>());
+        effect->setProperty("triggerCause", std::shared_ptr<CGameObject>());
+        auto event = std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, first);
+        tile->onStep(nullptr);
+        effect->onEffect();
+        potion->onUse(event);
+        scroll->onUse(event);
+        expect_true(tile->getBoolProperty("sawNil") && effect->getBoolProperty("sawNil"),
+                    "missing native arguments must reach Lua as nil");
+        expect_true(potion->getNumericProperty("calls") == 1 && scroll->getNumericProperty("calls") == 1,
+                    "potion and scroll hooks must receive native use events");
+        expect_true(!scroll->isDisposable(), "a Lua false must override the native bool result");
+        scroll->setBoolProperty("consume", true);
+        expect_true(scroll->isDisposable(), "a Lua bool hook must read updated object state");
+        interaction->performAction(first, second);
+        expect_true(first->getObjectProperty<CGameObject>("target") == second &&
+                        second->getObjectProperty<CGameObject>("actor") == first,
+                    "interaction dispatch must preserve both arguments and their order");
+        expect_true(!interaction->configureEffect(effect) && effect->getBoolProperty("configured"),
+                    "configureEffect must preserve side effects when returning false");
+        interaction->setBoolProperty("allow", true);
+        expect_true(interaction->configureEffect(effect), "configureEffect must also return Lua true");
+        trigger->trigger(effect, event);
+        expect_true(effect->getObjectProperty<CGameObject>("triggerCause") == first,
+                    "trigger events must retain their native cause identity");
+        const auto dispatchLifecycle = [&](const auto &object) {
+            object->onEnter(event);
+            object->onLeave(event);
+            object->onTurn(event);
+            object->onCreate(event);
+            object->onDestroy(event);
+            expect_true(object->getNumericProperty("calls") == 5,
+                        "building and event wrappers must dispatch all five lifecycle hooks");
+        };
+        dispatchLifecycle(building);
+        dispatchLifecycle(event_object);
+        first->setObjectProperty("target", std::shared_ptr<CGameObject>());
+        second->setObjectProperty("actor", std::shared_ptr<CGameObject>());
+        game->getLuaHandler()->releaseState();
+    }
+    for (const auto &observer : observers) {
+        expect_true(observer.expired(), "every supported wrapper must release its last native owner");
+    }
+    expect_true(CLuaOverrides::instances().size() == initial_entries,
+                "all eight wrapper destructors must remove their override entries");
+}
+
+void testLuaCuratedObjectApiPreservesValuesAndIdentity() {
+    auto game = std::make_shared<CGame>();
+    vstd::register_any_type<std::shared_ptr<CCreature>, std::shared_ptr<CGameObject>>();
+    game->getObjectHandler()->registerType("CGameObject", []() {
+        auto object = std::make_shared<CGameObject>();
+        object->setProperty("peer", std::shared_ptr<CGameObject>());
+        return object;
+    });
+    auto creature = std::make_shared<CCreature>();
+    creature->getBaseStats()->setStamina(2);
+    creature->setHp(1);
+    game->setProperty<std::shared_ptr<CGameObject>>("probeCreature", creature);
+    game->setProperty<std::shared_ptr<CGameObject>>("probeEvent",
+                                                    std::make_shared<CGameEventCaused>("probe", creature));
+    game->setProperty("apiReport", std::shared_ptr<CGameObject>());
+    const char *plugin = R"lua(
+function load(context)
+    local object = context.game:createObject("CGameObject")
+    object:setBoolProperty("enabled", true)
+    object:setNumericProperty("amount", 17)
+    object:setStringProperty("message", "Lua bridge")
+    assert(object:getBoolProperty("enabled") == true and object.enabled == true)
+    assert(object:getNumericProperty("amount") == 17 and object.amount == 17)
+    assert(object:getStringProperty("message") == "Lua bridge" and object.message == "Lua bridge")
+    object.enabled = false
+    object.amount = 23
+    object.message = "updated"
+    object.peer = context.game.probeCreature
+    assert(object.peer == context.game.probeEvent:getCause())
+    assert(object.peer ~= object)
+    assert(object.unknown == nil and object[false] == nil)
+    assert(object:getType() == "CGameObject" and type(object:getName()) == "string")
+    assert(object:getCause() == nil)
+    local creature = object.peer
+    creature:heal(2)
+    object.afterHeal = creature.hp
+    creature:hurt(1)
+    object.afterHurt = creature.hp
+    creature:healProc(100.0)
+    object.afterPercent = creature.hp
+    creature:setStringProperty("hp", "invalid")
+    assert(creature.hp == object.afterPercent)
+    object.randomValue = randint(7, 7)
+    context.log("bridge", 17, true, false, nil, {})
+    print("bridge log complete")
+    context.game.apiReport = object
+end
+)lua";
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/object_api.lua", plugin),
+                "the curated object API must preserve typed values and native object identity");
+    auto report = game->getObjectProperty<CGameObject>("apiReport");
+    expect_true(report != nullptr, "the Lua-created report must remain accessible to native callers");
+    if (report) {
+        expect_true(!report->getBoolProperty("enabled") && report->getNumericProperty("amount") == 23 &&
+                        report->getStringProperty("message") == "updated",
+                    "dynamic writes must update the same native properties as explicit setters");
+        expect_true(report->getObjectProperty<CGameObject>("peer") == creature,
+                    "Lua object-property writes must preserve the original shared object");
+        expect_true(report->getNumericProperty("afterHeal") == 3 && report->getNumericProperty("afterHurt") == 2 &&
+                        report->getNumericProperty("afterPercent") == creature->getHpMax(),
+                    "heal, hurt, and percentage healing must affect the native creature's health");
+        expect_true(report->getNumericProperty("randomValue") == 7, "equal randint bounds must be deterministic");
+    }
+    game->getLuaHandler()->releaseState();
+}
+
+void testLuaInvalidApiCallsDoNotMutateObjectsOrPoisonTheState() {
+    auto game = std::make_shared<CGame>();
+    register_base_game_object_factory(game);
+    game->getObjectHandler()->registerType(
+        "LuaThrowingFactory", []() -> std::shared_ptr<CGameObject> { throw std::runtime_error("factory failure"); });
+    const char *plugin = R"lua(
+function load(context)
+    local object = context.game:createObject("CGameObject")
+    object.flag = true
+    object.amount = 11
+    object.message = "kept"
+    object:setBoolProperty("flag", "invalid")
+    object:setNumericProperty("amount", 1.5)
+    object:setStringProperty("message", {})
+    object:setBoolProperty(nil, true)
+    object:setNumericProperty(nil, 2)
+    object:setStringProperty(nil, "bad")
+    object:setStringProperty("name", "unchanged")
+    object:setBoolProperty("name", true)
+    object:setNumericProperty("name", 42)
+    object.name = true
+    assert(object:getName() == "unchanged")
+    object.getBoolProperty({}, "flag")
+    object.setBoolProperty({}, "flag", false)
+    object.getNumericProperty({}, "amount")
+    object.setNumericProperty({}, "amount", 2)
+    object.getStringProperty({}, "message")
+    object.setStringProperty({}, "message", "bad")
+    assert(object:getBoolProperty(nil) == nil)
+    assert(object:getNumericProperty(nil) == nil)
+    assert(object:getStringProperty(nil) == nil)
+    assert(object:getBoolProperty("amount") == nil)
+    assert(object:getNumericProperty("message") == nil)
+    assert(object:getStringProperty("flag") == nil)
+    assert(object.hasProperty({}, "flag") == false and object:hasProperty(nil) == false)
+    assert(object.getType({}) == nil and object.getName({}) == nil)
+    object:heal(3)
+    object:hurt(2)
+    object:healProc(10)
+    object:getCause()
+    assert(object:createObject("CGameObject") == nil)
+    assert(context.game:createObject(nil) == nil)
+    assert(context.game:createObject("LuaThrowingFactory") == nil)
+    object.unsupportedTable = {}
+    object.unsupportedFraction = 1.5
+    object.unsupportedNil = nil
+    assert(not object:hasProperty("unsupportedTable"))
+    assert(not object:hasProperty("unsupportedFraction"))
+    assert(not object:hasProperty("unsupportedNil"))
+    assert(randint("bad", 3) == 0)
+    assert(object.flag == true and object.amount == 11 and object.message == "kept")
+    context.game.invalidApiSurvived = true
+end
+)lua";
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/invalid_api.lua", plugin),
+                "invalid Lua API arguments and native exceptions must be contained without aborting load");
+    expect_true(game->getBoolProperty("invalidApiSurvived"),
+                "the script must reach its final assertion after invalid calls and rejected writes");
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/recovery.lua", PROBE_TILE_PLUGIN),
+                "a plugin loaded after contained API errors must still register usable hooks");
+    auto tile = game->createObject<CTile>("LuaProbeTile");
+    auto creature = std::make_shared<CCreature>();
+    if (tile) {
+        tile->onStep(creature);
+    }
+    expect_true(creature->getNumericProperty("luaTouched") == 1,
+                "contained errors must not leave the Lua stack unusable for later dispatch");
+    game->getLuaHandler()->releaseState();
+}
+
+void testLuaMissingAndFailedHooksUseDocumentedFallbacks() {
+    auto game = std::make_shared<CGame>();
+    const char *plugin = R"lua(
+function load(context)
+    for _, base in ipairs({"CTile", "CEffect", "CPotion", "CScroll", "CInteraction", "CTrigger",
+                           "CBuilding", "CEvent"}) do
+        context.registerType("LuaEmpty" .. base, {base = base})
+    end
+    context.registerType("LuaFailedBool", {
+        base = "CInteraction", configureEffect = function(self, effect) error("bool failure") end,
+    })
+end
+)lua";
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/fallback_hooks.lua", plugin),
+                "types may omit optional Lua hooks");
+    auto tile = game->createObject<CTile>("LuaEmptyCTile");
+    auto effect = game->createObject<CEffect>("LuaEmptyCEffect");
+    auto potion = game->createObject<CPotion>("LuaEmptyCPotion");
+    auto scroll = game->createObject<CScroll>("LuaEmptyCScroll");
+    auto interaction = game->createObject<CInteraction>("LuaEmptyCInteraction");
+    auto trigger = game->createObject<CTrigger>("LuaEmptyCTrigger");
+    auto building = game->createObject<CBuilding>("LuaEmptyCBuilding");
+    auto event_object = game->createObject<CEvent>("LuaEmptyCEvent");
+    auto failed = game->createObject<CInteraction>("LuaFailedBool");
+    expect_true(tile && effect && potion && scroll && interaction && trigger && building && event_object && failed,
+                "empty and raising hook tables must still construct native objects");
+    if (!(tile && effect && potion && scroll && interaction && trigger && building && event_object && failed)) {
+        return;
+    }
+    auto creature = std::make_shared<CCreature>();
+    auto event = std::make_shared<CGameEvent>();
+    tile->onStep(creature);
+    effect->onEffect();
+    potion->onUse(event);
+    interaction->performAction(creature, creature);
+    trigger->trigger(creature, event);
+    const auto dispatchLifecycle = [&](const auto &object) {
+        object->onEnter(event);
+        object->onLeave(event);
+        object->onTurn(event);
+        object->onCreate(event);
+        object->onDestroy(event);
+        expect_true(!object->hasProperty("calls"), "missing lifecycle hooks must retain native no-op behavior");
+    };
+    dispatchLifecycle(building);
+    dispatchLifecycle(event_object);
+    expect_true(!scroll->isDisposable(), "missing scroll bool hooks must use the native false default");
+    expect_true(interaction->configureEffect(effect),
+                "missing interaction bool hooks must use the native true default");
+    expect_true(!failed->configureEffect(effect),
+                "a contained bool-hook error must return false instead of the default");
+    bool result = true;
+    expect_true(!CLuaHandler::dispatchBool(creature.get(), "configureEffect", {}, result) && result,
+                "objects without override entries must decline bool dispatch without changing the result");
+    expect_true(!CLuaHandler::dispatch(creature.get(), "onEffect"),
+                "objects without override entries must decline void dispatch");
+    game->getLuaHandler()->releaseState();
+    expect_true(failed->configureEffect(effect), "state release must restore native bool fallback on retained objects");
+}
+
+void testLuaRegistrationErrorsAndSandboxIsolation() {
+    auto game = std::make_shared<CGame>();
+    register_base_game_object_factory(game);
+    expect_true(!game->getLuaHandler()->loadPlugin(nullptr, "plugins/no_game.lua", PROBE_TILE_PLUGIN),
+                "a plugin cannot register types without a game");
+    expect_true(!game->getLuaHandler()->loadPlugin(game, "plugins/top_error.lua", "error('top-level failure')"),
+                "top-level chunk errors must be contained before load is invoked");
+    const char *plugin = R"lua(
+privateValue = "first plugin"
+math.privateValue = "first plugin"
+function load(context)
+    assert(context.registerType("LuaMissingBase", {}) == false)
+    assert(context.registerType(nil, {base = "CTile"}) == false)
+    assert(context.registerConfigJson("missingJson") == false)
+    assert(context.registerConfigJson(nil, "{}") == false)
+    assert(context.registerConfigJson("brokenJson", "{") == false)
+    assert(context.registerConfigJson("arrayJson", "[]") == false)
+    assert(context.registerConfigJson("", "{}") == false)
+    assert(context.registerType("", {base = "CTile"}) == false)
+    assert(context.registerType("LuaUnknownHook", {base = "CTile", typoHook = function() end}) == true)
+    context.game.registrationErrorsSurvived = true
+end
+)lua";
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/registration_errors.lua", plugin),
+                "invalid registrations must return false while an unknown optional hook only warns");
+    expect_true(game->getBoolProperty("registrationErrorsSurvived"),
+                "registration errors must not abort the rest of the plugin");
+    expect_true(game->getObjectHandler()->getType("LuaMissingBase") == nullptr,
+                "a registration without a supported base must not leave a factory behind");
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/isolated.lua", R"lua(
+assert(privateValue == nil and math.privateValue == nil)
+function load(context) context.game.sandboxIsolated = true end
+)lua"),
+                "each plugin must receive a fresh global environment and library table");
+    expect_true(game->getBoolProperty("sandboxIsolated"), "sandbox mutations must stay isolated between plugins");
+    game->getLuaHandler()->releaseState();
+}
+
 } // namespace
 
 int main() {
@@ -299,6 +647,11 @@ int main() {
     test_lua_release_state_makes_dispatch_a_safe_noop();
     test_lua_register_type_validation();
     test_lua_trusted_path_gate();
+    testLuaDispatchesEverySupportedHookAndReleasesObjects();
+    testLuaCuratedObjectApiPreservesValuesAndIdentity();
+    testLuaInvalidApiCallsDoNotMutateObjectsOrPoisonTheState();
+    testLuaMissingAndFailedHooksUseDocumentedFallbacks();
+    testLuaRegistrationErrorsAndSandboxIsolation();
 
     return finish_tests();
 }

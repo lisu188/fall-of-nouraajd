@@ -90,6 +90,29 @@ void test_manifest_scopes_control_plugin_auto_discovery() {
                 "a manifest without declarations must preserve normal auto-discovery");
 }
 
+void test_manifest_exclusions_require_trusted_script_paths() {
+    const json manifest = json::parse(R"json({"plugins": [
+        null, "plugins/plain.py", 7,
+        {"id": "missingSource", "kind": "python"},
+        {"id": "escape", "kind": "python", "path": "../plugins/escape.py"},
+        {"id": "absolute", "kind": "lua", "path": "/plugins/absolute.lua"},
+        {"id": "wrongRoot", "kind": "lua", "path": "maps/test/helper.lua"},
+        {"id": "wrongMapFile", "kind": "python", "path": "maps/test/helper.py"},
+        {"id": "nestedMap", "kind": "python", "path": "maps/test/nested/script.py"},
+        {"id": "cpp", "kind": "cpp", "type": "NativeMarkerPlugin"},
+        {"id": "native", "kind": "native", "library": "plugins/native_marker_plugin"},
+        {"id": "unknown", "kind": "unregistered", "path": "plugins/unknown.py"},
+        {"id": "mapScript", "kind": "python", "path": "maps/test/script.py", "scope": {"map": "test"}},
+        {"id": "normalized", "kind": "lua", "path": "plugins/nested/../shared.lua"},
+        {"id": "duplicate", "kind": "lua", "path": "./plugins/shared.lua"}
+    ]})json");
+    expect_true(getPluginAutoDiscoveryExclusions(manifest) ==
+                    std::set<std::string>{"maps/test/script.py", "plugins/shared.lua"},
+                "only trusted Python/Lua paths may suppress discovery, with normalized duplicates coalesced");
+    expect_true(getPluginAutoDiscoveryExclusions(json::parse(R"({"plugins":{}})")).empty(),
+                "malformed manifest sections must leave fallback discovery available");
+}
+
 void test_resource_provider_paths_and_config_loader() {
     auto provider = CResourcesProvider::getInstance();
     expect_true(provider->getPath("").empty(), "empty resource paths should be rejected");
@@ -667,6 +690,7 @@ int main() {
     pybind11::scoped_interpreter guard{};
 
     test_manifest_scopes_control_plugin_auto_discovery();
+    test_manifest_exclusions_require_trusted_script_paths();
     test_resource_provider_paths_and_config_loader();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();

@@ -32,6 +32,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CSdlResources.h"
 #include "gui/CTextureCache.h"
 #include "gui/CTextManager.h"
+#include "gui/CTooltip.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
@@ -2834,6 +2835,132 @@ void test_render_context_copy_ex_rotates_and_tracks_stats() {
     expect_true(stats.failedCopies == 0, "render context copyEx should not count failed copies for valid smoke path");
 }
 
+void testTextMetricsCacheAndExpiredGuiFallbacks() {
+    auto gui = std::make_shared<CGui>();
+    auto manager = std::make_shared<CTextManager>(gui);
+    const auto shortSize = manager->getTextureSize("Short");
+    const auto longSize = manager->getTextureSize("A longer second line");
+    const auto multilineSize = manager->getTextureSize("Short\nA longer second line");
+    expect_true(shortSize.first > 0 && shortSize.second > 0, "the font must produce nonempty text metrics");
+    expect_true(multilineSize.first == longSize.first && multilineSize.second == shortSize.second + longSize.second,
+                "multiline metrics must use the widest line and sum line heights");
+    const std::string bounded(4096, 'W');
+    expect_true(manager->getWrappedTextureSize(bounded + "discarded suffix", 10000) ==
+                    manager->getWrappedTextureSize(bounded, 8192),
+                "oversized render requests must share the documented byte and wrap-width bounds");
+    for (int index = 0; index < 513; ++index) {
+        manager->getTextureSize("cache entry " + std::to_string(index));
+    }
+    expect_true(manager->getTextureSize("Short") == shortSize, "cache eviction must preserve recomputed metrics");
+
+    auto viewport = std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 80, 40});
+    manager->drawTextScrolled("ignored", nullptr, 0);
+    manager.reset();
+    manager = std::make_shared<CTextManager>(gui);
+    gui.reset();
+    expect_true(manager->getTextureSize("uncached after shutdown") == std::make_pair(0, 0),
+                "an expired GUI must not produce new text textures");
+    expect_true(manager->countLines("no renderer", 80) == 1,
+                "line counting without a renderer must retain the safe one-line fallback");
+    manager->drawText("no renderer", 0, 0, 80);
+    manager->drawTextCentered("no renderer", viewport);
+    manager->drawTextScrolled("no renderer", viewport, -10);
+}
+
+void testRenderContextRestoresClipAndRejectsInvalidCopies() {
+    auto gui = std::make_shared<CGui>();
+    auto otherGui = std::make_shared<CGui>();
+    auto &context = gui->getRenderContext();
+    CRenderContext detached;
+    SDL_Rect target{0, 0, 4, 4};
+    expect_true(!detached.copy(nullptr, nullptr, target) && detached.getStats().skippedCopies == 1,
+                "a detached render context must skip copies before calling SDL");
+    auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 2, 2, 32, SDL_PIXELFORMAT_RGBA32));
+    expect_true(surface != nullptr, "copy validation needs a real source surface");
+    if (!surface) {
+        return;
+    }
+    auto texture = fn::sdl::TexturePtr(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get()));
+    auto foreignTexture = fn::sdl::TexturePtr(SDL_CreateTextureFromSurface(otherGui->getRenderer(), surface.get()));
+    expect_true(texture && foreignTexture, "copy validation needs textures from both renderers");
+    if (!texture || !foreignTexture) {
+        return;
+    }
+    const SDL_Rect previousClip{3, 4, 10, 11};
+    const SDL_Rect temporaryClip{1, 2, 5, 6};
+    SDL_RenderSetClipRect(gui->getRenderer(), &previousClip);
+    expect_true(context.copyEx(texture.get(), nullptr, target, 0, nullptr, SDL_FLIP_NONE, &temporaryClip),
+                "a clipped copyEx must accept its renderer's texture");
+    SDL_Rect restored{};
+    SDL_RenderGetClipRect(gui->getRenderer(), &restored);
+    expect_true(SDL_RenderIsClipEnabled(gui->getRenderer()) && restored.x == previousClip.x &&
+                    restored.y == previousClip.y && restored.w == previousClip.w && restored.h == previousClip.h,
+                "a temporary copy clip must restore the caller's enabled clip rectangle");
+    expect_true(!context.copy(texture.get(), nullptr, static_cast<const SDL_Rect *>(nullptr)),
+                "missing copy destinations must be rejected");
+    expect_true(!context.copy(texture.get(), nullptr, SDL_Rect{0, 0, 0, 4}),
+                "zero-width copy destinations must be rejected");
+    expect_true(!context.copy(foreignTexture.get(), nullptr, target),
+                "a texture from another renderer must report an SDL copy failure");
+    const auto stats = context.getStats();
+    expect_true(stats.attemptedCopies == 4 && stats.successfulCopies == 1 && stats.skippedCopies == 2 &&
+                    stats.failedCopies == 1,
+                "copy statistics must distinguish invalid arguments from SDL failures");
+    SDL_RenderSetClipRect(gui->getRenderer(), nullptr);
+}
+
+void testTextureMaskPreservesPixelsAcrossSurfaceFormats() {
+    auto gui = std::make_shared<CGui>();
+    expect_true(!CTextureUtil::calculateAlpha(gui->getRenderer(), nullptr), "missing alpha surfaces must be rejected");
+    for (Uint32 format :
+         {SDL_PIXELFORMAT_INDEX8, SDL_PIXELFORMAT_RGB565, SDL_PIXELFORMAT_RGB24, SDL_PIXELFORMAT_RGBA32}) {
+        auto surface = fn::sdl::SurfacePtr(SDL_CreateRGBSurfaceWithFormat(0, 3, 3, SDL_BITSPERPIXEL(format), format));
+        expect_true(surface != nullptr, "each supported byte depth must create a real surface");
+        if (!surface) {
+            continue;
+        }
+        if (surface->format->palette) {
+            const SDL_Color colors[] = {{0, 0, 0, 255}, {255, 255, 255, 255}, {255, 0, 0, 255}};
+            SDL_SetPaletteColors(surface->format->palette, colors, 0, 3);
+        }
+        SDL_FillRect(surface.get(), nullptr, SDL_MapRGB(surface->format, 255, 255, 255));
+        CTextureUtil::setPixelColor(surface.get(), 1, 1, {255, 0, 0, 255});
+        auto texture = CTextureUtil::calculateAlpha(gui->getRenderer(), std::move(surface));
+        expect_true(texture != nullptr, "mask conversion must preserve every supported surface format");
+        if (!texture) {
+            continue;
+        }
+        SDL_SetTextureBlendMode(texture.get(), SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(gui->getRenderer(), 0, 0, 255, 255);
+        SDL_RenderClear(gui->getRenderer());
+        SDL_Rect target{0, 0, 3, 3};
+        expect_true(gui->getRenderContext().copy(texture.get(), nullptr, target), "masked texture must render");
+        Uint32 pixels[9]{};
+        expect_true(SDL_RenderReadPixels(gui->getRenderer(), &target, SDL_PIXELFORMAT_ARGB8888, pixels,
+                                         3 * sizeof(Uint32)) == 0,
+                    "masked texture must support pixel readback");
+        expect_true((pixels[0] & 0x00ffffff) == 0x0000ff && (pixels[4] & 0x00ffffff) == 0xff0000,
+                    "the connected corner mask must be transparent while the red center remains visible");
+    }
+}
+
+void testTooltipConsumesInputAndClosesOnlyOnRightRelease() {
+    auto parent = std::make_shared<CGameGraphicsObject>();
+    auto tooltip = std::make_shared<CTooltip>();
+    tooltip->setText("inspect item");
+    parent->addChild(tooltip);
+    expect_true(tooltip->getText() == "inspect item", "tooltip content must remain available to the renderer");
+    expect_true(tooltip->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a), "tooltips must consume keyboard input");
+    tooltip->renderObject(nullptr, nullptr, 0);
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0);
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0);
+    expect_true(tooltip->getParent() == parent, "other mouse phases must not close the tooltip");
+    expect_true(tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0),
+                "right release must be consumed when closing the tooltip");
+    expect_true(!tooltip->getParent(), "right release must detach the tooltip");
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0);
+}
+
 void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
@@ -3556,6 +3683,10 @@ int main() {
     test_texture_cache_without_gui_fails_closed();
     test_render_context_rejects_null_texture_and_copies_valid_texture();
     test_render_context_copy_ex_rotates_and_tracks_stats();
+    testTextMetricsCacheAndExpiredGuiFallbacks();
+    testRenderContextRestoresClipAndRejectsInvalidCopies();
+    testTextureMaskPreservesPixelsAcrossSurfaceFormats();
+    testTooltipConsumesInputAndClosesOnlyOnRightRelease();
     test_minimap_bounds_extreme_metadata_fails_closed();
     test_minimap_bounds_overflow_prone_extents_fail_closed();
     test_minimap_bounds_sparse_coordinates_fail_closed();
