@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from scripts import coverage_report
 
@@ -123,10 +123,10 @@ class CoverageReportTest(unittest.TestCase):
             self.assertEqual(5, total)
             self.assertEqual(2, covered)
             self.assertAlmostEqual(40.0, pct)
-            by_path = {str(item["path"]): item for item in summary}
-            self.assertEqual([2], by_path["src/a.cpp"]["missing"])
-            self.assertEqual([10, 11], by_path["src/b.cpp"]["missing"])
-            self.assertAlmostEqual(100.0 * 2 / 3, by_path["src/a.cpp"]["percentage"])
+            by_path = {item["path"]: item for item in summary}
+            self.assertEqual([2], by_path[Path("src/a.cpp")]["missing"])
+            self.assertEqual([10, 11], by_path[Path("src/b.cpp")]["missing"])
+            self.assertAlmostEqual(100.0 * 2 / 3, by_path[Path("src/a.cpp")]["percentage"])
 
     def test_summarize_treats_empty_file_as_full_coverage(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -145,22 +145,32 @@ class CoverageReportTest(unittest.TestCase):
         self.assertEqual("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...", many)
 
     def test_write_text_report_emits_total_and_per_file_lines(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            report_path = Path(temp_dir) / "coverage.txt"
-            summary = [{"path": Path("src/a.cpp"), "lines": 3, "covered": 2, "missing": [2], "percentage": 66.67}]
-            coverage_report.write_text_report(report_path, summary, 2, 3, 66.67)
-            text = report_path.read_text(encoding="utf-8")
-            self.assertIn("TOTAL 2/3 eligible lines covered (66.67%)", text)
-            self.assertIn("src/a.cpp: 2/3 (66.67%) missing [2]", text)
+        cases = (
+            (PurePosixPath("src/a.cpp"), "src/a.cpp"),
+            (PureWindowsPath("src/a.cpp"), "src\\a.cpp"),
+        )
+        for source_path, expected_path in cases:
+            with self.subTest(path=source_path), tempfile.TemporaryDirectory() as temp_dir:
+                report_path = Path(temp_dir) / "coverage.txt"
+                summary = [{"path": source_path, "lines": 3, "covered": 2, "missing": [2], "percentage": 66.67}]
+                coverage_report.write_text_report(report_path, summary, 2, 3, 66.67)
+                text = report_path.read_text(encoding="utf-8")
+                self.assertIn("TOTAL 2/3 eligible lines covered (66.67%)", text)
+                self.assertIn(f"{expected_path}: 2/3 (66.67%) missing [2]", text)
 
     def test_write_html_report_escapes_paths(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            report_path = Path(temp_dir) / "coverage.html"
-            summary = [{"path": Path("src/<x>.cpp"), "lines": 1, "covered": 1, "missing": [], "percentage": 100.0}]
-            coverage_report.write_html_report(report_path, summary, 1, 1, 100.0)
-            html_text = report_path.read_text(encoding="utf-8")
-            self.assertIn("src/&lt;x&gt;.cpp", html_text)
-            self.assertNotIn("<x>.cpp", html_text)
+        cases = (
+            (PurePosixPath("src/<x>.cpp"), "src/&lt;x&gt;.cpp"),
+            (PureWindowsPath("src/<x>.cpp"), "src\\&lt;x&gt;.cpp"),
+        )
+        for source_path, expected_path in cases:
+            with self.subTest(path=source_path), tempfile.TemporaryDirectory() as temp_dir:
+                report_path = Path(temp_dir) / "coverage.html"
+                summary = [{"path": source_path, "lines": 1, "covered": 1, "missing": [], "percentage": 100.0}]
+                coverage_report.write_html_report(report_path, summary, 1, 1, 100.0)
+                html_text = report_path.read_text(encoding="utf-8")
+                self.assertIn(expected_path, html_text)
+                self.assertNotIn("<x>.cpp", html_text)
 
 
 if __name__ == "__main__":
