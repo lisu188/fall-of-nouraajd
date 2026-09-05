@@ -5466,7 +5466,7 @@ class GameTest(unittest.TestCase):
         second = g.createObject("LesserLifePotion")
         owner.setObjectProperty("inspectedItem", first)
         self.assertEqual(first, owner.getObjectProperty("inspectedItem"))
-        self.assertFalse(other_owner.hasProperty("inspectedItem"))
+        self.assertFalse(hasattr(other_owner, "inspectedItem"))
         owner.setObjectProperty("inspectedItem", second)
         self.assertEqual(second, owner.getObjectProperty("inspectedItem"))
         owner.setObjectProperty("inspectedItem", None)
