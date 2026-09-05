@@ -174,7 +174,7 @@ SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
     "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
-    "GameTest.testSavedEffectDependencyLoaderRestoresDetachedCaster",
+    "GameTest.testSavedEffectDependencyLoaderRestoresMapEffectAndDetachedCaster",
     XVFB_GAMEPLAY_PARENT_TEST,
 }
 # The stdio map walkthroughs each spawn their own isolated mcp.py subprocess over
@@ -9791,25 +9791,24 @@ class GameTest(unittest.TestCase):
             for map_dir in map_dirs:
                 shutil.rmtree(map_dir, ignore_errors=True)
 
-    @game_test
-    def testSavedEffectDependencyLoaderRestoresDetachedCaster(self):
+    def testSavedEffectDependencyLoaderRestoresMapEffectAndDetachedCaster(self):
         game = load_game_module()
         source_name = unique_map_name("effect_caster_source")
         source_dir = Path.cwd() / "maps" / source_name
         save_name = unique_save_name("effect_caster_dependency")
-        caster_class = f"SavedEffectCaster{os.getpid()}{time.time_ns()}"
+        effect_class = f"SavedMapEffect{os.getpid()}{time.time_ns()}"
         try:
             source_dir.mkdir(parents=True)
             (source_dir / "script.py").write_text(
                 "def load(self, context):\n"
-                "    from game import CCreature, register\n"
+                "    from game import CEffect, register\n"
                 "    @register(context)\n"
-                f"    class {caster_class}(CCreature):\n"
+                f"    class {effect_class}(CEffect):\n"
                 "        pass\n",
                 encoding="utf-8",
             )
             (source_dir / "config.json").write_text(
-                json.dumps({"savedEffectCasterAlias": {"class": caster_class}}), encoding="utf-8"
+                json.dumps({"savedEffectAlias": {"class": effect_class}}), encoding="utf-8"
             )
             snapshot = {
                 "class": "CMap",
@@ -9817,7 +9816,7 @@ class GameTest(unittest.TestCase):
                     "version": 1,
                     "actors": [
                         {
-                            "class": caster_class,
+                            "class": "CCreature",
                             "effectActorId": 2,
                             "properties": {"name": "retainedCaster", "level": 4, "hp": 0},
                         }
@@ -9838,7 +9837,7 @@ class GameTest(unittest.TestCase):
                                 "posy": 22,
                                 "effects": [
                                     {
-                                        "class": "CEffect",
+                                        "class": effect_class,
                                         "effectReferences": {"caster": 2, "victim": 1},
                                         "properties": {"name": "carriedEffect", "duration": 4, "timeLeft": 3},
                                     }
@@ -9871,9 +9870,10 @@ class GameTest(unittest.TestCase):
             effects = list(loaded_player.getEffects())
             self.assertEqual(1, len(effects))
             effect = effects[0]
+            self.assertEqual(effect_class, effect.getType())
             caster = effect.getCaster()
             self.assertIsNotNone(caster)
-            self.assertEqual(caster_class, caster.getType())
+            self.assertEqual("CCreature", caster.getType())
             self.assertEqual(4, caster.getLevel())
             self.assertEqual(0, caster.getHp())
             self.assertIsNone(loaded_map.getObjectByName("retainedCaster"))
@@ -9882,7 +9882,6 @@ class GameTest(unittest.TestCase):
             self.assertEqual("ritual", loaded_game.getResourcesProvider().getActiveScope())
             game.CFightHandler.applyEffects(loaded_player)
             self.assertEqual(2, effect.getTimeLeft())
-            return True, json.dumps({"casterClass": caster_class, "remaining": effect.getTimeLeft()})
         finally:
             cleanup_save_slot(save_name)
             shutil.rmtree(source_dir, ignore_errors=True)
