@@ -5434,6 +5434,14 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         plain_graphic = g.createObject("CGameGraphicsObject")
         self.assertEqual((0, 0, 0, 0), resolved_rect(plain_graphic))
+        layout = g.createObject("CLayout")
+        for name, value in (("x", "7"), ("y", "11"), ("w", "123"), ("h", "45")):
+            layout.setStringProperty(name, value)
+        plain_graphic.setObjectProperty("layout", layout)
+        rect = plain_graphic.getResolvedRect()
+        self.assertIsInstance(rect, tuple)
+        self.assertEqual((7, 11, 123, 45), rect)
+        self.assertTrue(all(type(value) is int for value in rect))
         return True, ""
 
     @game_test
