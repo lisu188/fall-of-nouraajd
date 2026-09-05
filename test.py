@@ -8990,6 +8990,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop()
@@ -13818,6 +13819,7 @@ class GameTest(unittest.TestCase):
         # queued space key, the same pattern test_blocking_modal_gui_helpers_drive_panels uses.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         player = g.getMap().getPlayer()
@@ -18710,6 +18712,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g, game_map, player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g.getContext().shutdown)
         player.addQuest("rolfQuest")
         game.CGameLoader.loadGui(g)
         quest_panel = g.createObject("questPanel")
@@ -18721,6 +18724,7 @@ class GameTest(unittest.TestCase):
         self.assertIn("Hint: The cave entrance lies beyond Nouraajd's roads.", text)
 
         g_rewards, _reward_map, reward_player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g_rewards.getContext().shutdown)
         for quest_id in NOURAAJD_QUEST_REWARDS:
             reward_player.addQuest(quest_id)
         game.CGameLoader.loadGui(g_rewards)
@@ -18730,6 +18734,7 @@ class GameTest(unittest.TestCase):
             self.assertIn(f"Reward: {reward}", reward_text)
 
         g_completed, completed_map, completed_player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g_completed.getContext().shutdown)
         completed_player.addQuest("rolfQuest")
         completed_map.removeObjectByName("cave1")
         completed_player.checkQuests()
@@ -23626,6 +23631,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         for case_type, method_name in (
             (GameTest, "test_inventory_panel_refreshes_only_after_event_loop_drains"),
             (GameTest, "test_blocking_modal_gui_helpers_drive_panels"),
+            (GameTest, "test_gui_includes_display_only_minimap_layout"),
+            (GameTest, "test_inventory_right_click_uses_scroll_and_keeps_it"),
             (XvfbGameplayProcessTest, "test_keyboard_input_moves_player"),
         ):
             with self.subTest(method=method_name):
@@ -23653,6 +23660,53 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertIn("fixture setup failed", result.failures[0][1])
                 context.shutdown.assert_called_once_with()
                 self.assertFalse(context.active)
+
+    def test_quest_journal_fixture_shuts_down_every_created_session_after_failure(self):
+        from unittest.mock import Mock, patch
+
+        active_text = "\n".join(
+            (
+                "[Active] Unravel the fate of Sergeant Rolf.",
+                "Objective: Recover Sergeant Rolf's skull from the Pritscher cave",
+                "Reward: Starts the Gooby hunt.",
+                "Hint: The cave entrance lies beyond Nouraajd's roads.",
+            )
+        )
+        reward_text = "\n".join(f"Reward: {reward}" for reward in NOURAAJD_QUEST_REWARDS.values())
+        for fail_during_first_gui_load in (True, False):
+            with self.subTest(fail_during_first_gui_load=fail_during_first_gui_load):
+                contexts = [types.SimpleNamespace(shutdown=Mock()) for _ in range(3)]
+                sessions = []
+                for context, text in zip(contexts, (active_text, reward_text, "")):
+                    panel = types.SimpleNamespace(getText=Mock(return_value=text))
+                    g = types.SimpleNamespace(
+                        getContext=Mock(return_value=context),
+                        getGui=Mock(),
+                        createObject=Mock(return_value=panel),
+                    )
+                    sessions.append((g, Mock(), Mock()))
+                load_gui = Mock()
+                if fail_during_first_gui_load:
+                    load_gui.side_effect = AssertionError("fixture GUI load failed")
+                game = types.SimpleNamespace(CGameLoader=types.SimpleNamespace(loadGui=load_gui))
+                result = unittest.TestResult()
+                with (
+                    patch(f"{__name__}.load_game_module", return_value=game),
+                    patch(f"{__name__}.load_game_map_with_player", side_effect=sessions) as load_session,
+                ):
+                    GameTest("test_quest_journal_shows_objectives_rewards_and_hints").run(result)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.errors)
+                self.assertEqual(1, len(result.failures))
+                expected_sessions = 1 if fail_during_first_gui_load else 3
+                self.assertEqual(expected_sessions, load_session.call_count)
+                failure_text = "fixture GUI load failed" if fail_during_first_gui_load else "[Completed]"
+                self.assertIn(failure_text, result.failures[0][1])
+                for index, context in enumerate(contexts):
+                    if index < expected_sessions:
+                        context.shutdown.assert_called_once_with()
+                    else:
+                        context.shutdown.assert_not_called()
 
     def test_gui_queries_preserve_tree_assertions_without_serializing(self):
         from unittest.mock import Mock, patch
