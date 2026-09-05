@@ -349,9 +349,6 @@ end
         observers = {tile, effect, potion, scroll, interaction, trigger, building, event_object};
         auto first = std::make_shared<CCreature>();
         auto second = std::make_shared<CCreature>();
-        first->setProperty("target", std::shared_ptr<CGameObject>());
-        second->setProperty("actor", std::shared_ptr<CGameObject>());
-        effect->setProperty("triggerCause", std::shared_ptr<CGameObject>());
         auto event = std::make_shared<CGameEventCaused>(CGameEvent::CType::onUse, first);
         tile->onStep(nullptr);
         effect->onEffect();
@@ -400,18 +397,13 @@ end
 void testLuaCuratedObjectApiPreservesValuesAndIdentity() {
     auto game = std::make_shared<CGame>();
     vstd::register_any_type<std::shared_ptr<CCreature>, std::shared_ptr<CGameObject>>();
-    game->getObjectHandler()->registerType("CGameObject", []() {
-        auto object = std::make_shared<CGameObject>();
-        object->setProperty("peer", std::shared_ptr<CGameObject>());
-        return object;
-    });
+    register_base_game_object_factory(game);
     auto creature = std::make_shared<CCreature>();
     creature->getBaseStats()->setStamina(2);
     creature->setHp(1);
     game->setProperty<std::shared_ptr<CGameObject>>("probeCreature", creature);
     game->setProperty<std::shared_ptr<CGameObject>>("probeEvent",
                                                     std::make_shared<CGameEventCaused>("probe", creature));
-    game->setProperty("apiReport", std::shared_ptr<CGameObject>());
     const char *plugin = R"lua(
 function load(context)
     local object = context.game:createObject("CGameObject")

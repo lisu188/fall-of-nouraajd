@@ -84,6 +84,15 @@ class PropertyChangeEmitter : public CGameObject {
     void recordChangedProperty(const std::string &property_name) { recordDirectPropertyChanged(property_name); }
 };
 
+class ObjectSlotChangeProbe : public CGameObject {
+    V_META(ObjectSlotChangeProbe, CGameObject, V_METHOD(ObjectSlotChangeProbe, onPropertyChanged, void, std::string))
+
+  public:
+    void onPropertyChanged(std::string property_name) { changedProperties.push_back(std::move(property_name)); }
+
+    std::vector<std::string> changedProperties;
+};
+
 size_t count_substring(const std::string &haystack, const std::string &needle) {
     if (needle.empty()) {
         return 0;
@@ -517,6 +526,64 @@ void test_game_object_property_helpers_and_owned_tile_movement() {
     standalone_tile->setPosz(7);
     expect_true(standalone_tile->getCoords() == Coords(5, 6, 7),
                 "public tile coordinate setters should update all tile coordinates");
+}
+
+void testDynamicObjectPropertiesPreserveIdentityAndNotifications() {
+    CTypes::register_type_metadata<ObjectSlotChangeProbe, CGameObject>();
+    CTypes::register_type_metadata<CItem, CGameObject>();
+    auto owner = std::make_shared<CGameObject>();
+    auto other_owner = std::make_shared<CGameObject>();
+    auto original = std::make_shared<CGameObject>();
+    auto replacement = std::make_shared<CGameObject>();
+    auto probe = std::make_shared<ObjectSlotChangeProbe>();
+    owner->connect("propertyChanged", probe, "onPropertyChanged");
+
+    try {
+        owner->setObjectProperty("companion", original);
+        expect_true(owner->hasProperty("companion") && owner->getObjectProperty<CGameObject>("companion") == original,
+                    "creating a dynamic object slot must retain the original object identity");
+        drain_event_loop();
+        expect_true(probe->changedProperties == std::vector<std::string>{"companion"},
+                    "creating a dynamic object slot must emit exactly one property change");
+
+        other_owner->setObjectProperty("companion", original);
+        owner->setObjectProperty("companion", replacement);
+        expect_true(owner->getObjectProperty<CGameObject>("companion") == replacement &&
+                        other_owner->getObjectProperty<CGameObject>("companion") == original,
+                    "replacing an object slot must not change the same slot on another owner");
+        drain_event_loop();
+        expect_true(probe->changedProperties == std::vector<std::string>({"companion", "companion"}),
+                    "replacing a dynamic object slot must emit exactly one additional change");
+
+        owner->setObjectProperty("companion", std::shared_ptr<CGameObject>());
+        expect_true(owner->hasProperty("companion") && !owner->getObjectProperty<CGameObject>("companion"),
+                    "clearing an object slot must retain a readable null-valued property");
+        drain_event_loop();
+        expect_true(probe->changedProperties == std::vector<std::string>({"companion", "companion", "companion"}),
+                    "clearing a dynamic object slot must emit exactly one additional change");
+
+        auto item = std::make_shared<CItem>();
+        auto bonus = std::make_shared<CStats>();
+        item->connect("propertyChanged", probe, "onPropertyChanged");
+        item->setObjectProperty("bonus", bonus);
+        expect_true(item->getBonus() == bonus && item->getObjectProperty<CStats>("bonus") == bonus,
+                    "object-property assignment must still invoke declared typed setters");
+        drain_event_loop();
+        expect_true(probe->changedProperties ==
+                        std::vector<std::string>({"companion", "companion", "companion", "bonus"}),
+                    "a declared object setter must also emit one property change");
+
+        item->setObjectProperty("bonus", std::shared_ptr<CStats>());
+        expect_true(!item->getBonus() && !item->getObjectProperty<CStats>("bonus"),
+                    "declared typed object slots must still support null clearing");
+        owner->setProperty("declaredSlot", original);
+        owner->setObjectProperty("declaredSlot", replacement);
+        expect_true(owner->getObjectProperty<CGameObject>("declaredSlot") == replacement,
+                    "existing dynamically declared pointer slots must accept replacement through the helper");
+        drain_event_loop();
+    } catch (const std::exception &error) {
+        expect_true(false, (std::string("object-property assignment must not throw: ") + error.what()).c_str());
+    }
 }
 
 void test_animation_property_events_invalidate_cached_graphics_object() {
@@ -2943,6 +3010,7 @@ int main() {
     test_game_object_get_map_prefers_owner_and_falls_back_to_active_map();
     test_game_object_equivalent_value_covers_supported_property_types();
     test_game_object_property_helpers_and_owned_tile_movement();
+    testDynamicObjectPropertiesPreserveIdentityAndNotifications();
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
     test_equip_item_same_instance_is_noop_and_keeps_cursed_lock();

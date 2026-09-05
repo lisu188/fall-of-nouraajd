@@ -5456,6 +5456,24 @@ class GameTest(unittest.TestCase):
         return True, ""
 
     @game_test
+    def test_object_property_binding_creates_replaces_and_clears_dynamic_references(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        owner = g.createObject("CGameObject")
+        other_owner = g.createObject("CGameObject")
+        first = g.createObject("Sword")
+        second = g.createObject("LesserLifePotion")
+        owner.setObjectProperty("inspectedItem", first)
+        self.assertEqual(first, owner.getObjectProperty("inspectedItem"))
+        self.assertFalse(other_owner.hasProperty("inspectedItem"))
+        owner.setObjectProperty("inspectedItem", second)
+        self.assertEqual(second, owner.getObjectProperty("inspectedItem"))
+        owner.setObjectProperty("inspectedItem", None)
+        self.assertIsNone(owner.getObjectProperty("inspectedItem"))
+        return True, "dynamic object references preserve identity, replacement, and null clearing"
+
+    @game_test
     def test_non_square_tmx_tile_layer_preserves_row_major_tile_positions(self):
         game = load_game_module()
         map_name = "unit_non_square_tmx"
@@ -24993,15 +25011,17 @@ class McpServerTest(unittest.TestCase):
         teleporter_2_def = find_map_object_definition("test", "teleporter2")
         ground_hole_def = find_map_object_definition("test", "groundHole")
 
-        teleporter = self._mcp_get_object_by_name(session, map_handle, "teleporter1")
-        teleporter_coords = self._mcp_handle_call(session, teleporter, "getCoords")
-        self._mcp_handle_call(session, player_handle, "setCoords", [teleporter_coords])
+        self._mcp_handle_call(
+            session, player_handle, "moveTo", [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0]
+        )
+        self._mcp_pump_event_loop(session)
         after_teleport_map = self._mcp_serialized_map(session, map_handle)
         after_teleport = self._serialized_coords(self._serialized_player(after_teleport_map))
 
-        ground_hole = self._mcp_get_object_by_name(session, map_handle, "groundHole")
-        ground_hole_coords = self._mcp_handle_call(session, ground_hole, "getCoords")
-        self._mcp_handle_call(session, player_handle, "setCoords", [ground_hole_coords])
+        self._mcp_handle_call(
+            session, player_handle, "moveTo", [ground_hole_def["x"] // 32, ground_hole_def["y"] // 32, 0]
+        )
+        self._mcp_pump_event_loop(session)
         after_ground_hole_map = self._mcp_serialized_map(session, map_handle)
         after_ground_hole = self._serialized_coords(self._serialized_player(after_ground_hole_map))
 
