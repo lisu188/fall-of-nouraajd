@@ -12541,6 +12541,16 @@ class GameTest(unittest.TestCase):
                 player_object = json.loads(json.dumps(obj))
                 break
         self.assertIsNotNone(player_object)
+        pending = [saved_document["snapshot"]]
+        maximum_actor_id = 0
+        while pending:
+            node = pending.pop()
+            if isinstance(node, dict):
+                maximum_actor_id = max(maximum_actor_id, node.get("effectActorId", 0))
+                pending.extend(node.values())
+            elif isinstance(node, list):
+                pending.extend(node)
+        player_object["effectActorId"] = maximum_actor_id + 1
         saved_document["snapshot"]["properties"]["objects"].append(player_object)
         save_primary_path(save_name).write_text(json.dumps(saved_document), encoding="utf-8")
 
@@ -20522,15 +20532,105 @@ def normalize_map_load_provenance(document):
     return normalized
 
 
+def canonicalizeEffectActorIds(document):
+    """Relabel operation-local actor IDs without changing graph identity or references."""
+
+    def canonicalizeGraph(root):
+        definitions = {}
+        pending = [root]
+        while pending:
+            node = pending.pop()
+            if isinstance(node, dict):
+                if isinstance(node.get("class"), str) and "effectActorId" in node:
+                    actor_id = node["effectActorId"]
+                    if type(actor_id) is not int or actor_id <= 0 or actor_id in definitions:
+                        raise ValueError("Invalid or duplicate effect actor definition")
+                    definitions[actor_id] = node
+                pending.extend(node.values())
+            elif isinstance(node, list):
+                pending.extend(node)
+
+        def rewriteIds(value, labels, *, omit_definitions=False):
+            if isinstance(value, dict):
+                rewritten = {
+                    key: rewriteIds(item, labels, omit_definitions=omit_definitions) for key, item in value.items()
+                }
+                # Metadata only belongs to object configs, never similarly named real properties.
+                if isinstance(value.get("class"), str):
+                    for key in ("effectActorId", "effectActorReference"):
+                        if key in value:
+                            if omit_definitions and key == "effectActorId":
+                                rewritten.pop(key)
+                            else:
+                                rewritten[key] = labels[value[key]]
+                    if "effectReferences" in value:
+                        for key in ("caster", "victim"):
+                            actor_id = value["effectReferences"].get(key)
+                            if actor_id is not None:
+                                rewritten["effectReferences"][key] = labels[actor_id]
+                return rewritten
+            if isinstance(value, list):
+                return [rewriteIds(item, labels, omit_definitions=omit_definitions) for item in value]
+            return value
+
+        def stableKey(value):
+            return json.dumps(normalize_save_snapshot(value), sort_keys=True, separators=(",", ":"))
+
+        def assignLabels(signatures):
+            ordered = {signature: index + 1 for index, signature in enumerate(sorted(set(signatures.values())))}
+            return {actor_id: ordered[signature] for actor_id, signature in signatures.items()}
+
+        anonymous = {actor_id: "<actor>" for actor_id in definitions}
+        try:
+            labels = assignLabels(
+                {
+                    actor_id: stableKey(rewriteIds(actor, anonymous, omit_definitions=True))
+                    for actor_id, actor in definitions.items()
+                }
+            )
+            # Most actors differ by name, class or coordinates. Refine rare content ties using
+            # their reference locations in the whole graph, with arrays already order-independent.
+            for _ in range(min(len(definitions), 16)):
+                counts = {}
+                for label in labels.values():
+                    counts[label] = counts.get(label, 0) + 1
+                if len(counts) == len(definitions):
+                    break
+                signatures = {}
+                for actor_id, label in labels.items():
+                    context = ""
+                    if counts[label] > 1:
+                        marked = {other: [other_label, other == actor_id] for other, other_label in labels.items()}
+                        context = stableKey(rewriteIds(root, marked))
+                    signatures[actor_id] = (label, context)
+                refined = assignLabels(signatures)
+                if len(set(refined.values())) == len(counts):
+                    break
+                labels = refined
+            if len(set(labels.values())) != len(definitions):
+                raise ValueError("Ambiguous effect actor identities after bounded reference-context refinement")
+            return rewriteIds(root, labels)
+        except KeyError as error:
+            raise ValueError(f"Effect actor reference has no definition: {error.args[0]}") from error
+
+    if isinstance(document, dict):
+        if "effectGraph" in document:
+            return canonicalizeGraph(document)
+        return {key: canonicalizeEffectActorIds(value) for key, value in document.items()}
+    if isinstance(document, list):
+        return [canonicalizeEffectActorIds(value) for value in document]
+    return document
+
+
 def canonical_save_round_trip_form(document, *, normalize=None):
     """Comparable form of a saved document: generated names and root-map load provenance
-    are normalized, then key order and set-backed array order are canonicalized via
-    normalize_save_snapshot. An optional `normalize` callable runs in between for fields
-    a future epic knows to be unstable."""
+    are normalized, effect actor IDs are relabeled, then key order and set-backed array
+    order are canonicalized. An optional `normalize` callable runs before graph relabeling
+    for fields a future epic knows to be unstable."""
     canonical = normalize_map_load_provenance(normalize_generated_save_names(document))
     if normalize is not None:
         canonical = normalize(canonical)
-    return normalize_save_snapshot(canonical)
+    return normalize_save_snapshot(canonicalizeEffectActorIds(canonical))
 
 
 def save_round_trip_diff(first, second, path="$"):
