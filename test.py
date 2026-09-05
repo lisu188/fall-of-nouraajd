@@ -35,6 +35,7 @@ import threading
 import time
 import traceback
 import types
+from functools import lru_cache
 from http import HTTPStatus
 from pathlib import Path
 import unittest
@@ -1812,14 +1813,21 @@ NOURAAJD_QUEST_REWARDS = {
 
 def load_sdl_library():
     import ctypes
+
+    # Cache the path, keeping each caller's ctypes function signatures independent.
+    library_name = resolveSdlLibraryName(str(build_dir), tuple(map(str, extension_dirs)))
+    return ctypes.CDLL(library_name)
+
+
+@lru_cache(maxsize=4)
+def resolveSdlLibraryName(build_path, extension_paths):
+    import ctypes
     import ctypes.util
 
-    library_names = [ctypes.util.find_library("SDL2")]
-    for extension_dir in extension_dirs:
-        library_names.append(extension_dir / "SDL2.dll")
+    library_names = [Path(extension_dir) / "SDL2.dll" for extension_dir in extension_paths]
     library_names.extend(
         [
-            build_dir / "vcpkg_installed" / "x64-windows" / "bin" / "SDL2.dll",
+            Path(build_path) / "vcpkg_installed" / "x64-windows" / "bin" / "SDL2.dll",
             "SDL2.dll",
             "libSDL2-2.0.so.0",
             "libSDL2.so",
@@ -1827,12 +1835,18 @@ def load_sdl_library():
     )
 
     for library_name in library_names:
-        if not library_name:
-            continue
         try:
-            return ctypes.CDLL(str(library_name))
+            ctypes.CDLL(str(library_name))
+            return str(library_name)
         except OSError:
             continue
+    discovered_name = ctypes.util.find_library("SDL2")
+    if discovered_name:
+        try:
+            ctypes.CDLL(discovered_name)
+            return discovered_name
+        except OSError:
+            pass
     raise AssertionError("Could not load SDL2 for gameplay event injection.")
 
 
@@ -8154,7 +8168,6 @@ class GameTest(unittest.TestCase):
             pump_event_loop_until(
                 lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
                 timeout=2.0,
-                min_iterations=2,
             )
         )
 
@@ -8179,7 +8192,6 @@ class GameTest(unittest.TestCase):
             pump_event_loop_until(
                 lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
                 timeout=2.0,
-                min_iterations=2,
             )
         )
 
@@ -14505,6 +14517,31 @@ class GameTest(unittest.TestCase):
         g.getMap().dumpPaths(str(output_path))
         return True, str(output_path)
 
+    def test_dialog_panel_accepts_registered_python_quest_action(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        gui = g.getGui()
+
+        dialog = g.createObject("dialog")
+        panel = g.createObject("dialogPanel")
+        panel.setObjectProperty("dialog", dialog)
+        gui.pushChild(panel)
+        self.assertEqual("not_started", game_map.getStringProperty("quest_state_octobogz_contract"))
+
+        for digit in "121":
+            self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord(digit)))
+
+        self.assertEqual("active", game_map.getStringProperty("quest_state_octobogz_contract"))
+        assert_player_quest_state(self, player, "octoBogzQuest", completed=False)
+        self.assertTrue(gui_contains_class(g, "CGameDialogPanel"))
+        self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord("1")))
+        self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
+
     @game_test
     def test_dialogs(self):
         option_defs = {}
@@ -20483,6 +20520,7 @@ def create_xvfb_gameplay_session(test_case, map_name="test", player_name=DEFAULT
 
     game = load_game_module()
     g = game.CGameLoader.loadGame()
+    test_case.addCleanup(g.getContext().shutdown)
     game.CGameLoader.loadGui(g)
     game.CGameLoader.startGameWithPlayer(g, map_name, player_name)
     pump_event_loop(5)
@@ -23515,12 +23553,80 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+
+    def test_explicit_transition_wait_accepts_completed_slow_pump(self):
+        from unittest.mock import Mock, patch
+
+        origin = types.SimpleNamespace(x=1, y=1, z=0)
+        entry = types.SimpleNamespace(x=3, y=4, z=0)
+        return_target = types.SimpleNamespace(x=2, y=1, z=0)
+        player = Mock()
+        player.isPlayer.return_value = True
+        player.getCoords.return_value = origin
+        original_map = Mock(mapName="test")
+        original_map.getTurn.return_value = 9
+        original_map.getBoolProperty.return_value = True
+        original_map.getPlayer.return_value = player
+        original_map.getObjects.return_value = [player]
+        ritual_map = Mock(mapName="ritual")
+        ritual_map.getTurn.return_value = 9
+        ritual_map.getEntryX.return_value = entry.x
+        ritual_map.getEntryY.return_value = entry.y
+        ritual_map.getEntryZ.return_value = entry.z
+        state = {"map": original_map, "request": None, "time": 0.0}
+        store = Mock()
+        store.contains.return_value = True
+        store.get.return_value = original_map
+        store.size.return_value = 1
+        scene_manager = Mock()
+        scene_manager.isTransitionPending.side_effect = lambda: state["request"] is not None
+        scene_manager.getTransitionStateName.side_effect = lambda: "TransitionPending" if state["request"] else "Idle"
+        scene_manager.getPendingMapName.side_effect = lambda: state["request"].targetMap
+        g = Mock()
+        g.getMap.side_effect = lambda: state["map"]
+        g.getSceneManager.return_value = scene_manager
+        g.getContext.return_value.getMapSessionStore.return_value = store
+
+        def requestTransition(request):
+            state["request"] = request
+            return True
+
+        def completeTransition():
+            request = state["request"]
+            self.assertIsNotNone(request)
+            state["time"] += 3.0
+            state["map"] = ritual_map if request.targetMap == "ritual" else original_map
+            player.getCoords.return_value = entry if request.targetMap == "ritual" else request.targetCoords
+            state["request"] = None
+
+        g.requestMapTransition.side_effect = requestTransition
+        loop = Mock()
+        loop.run.side_effect = completeTransition
+        game = types.SimpleNamespace(
+            CMapTransitionRequest=types.SimpleNamespace,
+            event_loop=types.SimpleNamespace(instance=lambda: loop),
+        )
+        result = unittest.TestResult()
+        with (
+            patch(f"{__name__}.load_game_module", return_value=game),
+            patch(f"{__name__}.load_game_map_with_player", return_value=(g, original_map, player)),
+            patch(f"{__name__}.find_adjacent_walkable_tile", return_value=return_target),
+            patch(f"{__name__}.time.monotonic", side_effect=lambda: state["time"]),
+            patch(f"{__name__}.time.sleep") as sleep,
+        ):
+            GameTest("test_explicit_transition_request_round_trips_persistent_session").run(result)
+        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+        self.assertEqual(2, loop.run.call_count)
+        self.assertEqual(6.0, state["time"])
+        sleep.assert_not_called()
+
     def test_modal_gui_fixtures_shutdown_after_assertion_failure(self):
         from unittest.mock import Mock, patch
 
-        for method_name in (
-            "test_inventory_panel_refreshes_only_after_event_loop_drains",
-            "test_blocking_modal_gui_helpers_drive_panels",
+        for case_type, method_name in (
+            (GameTest, "test_inventory_panel_refreshes_only_after_event_loop_drains"),
+            (GameTest, "test_blocking_modal_gui_helpers_drive_panels"),
+            (XvfbGameplayProcessTest, "test_keyboard_input_moves_player"),
         ):
             with self.subTest(method=method_name):
                 context = types.SimpleNamespace(active=True)
@@ -23533,8 +23639,14 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 )
                 game = types.SimpleNamespace(CGameLoader=loader)
                 result = unittest.TestResult()
-                with patch(f"{__name__}.load_game_module", return_value=game), patch(f"{__name__}.drain_sdl_events"):
-                    GameTest(method_name).run(result)
+                with (
+                    patch(f"{__name__}.load_game_module", return_value=game),
+                    patch(f"{__name__}.drain_sdl_events"),
+                    patch.dict(
+                        os.environ, {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}
+                    ),
+                ):
+                    case_type(method_name).run(result)
                 self.assertEqual(1, result.testsRun)
                 self.assertEqual([], result.errors)
                 self.assertEqual(1, len(result.failures))
