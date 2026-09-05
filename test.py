@@ -1688,6 +1688,7 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_panel_resize_reopened_panel_stays_onscreen",
     "test_screenshot_readback_has_rendered_pixels",
     "test_screenshot_minimap_has_rendered_pixels",
+    "test_gui_queries_match_serialized_rendered_tree",
     "test_screenshot_after_keyboard_move_has_rendered_pixels",
     "test_screenshot_after_mouse_move_has_rendered_pixels",
     "test_screenshot_after_save_hotkey_has_rendered_pixels",
@@ -2841,16 +2842,16 @@ def visible_map_cell_center(origin, target):
 
 
 def gui_contains_class(g, class_name):
-    game = load_game_module()
-    gui_tree = json.loads(game.jsonify(g.getGui()))
-    stack = [gui_tree]
+    """Find configured GUI classes, excluding metadata names of untyped render cells."""
+    gui = g.getGui()
+    stack = [gui] if gui is not None else []
     while stack:
         node = stack.pop()
-        if not isinstance(node, dict):
+        if node is None:
             continue
-        if node.get("class") == class_name:
+        if node.getType() == class_name:
             return True
-        stack.extend(node.get("properties", {}).get("children") or [])
+        stack.extend(node.getChildren())
     return False
 
 
@@ -2866,12 +2867,8 @@ def collect_gui_children(root, class_name):
 
 
 def get_map_proxy_child_counts(g):
-    game = load_game_module()
-    gui_tree = json.loads(game.jsonify(g.getGui()))
-    children = gui_tree.get("properties", {}).get("children") or []
-    map_graph = next(child for child in children if child.get("class") == "CMapGraphicsObject")
-    proxies = map_graph.get("properties", {}).get("children") or []
-    return [len(proxy.get("properties", {}).get("children") or []) for proxy in proxies]
+    map_graph = next(child for child in g.getGui().getChildren() if child.getType() == "CMapGraphicsObject")
+    return [len(proxy.getChildren()) for proxy in map_graph.getChildren()]
 
 
 def materialized_tile_type(game, game_map, coords):
@@ -21130,6 +21127,53 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertTrue(gui_contains_class(g, "CMinimapGraphicsObject"))
         self.assertGreaterEqual(summary["color_counts"].get(MINIMAP_PLAYER_RGB, 0), 20)
 
+    def test_gui_queries_match_serialized_rendered_tree(self):
+        from unittest.mock import patch
+
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = g.getGuiHandler().openPanel("questPanel")
+        g.getGuiHandler().showTooltip("GUI query reference", 960, 540)
+        pump_event_loop(3)
+        try:
+            gui_tree = json.loads(game.jsonify(g.getGui()))
+            serialized_classes = set()
+            stack = [gui_tree]
+            while stack:
+                node = stack.pop()
+                if isinstance(node, dict):
+                    serialized_classes.add(node.get("class"))
+                    stack.extend(node.get("properties", {}).get("children") or [])
+            map_graph = next(
+                child for child in gui_tree["properties"]["children"] if child.get("class") == "CMapGraphicsObject"
+            )
+            expected_counts = [
+                len(proxy.get("properties", {}).get("children") or []) for proxy in map_graph["properties"]["children"]
+            ]
+            self.assertTrue(expected_counts)
+            self.assertGreater(sum(expected_counts), 0)
+            self.assertTrue({"CGameQuestPanel", "CTooltip", "CMinimapGraphicsObject"} <= serialized_classes)
+            panel_config = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
+            query_classes = {entry["class"] for entry in panel_config.values()} | {
+                "CGui",
+                "CGamePanel",
+                "CTooltip",
+                "CMinimapGraphicsObject",
+                "CMapGraphicsObject",
+                "MissingPanel",
+            }
+            with patch.object(
+                game, "jsonify", side_effect=AssertionError("GUI queries must not serialize.")
+            ) as serialize:
+                for _ in range(20):
+                    for class_name in query_classes:
+                        self.assertEqual(
+                            class_name in serialized_classes, gui_contains_class(g, class_name), class_name
+                        )
+                    self.assertEqual(expected_counts, get_map_proxy_child_counts(g))
+                serialize.assert_not_called()
+        finally:
+            panel.close()
+
     def test_screenshot_after_keyboard_move_has_rendered_pixels(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
         initial = player.getCoords()
@@ -23469,6 +23513,28 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+    def test_gui_queries_preserve_tree_assertions_without_serializing(self):
+        from unittest.mock import Mock, patch
+
+        def node(class_name, children=()):
+            return types.SimpleNamespace(getType=lambda: class_name, getChildren=lambda: children)
+
+        leaf = node("CTextWidget")
+        map_graph = node("CMapGraphicsObject", (node(""), node("", (leaf, leaf))))
+        nested_map = node("CMapGraphicsObject", (node("CProxyGraphicsObject", (leaf,)),))
+        gui = node("CGui", (node("CGamePanel", (nested_map,)), map_graph))
+        g = types.SimpleNamespace(getGui=lambda: gui)
+        game = types.SimpleNamespace(jsonify=Mock(side_effect=AssertionError("Typed GUI queries must not serialize.")))
+        with patch(f"{__name__}.load_game_module", return_value=game):
+            for _ in range(20):
+                self.assertTrue(gui_contains_class(g, "CGui"))
+                self.assertTrue(gui_contains_class(g, "CTextWidget"))
+                self.assertFalse(gui_contains_class(g, "CGameGraphicsObject"))
+                self.assertFalse(gui_contains_class(g, "MissingPanel"))
+                self.assertEqual([0, 2], get_map_proxy_child_counts(g))
+            self.assertFalse(gui_contains_class(types.SimpleNamespace(getGui=lambda: None), "CGui"))
+        game.jsonify.assert_not_called()
+
     def test_parse_runner_args_accepts_suite_names(self):
         jobs, suite_name, unittest_argv = parse_runner_args(
             ["test.py", "--suite", "gameplay", "--jobs=3", "GameTest.test_turns"]
