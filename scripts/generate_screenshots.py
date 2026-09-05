@@ -58,6 +58,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REEXEC_SENTINEL = "NOURAAJD_SCREENSHOTS_REEXEC"
 PANELS_MAP = "nouraajd"  # content-rich campaign map used as the backdrop for panels
+NATIVE_GUI_HELPERS = {}
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +140,8 @@ def _suppress_blocking_popups(game):
     normally.
     """
     handler = game.CGuiHandler
+    for name in ("showSelection", "showLoot", "showDialog", "showCampaignSelection"):
+        NATIVE_GUI_HELPERS[name] = getattr(handler, name)
     handler.showMessage = lambda self, message: None
     handler.showInfo = lambda self, message, centered=False: None
     handler.showQuestion = lambda self, message: True
@@ -189,7 +192,14 @@ def discover_panels():
 # ---------------------------------------------------------------------------
 def _configure_panel(game_instance, panel_name, panel):
     """Populate ``panel`` with representative content. Best effort per panel."""
-    if panel_name in {"infoPanel", "textPanel"}:
+    if panel_name == "campaignPanel":
+        panel.setStringProperty("title", "Chapter I - The Ruined Town")
+        panel.setStringProperty("body", "Recover Sergeant Rolf's letter and cleanse the corruption beneath Nouraajd.")
+        panel.setStringProperty("actionLabel", "BEGIN")
+        for child in panel.getChildren():
+            if child.getType() == "CButton":
+                child.setStringProperty("text", "BEGIN")
+    elif panel_name in {"infoPanel", "textPanel"}:
         panel.setText(f"{panel_name}: rendered for screenshot coverage")
     elif panel_name == "questionPanel":
         panel.setStringProperty("question", "Regenerate the screenshots?")
@@ -198,58 +208,73 @@ def _configure_panel(game_instance, panel_name, panel):
         enemy.name = "screenshotGoblin"
         enemy.setHp(enemy.getHpMax())
         panel.setEnemy(enemy)  # also drives the nested creatureView / statsView
-    elif panel_name == "lootPanel":
-        creature = game_instance.createObject("GoblinThief")
-        creature.name = "screenshotLootGoblin"
-        panel.setCreature(creature)
-        panel.setItems({game_instance.createObject("Scroll"), game_instance.createObject("Sword")})
     elif panel_name == "tradePanel":
         market = game_instance.createObject("CMarket")
         market.setItems({game_instance.createObject("Scroll"), game_instance.createObject("Sword")})
         panel.setMarket(market)
-    elif panel_name == "dialogPanel":
-        dialog = game_instance.createObject("questDialog")
-        panel.setDialog(dialog)
-        reload_fn = getattr(panel, "reload", None)
-        if callable(reload_fn):
-            reload_fn()
-    elif panel_name == "selectionPanel":
-        _populate_selection_panel(game_instance, panel)
-    elif panel_name == "creatureView":
-        creature = game_instance.createObject("GoblinThief")
-        creature.name = "screenshotCreatureView"
-        creature.setHp(creature.getHpMax())
-        panel.setCreatureScript(creature)
-    elif panel_name == "statsView":
-        creature = game_instance.createObject("GoblinThief")
-        creature.name = "screenshotStatsView"
-        creature.setHp(creature.getHpMax())
-        panel.setCreature(creature)
     # characterPanel, inventoryPanel and questPanel render the live player,
     # which is prepared by _prepare_player_for_panels before capture.
 
 
-def _populate_selection_panel(game_instance, panel):
-    """Give the selection panel a few labelled buttons so it renders content.
+def _populateCampaignBrowser(game_instance, panel):
+    import campaign
 
-    ``showSelection`` builds these buttons from a string list with wired click
-    handlers; for a static screenshot we only need the buttons to be visible, so
-    we construct plain labelled buttons with proportional layouts.
-    """
-    options = ["Accept the contract", "Decline", "Ask for more gold"]
-    buttons = set()
-    count = len(options)
-    for index, label in enumerate(options):
-        button = game_instance.createObject("CButton")
-        button.setText(label)
-        layout = game_instance.createObject("CLayout")
-        layout.setX("0%")
-        layout.setY(f"{100 * index // count}%")
-        layout.setW("100%")
-        layout.setH(f"{100 // count}%")
-        button.setLayout(layout)
-        buttons.add(button)
-    panel.setChildren(buttons)
+    manifests = campaign.list_campaigns()
+    if manifests:
+        first = manifests[0]
+        panel.setStringProperty("selectedId", first["campaignId"])
+        panel.setStringProperty(
+            "detailText", f"{first['title']}\n\n{first.get('description', '')}\n\nChapters: {len(first['scenarios'])}"
+        )
+
+
+def _captureNativePanel(game, sim, panel_name, path):
+    """Use native helpers for panels whose initialization is not exposed to Python."""
+    game_instance = sim.gameInstance
+    if panel_name == "campaignBrowserPanel":
+        import campaign
+
+        helper_name, panel_class = "showCampaignSelection", "CGameCampaignBrowserPanel"
+        manifests = campaign.list_campaigns()
+        titles = game_instance.createObject("CMapStringString")
+        titles.setValues({manifest["campaignId"]: manifest["title"] for manifest in manifests})
+        descriptions = game_instance.createObject("CMapStringString")
+        descriptions.setValues({manifest["campaignId"]: manifest.get("description", "") for manifest in manifests})
+        counts = game_instance.createObject("CMapStringInt")
+        counts.setValues({manifest["campaignId"]: len(manifest["scenarios"]) for manifest in manifests})
+        arguments = (titles, descriptions, counts)
+    elif panel_name == "dialogPanel":
+        helper_name, panel_class = "showDialog", "CGameDialogPanel"
+        arguments = (game_instance.createObject("questDialog"),)
+    elif panel_name == "lootPanel":
+        helper_name, panel_class = "showLoot", "CGameLootPanel"
+        arguments = (
+            game_instance.createObject("GoblinThief"),
+            {game_instance.createObject("Scroll"), game_instance.createObject("Sword")},
+        )
+    else:
+        helper_name, panel_class = "showSelection", "CGamePanel"
+        choices = game_instance.createObject("CListString")
+        for label in ("Accept the contract", "Decline", "Ask for more gold"):
+            choices.addValue(label)
+        arguments = (choices,)
+    captured = {}
+
+    def captureAndClose():
+        panel = game_instance.getGui().findChild(panel_class)
+        if panel is None:
+            raise RuntimeError(f"Native helper did not open {panel_name}")
+        try:
+            if panel_name == "campaignBrowserPanel":
+                _populateCampaignBrowser(game_instance, panel)
+            sim.pumpEvents(5)
+            captured.update(sim.captureGuiScreenshot(path=path))
+        finally:
+            game_instance.getGuiHandler().flipPanel(panel_name, "x")
+
+    game.event_loop.instance().invoke(captureAndClose)
+    NATIVE_GUI_HELPERS[helper_name](game_instance.getGuiHandler(), *arguments)
+    return captured
 
 
 def _prepare_player_for_panels(sim):
@@ -262,23 +287,22 @@ def _prepare_player_for_panels(sim):
     player = sim.player
     for item_id in ("Sword", "Scroll", "LeatherArmor"):
         try:
-            player.addItem(item_id)
+            player.addItem(sim.gameInstance.createObject(item_id))
         except Exception:  # noqa: BLE001 - seeding inventory is best effort
             pass
     try:
         start_events = [
-            obj
-            for obj in sim.gameMap.getObjects()
-            if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
+            obj for obj in sim.gameMap.getObjects() if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
         ]
         if start_events:
             coords = start_events[0].getCoords()
-            player.setCoords(sim.gameModule.Coords(coords.x, coords.y, coords.z))
+            player.moveTo(coords.x, coords.y, coords.z)
             sim.pumpEvents(5)
             player.checkQuests()
             sim.pumpEvents(3)
     except Exception:  # noqa: BLE001 - activating a quest is best effort
         pass
+    player.addQuest("mainQuest")
 
 
 # ---------------------------------------------------------------------------
@@ -297,12 +321,19 @@ def capture_panels(game, output_dir, player_class, panels):
         path = output_dir / f"panel-{panel_name}.png"
         panel = None
         try:
-            panel = gui_handler.openPanel(panel_name)
+            if panel_name in {"campaignBrowserPanel", "dialogPanel", "lootPanel", "selectionPanel"}:
+                info = _captureNativePanel(game, sim, panel_name, path)
+                written.append(path)
+                print(f"  [ok]   panel {panel_name}: {path.name} ({info.get('bytes', 0)} bytes)", flush=True)
+                continue
+            # These resources are child views, not CGamePanel subclasses; opening
+            # them directly through openPanel would pass a null panel to the GUI.
+            host_name = "fightPanel" if panel_name in {"creatureView", "statsView"} else panel_name
+            panel = gui_handler.openPanel(host_name)
             if panel is None:
                 print(f"  [skip] panel {panel_name}: openPanel returned None", flush=True)
                 continue
-            sim.pumpEvents(3)
-            _configure_panel(sim.gameInstance, panel_name, panel)
+            _configure_panel(sim.gameInstance, host_name, panel)
             sim.pumpEvents(5)
             info = sim.captureGuiScreenshot(path=path)
             written.append(path)
@@ -388,7 +419,7 @@ def main():
 
     # Report panel coverage against the manifest so a missing panel is obvious.
     if not args.maps_only:
-        captured_panels = {p.stem[len("panel-"):] for p in written if p.stem.startswith("panel-")}
+        captured_panels = {p.stem[len("panel-") :] for p in written if p.stem.startswith("panel-")}
         missing = [name for name in panels if name not in captured_panels]
         if missing:
             print(f"WARNING: no screenshot produced for panels: {', '.join(missing)}", flush=True)
