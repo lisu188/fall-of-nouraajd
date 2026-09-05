@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGame.h"
 #include "core/CLoader.h"
+#include "core/CLuaOverrides.h"
 #include "handler/CLuaHandler.h"
 #include "handler/CObjectHandler.h"
 #include "object/CCreature.h"
@@ -109,6 +110,33 @@ end
     expect_true(probe != nullptr, "a Lua-registered config referencing a Lua-registered class constructs");
     expect_true(probe != nullptr && probe->getNumericProperty("power") == 3,
                 "reflection-driven property application works for Lua-backed types");
+}
+
+void test_lua_factory_objects_are_released() {
+    auto game = std::make_shared<CGame>();
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/probe_tile.lua", PROBE_TILE_PLUGIN),
+                "the lifetime-probe plugin must load");
+    const auto originalEntries = CLuaOverrides::instances().size();
+    std::weak_ptr<CGameObject> observer;
+    {
+        auto tile = game->getObjectHandler()->getType("LuaProbeTile");
+        expect_true(tile != nullptr, "a temporary Lua factory object must construct");
+        observer = tile;
+    }
+    expect_true(observer.expired(), "the override registry must not keep a discarded factory object alive");
+    expect_true(CLuaOverrides::instances().size() == originalEntries,
+                "destroying a Lua factory object must remove its override entry");
+
+    auto tile = game->createObject<CTile>("LuaProbeTile");
+    observer = tile;
+    if (tile) {
+        tile->onStep(std::make_shared<CCreature>());
+    }
+    game->getLuaHandler()->releaseState();
+    tile.reset();
+    expect_true(observer.expired(), "a dispatched Lua object must be released after the state and caller release it");
+    expect_true(CLuaOverrides::instances().size() == originalEntries,
+                "Lua state shutdown must not leave entries for discarded objects");
 }
 
 void test_lua_sandbox_blocks_dangerous_globals() {
@@ -263,6 +291,7 @@ int main() {
     test_lua_plugin_registers_constructible_type();
     test_lua_hook_dispatch_and_property_bridge();
     test_lua_config_json_and_reflection_construction();
+    test_lua_factory_objects_are_released();
     test_lua_sandbox_blocks_dangerous_globals();
     test_lua_rejects_bytecode_chunks();
     test_lua_load_contract_and_syntax_errors();

@@ -35,6 +35,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <string>
 
+std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest);
+
 namespace {
 
 class ScopedCurrentPath {
@@ -65,6 +67,27 @@ bool write_text_file(const std::filesystem::path &path, const std::string &text)
     }
     stream << text;
     return static_cast<bool>(stream);
+}
+
+void test_manifest_scopes_control_plugin_auto_discovery() {
+    const json manifest = json::parse(R"json({"plugins": [
+        {"id": "global", "kind": "python", "path": "plugins/global.py"},
+        {"id": "mapPython", "kind": "python", "path": "./plugins/map.py", "scope": {"map": "siege"}},
+        {"id": "mapLua", "kind": "lua", "path": "plugins/map.lua", "scope": {"map": "siege"}},
+        {"id": "otherMap", "kind": "lua", "path": "plugins/other.lua", "scope": {"map": "test"}},
+        {"id": "wrongKind", "kind": "lua", "path": "plugins/undispatched.py"},
+        {"kind": "python", "path": "plugins/missingId.py"}
+    ]})json");
+    const auto exclusions = getPluginAutoDiscoveryExclusions(manifest);
+    expect_true(exclusions == std::set<std::string>{"plugins/global.py", "plugins/map.py", "plugins/map.lua",
+                                                    "plugins/other.lua"},
+                "global discovery must defer all valid manifest paths, including every inactive map scope");
+    expect_true(!exclusions.contains("plugins/unlisted.py") && !exclusions.contains("plugins/unlisted.lua"),
+                "unlisted Python and Lua plugins must remain eligible for auto-discovery");
+    expect_true(!exclusions.contains("plugins/undispatched.py") && !exclusions.contains("plugins/missingId.py"),
+                "invalid manifest declarations must not suppress valid auto-discovered files");
+    expect_true(getPluginAutoDiscoveryExclusions(json::object()).empty(),
+                "a manifest without declarations must preserve normal auto-discovery");
 }
 
 void test_resource_provider_paths_and_config_loader() {
@@ -643,6 +666,7 @@ void test_map_load_activates_scope_for_map_local_assets() {
 int main() {
     pybind11::scoped_interpreter guard{};
 
+    test_manifest_scopes_control_plugin_auto_discovery();
     test_resource_provider_paths_and_config_loader();
     test_resource_provider_save_uses_provider_root_when_cwd_changes();
     test_configuration_provider_instances_do_not_share_config_cache();

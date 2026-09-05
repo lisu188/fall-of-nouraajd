@@ -747,15 +747,16 @@ bool CLuaHandler::loadPlugin(const std::shared_ptr<CGame> &game, const std::stri
 
 bool CLuaHandler::dispatch(const CGameObject *object, const char *hook,
                            const std::vector<std::shared_ptr<CGameObject>> &arguments) {
-    auto *entry = CLuaOverrides::find(object);
-    if (entry == nullptr) {
+    auto entry = CLuaOverrides::find(object);
+    if (!entry) {
         // Every CLuaWrapper instance is retained at construction, so a missing entry means the
         // object was produced outside its factory and falls back to base behavior.
         vstd::logger::debug("Lua dispatch has no override entry for hook:", hook);
         return false;
     }
+    auto self = entry->self.lock();
     auto handler = entry->handler.lock();
-    if (!handler || handler->luaState == nullptr) {
+    if (!self || !handler || handler->luaState == nullptr) {
         vstd::logger::debug("Lua dispatch skipped for hook after state release:", hook);
         return false;
     }
@@ -770,7 +771,7 @@ bool CLuaHandler::dispatch(const CGameObject *object, const char *hook,
         lua_pop(L, 2);
         return false;
     }
-    push_game_object(L, entry->self);
+    push_game_object(L, self);
     for (const auto &argument : arguments) {
         push_game_object(L, argument);
     }
@@ -784,12 +785,13 @@ bool CLuaHandler::dispatch(const CGameObject *object, const char *hook,
 
 bool CLuaHandler::dispatchBool(const CGameObject *object, const char *hook,
                                const std::vector<std::shared_ptr<CGameObject>> &arguments, bool &result) {
-    auto *entry = CLuaOverrides::find(object);
-    if (entry == nullptr) {
+    auto entry = CLuaOverrides::find(object);
+    if (!entry) {
         return false;
     }
+    auto self = entry->self.lock();
     auto handler = entry->handler.lock();
-    if (!handler || handler->luaState == nullptr) {
+    if (!self || !handler || handler->luaState == nullptr) {
         return false;
     }
     lua_State *L = handler->luaState;
@@ -803,7 +805,7 @@ bool CLuaHandler::dispatchBool(const CGameObject *object, const char *hook,
         lua_pop(L, 2);
         return false;
     }
-    push_game_object(L, entry->self);
+    push_game_object(L, self);
     for (const auto &argument : arguments) {
         push_game_object(L, argument);
     }

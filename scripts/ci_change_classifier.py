@@ -22,6 +22,7 @@ COVERAGE_PATH_PATTERNS = (
     "src/gui/*",
     "src/handler/*",
     "src/object/*",
+    "src/plugin/*",
 )
 
 NATIVE_PATH_PATTERNS = (

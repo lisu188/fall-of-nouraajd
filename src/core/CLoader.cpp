@@ -661,6 +661,25 @@ bool isLiveGuiSession(const std::shared_ptr<CGame> &game, const std::shared_ptr<
 }
 } // namespace
 
+std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest) {
+    std::set<std::string> paths;
+    if (!manifest.contains("plugins") || !manifest["plugins"].is_array()) {
+        return paths;
+    }
+    for (const auto &entry : manifest["plugins"]) {
+        const auto descriptor = parse_plugin_descriptor(entry);
+        if (!descriptor) {
+            continue;
+        }
+        const bool trustedPath = (descriptor->kind == "python" && is_allowed_python_plugin_path(descriptor->source)) ||
+                                 (descriptor->kind == "lua" && is_allowed_lua_plugin_path(descriptor->source));
+        if (trustedPath) {
+            paths.insert(*normalize_relative_resource_path(descriptor->source));
+        }
+    }
+    return paths;
+}
+
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
     if (mapc && mapc->is_object()) {
         const json emptyObject = json::object();
@@ -1330,19 +1349,22 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
     bool loadedAll = true;
     std::set<std::string> loadedPluginIds;
     std::set<std::string> loadedPluginPaths;
+    std::set<std::string> manifestPluginPaths;
 
     if (auto manifest = load_plugin_manifest(game->getResourcesProvider())) {
+        // Explicit manifest entries own discovery even while their map scope is inactive.
+        manifestPluginPaths = getPluginAutoDiscoveryExclusions(*manifest);
         loadedAll = load_plugin_entries(game, *manifest, std::nullopt, loadedPluginIds, loadedPluginPaths) && loadedAll;
     }
 
     for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN)) {
-        if (!loadedPluginPaths.contains(script)) {
+        if (!manifestPluginPaths.contains(script)) {
             loadedAll = loadPlugin(game, script) && loadedAll;
         }
     }
 
     for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN_LUA)) {
-        if (!loadedPluginPaths.contains(script)) {
+        if (!manifestPluginPaths.contains(script)) {
             loadedAll = loadLuaPlugin(game, script) && loadedAll;
         }
     }

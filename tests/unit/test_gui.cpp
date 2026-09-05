@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
 #include "gui/CTextureCache.h"
+#include "gui/CTextManager.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "gui/object/CWidget.h"
@@ -188,6 +189,7 @@ class QuestTextCountingPanel : public CGameQuestPanel {
     }
 
     int build_count = 0;
+    int paragraph_measure_count = 0;
 
   protected:
     std::shared_ptr<CPlayer> resolveQuestSource(const std::shared_ptr<CGui> &) override { return resolvedQuestSource; }
@@ -199,6 +201,12 @@ class QuestTextCountingPanel : public CGameQuestPanel {
     std::string buildText(const std::shared_ptr<CPlayer> &player) override {
         ++build_count;
         return CGameQuestPanel::buildText(player);
+    }
+
+    int measureParagraphHeight(const std::shared_ptr<CTextManager> &textManager, const std::string &text,
+                               int width) override {
+        ++paragraph_measure_count;
+        return CGameQuestPanel::measureParagraphHeight(textManager, text, width);
     }
 
   private:
@@ -872,6 +880,157 @@ void test_quest_panel_rebuilds_text_only_when_quest_data_changes() {
     expect_true(updated.find("[Active] Recover the sunken sigil") != std::string::npos,
                 "quest panel should keep rendering still-active quests after a rebuild");
     expect_true(panel->build_count == 2, "a quest-log change should trigger exactly one coalesced rebuild");
+}
+
+void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    auto player = std::make_shared<CPlayer>();
+    auto panel = std::make_shared<QuestTextCountingPanel>();
+    panel->setLayout(fixed_layout(0, 0, 800, 600));
+    panel->setResolvedQuestSource(player);
+    gui->pushChild(panel);
+
+    std::set<std::shared_ptr<CQuest>> completed;
+    for (int i = 0; i < 60; ++i) {
+        auto quest = std::make_shared<CQuest>();
+        quest->setDescription("Completed campaign chapter " + std::to_string(i) + ": recover the town's lost relic.");
+        completed.insert(quest);
+    }
+    auto active = std::make_shared<CQuest>();
+    active->setDescription("FINAL ACTIVE OBJECTIVE");
+    player->setCompletedQuests(completed);
+    player->setQuests({active});
+    expect_true(panel->getText(gui).size() > 4096, "journal fixture should exceed the whole-text texture limit");
+    const auto firstPage = panel->getViewportText(gui);
+    const int firstMeasures = panel->paragraph_measure_count;
+    expect_true(firstMeasures > 0, "journal should measure its paragraphs on the first layout");
+    for (int frame = 0; frame < 20; ++frame) {
+        gui->render(frame);
+    }
+    expect_true(panel->paragraph_measure_count == firstMeasures && panel->build_count == 1,
+                "idle journal rendering must not rebuild text or remeasure paragraphs");
+    expect_true(firstPage.find("[Completed]") != std::string::npos &&
+                    firstPage.find("FINAL ACTIVE OBJECTIVE") == std::string::npos,
+                "the initial viewport should show history before the distant active objective");
+
+    SDL_Event key{};
+    key.type = SDL_KEYDOWN;
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() > 0 && panel->getScrollOffset() == panel->getScrollMaximum(),
+                "End should reach the bottom of a long journal through normal GUI input");
+    expect_true(panel->getViewportText(gui).find("FINAL ACTIVE OBJECTIVE") != std::string::npos,
+                "the final active objective must remain reachable beyond 4096 bytes of completed history");
+    const int bottom = panel->getScrollOffset();
+    key.key.keysym.sym = SDLK_PAGEUP;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() < bottom && panel->getScrollOffset() > 0,
+                "Page Up should move through intermediate journal history");
+    key.key.keysym.sym = SDLK_PAGEDOWN;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() == bottom, "Page Down should return to the final page");
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    expect_true(panel->getViewportText(gui) == firstPage && panel->getScrollOffset() == 0,
+                "Home should restore the initial viewport exactly");
+
+    SDL_Event wheel{};
+    wheel.type = SDL_MOUSEWHEEL;
+    wheel.wheel.y = -1;
+    gui->event(&wheel);
+    expect_true(panel->getScrollOffset() > 0, "mouse-wheel scrolling should navigate the journal");
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    key.key.keysym.sym = SDLK_DOWN;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() > 0, "Down should move by a line");
+    key.key.keysym.sym = SDLK_UP;
+    gui->event(&key);
+    expect_true(panel->getScrollOffset() == 0, "Up should restore the previous line");
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->paragraph_measure_count == firstMeasures, "scrolling must reuse all measured paragraph heights");
+    panel->getLayout()->setRuntimeW(400);
+    expect_true(panel->getViewportText(gui).size() > 0, "a resized journal should rebuild wrapping and retain content");
+    expect_true(panel->build_count == 1, "scrolling and resizing must reuse the cached quest text");
+    expect_true(panel->paragraph_measure_count == 2 * firstMeasures,
+                "a width change should remeasure every paragraph exactly once");
+
+    std::string unicodeDescription;
+    for (int i = 0; i < 1800; ++i) {
+        unicodeDescription += "\xe2\x98\x85";
+    }
+    unicodeDescription += " UNICODE JOURNAL END";
+    active->setDescription(unicodeDescription);
+    player->setCompletedQuests({});
+    panel->refreshFromQuestsChanged();
+    key.key.keysym.sym = SDLK_HOME;
+    gui->event(&key);
+    auto containsCompleteStars = [](const std::string &text) {
+        for (std::size_t i = 0; i < text.size(); ++i) {
+            if (static_cast<unsigned char>(text[i]) >= 0x80) {
+                if (text.compare(i, 3, "\xe2\x98\x85") != 0) {
+                    return false;
+                }
+                i += 2;
+            }
+        }
+        return true;
+    };
+    key.key.keysym.sym = SDLK_PAGEDOWN;
+    for (int page = 0; page < 100; ++page) {
+        expect_true(containsCompleteStars(panel->getViewportText(gui)),
+                    "journal texture chunks must never split UTF-8 codepoints");
+        if (panel->getScrollOffset() == panel->getScrollMaximum()) {
+            break;
+        }
+        gui->event(&key);
+    }
+    key.key.keysym.sym = SDLK_END;
+    gui->event(&key);
+    expect_true(panel->getViewportText(gui).find("UNICODE JOURNAL END") != std::string::npos,
+                "a single long Unicode paragraph must remain readable to its end");
+
+    player->setCompletedQuests({});
+    player->setQuests({});
+    drain_event_loop();
+    expect_true(panel->getViewportText(gui).find("No active quests.") != std::string::npos,
+                "a shortened journal should clamp the viewport back to its remaining text");
+    expect_true(panel->getScrollMaximum() == 0 && panel->getScrollOffset() == 0,
+                "clearing quests must not leave an empty scrolled viewport");
+}
+
+void test_populated_list_releases_owning_view_and_ignores_expired_callbacks() {
+    auto harness = create_drag_list_harness();
+    type_registration::registerGuiAnimationTypes();
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        harness.game->getObjectHandler()->registerType(name, builder);
+    }
+    harness.panel->sourceItem->setAnimation("images/item");
+    harness.source->refresh();
+    expect_true(!harness.source->getChildren().empty(), "lifetime fixture should populate actual list proxy children");
+    std::shared_ptr<CAnimation> retainedAnimation;
+    for (auto graphic : harness.source->getProxiedObjects(harness.gui, 0, 0)) {
+        auto animation = vstd::cast<CAnimation>(graphic);
+        if (animation && animation->getObject() == harness.panel->sourceItem) {
+            retainedAnimation = animation;
+        }
+    }
+    expect_true(retainedAnimation != nullptr, "lifetime fixture should retain an actual item callback");
+    std::weak_ptr<CListView> weakList = harness.source;
+    harness.panel->close();
+    harness.source.reset();
+    harness.target.reset();
+    harness.panel.reset();
+    expect_true(weakList.expired(), "item callbacks must not retain a closed populated list view");
+    if (retainedAnimation) {
+        expect_true(retainedAnimation->mouseEvent(harness.gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0),
+                    "a retained item callback should safely consume input after its owner expires");
+    }
+    expect_true(!harness.gui->hasDragSession(), "an expired item callback must not start a drag");
 }
 
 void test_quest_panel_resubscribes_when_quest_source_changes() {
@@ -2821,6 +2980,46 @@ void test_dialog_panel_current_options_preserve_numeric_display_order() {
                 "dialog panel should display options from lowest dialog number to highest");
 }
 
+void test_dialog_option_callback_closes_and_releases_its_panel() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto game = create_gui_game(gui);
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    auto option = std::make_shared<CDialogOption>();
+    option->setNumber(0);
+    option->setText("Leave");
+    option->setNextStateId("EXIT");
+    auto state = std::make_shared<CDialogState>();
+    state->setStateId("ENTRY");
+    state->setText("Welcome, traveler.");
+    state->setOptions({option});
+    auto dialog = std::make_shared<CDialog>();
+    dialog->setStates({state});
+    auto panel = std::make_shared<CGameDialogPanel>();
+    panel->setGame(game);
+    panel->setLayout(fixed_layout(0, 0, 800, 600));
+    panel->setDialog(dialog);
+    gui->pushChild(panel);
+    panel->reload();
+    std::string click;
+    for (const auto &child : panel->getChildren()) {
+        if (auto widget = vstd::cast<CWidget>(child); widget && !widget->getClick().empty()) {
+            click = widget->getClick();
+        }
+    }
+    expect_true(!click.empty(), "dialog reload should install a clickable option");
+    if (!click.empty()) {
+        panel->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(click, panel, gui);
+    }
+    expect_true(!panel->getGui(), "the installed option callback should still close its dialog");
+    std::weak_ptr<CGameDialogPanel> weakPanel = panel;
+    panel.reset();
+    expect_true(weakPanel.expired(), "a closed dialog must expire even after installing dynamic option callbacks");
+}
+
 // Exercises the opt-in resize handle purely through geometry/state: no renderer, no real SDL input.
 // A default panel must ignore the handle entirely; an opted-in panel must resize from a bottom-right
 // handle drag and clamp within [min, parent] bounds without rewriting its serialized layout.
@@ -3250,8 +3449,7 @@ void test_campaign_browser_selects_by_stable_id_and_cancels_via_escape() {
     escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a);
     expect_true(!escaped->hasChoice(), "unrelated keys leave the browser open");
     escaped->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
-    expect_true(escaped->hasChoice() && escaped->awaitChoice().empty(),
-                "escape cancels the browser with the empty id");
+    expect_true(escaped->hasChoice() && escaped->awaitChoice().empty(), "escape cancels the browser with the empty id");
 }
 
 int main() {
@@ -3267,6 +3465,8 @@ int main() {
     test_character_panel_sheet_lines_build_without_rendering_and_fail_closed();
     test_character_panel_sheet_lines_render_race_and_class_labels();
     test_dialog_panel_current_options_preserve_numeric_display_order();
+    test_dialog_option_callback_closes_and_releases_its_panel();
+    test_populated_list_releases_owning_view_and_ignores_expired_callbacks();
     test_panel_opt_in_resize_handle_drag_resizes_within_bounds();
     test_panel_resize_handle_press_beats_covering_child_and_release_ends_capture();
     test_panel_resize_handle_press_resizes_subclass_panel_with_mouse_override();
@@ -3281,6 +3481,7 @@ int main() {
     test_list_view_property_subscriptions_follow_resolved_target_and_null();
     test_list_view_refresh_property_collision_fails_closed();
     test_quest_panel_rebuilds_text_only_when_quest_data_changes();
+    test_quest_journal_navigation_reaches_history_beyond_texture_limit();
     test_quest_panel_resubscribes_when_quest_source_changes();
     test_quest_panel_rebuilds_when_quest_state_properties_change();
     test_reactive_list_views_refresh_counts_match_model_changes_exactly();

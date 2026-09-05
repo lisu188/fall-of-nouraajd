@@ -248,8 +248,7 @@ void extend_target_flow_field(const std::shared_ptr<TargetFlowField> &field, con
     }
 }
 
-std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
-                                                       const Coords &start) {
+Coords get_target_flow_step(const std::shared_ptr<CMap> &map, const Coords &goal, const Coords &start) {
     constexpr std::size_t maxCachedFlowFields = 32;
     const auto revision = map->getNavigationRevision();
     std::lock_guard<std::mutex> lock(targetFlowMutex);
@@ -273,7 +272,10 @@ std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMa
         }
     }
     extend_target_flow_field(field, map, start);
-    return field;
+    // Copy the result while the lock also excludes other chasers extending and
+    // rehashing nextSteps. No mutable field or iterator may escape this scope.
+    const auto next = field->nextSteps.find(start);
+    return next == field->nextSteps.end() ? start : next->second;
 }
 
 Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &creature,
@@ -298,12 +300,7 @@ Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std:
         return start;
     }
 
-    auto flow = get_target_flow_field(map, goal, start);
-    auto next = flow->nextSteps.find(start);
-    if (next == flow->nextSteps.end()) {
-        return start;
-    }
-    auto step = map->normalizeCoords(next->second);
+    auto step = map->normalizeCoords(get_target_flow_step(map, goal, start));
     if (!creature_can_follow_step(map, creature, step)) {
         return start;
     }

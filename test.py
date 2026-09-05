@@ -21631,6 +21631,38 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
 
+    def test_quest_journal_scrolls_long_history_and_restores_first_frame(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.setCompletedQuests({make_ui_layout_quest(g, index, completed=True) for index in range(30)})
+        player.setQuests({make_ui_layout_quest(g, 100)})
+        panel = open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
+        self.assertGreater(len(panel.getText(g.getGui()).encode("utf-8")), 4096)
+        images = []
+        try:
+            with isolated_gui_panel(g, panel):
+                for name, scancode in (("first", None), ("last", 77), ("previous", 75), ("home", 74)):
+                    if scancode is not None:
+                        push_sdl_key_event((1 << 30) | scancode, scancode)
+                        pump_event_loop(3)
+                    path = TEST_OUTPUT_DIR / f"quest_journal_scroll_{name}.png"
+                    data, width, height = capture_sdl_screenshot(path, g.getGui())
+                    self.assertTrue(path.is_file())
+                    self.assertGreater(path.stat().st_size, 0)
+                    self.assertEqual(path.suffix, ".png")
+                    self.assertEqual((width, height), gui_logical_size(g))
+                    self.assertEqual(game_simulation.GameSimulation._pngDimensions(path.read_bytes()), (width, height))
+                    images.append(data)
+                x, y, width, height = resolved_rect(panel)
+                content_rect = (x, y, width, max(1, height - 96))
+                _, end_changes = pixel_diff_bounds(images[0], images[1], gui_logical_size(g)[0], content_rect)
+                _, page_changes = pixel_diff_bounds(images[1], images[2], gui_logical_size(g)[0], content_rect)
+                self.assertGreater(end_changes, 0, "End must reveal different quest content, beyond the footer")
+                self.assertGreater(page_changes, 0, "PageUp must navigate back through quest content")
+                self.assertEqual(images[0], images[3], "Home must restore the initial journal viewport")
+        finally:
+            panel.close()
+            pump_event_loop(3)
+
     def test_screenshot_repeated_render_frames_are_identical(self):
         # Rendering regression guard for the CRenderContext copy path: an
         # unchanged, isolated scene must reproduce the exact same frame when
