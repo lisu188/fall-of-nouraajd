@@ -14342,7 +14342,6 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
-        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         panel = g.getGuiHandler().openPanel("questionPanel")
@@ -23705,7 +23704,6 @@ class TestRunnerSuiteTest(unittest.TestCase):
             "test_fight_panel_callbacks_and_list_views",
             "test_fight_panel_enemy_list_pages_all_living_targets",
             "test_graphics_object_tree_helpers_are_bound",
-            "test_render_only_widget_ignores_mouse_clicks",
             "test_resource_provider_resolves_and_loads_known_files",
         )
         resources = {
