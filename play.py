@@ -25,6 +25,9 @@ def _insert_path(entry: Path) -> None:
 
 
 def _find_build_dir(root: Path) -> Path | None:
+    build_dir_override = os.environ.get("GAME_BUILD_DIR")
+    if build_dir_override:
+        return (root / build_dir_override).resolve()
     for candidate in (root / "cmake-build-release", root / "cmake-build-debug"):
         if candidate.exists():
             return candidate
@@ -40,7 +43,7 @@ def _insert_extension_paths(build_dir: Path) -> None:
     if build_config:
         _insert_path(build_dir / build_config)
         return
-    for config in ("Release", "Debug", "RelWithDebInfo", "MinSizeRel"):
+    for config in reversed(("Release", "Debug", "RelWithDebInfo", "MinSizeRel")):
         _insert_path(build_dir / config)
 
 
@@ -60,6 +63,7 @@ def _bootstrap() -> None:
         return
     if _is_resource_root(script_dir):
         _insert_path(script_dir)
+        _insert_extension_paths(script_dir)
         _ensure_workdir(script_dir)
         return
     _insert_path(source_res_dir)
