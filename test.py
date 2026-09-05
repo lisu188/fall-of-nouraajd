@@ -35,6 +35,7 @@ import threading
 import time
 import traceback
 import types
+from functools import lru_cache
 from http import HTTPStatus
 from pathlib import Path
 import unittest
@@ -1688,6 +1689,7 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_panel_resize_reopened_panel_stays_onscreen",
     "test_screenshot_readback_has_rendered_pixels",
     "test_screenshot_minimap_has_rendered_pixels",
+    "test_gui_queries_match_serialized_rendered_tree",
     "test_screenshot_after_keyboard_move_has_rendered_pixels",
     "test_screenshot_after_mouse_move_has_rendered_pixels",
     "test_screenshot_after_save_hotkey_has_rendered_pixels",
@@ -1811,14 +1813,21 @@ NOURAAJD_QUEST_REWARDS = {
 
 def load_sdl_library():
     import ctypes
+
+    # Cache the path, keeping each caller's ctypes function signatures independent.
+    library_name = resolveSdlLibraryName(str(build_dir), tuple(map(str, extension_dirs)))
+    return ctypes.CDLL(library_name)
+
+
+@lru_cache(maxsize=4)
+def resolveSdlLibraryName(build_path, extension_paths):
+    import ctypes
     import ctypes.util
 
-    library_names = [ctypes.util.find_library("SDL2")]
-    for extension_dir in extension_dirs:
-        library_names.append(extension_dir / "SDL2.dll")
+    library_names = [Path(extension_dir) / "SDL2.dll" for extension_dir in extension_paths]
     library_names.extend(
         [
-            build_dir / "vcpkg_installed" / "x64-windows" / "bin" / "SDL2.dll",
+            Path(build_path) / "vcpkg_installed" / "x64-windows" / "bin" / "SDL2.dll",
             "SDL2.dll",
             "libSDL2-2.0.so.0",
             "libSDL2.so",
@@ -1826,12 +1835,18 @@ def load_sdl_library():
     )
 
     for library_name in library_names:
-        if not library_name:
-            continue
         try:
-            return ctypes.CDLL(str(library_name))
+            ctypes.CDLL(str(library_name))
+            return str(library_name)
         except OSError:
             continue
+    discovered_name = ctypes.util.find_library("SDL2")
+    if discovered_name:
+        try:
+            ctypes.CDLL(discovered_name)
+            return discovered_name
+        except OSError:
+            pass
     raise AssertionError("Could not load SDL2 for gameplay event injection.")
 
 
@@ -2841,16 +2856,16 @@ def visible_map_cell_center(origin, target):
 
 
 def gui_contains_class(g, class_name):
-    game = load_game_module()
-    gui_tree = json.loads(game.jsonify(g.getGui()))
-    stack = [gui_tree]
+    """Find configured GUI classes, excluding metadata names of untyped render cells."""
+    gui = g.getGui()
+    stack = [gui] if gui is not None else []
     while stack:
         node = stack.pop()
-        if not isinstance(node, dict):
+        if node is None:
             continue
-        if node.get("class") == class_name:
+        if node.getType() == class_name:
             return True
-        stack.extend(node.get("properties", {}).get("children") or [])
+        stack.extend(node.getChildren())
     return False
 
 
@@ -2866,12 +2881,8 @@ def collect_gui_children(root, class_name):
 
 
 def get_map_proxy_child_counts(g):
-    game = load_game_module()
-    gui_tree = json.loads(game.jsonify(g.getGui()))
-    children = gui_tree.get("properties", {}).get("children") or []
-    map_graph = next(child for child in children if child.get("class") == "CMapGraphicsObject")
-    proxies = map_graph.get("properties", {}).get("children") or []
-    return [len(proxy.get("properties", {}).get("children") or []) for proxy in proxies]
+    map_graph = next(child for child in g.getGui().getChildren() if child.getType() == "CMapGraphicsObject")
+    return [len(proxy.getChildren()) for proxy in map_graph.getChildren()]
 
 
 def materialized_tile_type(game, game_map, coords):
@@ -5441,7 +5452,33 @@ class GameTest(unittest.TestCase):
         g = game.CGameLoader.loadGame()
         plain_graphic = g.createObject("CGameGraphicsObject")
         self.assertEqual((0, 0, 0, 0), resolved_rect(plain_graphic))
+        layout = g.createObject("CLayout")
+        for name, value in (("x", "7"), ("y", "11"), ("w", "123"), ("h", "45")):
+            layout.setStringProperty(name, value)
+        plain_graphic.setObjectProperty("layout", layout)
+        rect = plain_graphic.getResolvedRect()
+        self.assertIsInstance(rect, tuple)
+        self.assertEqual((7, 11, 123, 45), rect)
+        self.assertTrue(all(type(value) is int for value in rect))
         return True, ""
+
+    @game_test
+    def test_object_property_binding_creates_replaces_and_clears_dynamic_references(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        owner = g.createObject("CGameObject")
+        other_owner = g.createObject("CGameObject")
+        first = g.createObject("Sword")
+        second = g.createObject("LesserLifePotion")
+        owner.setObjectProperty("inspectedItem", first)
+        self.assertEqual(first, owner.getObjectProperty("inspectedItem"))
+        self.assertFalse(hasattr(other_owner, "inspectedItem"))
+        owner.setObjectProperty("inspectedItem", second)
+        self.assertEqual(second, owner.getObjectProperty("inspectedItem"))
+        owner.setObjectProperty("inspectedItem", None)
+        self.assertIsNone(owner.getObjectProperty("inspectedItem"))
+        return True, "dynamic object references preserve identity, replacement, and null clearing"
 
     @game_test
     def test_non_square_tmx_tile_layer_preserves_row_major_tile_positions(self):
@@ -8156,7 +8193,6 @@ class GameTest(unittest.TestCase):
             pump_event_loop_until(
                 lambda: g.getMap().mapName == "ritual" and not scene_manager.isTransitionPending(),
                 timeout=2.0,
-                min_iterations=2,
             )
         )
 
@@ -8181,7 +8217,6 @@ class GameTest(unittest.TestCase):
             pump_event_loop_until(
                 lambda: g.getMap().mapName == "test" and not scene_manager.isTransitionPending(),
                 timeout=2.0,
-                min_iterations=2,
             )
         )
 
@@ -8939,6 +8974,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Sorcerer")
         pump_event_loop()
@@ -8980,6 +9016,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop()
@@ -9019,6 +9056,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop()
@@ -9116,6 +9154,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         panel = g.getGuiHandler().openPanel("inventoryPanel")
@@ -13586,6 +13625,7 @@ class GameTest(unittest.TestCase):
     def test_empty_selection_list_returns_without_waiting(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
 
         empty_selection = g.createObject("CListString")
@@ -13600,6 +13640,7 @@ class GameTest(unittest.TestCase):
     def test_character_creation_empty_columns_return_without_waiting(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
 
         empty = g.createObject("CListString")
@@ -13941,6 +13982,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         pump_event_loop(5)
@@ -14043,6 +14085,7 @@ class GameTest(unittest.TestCase):
         # properties, which feed the root layout's runtime overrides.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         gui = g.getGui()
@@ -14101,6 +14144,7 @@ class GameTest(unittest.TestCase):
         # panel directly so the regression does not depend on process-global SDL input state.
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         player = g.getMap().getPlayer()
@@ -14159,6 +14203,7 @@ class GameTest(unittest.TestCase):
     def test_detached_inventory_list_view_ignores_stale_item_callbacks(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         player = g.getMap().getPlayer()
@@ -14204,6 +14249,7 @@ class GameTest(unittest.TestCase):
     def test_inventory_double_select_uses_selected_item(self):
         game = load_game_module()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
         pump_event_loop(5)
@@ -14248,6 +14294,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         pump_event_loop(5)
@@ -14503,6 +14550,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         drain_sdl_events()
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
         gui = g.getGui()
@@ -14574,6 +14622,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
         game.CGameLoader.loadGui(g)
         gui = g.getGui()
 
@@ -14669,6 +14718,7 @@ class GameTest(unittest.TestCase):
                 self.assertNotIn("zzFake", provider.getFiles("MAP"))
 
                 g = game.CGameLoader.loadGame()
+                self.addCleanup(g.getContext().shutdown)
                 game.CGameLoader.loadGui(g)
                 game.CGameLoader.startGameWithPlayer(g, "test", "Warrior")
                 self.assertEqual("test", g.getMap().mapName)
@@ -14800,6 +14850,31 @@ class GameTest(unittest.TestCase):
         output_path = TEST_OUTPUT_DIR / "random.png"
         g.getMap().dumpPaths(str(output_path))
         return True, str(output_path)
+
+    def test_dialog_panel_accepts_registered_python_quest_action(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        game.CGameLoader.loadGui(g)
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", "Warrior")
+        game_map = g.getMap()
+        player = game_map.getPlayer()
+        gui = g.getGui()
+
+        dialog = g.createObject("dialog")
+        panel = g.createObject("dialogPanel")
+        panel.setObjectProperty("dialog", dialog)
+        gui.pushChild(panel)
+        self.assertEqual("not_started", game_map.getStringProperty("quest_state_octobogz_contract"))
+
+        for digit in "121":
+            self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord(digit)))
+
+        self.assertEqual("active", game_map.getStringProperty("quest_state_octobogz_contract"))
+        assert_player_quest_state(self, player, "octoBogzQuest", completed=False)
+        self.assertTrue(gui_contains_class(g, "CGameDialogPanel"))
+        self.assertTrue(panel.keyboardEvent(gui, SDL_KEYDOWN, ord("1")))
+        self.assertFalse(gui_contains_class(g, "CGameDialogPanel"))
 
     @game_test
     def test_dialogs(self):
@@ -18986,6 +19061,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
 
         g, game_map, player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g.getContext().shutdown)
         player.addQuest("rolfQuest")
         game.CGameLoader.loadGui(g)
         quest_panel = g.createObject("questPanel")
@@ -18997,6 +19073,7 @@ class GameTest(unittest.TestCase):
         self.assertIn("Hint: The cave entrance lies beyond Nouraajd's roads.", text)
 
         g_rewards, _reward_map, reward_player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g_rewards.getContext().shutdown)
         for quest_id in NOURAAJD_QUEST_REWARDS:
             reward_player.addQuest(quest_id)
         game.CGameLoader.loadGui(g_rewards)
@@ -19006,6 +19083,7 @@ class GameTest(unittest.TestCase):
             self.assertIn(f"Reward: {reward}", reward_text)
 
         g_completed, completed_map, completed_player = load_game_map_with_player("nouraajd")
+        self.addCleanup(g_completed.getContext().shutdown)
         completed_player.addQuest("rolfQuest")
         completed_map.removeObjectByName("cave1")
         completed_player.checkQuests()
@@ -20796,6 +20874,7 @@ def create_xvfb_gameplay_session(test_case, map_name="test", player_name=DEFAULT
 
     game = load_game_module()
     g = game.CGameLoader.loadGame()
+    test_case.addCleanup(g.getContext().shutdown)
     game.CGameLoader.loadGui(g)
     game.CGameLoader.startGameWithPlayer(g, map_name, player_name)
     pump_event_loop(5)
@@ -21442,6 +21521,53 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertTrue(gui_contains_class(g, "CMinimapGraphicsObject"))
         self.assertGreaterEqual(summary["color_counts"].get(MINIMAP_PLAYER_RGB, 0), 20)
 
+    def test_gui_queries_match_serialized_rendered_tree(self):
+        from unittest.mock import patch
+
+        game, g, _, _ = create_xvfb_gameplay_session(self)
+        panel = g.getGuiHandler().openPanel("questPanel")
+        g.getGuiHandler().showTooltip("GUI query reference", 960, 540)
+        pump_event_loop(3)
+        try:
+            gui_tree = json.loads(game.jsonify(g.getGui()))
+            serialized_classes = set()
+            stack = [gui_tree]
+            while stack:
+                node = stack.pop()
+                if isinstance(node, dict):
+                    serialized_classes.add(node.get("class"))
+                    stack.extend(node.get("properties", {}).get("children") or [])
+            map_graph = next(
+                child for child in gui_tree["properties"]["children"] if child.get("class") == "CMapGraphicsObject"
+            )
+            expected_counts = [
+                len(proxy.get("properties", {}).get("children") or []) for proxy in map_graph["properties"]["children"]
+            ]
+            self.assertTrue(expected_counts)
+            self.assertGreater(sum(expected_counts), 0)
+            self.assertTrue({"CGameQuestPanel", "CTooltip", "CMinimapGraphicsObject"} <= serialized_classes)
+            panel_config = json.loads((REPO_ROOT / "res" / "config" / "panels.json").read_text())
+            query_classes = {entry["class"] for entry in panel_config.values()} | {
+                "CGui",
+                "CGamePanel",
+                "CTooltip",
+                "CMinimapGraphicsObject",
+                "CMapGraphicsObject",
+                "MissingPanel",
+            }
+            with patch.object(
+                game, "jsonify", side_effect=AssertionError("GUI queries must not serialize.")
+            ) as serialize:
+                for _ in range(20):
+                    for class_name in query_classes:
+                        self.assertEqual(
+                            class_name in serialized_classes, gui_contains_class(g, class_name), class_name
+                        )
+                    self.assertEqual(expected_counts, get_map_proxy_child_counts(g))
+                serialize.assert_not_called()
+        finally:
+            panel.close()
+
     def test_screenshot_after_keyboard_move_has_rendered_pixels(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
         initial = player.getCoords()
@@ -21950,6 +22076,38 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.addQuest("mainQuest")
         open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
+
+    def test_quest_journal_scrolls_long_history_and_restores_first_frame(self):
+        _, g, _, player = create_xvfb_gameplay_session(self)
+        player.setCompletedQuests({make_ui_layout_quest(g, index, completed=True) for index in range(30)})
+        player.setQuests({make_ui_layout_quest(g, 100)})
+        panel = open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
+        self.assertGreater(len(panel.getText(g.getGui()).encode("utf-8")), 4096)
+        images = []
+        try:
+            with isolated_gui_panel(g, panel):
+                for name, scancode in (("first", None), ("last", 77), ("previous", 75), ("home", 74)):
+                    if scancode is not None:
+                        push_sdl_key_event((1 << 30) | scancode, scancode)
+                        pump_event_loop(3)
+                    path = TEST_OUTPUT_DIR / f"quest_journal_scroll_{name}.png"
+                    data, width, height = capture_sdl_screenshot(path, g.getGui())
+                    self.assertTrue(path.is_file())
+                    self.assertGreater(path.stat().st_size, 0)
+                    self.assertEqual(path.suffix, ".png")
+                    self.assertEqual((width, height), gui_logical_size(g))
+                    self.assertEqual(game_simulation.GameSimulation._pngDimensions(path.read_bytes()), (width, height))
+                    images.append(data)
+                x, y, width, height = resolved_rect(panel)
+                content_rect = (x, y, width, max(1, height - 96))
+                _, end_changes = pixel_diff_bounds(images[0], images[1], gui_logical_size(g)[0], content_rect)
+                _, page_changes = pixel_diff_bounds(images[1], images[2], gui_logical_size(g)[0], content_rect)
+                self.assertGreater(end_changes, 0, "End must reveal different quest content, beyond the footer")
+                self.assertGreater(page_changes, 0, "PageUp must navigate back through quest content")
+                self.assertEqual(images[0], images[3], "Home must restore the initial journal viewport")
+        finally:
+            panel.close()
+            pump_event_loop(3)
 
     def test_screenshot_repeated_render_frames_are_identical(self):
         # Rendering regression guard for the CRenderContext copy path: an
@@ -23763,6 +23921,241 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+
+    def test_explicit_transition_wait_accepts_completed_slow_pump(self):
+        from unittest.mock import Mock, patch
+
+        origin = types.SimpleNamespace(x=1, y=1, z=0)
+        entry = types.SimpleNamespace(x=3, y=4, z=0)
+        return_target = types.SimpleNamespace(x=2, y=1, z=0)
+        player = Mock()
+        player.isPlayer.return_value = True
+        player.getCoords.return_value = origin
+        original_map = Mock(mapName="test")
+        original_map.getTurn.return_value = 9
+        original_map.getBoolProperty.return_value = True
+        original_map.getPlayer.return_value = player
+        original_map.getObjects.return_value = [player]
+        ritual_map = Mock(mapName="ritual")
+        ritual_map.getTurn.return_value = 9
+        ritual_map.getEntryX.return_value = entry.x
+        ritual_map.getEntryY.return_value = entry.y
+        ritual_map.getEntryZ.return_value = entry.z
+        state = {"map": original_map, "request": None, "time": 0.0}
+        store = Mock()
+        store.contains.return_value = True
+        store.get.return_value = original_map
+        store.size.return_value = 1
+        scene_manager = Mock()
+        scene_manager.isTransitionPending.side_effect = lambda: state["request"] is not None
+        scene_manager.getTransitionStateName.side_effect = lambda: "TransitionPending" if state["request"] else "Idle"
+        scene_manager.getPendingMapName.side_effect = lambda: state["request"].targetMap
+        g = Mock()
+        g.getMap.side_effect = lambda: state["map"]
+        g.getSceneManager.return_value = scene_manager
+        g.getContext.return_value.getMapSessionStore.return_value = store
+
+        def requestTransition(request):
+            state["request"] = request
+            return True
+
+        def completeTransition():
+            request = state["request"]
+            self.assertIsNotNone(request)
+            state["time"] += 3.0
+            state["map"] = ritual_map if request.targetMap == "ritual" else original_map
+            player.getCoords.return_value = entry if request.targetMap == "ritual" else request.targetCoords
+            state["request"] = None
+
+        g.requestMapTransition.side_effect = requestTransition
+        loop = Mock()
+        loop.run.side_effect = completeTransition
+        game = types.SimpleNamespace(
+            CMapTransitionRequest=types.SimpleNamespace,
+            event_loop=types.SimpleNamespace(instance=lambda: loop),
+        )
+        result = unittest.TestResult()
+        with (
+            patch(f"{__name__}.load_game_module", return_value=game),
+            patch(f"{__name__}.load_game_map_with_player", return_value=(g, original_map, player)),
+            patch(f"{__name__}.find_adjacent_walkable_tile", return_value=return_target),
+            patch(f"{__name__}.time.monotonic", side_effect=lambda: state["time"]),
+            patch(f"{__name__}.time.sleep") as sleep,
+        ):
+            GameTest("test_explicit_transition_request_round_trips_persistent_session").run(result)
+        self.assertTrue(result.wasSuccessful(), result.failures + result.errors)
+        self.assertEqual(2, loop.run.call_count)
+        self.assertEqual(6.0, state["time"])
+        sleep.assert_not_called()
+
+    def test_modal_gui_fixtures_shutdown_after_assertion_failure(self):
+        from unittest.mock import Mock, patch
+
+        for case_type, method_name in (
+            (GameTest, "test_inventory_panel_refreshes_only_after_event_loop_drains"),
+            (GameTest, "test_blocking_modal_gui_helpers_drive_panels"),
+            (GameTest, "test_gui_includes_display_only_minimap_layout"),
+            (GameTest, "test_inventory_right_click_uses_scroll_and_keeps_it"),
+            (XvfbGameplayProcessTest, "test_keyboard_input_moves_player"),
+        ):
+            with self.subTest(method=method_name):
+                context = types.SimpleNamespace(active=True)
+                context.shutdown = Mock(side_effect=lambda: setattr(context, "active", False))
+                g = types.SimpleNamespace(getContext=lambda: context)
+                loader = types.SimpleNamespace(
+                    loadGame=lambda: g,
+                    loadGui=Mock(),
+                    startGameWithPlayer=Mock(side_effect=AssertionError("fixture setup failed")),
+                )
+                game = types.SimpleNamespace(CGameLoader=loader)
+                result = unittest.TestResult()
+                with (
+                    patch(f"{__name__}.load_game_module", return_value=game),
+                    patch(f"{__name__}.drain_sdl_events"),
+                    patch.dict(
+                        os.environ, {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11", "DISPLAY": ":1"}
+                    ),
+                ):
+                    case_type(method_name).run(result)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.errors)
+                self.assertEqual(1, len(result.failures))
+                self.assertIn("fixture setup failed", result.failures[0][1])
+                context.shutdown.assert_called_once_with()
+                self.assertFalse(context.active)
+
+    def test_gui_fixtures_shutdown_when_gui_loading_fails(self):
+        from unittest.mock import Mock, patch
+
+        methods = (
+            "test_map_proxy_cells_remain_populated_after_player_move",
+            "test_map_proxy_refresh_reuses_children_and_updates_changed_cells",
+            "test_empty_selection_list_returns_without_waiting",
+            "test_character_creation_empty_columns_return_without_waiting",
+            "test_window_resize_scales_percent_panels",
+            "test_detached_inventory_list_view_ignores_stale_item_callbacks",
+            "test_inventory_double_select_uses_selected_item",
+            "test_fight_panel_callbacks_and_list_views",
+            "test_fight_panel_enemy_list_pages_all_living_targets",
+            "test_graphics_object_tree_helpers_are_bound",
+            "test_resource_provider_resolves_and_loads_known_files",
+        )
+        resources = {
+            "config/tiles.json": "GroundTile",
+            "config/items.json": "{}",
+            "maps/test/map.json": '{"layers": []}',
+            "plugins/effect.py": "def load(context): pass",
+            "fonts/ampersand.ttf": "font fixture",
+            "images/item.png": "image fixture",
+        }
+        with tempfile.TemporaryDirectory() as fixture_dir:
+            fixture_root = Path(fixture_dir)
+            for name, contents in resources.items():
+                path = fixture_root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(contents, encoding="utf-8")
+            provider = types.SimpleNamespace(
+                getPath=lambda name: str(fixture_root / name) if name in resources else "",
+                load=lambda name: resources[name],
+                getFiles=lambda kind: ["test"] if kind == "MAP" else [],
+            )
+            for method_name in methods:
+                with self.subTest(method=method_name):
+                    context = types.SimpleNamespace(active=True)
+                    context.shutdown = Mock(side_effect=lambda: setattr(context, "active", False))
+                    g = types.SimpleNamespace(getContext=lambda: context)
+                    loader = types.SimpleNamespace(
+                        loadGame=Mock(return_value=g),
+                        loadGui=Mock(side_effect=AssertionError("fixture GUI load failed")),
+                    )
+                    game = types.SimpleNamespace(
+                        CGameLoader=loader,
+                        CResourcesProvider=types.SimpleNamespace(getInstance=lambda: provider),
+                    )
+                    result = unittest.TestResult()
+                    with (
+                        patch(f"{__name__}.load_game_module", return_value=game),
+                        patch(f"{__name__}.drain_sdl_events"),
+                    ):
+                        GameTest(method_name).run(result)
+                    self.assertEqual(1, result.testsRun)
+                    self.assertEqual([], result.errors)
+                    self.assertEqual(1, len(result.failures))
+                    self.assertIn("fixture GUI load failed", result.failures[0][1])
+                    loader.loadGame.assert_called_once_with()
+                    loader.loadGui.assert_called_once_with(g)
+                    context.shutdown.assert_called_once_with()
+                    self.assertFalse(context.active)
+
+    def test_quest_journal_fixture_shuts_down_every_created_session_after_failure(self):
+        from unittest.mock import Mock, patch
+
+        active_text = "\n".join(
+            (
+                "[Active] Unravel the fate of Sergeant Rolf.",
+                "Objective: Recover Sergeant Rolf's skull from the Pritscher cave",
+                "Reward: Starts the Gooby hunt.",
+                "Hint: The cave entrance lies beyond Nouraajd's roads.",
+            )
+        )
+        reward_text = "\n".join(f"Reward: {reward}" for reward in NOURAAJD_QUEST_REWARDS.values())
+        for fail_during_first_gui_load in (True, False):
+            with self.subTest(fail_during_first_gui_load=fail_during_first_gui_load):
+                contexts = [types.SimpleNamespace(shutdown=Mock()) for _ in range(3)]
+                sessions = []
+                for context, text in zip(contexts, (active_text, reward_text, "")):
+                    panel = types.SimpleNamespace(getText=Mock(return_value=text))
+                    g = types.SimpleNamespace(
+                        getContext=Mock(return_value=context),
+                        getGui=Mock(),
+                        createObject=Mock(return_value=panel),
+                    )
+                    sessions.append((g, Mock(), Mock()))
+                load_gui = Mock()
+                if fail_during_first_gui_load:
+                    load_gui.side_effect = AssertionError("fixture GUI load failed")
+                game = types.SimpleNamespace(CGameLoader=types.SimpleNamespace(loadGui=load_gui))
+                result = unittest.TestResult()
+                with (
+                    patch(f"{__name__}.load_game_module", return_value=game),
+                    patch(f"{__name__}.load_game_map_with_player", side_effect=sessions) as load_session,
+                ):
+                    GameTest("test_quest_journal_shows_objectives_rewards_and_hints").run(result)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.errors)
+                self.assertEqual(1, len(result.failures))
+                expected_sessions = 1 if fail_during_first_gui_load else 3
+                self.assertEqual(expected_sessions, load_session.call_count)
+                failure_text = "fixture GUI load failed" if fail_during_first_gui_load else "[Completed]"
+                self.assertIn(failure_text, result.failures[0][1])
+                for index, context in enumerate(contexts):
+                    if index < expected_sessions:
+                        context.shutdown.assert_called_once_with()
+                    else:
+                        context.shutdown.assert_not_called()
+
+    def test_gui_queries_preserve_tree_assertions_without_serializing(self):
+        from unittest.mock import Mock, patch
+
+        def node(class_name, children=()):
+            return types.SimpleNamespace(getType=lambda: class_name, getChildren=lambda: children)
+
+        leaf = node("CTextWidget")
+        map_graph = node("CMapGraphicsObject", (node(""), node("", (leaf, leaf))))
+        nested_map = node("CMapGraphicsObject", (node("CProxyGraphicsObject", (leaf,)),))
+        gui = node("CGui", (node("CGamePanel", (nested_map,)), map_graph))
+        g = types.SimpleNamespace(getGui=lambda: gui)
+        game = types.SimpleNamespace(jsonify=Mock(side_effect=AssertionError("Typed GUI queries must not serialize.")))
+        with patch(f"{__name__}.load_game_module", return_value=game):
+            for _ in range(20):
+                self.assertTrue(gui_contains_class(g, "CGui"))
+                self.assertTrue(gui_contains_class(g, "CTextWidget"))
+                self.assertFalse(gui_contains_class(g, "CGameGraphicsObject"))
+                self.assertFalse(gui_contains_class(g, "MissingPanel"))
+                self.assertEqual([0, 2], get_map_proxy_child_counts(g))
+            self.assertFalse(gui_contains_class(types.SimpleNamespace(getGui=lambda: None), "CGui"))
+        game.jsonify.assert_not_called()
+
     def test_parse_runner_args_accepts_suite_names(self):
         jobs, suite_name, unittest_argv = parse_runner_args(
             ["test.py", "--suite", "gameplay", "--jobs=3", "GameTest.test_turns"]
@@ -25029,15 +25422,17 @@ class McpServerTest(unittest.TestCase):
         teleporter_2_def = find_map_object_definition("test", "teleporter2")
         ground_hole_def = find_map_object_definition("test", "groundHole")
 
-        teleporter = self._mcp_get_object_by_name(session, map_handle, "teleporter1")
-        teleporter_coords = self._mcp_handle_call(session, teleporter, "getCoords")
-        self._mcp_handle_call(session, player_handle, "setCoords", [teleporter_coords])
+        self._mcp_handle_call(
+            session, player_handle, "moveTo", [teleporter_1_def["x"] // 32, teleporter_1_def["y"] // 32, 0]
+        )
+        self._mcp_pump_event_loop(session)
         after_teleport_map = self._mcp_serialized_map(session, map_handle)
         after_teleport = self._serialized_coords(self._serialized_player(after_teleport_map))
 
-        ground_hole = self._mcp_get_object_by_name(session, map_handle, "groundHole")
-        ground_hole_coords = self._mcp_handle_call(session, ground_hole, "getCoords")
-        self._mcp_handle_call(session, player_handle, "setCoords", [ground_hole_coords])
+        self._mcp_handle_call(
+            session, player_handle, "moveTo", [ground_hole_def["x"] // 32, ground_hole_def["y"] // 32, 0]
+        )
+        self._mcp_pump_event_loop(session)
         after_ground_hole_map = self._mcp_serialized_map(session, map_handle)
         after_ground_hole = self._serialized_coords(self._serialized_player(after_ground_hole_map))
 

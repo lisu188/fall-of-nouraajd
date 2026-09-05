@@ -202,9 +202,21 @@ void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
 
     performance_guard::clearTargetFlowCache();
     expect_true(performance_guard::targetFlowCacheSize() == 0, "shared-goal flow cache should start empty");
+    performance_guard::resetMapCoordinateLookupProbe();
+    std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
     for (const auto &actor : actors) {
+        pending.push_back(actor->getController()->control(actor));
+    }
+    std::vector<Coords> steps;
+    for (const auto &future : pending) {
+        steps.push_back(future->get());
+    }
+    const auto cold_probes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
+    for (std::size_t i = 0; i < actors.size(); ++i) {
+        const auto &actor = actors[i];
         const auto start = fixture.map->normalizeCoords(actor->getCoords());
-        const auto step = fixture.map->normalizeCoords(resolve_step(actor));
+        const auto step = fixture.map->normalizeCoords(steps[i]);
         if (step != start && is_cardinal_step(fixture.map, start, step) &&
             moves_closer(fixture.map, start, step, goal_coords) && fixture.map->canStep(step)) {
             progressing_steps++;
@@ -221,11 +233,26 @@ void test_many_target_controllers_share_one_goal_without_mutating_navigation() {
     expect_true(fixture.map->getObjects().size() == object_count_before,
                 "shared-goal controller reads should not add or remove objects");
 
+    pending.clear();
+    performance_guard::resetMapCoordinateLookupProbe();
     for (const auto &actor : actors) {
-        resolve_step(actor);
+        pending.push_back(actor->getController()->control(actor));
     }
+    for (const auto &future : pending) {
+        future->get();
+    }
+    const auto warm_probes = performance_guard::mapCoordinateLookupProbeCount();
+    performance_guard::disableMapCoordinateLookupProbe();
     expect_true(performance_guard::targetFlowCacheSize() == 1,
                 "repeated shared-goal reads should keep reusing the cached target flow field");
+    // Unique actor cells are inspected at most once per adjacent flood cell, plus
+    // goal/step validation. Warm requests need only the goal and step checks.
+    expect_true(cold_probes <= SHARED_TARGET_ACTORS * 8,
+                "concurrent cold requests must keep coordinate lookup work bounded by one shared flood");
+    expect_true(warm_probes <= SHARED_TARGET_ACTORS * 2,
+                "concurrent warm requests must reuse the settled flood without expanding it again");
+    std::cout << "Shared target flow coordinate probes: cold=" << cold_probes << "/" << SHARED_TARGET_ACTORS * 8
+              << " warm=" << warm_probes << "/" << SHARED_TARGET_ACTORS * 2 << "\n";
 }
 
 void test_relevant_object_move_invalidates_target_navigation() {

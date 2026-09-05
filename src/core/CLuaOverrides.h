@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <unordered_map>
 
 class CGameObject;
@@ -32,7 +34,7 @@ namespace CLuaOverrides {
 struct Entry {
     std::weak_ptr<CLuaHandler> handler;
     int hooksRef; // luaL_ref of the registered type's hook table in LUA_REGISTRYINDEX
-    std::shared_ptr<CGameObject> self;
+    std::weak_ptr<CGameObject> self;
 };
 
 inline std::unordered_map<const CGameObject *, Entry> &instances() {
@@ -42,18 +44,28 @@ inline std::unordered_map<const CGameObject *, Entry> &instances() {
     return *registry;
 }
 
+inline std::mutex &registryMutex() {
+    static auto *mutex = new std::mutex();
+    return *mutex;
+}
+
 inline void retain(const std::shared_ptr<CGameObject> &object, std::weak_ptr<CLuaHandler> handler, int hooksRef) {
     if (!object) {
         return;
     }
+    std::lock_guard lock(registryMutex());
     instances()[object.get()] = Entry{std::move(handler), hooksRef, object};
 }
 
-inline Entry *find(const CGameObject *object) {
+inline std::optional<Entry> find(const CGameObject *object) {
+    std::lock_guard lock(registryMutex());
     auto it = instances().find(object);
-    return it == instances().end() ? nullptr : &it->second;
+    return it == instances().end() ? std::nullopt : std::optional<Entry>(it->second);
 }
 
-inline void release(const CGameObject *object) { instances().erase(object); }
+inline void release(const CGameObject *object) {
+    std::lock_guard lock(registryMutex());
+    instances().erase(object);
+}
 
 } // namespace CLuaOverrides

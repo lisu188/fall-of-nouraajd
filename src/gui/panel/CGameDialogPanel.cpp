@@ -81,8 +81,8 @@ void CGameDialogPanel::reload() {
 
             auto _option = option;
             self->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
-                clickName, self, [self, _option](CGameGraphicsObject *_self, std::shared_ptr<CGui> gui) {
-                    self->selectOption(_option);
+                clickName, self, [_option](CGameGraphicsObject *_self, std::shared_ptr<CGui> gui) {
+                    static_cast<CGameDialogPanel *>(_self)->selectOption(_option);
                 });
 
             std::shared_ptr<CTextWidget> optionWidget = getGame()->createObject<CTextWidget>("CTextWidget");

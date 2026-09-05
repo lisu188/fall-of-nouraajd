@@ -17,10 +17,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameQuestPanel.h"
 #include "core/CMap.h"
+#include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CLayout.h"
 #include "gui/CTextManager.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
+
+#include <algorithm>
+#include <sstream>
 
 namespace {
 void append_quest_line(std::string &text, const std::shared_ptr<CQuest> &quest, bool completed) {
@@ -61,10 +66,137 @@ void append_quest_line(std::string &text, const std::shared_ptr<CQuest> &quest, 
 } // namespace
 
 void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int i) {
-    gui->getTextManager()->drawText(getText(gui), rect);
+    if (!gui || !rect || rect->w <= 0 || rect->h <= 0) {
+        return;
+    }
+    refreshScrollLayout(gui);
+    auto viewport = CUtil::rect(rect->x, rect->y, rect->w, viewportHeight);
+    auto textManager = gui->getTextManager();
+    auto first = std::lower_bound(paragraphs.begin(), paragraphs.end(), scrollOffset,
+                                  [](const auto &paragraph, int y) { return paragraph.y + paragraph.height <= y; });
+    for (auto paragraph = first; paragraph != paragraphs.end() && paragraph->y < scrollOffset + viewportHeight;
+         ++paragraph) {
+        textManager->drawTextScrolled(paragraph->text, viewport, paragraph->y - scrollOffset);
+    }
+    const std::string position = scrollMaximum ? std::to_string(100LL * scrollOffset / scrollMaximum) + "%" : "100%";
+    auto footer = CUtil::rect(rect->x, rect->y + viewportHeight, rect->w, rect->h - viewportHeight);
+    textManager->drawTextCentered("Wheel / Up / Down / PgUp / PgDn / Home / End - " + position, footer);
+}
+
+void CGameQuestPanel::refreshScrollLayout(const std::shared_ptr<CGui> &gui) {
+    if (!gui) {
+        return;
+    }
+    refreshTextCache(gui);
+    const auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
+    auto textManager = gui->getTextManager();
+    if (measuredTextManager.lock() != textManager) {
+        lineHeight = std::max(24, textManager->getTextureSize("Ag").second);
+        measuredTextManager = textManager;
+        paragraphLayoutDirty = true;
+    }
+    viewportHeight = std::max(0, rect->h - lineHeight * 2);
+    const int width = std::max(1, rect->w);
+    if (paragraphLayoutDirty || paragraphWidth != width) {
+        paragraphs.clear();
+        contentHeight = 0;
+        std::istringstream lines(cachedQuestText);
+        std::string line;
+        while (std::getline(lines, line)) {
+            // Keep each texture below the text manager's byte limit; long journals
+            // must remain readable even when their combined text exceeds that limit.
+            constexpr std::size_t chunkSize = 1024;
+            std::size_t offset = 0;
+            do {
+                auto end = std::min(offset + chunkSize, line.size());
+                while (end < line.size() && end > offset && (static_cast<unsigned char>(line[end]) & 0xc0) == 0x80) {
+                    --end;
+                }
+                if (end == offset) {
+                    end = std::min(offset + chunkSize, line.size());
+                }
+                auto chunk = line.substr(offset, end - offset);
+                const int height = measureParagraphHeight(textManager, chunk, width);
+                paragraphs.push_back({std::move(chunk), contentHeight, height});
+                contentHeight += height;
+                offset = end;
+            } while (offset < line.size());
+        }
+        paragraphWidth = width;
+        paragraphLayoutDirty = false;
+    }
+    scrollMaximum = std::max(0, contentHeight - viewportHeight);
+    scrollOffset = std::clamp(scrollOffset, 0, scrollMaximum);
+}
+
+int CGameQuestPanel::measureParagraphHeight(const std::shared_ptr<CTextManager> &textManager, const std::string &text,
+                                            int width) {
+    return text.empty() ? lineHeight : std::max(lineHeight, textManager->getWrappedTextureSize(text, width).second);
+}
+
+std::string CGameQuestPanel::getViewportText(const std::shared_ptr<CGui> &gui) {
+    refreshScrollLayout(gui);
+    std::string text;
+    for (const auto &paragraph : paragraphs) {
+        if (paragraph.y + paragraph.height > scrollOffset && paragraph.y < scrollOffset + viewportHeight) {
+            text += paragraph.text + "\n";
+        }
+    }
+    return text;
+}
+
+int CGameQuestPanel::getScrollOffset() const { return scrollOffset; }
+
+int CGameQuestPanel::getScrollMaximum() const { return scrollMaximum; }
+
+void CGameQuestPanel::scrollBy(long long delta) {
+    scrollOffset = static_cast<int>(
+        std::clamp(static_cast<long long>(scrollOffset) + delta, 0LL, static_cast<long long>(scrollMaximum)));
+}
+
+bool CGameQuestPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) {
+    if (type != SDL_KEYDOWN) {
+        return true;
+    }
+    refreshScrollLayout(gui);
+    switch (key) {
+    case SDLK_UP:
+        scrollBy(-lineHeight);
+        break;
+    case SDLK_DOWN:
+        scrollBy(lineHeight);
+        break;
+    case SDLK_PAGEUP:
+        scrollBy(-std::max(1, viewportHeight - lineHeight));
+        break;
+    case SDLK_PAGEDOWN:
+        scrollBy(std::max(1, viewportHeight - lineHeight));
+        break;
+    case SDLK_HOME:
+        scrollOffset = 0;
+        break;
+    case SDLK_END:
+        scrollOffset = scrollMaximum;
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+
+bool CGameQuestPanel::mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX,
+                                      int wheelY) {
+    refreshScrollLayout(gui);
+    scrollBy(-static_cast<long long>(wheelY) * lineHeight * 3);
+    return true;
 }
 
 std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
+    refreshTextCache(ptr);
+    return cachedQuestText;
+}
+
+void CGameQuestPanel::refreshTextCache(const std::shared_ptr<CGui> &ptr) {
     // Reactive read path: the journal text is only rebuilt when a change subscription
     // (see refreshQuestSubscriptions) marked it stale, instead of re-walking the quest
     // log on every rendered frame.
@@ -73,8 +205,8 @@ std::string CGameQuestPanel::getText(std::shared_ptr<CGui> ptr) {
     if (questTextDirty) {
         cachedQuestText = buildText(player);
         questTextDirty = false;
+        paragraphLayoutDirty = true;
     }
-    return cachedQuestText;
 }
 
 std::shared_ptr<CPlayer> CGameQuestPanel::resolveQuestSource(const std::shared_ptr<CGui> &gui) {

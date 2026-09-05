@@ -102,7 +102,11 @@ void refreshProxyTargets(const std::shared_ptr<CGameGraphicsObject> &root) {
 } // namespace
 
 CGui::CGui() {
-    SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
+    // Video lives for the process; repeated initialization can overflow SDL 2's
+    // subsystem reference counter and invalidate windows from earlier sessions.
+    if ((SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO) == 0) {
+        SDL_SAFE(SDL_Init(SDL_INIT_VIDEO));
+    }
     SDL_Window *rawWindow = nullptr;
     SDL_Renderer *rawRenderer = nullptr;
     SDL_SAFE(SDL_CreateWindowAndRenderer(width, height, SDL_WINDOW_RESIZABLE, &rawWindow, &rawRenderer));
