@@ -500,7 +500,7 @@ void init_game_module(py::module_ &m) {
             "Dispatch a mouse button event to this object.")
         .def(
             "getResolvedRect",
-            [](CGameGraphicsObject &self) {
+            [](CGameGraphicsObject &self) -> py::tuple {
                 auto layout = self.getLayout();
                 if (!layout) {
                     return py::make_tuple(0, 0, 0, 0);
