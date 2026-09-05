@@ -1370,16 +1370,24 @@ void test_save_format_codec_validation() {
                 "save envelope should use the canonical format marker");
     expect_true((*envelope)->at("schemaVersion").get<int>() == CSaveFormat::SCHEMA_VERSION,
                 "save envelope should use the canonical schema version");
-    // Optional archetype fields (race/creatureClass/playerClassId) are additive and must not bump
-    // the published schema version. Pin it so a future change that breaks schema-v1 compatibility
-    // fails here instead of silently invalidating existing v1 saves.
-    expect_true(CSaveFormat::SCHEMA_VERSION == 1, "schema version must stay 1 for optional archetype fields");
+    expect_true(CSaveFormat::SCHEMA_VERSION == 2,
+                "effect actor references require a schema version that older readers reject");
 
     auto decoded = CSaveFormat::decodeDocument(*envelope);
     expect_true(
         decoded.has_value() && decoded->mapName == "test" && decoded->encoding == CSaveFormat::Encoding::Versioned &&
             decoded->snapshot.get() == &(*envelope)->at("snapshot") && save_snapshot_has_map(decoded->snapshot, "test"),
         "save migration registry should no-op current schema envelopes");
+
+    auto schema_one = std::make_shared<json>(**envelope);
+    (*schema_one)["schemaVersion"] = 1;
+    const auto schema_one_before = schema_one->dump();
+    auto schema_one_decoded = CSaveFormat::decodeDocument(schema_one);
+    expect_true(schema_one_decoded.has_value() && schema_one_decoded->mapName == "test" &&
+                    schema_one_decoded->encoding == CSaveFormat::Encoding::Versioned &&
+                    schema_one_decoded->snapshot->dump() == schema_one->at("snapshot").dump() &&
+                    schema_one->dump() == schema_one_before,
+                "schema-v1 saves must retain their snapshot without inventing missing effect state");
 
     const auto legacy_before = snapshot->dump();
     auto legacy = CSaveFormat::decodeDocument(snapshot);

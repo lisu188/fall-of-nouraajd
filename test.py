@@ -175,6 +175,7 @@ SERIAL_TEST_NAMES = {
     "GameTest.test_load_saved_map_slot_name_does_not_override_object_type_configs",
     "GameTest.test_missing_save_resource_directory_lists_empty",
     "GameTest.test_saved_quest_dependency_loader_uses_class_and_type_refs",
+    "GameTest.testSavedEffectDependencyLoaderRestoresMapEffectAndDetachedCaster",
     XVFB_GAMEPLAY_PARENT_TEST,
 }
 # The stdio map walkthroughs each spawn their own isolated mcp.py subprocess over
@@ -272,7 +273,7 @@ def unique_map_name(prefix):
 
 
 SAVE_FORMAT = "fall-of-nouraajd-save"
-SAVE_SCHEMA_VERSION = 1
+SAVE_SCHEMA_VERSION = 2
 SAVE_FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "save_compatibility"
 
 
@@ -310,9 +311,9 @@ def save_snapshot(saved_document):
     return saved_document
 
 
-def assert_save_envelope(test_case, saved_document, map_name):
+def assert_save_envelope(test_case, saved_document, map_name, schema_version=SAVE_SCHEMA_VERSION):
     test_case.assertEqual(SAVE_FORMAT, saved_document.get("format"))
-    test_case.assertEqual(SAVE_SCHEMA_VERSION, saved_document.get("schemaVersion"))
+    test_case.assertEqual(schema_version, saved_document.get("schemaVersion"))
     test_case.assertEqual(map_name, saved_document.get("mapName"))
     snapshot = saved_document.get("snapshot")
     test_case.assertIsInstance(snapshot, dict)
@@ -839,7 +840,9 @@ class SaveFixtureTest(unittest.TestCase):
 
             document = json.loads(document_path.read_text(encoding="utf-8"))
             if document.get("format") == SAVE_FORMAT:
-                assert_save_envelope(self, document, expected["summary"]["map"])
+                assert_save_envelope(
+                    self, document, expected["summary"]["map"], schema_version=expected["summary"]["schemaVersion"]
+                )
             self.assertEqual(expected["summary"], save_fixture_summary(document), fixture_name)
 
     def test_primitive_wrapper_fixtures_share_values_across_legacy_and_flattened_encodings(self):
@@ -905,21 +908,15 @@ class SaveFixtureTest(unittest.TestCase):
         self.assertEqual([], summary["player"]["items"])
 
     def test_schema_v1_fixture_stays_on_version_one_with_legacy_player(self):
-        # Optional archetype fields (race/creatureClass/playerClassId) are additive and must NOT
-        # force a SCHEMA_VERSION bump. This pins the published schema-v1 contract: the immutable
-        # schema_v1 fixture must keep schemaVersion 1, the Python mirror constant must stay 1, and
-        # the fixture must continue to describe a legacy CPlayer (typeId "Warrior" only, no
-        # archetype identity fields) so it still resolves to legacy default stats on load.
-        self.assertEqual(1, SAVE_SCHEMA_VERSION, "Python schema-version mirror drifted from v1")
-
+        # Preserve the published v1 fixture while current saves use v2 for active effect state.
+        # The legacy player has no archetype identity fields and must still resolve its defaults.
         fixture_path = SAVE_FIXTURE_DIR / "schema_v1_test_map.json"
         self.assertTrue(fixture_path.is_file(), fixture_path)
         document = json.loads(fixture_path.read_text(encoding="utf-8"))
 
         self.assertEqual(SAVE_FORMAT, document.get("format"))
         self.assertEqual(1, document.get("schemaVersion"), "schema-v1 fixture must stay on version 1")
-        self.assertEqual(SAVE_SCHEMA_VERSION, document.get("schemaVersion"))
-        assert_save_envelope(self, document, "test")
+        assert_save_envelope(self, document, "test", schema_version=1)
 
         player = snapshot_player_properties(save_snapshot(document))
         # Legacy v1 player: identified by typeId only, with no archetype identity overrides.
@@ -1019,7 +1016,7 @@ class SaveFixtureTest(unittest.TestCase):
         document = json.loads(fixture_path.read_text(encoding="utf-8"))
 
         # Decode through the normal versioned-save envelope, exactly like every other fixture.
-        assert_save_envelope(self, document, "composed")
+        assert_save_envelope(self, document, "composed", schema_version=1)
         snapshot = save_snapshot(document)
 
         # The legacy player keeps loading through the established CPlayer path unchanged: it is
@@ -3049,6 +3046,36 @@ def load_game_map_with_player(map_name, player_name=DEFAULT_PLAYER):
     game_map = g.getMap()
     player = game_map.getPlayer()
     return g, game_map, player
+
+
+def createActiveEffectSaveFixture(test_case):
+    game = load_game_module()
+    g, game_map, player = load_game_map_with_player("test")
+    player.moveTo(13, 12, 0)
+    game.event_loop.instance().run()
+    test_case.assertEqual((13, 12, 0), coords_tuple(player.getCoords()))
+    stat_names = ("armor", "normalResist", "shadowResist")
+    baseline_stats = {name: player.getStats().getNumericProperty(name) for name in stat_names}
+    g.createObject("ArmorOfFaith").onAction(player, player)
+    effects = list(player.getEffects())
+    test_case.assertEqual(1, len(effects))
+    effect = effects[0]
+    effect.apply(player)
+    expected = {
+        "duration": 4,
+        "timeLeft": 3,
+        "bonus": {"armor": 3 + player.getLevel() // 2, "normalResist": 3, "shadowResist": 3},
+    }
+    test_case.assertEqual(expected["timeLeft"], effect.getTimeLeft())
+    test_case.assertEqual(expected["duration"], effect.getNumericProperty("duration"))
+    test_case.assertEqual(expected["bonus"], {name: effect.getBonus().getNumericProperty(name) for name in stat_names})
+    save_name = unique_save_name("active-effect-state")
+    test_case.addCleanup(cleanup_save_slot, save_name)
+    try:
+        game.CMapLoader.save(game_map, save_name)
+    finally:
+        player.setEffects(set())
+    return save_name, expected, baseline_stats
 
 
 def get_player_controller(player):
@@ -9803,6 +9830,101 @@ class GameTest(unittest.TestCase):
             for map_dir in map_dirs:
                 shutil.rmtree(map_dir, ignore_errors=True)
 
+    def testSavedEffectDependencyLoaderRestoresMapEffectAndDetachedCaster(self):
+        game = load_game_module()
+        source_name = unique_map_name("effect_caster_source")
+        source_dir = Path.cwd() / "maps" / source_name
+        save_name = unique_save_name("effect_caster_dependency")
+        effect_class = f"SavedMapEffect{os.getpid()}{time.time_ns()}"
+        try:
+            source_dir.mkdir(parents=True)
+            (source_dir / "script.py").write_text(
+                "def load(self, context):\n"
+                "    from game import CEffect, register\n"
+                "    @register(context)\n"
+                f"    class {effect_class}(CEffect):\n"
+                "        pass\n",
+                encoding="utf-8",
+            )
+            (source_dir / "config.json").write_text(
+                json.dumps({"savedEffectAlias": {"class": effect_class}}), encoding="utf-8"
+            )
+            snapshot = {
+                "class": "CMap",
+                "effectGraph": {
+                    "version": 1,
+                    "actors": [
+                        {
+                            "class": "CCreature",
+                            "effectActorId": 2,
+                            "properties": {"name": "retainedCaster", "level": 4, "hp": 0},
+                        }
+                    ],
+                },
+                "properties": {
+                    "mapName": "ritual",
+                    "tiles": [],
+                    "triggers": [],
+                    "objects": [
+                        {
+                            "class": "CPlayer",
+                            "effectActorId": 1,
+                            "properties": {
+                                "name": "player",
+                                "hp": 70,
+                                "posx": 3,
+                                "posy": 22,
+                                "effects": [
+                                    {
+                                        "class": effect_class,
+                                        "effectReferences": {"caster": 2, "victim": 1},
+                                        "properties": {"name": "carriedEffect", "duration": 4, "timeLeft": 3},
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                },
+            }
+            save_path = save_primary_path(save_name)
+            save_path.parent.mkdir(exist_ok=True)
+            save_path.write_text(
+                json.dumps(
+                    {
+                        "format": SAVE_FORMAT,
+                        "schemaVersion": SAVE_SCHEMA_VERSION,
+                        "mapName": "ritual",
+                        "snapshot": snapshot,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(loaded_game, "test", "Sorcerer")
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            self.assertEqual("ritual", loaded_map.mapName)
+            loaded_player = loaded_map.getPlayer()
+            self.addCleanup(loaded_player.setEffects, set())
+            effects = list(loaded_player.getEffects())
+            self.assertEqual(1, len(effects))
+            effect = effects[0]
+            self.assertEqual(effect_class, effect.getType())
+            caster = effect.getCaster()
+            self.assertIsNotNone(caster)
+            self.assertEqual("CCreature", caster.getType())
+            self.assertEqual(4, caster.getLevel())
+            self.assertEqual(0, caster.getHp())
+            self.assertIsNone(loaded_map.getObjectByName("retainedCaster"))
+            self.assertIs(loaded_player, effect.getVictim())
+            self.assertEqual(3, effect.getTimeLeft())
+            self.assertEqual("ritual", loaded_game.getResourcesProvider().getActiveScope())
+            game.CFightHandler.applyEffects(loaded_player)
+            self.assertEqual(2, effect.getTimeLeft())
+        finally:
+            cleanup_save_slot(save_name)
+            shutil.rmtree(source_dir, ignore_errors=True)
+
     @game_test
     def test_multilevel_map_loads_authored_z_layers(self):
         game = load_game_module()
@@ -12458,6 +12580,16 @@ class GameTest(unittest.TestCase):
                 player_object = json.loads(json.dumps(obj))
                 break
         self.assertIsNotNone(player_object)
+        pending = [saved_document["snapshot"]]
+        maximum_actor_id = 0
+        while pending:
+            node = pending.pop()
+            if isinstance(node, dict):
+                maximum_actor_id = max(maximum_actor_id, node.get("effectActorId", 0))
+                pending.extend(node.values())
+            elif isinstance(node, list):
+                pending.extend(node)
+        player_object["effectActorId"] = maximum_actor_id + 1
         saved_document["snapshot"]["properties"]["objects"].append(player_object)
         save_primary_path(save_name).write_text(json.dumps(saved_document), encoding="utf-8")
 
@@ -12552,6 +12684,38 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    def testSavedActiveEffectRetainsStateAndActorIdentity(self):
+        game = load_game_module()
+        save_name, expected, baseline_stats = createActiveEffectSaveFixture(self)
+        loaded_game = game.CGameLoader.loadGame()
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        player = loaded_game.getMap().getPlayer()
+        self.addCleanup(player.setEffects, set())
+        effects = list(player.getEffects())
+        self.assertEqual(1, len(effects))
+        effect = effects[0]
+        self.assertEqual(
+            expected,
+            {
+                "duration": effect.getNumericProperty("duration"),
+                "timeLeft": effect.getTimeLeft(),
+                "bonus": {name: effect.getBonus().getNumericProperty(name) for name in baseline_stats},
+            },
+        )
+        self.assertIs(effect.getCaster(), player)
+        self.assertIs(effect.getVictim(), player)
+        self.assertEqual(
+            {name: value + expected["bonus"][name] for name, value in baseline_stats.items()},
+            {name: player.getStats().getNumericProperty(name) for name in baseline_stats},
+        )
+
+        game.CFightHandler.applyEffects(player)
+        self.assertEqual(2, effect.getTimeLeft())
+        for _ in range(3):
+            game.CFightHandler.applyEffects(player)
+        self.assertEqual([], list(player.getEffects()))
+        self.assertEqual(baseline_stats, {name: player.getStats().getNumericProperty(name) for name in baseline_stats})
 
     @game_test
     def test_fights(self):
@@ -20446,15 +20610,105 @@ def normalize_map_load_provenance(document):
     return normalized
 
 
+def canonicalizeEffectActorIds(document):
+    """Relabel operation-local actor IDs without changing graph identity or references."""
+
+    def canonicalizeGraph(root):
+        definitions = {}
+        pending = [root]
+        while pending:
+            node = pending.pop()
+            if isinstance(node, dict):
+                if isinstance(node.get("class"), str) and "effectActorId" in node:
+                    actor_id = node["effectActorId"]
+                    if type(actor_id) is not int or actor_id <= 0 or actor_id in definitions:
+                        raise ValueError("Invalid or duplicate effect actor definition")
+                    definitions[actor_id] = node
+                pending.extend(node.values())
+            elif isinstance(node, list):
+                pending.extend(node)
+
+        def rewriteIds(value, labels, *, omit_definitions=False):
+            if isinstance(value, dict):
+                rewritten = {
+                    key: rewriteIds(item, labels, omit_definitions=omit_definitions) for key, item in value.items()
+                }
+                # Metadata only belongs to object configs, never similarly named real properties.
+                if isinstance(value.get("class"), str):
+                    for key in ("effectActorId", "effectActorReference"):
+                        if key in value:
+                            if omit_definitions and key == "effectActorId":
+                                rewritten.pop(key)
+                            else:
+                                rewritten[key] = labels[value[key]]
+                    if "effectReferences" in value:
+                        for key in ("caster", "victim"):
+                            actor_id = value["effectReferences"].get(key)
+                            if actor_id is not None:
+                                rewritten["effectReferences"][key] = labels[actor_id]
+                return rewritten
+            if isinstance(value, list):
+                return [rewriteIds(item, labels, omit_definitions=omit_definitions) for item in value]
+            return value
+
+        def stableKey(value):
+            return json.dumps(normalize_save_snapshot(value), sort_keys=True, separators=(",", ":"))
+
+        def assignLabels(signatures):
+            ordered = {signature: index + 1 for index, signature in enumerate(sorted(set(signatures.values())))}
+            return {actor_id: ordered[signature] for actor_id, signature in signatures.items()}
+
+        anonymous = {actor_id: "<actor>" for actor_id in definitions}
+        try:
+            labels = assignLabels(
+                {
+                    actor_id: stableKey(rewriteIds(actor, anonymous, omit_definitions=True))
+                    for actor_id, actor in definitions.items()
+                }
+            )
+            # Most actors differ by name, class or coordinates. Refine rare content ties using
+            # their reference locations in the whole graph, with arrays already order-independent.
+            for _ in range(min(len(definitions), 16)):
+                counts = {}
+                for label in labels.values():
+                    counts[label] = counts.get(label, 0) + 1
+                if len(counts) == len(definitions):
+                    break
+                signatures = {}
+                for actor_id, label in labels.items():
+                    context = ""
+                    if counts[label] > 1:
+                        marked = {other: [other_label, other == actor_id] for other, other_label in labels.items()}
+                        context = stableKey(rewriteIds(root, marked))
+                    signatures[actor_id] = (label, context)
+                refined = assignLabels(signatures)
+                if len(set(refined.values())) == len(counts):
+                    break
+                labels = refined
+            if len(set(labels.values())) != len(definitions):
+                raise ValueError("Ambiguous effect actor identities after bounded reference-context refinement")
+            return rewriteIds(root, labels)
+        except KeyError as error:
+            raise ValueError(f"Effect actor reference has no definition: {error.args[0]}") from error
+
+    if isinstance(document, dict):
+        if "effectGraph" in document:
+            return canonicalizeGraph(document)
+        return {key: canonicalizeEffectActorIds(value) for key, value in document.items()}
+    if isinstance(document, list):
+        return [canonicalizeEffectActorIds(value) for value in document]
+    return document
+
+
 def canonical_save_round_trip_form(document, *, normalize=None):
     """Comparable form of a saved document: generated names and root-map load provenance
-    are normalized, then key order and set-backed array order are canonicalized via
-    normalize_save_snapshot. An optional `normalize` callable runs in between for fields
-    a future epic knows to be unstable."""
+    are normalized, effect actor IDs are relabeled, then key order and set-backed array
+    order are canonicalized. An optional `normalize` callable runs before graph relabeling
+    for fields a future epic knows to be unstable."""
     canonical = normalize_map_load_provenance(normalize_generated_save_names(document))
     if normalize is not None:
         canonical = normalize(canonical)
-    return normalize_save_snapshot(canonical)
+    return normalize_save_snapshot(canonicalizeEffectActorIds(canonical))
 
 
 def save_round_trip_diff(first, second, path="$"):
@@ -24966,6 +25220,30 @@ class McpServerTest(unittest.TestCase):
             )
         finally:
             self._shutdown_process(proc)
+
+    def test_stdioSavedActiveEffectRetainsRemainingTimeAndBonus(self):
+        save_name, expected, _baseline_stats = createActiveEffectSaveFixture(self)
+        proc = self._start_stdio_mcp_process()
+        self.addCleanup(self._shutdown_process, proc)
+        self._initialize_stdio_mcp(proc)
+        session = {"proc": proc, "next_request_id": 3}
+        game_handle, _map_handle, _player_handle = self._mcp_load_game_map_with_player(session, "test")
+        self._mcp_engine_call(session, "CGameLoader.loadSavedGame", [game_handle, save_name])
+        self._mcp_pump_event_loop(session)
+        map_handle = self._mcp_handle_call(session, game_handle, "getMap")
+        player_handle = self._mcp_handle_call(session, map_handle, "getPlayer")
+        self._mcp_handle_call(session, player_handle, "moveTo", [14, 12, 0])
+        self._mcp_pump_event_loop(session)
+        player_snapshot = json.loads(self._mcp_engine_call(session, "jsonify", [player_handle]))
+        self.assertEqual([14, 12, 0], self._serialized_coords(player_snapshot))
+        effects = player_snapshot["properties"]["effects"]
+        self.assertEqual(1, len(effects))
+        self.assertEqual("ArmorOfFaithEffect", effects[0]["class"])
+        properties = effects[0]["properties"]
+        self.assertEqual(expected["duration"], properties.get("duration"))
+        self.assertEqual(expected["timeLeft"], properties.get("timeLeft"))
+        bonus = properties.get("bonus", {}).get("properties", {})
+        self.assertEqual(expected["bonus"], {name: bonus.get(name) for name in expected["bonus"]})
 
     def test_stdio_map_walkthroughs_cover_all_maps(self):
         discovered_maps = discover_maps()
