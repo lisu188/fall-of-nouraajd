@@ -166,6 +166,19 @@ class AndroidPortScaffoldTest(unittest.TestCase):
                     (prefix / "lib" / f"libpython{version}.so").touch()
                 elif name == "directory":
                     (prefix / "lib" / f"libpython{version}.so").mkdir()
+            dependency_libs = project / "dependencies/lib"
+            dependency_libs.mkdir(parents=True)
+            for name in ("libSDL2.so", "libSDL2_image.so", "libSDL2_ttf.so"):
+                (dependency_libs / name).write_text(f"release {name}", encoding="utf-8")
+            preserved_libraries = {
+                "libpng16.so": "image dependency",
+                "libfreetype.so": "font dependency",
+                "libSDL2_mixer.so": "other runtime dependency",
+            }
+            for name, content in preserved_libraries.items():
+                (dependency_libs / name).write_text(content, encoding="utf-8")
+            (project / "official/lib/libcrypto_python.so").write_text("Python extension dependency", encoding="utf-8")
+            (project / "official/lib/libpython3.14.so").write_text("Python runtime", encoding="utf-8")
             (project / "settings.gradle.kts").write_text(
                 'rootProject.name = "python-library-selector-regression"\n', encoding="utf-8"
             )
@@ -186,6 +199,7 @@ class AndroidPortScaffoldTest(unittest.TestCase):
                 + staging_dependencies
                 + "\n"
                 'tasks.register("verifyPythonLibrarySelection") {\n'
+                '    dependsOn("preBuild")\n'
                 "    doLast {\n"
                 '        check(selectPythonLibrary(file("official")) == file("official/lib/libpython3.14.so"))\n'
                 '        check(selectPythonLibrary(file("alternate")) == file("alternate/lib/libpython3.15.so"))\n'
@@ -205,6 +219,16 @@ class AndroidPortScaffoldTest(unittest.TestCase):
                 "        check(dependencies.contains(prepareNativeLibraries.get()))\n"
                 "        check(prepareRuntimeAssets.get().destinationDir == assetsSource)\n"
                 '        check(prepareNativeLibraries.get().destinationDir == File(nativeSource, "arm64-v8a"))\n'
+                '        val staged = File(nativeSource, "arm64-v8a")\n'
+                '        for (name in listOf("libSDL2.so", "libSDL2_image.so", "libSDL2_ttf.so")) {\n'
+                '            check(!File(staged, name).exists()) { "Release $name duplicates CMake-selected SDL library" }\n'
+                "        }\n"
+                '        for (name in listOf("libpng16.so", "libfreetype.so", "libSDL2_mixer.so")) {\n'
+                '            check(File(staged, name).readBytes().contentEquals(File(dependencyPrefix, "lib/$name").readBytes()))\n'
+                "        }\n"
+                '        for (name in listOf("libpython3.14.so", "libcrypto_python.so")) {\n'
+                '            check(File(staged, name).readBytes().contentEquals(File(pythonPrefix, "lib/$name").readBytes()))\n'
+                "        }\n"
                 '        println("Python library selection regression passed")\n'
                 "    }\n}\n",
                 encoding="utf-8",

@@ -58,6 +58,8 @@ val prepareNativeLibraries by tasks.registering(Sync::class) {
     }
     from(File(dependencyPrefix, "lib")) {
         include("*.so")
+        // CMake packages these SDL libraries for the selected build variant.
+        exclude("libSDL2.so", "libSDL2_image.so", "libSDL2_ttf.so")
     }
 }
 
