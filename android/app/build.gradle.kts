@@ -81,7 +81,7 @@ android {
                 arguments += listOf(
                     "-DGAME_ANDROID_PYTHON_INCLUDE_DIR=${pythonIncludeDir.absolutePath}",
                     "-DGAME_ANDROID_PYTHON_LIBRARY=${pythonLibrary.absolutePath}",
-                    "-DCMAKE_PREFIX_PATH=${dependencyPrefix.absolutePath}"
+                    "-DGAME_ANDROID_DEPENDENCY_PREFIX=${dependencyPrefix.absolutePath}"
                 )
             }
         }

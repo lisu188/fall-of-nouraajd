@@ -40,6 +40,79 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('${SDL2_IMAGE_ANDROID_LIBS}', cmake)
         self.assertIn('${SDL2_TTF_ANDROID_LIBS}', cmake)
 
+    def testAndroidCmakeFindsTargetPackagesOutsideTheSysroot(self):
+        cmake = shutil.which("cmake")
+        if cmake is None:
+            self.skipTest("CMake is required for Android package-discovery regression")
+        source = (ROOT / "android/CMakeLists.txt").read_text(encoding="utf-8")
+        discovery = source[source.index("get_filename_component(") : source.index("add_library(game_android_python")]
+        with tempfile.TemporaryDirectory(prefix="nouraajd-android-packages-") as temporary:
+            project = Path(temporary)
+            prefix = project / "target dependencies"
+            sysroot = project / "sysroot"
+            host_prefix = project / "host"
+            sysroot.mkdir()
+            python_include = prefix / "include/python3.14"
+            python_include.mkdir(parents=True)
+            python_library = prefix / "lib/libpython3.14.so"
+            python_library.parent.mkdir()
+            python_library.touch()
+            packages = {
+                "pybind11": ("pybind11::headers",),
+                "SDL2": ("SDL2::SDL2", "SDL2::SDL2main"),
+                "SDL2_image": ("SDL2_image::SDL2_image",),
+                "SDL2_ttf": ("SDL2_ttf::SDL2_ttf",),
+            }
+            for package, targets in packages.items():
+                package_dir = prefix / "share" / package
+                package_dir.mkdir(parents=True)
+                (package_dir / f"{package}Config.cmake").write_text(
+                    "".join(f"add_library({target} INTERFACE IMPORTED)\n" for target in targets), encoding="utf-8"
+                )
+            host_package = host_prefix / "share/HostOnly"
+            host_package.mkdir(parents=True)
+            (host_package / "HostOnlyConfig.cmake").write_text("set(HostOnly_FOUND TRUE)\n", encoding="utf-8")
+            (project / "CMakeLists.txt").write_text(
+                "cmake_minimum_required(VERSION 3.20)\n"
+                "project(android_package_lookup LANGUAGES NONE)\n"
+                f'set(CMAKE_FIND_ROOT_PATH "{sysroot.as_posix()}")\n'
+                f'set(CMAKE_PREFIX_PATH "{prefix.as_posix()}")\n'
+                f'set(CMAKE_SYSTEM_PREFIX_PATH "{host_prefix.as_posix()}")\n'
+                "set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)\n"
+                "set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)\n"
+                "set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)\n"
+                "set(CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH FALSE)\n"
+                "set(CMAKE_FIND_USE_PACKAGE_REGISTRY FALSE)\n"
+                "set(CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY FALSE)\n"
+                f'set(GAME_ANDROID_DEPENDENCY_PREFIX "{prefix.as_posix()}" CACHE PATH "Fixture prefix")\n'
+                f'set(GAME_ANDROID_PYTHON_INCLUDE_DIR "{python_include.as_posix()}" CACHE PATH "Fixture headers")\n'
+                f'set(GAME_ANDROID_PYTHON_LIBRARY "{python_library.as_posix()}" CACHE FILEPATH "Fixture library")\n'
+                + discovery
+                + "\n"
+                + "".join(
+                    f'if (NOT TARGET {target})\nmessage(FATAL_ERROR "Missing target package: {target}")\nendif ()\n'
+                    for targets in packages.values()
+                    for target in targets
+                )
+                + f'if (NOT "{sysroot.as_posix()}" IN_LIST CMAKE_FIND_ROOT_PATH)\n'
+                'message(FATAL_ERROR "Original sysroot was discarded")\nendif ()\n'
+                "foreach (kind PACKAGE LIBRARY INCLUDE)\n"
+                'if (NOT CMAKE_FIND_ROOT_PATH_MODE_${kind} STREQUAL "ONLY")\n'
+                'message(FATAL_ERROR "Host lookup was enabled for ${kind}")\nendif ()\nendforeach ()\n'
+                "find_package(HostOnly CONFIG QUIET)\n"
+                'if (HostOnly_FOUND)\nmessage(FATAL_ERROR "Host-only package escaped target isolation")\nendif ()\n'
+                'message(STATUS "Android target packages resolved without host fallback")\n',
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [cmake, "-S", str(project), "-B", str(project / "build")],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            self.assertIn("Android target packages resolved without host fallback", completed.stdout)
+
     def test_gradle_stages_game_and_cpython_payloads(self):
         gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
         self.assertIn('File(repositoryRoot, "res")', gradle)
@@ -53,6 +126,7 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('File(repositoryRoot, "android/CMakeLists.txt")', gradle)
         self.assertIn('abiFilters += "arm64-v8a"', gradle)
         self.assertIn('minSdk = 28', gradle)
+        self.assertIn('"-DGAME_ANDROID_DEPENDENCY_PREFIX=${dependencyPrefix.absolutePath}"', gradle)
 
     def testGradleSelectsTheLibraryMatchingPythonHeaders(self):
         gradle = shutil.which("gradle")
