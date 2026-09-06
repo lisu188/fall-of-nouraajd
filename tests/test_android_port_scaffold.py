@@ -1,3 +1,7 @@
+import os
+import shutil
+import subprocess
+import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -48,6 +52,66 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         self.assertIn('File(repositoryRoot, "android/CMakeLists.txt")', gradle)
         self.assertIn('abiFilters += "arm64-v8a"', gradle)
         self.assertIn('minSdk = 28', gradle)
+
+    def testGradleSelectsTheLibraryMatchingPythonHeaders(self):
+        gradle = shutil.which("gradle")
+        if gradle is None and os.environ.get("GRADLE_HOME"):
+            executable = "gradle.bat" if os.name == "nt" else "gradle"
+            candidate = Path(os.environ["GRADLE_HOME"]) / "bin" / executable
+            if candidate.is_file():
+                gradle = str(candidate)
+        if gradle is None:
+            self.skipTest("Gradle is required to execute the Android Kotlin selector regression")
+
+        source = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
+        start = source.index("val pythonIncludeDir =")
+        end = source.index("val generatedAssetsDir =", start)
+        selector = source[start:end]
+        with tempfile.TemporaryDirectory(prefix="nouraajd-python-selector-") as temporary:
+            project = Path(temporary)
+            for name, version in (
+                ("official", "3.14"),
+                ("alternate", "3.15"),
+                ("missing", "3.14"),
+                ("directory", "3.14"),
+            ):
+                prefix = project / name
+                (prefix / "include" / f"python{version}").mkdir(parents=True)
+                (prefix / "lib" / f"python{version}").mkdir(parents=True)
+                (prefix / "lib" / "libpython3.so").touch()
+                (prefix / "lib" / "libpython3.13.so").touch()
+                if name in ("official", "alternate"):
+                    (prefix / "lib" / f"libpython{version}.so").touch()
+                elif name == "directory":
+                    (prefix / "lib" / f"libpython{version}.so").mkdir()
+            (project / "settings.gradle.kts").write_text(
+                'rootProject.name = "python-library-selector-regression"\n', encoding="utf-8"
+            )
+            (project / "build.gradle.kts").write_text(
+                "import java.io.File\n"
+                "import org.gradle.api.GradleException\n"
+                "fun selectPythonLibrary(pythonPrefix: File): File {\n" + selector + "return pythonLibrary\n}\n"
+                'tasks.register("verifyPythonLibrarySelection") {\n'
+                "    doLast {\n"
+                '        check(selectPythonLibrary(file("official")) == file("official/lib/libpython3.14.so"))\n'
+                '        check(selectPythonLibrary(file("alternate")) == file("alternate/lib/libpython3.15.so"))\n'
+                '        for (name in listOf("missing", "directory")) {\n'
+                "            val error = runCatching { selectPythonLibrary(file(name)) }.exceptionOrNull()\n"
+                '            check(error is GradleException) { "Expected a missing-library error for $name" }\n'
+                "        }\n"
+                '        println("Python library selection regression passed")\n'
+                "    }\n}\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [gradle, "--offline", "--no-daemon", "--console=plain", "verifyPythonLibrarySelection"],
+                cwd=project,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
+            self.assertIn("Python library selection regression passed", completed.stdout)
 
     def test_dependency_bootstrap_pins_python_and_dynamic_sdl(self):
         bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
