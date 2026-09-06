@@ -109,12 +109,12 @@ jobs:
         run: |
           set -euo pipefail
           test -d "${ANDROID_HOME}/build-tools/36.0.0"
-          test -d "${ANDROID_HOME}/ndk/28.2.13676358"
+          test -d "${ANDROID_HOME}/ndk/29.0.14206865"
           test -d "${ANDROID_HOME}/cmake/3.31.5"
           test -d "${ANDROID_HOME}/platforms/android-37" || \
             test -d "${ANDROID_HOME}/platforms/android-37.0" || \
             test -d "${ANDROID_HOME}/platforms/android-37.1"
-          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/28.2.13676358" >> "${GITHUB_ENV}"
+          echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/29.0.14206865" >> "${GITHUB_ENV}"
 
       - name: Install host build tools
         run: |

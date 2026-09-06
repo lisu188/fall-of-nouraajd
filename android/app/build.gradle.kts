@@ -64,6 +64,7 @@ val prepareNativeLibraries by tasks.registering(Sync::class) {
 android {
     namespace = "com.lisu188.fallofnouraajd"
     compileSdk = 37
+    ndkVersion = "29.0.14206865"
 
     defaultConfig {
         applicationId = "com.lisu188.fallofnouraajd"

@@ -9,6 +9,7 @@ The Android port keeps the existing C++/SDL engine, Python map/quest scripts, Lu
 - orientation: landscape
 - Android Gradle Plugin: 9.3.1
 - Java: 17
+- Android NDK: 29.0.14206865, shared by dependency bootstrap and the Gradle native build
 - game native code: C++23
 
 API 28 matches the API floor used by vcpkg's current tested `arm64-android` triplet. Lower Android versions are not claimed by this MVP until the dependency triplet is explicitly rebuilt/tested for a lower API level.
@@ -17,11 +18,15 @@ The Gradle wrapper is not committed yet. AGP 9.3 requires Gradle 9.5.0 or newer 
 
 ## Preferred dependency bootstrap
 
-With an Android NDK installed, set `ANDROID_NDK_HOME` and run:
+With Android NDK 29.0.14206865 installed, set `ANDROID_NDK_HOME` to that version's directory and run:
 
 ```text
 bash bootstrap-deps.sh
 ```
+
+NDK 29 provides the standard C++ stop-token and `std::jthread` support used by the engine thread pool.
+The bootstrap checks the selected NDK revision before downloading or building dependencies, and Gradle pins the same
+revision for the game build.
 
 The script pins the Android runtime inputs used by this branch:
 

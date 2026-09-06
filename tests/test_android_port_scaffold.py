@@ -219,6 +219,74 @@ class AndroidPortScaffoldTest(unittest.TestCase):
             self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
             self.assertIn("Python library selection regression passed", completed.stdout)
 
+    def testAndroidNdkPinsMatchAcrossBuildEntrypoints(self):
+        bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
+        required = re.search(r'^ANDROID_NDK_VERSION="([0-9.]+)"$', bootstrap, re.MULTILINE)
+        self.assertIsNotNone(required, "Bootstrap must declare its required Android NDK revision")
+        version = required.group(1)
+        gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
+        self.assertIn(f'ndkVersion = "{version}"', gradle)
+        for workflow in ("android.yml", "release.yml"):
+            with self.subTest(workflow=workflow):
+                source = (ROOT / ".github/workflows" / workflow).read_text(encoding="utf-8")
+                selected_versions = re.findall(r"ANDROID_HOME\}/ndk/([0-9.]+)", source)
+                self.assertTrue(selected_versions, "Workflow must select the bootstrap NDK")
+                self.assertEqual({version}, set(selected_versions))
+
+    def testAndroidBootstrapChecksNdkBeforeDownloadsOrDependencyBuilds(self):
+        if os.name != "posix":
+            self.skipTest("Android bootstrap guard uses POSIX shell tooling")
+        for command in ("bash", "awk", "find", "sed", "sha256sum", "tar"):
+            if shutil.which(command) is None:
+                self.skipTest(f"Android bootstrap guard requires {command}")
+        gradle = (ROOT / "android/app/build.gradle.kts").read_text(encoding="utf-8")
+        version = re.search(r'ndkVersion\s*=\s*"([0-9.]+)"', gradle).group(1)
+        bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory(prefix="nouraajd-ndk-guard-") as temporary:
+            project = Path(temporary)
+            script = project / "android/bootstrap-deps.sh"
+            script.parent.mkdir()
+            script.write_text(bootstrap, encoding="utf-8")
+            fake_bin = project / "bin"
+            fake_bin.mkdir()
+            for command in ("curl", "git"):
+                executable = fake_bin / command
+                executable.write_text(
+                    '#!/bin/sh\nprintf "%s\\n" "$0" >> "$GAME_TEST_DOWNLOAD_LOG"\nexit 97\n', encoding="utf-8"
+                )
+                executable.chmod(0o755)
+            for case, revision in (("old", "28.2.13676358"), ("missing", None), ("matching", version)):
+                with self.subTest(case=case):
+                    ndk = project / case
+                    ndk.mkdir()
+                    if revision is not None:
+                        (ndk / "source.properties").write_text(f"Pkg.Revision = {revision}\n", encoding="utf-8")
+                    dependencies = project / f"dependencies-{case}"
+                    download_log = project / f"downloads-{case}.log"
+                    environment = os.environ | {
+                        "PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+                        "ANDROID_NDK_HOME": str(ndk),
+                        "GAME_ANDROID_DEPS_DIR": str(dependencies),
+                        "GAME_TEST_DOWNLOAD_LOG": str(download_log),
+                    }
+                    completed = subprocess.run(
+                        [shutil.which("bash"), str(script)],
+                        cwd=project,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if case == "matching":
+                        self.assertEqual(97, completed.returncode, completed.stdout + completed.stderr)
+                        self.assertTrue(dependencies.is_dir())
+                        self.assertIn("curl", download_log.read_text(encoding="utf-8"))
+                    else:
+                        self.assertEqual(3, completed.returncode, completed.stdout + completed.stderr)
+                        self.assertIn("Android NDK", completed.stderr)
+                        self.assertFalse(dependencies.exists(), "Reject incompatible NDK before dependency setup")
+                        self.assertFalse(download_log.exists(), "Reject incompatible NDK before network access")
+
     def test_dependency_bootstrap_pins_python_and_dynamic_sdl(self):
         bootstrap = (ROOT / "android/bootstrap-deps.sh").read_text(encoding="utf-8")
         triplet = (ROOT / "android/triplets/arm64-android-dynamic.cmake").read_text(encoding="utf-8")
