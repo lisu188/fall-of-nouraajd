@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace CSaveFormat {
 
 inline constexpr const char *FORMAT = "fall-of-nouraajd-save";
-inline constexpr int SCHEMA_VERSION = 1;
+inline constexpr int SCHEMA_VERSION = 2;
 inline constexpr const char *BACKUP_SUFFIX = ".bak";
 
 // Structural limits applied to a decoded save document before any reference traversal or strict

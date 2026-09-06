@@ -792,7 +792,7 @@ void collect_saved_quest(const json &quest, CSavedQuestRefs &refs) {
     }
 }
 
-void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs) {
+void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs, const std::shared_ptr<CGame> &game) {
     // Iterative traversal with an explicit work stack instead of recursion. The save document has
     // already been structurally bounded by CSaveFormat::validateDocumentStructure (depth, node
     // count, container fan-out) before this runs, but keeping the walk non-recursive removes the
@@ -800,6 +800,8 @@ void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs) {
     std::vector<const json *> pending;
     pending.push_back(&root);
     std::size_t visited = 0;
+    const auto registeredClasses = game->getObjectHandler()->getAllTypes();
+    const std::set<std::string> knownClasses(registeredClasses.begin(), registeredClasses.end());
 
     while (!pending.empty()) {
         const json *node = pending.back();
@@ -811,6 +813,15 @@ void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs) {
         }
 
         if (node->is_object()) {
+            // Detached effect actors can originate in another map's script. Discover their missing classes
+            // through the same authored config index used for carried quest classes, without activating that map.
+            if ((node->contains("effectActorId") || node->contains("effectReferences")) && node->contains("class") &&
+                (*node)["class"].is_string()) {
+                const auto type = (*node)["class"].get<std::string>();
+                if (!knownClasses.contains(type)) {
+                    refs.classes.insert(type);
+                }
+            }
             if (node->contains("properties") && (*node)["properties"].is_object()) {
                 const json &properties = (*node)["properties"];
                 for (const char *journalProperty : {"quests", "completedQuests"}) {
@@ -877,7 +888,7 @@ std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &g
                                                  const std::string &mapName) {
     std::set<std::string> maps = {mapName};
     CSavedQuestRefs questRefs;
-    collect_saved_quest_refs(save, questRefs);
+    collect_saved_quest_refs(save, questRefs, game);
     if (questRefs.classes.empty() && questRefs.typeIds.empty()) {
         return maps;
     }

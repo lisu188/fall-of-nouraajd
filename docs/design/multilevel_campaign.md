@@ -85,9 +85,9 @@ orchestration, not plumbing.
   in saves today. This is where campaign state goes (see below).
 - **Saves are a single-map snapshot with the player embedded.**
   `CSaveFormat` (`src/core/CSaveFormat.h`) wraps one `CMap` snapshot
-  (versioned envelope, `schemaVersion: 1`); the player — including dynamic
-  properties — serializes inside it. So campaign position stored on the
-  player is persisted for free.
+  (versioned envelope, `schemaVersion: 2`; see [effect persistence](save_effects.md));
+  the player — including dynamic properties — serializes inside it. So campaign
+  position stored on the player is persisted for free.
 - **Briefing raw material exists.** `CDialog` state machines
   (`res/maps/*/dialog*.json`, driven from `res/game.py:241`), `StartEvent`
   entry text, and `CGuiHandler::showMessage`/`showSelection` cover MVP

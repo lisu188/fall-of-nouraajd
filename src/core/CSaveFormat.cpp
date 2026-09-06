@@ -123,6 +123,7 @@ std::expected<std::shared_ptr<json>, std::string> migrateLegacySchema(const Sour
 const std::map<int, Migration> &migrationRegistry() {
     static const std::map<int, Migration> registry = {
         {LEGACY_SCHEMA_VERSION, migrateLegacySchema},
+        {1, migrateCurrentSchema},
         {SCHEMA_VERSION, migrateCurrentSchema},
     };
     return registry;
