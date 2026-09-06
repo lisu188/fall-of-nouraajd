@@ -8,6 +8,7 @@ PYTHON_VERSION="${GAME_ANDROID_PYTHON_VERSION:-3.14.7}"
 PYTHON_SHA256="${GAME_ANDROID_PYTHON_SHA256:-6d50cc3aa66e414a439594089bcdfb5f1264358155c70c1f00471c24cfb477fb}"
 VCPKG_REF="${GAME_ANDROID_VCPKG_REF:-2026.05.25}"
 VCPKG_TRIPLET="arm64-android-dynamic"
+ANDROID_NDK_VERSION="29.0.14206865"
 
 for command in awk curl find git sed sha256sum tar; do
     if ! command -v "${command}" >/dev/null 2>&1; then
@@ -18,6 +19,18 @@ done
 
 if [[ -z "${ANDROID_NDK_HOME:-}" || ! -d "${ANDROID_NDK_HOME}" ]]; then
     echo "ANDROID_NDK_HOME must point to an installed Android NDK." >&2
+    exit 3
+fi
+if [[ ! -f "${ANDROID_NDK_HOME}/source.properties" ]]; then
+    echo "Android NDK source.properties is missing under ${ANDROID_NDK_HOME}." >&2
+    exit 3
+fi
+NDK_REVISION="$(
+    awk -F '=' '/^Pkg\.Revision[[:space:]]*=/ { gsub(/[[:space:]]/, "", $2); print $2 }' \
+        "${ANDROID_NDK_HOME}/source.properties"
+)"
+if [[ "${NDK_REVISION}" != "${ANDROID_NDK_VERSION}" ]]; then
+    echo "Android NDK ${ANDROID_NDK_VERSION} is required; found ${NDK_REVISION:-unknown} under ${ANDROID_NDK_HOME}." >&2
     exit 3
 fi
 

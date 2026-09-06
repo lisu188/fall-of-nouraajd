@@ -11,12 +11,20 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${GAME_REPOSITORY_ROOT}/cmake")
 
 set(GAME_ANDROID_PYTHON_INCLUDE_DIR "" CACHE PATH "Android CPython include directory")
 set(GAME_ANDROID_PYTHON_LIBRARY "" CACHE FILEPATH "Android libpython shared library")
+set(GAME_ANDROID_DEPENDENCY_PREFIX "" CACHE PATH "Android target dependency installation prefix")
 if (NOT IS_DIRECTORY "${GAME_ANDROID_PYTHON_INCLUDE_DIR}")
     message(FATAL_ERROR "GAME_ANDROID_PYTHON_INCLUDE_DIR must point to prefix/include/python3.*")
 endif ()
 if (NOT EXISTS "${GAME_ANDROID_PYTHON_LIBRARY}")
     message(FATAL_ERROR "GAME_ANDROID_PYTHON_LIBRARY must point to libpython3.*.so")
 endif ()
+if (NOT IS_DIRECTORY "${GAME_ANDROID_DEPENDENCY_PREFIX}")
+    message(FATAL_ERROR "GAME_ANDROID_DEPENDENCY_PREFIX must point to the Android dependency installation")
+endif ()
+
+# The NDK restricts package discovery to target roots, including explicit prefixes.
+list(PREPEND CMAKE_PREFIX_PATH "${GAME_ANDROID_DEPENDENCY_PREFIX}")
+list(APPEND CMAKE_FIND_ROOT_PATH "${GAME_ANDROID_DEPENDENCY_PREFIX}")
 
 set(PYBIND11_NOPYTHON ON)
 find_package(pybind11 CONFIG REQUIRED)
