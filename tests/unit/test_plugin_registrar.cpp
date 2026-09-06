@@ -33,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "plugin/CGameplayTypeTable.h"
 #include "plugin/CPluginAbi.h"
 #include "plugin/CPluginRegistrar.h"
+#include "plugin/CPluginRuntime.h"
 #include "plugin/NativePlugin.h"
 #include "test_harness.h"
 
@@ -40,8 +41,56 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace {
+
+class CProbePluginRuntime : public IPluginRuntime {
+  public:
+    explicit CProbePluginRuntime(std::string runtimeKind) : runtimeKind(std::move(runtimeKind)) {}
+
+    std::string kind() const override { return runtimeKind; }
+
+    bool load(const std::shared_ptr<CGame> &, const CPluginDescriptor &) override { return true; }
+
+  private:
+    std::string runtimeKind;
+};
+
+void testBuiltinRuntimesPreserveCustomRegistrations() {
+    for (const char *kind : {"native", "cpp", "python", "lua"}) {
+        expect_true(plugin_runtime::find(kind) == nullptr,
+                    "the custom-first regression needs a fresh runtime registry");
+    }
+    auto custom = std::make_shared<CProbePluginRuntime>("probe");
+    auto lua = std::make_shared<CProbePluginRuntime>("lua");
+    plugin_runtime::registerRuntime(custom);
+    plugin_runtime::registerRuntime(lua);
+    plugin_runtime::registerBuiltinRuntimes();
+
+    auto *native = plugin_runtime::find("native");
+    auto *cpp = plugin_runtime::find("cpp");
+    auto *python = plugin_runtime::find("python");
+    expect_true(native != nullptr && native->kind() == "native", "a custom runtime must not suppress native support");
+    expect_true(cpp != nullptr && cpp->kind() == "cpp", "a custom runtime must not suppress C++ support");
+    expect_true(python != nullptr && python->kind() == "python", "a custom runtime must not suppress Python support");
+    expect_true(plugin_runtime::find("lua") == lua.get(), "initialization must preserve a custom built-in replacement");
+    expect_true(plugin_runtime::find("probe") == custom.get(), "initialization must preserve a custom runtime kind");
+
+    plugin_runtime::registerBuiltinRuntimes();
+    expect_true(plugin_runtime::find("native") == native && plugin_runtime::find("cpp") == cpp &&
+                    plugin_runtime::find("python") == python && plugin_runtime::find("lua") == lua.get(),
+                "repeated initialization must retain the registered runtime instances");
+
+    auto replacement = std::make_shared<CProbePluginRuntime>("python");
+    plugin_runtime::registerRuntime(replacement);
+    plugin_runtime::registerBuiltinRuntimes();
+    expect_true(plugin_runtime::find("python") == replacement.get(),
+                "initialization must preserve a built-in replacement registered after initialization");
+    expect_true(plugin_runtime::find("native") == native && plugin_runtime::find("cpp") == cpp &&
+                    plugin_runtime::find("lua") == lua.get() && plugin_runtime::find("probe") == custom.get(),
+                "replacing one runtime must leave other registered instances intact");
+}
 
 // The registrar performs the engine's canonical double registration: process-global CTypes
 // tables plus the per-game CObjectHandler factory that JSON {"class": name} construction reads.
@@ -162,6 +211,7 @@ void test_cpp_plugin_loads_through_registrar() {
 } // namespace
 
 int main() {
+    testBuiltinRuntimesPreserveCustomRegistrations();
     pybind11::scoped_interpreter guard{};
 
     test_registrar_registers_types_and_factories();

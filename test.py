@@ -23544,6 +23544,15 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
 
 class PlayBootstrapTest(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+
+        environment_patch = patch.dict(os.environ)
+        environment_patch.start()
+        self.addCleanup(environment_patch.stop)
+        os.environ.pop("GAME_BUILD_DIR", None)
+        os.environ.pop("GAME_BUILD_CONFIG", None)
+
     def assertSamePath(self, expected, actual):
         self.assertTrue(os.path.samefile(expected, actual), f"{Path(expected)} != {Path(actual)}")
 

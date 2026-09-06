@@ -80,13 +80,18 @@ IPluginRuntime *find(const std::string &kind) {
 }
 
 void registerBuiltinRuntimes() {
-    if (!runtimes().empty()) {
-        return;
+    if (!find("native")) {
+        registerRuntime(std::make_shared<CNativeKindRuntime>());
     }
-    registerRuntime(std::make_shared<CNativeKindRuntime>());
-    registerRuntime(std::make_shared<CCppKindRuntime>());
-    registerRuntime(std::make_shared<CPythonKindRuntime>());
-    registerRuntime(std::make_shared<CLuaKindRuntime>());
+    if (!find("cpp")) {
+        registerRuntime(std::make_shared<CCppKindRuntime>());
+    }
+    if (!find("python")) {
+        registerRuntime(std::make_shared<CPythonKindRuntime>());
+    }
+    if (!find("lua")) {
+        registerRuntime(std::make_shared<CLuaKindRuntime>());
+    }
 }
 
 } // namespace plugin_runtime
