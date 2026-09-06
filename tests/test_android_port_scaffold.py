@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -67,6 +68,13 @@ class AndroidPortScaffoldTest(unittest.TestCase):
         start = source.index("val pythonIncludeDir =")
         end = source.index("val generatedAssetsDir =", start)
         selector = source[start:end]
+        staging_start = source.index("val prepareRuntimeAssets by", end)
+        android_start = source.index("\nandroid {", staging_start)
+        generated_directories = source[end:staging_start]
+        staging_tasks = source[staging_start:android_start]
+        source_arguments = dict(re.findall(r"^\s*(assets|jniLibs)\.srcDir\((.+)\)\s*$", source, re.MULTILINE))
+        self.assertEqual({"assets", "jniLibs"}, set(source_arguments))
+        staging_dependencies = source[source.index('tasks.named("preBuild")') :]
         with tempfile.TemporaryDirectory(prefix="nouraajd-python-selector-") as temporary:
             project = Path(temporary)
             for name, version in (
@@ -90,7 +98,19 @@ class AndroidPortScaffoldTest(unittest.TestCase):
             (project / "build.gradle.kts").write_text(
                 "import java.io.File\n"
                 "import org.gradle.api.GradleException\n"
-                "fun selectPythonLibrary(pythonPrefix: File): File {\n" + selector + "return pythonLibrary\n}\n"
+                "import org.gradle.api.tasks.Sync\n"
+                "fun selectPythonLibrary(pythonPrefix: File): File {\n"
+                + selector
+                + "return pythonLibrary\n}\n"
+                + generated_directories
+                + 'val repositoryRoot = file("repository")\n'
+                'val pythonPrefix = file("official")\n'
+                'val dependencyPrefix = file("dependencies")\n'
+                'val pythonStdlibDir = file("official/lib/python3.14")\n'
+                + staging_tasks
+                + 'tasks.register("preBuild")\n'
+                + staging_dependencies
+                + "\n"
                 'tasks.register("verifyPythonLibrarySelection") {\n'
                 "    doLast {\n"
                 '        check(selectPythonLibrary(file("official")) == file("official/lib/libpython3.14.so"))\n'
@@ -99,6 +119,18 @@ class AndroidPortScaffoldTest(unittest.TestCase):
                 "            val error = runCatching { selectPythonLibrary(file(name)) }.exceptionOrNull()\n"
                 '            check(error is GradleException) { "Expected a missing-library error for $name" }\n'
                 "        }\n"
+                + f'        val assetsSource: Any = {source_arguments["assets"]}\n'
+                + f'        val nativeSource: Any = {source_arguments["jniLibs"]}\n'
+                + '        check(assetsSource is File) { "assets.srcDir requires a concrete File" }\n'
+                '        check(nativeSource is File) { "jniLibs.srcDir requires a concrete File" }\n'
+                "        check(assetsSource == generatedAssetsDir.get().asFile)\n"
+                "        check(nativeSource == generatedJniLibsDir.get().asFile)\n"
+                '        val preBuild = tasks.getByName("preBuild")\n'
+                "        val dependencies = preBuild.taskDependencies.getDependencies(preBuild)\n"
+                "        check(dependencies.contains(prepareRuntimeAssets.get()))\n"
+                "        check(dependencies.contains(prepareNativeLibraries.get()))\n"
+                "        check(prepareRuntimeAssets.get().destinationDir == assetsSource)\n"
+                '        check(prepareNativeLibraries.get().destinationDir == File(nativeSource, "arm64-v8a"))\n'
                 '        println("Python library selection regression passed")\n'
                 "    }\n}\n",
                 encoding="utf-8",

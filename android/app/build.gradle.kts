@@ -95,8 +95,8 @@ android {
 
     sourceSets.getByName("main") {
         java.srcDir(sdlJavaDir)
-        assets.srcDir(generatedAssetsDir)
-        jniLibs.srcDir(generatedJniLibsDir)
+        assets.srcDir(generatedAssetsDir.get().asFile)
+        jniLibs.srcDir(generatedJniLibsDir.get().asFile)
     }
 
     androidResources {
