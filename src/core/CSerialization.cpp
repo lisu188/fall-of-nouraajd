@@ -21,10 +21,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CList.h"
 #include "core/CMap.h"
 #include "core/CTypes.h"
+#include "object/CCreature.h"
+#include "object/CEffect.h"
 
 #include <atomic>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_index, std::type_index> key) {
     return (*CTypes::serializers())[key];
@@ -33,6 +39,307 @@ std::shared_ptr<CSerializerBase> CSerialization::serializer(std::pair<std::type_
 namespace {
 thread_local std::string array_deserialize_context;
 thread_local bool strict_deserialization = false;
+
+// Only effect actor links are references. Other reflected properties retain the existing tree encoding.
+class EffectWriteContext {
+  public:
+    explicit EffectWriteContext(bool includeDetached = true) : includeDetached(includeDetached) {}
+
+    int actorId(const std::shared_ptr<CCreature> &actor) {
+        if (!actor) {
+            return 0;
+        }
+        auto found = actorIds.find(actor.get());
+        if (found != actorIds.end()) {
+            return found->second;
+        }
+        if (actors.size() >= static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::runtime_error("Too many effect actors to serialize");
+        }
+        const int id = static_cast<int>(actors.size()) + 1;
+        actorIds.emplace(actor.get(), id);
+        actors.push_back({actor, false, false});
+        return id;
+    }
+
+    bool writeRecord(const std::shared_ptr<CGameObject> &object, const std::shared_ptr<json> &config) {
+        if (auto actor = std::dynamic_pointer_cast<CCreature>(object)) {
+            const int id = actorId(actor);
+            auto &entry = actors[id - 1];
+            if (entry.defined) {
+                if (!entry.completed) {
+                    throw std::runtime_error("Cannot serialize cyclic creature ownership through ordinary properties");
+                }
+                (*config)["effectActorReference"] = id;
+                return false;
+            }
+            entry.defined = true;
+            (*config)["effectActorId"] = id;
+        }
+        if (auto effect = std::dynamic_pointer_cast<CEffect>(object)) {
+            const int caster = actorId(effect->getCaster());
+            const int victim = actorId(effect->getVictim());
+            if (caster || victim) {
+                (*config)["effectReferences"] = {
+                    {"caster", caster ? json(caster) : json(nullptr)},
+                    {"victim", victim ? json(victim) : json(nullptr)},
+                };
+            }
+        }
+        return true;
+    }
+
+    void complete(const std::shared_ptr<CGameObject> &object) {
+        if (auto actor = std::dynamic_pointer_cast<CCreature>(object)) {
+            actors[actorIds.at(actor.get()) - 1].completed = true;
+        }
+    }
+
+    void finish(const std::shared_ptr<json> &root) {
+        auto detached = json::array();
+        if (includeDetached) {
+            // Serializing a detached actor can discover further actors; the growing queue visits each once.
+            for (std::size_t index = 0; index < actors.size(); ++index) {
+                if (!actors[index].defined) {
+                    auto actor = actors[index].actor;
+                    detached[detached.size()] = *object_serialize(actor);
+                }
+            }
+        }
+        if (!actors.empty()) {
+            (*root)["effectGraph"] = {{"version", 1}, {"actors", std::move(detached)}};
+        }
+    }
+
+    std::unordered_map<int, std::shared_ptr<CCreature>> externalActors() const {
+        std::unordered_map<int, std::shared_ptr<CCreature>> result;
+        for (std::size_t index = 0; index < actors.size(); ++index) {
+            if (!actors[index].defined) {
+                result.emplace(static_cast<int>(index) + 1, actors[index].actor);
+            }
+        }
+        return result;
+    }
+
+  private:
+    struct Actor {
+        std::shared_ptr<CCreature> actor;
+        bool defined;
+        bool completed;
+    };
+    bool includeDetached;
+    std::unordered_map<const CCreature *, int> actorIds;
+    std::vector<Actor> actors;
+};
+
+class EffectReadContext {
+  public:
+    explicit EffectReadContext(std::unordered_map<int, std::shared_ptr<CCreature>> external = {})
+        : actors(std::move(external)) {}
+
+    [[noreturn]] void fail(const std::string &message) {
+        failure = "Invalid effect graph: " + message;
+        throw std::runtime_error(failure);
+    }
+
+    int readId(const json &value) {
+        if (!value.is_number_integer()) {
+            fail("actor id must be a positive integer");
+        }
+        const auto id = value.get<unsigned long long>();
+        if (id == 0 || id > static_cast<unsigned long long>(std::numeric_limits<int>::max())) {
+            fail("actor id must be a positive integer");
+        }
+        return static_cast<int>(id);
+    }
+
+    void prepare(const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &config) {
+        if (!config->contains("effectGraph")) {
+            return;
+        }
+        if (graph) {
+            if (graphRoot != config.get()) {
+                fail("nested effect graph");
+            }
+            return;
+        }
+        auto &value = (*config)["effectGraph"];
+        if (!value.is_object() || !value.contains("version") || !value["version"].is_number_integer() ||
+            value["version"].get<unsigned long long>() != 1 || !value.contains("actors") ||
+            !value["actors"].is_array()) {
+            fail("unsupported graph version or missing actor table");
+        }
+        graphRoot = config.get();
+        graph = CJsonUtil::alias(config, value);
+
+        // Allocate actor identities before setting properties: a forward alias can precede its definition in JSON.
+        std::vector<json *> pending{config.get()};
+        while (!pending.empty()) {
+            auto *node = pending.back();
+            pending.pop_back();
+            if (node->is_object()) {
+                needsFixup = needsFixup || node->contains("effectReferences");
+                if (node->contains("effectActorId") && (node->contains("class") || node->contains("ref"))) {
+                    const int id = readId((*node)["effectActorId"]);
+                    if (actors.contains(id) || node->contains("effectActorReference")) {
+                        fail("duplicate actor definition");
+                    }
+                    if (!node->contains("class") || !(*node)["class"].is_string()) {
+                        fail("actor definition must name a class");
+                    }
+                    const auto type = (*node)["class"].get<std::string>();
+                    auto actor = std::dynamic_pointer_cast<CCreature>(game->getObjectHandler()->getType(type));
+                    if (!actor) {
+                        fail("actor definition does not construct a creature: " + type);
+                    }
+                    actor->setGame(game);
+                    actors.emplace(id, std::move(actor));
+                    definitions.emplace(id, CJsonUtil::alias(config, *node));
+                }
+                for (auto &child : node->items()) {
+                    pending.push_back(&child.second);
+                }
+            } else if (node->is_array()) {
+                for (auto &child : *node) {
+                    pending.push_back(&child);
+                }
+            }
+        }
+    }
+
+    std::shared_ptr<CCreature> definition(const std::shared_ptr<json> &config) {
+        if (!config->contains("effectActorId")) {
+            return nullptr;
+        }
+        const int id = readId((*config)["effectActorId"]);
+        if (!graph || !definitions.contains(id) || definitions.at(id).get() != config.get()) {
+            fail("actor definition is outside its snapshot graph");
+        }
+        loadedDefinitions.insert(id);
+        return actors.at(id);
+    }
+
+    bool alreadyLoading(const std::shared_ptr<json> &config) {
+        return config->contains("effectActorId") && loadedDefinitions.contains(readId((*config)["effectActorId"]));
+    }
+
+    std::shared_ptr<CCreature> reference(const std::shared_ptr<CGame> &game, const std::shared_ptr<json> &config) {
+        const int id = readId((*config)["effectActorReference"]);
+        if (!graph || !actors.contains(id) || config->size() != 2 || !config->contains("class") ||
+            !(*config)["class"].is_string()) {
+            fail("dangling or malformed actor alias");
+        }
+        if (definitions.contains(id) && !loadedDefinitions.contains(id)) {
+            // CMap indexes actors as soon as its objects setter runs; populate a forward alias before returning it.
+            object_deserialize(game, definitions.at(id));
+        }
+        if (definitions.contains(id) && !completedDefinitions.contains(id)) {
+            fail("cyclic creature ownership through ordinary properties");
+        }
+        const auto actor = actors.at(id);
+        const auto type = actor->getType().empty() ? actor->meta()->name() : actor->getType();
+        if ((*config)["class"].get<std::string>() != type) {
+            fail("actor alias class does not match its definition");
+        }
+        return actors.at(id);
+    }
+
+    void readRecord(const std::shared_ptr<CGameObject> &object, const std::shared_ptr<json> &config) {
+        if (!config->contains("effectReferences")) {
+            return;
+        }
+        const auto effect = std::dynamic_pointer_cast<CEffect>(object);
+        const auto &links = (*config)["effectReferences"];
+        if (!graph || !effect || !links.is_object() || !links.contains("caster") || !links.contains("victim")) {
+            fail("effect references require an effect and a snapshot graph");
+        }
+        effects.push_back({effect, links["caster"].is_null() ? 0 : readId(links["caster"]),
+                           links["victim"].is_null() ? 0 : readId(links["victim"])});
+    }
+
+    void initialize(const std::shared_ptr<CGameObject> &object) {
+        if (!object || !object->meta()->has_method("initialize", object)) {
+            return;
+        }
+        if (graph && needsFixup) {
+            if (initializationSet.insert(object.get()).second) {
+                initializations.push_back(object);
+            }
+        } else {
+            object->meta()->invoke_method<void>("initialize", object);
+        }
+    }
+
+    void complete(const std::shared_ptr<json> &config) {
+        if (config->contains("effectActorId")) {
+            completedDefinitions.insert(readId((*config)["effectActorId"]));
+        }
+    }
+
+    void finish(const std::shared_ptr<CGame> &game) {
+        if (graph) {
+            for (auto &record : (*graph)["actors"]) {
+                if (!record.is_object() || !record.contains("effectActorId")) {
+                    fail("detached actor table contains a non-definition");
+                }
+                if (!object_deserialize(game, CJsonUtil::alias(graph, record))) {
+                    fail("detached actor could not be loaded");
+                }
+            }
+        }
+        if (!failure.empty()) {
+            throw std::runtime_error(failure);
+        }
+        if (completedDefinitions.size() != definitions.size()) {
+            fail("actor definition was not loaded");
+        }
+        for (const auto &entry : effects) {
+            if ((entry.caster && !actors.contains(entry.caster)) || (entry.victim && !actors.contains(entry.victim))) {
+                fail("dangling effect actor reference");
+            }
+        }
+        // Validate all links before creating the existing strong actor/effect ownership relationships.
+        for (const auto &entry : effects) {
+            entry.effect->setCaster(entry.caster ? actors.at(entry.caster) : nullptr);
+            entry.effect->setVictim(entry.victim ? actors.at(entry.victim) : nullptr);
+        }
+        for (std::size_t index = 0; index < initializations.size(); ++index) {
+            auto object = initializations[index];
+            object->meta()->invoke_method<void>("initialize", object);
+        }
+    }
+
+  private:
+    struct EffectLinks {
+        std::shared_ptr<CEffect> effect;
+        int caster;
+        int victim;
+    };
+    const json *graphRoot = nullptr;
+    std::shared_ptr<json> graph;
+    bool needsFixup = false;
+    std::string failure;
+    std::unordered_map<int, std::shared_ptr<CCreature>> actors;
+    std::unordered_map<int, std::shared_ptr<json>> definitions;
+    std::unordered_set<int> loadedDefinitions;
+    std::unordered_set<int> completedDefinitions;
+    std::vector<EffectLinks> effects;
+    std::vector<std::shared_ptr<CGameObject>> initializations;
+    std::unordered_set<const CGameObject *> initializationSet;
+};
+
+thread_local EffectWriteContext *effectWriteContext = nullptr;
+thread_local EffectReadContext *effectReadContext = nullptr;
+
+template <typename Context> class EffectContextScope {
+  public:
+    EffectContextScope(Context *&slot, Context &context) : slot(slot), previous(slot) { slot = &context; }
+    ~EffectContextScope() { slot = previous; }
+
+  private:
+    Context *&slot;
+    Context *previous;
+};
 
 class CScopedArrayDeserializeContext {
   public:
@@ -401,9 +708,19 @@ void CSerialization::setProperty(const std::shared_ptr<json> &conf, const std::s
 }
 
 std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &object) {
+    if (!effectWriteContext) {
+        EffectWriteContext context;
+        EffectContextScope scope(effectWriteContext, context);
+        auto config = object_serialize(object);
+        context.finish(config);
+        return config;
+    }
     std::shared_ptr<json> conf = std::make_shared<json>();
     if (object) {
         add_member(conf, "class", vstd::is_empty(object->getType()) ? object->meta()->name() : object->getType());
+        if (!effectWriteContext->writeRecord(object, conf)) {
+            return conf;
+        }
         std::shared_ptr<json> properties = std::make_shared<json>();
         object->meta()->for_all_properties(object, [&](auto property) {
             if (property->name() != "type") {
@@ -412,12 +729,20 @@ std::shared_ptr<json> object_serialize(const std::shared_ptr<CGameObject> &objec
             }
         });
         add_member(conf, "properties", properties);
+        effectWriteContext->complete(object);
     }
     return conf;
 }
 
 std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &game,
                                                 const std::shared_ptr<json> &config) {
+    if (!effectReadContext) {
+        EffectReadContext context;
+        EffectContextScope scope(effectReadContext, context);
+        auto object = object_deserialize(game, config);
+        context.finish(game);
+        return object;
+    }
     std::shared_ptr<CGameObject> object;
     if (!game || !config || !config->is_object()) {
         if (CSerialization::isStrict()) {
@@ -425,10 +750,20 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
         }
         return nullptr;
     }
+    effectReadContext->prepare(game, config);
+    if (config->contains("effectActorReference")) {
+        return effectReadContext->reference(game, config);
+    }
+    if (effectReadContext->alreadyLoading(config)) {
+        return effectReadContext->definition(config);
+    }
     if (CJsonUtil::isRef(config)) {
         object = game->getObjectHandler()->createObject(game, (*config)["ref"].get<std::string>());
     } else if (CJsonUtil::isType(config)) {
-        object = game->getObjectHandler()->getType((*config)["class"].get<std::string>());
+        object = effectReadContext->definition(config);
+        if (!object) {
+            object = game->getObjectHandler()->getType((*config)["class"].get<std::string>());
+        }
         if (object) {
             object->setGame(game);
             if (vstd::is_empty(object->getName())) {
@@ -437,6 +772,7 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
             object->setType((*config)["class"].get<std::string>());
         }
     }
+    effectReadContext->readRecord(object, config);
     if (!object && CSerialization::isStrict()) {
         std::string type = "<unknown>";
         if (config->contains("ref") && (*config)["ref"].is_string()) {
@@ -460,10 +796,27 @@ std::shared_ptr<CGameObject> object_deserialize(const std::shared_ptr<CGame> &ga
             }
         }
     }
-    if (object && object->meta()->has_method("initialize", object)) {
-        object->meta()->invoke_method<void>("initialize", object);
-    }
+    effectReadContext->initialize(object);
+    effectReadContext->complete(config);
     return object;
+}
+
+std::shared_ptr<CGameObject> CSerialization::cloneObject(const std::shared_ptr<CGameObject> &object) {
+    if (!object) {
+        return nullptr;
+    }
+    EffectWriteContext writing(false);
+    std::shared_ptr<json> config;
+    {
+        EffectContextScope writeScope(effectWriteContext, writing);
+        config = object_serialize(object);
+        writing.finish(config);
+    }
+    EffectReadContext reading(writing.externalActors());
+    EffectContextScope readScope(effectReadContext, reading);
+    auto clone = object_deserialize(object->getGame(), config);
+    reading.finish(object->getGame());
+    return clone;
 }
 
 std::string CSerialization::generateName(const std::shared_ptr<CGameObject> &object) {

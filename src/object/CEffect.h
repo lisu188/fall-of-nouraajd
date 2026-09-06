@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -23,7 +23,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CEffect : public CGameObject {
 
     V_META(CEffect, CGameObject, V_PROPERTY(CEffect, int, duration, getDuration, setDuration),
-           V_PROPERTY(CEffect, bool, cumulative, getCumulative, setCumulative))
+           V_PROPERTY(CEffect, bool, cumulative, getCumulative, setCumulative),
+           V_PROPERTY(CEffect, std::shared_ptr<CStats>, bonus, getBonus, setBonus),
+           V_PROPERTY(CEffect, int, timeLeft, getTimeLeft, setTimeLeft))
 
   public:
     CEffect();
@@ -31,6 +33,8 @@ class CEffect : public CGameObject {
     virtual ~CEffect();
 
     int getTimeLeft();
+
+    void setTimeLeft(int value);
 
     int getTimeTotal();
 
