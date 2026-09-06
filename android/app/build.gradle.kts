@@ -27,9 +27,9 @@ val sdlJavaDir = requiredDirectory("gameAndroidSdlJavaDir", "GAME_ANDROID_SDL_JA
 val pythonIncludeDir = File(pythonPrefix, "include").listFiles()
     ?.singleOrNull { it.isDirectory && it.name.startsWith("python3.") }
     ?: throw GradleException("Expected exactly one prefix/include/python3.* directory under ${pythonPrefix.absolutePath}")
-val pythonLibrary = File(pythonPrefix, "lib").listFiles()
-    ?.singleOrNull { it.isFile && it.name.startsWith("libpython3.") && it.name.endsWith(".so") }
-    ?: throw GradleException("Expected exactly one libpython3.*.so under ${pythonPrefix.absolutePath}/lib")
+val pythonLibrary = File(pythonPrefix, "lib/lib${pythonIncludeDir.name}.so")
+    .takeIf { it.isFile }
+    ?: throw GradleException("Missing lib${pythonIncludeDir.name}.so under ${pythonPrefix.absolutePath}/lib")
 val pythonStdlibDir = File(pythonPrefix, "lib").listFiles()
     ?.singleOrNull { it.isDirectory && it.name.startsWith("python3.") }
     ?: throw GradleException("Expected exactly one Python standard-library directory under ${pythonPrefix.absolutePath}/lib")
@@ -58,12 +58,15 @@ val prepareNativeLibraries by tasks.registering(Sync::class) {
     }
     from(File(dependencyPrefix, "lib")) {
         include("*.so")
+        // CMake packages these SDL libraries for the selected build variant.
+        exclude("libSDL2.so", "libSDL2_image.so", "libSDL2_ttf.so")
     }
 }
 
 android {
     namespace = "com.lisu188.fallofnouraajd"
     compileSdk = 37
+    ndkVersion = "29.0.14206865"
 
     defaultConfig {
         applicationId = "com.lisu188.fallofnouraajd"
@@ -81,7 +84,7 @@ android {
                 arguments += listOf(
                     "-DGAME_ANDROID_PYTHON_INCLUDE_DIR=${pythonIncludeDir.absolutePath}",
                     "-DGAME_ANDROID_PYTHON_LIBRARY=${pythonLibrary.absolutePath}",
-                    "-DCMAKE_PREFIX_PATH=${dependencyPrefix.absolutePath}"
+                    "-DGAME_ANDROID_DEPENDENCY_PREFIX=${dependencyPrefix.absolutePath}"
                 )
             }
         }
@@ -95,8 +98,8 @@ android {
 
     sourceSets.getByName("main") {
         java.srcDir(sdlJavaDir)
-        assets.srcDir(generatedAssetsDir)
-        jniLibs.srcDir(generatedJniLibsDir)
+        assets.srcDir(generatedAssetsDir.get().asFile)
+        jniLibs.srcDir(generatedJniLibsDir.get().asFile)
     }
 
     androidResources {
