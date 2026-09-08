@@ -35,9 +35,9 @@ used by the screenshot tests -- to produce that set:
 * ``map-random.png`` for a freshly generated random map.
 
 Requirements: the ``_game`` module must be built (see the project README) and
-``pillow`` installed (``pip install -r requirements-dev.txt``). A real SDL
-renderer is needed, so on Linux the script re-executes itself under
-``xvfb-run`` automatically; you can also run it explicitly::
+``pillow`` installed (``pip install -r requirements-dev.txt``). Screenshots use
+an offscreen SDL software renderer on Windows and an isolated ``xvfb-run``
+display on Linux. You can also run it explicitly::
 
     xvfb-run -a --server-args="-screen 0 1920x1080x24" \\
         python3 scripts/generate_screenshots.py
@@ -58,29 +58,36 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REEXEC_SENTINEL = "NOURAAJD_SCREENSHOTS_REEXEC"
 PANELS_MAP = "nouraajd"  # content-rich campaign map used as the backdrop for panels
+MODAL_PANELS = {
+    "dialogPanel": ("showDialog", "CGameDialogPanel"),
+    "lootPanel": ("showLoot", "CGameLootPanel"),
+    "selectionPanel": ("showSelection", "CGamePanel"),
+}
 
 
 # ---------------------------------------------------------------------------
 # Environment bootstrap (mirrors scripts/generate_walkthrough_video.py)
 # ---------------------------------------------------------------------------
 def _reexec_under_xvfb_if_needed():
-    """Re-run this process under ``xvfb-run`` with the x11 SDL driver.
-
-    A genuine SDL renderer (not the ``dummy`` driver) is required for pixel
-    readback, and on headless Linux that means an X server. This mirrors the
-    invocation used by the project's GUI tests.
-    """
+    """Select a virtual display without falling back to the user's desktop."""
+    video_driver = os.environ.get("SDL_VIDEODRIVER")
     if os.name != "posix":
+        if video_driver not in (None, "dummy", "offscreen"):
+            raise SystemExit("Screenshot tests require SDL_VIDEODRIVER=dummy or offscreen, not a desktop display.")
+        os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+        os.environ["SDL_RENDER_DRIVER"] = "software"
+        os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+        return
+    if video_driver in ("dummy", "offscreen"):
+        os.environ["SDL_RENDER_DRIVER"] = "software"
+        os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
         return
     if os.environ.get(REEXEC_SENTINEL) == "1":
-        return
-    if os.environ.get("SDL_VIDEODRIVER") == "x11" and os.environ.get("DISPLAY"):
         return
     import shutil
 
     if shutil.which("xvfb-run") is None:
-        # No xvfb available; fall through and let SDL try whatever is configured.
-        return
+        raise SystemExit("Screenshot tests require xvfb-run or an explicitly configured SDL offscreen/dummy driver.")
 
     env = dict(os.environ)
     env[REEXEC_SENTINEL] = "1"
@@ -139,6 +146,7 @@ def _suppress_blocking_popups(game):
     normally.
     """
     handler = game.CGuiHandler
+    modal_handlers = {name: getattr(handler, method) for name, (method, _) in MODAL_PANELS.items()}
     handler.showMessage = lambda self, message: None
     handler.showInfo = lambda self, message, centered=False: None
     handler.showQuestion = lambda self, message: True
@@ -146,6 +154,7 @@ def _suppress_blocking_popups(game):
     handler.showLoot = lambda self, *args, **kwargs: None
     handler.showTrade = lambda self, *args, **kwargs: None
     handler.showDialog = lambda self, *args, **kwargs: None
+    return modal_handlers
 
 
 def _load_game_module():
@@ -198,23 +207,10 @@ def _configure_panel(game_instance, panel_name, panel):
         enemy.name = "screenshotGoblin"
         enemy.setHp(enemy.getHpMax())
         panel.setEnemy(enemy)  # also drives the nested creatureView / statsView
-    elif panel_name == "lootPanel":
-        creature = game_instance.createObject("GoblinThief")
-        creature.name = "screenshotLootGoblin"
-        panel.setCreature(creature)
-        panel.setItems({game_instance.createObject("Scroll"), game_instance.createObject("Sword")})
     elif panel_name == "tradePanel":
         market = game_instance.createObject("CMarket")
         market.setItems({game_instance.createObject("Scroll"), game_instance.createObject("Sword")})
         panel.setMarket(market)
-    elif panel_name == "dialogPanel":
-        dialog = game_instance.createObject("questDialog")
-        panel.setDialog(dialog)
-        reload_fn = getattr(panel, "reload", None)
-        if callable(reload_fn):
-            reload_fn()
-    elif panel_name == "selectionPanel":
-        _populate_selection_panel(game_instance, panel)
     elif panel_name == "creatureView":
         creature = game_instance.createObject("GoblinThief")
         creature.name = "screenshotCreatureView"
@@ -229,27 +225,58 @@ def _configure_panel(game_instance, panel_name, panel):
     # which is prepared by _prepare_player_for_panels before capture.
 
 
-def _populate_selection_panel(game_instance, panel):
-    """Give the selection panel a few labelled buttons so it renders content.
+def captureModalPanel(game, sim, panel_name, path, modal_handlers):
+    """Capture native modal builders whose panel setters are not Python bindings."""
+    game_instance = sim.gameInstance
+    if panel_name == "dialogPanel":
+        arguments = (game_instance.createObject("questDialog"),)
+    elif panel_name == "lootPanel":
+        creature = game_instance.createObject("GoblinThief")
+        creature.name = "screenshotLootGoblin"
+        arguments = (creature, {game_instance.createObject("Scroll"), game_instance.createObject("Sword")})
+    else:
+        selection = game_instance.createObject("CListString")
+        for label in ("Accept the contract", "Decline", "Ask for more gold"):
+            selection.addValue(label)
+        arguments = (selection,)
+    method, expected_class = MODAL_PANELS[panel_name]
+    show = modal_handlers[panel_name] if modal_handlers is not None else getattr(game.CGuiHandler, method)
+    observed = {}
+    previous_children = list(game_instance.getGui().getChildren())
 
-    ``showSelection`` builds these buttons from a string list with wired click
-    handlers; for a static screenshot we only need the buttons to be visible, so
-    we construct plain labelled buttons with proportional layouts.
-    """
-    options = ["Accept the contract", "Decline", "Ask for more gold"]
-    buttons = set()
-    count = len(options)
-    for index, label in enumerate(options):
-        button = game_instance.createObject("CButton")
-        button.setText(label)
-        layout = game_instance.createObject("CLayout")
-        layout.setX("0%")
-        layout.setY(f"{100 * index // count}%")
-        layout.setW("100%")
-        layout.setH(f"{100 // count}%")
-        button.setLayout(layout)
-        buttons.add(button)
-    panel.setChildren(buttons)
+    def captureAndClose():
+        if observed.get("cancelled"):
+            return
+        children = game_instance.getGui().getChildren()
+        panel = next((child for child in children if child.getType() == expected_class), None)
+        if panel is None:
+            observed["error"] = RuntimeError(f"Native {panel_name} did not attach its panel")
+            for child in children:
+                if child not in previous_children:
+                    game_instance.getGui().removeChild(child)
+            return
+        try:
+            sim.pumpEvents(3)
+            observed["info"] = sim.captureGuiScreenshot(path=path)
+        except Exception as error:  # surface callback failures after the native modal returns
+            observed["error"] = error
+        finally:
+            # GUI child handles can expose only CGameGraphicsObject, without
+            # CGamePanel.close. Detachment is exactly what native close does.
+            game_instance.getGui().removeChild(panel)
+
+    game.event_loop.instance().invoke(captureAndClose)
+    try:
+        show(game_instance.getGuiHandler(), *arguments)
+    finally:
+        # A builder can reject its input before entering its event loop.
+        observed["cancelled"] = True
+    if "error" in observed:
+        raise observed["error"]
+    if "info" not in observed:
+        raise RuntimeError(f"Native {panel_name} returned without a screenshot")
+    sim.pumpEvents(2)
+    return observed["info"]
 
 
 def _prepare_player_for_panels(sim):
@@ -267,9 +294,7 @@ def _prepare_player_for_panels(sim):
             pass
     try:
         start_events = [
-            obj
-            for obj in sim.gameMap.getObjects()
-            if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
+            obj for obj in sim.gameMap.getObjects() if obj.getTypeId() == "StartEvent" or obj.getType() == "StartEvent"
         ]
         if start_events:
             coords = start_events[0].getCoords()
@@ -284,7 +309,7 @@ def _prepare_player_for_panels(sim):
 # ---------------------------------------------------------------------------
 # Capture
 # ---------------------------------------------------------------------------
-def capture_panels(game, output_dir, player_class, panels):
+def capture_panels(game, output_dir, player_class, panels, modal_handlers=None):
     """Open, configure and capture each panel over the campaign map."""
     import game_simulation
 
@@ -297,12 +322,20 @@ def capture_panels(game, output_dir, player_class, panels):
         path = output_dir / f"panel-{panel_name}.png"
         panel = None
         try:
-            panel = gui_handler.openPanel(panel_name)
+            if panel_name in MODAL_PANELS:
+                info = captureModalPanel(game, sim, panel_name, path, modal_handlers)
+                written.append(path)
+                print(f"  [ok]   panel {panel_name}: {path.name} ({info.get('bytes', 0)} bytes)", flush=True)
+                continue
+            # These views are graphics objects, not CGamePanel subclasses. Their
+            # normal fight-panel parent supplies both layout and creature state.
+            parent_panel = "fightPanel" if panel_name in {"creatureView", "statsView"} else panel_name
+            panel = gui_handler.openPanel(parent_panel)
             if panel is None:
                 print(f"  [skip] panel {panel_name}: openPanel returned None", flush=True)
                 continue
             sim.pumpEvents(3)
-            _configure_panel(sim.gameInstance, panel_name, panel)
+            _configure_panel(sim.gameInstance, parent_panel, panel)
             sim.pumpEvents(5)
             info = sim.captureGuiScreenshot(path=path)
             written.append(path)
@@ -360,14 +393,14 @@ def main():
     _bootstrap_paths()
     game = _load_game_module()
 
-    _suppress_blocking_popups(game)
+    modal_handlers = _suppress_blocking_popups(game)
 
     written = []
     failures = 0
 
     if not args.maps_only:
         print(f"Capturing {len(panels)} panel screenshots on the '{PANELS_MAP}' map...", flush=True)
-        written.extend(capture_panels(game, output_dir, args.player, panels))
+        written.extend(capture_panels(game, output_dir, args.player, panels, modal_handlers=modal_handlers))
 
     if not args.panels_only:
         print(f"Capturing {len(maps)} map screenshots...", flush=True)
@@ -388,7 +421,7 @@ def main():
 
     # Report panel coverage against the manifest so a missing panel is obvious.
     if not args.maps_only:
-        captured_panels = {p.stem[len("panel-"):] for p in written if p.stem.startswith("panel-")}
+        captured_panels = {p.stem[len("panel-") :] for p in written if p.stem.startswith("panel-")}
         missing = [name for name in panels if name not in captured_panels]
         if missing:
             print(f"WARNING: no screenshot produced for panels: {', '.join(missing)}", flush=True)

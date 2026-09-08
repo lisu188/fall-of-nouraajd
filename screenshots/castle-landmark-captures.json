@@ -1,0 +1,201 @@
+[
+  {
+    "path": "castle-camp-32px.png",
+    "suffix": ".png",
+    "bytes": 508087,
+    "width": 1920,
+    "height": 1080,
+    "map": "castleHomecoming",
+    "target": null,
+    "tileSize": 32,
+    "playerPosition": [
+      64,
+      57,
+      0
+    ],
+    "playerRelocated": false,
+    "stage": "beforeCombat",
+    "virtualScreen": "dummy",
+    "playerRect": [
+      960,
+      544,
+      32,
+      32
+    ],
+    "landmarkRect": null,
+    "viewportRect": [
+      0,
+      0,
+      1920,
+      1080
+    ]
+  },
+  {
+    "path": "castle-terraneus-32px.png",
+    "suffix": ".png",
+    "bytes": 438057,
+    "width": 1920,
+    "height": 1080,
+    "map": "castleHomecoming",
+    "target": "castleHomecomingObjective1453",
+    "tileSize": 32,
+    "playerPosition": [
+      32,
+      36,
+      1
+    ],
+    "playerRelocated": true,
+    "stage": "beforeCombat",
+    "virtualScreen": "dummy",
+    "playerRect": [
+      960,
+      544,
+      32,
+      32
+    ],
+    "landmarkRect": [
+      992,
+      512,
+      32,
+      32
+    ],
+    "viewportRect": [
+      0,
+      0,
+      1920,
+      1080
+    ]
+  },
+  {
+    "path": "castle-griffin-tower-32px.png",
+    "suffix": ".png",
+    "bytes": 328196,
+    "width": 1920,
+    "height": 1080,
+    "map": "castleGriffinCliff",
+    "target": "castleGriffinCliffObjective1015",
+    "tileSize": 32,
+    "playerPosition": [
+      37,
+      2,
+      0
+    ],
+    "playerRelocated": true,
+    "stage": "beforeCombat",
+    "virtualScreen": "dummy",
+    "playerRect": [
+      960,
+      544,
+      32,
+      32
+    ],
+    "landmarkRect": [
+      992,
+      576,
+      32,
+      32
+    ],
+    "viewportRect": [
+      0,
+      0,
+      1920,
+      1080
+    ]
+  },
+  {
+    "path": "castle-terraneus-after-combat-32px.png",
+    "suffix": ".png",
+    "bytes": 438484,
+    "width": 1920,
+    "height": 1080,
+    "map": "castleHomecoming",
+    "target": "castleHomecomingObjective1453",
+    "tileSize": 32,
+    "playerPosition": [
+      32,
+      36,
+      1
+    ],
+    "playerRelocated": true,
+    "stage": "afterGarrisonCombat",
+    "virtualScreen": "dummy",
+    "guardIds": [
+      "castleHomecomingGuard1453"
+    ],
+    "defeatedGuards": 1,
+    "objectiveCaptured": false,
+    "playerHpBeforeCombat": 70,
+    "playerHpAfterCombat": 66,
+    "combatTarget": [
+      33,
+      35,
+      1
+    ],
+    "playerRect": [
+      960,
+      544,
+      32,
+      32
+    ],
+    "landmarkRect": [
+      992,
+      512,
+      32,
+      32
+    ],
+    "viewportRect": [
+      0,
+      0,
+      1920,
+      1080
+    ]
+  },
+  {
+    "path": "castle-griffin-tower-after-combat-32px.png",
+    "suffix": ".png",
+    "bytes": 329294,
+    "width": 1920,
+    "height": 1080,
+    "map": "castleGriffinCliff",
+    "target": "castleGriffinCliffObjective1015",
+    "tileSize": 32,
+    "playerPosition": [
+      37,
+      2,
+      0
+    ],
+    "playerRelocated": true,
+    "stage": "afterGarrisonCombat",
+    "virtualScreen": "dummy",
+    "guardIds": [
+      "castleGriffinCliffGuard1015"
+    ],
+    "defeatedGuards": 1,
+    "objectiveCaptured": false,
+    "playerHpBeforeCombat": 70,
+    "playerHpAfterCombat": 84,
+    "combatTarget": [
+      38,
+      3,
+      0
+    ],
+    "playerRect": [
+      960,
+      544,
+      32,
+      32
+    ],
+    "landmarkRect": [
+      992,
+      576,
+      32,
+      32
+    ],
+    "viewportRect": [
+      0,
+      0,
+      1920,
+      1080
+    ]
+  }
+]

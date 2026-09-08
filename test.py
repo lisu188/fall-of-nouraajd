@@ -136,6 +136,7 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
     "McpServerTest.test_engine_handle_call_rejects_private_methods",
     "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
+    "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
     "McpServerTest.test_http_notification_response_declares_empty_body",
     "McpServerTest.test_initialize_response_preserves_request_id",
     "McpServerTest.test_map_design_brief_rejects_path_traversal",
@@ -168,6 +169,10 @@ COVERAGE_SAFE_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_stdio_map_walkthrough_kadath",
     "McpServerTest.test_stdio_map_walkthrough_sunderedmarch",
     "McpServerTest.test_stdio_map_walkthrough_ninemarches",
+    "McpServerTest.test_stdio_map_walkthrough_castleHomecoming",
+    "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels",
+    "McpServerTest.test_stdio_map_walkthrough_castleGriffinCliff",
+    "McpServerTest.test_stdio_castle_campaign_full_route",
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough",
 }
 SERIAL_TEST_NAMES = {
@@ -196,6 +201,15 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_kadath": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_sunderedmarch": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_ninemarches": 200.0,
+    "McpServerTest.test_stdio_map_walkthrough_castleHomecoming": 70.0,
+    "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels": 70.0,
+    "McpServerTest.test_stdio_map_walkthrough_castleGriffinCliff": 90.0,
+    "McpServerTest.test_stdio_castle_campaign_full_route": 200.0,
+    "GameTest.test_map_walkthrough_castleHomecoming": 25.0,
+    "GameTest.test_map_walkthrough_castleGuardianAngels": 25.0,
+    "GameTest.test_map_walkthrough_castleGriffinCliff": 35.0,
+    "GameTest.test_castle_campaign_carryover_with_melee_and_caster": 80.0,
+    "GameTest.test_castle_partial_capture_survives_save_load": 25.0,
     "McpServerTest.test_stdio_scene_manager_map_transition_walkthrough": 20.0,
     XVFB_GAMEPLAY_PARENT_TEST: 90.0,
     "GameTest.test_map_walkthrough_multilevel": 12.0,
@@ -5328,7 +5342,30 @@ def walkthrough_usurpergate_map():
     }
 
 
+def walkthrough_castle_map(map_name):
+    from tests.castle_walkthrough import nativeDriver
+
+    game = load_game_module()
+    game_instance, _, _ = load_game_map_with_player(map_name)
+    return nativeDriver(game, game_instance).chapter(map_name)
+
+
+def walkthrough_castle_homecoming_map():
+    return walkthrough_castle_map("castleHomecoming")
+
+
+def walkthrough_castle_guardian_angels_map():
+    return walkthrough_castle_map("castleGuardianAngels")
+
+
+def walkthrough_castle_griffin_cliff_map():
+    return walkthrough_castle_map("castleGriffinCliff")
+
+
 WALKTHROUGHS = {
+    "castleHomecoming": walkthrough_castle_homecoming_map,
+    "castleGuardianAngels": walkthrough_castle_guardian_angels_map,
+    "castleGriffinCliff": walkthrough_castle_griffin_cliff_map,
     "gravemoor": walkthrough_gravemoor_map,
     "hearthfall": walkthrough_hearthfall_map,
     "kadath": walkthrough_kadath_map,
@@ -17293,6 +17330,18 @@ class GameTest(unittest.TestCase):
         return execute_walkthrough("usurpergate")
 
     @game_test
+    def test_map_walkthrough_castleHomecoming(self):
+        return execute_walkthrough("castleHomecoming")
+
+    @game_test
+    def test_map_walkthrough_castleGuardianAngels(self):
+        return execute_walkthrough("castleGuardianAngels")
+
+    @game_test
+    def test_map_walkthrough_castleGriffinCliff(self):
+        return execute_walkthrough("castleGriffinCliff")
+
+    @game_test
     def test_all_maps_have_walkthroughs(self):
         discovered_maps = discover_maps()
         walkthrough_maps = sorted(WALKTHROUGHS)
@@ -18322,6 +18371,124 @@ class GameTest(unittest.TestCase):
             },
             sort_keys=True,
         )
+
+    @game_test
+    def test_castle_campaign_carryover_with_melee_and_caster(self):
+        from tests.castle_walkthrough import MAP_NAMES, nativeDriver
+        import campaign as campaign_module
+
+        game = load_game_module()
+        logs = {}
+        for player_class in ("Warrior", "Sorcerer"):
+            game_instance = game.CGameLoader.loadGame()
+            store = campaign_module.start(game_instance, "longLiveTheQueen", player_class)
+            original_player = game_instance.getMap().getPlayer()
+            original_player.addItem("Dagger")
+            original_player.addGold(37)
+            equipment = json.loads(game.jsonify(original_player))["properties"].get("equipped")
+            driver = nativeDriver(game, game_instance)
+            for map_name in MAP_NAMES:
+                self.assertEqual(map_name, game_instance.getMap().mapName)
+                self.assertTrue(game_instance.getMap().getPlayer() == original_player)
+                previous_level = original_player.getLevel()
+                driver.chapter(map_name)
+                pump_event_loop(5)
+                self.assertGreaterEqual(original_player.getLevel(), previous_level)
+                self.assertEqual(equipment, json.loads(game.jsonify(original_player))["properties"].get("equipped"))
+                self.assertGreaterEqual(original_player.countItems("Dagger"), 1)
+            self.assertTrue(store.finished())
+            self.assertFalse(store.active())
+            self.assertEqual(3, len(store.history()))
+            self.assertTrue(driver.log["portals"], "The route must exercise authored underground or boat travel")
+            self.assertTrue(driver.log["combats"], "The route must defeat actual creatures")
+            logs[player_class] = driver.log
+        return True, json.dumps(logs, sort_keys=True)
+
+    @game_test
+    def test_castle_campaign_initializes_on_first_normal_turn(self):
+        from tests.castle_walkthrough import MAP_NAMES, authoredMap
+
+        logs = {}
+        for map_name in MAP_NAMES:
+            game_instance, game_map, player = load_game_map_with_player(map_name)
+            _, objects, walkable, portals, mission = authoredMap(map_name)
+            origin = coords_tuple(player.getCoords())
+            occupied = {
+                value["coords"]
+                for name, value in objects.items()
+                if name in mission["defenderIds"] or value.get("class") == "CastleSupply"
+            }
+            target = next(
+                (origin[0] + dx, origin[1] + dy, origin[2])
+                for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))
+                if (origin[0] + dx, origin[1] + dy, origin[2]) in walkable - occupied - set(portals)
+            )
+            initial_potions = game_instance.createObject(DEFAULT_PLAYER).countItems("LifePotion")
+            player.moveTo(*target)
+            game_map.move()
+            pump_event_loop(3)
+            self.assertEqual(target, coords_tuple(player.getCoords()))
+            self.assertIn(mission["questId"], quest_names(player))
+            self.assertEqual(initial_potions + 2, player.countItems("LifePotion"))
+            game_map.move()
+            pump_event_loop(3)
+            self.assertEqual(initial_potions + 2, player.countItems("LifePotion"))
+            logs[map_name] = {"quest": mission["questId"], "potions": player.countItems("LifePotion")}
+        return True, json.dumps(logs, sort_keys=True)
+
+    @game_test
+    def test_castle_partial_capture_survives_save_load(self):
+        from tests.castle_walkthrough import nativeDriver
+
+        game = load_game_module()
+        game_instance, game_map, player = load_game_map_with_player("castleGriffinCliff")
+        driver = nativeDriver(game, game_instance)
+        driver.chapter("castleGriffinCliff", finish=False)
+        first_tower = driver.mission["objectiveIds"][0]
+        expected_gold = player.getGold()
+        expected_potions = player.countItems("LifePotion")
+        save_name = unique_save_name("castle-partial-capture")
+        try:
+            game.CMapLoader.save(game_map, save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            loaded_map = loaded_game.getMap()
+            loaded_player = loaded_map.getPlayer()
+            self.assertEqual(expected_gold, loaded_player.getGold())
+            self.assertTrue(loaded_map.getBoolProperty("campaign_castleCaptured_" + first_tower))
+            self.assertFalse(loaded_map.getObjectByName(first_tower).capture(loaded_player))
+            self.assertEqual(expected_gold, loaded_player.getGold())
+            captured = sum(
+                loaded_map.getBoolProperty("campaign_castleCaptured_" + name) for name in driver.mission["objectiveIds"]
+            )
+            self.assertEqual(1, captured)
+            self.assertFalse(loaded_map.getBoolProperty("campaign_castleFinished_griffinCliff"))
+            self.assertIn(driver.mission["questId"], quest_names(loaded_player))
+            loaded_map.move()
+            pump_event_loop(3)
+            self.assertEqual(expected_potions, loaded_player.countItems("LifePotion"))
+            for name, value in driver.objects.items():
+                if value.get("class") != "CastlePortal":
+                    continue
+                target = tuple(int(value["properties"]["campaign_target" + axis]) for axis in "XYZ")
+                self.assertTrue(
+                    loaded_map.hasNavigationEdge(game.Coords(*value["coords"]), game.Coords(*target), name), name
+                )
+            restored_revision = loaded_map.getNavigationRevision()
+            loaded_map.move()
+            pump_event_loop(3)
+            self.assertEqual(restored_revision, loaded_map.getNavigationRevision())
+            origin, destinations = next(iter(driver.portals.passages.items()))
+            target = sorted(destinations)[0]
+            loaded_player.moveTo(*origin)
+            pump_event_loop(3)
+            set_player_target(loaded_player, game.Coords(*target))
+            loaded_map.move()
+            pump_event_loop(3)
+            self.assertEqual(target, coords_tuple(loaded_player.getCoords()))
+        finally:
+            cleanup_save_slot(save_name)
+        return True, json.dumps({"captured": first_tower, "gold": expected_gold, "save_restored": True})
 
     def _drive_wardens_road_to_judgment(self, g, campaign_module):
         """Play the Warden's Road campaign up to the Gravemoor judgment.
@@ -23537,6 +23704,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
 
 class McpServerTest(unittest.TestCase):
     MCP_WALKTHROUGHS = {
+        "castleHomecoming": "_mcp_walkthrough_castleHomecoming",
+        "castleGuardianAngels": "_mcp_walkthrough_castleGuardianAngels",
+        "castleGriffinCliff": "_mcp_walkthrough_castleGriffinCliff",
         "multilevel": "_mcp_walkthrough_multilevel",
         "nouraajd": "_mcp_walkthrough_nouraajd",
         "ritual": "_mcp_walkthrough_ritual",
@@ -23901,6 +24071,49 @@ class McpServerTest(unittest.TestCase):
         )
         self.assertFalse(player_response["isError"])
         self.assertEqual(player_response["structuredContent"]["result"], "player-controller")
+
+    def test_engine_handle_call_scopes_fight_controllers_to_players(self):
+        server = self.make_stub_server()
+
+        class CCreature:
+            def __init__(self):
+                self.controller = object()
+
+            def getFightController(self):
+                return self.controller
+
+            def setFightController(self, controller):
+                self.controller = controller
+
+        class CPlayer(CCreature):
+            pass
+
+        creature = CCreature()
+        creature_handle = server._serialize_result(creature)
+        for method, args in (("getFightController", []), ("setFightController", [None])):
+            response = server._engine_handle_call(
+                {"handle": creature_handle["__handle__"], "method": method, "args": args}
+            )
+            self.assertTrue(response["isError"])
+            self.assertEqual(
+                {"error": f"Method `{method}` is not exported for handle calls"}, response["structuredContent"]
+            )
+        self.assertIsNotNone(creature.controller)
+
+        player = CPlayer()
+        player_handle = server._serialize_result(player)
+        controller_response = server._engine_handle_call(
+            {"handle": player_handle["__handle__"], "method": "getFightController", "args": []}
+        )
+        self.assertFalse(controller_response["isError"])
+        controller_handle = controller_response["structuredContent"]["result"]
+        original = player.controller
+        player.controller = None
+        setter_response = server._engine_handle_call(
+            {"handle": player_handle["__handle__"], "method": "setFightController", "args": [controller_handle]}
+        )
+        self.assertFalse(setter_response["isError"])
+        self.assertIs(original, player.controller)
 
     def test_initialize_response_preserves_request_id(self):
         server = self.make_stub_server()
@@ -24283,6 +24496,46 @@ class McpServerTest(unittest.TestCase):
 
     def test_stdio_map_walkthrough_usurpergate(self):
         self._assert_mcp_walkthrough("usurpergate")
+
+    def test_stdio_map_walkthrough_castleHomecoming(self):
+        self._assert_mcp_walkthrough("castleHomecoming")
+
+    def test_stdio_map_walkthrough_castleGuardianAngels(self):
+        self._assert_mcp_walkthrough("castleGuardianAngels")
+
+    def test_stdio_map_walkthrough_castleGriffinCliff(self):
+        self._assert_mcp_walkthrough("castleGriffinCliff")
+
+    def test_stdio_castle_campaign_full_route(self):
+        import campaign as campaign_module
+        from tests.castle_walkthrough import MAP_NAMES
+
+        proc = self._start_stdio_mcp_process("castleHomecoming")
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            driver = self._mcp_castle_driver(session, "castleHomecoming")
+            # CGameLoader starts the real map and player; these are the existing driver's serialized initial state.
+            for key, value in (
+                (campaign_module.CAMPAIGN_ID_PROPERTY, "longLiveTheQueen"),
+                (campaign_module.CAMPAIGN_SCENARIO_PROPERTY, "homecoming"),
+                (campaign_module.CAMPAIGN_HISTORY_PROPERTY, ""),
+            ):
+                driver.call(driver.player, "setStringProperty", [key, value])
+            driver.call(driver.player, "setBoolProperty", [campaign_module.CAMPAIGN_FINISHED_PROPERTY, False])
+            driver.call(driver.player, "addItem", ["Dagger"])
+            for map_name in MAP_NAMES:
+                driver.chapter(map_name)
+                driver.pump()
+                self.assertGreaterEqual(driver.call(driver.player, "countItems", ["Dagger"]), 1)
+            self.assertTrue(driver.call(driver.player, "getBoolProperty", [campaign_module.CAMPAIGN_FINISHED_PROPERTY]))
+            history = driver.call(driver.player, "getStringProperty", [campaign_module.CAMPAIGN_HISTORY_PROPERTY])
+            self.assertEqual("homecoming:completed,guardianAngels:completed,griffinCliff:completed", history)
+            self.assertTrue(driver.log["portals"])
+            self.assertTrue(driver.log["combats"])
+            self._write_mcp_walkthrough_log("longLiveTheQueen", driver.log)
+        finally:
+            self._shutdown_process(proc)
 
     def test_stdio_scene_manager_map_transition_walkthrough(self):
         proc = None
@@ -24816,6 +25069,29 @@ class McpServerTest(unittest.TestCase):
             "captain_defeated": map_bool("captain_defeated"),
             "quests": self._serialized_quest_ids(player_data),
         }
+
+    def _mcp_castle_driver(self, session, map_name):
+        from tests.castle_walkthrough import CastleWalkthrough
+
+        game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, map_name)
+        return CastleWalkthrough(
+            lambda name, args: self._mcp_engine_call(session, name, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS),
+            lambda handle, method, args: self._mcp_handle_call(
+                session, handle, method, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+            ),
+            game_handle,
+            map_handle,
+            player_handle,
+        )
+
+    def _mcp_walkthrough_castleHomecoming(self, session):
+        return self._mcp_castle_driver(session, "castleHomecoming").chapter("castleHomecoming")
+
+    def _mcp_walkthrough_castleGuardianAngels(self, session):
+        return self._mcp_castle_driver(session, "castleGuardianAngels").chapter("castleGuardianAngels")
+
+    def _mcp_walkthrough_castleGriffinCliff(self, session):
+        return self._mcp_castle_driver(session, "castleGriffinCliff").chapter("castleGriffinCliff")
 
     def _mcp_walkthrough_gravemoor(self, session):
         _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "gravemoor")

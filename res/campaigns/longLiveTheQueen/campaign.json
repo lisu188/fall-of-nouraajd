@@ -1,0 +1,31 @@
+{
+  "format": "fall-of-nouraajd-campaign",
+  "schemaVersion": 1,
+  "campaignId": "longLiveTheQueen",
+  "title": "Long Live the Queen",
+  "description": "Catherine returns to an occupied Erathia. Accompany her expedition through Homecoming, Guardian Angels, and Griffin Cliff, on the original campaign geography adapted for a single adventurer.",
+  "start": "homecoming",
+  "completionText": "Seven griffin towers answer Erathia's call. With Terraneus reclaimed and the invaders driven from the angels' lands, Catherine has the allies she needs for the road ahead. The opening campaign is complete.",
+  "scenarios": {
+    "homecoming": {
+      "map": "castleHomecoming",
+      "title": "Homecoming",
+      "briefing": "Catherine Ironfist has returned to Erathia and found her father's kingdom under occupation. You travel with her landing force and Christian's scouts. Establish a foothold, follow the roads and underground passages, and capture the defended town of Terraneus.",
+      "epilogue": "Erathia's colors rise above Terraneus. Catherine can now move supplies inland, but hostile commanders still bar the approach to the angels' sanctuaries.",
+      "next": { "completed": "guardianAngels" }
+    },
+    "guardianAngels": {
+      "map": "castleGuardianAngels",
+      "title": "Guardian Angels",
+      "briefing": "The angels are prepared to help Catherine, but their country remains contested. Secure every enemy stronghold and defeat every invading commander on both levels of the map. Christian's field report tracks what remains.",
+      "epilogue": "The hostile strongholds are silent and their commanders defeated. The angels join the restoration of Erathia, while Catherine sends you toward the griffins' mountain homes.",
+      "next": { "completed": "griffinCliff" }
+    },
+    "griffinCliff": {
+      "map": "castleGriffinCliff",
+      "title": "Griffin Cliff",
+      "briefing": "Erathia's griffins are scattered among seven guarded towers. Find each tower, defeat its defenders, and claim it for Catherine. Other occupied settlements and wandering enemies may offer supplies or obstruct your route, but the seven towers are your objective.",
+      "next": {}
+    }
+  }
+}
