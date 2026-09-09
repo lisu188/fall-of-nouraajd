@@ -228,6 +228,14 @@ def load(self, context):
             LegacyBoolFlag("VICTOR_REWARD_CLAIMED", "victor", states=("good_end",)),
         )
 
+        def sync_legacy_flags(self):
+            super().sync_legacy_flags()
+            player = self.map.getPlayer()
+            if player is not None:
+                state = self.map.getStringProperty(self.QUEST_KEYS["victor"])
+                if player.getStringProperty("nouraajdVictorState") != state:
+                    player.setStringProperty("nouraajdVictorState", state)
+
         # --- Rolf / Gooby ---
         def ensure_main_quest(self, player):
             if self.get_state("main") == "locked":
@@ -515,11 +523,22 @@ def load(self, context):
 
     @register(context)
     class VictorQuest(CQuest):
+        def _getState(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            if game_map.mapName == "nouraajd":
+                state = _quest_system_from(self).get_state("victor")
+                if player is not None and player.getStringProperty("nouraajdVictorState") != state:
+                    player.setStringProperty("nouraajdVictorState", state)
+                return state
+            # The journal travels with the player; its original map state does not.
+            return player.getStringProperty("nouraajdVictorState") if player is not None else "not_started"
+
         def isCompleted(self):
-            return _quest_system_from(self).victor_has_ended()
+            return self._getState() in ("good_end", "bad_end")
 
         def getObjective(self):
-            state = _quest_system_from(self).get_state("victor")
+            state = self._getState()
             if state == "encounter_active":
                 return "Defeat the cult leader in the courtyard before Victor's daughter is taken."
             if state == "good_end":
@@ -531,7 +550,7 @@ def load(self, context):
             return "Find Victor's missing daughter."
 
         def getReward(self):
-            if _quest_system_from(self).get_state("victor") == "bad_end":
+            if self._getState() == "bad_end":
                 return "No reward if Victor's daughter is taken."
             return (
                 "500 gold, healing, and one-time access to buy Victor's remaining potions "
@@ -539,7 +558,7 @@ def load(self, context):
             )
 
         def getHint(self):
-            state = _quest_system_from(self).get_state("victor")
+            state = self._getState()
             if state == "encounter_active":
                 return f"The cultists began their rite; you have {VICTOR_COURTYARD_TIMEOUT_TURNS} turns from first contact."
             if state == "good_end":
