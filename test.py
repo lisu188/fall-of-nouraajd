@@ -19021,7 +19021,8 @@ class GameTest(unittest.TestCase):
         self.assertEqual(potions_before + 1, player.countItems("LifePotion"))
         gold_before = player.getGold()
         self.assertGreaterEqual(gold_before, 10)
-        player.hurt(3)
+        # Combat blocking must not decide whether this healing fixture starts injured.
+        player.setHp(max(1, player.getHpMax() - 3))
         self.assertLess(player.getHp(), player.getHpMax())
         dialog = game_instance.createObject("CastleTownRestDialog")
         self.assertTrue(dialog.configureTown(game_map.getObjectByName(town_name)))
