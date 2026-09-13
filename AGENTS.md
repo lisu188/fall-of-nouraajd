@@ -308,6 +308,15 @@ Coverage reports are generated under `coverage/`.
 
 ## GUI and screenshot tests
 
+Run automated game, GUI, and screenshot tests on virtual or offscreen displays. Never open test windows on the user's
+desktop, steal focus, or require the user to dismiss test UI. This also applies to screenshot regeneration and MCP
+sessions that initialize a GUI.
+
+Use Xvfb on Linux. On Windows, use a verified SDL offscreen/dummy driver with software rendering, or an isolated virtual
+display such as WSL with Xvfb or a VM. Set the display environment before SDL initializes, and verify that screenshot
+readback contains rendered pixels. Do not silently fall back to the user's visible desktop when virtual-display setup
+fails; report the exact blocked check and continue checks that do not need a GUI.
+
 When adding or updating GUI-focused tests in `test.py`, follow the existing `XvfbGameplayTest` and `XvfbGameplayProcessTest` style.
 
 Guard platform/tooling preconditions and skip cleanly when unavailable:
