@@ -286,9 +286,11 @@ bool CListView::invokeRightClickCallback(std::shared_ptr<CGui> gui, int i, std::
 }
 
 auto CListView::getArrowCallback(bool left) {
-    return [this, left](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
-        if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-            doShift(gui, left ? -1 : 1);
+    std::weak_ptr<CListView> weakSelf = this->ptr<CListView>();
+    return [weakSelf, left](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int, int) {
+        auto self = weakSelf.lock();
+        if (self && self->isAttachedToGui(gui) && type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
+            self->doShift(gui, left ? -1 : 1);
         }
         return true;
     };
@@ -377,6 +379,9 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
     const int itemTypeCount = getItemTypesCount(gui);
     clampShift(gui, itemTypeCount);
     const int safeTileSize = std::max(1, tileSize);
+    if (x < 0 || y < 0) {
+        return false;
+    }
     int xIndex = x / safeTileSize;
     int yIndex = y / safeTileSize;
     if (xIndex < 0 || yIndex < 0 || xIndex >= getSizeX(gui) || yIndex >= getSizeY(gui)) {
@@ -482,17 +487,18 @@ void CListView::addSelectionBox(const std::shared_ptr<CGui> &gui,
 void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
                         std::unordered_multimap<int, std::shared_ptr<CGameObject>> indexedCollection,
                         int itemIndex) const {
-    auto self = const_cast<CListView *>(this)->ptr<CListView>();
+    std::weak_ptr<CListView> weakSelf = const_cast<CListView *>(this)->ptr<CListView>();
     auto object = indexedCollection.find(itemIndex)->second;
     auto itemAnimation = createListItemAnimation(gui, object);
     std::weak_ptr<CGameGraphicsObject> sourceGraphic = itemAnimation;
     std::shared_ptr<CGameGraphicsObject> objectGraphic =
-        itemAnimation->withCallback([self, sourceGraphic, itemIndex,
+        itemAnimation->withCallback([weakSelf, sourceGraphic, itemIndex,
                                      object](std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
             if (type != SDL_MOUSEBUTTONDOWN) {
                 return false;
             }
-            if (!self->isAttachedToGui(gui)) {
+            auto self = weakSelf.lock();
+            if (!self || !self->isAttachedToGui(gui)) {
                 return true;
             }
             if (button == SDL_BUTTON_LEFT) {

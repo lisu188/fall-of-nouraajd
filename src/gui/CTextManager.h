@@ -33,9 +33,13 @@ class CTextManager : public CGameObject {
 
     std::pair<int, int> getTextureSize(std::string text);
 
+    std::pair<int, int> getWrappedTextureSize(const std::string &text, int width);
+
     void drawText(const std::string &text, int x, int y, int w);
 
     void drawText(const std::string &text, const std::shared_ptr<SDL_Rect> &rect);
+
+    void drawTextScrolled(const std::string &text, const std::shared_ptr<SDL_Rect> &viewport, int offsetY);
 
     void drawTextCentered(const std::string &text, int x, int y, int w, int h);
 

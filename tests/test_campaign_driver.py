@@ -69,17 +69,21 @@ def manifest_fixture():
 
 
 class FakeItem:
-    def __init__(self, name):
+    def __init__(self, type_id, name):
+        self._type_id = type_id
         self._name = name
 
     def getName(self):
         return self._name
 
+    def getTypeId(self):
+        return self._type_id
+
 
 class FakePlayer:
     def __init__(self, gold=0, items=()):
         self.gold = gold
-        self.items = [FakeItem(name) for name in items]
+        self.items = [FakeItem(type_id, f"runtimeItem{index}") for index, type_id in enumerate(items)]
         self.string_properties = {}
         self.bool_properties = {}
 
@@ -101,18 +105,17 @@ class FakePlayer:
     def addGold(self, amount):
         self.gold += amount
 
-    def removeItem(self, predicate, remove_all=False):
-        kept = []
-        removed = False
-        for item in self.items:
-            if predicate(item) and (remove_all or not removed):
-                removed = True
-                continue
-            kept.append(item)
-        self.items = kept
+    def getItems(self):
+        return set(self.items)
 
-    def item_names(self):
-        return sorted(item.getName() for item in self.items)
+    def removeItem(self, predicate, allow_quest_removal=False):
+        for index, item in enumerate(self.items):
+            if predicate(item):
+                del self.items[index]
+                break
+
+    def item_type_ids(self):
+        return sorted(item.getTypeId() for item in self.items)
 
 
 class FakeGuiHandler:
@@ -329,7 +332,7 @@ class CarryoverTest(unittest.TestCase):
         campaign.apply_carryover(player, None)
         campaign.apply_carryover(player, {})
         self.assertEqual(500, player.getGold())
-        self.assertEqual(["cursedIdol", "sword"], player.item_names())
+        self.assertEqual(["cursedIdol", "sword"], player.item_type_ids())
 
     def test_gold_max_clamps_only_above_the_cap(self):
         rich = FakePlayer(gold=500)
@@ -342,12 +345,12 @@ class CarryoverTest(unittest.TestCase):
     def test_items_allow_keeps_only_listed_items(self):
         player = FakePlayer(items=("sword", "sword", "cursedIdol", "LifePotion"))
         campaign.apply_carryover(player, {"items_allow": ["sword"]})
-        self.assertEqual(["sword", "sword"], player.item_names())
+        self.assertEqual(["sword", "sword"], player.item_type_ids())
 
     def test_items_deny_strips_listed_items(self):
         player = FakePlayer(items=("sword", "cursedIdol", "cursedIdol"))
         campaign.apply_carryover(player, {"items_deny": ["cursedIdol"]})
-        self.assertEqual(["sword"], player.item_names())
+        self.assertEqual(["sword"], player.item_type_ids())
 
 
 class CampaignStateStoreTest(unittest.TestCase):
@@ -424,7 +427,7 @@ class CompleteScenarioTest(unittest.TestCase):
         self.assertEqual([("one", "completed")], store.history())
         self.assertEqual(["mapTwo"], game.map_changes)
         self.assertEqual(100, player.getGold())
-        self.assertEqual(["sword"], player.item_names())
+        self.assertEqual(["sword"], player.item_type_ids())
         self.assertIn("Onward.", game.gui_handler.messages)
         self.assertIn("Chapter II. End.", game.gui_handler.messages)
 

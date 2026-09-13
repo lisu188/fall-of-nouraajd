@@ -142,6 +142,10 @@ void CTextManager::drawTextCentered(const std::string &text, const std::shared_p
 }
 
 void CTextManager::drawText(const std::string &text, const std::shared_ptr<SDL_Rect> &rect) {
+    drawTextScrolled(text, rect, 0);
+}
+
+void CTextManager::drawTextScrolled(const std::string &text, const std::shared_ptr<SDL_Rect> &rect, int offsetY) {
     if (!rect || !_gui.lock()) {
         return;
     }
@@ -149,7 +153,7 @@ void CTextManager::drawText(const std::string &text, const std::shared_ptr<SDL_R
     if (text.length() != 0) {
         SDL_Rect actual;
         actual.x = rect->x;
-        actual.y = rect->y;
+        actual.y = rect->y + offsetY;
         SDL_Texture *pTexture = getTexture(text, rect->w);
         if (!pTexture) {
             return;
@@ -157,6 +161,14 @@ void CTextManager::drawText(const std::string &text, const std::shared_ptr<SDL_R
         SDL_SAFE(SDL_QueryTexture(pTexture, nullptr, nullptr, &actual.w, &actual.h));
         _gui.lock()->getRenderContext().copy(pTexture, nullptr, &actual, &clip);
     }
+}
+
+std::pair<int, int> CTextManager::getWrappedTextureSize(const std::string &text, int width) {
+    int w = 0, h = 0;
+    if (auto texture = getTexture(text, width)) {
+        SDL_SAFE(SDL_QueryTexture(texture, nullptr, nullptr, &w, &h));
+    }
+    return {w, h};
 }
 
 std::pair<int, int> CTextManager::getTextureSize(std::string text) {

@@ -40,8 +40,13 @@ namespace {
 constexpr const char *GAME_OBJECT_METATABLE = "fon.CGameObject";
 constexpr const char *LUA_HOST_METATABLE = "fon.LuaHost";
 
+// Both references are weak on purpose. This userdata lives inside the lua_State that the game's
+// own CGameContext owns, so a strong CGame here closes an ownership cycle
+// (CGame -> CGameContext -> CLuaHandler -> lua_State -> userdata -> CGame) that no destructor can
+// break: the state is only closed by the explicit CGameContext::shutdown, so simply dropping the
+// last reference to a game would leak its entire object graph (measured at ~2.4 MB per loadGame).
 struct LuaHostContext {
-    std::shared_ptr<CGame> game;
+    std::weak_ptr<CGame> game;
     std::weak_ptr<CLuaHandler> handler;
 };
 
@@ -498,7 +503,8 @@ std::function<std::shared_ptr<CGameObject>()> make_lua_factory(std::weak_ptr<CLu
 int lua_context_register_type(lua_State *L) {
     auto *host = test_lua_host(L, lua_upvalueindex(1));
     const char *name = lua_tostring(L, 1);
-    if (host == nullptr || !host->game || name == nullptr || !lua_istable(L, 2)) {
+    auto game = host == nullptr ? nullptr : host->game.lock();
+    if (!game || name == nullptr || !lua_istable(L, 2)) {
         vstd::logger::warning("Lua plugin called registerType without a name and spec table");
         lua_pushboolean(L, false);
         return 1;
@@ -530,7 +536,7 @@ int lua_context_register_type(lua_State *L) {
 
     lua_pushvalue(L, 2);
     const int hooksRef = luaL_ref(L, LUA_REGISTRYINDEX);
-    CPluginRegistrar registrar(host->game);
+    CPluginRegistrar registrar(game);
     const bool registered = registrar.registerFactory(name, make_lua_factory(host->handler, base->kind, hooksRef));
     lua_pushboolean(L, registered);
     return 1;
@@ -540,12 +546,13 @@ int lua_context_register_config_json(lua_State *L) {
     auto *host = test_lua_host(L, lua_upvalueindex(1));
     const char *id = lua_tostring(L, 1);
     const char *jsonText = lua_tostring(L, 2);
-    if (host == nullptr || !host->game || id == nullptr || jsonText == nullptr) {
+    auto game = host == nullptr ? nullptr : host->game.lock();
+    if (!game || id == nullptr || jsonText == nullptr) {
         vstd::logger::warning("Lua plugin called registerConfigJson without an id and json text");
         lua_pushboolean(L, false);
         return 1;
     }
-    CPluginRegistrar registrar(host->game);
+    CPluginRegistrar registrar(game);
     lua_pushboolean(L, registrar.registerConfigJson(id, jsonText));
     return 1;
 }
@@ -660,6 +667,8 @@ void push_context_table(lua_State *L, const std::shared_ptr<CGame> &game, std::w
 
     lua_pushcfunction(L, lua_plugin_log);
     lua_setfield(L, -2, "log");
+    // context.game is a normal CGameObject userdata, i.e. a strong reference to the game. The
+    // table is scoped to the load(context) call and becomes collectable as soon as it returns.
     push_game_object(L, game);
     lua_setfield(L, -2, "game");
 }
@@ -747,15 +756,16 @@ bool CLuaHandler::loadPlugin(const std::shared_ptr<CGame> &game, const std::stri
 
 bool CLuaHandler::dispatch(const CGameObject *object, const char *hook,
                            const std::vector<std::shared_ptr<CGameObject>> &arguments) {
-    auto *entry = CLuaOverrides::find(object);
-    if (entry == nullptr) {
+    auto entry = CLuaOverrides::find(object);
+    if (!entry) {
         // Every CLuaWrapper instance is retained at construction, so a missing entry means the
         // object was produced outside its factory and falls back to base behavior.
         vstd::logger::debug("Lua dispatch has no override entry for hook:", hook);
         return false;
     }
+    auto self = entry->self.lock();
     auto handler = entry->handler.lock();
-    if (!handler || handler->luaState == nullptr) {
+    if (!self || !handler || handler->luaState == nullptr) {
         vstd::logger::debug("Lua dispatch skipped for hook after state release:", hook);
         return false;
     }
@@ -770,7 +780,7 @@ bool CLuaHandler::dispatch(const CGameObject *object, const char *hook,
         lua_pop(L, 2);
         return false;
     }
-    push_game_object(L, entry->self);
+    push_game_object(L, self);
     for (const auto &argument : arguments) {
         push_game_object(L, argument);
     }
@@ -784,12 +794,13 @@ bool CLuaHandler::dispatch(const CGameObject *object, const char *hook,
 
 bool CLuaHandler::dispatchBool(const CGameObject *object, const char *hook,
                                const std::vector<std::shared_ptr<CGameObject>> &arguments, bool &result) {
-    auto *entry = CLuaOverrides::find(object);
-    if (entry == nullptr) {
+    auto entry = CLuaOverrides::find(object);
+    if (!entry) {
         return false;
     }
+    auto self = entry->self.lock();
     auto handler = entry->handler.lock();
-    if (!handler || handler->luaState == nullptr) {
+    if (!self || !handler || handler->luaState == nullptr) {
         return false;
     }
     lua_State *L = handler->luaState;
@@ -803,7 +814,7 @@ bool CLuaHandler::dispatchBool(const CGameObject *object, const char *hook,
         lua_pop(L, 2);
         return false;
     }
-    push_game_object(L, entry->self);
+    push_game_object(L, self);
     for (const auto &argument : arguments) {
         push_game_object(L, argument);
     }

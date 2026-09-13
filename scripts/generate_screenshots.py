@@ -62,6 +62,7 @@ MODAL_PANELS = {
     "dialogPanel": ("showDialog", "CGameDialogPanel"),
     "lootPanel": ("showLoot", "CGameLootPanel"),
     "selectionPanel": ("showSelection", "CGamePanel"),
+    "campaignBrowserPanel": ("showCampaignSelection", "CGameCampaignBrowserPanel"),
 }
 
 
@@ -198,7 +199,14 @@ def discover_panels():
 # ---------------------------------------------------------------------------
 def _configure_panel(game_instance, panel_name, panel):
     """Populate ``panel`` with representative content. Best effort per panel."""
-    if panel_name in {"infoPanel", "textPanel"}:
+    if panel_name == "campaignPanel":
+        panel.setStringProperty("title", "Chapter I - The Ruined Town")
+        panel.setStringProperty("body", "Recover Sergeant Rolf's letter and cleanse the corruption beneath Nouraajd.")
+        panel.setStringProperty("actionLabel", "BEGIN")
+        for child in panel.getChildren():
+            if child.getType() == "CButton":
+                child.setStringProperty("text", "BEGIN")
+    elif panel_name in {"infoPanel", "textPanel"}:
         panel.setText(f"{panel_name}: rendered for screenshot coverage")
     elif panel_name == "questionPanel":
         panel.setStringProperty("question", "Regenerate the screenshots?")
@@ -211,24 +219,37 @@ def _configure_panel(game_instance, panel_name, panel):
         market = game_instance.createObject("CMarket")
         market.setItems({game_instance.createObject("Scroll"), game_instance.createObject("Sword")})
         panel.setMarket(market)
-    elif panel_name == "creatureView":
-        creature = game_instance.createObject("GoblinThief")
-        creature.name = "screenshotCreatureView"
-        creature.setHp(creature.getHpMax())
-        panel.setCreatureScript(creature)
-    elif panel_name == "statsView":
-        creature = game_instance.createObject("GoblinThief")
-        creature.name = "screenshotStatsView"
-        creature.setHp(creature.getHpMax())
-        panel.setCreature(creature)
     # characterPanel, inventoryPanel and questPanel render the live player,
     # which is prepared by _prepare_player_for_panels before capture.
+
+
+def _populateCampaignBrowser(game_instance, panel):
+    import campaign
+
+    manifests = campaign.list_campaigns()
+    if manifests:
+        first = manifests[0]
+        panel.setStringProperty("selectedId", first["campaignId"])
+        panel.setStringProperty(
+            "detailText", f"{first['title']}\n\n{first.get('description', '')}\n\nChapters: {len(first['scenarios'])}"
+        )
 
 
 def captureModalPanel(game, sim, panel_name, path, modal_handlers):
     """Capture native modal builders whose panel setters are not Python bindings."""
     game_instance = sim.gameInstance
-    if panel_name == "dialogPanel":
+    if panel_name == "campaignBrowserPanel":
+        import campaign
+
+        manifests = campaign.list_campaigns()
+        titles = game_instance.createObject("CMapStringString")
+        titles.setValues({manifest["campaignId"]: manifest["title"] for manifest in manifests})
+        descriptions = game_instance.createObject("CMapStringString")
+        descriptions.setValues({manifest["campaignId"]: manifest.get("description", "") for manifest in manifests})
+        counts = game_instance.createObject("CMapStringInt")
+        counts.setValues({manifest["campaignId"]: len(manifest["scenarios"]) for manifest in manifests})
+        arguments = (titles, descriptions, counts)
+    elif panel_name == "dialogPanel":
         arguments = (game_instance.createObject("questDialog"),)
     elif panel_name == "lootPanel":
         creature = game_instance.createObject("GoblinThief")
@@ -256,6 +277,8 @@ def captureModalPanel(game, sim, panel_name, path, modal_handlers):
                     game_instance.getGui().removeChild(child)
             return
         try:
+            if panel_name == "campaignBrowserPanel":
+                _populateCampaignBrowser(game_instance, panel)
             sim.pumpEvents(3)
             observed["info"] = sim.captureGuiScreenshot(path=path)
         except Exception as error:  # surface callback failures after the native modal returns
@@ -289,7 +312,7 @@ def _prepare_player_for_panels(sim):
     player = sim.player
     for item_id in ("Sword", "Scroll", "LeatherArmor"):
         try:
-            player.addItem(item_id)
+            player.addItem(sim.gameInstance.createObject(item_id))
         except Exception:  # noqa: BLE001 - seeding inventory is best effort
             pass
     try:
@@ -298,12 +321,13 @@ def _prepare_player_for_panels(sim):
         ]
         if start_events:
             coords = start_events[0].getCoords()
-            player.setCoords(sim.gameModule.Coords(coords.x, coords.y, coords.z))
+            player.moveTo(coords.x, coords.y, coords.z)
             sim.pumpEvents(5)
             player.checkQuests()
             sim.pumpEvents(3)
     except Exception:  # noqa: BLE001 - activating a quest is best effort
         pass
+    player.addQuest("mainQuest")
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +358,6 @@ def capture_panels(game, output_dir, player_class, panels, modal_handlers=None):
             if panel is None:
                 print(f"  [skip] panel {panel_name}: openPanel returned None", flush=True)
                 continue
-            sim.pumpEvents(3)
             _configure_panel(sim.gameInstance, parent_panel, panel)
             sim.pumpEvents(5)
             info = sim.captureGuiScreenshot(path=path)

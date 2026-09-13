@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #pragma once
 
+#include "core/CExport.h"
 #include "core/CGlobal.h"
 
 class CGameObject;
@@ -25,12 +26,7 @@ namespace CPythonOverrides {
 
 inline bool hasAttachedPythonThread() { return PyGILState_Check(); }
 
-inline std::unordered_map<const CGameObject *, pybind11::object> &instances() {
-    // Intentionally leak the registry so pybind11::object destructors do not run
-    // during C++ static teardown after the Python interpreter has finalized.
-    static auto *registry = new std::unordered_map<const CGameObject *, pybind11::object>();
-    return *registry;
-}
+GAME_CORE_EXPORT std::unordered_map<const CGameObject *, pybind11::object> &instances();
 
 inline void retain(const std::shared_ptr<CGameObject> &object, const pybind11::object &instance) {
     if (!hasAttachedPythonThread()) {

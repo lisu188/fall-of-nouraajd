@@ -132,7 +132,7 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
 
     template <fn::GameObjectDerived T = CGameObject>
     void setObjectProperty(std::string name, std::shared_ptr<T> object) {
-        setProperty(name, std::any(object));
+        setProperty(name, object);
     }
 
     template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> getObjectProperty(std::string name) {

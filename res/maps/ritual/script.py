@@ -230,18 +230,19 @@ def load(self, context):
             if not self.can_free_captive():
                 return
 
+            player = game_map.getPlayer()
             game_map.setBoolProperty("captive_freed", True)
             game_map.setBoolProperty("good_ending", True)
             game_map.setBoolProperty("ritual_finished", True)
 
             if not game_map.getBoolProperty("reward_claimed"):
-                player = game_map.getPlayer()
                 player.addGold(300)
                 player.addItem("LifePotion")
                 game_map.setBoolProperty("reward_claimed", True)
                 self.getGame().getGuiHandler().showMessage(
                     "You earn 300 gold and a Life Potion. The rescued captive points toward a siege beyond the marsh."
                 )
+            player.checkQuests()
             campaign.complete_scenario(self.getGame(), "good_ending", fallback_map="siege")
 
     @trigger(context, "onTurn", "ritualTurnAnchor")

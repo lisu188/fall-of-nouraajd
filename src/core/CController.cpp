@@ -248,8 +248,7 @@ void extend_target_flow_field(const std::shared_ptr<TargetFlowField> &field, con
     }
 }
 
-std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
-                                                       const Coords &start) {
+Coords get_target_flow_step(const std::shared_ptr<CMap> &map, const Coords &goal, const Coords &start) {
     constexpr std::size_t maxCachedFlowFields = 32;
     const auto revision = map->getNavigationRevision();
     std::lock_guard<std::mutex> lock(targetFlowMutex);
@@ -273,7 +272,10 @@ std::shared_ptr<TargetFlowField> get_target_flow_field(const std::shared_ptr<CMa
         }
     }
     extend_target_flow_field(field, map, start);
-    return field;
+    // Copy the result while the lock also excludes other chasers extending and
+    // rehashing nextSteps. No mutable field or iterator may escape this scope.
+    const auto next = field->nextSteps.find(start);
+    return next == field->nextSteps.end() ? start : next->second;
 }
 
 Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &creature,
@@ -298,12 +300,7 @@ Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std:
         return start;
     }
 
-    auto flow = get_target_flow_field(map, goal, start);
-    auto next = flow->nextSteps.find(start);
-    if (next == flow->nextSteps.end()) {
-        return start;
-    }
-    auto step = map->normalizeCoords(next->second);
+    auto step = map->normalizeCoords(get_target_flow_step(map, goal, start));
     if (!creature_can_follow_step(map, creature, step)) {
         return start;
     }
@@ -532,14 +529,23 @@ int expected_incoming_hit(const std::shared_ptr<CCreature> &me, const std::share
 // Heal items restore getPower() * 20% of max hp (res/plugins/potion.py), capped
 // by the hp actually missing. Returns the estimate for the strongest heal item
 // carried, i.e. the best single-turn hp swing a heal turn could buy.
-int strongest_heal_estimate(const std::shared_ptr<CCreature> &me) {
-    int bestPower = 0;
+// Estimates how much the heal potion the AI would actually drink restores. The
+// controller spends the LEAST powerful heal first (getLeastPowerfulItemWithTag), so the
+// gate must weigh that same potion: weighing the strongest would green-light a heal the
+// drunk potion cannot keep pace with, re-introducing net-loss chain-drinking.
+int consumed_heal_estimate(const std::shared_ptr<CCreature> &me) {
+    bool found = false;
+    int weakestPower = 0;
     for (const auto &item : me->getItems()) {
         if (item && item->hasTag(CTag::Heal)) {
-            bestPower = std::max(bestPower, item->getPower());
+            const int power = item->getPower();
+            if (!found || power < weakestPower) {
+                weakestPower = power;
+                found = true;
+            }
         }
     }
-    const int uncapped = bestPower * me->getHpMax() / 5;
+    const int uncapped = weakestPower * me->getHpMax() / 5;
     return std::min(uncapped, me->getHpMax() - me->getHp());
 }
 
@@ -554,7 +560,7 @@ bool heal_preserves_combatant(const std::shared_ptr<CCreature> &me, const std::s
     if (me->getHp() <= incoming) {
         return true;
     }
-    return strongest_heal_estimate(me) > incoming;
+    return consumed_heal_estimate(me) > incoming;
 }
 
 // Deterministic estimate of how much a single cast weakens the opponent, used to

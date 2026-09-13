@@ -661,6 +661,25 @@ bool isLiveGuiSession(const std::shared_ptr<CGame> &game, const std::shared_ptr<
 }
 } // namespace
 
+std::set<std::string> getPluginAutoDiscoveryExclusions(const json &manifest) {
+    std::set<std::string> paths;
+    if (!manifest.contains("plugins") || !manifest["plugins"].is_array()) {
+        return paths;
+    }
+    for (const auto &entry : manifest["plugins"]) {
+        const auto descriptor = parse_plugin_descriptor(entry);
+        if (!descriptor) {
+            continue;
+        }
+        const bool trustedPath = (descriptor->kind == "python" && is_allowed_python_plugin_path(descriptor->source)) ||
+                                 (descriptor->kind == "lua" && is_allowed_lua_plugin_path(descriptor->source));
+        if (trustedPath) {
+            paths.insert(*normalize_relative_resource_path(descriptor->source));
+        }
+    }
+    return paths;
+}
+
 void CMapLoader::loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc) {
     if (mapc && mapc->is_object()) {
         const json emptyObject = json::object();
@@ -773,7 +792,7 @@ void collect_saved_quest(const json &quest, CSavedQuestRefs &refs) {
     }
 }
 
-void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs) {
+void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs, const std::shared_ptr<CGame> &game) {
     // Iterative traversal with an explicit work stack instead of recursion. The save document has
     // already been structurally bounded by CSaveFormat::validateDocumentStructure (depth, node
     // count, container fan-out) before this runs, but keeping the walk non-recursive removes the
@@ -781,6 +800,8 @@ void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs) {
     std::vector<const json *> pending;
     pending.push_back(&root);
     std::size_t visited = 0;
+    const auto registeredClasses = game->getObjectHandler()->getAllTypes();
+    const std::set<std::string> knownClasses(registeredClasses.begin(), registeredClasses.end());
 
     while (!pending.empty()) {
         const json *node = pending.back();
@@ -792,6 +813,15 @@ void collect_saved_quest_refs(const json &root, CSavedQuestRefs &refs) {
         }
 
         if (node->is_object()) {
+            // Detached effect actors can originate in another map's script. Discover their missing classes
+            // through the same authored config index used for carried quest classes, without activating that map.
+            if ((node->contains("effectActorId") || node->contains("effectReferences")) && node->contains("class") &&
+                (*node)["class"].is_string()) {
+                const auto type = (*node)["class"].get<std::string>();
+                if (!knownClasses.contains(type)) {
+                    refs.classes.insert(type);
+                }
+            }
             if (node->contains("properties") && (*node)["properties"].is_object()) {
                 const json &properties = (*node)["properties"];
                 for (const char *journalProperty : {"quests", "completedQuests"}) {
@@ -858,7 +888,7 @@ std::set<std::string> get_saved_map_dependencies(const std::shared_ptr<CGame> &g
                                                  const std::string &mapName) {
     std::set<std::string> maps = {mapName};
     CSavedQuestRefs questRefs;
-    collect_saved_quest_refs(save, questRefs);
+    collect_saved_quest_refs(save, questRefs, game);
     if (questRefs.classes.empty() && questRefs.typeIds.empty()) {
         return maps;
     }
@@ -1128,7 +1158,7 @@ std::shared_ptr<CMap> CRandomMapGenerator::loadRandomMap(const std::shared_ptr<C
 void CRandomMapGenerator::generateEncounters(const std::shared_ptr<CGame> &game, std::shared_ptr<CMap> &map,
                                              const std::vector<rdg::Room> &rooms) {
     for (const auto &room : rooms) {
-        auto roomCoords = Coords(room.row + room.width / 2, room.col + room.height / 2, 0);
+        auto roomCoords = Coords(room.row + room.height / 2, room.col + room.width / 2, 0);
         if (roomCoords.getDist(map->getEntry()) > 5) {
             for (const auto &creature : game->getRngHandler()->getRandomEncounter(5)) {
                 map->addObject(creature, roomCoords);
@@ -1330,19 +1360,22 @@ bool CPluginLoader::loadGlobalPlugins(const std::shared_ptr<CGame> &game) {
     bool loadedAll = true;
     std::set<std::string> loadedPluginIds;
     std::set<std::string> loadedPluginPaths;
+    std::set<std::string> manifestPluginPaths;
 
     if (auto manifest = load_plugin_manifest(game->getResourcesProvider())) {
+        // Explicit manifest entries own discovery even while their map scope is inactive.
+        manifestPluginPaths = getPluginAutoDiscoveryExclusions(*manifest);
         loadedAll = load_plugin_entries(game, *manifest, std::nullopt, loadedPluginIds, loadedPluginPaths) && loadedAll;
     }
 
     for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN)) {
-        if (!loadedPluginPaths.contains(script)) {
+        if (!manifestPluginPaths.contains(script)) {
             loadedAll = loadPlugin(game, script) && loadedAll;
         }
     }
 
     for (const std::string &script : game->getResourcesProvider()->getFiles(CResType::PLUGIN_LUA)) {
-        if (!loadedPluginPaths.contains(script)) {
+        if (!manifestPluginPaths.contains(script)) {
             loadedAll = loadLuaPlugin(game, script) && loadedAll;
         }
     }

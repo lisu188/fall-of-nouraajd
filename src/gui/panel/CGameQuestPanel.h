@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -19,7 +19,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGamePanel.h"
 
+#include <vector>
+
 class CPlayer;
+class CTextManager;
 
 class CGameQuestPanel : public CGamePanel {
     V_META(CGameQuestPanel, CGamePanel, V_METHOD(CGameQuestPanel, refreshFromQuestsChanged),
@@ -30,6 +33,16 @@ class CGameQuestPanel : public CGamePanel {
 
   public:
     std::string getText(std::shared_ptr<CGui> ptr);
+
+    std::string getViewportText(const std::shared_ptr<CGui> &gui);
+
+    int getScrollOffset() const;
+
+    int getScrollMaximum() const;
+
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
+
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
 
     // Reactive slots (same signal channels CListView refresh subscriptions use): a
     // subscribed source changed, so the cached journal text is stale and must be
@@ -63,7 +76,32 @@ class CGameQuestPanel : public CGamePanel {
     // tests can observe how often the text is actually rebuilt.
     virtual std::string buildText(const std::shared_ptr<CPlayer> &player);
 
+    virtual int measureParagraphHeight(const std::shared_ptr<CTextManager> &textManager, const std::string &text,
+                                       int width);
+
   private:
+    struct JournalParagraph {
+        std::string text;
+        int y;
+        int height;
+    };
+
+    void refreshScrollLayout(const std::shared_ptr<CGui> &gui);
+
+    void refreshTextCache(const std::shared_ptr<CGui> &gui);
+
+    void scrollBy(long long delta);
+
+    std::vector<JournalParagraph> paragraphs;
+    int paragraphWidth = -1;
+    int contentHeight = 0;
+    int viewportHeight = 0;
+    int lineHeight = 24;
+    int scrollOffset = 0;
+    int scrollMaximum = 0;
+    bool paragraphLayoutDirty = true;
+    std::weak_ptr<CTextManager> measuredTextManager;
+
     // Keeps the change subscriptions bound to the currently resolved player and map,
     // reconnecting when either changes (new game, map transition) and marking the
     // cached text stale on any target change — the same follow-the-target contract

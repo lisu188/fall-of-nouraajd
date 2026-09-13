@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -28,10 +28,9 @@ CTile::CTile() {}
 CTile::~CTile() {}
 
 void CTile::move(int x, int y, int z) {
-    if (getMap()) {
-        Coords target = getMap()->normalizeCoords(Coords(posx + x, posy + y, posz + z));
-        getMap()->moveTile(this->ptr<CTile>(), target.x, target.y, target.z);
-        setXYZ(target.x, target.y, target.z);
+    if (auto map = getMap()) {
+        Coords target = map->normalizeCoords(Coords(posx + x, posy + y, posz + z));
+        map->moveTile(this->ptr<CTile>(), target.x, target.y, target.z);
     }
 }
 

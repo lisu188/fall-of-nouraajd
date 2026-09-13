@@ -21,6 +21,54 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "object/CMapObject.h"
 
+struct StatsModifier {
+    int strength = 0;
+    int agility = 0;
+    int stamina = 0;
+    int intelligence = 0;
+    int armor = 0;
+    int block = 0;
+    int dmgMin = 0;
+    int dmgMax = 0;
+    int attack = 0;
+    int hit = 0;
+    int crit = 0;
+    int fireResist = 0;
+    int frostResist = 0;
+    int normalResist = 0;
+    int thunderResist = 0;
+    int shadowResist = 0;
+    int damage = 0;
+
+    auto operator<=>(const StatsModifier &) const = default;
+
+    StatsModifier &operator+=(const StatsModifier &other);
+    StatsModifier &operator-=(const StatsModifier &other);
+    StatsModifier operator-() const;
+
+    friend StatsModifier operator+(StatsModifier lhs, const StatsModifier &rhs) { return lhs += rhs; }
+    friend StatsModifier operator-(StatsModifier lhs, const StatsModifier &rhs) { return lhs -= rhs; }
+};
+
+struct DamageValue {
+    int normal = 0;
+    int fire = 0;
+    int frost = 0;
+    int thunder = 0;
+    int shadow = 0;
+
+    auto operator<=>(const DamageValue &) const = default;
+
+    DamageValue &operator+=(const DamageValue &other);
+    DamageValue &operator-=(const DamageValue &other);
+    DamageValue operator-() const;
+    DamageValue &scale(double multiplier);
+    DamageValue scaled(double multiplier) const;
+
+    friend DamageValue operator+(DamageValue lhs, const DamageValue &rhs) { return lhs += rhs; }
+    friend DamageValue operator-(DamageValue lhs, const DamageValue &rhs) { return lhs -= rhs; }
+};
+
 class CStats : public CGameObject {
 
     V_META(CStats, CGameObject, V_PROPERTY(CStats, int, strength, getStrength, setStrength),
@@ -59,6 +107,12 @@ class CStats : public CGameObject {
 
   public:
     CStats();
+
+    CStats &operator+=(const CStats &other);
+    CStats &operator-=(const CStats &other);
+
+    CStats &apply(const StatsModifier &modifier);
+    StatsModifier modifier() const;
 
     void addBonus(std::shared_ptr<CStats> stats);
 
@@ -159,6 +213,11 @@ class CDamage : public CGameObject {
 
   public:
     CDamage();
+
+    CDamage &operator+=(const CDamage &other);
+
+    CDamage &apply(const DamageValue &damage);
+    DamageValue value() const;
 
     int getFire() const;
 

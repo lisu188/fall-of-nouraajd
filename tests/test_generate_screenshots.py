@@ -70,6 +70,9 @@ class ScreenshotPanelCoverageTest(unittest.TestCase):
             def showSelection(self, selection):
                 self.show("selectionPanel", selection)
 
+            def showCampaignSelection(self, *arguments):
+                self.show("campaignBrowserPanel", *arguments)
+
         handler = Handler()
         sim.gameInstance.getGuiHandler.return_value = handler
         game = types.SimpleNamespace(
@@ -91,12 +94,12 @@ class ScreenshotPanelCoverageTest(unittest.TestCase):
         game, sim, calls = self.makeModalSession()
         handlers = generate_screenshots._suppress_blocking_popups(game)
         with tempfile.TemporaryDirectory() as directory:
-            for name in generate_screenshots.MODAL_PANELS:
+            for name in ("dialogPanel", "lootPanel", "selectionPanel"):
                 info = generate_screenshots.captureModalPanel(
                     game, sim, name, Path(directory) / (name + ".png"), handlers
                 )
                 self.assertGreater(info["bytes"], 0)
-        self.assertEqual(list(generate_screenshots.MODAL_PANELS), [call[0] for call in calls])
+        self.assertEqual(["dialogPanel", "lootPanel", "selectionPanel"], [call[0] for call in calls])
         self.assertEqual("questDialog", calls[0][1][0].resource_id)
         self.assertEqual({"Scroll", "Sword"}, {item.resource_id for item in calls[1][1][1]})
         self.assertEqual(3, calls[2][1][0].addValue.call_count)
@@ -149,6 +152,93 @@ class ScreenshotPanelCoverageTest(unittest.TestCase):
                 self.assertEqual(".png", path.suffix)
                 self.assertGreater(path.stat().st_size, 0)
                 self.assertEqual(b"\x89PNG\r\n\x1a\n", path.read_bytes()[:8])
+
+
+class ScreenshotPanelSetupTest(unittest.TestCase):
+    def testNestedViewsUseConfiguredFightPanelBeforeRendering(self):
+        for resource in ("creatureView", "statsView", "fightPanel"):
+            with self.subTest(resource=resource):
+                events = []
+                panel = mock.Mock()
+                handler = mock.Mock()
+
+                def openPanel(name):
+                    self.assertEqual("fightPanel", name)
+                    events.append("open")
+                    return panel
+
+                handler.openPanel.side_effect = openPanel
+                sim = mock.Mock()
+                sim.gameInstance.getGuiHandler.return_value = handler
+                sim.pumpEvents.side_effect = lambda count: self.assertIn("configure", events)
+                sim.captureGuiScreenshot.return_value = {"bytes": 123}
+                simulation_module = types.SimpleNamespace(
+                    GameSimulation=types.SimpleNamespace(startGame=mock.Mock(return_value=sim))
+                )
+                with (
+                    mock.patch.dict("sys.modules", {"game_simulation": simulation_module}),
+                    mock.patch.object(generate_screenshots, "_prepare_player_for_panels"),
+                    mock.patch.object(
+                        generate_screenshots,
+                        "_configure_panel",
+                        side_effect=lambda instance, name, widget: events.append("configure"),
+                    ) as configure,
+                ):
+                    written = generate_screenshots.capture_panels(
+                        mock.Mock(), Path("screenshots"), "Warrior", [resource]
+                    )
+                self.assertEqual([Path("screenshots") / f"panel-{resource}.png"], written)
+                configure.assert_called_once_with(sim.gameInstance, "fightPanel", panel)
+                self.assertEqual(["open", "configure"], events)
+                panel.close.assert_called_once()
+
+    def testNativePanelsAreConfiguredBeforeCaptureAndClosedThroughGui(self):
+        panel_types = {
+            "campaignBrowserPanel": ("showCampaignSelection", "CGameCampaignBrowserPanel"),
+            "dialogPanel": ("showDialog", "CGameDialogPanel"),
+            "lootPanel": ("showLoot", "CGameLootPanel"),
+            "selectionPanel": ("showSelection", "CGamePanel"),
+        }
+        for panel_name, (helper_name, panel_class) in panel_types.items():
+            with self.subTest(panel=panel_name):
+                events = []
+                callbacks = []
+                # Some native panels downcast only to CGameObject in Python and
+                # consequently expose no close() or panel-specific setters.
+                panel = types.SimpleNamespace(setStringProperty=mock.Mock(), getType=lambda: panel_class)
+                sim = mock.Mock()
+                handler = sim.gameInstance.getGuiHandler.return_value
+                sim.gameInstance.getGui.return_value.getChildren.return_value = [panel]
+                sim.pumpEvents.side_effect = lambda count: self.assertEqual(["configured"], events)
+                sim.captureGuiScreenshot.return_value = {"bytes": 123}
+                game = types.SimpleNamespace(
+                    event_loop=types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=callbacks.append))
+                )
+
+                def showPanel(actual_handler, *arguments):
+                    self.assertIs(handler, actual_handler)
+                    self.assertTrue(arguments)
+                    events.append("configured")
+                    callbacks.pop()()
+
+                campaigns = types.SimpleNamespace(
+                    list_campaigns=lambda: [
+                        {"campaignId": "testCampaign", "title": "Test campaign", "scenarios": ["map"]}
+                    ]
+                )
+                path = Path("screenshots") / f"panel-{panel_name}.png"
+                with mock.patch.dict("sys.modules", {"campaign": campaigns}):
+                    info = generate_screenshots.captureModalPanel(game, sim, panel_name, path, {panel_name: showPanel})
+                self.assertEqual({"bytes": 123}, info)
+                self.assertGreaterEqual(sim.gameInstance.getGui.return_value.getChildren.call_count, 1)
+                sim.captureGuiScreenshot.assert_called_once_with(path=path)
+                sim.gameInstance.getGui.return_value.removeChild.assert_called_once_with(panel)
+
+    def testCampaignButtonUsesTheExposedPropertyApi(self):
+        child = types.SimpleNamespace(getType=lambda: "CButton", setStringProperty=mock.Mock())
+        panel = types.SimpleNamespace(setStringProperty=mock.Mock(), getChildren=lambda: [child])
+        generate_screenshots._configure_panel(mock.Mock(), "campaignPanel", panel)
+        child.setStringProperty.assert_called_once_with("text", "BEGIN")
 
 
 if __name__ == "__main__":

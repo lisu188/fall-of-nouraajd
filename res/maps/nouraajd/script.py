@@ -502,13 +502,13 @@ def load(self, context):
             return _quest_system_from(self).is_cave_purged()
 
         def getObjective(self):
-            return "Use the returned relic to cleanse the OctoBogz cave, then report to Beren."
+            return "Return the holy relic to Beren and destroy the OctoBogz, then report back once both are done."
 
         def getReward(self):
             return "Opens the road to the ritual chapel."
 
         def getHint(self):
-            return "Clear the OctoBogz lair after the relic is back in Beren's hands."
+            return "Beren needs the relic back, and the OctoBogz must be dead before he can finish the cleansing."
 
         def onComplete(self):
             pass
@@ -521,7 +521,7 @@ def load(self, context):
         def getObjective(self):
             state = _quest_system_from(self).get_state("victor")
             if state == "encounter_active":
-                return "Defeat the cultists in the courtyard before Victor's daughter is taken."
+                return "Defeat the cult leader in the courtyard before Victor's daughter is taken."
             if state == "good_end":
                 return "Victor's daughter survived the courtyard rite."
             if state == "bad_end":
