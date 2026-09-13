@@ -18437,6 +18437,48 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(logs, sort_keys=True)
 
     @game_test
+    def test_castle_town_infirmary_rest_uses_explicit_paid_dialog_action(self):
+        from tests.castle_walkthrough import authoredMap, nativeDriver, shortestRoute
+
+        game = load_game_module()
+        game_instance, game_map, player = load_game_map_with_player("castleGriffinCliff")
+        driver = nativeDriver(game, game_instance)
+        _, driver.objects, driver.walkable, driver.portals, driver.mission = authoredMap("castleGriffinCliff")
+        driver.guardsByCell = {}
+        for name in driver.mission["defenderIds"]:
+            driver.guardsByCell.setdefault(driver.objects[name]["coords"], []).append(name)
+        towns = [(name, value) for name, value in driver.objects.items() if value["properties"].get("campaign_loyalTown")]
+        town_name, definition = min(
+            towns,
+            key=lambda pair: len(shortestRoute(driver.walkable, driver.portals, driver.coords(), pair[1]["coords"])),
+        )
+        game_map.move()
+        pump_event_loop(3)
+        potions_before = player.countItems("LifePotion")
+        driver.walkTo(definition["coords"])
+        self.assertTrue(game_map.getBoolProperty("campaign_castleSupply_" + town_name))
+        self.assertEqual(potions_before + 1, player.countItems("LifePotion"))
+        gold_before = player.getGold()
+        self.assertGreaterEqual(gold_before, 10)
+        player.hurt(3)
+        self.assertLess(player.getHp(), player.getHpMax())
+        dialog = game_instance.createObject("CastleTownRestDialog")
+        self.assertTrue(dialog.configureTown(game_map.getObjectByName(town_name)))
+        self.assertTrue(dialog.canRest())
+        dialog.invokeAction("rest")
+        pump_event_loop(3)
+        self.assertEqual(gold_before - 10, player.getGold())
+        self.assertEqual(player.getHpMax(), player.getHp())
+        self.assertFalse(dialog.canRest())
+        dialog.invokeAction("rest")
+        pump_event_loop(3)
+        self.assertEqual(gold_before - 10, player.getGold())
+        self.assertEqual(potions_before + 1, player.countItems("LifePotion"))
+        return True, json.dumps(
+            {"town": town_name, "cost": 10, "repeat_charged": False, "movement_steps": driver.log["steps"]}
+        )
+
+    @game_test
     def test_castle_partial_capture_survives_save_load(self):
         from tests.castle_walkthrough import nativeDriver
 

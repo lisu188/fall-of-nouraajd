@@ -38,6 +38,12 @@ masks, original owner/army data, and transit mappings. Source documents are outs
 map directories because the engine treats all map-local JSON except `map.json` as
 object configuration.
 
+Other visitable land landmarks, including mines and huts, use existing engine
+icons at their original visit cells. Their labels and source-to-icon mappings are
+recorded without adding strategic resource production or recruitment. Guarded
+garrisons and events become bounded RPG encounters; these optional encounters do
+not add victory requirements to Griffin Cliff.
+
 Interactive locations use the original visit mask, which may differ from the
 object anchor. Terraneus's entrance is `(33, 35, 1)`; its anchor is farther east.
 The importer preserves map extent and obstacle footprints and records the boat
@@ -59,6 +65,9 @@ properties; completed chapter quests are also recorded on the carried player.
 Capturing requires the active, living player to be on the same floor within one
 cell of the objective and every named guard to have actually died. Removing a
 living guard is not a combat victory. Captures and chapter rewards are idempotent.
+Loyal and liberated towns offer an explicit infirmary visit for 10 gold. Rest
+restores health without creating items or repeating capture rewards; a healthy
+champion pays nothing. Griffin Towers and field allies do not offer this service.
 
 The seventh distinct Griffin Tower completes the finale even if unrelated enemies
 remain. Guardian Angels separately checks its enemy commander list. Quests are
@@ -70,7 +79,7 @@ handles to an earlier chapter cannot advance the current chapter.
 Source and gate tests require only Python:
 
 ```sh
-python -m unittest tests.test_castle_importer tests.test_castle_campaign -v
+python -m unittest tests.test_castle_importer tests.test_castle_campaign tests.test_castle_town_services -v
 python scripts/validate_content.py
 ```
 
@@ -80,6 +89,7 @@ After normal CMake configuration has staged the resources beside `_game`, run:
 python test.py GameTest.test_map_walkthrough_castleHomecoming GameTest.test_map_walkthrough_castleGuardianAngels GameTest.test_map_walkthrough_castleGriffinCliff
 python test.py GameTest.test_castle_campaign_carryover_with_melee_and_caster GameTest.test_castle_partial_capture_survives_save_load
 python test.py GameTest.test_castle_campaign_initializes_on_first_normal_turn
+python test.py GameTest.test_castle_town_infirmary_rest_uses_explicit_paid_dialog_action
 python test.py McpServerTest.test_stdio_castle_campaign_full_route
 ```
 

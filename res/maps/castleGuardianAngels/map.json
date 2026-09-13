@@ -3,7 +3,7 @@
   "height": 36,
   "tilewidth": 32,
   "tileheight": 32,
-  "nextobjectid": 81,
+  "nextobjectid": 255,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.2.0",
@@ -2736,7 +2736,8 @@
             "campaign_objectiveId": "castleGuardianAngelsObjective0",
             "campaign_sourceIndex": 0,
             "campaign_guards": "castleGuardianAngelsGuard0",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -3956,6 +3957,2206 @@
             "campaign_rewardGold": 0,
             "campaign_aidMessage": "The angel raises a shining hand. Your wounds close, and a healing draught is offered for the road. Erathia's cause now has friends in the skies."
           }
+        },
+        {
+          "id": 81,
+          "name": "castleGuardianAngelsLandmark55",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 352,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sawmill",
+            "description": "Old workings mark this sawmill beside the invasion roads.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 55,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 82,
+          "name": "castleGuardianAngelsLandmark56",
+          "type": "castleLandmark",
+          "x": 672,
+          "y": 256,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystal cavern",
+            "description": "Old workings mark this crystal cavern beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 56,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 83,
+          "name": "castleGuardianAngelsLandmark57",
+          "type": "castleLandmark",
+          "x": 608,
+          "y": 416,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Alchemist's laboratory",
+            "description": "Old workings mark this alchemist's laboratory beside the invasion roads.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 57,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 84,
+          "name": "castleGuardianAngelsLandmark64",
+          "type": "castleLandmark",
+          "x": 896,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Temple",
+            "description": "Stone steps lead toward a quiet temple.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 64,
+            "campaign_sourceType": 96,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 85,
+          "name": "castleGuardianAngelsLandmark73",
+          "type": "castleLandmark",
+          "x": 736,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 73,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 86,
+          "name": "castleGuardianAngelsLandmark74",
+          "type": "castleLandmark",
+          "x": 736,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 74,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 87,
+          "name": "castleGuardianAngelsLandmark75",
+          "type": "castleLandmark",
+          "x": 384,
+          "y": 384,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 75,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 88,
+          "name": "castleGuardianAngelsLandmark76",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 384,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 76,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 89,
+          "name": "castleGuardianAngelsLandmark77",
+          "type": "castleLandmark",
+          "x": 192,
+          "y": 320,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sawmill",
+            "description": "Old workings mark this sawmill beside the invasion roads.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 77,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 90,
+          "name": "castleGuardianAngelsLandmark78",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 544,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Portal of glory",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 78,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 8
+          }
+        },
+        {
+          "id": 91,
+          "name": "castleGuardianAngelsLandmark79",
+          "type": "castleLandmark",
+          "x": 896,
+          "y": 864,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystal cavern",
+            "description": "Old workings mark this crystal cavern beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 79,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 92,
+          "name": "castleGuardianAngelsLandmark80",
+          "type": "castleLandmark",
+          "x": 672,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Alchemist's laboratory",
+            "description": "Old workings mark this alchemist's laboratory beside the invasion roads.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 80,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 93,
+          "name": "castleGuardianAngelsLandmark82",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystal cavern",
+            "description": "Old workings mark this crystal cavern beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 82,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 94,
+          "name": "castleGuardianAngelsLandmark83",
+          "type": "castleLandmark",
+          "x": 512,
+          "y": 640,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Windmill",
+            "description": "A weathered mill overlooks the nearby fields.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 83,
+            "campaign_sourceType": 112,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 95,
+          "name": "castleGuardianAngelsLandmark92",
+          "type": "castleLandmark",
+          "x": 96,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 92,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 96,
+          "name": "castleGuardianAngelsLandmark93",
+          "type": "castleLandmark",
+          "x": 96,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 93,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 97,
+          "name": "castleGuardianAngelsLandmark94",
+          "type": "castleLandmark",
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 94,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 77
+          }
+        },
+        {
+          "id": 98,
+          "name": "castleGuardianAngelsLandmark95",
+          "type": "castleLandmark",
+          "x": 96,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 95,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 99,
+          "name": "castleGuardianAngelsLandmark126",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 126,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 8
+          }
+        },
+        {
+          "id": 100,
+          "name": "castleGuardianAngelsLandmark127",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 127,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 101,
+          "name": "castleGuardianAngelsLandmark128",
+          "type": "castleLandmark",
+          "x": 224,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 128,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 102,
+          "name": "castleGuardianAngelsLandmark137",
+          "type": "castleLandmark",
+          "x": 896,
+          "y": 736,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur mine",
+            "description": "Old workings mark this sulfur mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 137,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 103,
+          "name": "castleGuardianAngelsLandmark142",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 142,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 27
+          }
+        },
+        {
+          "id": 104,
+          "name": "castleGuardianAngelsLandmark143",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystals stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 143,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 105,
+          "name": "castleGuardianAngelsLandmark144",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 144,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 106,
+          "name": "castleGuardianAngelsLandmark145",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystals stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 145,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 107,
+          "name": "castleGuardianAngelsLandmark149",
+          "type": "castleLandmark",
+          "x": 768,
+          "y": 576,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Portal of glory",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 149,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 8
+          }
+        },
+        {
+          "id": 108,
+          "name": "castleGuardianAngelsLandmark152",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercenary camp",
+            "description": "Worn practice posts surround an old soldiers' camp.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 152,
+            "campaign_sourceType": 51,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 109,
+          "name": "castleGuardianAngelsLandmark155",
+          "type": "castleLandmark",
+          "x": 576,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 155,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 38
+          }
+        },
+        {
+          "id": 110,
+          "name": "castleGuardianAngelsLandmark156",
+          "type": "castleLandmark",
+          "x": 608,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gems stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 156,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 111,
+          "name": "castleGuardianAngelsLandmark157",
+          "type": "castleLandmark",
+          "x": 608,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gems stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 157,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 112,
+          "name": "castleGuardianAngelsLandmark158",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 158,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 113,
+          "name": "castleGuardianAngelsLandmark159",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 159,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 114,
+          "name": "castleGuardianAngelsLandmark160",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Learning stone",
+            "description": "Faded inscriptions cover a solitary standing stone.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 160,
+            "campaign_sourceType": 100,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 115,
+          "name": "castleGuardianAngelsLandmark162",
+          "type": "castleLandmark",
+          "x": 672,
+          "y": 864,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 162,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 116,
+          "name": "castleGuardianAngelsLandmark163",
+          "type": "castleLandmark",
+          "x": 704,
+          "y": 864,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 163,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 117,
+          "name": "castleGuardianAngelsLandmark170",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 170,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 118,
+          "name": "castleGuardianAngelsLandmark171",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 171,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 119,
+          "name": "castleGuardianAngelsLandmark172",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 172,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 43
+          }
+        },
+        {
+          "id": 120,
+          "name": "castleGuardianAngelsLandmark174",
+          "type": "castleLandmark",
+          "x": 544,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Marletto Tower",
+            "description": "A tall watchtower surveys the surrounding country.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 174,
+            "campaign_sourceType": 23,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 121,
+          "name": "castleGuardianAngelsLandmark177",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 177,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 13
+          }
+        },
+        {
+          "id": 122,
+          "name": "castleGuardianAngelsLandmark179",
+          "type": "castleLandmark",
+          "x": 448,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 179,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 123,
+          "name": "castleGuardianAngelsLandmark182",
+          "type": "castleLandmark",
+          "x": 352,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 182,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 124,
+          "name": "castleGuardianAngelsLandmark183",
+          "type": "castleLandmark",
+          "x": 352,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 183,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 125,
+          "name": "castleGuardianAngelsLandmark184",
+          "type": "castleLandmark",
+          "x": 352,
+          "y": 864,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 184,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 126,
+          "name": "castleGuardianAngelsLandmark185",
+          "type": "castleLandmark",
+          "x": 320,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 185,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 127,
+          "name": "castleGuardianAngelsLandmark191",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 1056,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 191,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 128,
+          "name": "castleGuardianAngelsLandmark193",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 1056,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 193,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 129,
+          "name": "castleGuardianAngelsLandmark194",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 194,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 130,
+          "name": "castleGuardianAngelsLandmark197",
+          "type": "castleLandmark",
+          "x": 992,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercury stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 197,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 131,
+          "name": "castleGuardianAngelsLandmark198",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercury stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 198,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 132,
+          "name": "castleGuardianAngelsLandmark205",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 205,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 59
+          }
+        },
+        {
+          "id": 133,
+          "name": "castleGuardianAngelsLandmark206",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 1056,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 206,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 134,
+          "name": "castleGuardianAngelsLandmark207",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 1056,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 207,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 135,
+          "name": "castleGuardianAngelsLandmark208",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 208,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 136,
+          "name": "castleGuardianAngelsLandmark209",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 209,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 137,
+          "name": "castleGuardianAngelsLandmark211",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 128,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 211,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 138,
+          "name": "castleGuardianAngelsLandmark212",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercury stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 212,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 139,
+          "name": "castleGuardianAngelsLandmark213",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercury stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 213,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 140,
+          "name": "castleGuardianAngelsLandmark215",
+          "type": "castleLandmark",
+          "x": 96,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur mine",
+            "description": "Old workings mark this sulfur mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 215,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 141,
+          "name": "castleGuardianAngelsLandmark223",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 256,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 223,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 65
+          }
+        },
+        {
+          "id": 142,
+          "name": "castleGuardianAngelsLandmark224",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 256,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystals stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 224,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 143,
+          "name": "castleGuardianAngelsLandmark225",
+          "type": "castleLandmark",
+          "x": 320,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystals stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 225,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 144,
+          "name": "castleGuardianAngelsLandmark226",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 226,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 145,
+          "name": "castleGuardianAngelsLandmark234",
+          "type": "castleLandmark",
+          "x": 576,
+          "y": 640,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Campfire",
+            "description": "A small fire marks an abandoned stopping place.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 234,
+            "campaign_sourceType": 12,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 146,
+          "name": "castleGuardianAngelsLandmark235",
+          "type": "castleLandmark",
+          "x": 1056,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Idol of fortune",
+            "description": "A small carved idol stands beside the trail.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 235,
+            "campaign_sourceType": 38,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 147,
+          "name": "castleGuardianAngelsLandmark237",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 237,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 60
+          }
+        },
+        {
+          "id": 148,
+          "name": "castleGuardianAngelsLandmark238",
+          "type": "castleLandmark",
+          "x": 832,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 238,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 149,
+          "name": "castleGuardianAngelsLandmark247",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 247,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 150,
+          "name": "castleGuardianAngelsLandmark248",
+          "type": "castleLandmark",
+          "x": 448,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 248,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 151,
+          "name": "castleGuardianAngelsLandmark249",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 249,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 152,
+          "name": "castleGuardianAngelsLandmark250",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 250,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 153,
+          "name": "castleGuardianAngelsLandmark253",
+          "type": "castleLandmark",
+          "x": 128,
+          "y": 1056,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 253,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 154,
+          "name": "castleGuardianAngelsLandmark254",
+          "type": "castleLandmark",
+          "x": 192,
+          "y": 1056,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Campfire",
+            "description": "A small fire marks an abandoned stopping place.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 254,
+            "campaign_sourceType": 12,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 155,
+          "name": "castleGuardianAngelsLandmark258",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Fountain of youth",
+            "description": "Clear water runs through a sheltered fountain.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 258,
+            "campaign_sourceType": 31,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 156,
+          "name": "castleGuardianAngelsLandmark261",
+          "type": "castleLandmark",
+          "x": 992,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 261,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 157,
+          "name": "castleGuardianAngelsLandmark262",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 256,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 262,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 158,
+          "name": "castleGuardianAngelsLandmark263",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 263,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 159,
+          "name": "castleGuardianAngelsLandmark264",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 96,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 264,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 160,
+          "name": "castleGuardianAngelsLandmark265",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 96,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 265,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 161,
+          "name": "castleGuardianAngelsLandmark266",
+          "type": "castleLandmark",
+          "x": 992,
+          "y": 640,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Magic well",
+            "description": "A faint shimmer hangs above the water of this stone well.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 266,
+            "campaign_sourceType": 49,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 162,
+          "name": "castleGuardianAngelsLandmark267",
+          "type": "castleLandmark",
+          "x": 1024,
+          "y": 416,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 267,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 163,
+          "name": "castleGuardianAngelsLandmark268",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 544,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Magic well",
+            "description": "A faint shimmer hangs above the water of this stone well.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 268,
+            "campaign_sourceType": 49,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 164,
+          "name": "castleGuardianAngelsLandmark271",
+          "type": "castleLandmark",
+          "x": 992,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sawmill",
+            "description": "Old workings mark this sawmill beside the invasion roads.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 271,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 165,
+          "name": "castleGuardianAngelsLandmark273",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Faerie ring",
+            "description": "A ring of old stones encloses a quiet clearing.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 273,
+            "campaign_sourceType": 28,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 166,
+          "name": "castleGuardianAngelsLandmark279",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 544,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Redwood observatory",
+            "description": "An old lookout rises among the tall trees.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 279,
+            "campaign_sourceType": 58,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 167,
+          "name": "castleGuardianAngelsLandmark280",
+          "type": "castleLandmark",
+          "x": 576,
+          "y": 768,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mystical garden",
+            "description": "A secluded garden grows around a mossy shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 280,
+            "campaign_sourceType": 55,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 168,
+          "name": "castleGuardianAngelsLandmark281",
+          "type": "castleLandmark",
+          "x": 704,
+          "y": 352,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Seer's hut",
+            "description": "A secluded hut stands beneath a weathered sign.",
+            "animation": "images/buildings/tavern",
+            "canStep": true,
+            "campaign_sourceIndex": 281,
+            "campaign_sourceType": 83,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 169,
+          "name": "castleGuardianAngelsLandmark283",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 768,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Fountain of fortune",
+            "description": "Coins glimmer beneath the water of an old fountain.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 283,
+            "campaign_sourceType": 30,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 170,
+          "name": "castleGuardianAngelsLandmark284",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 96,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 284,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 72
+          }
+        },
+        {
+          "id": 171,
+          "name": "castleGuardianAngelsLandmark287",
+          "type": "castleLandmark",
+          "x": 928,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Idol of fortune",
+            "description": "A small carved idol stands beside the trail.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 287,
+            "campaign_sourceType": 38,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 172,
+          "name": "castleGuardianAngelsLandmark289",
+          "type": "castleLandmark",
+          "x": 384,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 289,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 173,
+          "name": "castleGuardianAngelsLandmark290",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 290,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 174,
+          "name": "castleGuardianAngelsLandmark291",
+          "type": "castleLandmark",
+          "x": 384,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 291,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 175,
+          "name": "castleGuardianAngelsLandmark292",
+          "type": "castleLandmark",
+          "x": 352,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 292,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 176,
+          "name": "castleGuardianAngelsLandmark293",
+          "type": "castleLandmark",
+          "x": 832,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Campfire",
+            "description": "A small fire marks an abandoned stopping place.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 293,
+            "campaign_sourceType": 12,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 177,
+          "name": "castleGuardianAngelsLandmark297",
+          "type": "castleLandmark",
+          "x": 800,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur mine",
+            "description": "Old workings mark this sulfur mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 297,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 178,
+          "name": "castleGuardianAngelsLandmark317",
+          "type": "castleLandmark",
+          "x": 128,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 317,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 179,
+          "name": "castleGuardianAngelsLandmark407",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gem pond",
+            "description": "Old workings mark this gem pond beside the invasion roads.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 407,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 180,
+          "name": "castleGuardianAngelsLandmark455",
+          "type": "castleLandmark",
+          "x": 192,
+          "y": 384,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 455,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 181,
+          "name": "castleGuardianAngelsLandmark456",
+          "type": "castleLandmark",
+          "x": 128,
+          "y": 416,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic incantation",
+            "description": "Simple magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 456,
+            "campaign_sourceType": 88,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 182,
+          "name": "castleGuardianAngelsLandmark458",
+          "type": "castleLandmark",
+          "x": 128,
+          "y": 352,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 458,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 183,
+          "name": "castleGuardianAngelsLandmark460",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Witch's hut",
+            "description": "A crooked hut stands among tangled paths and old trees.",
+            "animation": "images/buildings/tavern",
+            "canStep": true,
+            "campaign_sourceIndex": 460,
+            "campaign_sourceType": 113,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 184,
+          "name": "castleGuardianAngelsLandmark461",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Star axis",
+            "description": "Carved stones align with the distant stars.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 461,
+            "campaign_sourceType": 61,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 185,
+          "name": "castleGuardianAngelsLandmark462",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 736,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Garden of revelation",
+            "description": "Worn paths wind around an ancient garden shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 462,
+            "campaign_sourceType": 32,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 186,
+          "name": "castleGuardianAngelsLandmark464",
+          "type": "castleLandmark",
+          "x": 768,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Tree of knowledge",
+            "description": "An ancient tree towers above a quiet clearing.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 464,
+            "campaign_sourceType": 102,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 187,
+          "name": "castleGuardianAngelsLandmark465",
+          "type": "castleLandmark",
+          "x": 128,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gem pond",
+            "description": "Old workings mark this gem pond beside the invasion roads.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 465,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 188,
+          "name": "castleGuardianAngelsLandmark472",
+          "type": "castleLandmark",
+          "x": 384,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gem pond",
+            "description": "Old workings mark this gem pond beside the invasion roads.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 472,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 189,
+          "name": "castleGuardianAngelsLandmark473",
+          "type": "castleLandmark",
+          "x": 704,
+          "y": 768,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 473,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 190,
+          "name": "castleGuardianAngelsLandmark479",
+          "type": "castleLandmark",
+          "x": 384,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Scholar",
+            "description": "A wandering scholar studies a bundle of worn manuscripts.",
+            "animation": "images/npc/questGiver",
+            "canStep": true,
+            "campaign_sourceIndex": 479,
+            "campaign_sourceType": 81,
+            "campaign_sourceSubtype": 0
+          }
         }
       ]
     },
@@ -3985,7 +6186,8 @@
             "campaign_objectiveId": "castleGuardianAngelsObjective484",
             "campaign_sourceIndex": 484,
             "campaign_guards": "castleGuardianAngelsGuard484",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -4046,7 +6248,8 @@
             "campaign_objectiveId": "castleGuardianAngelsObjective485",
             "campaign_sourceIndex": 485,
             "campaign_guards": "castleGuardianAngelsGuard485",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -4443,7 +6646,8 @@
             "campaign_objectiveId": "castleGuardianAngelsObjective571",
             "campaign_sourceIndex": 571,
             "campaign_guards": "castleGuardianAngelsGuard571",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -4504,7 +6708,8 @@
             "campaign_objectiveId": "castleGuardianAngelsObjective572",
             "campaign_sourceIndex": 572,
             "campaign_guards": "castleGuardianAngelsGuard572",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -5267,6 +7472,1286 @@
             "campaign_targetX": 1,
             "campaign_targetY": 16,
             "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 191,
+          "name": "castleGuardianAngelsLandmark494",
+          "type": "castleLandmark",
+          "x": 832,
+          "y": 256,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Learning stone",
+            "description": "Faded inscriptions cover a solitary standing stone.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 494,
+            "campaign_sourceType": 100,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 192,
+          "name": "castleGuardianAngelsLandmark495",
+          "type": "castleLandmark",
+          "x": 800,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Learning stone",
+            "description": "Faded inscriptions cover a solitary standing stone.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 495,
+            "campaign_sourceType": 100,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 193,
+          "name": "castleGuardianAngelsLandmark496",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 320,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 496,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 194,
+          "name": "castleGuardianAngelsLandmark497",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 497,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 195,
+          "name": "castleGuardianAngelsLandmark498",
+          "type": "castleLandmark",
+          "x": 1056,
+          "y": 320,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 498,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 7
+          }
+        },
+        {
+          "id": 196,
+          "name": "castleGuardianAngelsLandmark499",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 499,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 197,
+          "name": "castleGuardianAngelsLandmark501",
+          "type": "castleLandmark",
+          "x": 832,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 501,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 31
+          }
+        },
+        {
+          "id": 198,
+          "name": "castleGuardianAngelsLandmark502",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 502,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 199,
+          "name": "castleGuardianAngelsLandmark505",
+          "type": "castleLandmark",
+          "x": 64,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 505,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 58
+          }
+        },
+        {
+          "id": 200,
+          "name": "castleGuardianAngelsLandmark506",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gems stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 506,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 201,
+          "name": "castleGuardianAngelsLandmark507",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gems stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 507,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 202,
+          "name": "castleGuardianAngelsLandmark508",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 508,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 203,
+          "name": "castleGuardianAngelsLandmark509",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 509,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 204,
+          "name": "castleGuardianAngelsLandmark511",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Learning stone",
+            "description": "Faded inscriptions cover a solitary standing stone.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 511,
+            "campaign_sourceType": 100,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 205,
+          "name": "castleGuardianAngelsLandmark512",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 512,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 14
+          }
+        },
+        {
+          "id": 206,
+          "name": "castleGuardianAngelsLandmark513",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 513,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 207,
+          "name": "castleGuardianAngelsLandmark514",
+          "type": "castleLandmark",
+          "x": 224,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 514,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 208,
+          "name": "castleGuardianAngelsLandmark519",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 519,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 209,
+          "name": "castleGuardianAngelsLandmark520",
+          "type": "castleLandmark",
+          "x": 1056,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 520,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 210,
+          "name": "castleGuardianAngelsLandmark521",
+          "type": "castleLandmark",
+          "x": 1024,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 521,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 211,
+          "name": "castleGuardianAngelsLandmark523",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 523,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 212,
+          "name": "castleGuardianAngelsLandmark524",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 524,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 213,
+          "name": "castleGuardianAngelsLandmark526",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Troglodyte warren",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 526,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 46
+          }
+        },
+        {
+          "id": 214,
+          "name": "castleGuardianAngelsLandmark529",
+          "type": "castleLandmark",
+          "x": 1056,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 529,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 215,
+          "name": "castleGuardianAngelsLandmark530",
+          "type": "castleLandmark",
+          "x": 1024,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 530,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 216,
+          "name": "castleGuardianAngelsLandmark532",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 532,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 217,
+          "name": "castleGuardianAngelsLandmark533",
+          "type": "castleLandmark",
+          "x": 992,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 533,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 218,
+          "name": "castleGuardianAngelsLandmark536",
+          "type": "castleLandmark",
+          "x": 1056,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 536,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 19
+          }
+        },
+        {
+          "id": 219,
+          "name": "castleGuardianAngelsLandmark537",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 537,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 220,
+          "name": "castleGuardianAngelsLandmark540",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ancient artifact",
+            "description": "An old relic rests among the signs of the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 540,
+            "campaign_sourceType": 5,
+            "campaign_sourceSubtype": 94
+          }
+        },
+        {
+          "id": 221,
+          "name": "castleGuardianAngelsLandmark541",
+          "type": "castleLandmark",
+          "x": 224,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 541,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 222,
+          "name": "castleGuardianAngelsLandmark542",
+          "type": "castleLandmark",
+          "x": 192,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 542,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 223,
+          "name": "castleGuardianAngelsLandmark545",
+          "type": "castleLandmark",
+          "x": 800,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold mine",
+            "description": "Old workings mark this gold mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 545,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 224,
+          "name": "castleGuardianAngelsLandmark546",
+          "type": "castleLandmark",
+          "x": 64,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Learning stone",
+            "description": "Faded inscriptions cover a solitary standing stone.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 546,
+            "campaign_sourceType": 100,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 225,
+          "name": "castleGuardianAngelsLandmark547",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold mine",
+            "description": "Old workings mark this gold mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 547,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 226,
+          "name": "castleGuardianAngelsLandmark550",
+          "type": "castleLandmark",
+          "x": 224,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 550,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 227,
+          "name": "castleGuardianAngelsLandmark551",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Star axis",
+            "description": "Carved stones align with the distant stars.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 551,
+            "campaign_sourceType": 61,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 228,
+          "name": "castleGuardianAngelsLandmark554",
+          "type": "castleLandmark",
+          "x": 64,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Pillar of fire",
+            "description": "A bright flame burns above a stone pillar.",
+            "animation": "images/ambient/brazier",
+            "canStep": true,
+            "campaign_sourceIndex": 554,
+            "campaign_sourceType": 60,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 229,
+          "name": "castleGuardianAngelsLandmark555",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Pillar of fire",
+            "description": "A bright flame burns above a stone pillar.",
+            "animation": "images/ambient/brazier",
+            "canStep": true,
+            "campaign_sourceIndex": 555,
+            "campaign_sourceType": 60,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 230,
+          "name": "castleGuardianAngelsLandmark556",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Pillar of fire",
+            "description": "A bright flame burns above a stone pillar.",
+            "animation": "images/ambient/brazier",
+            "canStep": true,
+            "campaign_sourceIndex": 556,
+            "campaign_sourceType": 60,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 231,
+          "name": "castleGuardianAngelsLandmark560",
+          "type": "castleLandmark",
+          "x": 896,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 560,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 232,
+          "name": "castleGuardianAngelsLandmark561",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 561,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 233,
+          "name": "castleGuardianAngelsLandmark562",
+          "type": "castleLandmark",
+          "x": 64,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 562,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 234,
+          "name": "castleGuardianAngelsLandmark563",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 563,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 235,
+          "name": "castleGuardianAngelsLandmark564",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 576,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 564,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 236,
+          "name": "castleGuardianAngelsLandmark565",
+          "type": "castleLandmark",
+          "x": 832,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 565,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 237,
+          "name": "castleGuardianAngelsLandmark566",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 566,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 238,
+          "name": "castleGuardianAngelsLandmark567",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 567,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 239,
+          "name": "castleGuardianAngelsLandmark568",
+          "type": "castleLandmark",
+          "x": 768,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 568,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 240,
+          "name": "castleGuardianAngelsLandmark569",
+          "type": "castleLandmark",
+          "x": 736,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 569,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 241,
+          "name": "castleGuardianAngelsLandmark570",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 864,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic gesture",
+            "description": "Intricate magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 570,
+            "campaign_sourceType": 89,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 242,
+          "name": "castleGuardianAngelsLandmark589",
+          "type": "castleLandmark",
+          "x": 320,
+          "y": 128,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 589,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 243,
+          "name": "castleGuardianAngelsLandmark590",
+          "type": "castleLandmark",
+          "x": 768,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "War machine factory",
+            "description": "Old wheels and timber frames surround a military workshop.",
+            "animation": "images/ambient/broken_cart",
+            "canStep": true,
+            "campaign_sourceIndex": 590,
+            "campaign_sourceType": 106,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 244,
+          "name": "castleGuardianAngelsLandmark593",
+          "type": "castleLandmark",
+          "x": 896,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 593,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 245,
+          "name": "castleGuardianAngelsLandmark594",
+          "type": "castleLandmark",
+          "x": 928,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 594,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 246,
+          "name": "castleGuardianAngelsLandmark598",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Pillar of fire",
+            "description": "A bright flame burns above a stone pillar.",
+            "animation": "images/ambient/brazier",
+            "canStep": true,
+            "campaign_sourceIndex": 598,
+            "campaign_sourceType": 60,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 247,
+          "name": "castleGuardianAngelsLandmark601",
+          "type": "castleLandmark",
+          "x": 224,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Imp dwelling",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/ambient/brazier",
+            "canStep": true,
+            "campaign_sourceIndex": 601,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 29
+          }
+        },
+        {
+          "id": 248,
+          "name": "castleGuardianAngelsLandmark602",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gog dwelling",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/dungeon",
+            "canStep": true,
+            "campaign_sourceIndex": 602,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 22
+          }
+        },
+        {
+          "id": 249,
+          "name": "castleGuardianAngelsLandmark615",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 864,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 615,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 250,
+          "name": "castleGuardianAngelsLandmark620",
+          "type": "castleLandmark",
+          "x": 672,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 620,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 251,
+          "name": "castleGuardianAngelsLandmark621",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 621,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 252,
+          "name": "castleGuardianAngelsLandmark626",
+          "type": "castleLandmark",
+          "x": 576,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 626,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 253,
+          "name": "castleGuardianAngelsLandmark627",
+          "type": "castleLandmark",
+          "x": 384,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 627,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 254,
+          "name": "castleGuardianAngelsLandmark634",
+          "type": "castleLandmark",
+          "x": 1056,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Harpy loft",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 634,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 26
           }
         }
       ]

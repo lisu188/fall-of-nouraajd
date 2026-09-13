@@ -2,7 +2,7 @@
   {
     "path": "castle-camp-32px.png",
     "suffix": ".png",
-    "bytes": 508087,
+    "bytes": 554028,
     "width": 1920,
     "height": 1080,
     "map": "castleHomecoming",
@@ -33,7 +33,7 @@
   {
     "path": "castle-terraneus-32px.png",
     "suffix": ".png",
-    "bytes": 438057,
+    "bytes": 446909,
     "width": 1920,
     "height": 1080,
     "map": "castleHomecoming",
@@ -69,7 +69,7 @@
   {
     "path": "castle-griffin-tower-32px.png",
     "suffix": ".png",
-    "bytes": 328196,
+    "bytes": 366869,
     "width": 1920,
     "height": 1080,
     "map": "castleGriffinCliff",
@@ -105,7 +105,7 @@
   {
     "path": "castle-terraneus-after-combat-32px.png",
     "suffix": ".png",
-    "bytes": 438484,
+    "bytes": 447264,
     "width": 1920,
     "height": 1080,
     "map": "castleHomecoming",
@@ -153,7 +153,7 @@
   {
     "path": "castle-griffin-tower-after-combat-32px.png",
     "suffix": ".png",
-    "bytes": 329294,
+    "bytes": 367949,
     "width": 1920,
     "height": 1080,
     "map": "castleGriffinCliff",

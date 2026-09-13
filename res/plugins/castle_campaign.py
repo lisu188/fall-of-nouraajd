@@ -6,6 +6,8 @@
 
 import json
 
+TOWN_REST_GOLD = 10
+
 
 def decodeMission(text):
     return json.loads((text or "{}").removeprefix("castleMission:"))
@@ -34,6 +36,44 @@ def canInteract(marker, player):
         return False
     here, there = marker.getCoords(), player.getCoords()
     return here.z == there.z and max(abs(here.x - there.x), abs(here.y - there.y)) <= 1
+
+
+def canUseTown(marker, player):
+    if not canInteract(marker, player) or not marker.getBoolProperty("campaign_isTown"):
+        return False
+    game_map = marker.getMap()
+    if game_map.getObjectByName(marker.getName()) != marker:
+        return False
+    if marker.getBoolProperty("campaign_loyalTown"):
+        return True
+    object_id = marker.getStringProperty("campaign_objectiveId")
+    data = missionData(game_map)
+    return object_id in data.get("captureIds", data.get("objectiveIds", [])) and game_map.getBoolProperty(
+        objectiveFlag(object_id)
+    )
+
+
+def canRestAtTown(marker, player):
+    return canUseTown(marker, player) and player.getHp() < player.getHpMax() and player.getGold() >= TOWN_REST_GOLD
+
+
+def restAtTown(marker, player):
+    if not canRestAtTown(marker, player):
+        return False
+    player.addGold(-TOWN_REST_GOLD)
+    player.healProc(100)
+    marker.getGame().getGuiHandler().showMessage("After a warm meal and a quiet rest, your health is fully restored.")
+    return True
+
+
+def showTownServices(marker, player):
+    if not canUseTown(marker, player):
+        return False
+    dialog = marker.getGame().createObject("CastleTownRestDialog")
+    if not dialog.configureTown(marker):
+        return False
+    marker.getGame().getGuiHandler().showDialog(dialog)
+    return True
 
 
 def finishMission(game_map):
@@ -178,7 +218,54 @@ def load(self, context):
             return captureObjective(self, player)
 
         def onEnter(self, event):
-            return self.capture(event.getCause() if event else None)
+            player = event.getCause() if event else None
+            return self.capture(player) or showTownServices(self, player)
+
+    @register(context)
+    class CastleTownRestDialog(CDialog):
+        def configureTown(self, town):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer() if game_map else None
+            if not canUseTown(town, player):
+                return False
+            self.setStringProperty("campaign_townName", town.getName())
+            self.setStringProperty("campaign_townMapName", game_map.getStringProperty("mapName"))
+            state = self.getGame().createObject("CDialogState")
+            state.setStringProperty("stateId", "ENTRY")
+            text = f"The town offers a warm meal and a bed. Rest restores all health for {TOWN_REST_GOLD} gold."
+            if player.getHp() >= player.getHpMax():
+                text += " You are already fully rested."
+            elif player.getGold() < TOWN_REST_GOLD:
+                text += " You do not have enough gold."
+            state.setStringProperty("text", text)
+            options = set()
+            for number, (label, action, condition) in enumerate(
+                ((f"Rest and recover all health ({TOWN_REST_GOLD} gold).", "rest", "canRest"), ("Leave.", "", ""))
+            ):
+                option = self.getGame().createObject("CDialogOption")
+                option.setNumericProperty("number", number)
+                option.setStringProperty("text", label)
+                option.setStringProperty("action", action)
+                option.setStringProperty("condition", condition)
+                option.setStringProperty("nextStateId", "EXIT")
+                options.add(option)
+            state.setOptions(options)
+            self.setStates({state})
+            return True
+
+        def town(self):
+            game_map = self.getGame().getMap()
+            if not game_map or game_map.getStringProperty("mapName") != self.getStringProperty("campaign_townMapName"):
+                return None
+            return game_map.getObjectByName(self.getStringProperty("campaign_townName"))
+
+        def canRest(self):
+            game_map = self.getGame().getMap()
+            return canRestAtTown(self.town(), game_map.getPlayer() if game_map else None)
+
+        def rest(self):
+            game_map = self.getGame().getMap()
+            return restAtTown(self.town(), game_map.getPlayer() if game_map else None)
 
     @register(context)
     class CastleMissionQuest(CQuest):
@@ -302,3 +389,4 @@ def load(self, context):
                 self.getGame().getGuiHandler().showMessage(
                     message or "The loyal garrison tends your wounds and shares its supplies."
                 )
+            showTownServices(self, player)

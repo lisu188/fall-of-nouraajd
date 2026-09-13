@@ -294,6 +294,217 @@ class CastleCampaignGateTest(unittest.TestCase):
         self.assertEqual({"fallback_map": "castleGuardianAngels"}, self.routes[0][2])
 
 
+class CastleCampaignAuthoringTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from scripts import author_castle_campaign
+
+        cls.author = author_castle_campaign
+        cls.fixtures = []
+        for map_name in MAP_NAMES:
+            source = json.loads(
+                (REPO_ROOT / "res/campaigns/longLiveTheQueen/sources" / (map_name + ".json")).read_text()
+            )
+            native = json.loads((REPO_ROOT / "res/maps" / map_name / "map.json").read_text())
+            authored = cls.author.authorMap(native, source)
+            cls.fixtures.append((map_name, source, native, authored))
+
+    def objectsByName(self, document):
+        return {
+            obj["name"]: (obj, int(layer["properties"]["level"]))
+            for layer in document["layers"]
+            for obj in layer.get("objects", [])
+        }
+
+    def test_all_reviewed_landmark_families_retain_exact_source_visits(self):
+        intended_types = {
+            2,
+            4,
+            5,
+            9,
+            10,
+            12,
+            13,
+            14,
+            16,
+            17,
+            23,
+            25,
+            27,
+            28,
+            30,
+            31,
+            32,
+            33,
+            35,
+            37,
+            38,
+            39,
+            41,
+            42,
+            47,
+            49,
+            51,
+            53,
+            55,
+            58,
+            60,
+            61,
+            62,
+            64,
+            66,
+            67,
+            68,
+            76,
+            79,
+            80,
+            81,
+            83,
+            88,
+            89,
+            90,
+            91,
+            93,
+            94,
+            96,
+            97,
+            99,
+            100,
+            101,
+            102,
+            104,
+            106,
+            107,
+            109,
+            112,
+            113,
+        }
+        self.assertEqual(intended_types, set(self.author.LANDMARKS))
+        for (map_name, source, _, authored), expected_count in zip(self.fixtures, (211, 174, 423)):
+            with self.subTest(map=map_name):
+                expected = {}
+                for record in source["objects"]:
+                    x, y, z = record["visit"]
+                    if record["type"] not in intended_types or not record["visitable"]:
+                        continue
+                    if source["terrain"][z][y * source["width"] + x][0] >= 8:
+                        continue
+                    if map_name == "castleGriffinCliff" and record["type"] == 17 and record["subtype"] == 25:
+                        continue
+                    expected[record["index"]] = record
+                objects = self.objectsByName(authored)
+                actual = {
+                    obj["properties"]["campaign_sourceIndex"]: (obj, z)
+                    for obj, z in objects.values()
+                    if obj["type"] == "castleLandmark"
+                }
+                self.assertEqual(expected_count, len(actual))
+                self.assertEqual(set(expected), set(actual))
+                self.assertEqual(expected_count, len(source["landmarkMappings"]))
+                for index, record in expected.items():
+                    obj, z = actual[index]
+                    self.assertEqual(tuple(record["visit"]), (obj["x"] // 32, obj["y"] // 32, z))
+                    self.assertEqual((32, 32), (obj["width"], obj["height"]))
+                    properties = obj["properties"]
+                    self.assertEqual(record["type"], properties["campaign_sourceType"])
+                    self.assertTrue(properties["canStep"])
+                    self.assertTrue(properties["label"])
+                    self.assertTrue(properties["description"])
+                    self.assertNotIn("campaign_rewardGold", properties)
+                    self.assertTrue((REPO_ROOT / "res" / (properties["animation"] + ".png")).is_file())
+                for mapping in source["landmarkMappings"]:
+                    obj, _ = objects[mapping["nativeObjectId"]]
+                    self.assertEqual("visualOnly", mapping["adaptation"])
+                    self.assertEqual(expected[mapping["sourceIndex"]]["visit"], mapping["visit"])
+                    self.assertEqual(obj["properties"]["animation"], mapping["animation"])
+
+    def test_key_landmark_icons_and_town_service_flags_are_type_specific(self):
+        icon_cases = {
+            (53, 0): "ambient/supply_pile",
+            (53, 2): "buildings/cave",
+            (53, 5): "ambient/stone_well",
+            (83, 0): "buildings/tavern",
+            (17, 25): "castle/griffinTower",
+            (17, 35): "buildings/chapel",
+            (93, 0): "items/scroll",
+            (101, 0): "misc/chest",
+            (94, 0): "ambient/hay_bales",
+        }
+        for (kind, subtype), icon in icon_cases.items():
+            properties = self.author.landmarkProperties({"index": 1, "type": kind, "subtype": subtype})
+            self.assertEqual("images/" + icon, properties["animation"])
+        for map_name, source, _, authored in self.fixtures:
+            objects = self.objectsByName(authored)
+            for record in source["objects"]:
+                if record["type"] not in (77, 98):
+                    continue
+                prefix = "Supply" if record.get("owner") == 0 else "Objective"
+                obj, _ = objects[map_name + prefix + str(record["index"])]
+                self.assertTrue(obj["properties"]["campaign_isTown"])
+                self.assertEqual(record.get("owner") == 0, obj["properties"].get("campaign_loyalTown", False))
+            for obj, _ in objects.values():
+                if "Support" in obj["name"] or "Ally" in obj["name"]:
+                    self.assertFalse(obj["properties"].get("campaign_isTown", False))
+
+    def test_optional_garrisons_and_event_armies_do_not_expand_griffin_victory(self):
+        map_name, source, _, authored = self.fixtures[2]
+        objects = self.objectsByName(authored)
+        mission = json.loads(
+            objects["castleMission"][0]["properties"]["campaign_mission"].removeprefix("castleMission:")
+        )
+        expected_indices = {397, 1063, 1328, 1510, 1052, 1053}
+        actual_indices = {mapping["sourceIndex"] for mapping in source["optionalEncounterMappings"]}
+        self.assertEqual(expected_indices, actual_indices)
+        self.assertEqual(7, len(mission["objectiveIds"]))
+        self.assertEqual([], mission["enemyHeroIds"])
+        self.assertEqual(
+            set(mission["objectiveIds"]),
+            {
+                name
+                for name, (obj, _) in objects.items()
+                if obj["properties"].get("animation") == "images/castle/griffinTower"
+            },
+            "Only the seven required Griffin Towers may use the roost silhouette",
+        )
+        for record in source["objects"]:
+            if record["index"] not in expected_indices:
+                continue
+            actor_id = map_name + "Encounter" + str(record["index"])
+            actor, z = objects[actor_id]
+            self.assertEqual(tuple(record["visit"]), (actor["x"] // 32, actor["y"] // 32, z))
+            self.assertEqual("castleGarrison", actor["type"])
+            self.assertIn(actor_id, mission["defenderIds"])
+            self.assertNotIn(actor_id, mission["objectiveIds"])
+            self.assertLessEqual(actor["properties"]["hp"], 63)
+            self.assertEqual(
+                record["army"], json.loads(actor["properties"]["campaign_sourceArmy"].removeprefix("castleArmy:"))
+            )
+        self.assertEqual([], self.fixtures[0][1]["optionalEncounterMappings"])
+        self.assertEqual([], self.fixtures[1][1]["optionalEncounterMappings"])
+
+    def test_landmark_append_is_deterministic_and_preserves_terrain_and_existing_ids(self):
+        for map_name, source, native, authored in self.fixtures:
+            with self.subTest(map=map_name):
+                self.assertEqual(authored, self.author.authorMap(native, copy.deepcopy(source)))
+                self.assertEqual(
+                    [layer for layer in native["layers"] if layer["type"] == "tilelayer"],
+                    [layer for layer in authored["layers"] if layer["type"] == "tilelayer"],
+                )
+                before, after = self.objectsByName(native), self.objectsByName(authored)
+                for name, (old, old_z) in before.items():
+                    new, new_z = after[name]
+                    self.assertEqual(old["id"], new["id"])
+                    self.assertEqual(old["type"], new["type"])
+                    if name not in ("castleCatherine", "castleChristian") and "Support" not in name:
+                        self.assertEqual((old["x"], old["y"], old_z), (new["x"], new["y"], new_z))
+                landmark_cells = {
+                    (obj["x"], obj["y"], z) for obj, z in after.values() if obj["type"] == "castleLandmark"
+                }
+                for name, (obj, z) in after.items():
+                    if name in ("castleCatherine", "castleChristian") or "Support" in name:
+                        self.assertNotIn((obj["x"], obj["y"], z), landmark_cells)
+
+
 class CastleCampaignContentTest(unittest.TestCase):
     def test_random_level_six_army_keeps_source_identity_and_minotaur_art(self):
         from tests.castle_walkthrough import authoredMap

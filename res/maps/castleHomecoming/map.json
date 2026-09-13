@@ -3,7 +3,7 @@
   "height": 72,
   "tilewidth": 32,
   "tileheight": 32,
-  "nextobjectid": 126,
+  "nextobjectid": 337,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.2.0",
@@ -10512,7 +10512,8 @@
             "campaign_objectiveId": "castleHomecomingObjective4",
             "campaign_sourceIndex": 4,
             "campaign_guards": "castleHomecomingGuard4",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -10568,7 +10569,9 @@
           "visible": true,
           "rotation": 0,
           "properties": {
-            "label": "Loyal Castle stronghold"
+            "label": "Loyal Castle stronghold",
+            "campaign_isTown": true,
+            "campaign_loyalTown": true
           }
         },
         {
@@ -10587,7 +10590,8 @@
             "campaign_objectiveId": "castleHomecomingObjective597",
             "campaign_sourceIndex": 597,
             "campaign_guards": "castleHomecomingGuard597",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -10648,7 +10652,8 @@
             "campaign_objectiveId": "castleHomecomingObjective628",
             "campaign_sourceIndex": 628,
             "campaign_guards": "castleHomecomingGuard628",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -13209,6 +13214,4066 @@
             "campaign_rewardGold": 0,
             "campaign_aidMessage": "Catherine's allies tend your wounds and give you a healing draught from the expedition stores."
           }
+        },
+        {
+          "id": 126,
+          "name": "castleHomecomingLandmark600",
+          "type": "castleLandmark",
+          "x": 2240,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 600,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 127,
+          "name": "castleHomecomingLandmark607",
+          "type": "castleLandmark",
+          "x": 1760,
+          "y": 1696,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sawmill",
+            "description": "Old workings mark this sawmill beside the invasion roads.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 607,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 128,
+          "name": "castleHomecomingLandmark622",
+          "type": "castleLandmark",
+          "x": 1504,
+          "y": 384,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sawmill",
+            "description": "Old workings mark this sawmill beside the invasion roads.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 622,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 129,
+          "name": "castleHomecomingLandmark625",
+          "type": "castleLandmark",
+          "x": 2112,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 625,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 130,
+          "name": "castleHomecomingLandmark629",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 1440,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sawmill",
+            "description": "Old workings mark this sawmill beside the invasion roads.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 629,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 131,
+          "name": "castleHomecomingLandmark634",
+          "type": "castleLandmark",
+          "x": 608,
+          "y": 1664,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 634,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 132,
+          "name": "castleHomecomingLandmark645",
+          "type": "castleLandmark",
+          "x": 1344,
+          "y": 1152,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 645,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 133,
+          "name": "castleHomecomingLandmark654",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sawmill",
+            "description": "Old workings mark this sawmill beside the invasion roads.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 654,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 134,
+          "name": "castleHomecomingLandmark666",
+          "type": "castleLandmark",
+          "x": 352,
+          "y": 544,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Prison",
+            "description": "A barred entrance leads into an isolated prison.",
+            "animation": "images/buildings/dungeon",
+            "canStep": true,
+            "campaign_sourceIndex": 666,
+            "campaign_sourceType": 62,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 135,
+          "name": "castleHomecomingLandmark667",
+          "type": "castleLandmark",
+          "x": 1760,
+          "y": 1408,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold mine",
+            "description": "Old workings mark this gold mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 667,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 136,
+          "name": "castleHomecomingLandmark668",
+          "type": "castleLandmark",
+          "x": 736,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold mine",
+            "description": "Old workings mark this gold mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 668,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 137,
+          "name": "castleHomecomingLandmark671",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 1440,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur mine",
+            "description": "Old workings mark this sulfur mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 671,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 138,
+          "name": "castleHomecomingLandmark672",
+          "type": "castleLandmark",
+          "x": 1184,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur mine",
+            "description": "Old workings mark this sulfur mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 672,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 139,
+          "name": "castleHomecomingLandmark674",
+          "type": "castleLandmark",
+          "x": 2112,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Alchemist's laboratory",
+            "description": "Old workings mark this alchemist's laboratory beside the invasion roads.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 674,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 140,
+          "name": "castleHomecomingLandmark676",
+          "type": "castleLandmark",
+          "x": 928,
+          "y": 640,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Alchemist's laboratory",
+            "description": "Old workings mark this alchemist's laboratory beside the invasion roads.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 676,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 141,
+          "name": "castleHomecomingLandmark677",
+          "type": "castleLandmark",
+          "x": 1280,
+          "y": 1920,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gem pond",
+            "description": "Old workings mark this gem pond beside the invasion roads.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 677,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 142,
+          "name": "castleHomecomingLandmark680",
+          "type": "castleLandmark",
+          "x": 1280,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gem pond",
+            "description": "Old workings mark this gem pond beside the invasion roads.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 680,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 143,
+          "name": "castleHomecomingLandmark681",
+          "type": "castleLandmark",
+          "x": 2240,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystal cavern",
+            "description": "Old workings mark this crystal cavern beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 681,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 144,
+          "name": "castleHomecomingLandmark688",
+          "type": "castleLandmark",
+          "x": 544,
+          "y": 352,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystal cavern",
+            "description": "Old workings mark this crystal cavern beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 688,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 145,
+          "name": "castleHomecomingLandmark690",
+          "type": "castleLandmark",
+          "x": 1696,
+          "y": 768,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold mine",
+            "description": "Old workings mark this gold mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 690,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 146,
+          "name": "castleHomecomingLandmark692",
+          "type": "castleLandmark",
+          "x": 1984,
+          "y": 352,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Redwood observatory",
+            "description": "An old lookout rises among the tall trees.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 692,
+            "campaign_sourceType": 58,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 147,
+          "name": "castleHomecomingLandmark712",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Eye of the Magi",
+            "description": "A carved eye watches from a weathered stone monument.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 712,
+            "campaign_sourceType": 27,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 148,
+          "name": "castleHomecomingLandmark713",
+          "type": "castleLandmark",
+          "x": 416,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Eye of the Magi",
+            "description": "A carved eye watches from a weathered stone monument.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 713,
+            "campaign_sourceType": 27,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 149,
+          "name": "castleHomecomingLandmark714",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 128,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Eye of the Magi",
+            "description": "A carved eye watches from a weathered stone monument.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 714,
+            "campaign_sourceType": 27,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 150,
+          "name": "castleHomecomingLandmark717",
+          "type": "castleLandmark",
+          "x": 1600,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Hut of the Magi",
+            "description": "Faded symbols cover the walls of a secluded scholar's dwelling.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 717,
+            "campaign_sourceType": 37,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 151,
+          "name": "castleHomecomingLandmark719",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 1728,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Lean-to",
+            "description": "Weathered boards shelter a few abandoned bundles.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 719,
+            "campaign_sourceType": 39,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 152,
+          "name": "castleHomecomingLandmark720",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Lean-to",
+            "description": "Weathered boards shelter a few abandoned bundles.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 720,
+            "campaign_sourceType": 39,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 153,
+          "name": "castleHomecomingLandmark721",
+          "type": "castleLandmark",
+          "x": 544,
+          "y": 1152,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Lean-to",
+            "description": "Weathered boards shelter a few abandoned bundles.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 721,
+            "campaign_sourceType": 39,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 154,
+          "name": "castleHomecomingLandmark753",
+          "type": "castleLandmark",
+          "x": 2048,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Trading post",
+            "description": "An old market shelter stands at the meeting of the roads.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 753,
+            "campaign_sourceType": 99,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 155,
+          "name": "castleHomecomingLandmark755",
+          "type": "castleLandmark",
+          "x": 1856,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Trading post",
+            "description": "An old market shelter stands at the meeting of the roads.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 755,
+            "campaign_sourceType": 99,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 156,
+          "name": "castleHomecomingLandmark757",
+          "type": "castleLandmark",
+          "x": 128,
+          "y": 1472,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Water wheel",
+            "description": "A riverside workshop stands beside an old mill race.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 757,
+            "campaign_sourceType": 109,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 157,
+          "name": "castleHomecomingLandmark771",
+          "type": "castleLandmark",
+          "x": 1888,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Water wheel",
+            "description": "A riverside workshop stands beside an old mill race.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 771,
+            "campaign_sourceType": 109,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 158,
+          "name": "castleHomecomingLandmark772",
+          "type": "castleLandmark",
+          "x": 2112,
+          "y": 1376,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Water wheel",
+            "description": "A riverside workshop stands beside an old mill race.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 772,
+            "campaign_sourceType": 109,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 159,
+          "name": "castleHomecomingLandmark777",
+          "type": "castleLandmark",
+          "x": 672,
+          "y": 1216,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Water wheel",
+            "description": "A riverside workshop stands beside an old mill race.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 777,
+            "campaign_sourceType": 109,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 160,
+          "name": "castleHomecomingLandmark779",
+          "type": "castleLandmark",
+          "x": 1184,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Faerie ring",
+            "description": "A ring of old stones encloses a quiet clearing.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 779,
+            "campaign_sourceType": 28,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 161,
+          "name": "castleHomecomingLandmark780",
+          "type": "castleLandmark",
+          "x": 800,
+          "y": 352,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Fountain of fortune",
+            "description": "Coins glimmer beneath the water of an old fountain.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 780,
+            "campaign_sourceType": 30,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 162,
+          "name": "castleHomecomingLandmark781",
+          "type": "castleLandmark",
+          "x": 704,
+          "y": 1408,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Idol of fortune",
+            "description": "A small carved idol stands beside the trail.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 781,
+            "campaign_sourceType": 38,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 163,
+          "name": "castleHomecomingLandmark782",
+          "type": "castleLandmark",
+          "x": 1376,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Garden of revelation",
+            "description": "Worn paths wind around an ancient garden shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 782,
+            "campaign_sourceType": 32,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 164,
+          "name": "castleHomecomingLandmark783",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 1280,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Garden of revelation",
+            "description": "Worn paths wind around an ancient garden shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 783,
+            "campaign_sourceType": 32,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 165,
+          "name": "castleHomecomingLandmark797",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Marletto Tower",
+            "description": "A tall watchtower surveys the surrounding country.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 797,
+            "campaign_sourceType": 23,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 166,
+          "name": "castleHomecomingLandmark798",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Marletto Tower",
+            "description": "A tall watchtower surveys the surrounding country.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 798,
+            "campaign_sourceType": 23,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 167,
+          "name": "castleHomecomingLandmark799",
+          "type": "castleLandmark",
+          "x": 2240,
+          "y": 1376,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercenary camp",
+            "description": "Worn practice posts surround an old soldiers' camp.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 799,
+            "campaign_sourceType": 51,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 168,
+          "name": "castleHomecomingLandmark800",
+          "type": "castleLandmark",
+          "x": 1920,
+          "y": 544,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercenary camp",
+            "description": "Worn practice posts surround an old soldiers' camp.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 800,
+            "campaign_sourceType": 51,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 169,
+          "name": "castleHomecomingLandmark802",
+          "type": "castleLandmark",
+          "x": 1280,
+          "y": 1536,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "School of magic",
+            "description": "Arcane emblems mark an old schoolhouse.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 802,
+            "campaign_sourceType": 47,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 170,
+          "name": "castleHomecomingLandmark803",
+          "type": "castleLandmark",
+          "x": 1024,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "School of magic",
+            "description": "Arcane emblems mark an old schoolhouse.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 803,
+            "campaign_sourceType": 47,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 171,
+          "name": "castleHomecomingLandmark804",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 1376,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercenary camp",
+            "description": "Worn practice posts surround an old soldiers' camp.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 804,
+            "campaign_sourceType": 51,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 172,
+          "name": "castleHomecomingLandmark805",
+          "type": "castleLandmark",
+          "x": 832,
+          "y": 1504,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Learning stone",
+            "description": "Faded inscriptions cover a solitary standing stone.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 805,
+            "campaign_sourceType": 100,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 173,
+          "name": "castleHomecomingLandmark808",
+          "type": "castleLandmark",
+          "x": 576,
+          "y": 1728,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Star axis",
+            "description": "Carved stones align with the distant stars.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 808,
+            "campaign_sourceType": 61,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 174,
+          "name": "castleHomecomingLandmark809",
+          "type": "castleLandmark",
+          "x": 1408,
+          "y": 1376,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Star axis",
+            "description": "Carved stones align with the distant stars.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 809,
+            "campaign_sourceType": 61,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 175,
+          "name": "castleHomecomingLandmark810",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Star axis",
+            "description": "Carved stones align with the distant stars.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 810,
+            "campaign_sourceType": 61,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 176,
+          "name": "castleHomecomingLandmark811",
+          "type": "castleLandmark",
+          "x": 1888,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Star axis",
+            "description": "Carved stones align with the distant stars.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 811,
+            "campaign_sourceType": 61,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 177,
+          "name": "castleHomecomingLandmark812",
+          "type": "castleLandmark",
+          "x": 1792,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Temple",
+            "description": "Stone steps lead toward a quiet temple.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 812,
+            "campaign_sourceType": 96,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 178,
+          "name": "castleHomecomingLandmark813",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Temple",
+            "description": "Stone steps lead toward a quiet temple.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 813,
+            "campaign_sourceType": 96,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 179,
+          "name": "castleHomecomingLandmark814",
+          "type": "castleLandmark",
+          "x": 1184,
+          "y": 864,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Idol of fortune",
+            "description": "A small carved idol stands beside the trail.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 814,
+            "campaign_sourceType": 38,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 180,
+          "name": "castleHomecomingLandmark822",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Learning stone",
+            "description": "Faded inscriptions cover a solitary standing stone.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 822,
+            "campaign_sourceType": 100,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 181,
+          "name": "castleHomecomingLandmark827",
+          "type": "castleLandmark",
+          "x": 1664,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Fountain of youth",
+            "description": "Clear water runs through a sheltered fountain.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 827,
+            "campaign_sourceType": 31,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 182,
+          "name": "castleHomecomingLandmark828",
+          "type": "castleLandmark",
+          "x": 1088,
+          "y": 2080,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Lighthouse",
+            "description": "A high coastal tower watches the approaches from the sea.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 828,
+            "campaign_sourceType": 42,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 183,
+          "name": "castleHomecomingLandmark829",
+          "type": "castleLandmark",
+          "x": 1696,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Magic well",
+            "description": "A faint shimmer hangs above the water of this stone well.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 829,
+            "campaign_sourceType": 49,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 184,
+          "name": "castleHomecomingLandmark830",
+          "type": "castleLandmark",
+          "x": 1504,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Rally flag",
+            "description": "A weathered standard marks an old gathering place.",
+            "animation": "images/items/quest/warBanner",
+            "canStep": true,
+            "campaign_sourceIndex": 830,
+            "campaign_sourceType": 64,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 185,
+          "name": "castleHomecomingLandmark833",
+          "type": "castleLandmark",
+          "x": 1856,
+          "y": 1248,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Magic well",
+            "description": "A faint shimmer hangs above the water of this stone well.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 833,
+            "campaign_sourceType": 49,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 186,
+          "name": "castleHomecomingLandmark834",
+          "type": "castleLandmark",
+          "x": 1856,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sanctuary",
+            "description": "A quiet sanctuary stands apart from the war-torn roads.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 834,
+            "campaign_sourceType": 80,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 187,
+          "name": "castleHomecomingLandmark840",
+          "type": "castleLandmark",
+          "x": 1152,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Scholar",
+            "description": "A wandering scholar studies a bundle of worn manuscripts.",
+            "animation": "images/npc/questGiver",
+            "canStep": true,
+            "campaign_sourceIndex": 840,
+            "campaign_sourceType": 81,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 188,
+          "name": "castleHomecomingLandmark841",
+          "type": "castleLandmark",
+          "x": 1408,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Scholar",
+            "description": "A wandering scholar studies a bundle of worn manuscripts.",
+            "animation": "images/npc/questGiver",
+            "canStep": true,
+            "campaign_sourceIndex": 841,
+            "campaign_sourceType": 81,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 189,
+          "name": "castleHomecomingLandmark842",
+          "type": "castleLandmark",
+          "x": 1216,
+          "y": 1312,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic gesture",
+            "description": "Intricate magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 842,
+            "campaign_sourceType": 89,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 190,
+          "name": "castleHomecomingLandmark844",
+          "type": "castleLandmark",
+          "x": 1824,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic thought",
+            "description": "Ancient magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 844,
+            "campaign_sourceType": 90,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 191,
+          "name": "castleHomecomingLandmark845",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic gesture",
+            "description": "Intricate magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 845,
+            "campaign_sourceType": 89,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 192,
+          "name": "castleHomecomingLandmark846",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 384,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic gesture",
+            "description": "Intricate magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 846,
+            "campaign_sourceType": 89,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 193,
+          "name": "castleHomecomingLandmark859",
+          "type": "castleLandmark",
+          "x": 1984,
+          "y": 1728,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic gesture",
+            "description": "Intricate magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 859,
+            "campaign_sourceType": 89,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 194,
+          "name": "castleHomecomingLandmark869",
+          "type": "castleLandmark",
+          "x": 1568,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 869,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 195,
+          "name": "castleHomecomingLandmark870",
+          "type": "castleLandmark",
+          "x": 1792,
+          "y": 1440,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 870,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 196,
+          "name": "castleHomecomingLandmark871",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 871,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 197,
+          "name": "castleHomecomingLandmark872",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 640,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 872,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 198,
+          "name": "castleHomecomingLandmark873",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 873,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 199,
+          "name": "castleHomecomingLandmark874",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 874,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 200,
+          "name": "castleHomecomingLandmark875",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 128,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 875,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 201,
+          "name": "castleHomecomingLandmark876",
+          "type": "castleLandmark",
+          "x": 1312,
+          "y": 416,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 876,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 202,
+          "name": "castleHomecomingLandmark877",
+          "type": "castleLandmark",
+          "x": 1760,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 877,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 203,
+          "name": "castleHomecomingLandmark878",
+          "type": "castleLandmark",
+          "x": 800,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 878,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 204,
+          "name": "castleHomecomingLandmark879",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Minor artifact",
+            "description": "A small relic rests among the scattered supplies.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 879,
+            "campaign_sourceType": 67,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 205,
+          "name": "castleHomecomingLandmark880",
+          "type": "castleLandmark",
+          "x": 224,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 880,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 206,
+          "name": "castleHomecomingLandmark881",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 881,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 207,
+          "name": "castleHomecomingLandmark882",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Major artifact",
+            "description": "A finely worked relic has survived the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 882,
+            "campaign_sourceType": 68,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 208,
+          "name": "castleHomecomingLandmark883",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 883,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 209,
+          "name": "castleHomecomingLandmark884",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 640,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 884,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 210,
+          "name": "castleHomecomingLandmark885",
+          "type": "castleLandmark",
+          "x": 96,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Minor artifact",
+            "description": "A small relic rests among the scattered supplies.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 885,
+            "campaign_sourceType": 67,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 211,
+          "name": "castleHomecomingLandmark886",
+          "type": "castleLandmark",
+          "x": 288,
+          "y": 768,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Major artifact",
+            "description": "A finely worked relic has survived the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 886,
+            "campaign_sourceType": 68,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 212,
+          "name": "castleHomecomingLandmark887",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 887,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 213,
+          "name": "castleHomecomingLandmark888",
+          "type": "castleLandmark",
+          "x": 352,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 888,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 214,
+          "name": "castleHomecomingLandmark889",
+          "type": "castleLandmark",
+          "x": 0,
+          "y": 1216,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Minor artifact",
+            "description": "A small relic rests among the scattered supplies.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 889,
+            "campaign_sourceType": 67,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 215,
+          "name": "castleHomecomingLandmark890",
+          "type": "castleLandmark",
+          "x": 1440,
+          "y": 1312,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 890,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 216,
+          "name": "castleHomecomingLandmark891",
+          "type": "castleLandmark",
+          "x": 1280,
+          "y": 1408,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 891,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 217,
+          "name": "castleHomecomingLandmark892",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 1280,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 892,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 218,
+          "name": "castleHomecomingLandmark893",
+          "type": "castleLandmark",
+          "x": 672,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 893,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 219,
+          "name": "castleHomecomingLandmark894",
+          "type": "castleLandmark",
+          "x": 1376,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 894,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 220,
+          "name": "castleHomecomingLandmark899",
+          "type": "castleLandmark",
+          "x": 2176,
+          "y": 320,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 899,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 221,
+          "name": "castleHomecomingLandmark901",
+          "type": "castleLandmark",
+          "x": 1664,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 901,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 222,
+          "name": "castleHomecomingLandmark902",
+          "type": "castleLandmark",
+          "x": 1632,
+          "y": 0,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 902,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 223,
+          "name": "castleHomecomingLandmark913",
+          "type": "castleLandmark",
+          "x": 1664,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Minor artifact",
+            "description": "A small relic rests among the scattered supplies.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 913,
+            "campaign_sourceType": 67,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 224,
+          "name": "castleHomecomingLandmark914",
+          "type": "castleLandmark",
+          "x": 1632,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 914,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 225,
+          "name": "castleHomecomingLandmark918",
+          "type": "castleLandmark",
+          "x": 704,
+          "y": 1568,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 918,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 226,
+          "name": "castleHomecomingLandmark919",
+          "type": "castleLandmark",
+          "x": 672,
+          "y": 1568,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 919,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 227,
+          "name": "castleHomecomingLandmark922",
+          "type": "castleLandmark",
+          "x": 544,
+          "y": 1408,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Shrine of magic thought",
+            "description": "Ancient magical signs cover a stone shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 922,
+            "campaign_sourceType": 90,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 228,
+          "name": "castleHomecomingLandmark924",
+          "type": "castleLandmark",
+          "x": 512,
+          "y": 1280,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 924,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 229,
+          "name": "castleHomecomingLandmark927",
+          "type": "castleLandmark",
+          "x": 96,
+          "y": 1568,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 927,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 230,
+          "name": "castleHomecomingLandmark930",
+          "type": "castleLandmark",
+          "x": 1696,
+          "y": 1408,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 930,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 231,
+          "name": "castleHomecomingLandmark931",
+          "type": "castleLandmark",
+          "x": 1728,
+          "y": 1440,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 931,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 232,
+          "name": "castleHomecomingLandmark932",
+          "type": "castleLandmark",
+          "x": 1760,
+          "y": 1440,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 932,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 233,
+          "name": "castleHomecomingLandmark933",
+          "type": "castleLandmark",
+          "x": 1056,
+          "y": 1472,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 933,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 234,
+          "name": "castleHomecomingLandmark934",
+          "type": "castleLandmark",
+          "x": 1280,
+          "y": 1952,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gems stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 934,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 235,
+          "name": "castleHomecomingLandmark935",
+          "type": "castleLandmark",
+          "x": 2208,
+          "y": 1632,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 935,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 236,
+          "name": "castleHomecomingLandmark936",
+          "type": "castleLandmark",
+          "x": 2240,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystals stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 936,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 237,
+          "name": "castleHomecomingLandmark937",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 937,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 238,
+          "name": "castleHomecomingLandmark938",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 938,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 239,
+          "name": "castleHomecomingLandmark939",
+          "type": "castleLandmark",
+          "x": 2080,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 939,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 240,
+          "name": "castleHomecomingLandmark940",
+          "type": "castleLandmark",
+          "x": 1952,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 940,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 241,
+          "name": "castleHomecomingLandmark941",
+          "type": "castleLandmark",
+          "x": 2080,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercury stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 941,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 242,
+          "name": "castleHomecomingLandmark942",
+          "type": "castleLandmark",
+          "x": 2048,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 942,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 243,
+          "name": "castleHomecomingLandmark943",
+          "type": "castleLandmark",
+          "x": 1728,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 943,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 244,
+          "name": "castleHomecomingLandmark944",
+          "type": "castleLandmark",
+          "x": 1312,
+          "y": 1184,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 944,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 245,
+          "name": "castleHomecomingLandmark945",
+          "type": "castleLandmark",
+          "x": 512,
+          "y": 384,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystals stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 945,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 4
+          }
+        },
+        {
+          "id": 246,
+          "name": "castleHomecomingLandmark946",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 384,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 946,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 247,
+          "name": "castleHomecomingLandmark947",
+          "type": "castleLandmark",
+          "x": 704,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 947,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 248,
+          "name": "castleHomecomingLandmark948",
+          "type": "castleLandmark",
+          "x": 1184,
+          "y": 544,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 948,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 249,
+          "name": "castleHomecomingLandmark949",
+          "type": "castleLandmark",
+          "x": 1312,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gems stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 949,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 250,
+          "name": "castleHomecomingLandmark950",
+          "type": "castleLandmark",
+          "x": 928,
+          "y": 672,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercury stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 950,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 251,
+          "name": "castleHomecomingLandmark951",
+          "type": "castleLandmark",
+          "x": 1792,
+          "y": 1728,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 951,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 252,
+          "name": "castleHomecomingLandmark960",
+          "type": "castleLandmark",
+          "x": 2240,
+          "y": 416,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 960,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 253,
+          "name": "castleHomecomingLandmark961",
+          "type": "castleLandmark",
+          "x": 2240,
+          "y": 448,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 961,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 254,
+          "name": "castleHomecomingLandmark962",
+          "type": "castleLandmark",
+          "x": 2272,
+          "y": 480,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 962,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 255,
+          "name": "castleHomecomingLandmark965",
+          "type": "castleLandmark",
+          "x": 864,
+          "y": 1664,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "School of war",
+            "description": "Practice grounds lie beside a fortified schoolhouse.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 965,
+            "campaign_sourceType": 107,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 256,
+          "name": "castleHomecomingLandmark983",
+          "type": "castleLandmark",
+          "x": 1408,
+          "y": 1760,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 983,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 257,
+          "name": "castleHomecomingLandmark992",
+          "type": "castleLandmark",
+          "x": 2144,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 992,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 258,
+          "name": "castleHomecomingLandmark997",
+          "type": "castleLandmark",
+          "x": 896,
+          "y": 1024,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 997,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 259,
+          "name": "castleHomecomingLandmark998",
+          "type": "castleLandmark",
+          "x": 320,
+          "y": 1472,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 998,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 260,
+          "name": "castleHomecomingLandmark999",
+          "type": "castleLandmark",
+          "x": 576,
+          "y": 1696,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 999,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 261,
+          "name": "castleHomecomingLandmark1027",
+          "type": "castleLandmark",
+          "x": 352,
+          "y": 32,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1027,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 262,
+          "name": "castleHomecomingLandmark1028",
+          "type": "castleLandmark",
+          "x": 96,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1028,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 263,
+          "name": "castleHomecomingLandmark1029",
+          "type": "castleLandmark",
+          "x": 32,
+          "y": 736,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1029,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 264,
+          "name": "castleHomecomingLandmark1030",
+          "type": "castleLandmark",
+          "x": 128,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1030,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 265,
+          "name": "castleHomecomingLandmark1031",
+          "type": "castleLandmark",
+          "x": 64,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1031,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 266,
+          "name": "castleHomecomingLandmark1032",
+          "type": "castleLandmark",
+          "x": 256,
+          "y": 1152,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1032,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 267,
+          "name": "castleHomecomingLandmark1033",
+          "type": "castleLandmark",
+          "x": 1440,
+          "y": 800,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Swordsman barracks",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 1033,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 58
+          }
+        },
+        {
+          "id": 268,
+          "name": "castleHomecomingLandmark1040",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 1344,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mercenary camp",
+            "description": "Worn practice posts surround an old soldiers' camp.",
+            "animation": "images/ambient/campfire_cauldron",
+            "canStep": true,
+            "campaign_sourceIndex": 1040,
+            "campaign_sourceType": 51,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 269,
+          "name": "castleHomecomingLandmark1042",
+          "type": "castleLandmark",
+          "x": 576,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Pikeman barracks",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 1042,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 56
+          }
+        },
+        {
+          "id": 270,
+          "name": "castleHomecomingLandmark1045",
+          "type": "castleLandmark",
+          "x": 1888,
+          "y": 992,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Griffin dwelling",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/castle/griffinTower",
+            "canStep": true,
+            "campaign_sourceIndex": 1045,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 25
+          }
+        },
+        {
+          "id": 271,
+          "name": "castleHomecomingLandmark1049",
+          "type": "castleLandmark",
+          "x": 2080,
+          "y": 1536,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Pikeman barracks",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 1049,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 56
+          }
+        },
+        {
+          "id": 272,
+          "name": "castleHomecomingLandmark1054",
+          "type": "castleLandmark",
+          "x": 608,
+          "y": 832,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Monastery",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 1054,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 35
+          }
+        },
+        {
+          "id": 273,
+          "name": "castleHomecomingLandmark1060",
+          "type": "castleLandmark",
+          "x": 2208,
+          "y": 1664,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Redwood observatory",
+            "description": "An old lookout rises among the tall trees.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 1060,
+            "campaign_sourceType": 58,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 274,
+          "name": "castleHomecomingLandmark1068",
+          "type": "castleLandmark",
+          "x": 1536,
+          "y": 416,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Timber stockpile",
+            "description": "A small stockpile marks an abandoned supply route.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1068,
+            "campaign_sourceType": 79,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 275,
+          "name": "castleHomecomingLandmark1073",
+          "type": "castleLandmark",
+          "x": 544,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Major artifact",
+            "description": "A finely worked relic has survived the invasion.",
+            "animation": "images/items/quest/holyRelic",
+            "canStep": true,
+            "campaign_sourceIndex": 1073,
+            "campaign_sourceType": 68,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 276,
+          "name": "castleHomecomingLandmark1076",
+          "type": "castleLandmark",
+          "x": 320,
+          "y": 416,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 1076,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 277,
+          "name": "castleHomecomingLandmark1085",
+          "type": "castleLandmark",
+          "x": 832,
+          "y": 1312,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Signpost",
+            "description": "A weathered sign marks a junction in the road.",
+            "animation": "images/ambient/signpost",
+            "canStep": true,
+            "campaign_sourceIndex": 1085,
+            "campaign_sourceType": 91,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 278,
+          "name": "castleHomecomingLandmark1086",
+          "type": "castleLandmark",
+          "x": 1312,
+          "y": 736,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Signpost",
+            "description": "A weathered sign marks a junction in the road.",
+            "animation": "images/ambient/signpost",
+            "canStep": true,
+            "campaign_sourceIndex": 1086,
+            "campaign_sourceType": 91,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 279,
+          "name": "castleHomecomingLandmark1087",
+          "type": "castleLandmark",
+          "x": 1536,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Signpost",
+            "description": "A weathered sign marks a junction in the road.",
+            "animation": "images/ambient/signpost",
+            "canStep": true,
+            "campaign_sourceIndex": 1087,
+            "campaign_sourceType": 91,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 280,
+          "name": "castleHomecomingLandmark1148",
+          "type": "castleLandmark",
+          "x": 1184,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "University",
+            "description": "An imposing hall recalls quieter days of study.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 1148,
+            "campaign_sourceType": 104,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 281,
+          "name": "castleHomecomingLandmark1152",
+          "type": "castleLandmark",
+          "x": 1504,
+          "y": 1888,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Windmill",
+            "description": "A weathered mill overlooks the nearby fields.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 1152,
+            "campaign_sourceType": 112,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 282,
+          "name": "castleHomecomingLandmark1171",
+          "type": "castleLandmark",
+          "x": 1248,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "School of war",
+            "description": "Practice grounds lie beside a fortified schoolhouse.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 1171,
+            "campaign_sourceType": 107,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 283,
+          "name": "castleHomecomingLandmark1175",
+          "type": "castleLandmark",
+          "x": 1248,
+          "y": 1152,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Redwood observatory",
+            "description": "An old lookout rises among the tall trees.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 1175,
+            "campaign_sourceType": 58,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 284,
+          "name": "castleHomecomingLandmark1177",
+          "type": "castleLandmark",
+          "x": 480,
+          "y": 1632,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Redwood observatory",
+            "description": "An old lookout rises among the tall trees.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 1177,
+            "campaign_sourceType": 58,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 285,
+          "name": "castleHomecomingLandmark1178",
+          "type": "castleLandmark",
+          "x": 1120,
+          "y": 1824,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Trading post",
+            "description": "An old market shelter stands at the meeting of the roads.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 1178,
+            "campaign_sourceType": 99,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 286,
+          "name": "castleHomecomingLandmark1182",
+          "type": "castleLandmark",
+          "x": 768,
+          "y": 1280,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Magic well",
+            "description": "A faint shimmer hangs above the water of this stone well.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 1182,
+            "campaign_sourceType": 49,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 287,
+          "name": "castleHomecomingLandmark1183",
+          "type": "castleLandmark",
+          "x": 736,
+          "y": 576,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Den of thieves",
+            "description": "A concealed entrance descends beneath the hillside.",
+            "animation": "images/buildings/groundhole",
+            "canStep": true,
+            "campaign_sourceIndex": 1183,
+            "campaign_sourceType": 97,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 288,
+          "name": "castleHomecomingLandmark1192",
+          "type": "castleLandmark",
+          "x": 800,
+          "y": 192,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Library of enlightenment",
+            "description": "Carved doors lead into a quiet hall of learning.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 1192,
+            "campaign_sourceType": 41,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 289,
+          "name": "castleHomecomingLandmark1207",
+          "type": "castleLandmark",
+          "x": 1024,
+          "y": 160,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Arena",
+            "description": "A stone enclosure overlooks an old fighting ground.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 1207,
+            "campaign_sourceType": 4,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 290,
+          "name": "castleHomecomingLandmark1225",
+          "type": "castleLandmark",
+          "x": 1760,
+          "y": 64,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Hill fort",
+            "description": "Old fortifications crown the hill above the road.",
+            "animation": "images/buildings/town_hall",
+            "canStep": true,
+            "campaign_sourceIndex": 1225,
+            "campaign_sourceType": 35,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 291,
+          "name": "castleHomecomingLandmark1272",
+          "type": "castleLandmark",
+          "x": 1632,
+          "y": 1088,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Swan pond",
+            "description": "Still water gathers in a sheltered hollow.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 1272,
+            "campaign_sourceType": 14,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 292,
+          "name": "castleHomecomingLandmark1326",
+          "type": "castleLandmark",
+          "x": 448,
+          "y": 1440,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Archers' tower",
+            "description": "A secluded dwelling stands beyond the town walls.",
+            "animation": "images/castle/griffinTower",
+            "canStep": true,
+            "campaign_sourceIndex": 1326,
+            "campaign_sourceType": 17,
+            "campaign_sourceSubtype": 57
+          }
+        },
+        {
+          "id": 293,
+          "name": "castleHomecomingLandmark1332",
+          "type": "castleLandmark",
+          "x": 1568,
+          "y": 1760,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Stables",
+            "description": "Hay and worn hitching posts mark an old stable yard.",
+            "animation": "images/ambient/hay_bales",
+            "canStep": true,
+            "campaign_sourceIndex": 1332,
+            "campaign_sourceType": 94,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 294,
+          "name": "castleHomecomingLandmark1359",
+          "type": "castleLandmark",
+          "x": 1312,
+          "y": 576,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Windmill",
+            "description": "A weathered mill overlooks the nearby fields.",
+            "animation": "images/buildings/market",
+            "canStep": true,
+            "campaign_sourceIndex": 1359,
+            "campaign_sourceType": 112,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 295,
+          "name": "castleHomecomingLandmark1385",
+          "type": "castleLandmark",
+          "x": 1472,
+          "y": 576,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mystical garden",
+            "description": "A secluded garden grows around a mossy shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 1385,
+            "campaign_sourceType": 55,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 296,
+          "name": "castleHomecomingLandmark1388",
+          "type": "castleLandmark",
+          "x": 928,
+          "y": 1152,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Witch's hut",
+            "description": "A crooked hut stands among tangled paths and old trees.",
+            "animation": "images/buildings/tavern",
+            "canStep": true,
+            "campaign_sourceIndex": 1388,
+            "campaign_sourceType": 113,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 297,
+          "name": "castleHomecomingLandmark1389",
+          "type": "castleLandmark",
+          "x": 2144,
+          "y": 288,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Witch's hut",
+            "description": "A crooked hut stands among tangled paths and old trees.",
+            "animation": "images/buildings/tavern",
+            "canStep": true,
+            "campaign_sourceIndex": 1389,
+            "campaign_sourceType": 113,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 298,
+          "name": "castleHomecomingLandmark1390",
+          "type": "castleLandmark",
+          "x": 384,
+          "y": 1376,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Witch's hut",
+            "description": "A crooked hut stands among tangled paths and old trees.",
+            "animation": "images/buildings/tavern",
+            "canStep": true,
+            "campaign_sourceIndex": 1390,
+            "campaign_sourceType": 113,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 299,
+          "name": "castleHomecomingLandmark1391",
+          "type": "castleLandmark",
+          "x": 1856,
+          "y": 1600,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Witch's hut",
+            "description": "A crooked hut stands among tangled paths and old trees.",
+            "animation": "images/buildings/tavern",
+            "canStep": true,
+            "campaign_sourceIndex": 1391,
+            "campaign_sourceType": 113,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 300,
+          "name": "castleHomecomingLandmark1392",
+          "type": "castleLandmark",
+          "x": 1920,
+          "y": 1472,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Tree of knowledge",
+            "description": "An ancient tree towers above a quiet clearing.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 1392,
+            "campaign_sourceType": 102,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 301,
+          "name": "castleHomecomingLandmark1393",
+          "type": "castleLandmark",
+          "x": 1312,
+          "y": 224,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Tree of knowledge",
+            "description": "An ancient tree towers above a quiet clearing.",
+            "animation": "images/ambient/dead_tree",
+            "canStep": true,
+            "campaign_sourceIndex": 1393,
+            "campaign_sourceType": 102,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 302,
+          "name": "castleHomecomingLandmark1394",
+          "type": "castleLandmark",
+          "x": 992,
+          "y": 320,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Fortified storehouse",
+            "description": "Heavy doors protect an old storehouse.",
+            "animation": "images/buildings/dungeon",
+            "canStep": true,
+            "campaign_sourceIndex": 1394,
+            "campaign_sourceType": 16,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 303,
+          "name": "castleHomecomingLandmark1400",
+          "type": "castleLandmark",
+          "x": 1664,
+          "y": 1760,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1400,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 304,
+          "name": "castleHomecomingLandmark1401",
+          "type": "castleLandmark",
+          "x": 1888,
+          "y": 1888,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1401,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 305,
+          "name": "castleHomecomingLandmark1402",
+          "type": "castleLandmark",
+          "x": 2240,
+          "y": 1696,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1402,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 306,
+          "name": "castleHomecomingLandmark1403",
+          "type": "castleLandmark",
+          "x": 2144,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1403,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 307,
+          "name": "castleHomecomingLandmark1404",
+          "type": "castleLandmark",
+          "x": 1568,
+          "y": 1184,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1404,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 308,
+          "name": "castleHomecomingLandmark1405",
+          "type": "castleLandmark",
+          "x": 1664,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1405,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 309,
+          "name": "castleHomecomingLandmark1406",
+          "type": "castleLandmark",
+          "x": 2080,
+          "y": 640,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1406,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 310,
+          "name": "castleHomecomingLandmark1407",
+          "type": "castleLandmark",
+          "x": 1920,
+          "y": 608,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1407,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 311,
+          "name": "castleHomecomingLandmark1408",
+          "type": "castleLandmark",
+          "x": 1728,
+          "y": 512,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1408,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 312,
+          "name": "castleHomecomingLandmark1409",
+          "type": "castleLandmark",
+          "x": 1632,
+          "y": 96,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1409,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 313,
+          "name": "castleHomecomingLandmark1410",
+          "type": "castleLandmark",
+          "x": 1152,
+          "y": 2080,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1410,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 314,
+          "name": "castleHomecomingLandmark1411",
+          "type": "castleLandmark",
+          "x": 928,
+          "y": 1888,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1411,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 315,
+          "name": "castleHomecomingLandmark1412",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 1760,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1412,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 316,
+          "name": "castleHomecomingLandmark1413",
+          "type": "castleLandmark",
+          "x": 1184,
+          "y": 1472,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1413,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 317,
+          "name": "castleHomecomingLandmark1414",
+          "type": "castleLandmark",
+          "x": 960,
+          "y": 1536,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure chest",
+            "description": "An old chest rests beside the road.",
+            "animation": "images/misc/chest",
+            "canStep": true,
+            "campaign_sourceIndex": 1414,
+            "campaign_sourceType": 101,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 318,
+          "name": "castleHomecomingLandmark1415",
+          "type": "castleLandmark",
+          "x": 1760,
+          "y": 1856,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1415,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 319,
+          "name": "castleHomecomingLandmark1416",
+          "type": "castleLandmark",
+          "x": 1632,
+          "y": 1888,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1416,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 320,
+          "name": "castleHomecomingLandmark1417",
+          "type": "castleLandmark",
+          "x": 1984,
+          "y": 1504,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1417,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 321,
+          "name": "castleHomecomingLandmark1418",
+          "type": "castleLandmark",
+          "x": 2176,
+          "y": 1216,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1418,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 322,
+          "name": "castleHomecomingLandmark1419",
+          "type": "castleLandmark",
+          "x": 1664,
+          "y": 1216,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1419,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 323,
+          "name": "castleHomecomingLandmark1420",
+          "type": "castleLandmark",
+          "x": 1984,
+          "y": 928,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1420,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 324,
+          "name": "castleHomecomingLandmark1421",
+          "type": "castleLandmark",
+          "x": 2112,
+          "y": 896,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1421,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 325,
+          "name": "castleHomecomingLandmark1422",
+          "type": "castleLandmark",
+          "x": 544,
+          "y": 1760,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1422,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 326,
+          "name": "castleHomecomingLandmark1423",
+          "type": "castleLandmark",
+          "x": 320,
+          "y": 1856,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Abandoned resources",
+            "description": "Bundles of raw materials lie beside the road.",
+            "animation": "images/ambient/supply_pile",
+            "canStep": true,
+            "campaign_sourceIndex": 1423,
+            "campaign_sourceType": 76,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 327,
+          "name": "castleHomecomingLandmark1425",
+          "type": "castleLandmark",
+          "x": 1984,
+          "y": 1248,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Mystical garden",
+            "description": "A secluded garden grows around a mossy shrine.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 1425,
+            "campaign_sourceType": 55,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 328,
+          "name": "castleHomecomingLandmark1447",
+          "type": "castleLandmark",
+          "x": 1600,
+          "y": 1536,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Treasure artifact",
+            "description": "An old ornament lies beside the trail.",
+            "animation": "images/items/quest/preciousAmulet",
+            "canStep": true,
+            "campaign_sourceIndex": 1447,
+            "campaign_sourceType": 66,
+            "campaign_sourceSubtype": 0
+          }
         }
       ]
     },
@@ -13238,7 +17303,8 @@
             "campaign_objectiveId": "castleHomecomingObjective1453",
             "campaign_sourceIndex": 1453,
             "campaign_guards": "castleHomecomingGuard1453",
-            "campaign_rewardGold": 50
+            "campaign_rewardGold": 50,
+            "campaign_isTown": true
           }
         },
         {
@@ -14121,6 +18187,166 @@
             "campaign_targetX": 55,
             "campaign_targetY": 38,
             "campaign_targetZ": 1
+          }
+        },
+        {
+          "id": 329,
+          "name": "castleHomecomingLandmark1454",
+          "type": "castleLandmark",
+          "x": 1184,
+          "y": 1536,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Ore quarry",
+            "description": "Old workings mark this ore quarry beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 1454,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 2
+          }
+        },
+        {
+          "id": 330,
+          "name": "castleHomecomingLandmark1455",
+          "type": "castleLandmark",
+          "x": 1632,
+          "y": 1376,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gold mine",
+            "description": "Old workings mark this gold mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 1455,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 6
+          }
+        },
+        {
+          "id": 331,
+          "name": "castleHomecomingLandmark1456",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 1440,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Gem pond",
+            "description": "Old workings mark this gem pond beside the invasion roads.",
+            "animation": "images/ambient/stone_well",
+            "canStep": true,
+            "campaign_sourceIndex": 1456,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 5
+          }
+        },
+        {
+          "id": 332,
+          "name": "castleHomecomingLandmark1457",
+          "type": "castleLandmark",
+          "x": 608,
+          "y": 1120,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Alchemist's laboratory",
+            "description": "Old workings mark this alchemist's laboratory beside the invasion roads.",
+            "animation": "images/buildings/chapel",
+            "canStep": true,
+            "campaign_sourceIndex": 1457,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 1
+          }
+        },
+        {
+          "id": 333,
+          "name": "castleHomecomingLandmark1458",
+          "type": "castleLandmark",
+          "x": 640,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Sulfur mine",
+            "description": "Old workings mark this sulfur mine beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 1458,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 3
+          }
+        },
+        {
+          "id": 334,
+          "name": "castleHomecomingLandmark1459",
+          "type": "castleLandmark",
+          "x": 1312,
+          "y": 1184,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Altar of sacrifice",
+            "description": "Weathered offerings lie upon a dark stone altar.",
+            "animation": "images/ambient/stone_shrine",
+            "canStep": true,
+            "campaign_sourceIndex": 1459,
+            "campaign_sourceType": 2,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 335,
+          "name": "castleHomecomingLandmark1462",
+          "type": "castleLandmark",
+          "x": 992,
+          "y": 960,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Pillar of fire",
+            "description": "A bright flame burns above a stone pillar.",
+            "animation": "images/ambient/brazier",
+            "canStep": true,
+            "campaign_sourceIndex": 1462,
+            "campaign_sourceType": 60,
+            "campaign_sourceSubtype": 0
+          }
+        },
+        {
+          "id": 336,
+          "name": "castleHomecomingLandmark1464",
+          "type": "castleLandmark",
+          "x": 1824,
+          "y": 736,
+          "width": 32,
+          "height": 32,
+          "visible": true,
+          "rotation": 0,
+          "properties": {
+            "label": "Crystal cavern",
+            "description": "Old workings mark this crystal cavern beside the invasion roads.",
+            "animation": "images/buildings/cave",
+            "canStep": true,
+            "campaign_sourceIndex": 1464,
+            "campaign_sourceType": 53,
+            "campaign_sourceSubtype": 4
           }
         }
       ]

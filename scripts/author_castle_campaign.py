@@ -14,6 +14,94 @@ import json
 
 RANDOM_MONSTER_REPRESENTATIVES = {71: 70, 72: 70, 73: 72, 74: 74, 75: 78, 162: 80, 163: 80, 164: 54}
 
+# Source type identities follow VCMI lib/constants/EntityIdentifiers.h. These
+# markers retain recognizable places without introducing a strategic economy.
+LANDMARKS = {
+    2: ("Altar of sacrifice", "ambient/stone_shrine", "Weathered offerings lie upon a dark stone altar."),
+    4: ("Arena", "buildings/town_hall", "A stone enclosure overlooks an old fighting ground."),
+    5: ("Ancient artifact", "items/quest/holyRelic", "An old relic rests among the signs of the invasion."),
+    9: ("Border guard", "misc/open_door", "Stone posts mark an old border crossing."),
+    10: ("Keymaster's tent", "ambient/campfire_cauldron", "A colorful roadside camp stands beside the border road."),
+    12: ("Campfire", "ambient/campfire_cauldron", "A small fire marks an abandoned stopping place."),
+    13: ("Cartographer", "items/scroll", "Rolled charts record the surrounding roads and hills."),
+    14: ("Swan pond", "ambient/stone_well", "Still water gathers in a sheltered hollow."),
+    16: ("Fortified storehouse", "buildings/dungeon", "Heavy doors protect an old storehouse."),
+    17: ("Creature dwelling", "buildings/town_hall", "A secluded dwelling stands beyond the town walls."),
+    23: ("Marletto Tower", "buildings/town_hall", "A tall watchtower surveys the surrounding country."),
+    25: ("Dragon utopia", "buildings/dungeon", "An imposing ruin carries the scars of great winged creatures."),
+    27: ("Eye of the Magi", "ambient/stone_shrine", "A carved eye watches from a weathered stone monument."),
+    28: ("Faerie ring", "ambient/stone_shrine", "A ring of old stones encloses a quiet clearing."),
+    30: ("Fountain of fortune", "ambient/stone_well", "Coins glimmer beneath the water of an old fountain."),
+    31: ("Fountain of youth", "ambient/stone_well", "Clear water runs through a sheltered fountain."),
+    32: ("Garden of revelation", "ambient/stone_shrine", "Worn paths wind around an ancient garden shrine."),
+    33: ("Fortified garrison", "misc/open_door", "An armed outpost commands the road through this pass."),
+    35: ("Hill fort", "buildings/town_hall", "Old fortifications crown the hill above the road."),
+    37: ("Hut of the Magi", "buildings/chapel", "Faded symbols cover the walls of a secluded scholar's dwelling."),
+    38: ("Idol of fortune", "ambient/stone_shrine", "A small carved idol stands beside the trail."),
+    39: ("Lean-to", "ambient/supply_pile", "Weathered boards shelter a few abandoned bundles."),
+    41: ("Library of enlightenment", "buildings/chapel", "Carved doors lead into a quiet hall of learning."),
+    42: ("Lighthouse", "buildings/town_hall", "A high coastal tower watches the approaches from the sea."),
+    47: ("School of magic", "buildings/chapel", "Arcane emblems mark an old schoolhouse."),
+    49: ("Magic well", "ambient/stone_well", "A faint shimmer hangs above the water of this stone well."),
+    51: ("Mercenary camp", "ambient/campfire_cauldron", "Worn practice posts surround an old soldiers' camp."),
+    53: ("Mine", "buildings/cave", "A worked entrance opens into the resource-rich hillside."),
+    55: ("Mystical garden", "ambient/stone_shrine", "A secluded garden grows around a mossy shrine."),
+    58: ("Redwood observatory", "ambient/dead_tree", "An old lookout rises among the tall trees."),
+    60: ("Pillar of fire", "ambient/brazier", "A bright flame burns above a stone pillar."),
+    61: ("Star axis", "ambient/stone_shrine", "Carved stones align with the distant stars."),
+    62: ("Prison", "buildings/dungeon", "A barred entrance leads into an isolated prison."),
+    64: ("Rally flag", "items/quest/warBanner", "A weathered standard marks an old gathering place."),
+    66: ("Treasure artifact", "items/quest/preciousAmulet", "An old ornament lies beside the trail."),
+    67: ("Minor artifact", "items/quest/holyRelic", "A small relic rests among the scattered supplies."),
+    68: ("Major artifact", "items/quest/holyRelic", "A finely worked relic has survived the invasion."),
+    76: ("Abandoned resources", "ambient/supply_pile", "Bundles of raw materials lie beside the road."),
+    79: ("Resource stockpile", "ambient/supply_pile", "A small stockpile marks an abandoned supply route."),
+    80: ("Sanctuary", "buildings/chapel", "A quiet sanctuary stands apart from the war-torn roads."),
+    81: ("Scholar", "npc/questGiver", "A wandering scholar studies a bundle of worn manuscripts."),
+    83: ("Seer's hut", "buildings/tavern", "A secluded hut stands beneath a weathered sign."),
+    88: ("Shrine of magic incantation", "ambient/stone_shrine", "Simple magical signs cover a stone shrine."),
+    89: ("Shrine of magic gesture", "ambient/stone_shrine", "Intricate magical signs cover a stone shrine."),
+    90: ("Shrine of magic thought", "ambient/stone_shrine", "Ancient magical signs cover a stone shrine."),
+    91: ("Signpost", "ambient/signpost", "A weathered sign marks a junction in the road."),
+    93: ("Spell scroll", "items/scroll", "A sealed scroll rests beside the trail."),
+    94: ("Stables", "ambient/hay_bales", "Hay and worn hitching posts mark an old stable yard."),
+    96: ("Temple", "buildings/chapel", "Stone steps lead toward a quiet temple."),
+    97: ("Den of thieves", "buildings/groundhole", "A concealed entrance descends beneath the hillside."),
+    99: ("Trading post", "buildings/market", "An old market shelter stands at the meeting of the roads."),
+    100: ("Learning stone", "ambient/stone_shrine", "Faded inscriptions cover a solitary standing stone."),
+    101: ("Treasure chest", "misc/chest", "An old chest rests beside the road."),
+    102: ("Tree of knowledge", "ambient/dead_tree", "An ancient tree towers above a quiet clearing."),
+    104: ("University", "buildings/town_hall", "An imposing hall recalls quieter days of study."),
+    106: ("War machine factory", "ambient/broken_cart", "Old wheels and timber frames surround a military workshop."),
+    107: ("School of war", "buildings/town_hall", "Practice grounds lie beside a fortified schoolhouse."),
+    109: ("Water wheel", "buildings/market", "A riverside workshop stands beside an old mill race."),
+    112: ("Windmill", "buildings/market", "A weathered mill overlooks the nearby fields."),
+    113: ("Witch's hut", "buildings/tavern", "A crooked hut stands among tangled paths and old trees."),
+}
+
+MINE_LANDMARKS = {
+    0: ("Sawmill", "ambient/supply_pile"),
+    1: ("Alchemist's laboratory", "buildings/chapel"),
+    2: ("Ore quarry", "buildings/cave"),
+    3: ("Sulfur mine", "buildings/cave"),
+    4: ("Crystal cavern", "buildings/cave"),
+    5: ("Gem pond", "ambient/stone_well"),
+    6: ("Gold mine", "buildings/cave"),
+}
+DWELLING_LANDMARKS = {
+    8: ("Portal of glory", "buildings/chapel"),
+    22: ("Gog dwelling", "buildings/dungeon"),
+    25: ("Griffin dwelling", "castle/griffinTower"),
+    26: ("Harpy loft", "buildings/cave"),
+    29: ("Imp dwelling", "ambient/brazier"),
+    35: ("Monastery", "buildings/chapel"),
+    46: ("Troglodyte warren", "buildings/cave"),
+    56: ("Pikeman barracks", "buildings/town_hall"),
+    57: ("Archers' tower", "castle/griffinTower"),
+    58: ("Swordsman barracks", "buildings/town_hall"),
+}
+RESOURCE_LABELS = ("Timber", "Mercury", "Ore", "Sulfur", "Crystals", "Gems", "Gold")
+
 SCENARIOS = {
     "homecoming": {
         "mapId": "castleHomecoming",
@@ -124,6 +212,32 @@ def compressedArmy(source_object, chapter, elite=False, griffin=False):
     }
 
 
+def isLandVisit(source_object, source_data):
+    x, y, z = source_object["visit"]
+    return source_object.get("visitable", False) and source_data["terrain"][z][y * source_data["width"] + x][0] < 8
+
+
+def landmarkProperties(source_object):
+    kind, subtype = source_object["type"], source_object["subtype"]
+    label, animation, description = LANDMARKS[kind]
+    if kind == 53:
+        label, animation = MINE_LANDMARKS[subtype]
+        description = "Old workings mark this " + label.lower() + " beside the invasion roads."
+    elif kind == 17:
+        label, animation = DWELLING_LANDMARKS[subtype]
+    elif kind == 79:
+        label = RESOURCE_LABELS[subtype] + " stockpile"
+    return {
+        "label": label,
+        "description": description,
+        "animation": "images/" + animation,
+        "canStep": True,
+        "campaign_sourceIndex": source_object["index"],
+        "campaign_sourceType": kind,
+        "campaign_sourceSubtype": subtype,
+    }
+
+
 def authorMap(map_data, source_data):
     """Return a populated native map; never write files or reshape geography."""
     result = copy.deepcopy(map_data)
@@ -183,7 +297,12 @@ def authorMap(map_data, source_data):
         is_tower = kind == 17 and source_object["subtype"] == 25 and scenario_id == "griffinCliff"
         if kind in (77, 98) or is_tower:
             if source_object.get("owner") == 0 and not is_tower:
-                addObject(map_id + "Supply" + str(index), "castleSupply", coords, {"label": "Loyal Castle stronghold"})
+                addObject(
+                    map_id + "Supply" + str(index),
+                    "castleSupply",
+                    coords,
+                    {"label": "Loyal Castle stronghold", "campaign_isTown": True, "campaign_loyalTown": True},
+                )
                 continue
             object_id = map_id + "Objective" + str(index)
             guard_id = map_id + "Guard" + str(index)
@@ -201,6 +320,7 @@ def authorMap(map_data, source_data):
                     "campaign_sourceIndex": index,
                     "campaign_guards": guard_id,
                     "campaign_rewardGold": 50,
+                    "campaign_isTown": not is_tower,
                 },
             )
             guard_properties = compressedArmy(source_object, chapter, griffin=is_tower)
@@ -288,6 +408,7 @@ def authorMap(map_data, source_data):
     if not passable(spawn):
         raise ValueError("Original hero arrival must remain walkable")
     reserved.add(tuple(spawn))
+    reserved.update(tuple(obj["visit"]) for obj in source_objects if isLandVisit(obj, source_data))
     for officer, art in (("Catherine", "catherine"), ("Christian", "christian")):
         candidates = [
             (spawn[0] + dx, spawn[1] + dy, spawn[2])
@@ -364,6 +485,58 @@ def authorMap(map_data, source_data):
     mission_layer = generated_layers[spawn[2]]["objects"]
     mission_layer.remove(mission_object)
     mission_layer.insert(0, mission_object)
+    represented = {
+        obj["properties"].get("campaign_sourceIndex") for layer in generated_layers.values() for obj in layer["objects"]
+    }
+    source_data["landmarkMappings"] = []
+    for source_object in source_objects:
+        if (
+            source_object["type"] not in LANDMARKS
+            or source_object["index"] in represented
+            or not isLandVisit(source_object, source_data)
+        ):
+            continue
+        object_id = map_id + "Landmark" + str(source_object["index"])
+        properties = landmarkProperties(source_object)
+        addObject(object_id, "castleLandmark", source_object["visit"], properties)
+        source_data["landmarkMappings"].append(
+            {
+                "sourceIndex": source_object["index"],
+                "type": source_object["type"],
+                "nativeObjectId": object_id,
+                "visit": source_object["visit"],
+                "animation": properties["animation"],
+                "adaptation": "visualOnly",
+            }
+        )
+    source_data["optionalEncounterMappings"] = []
+    for source_object in source_objects:
+        if source_object["type"] not in (26, 33):
+            continue
+        if source_object["type"] == 33 and not isEnemy(source_object):
+            continue
+        if not any(stack.get("count", 0) > 0 for stack in source_object.get("army", [])):
+            continue
+        actor_id = map_id + "Encounter" + str(source_object["index"])
+        addObject(actor_id, "castleGarrison", source_object["visit"], compressedArmy(source_object, chapter))
+        defender_ids.append(actor_id)
+        source_data["optionalEncounterMappings"].append(
+            {
+                "sourceIndex": source_object["index"],
+                "type": source_object["type"],
+                "nativeObjectId": actor_id,
+                "visit": source_object["visit"],
+                "adaptation": "optionalCombat",
+            }
+        )
+    source_data["landmarkPolicy"] = {
+        "adaptation": "visualOnly",
+        "onlyLandVisits": True,
+        "invisibleEventTypes": [26],
+        "waterTransitOrSalvageTypes": [8, 11, 29, 82, 86, 111],
+        "eventGuardArmies": "optionalCombat",
+    }
+    mission_object["properties"]["campaign_mission"] = "castleMission:" + json.dumps(mission, separators=(",", ":"))
     result["layers"].extend(generated_layers[level] for level in sorted(generated_layers))
     result["nextobjectid"] = next_id
     return result
