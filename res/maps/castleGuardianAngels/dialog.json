@@ -1,0 +1,64 @@
+{
+  "castleCatherineDialog": {
+    "class": "CastleGuardianAngelsOfficerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The angels have heard Erathia's call, but their sanctuaries are hemmed in by the invasion. Clear the four hostile strongholds and defeat their four commanders. With these lands secured, the angels can join the restoration of our kingdom.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Give me the field report.",
+                  "action": "reportProgress",
+                  "nextStateId": "EXIT"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "castleChristianDialog": {
+    "class": "CastleGuardianAngelsOfficerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "I have four enemy strongholds and four commanders on my report. The western and eastern stairways lead into their underground territory. Follow the roads, look for the marked mountain gaps, and accept help from the friendly angels. I will keep count of every position you secure.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Give me the field report.",
+                  "action": "reportProgress",
+                  "nextStateId": "EXIT"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

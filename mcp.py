@@ -166,7 +166,9 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "checkQuests",
         "getCompletedQuests",
         "getController",
+        "getFightController",
         "getQuests",
+        "setFightController",
     },
     "CPlayerController": {
         "isCompleted",
