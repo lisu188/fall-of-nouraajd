@@ -380,6 +380,43 @@
       "sw": 1
     }
   },
+  "NeutralHumanNpc": {
+    "class": "CCreature",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "label": "Human",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "humanRace"
+      }
+    }
+  },
   "CultLeader": {
     "class": "CCreature",
     "properties": {
