@@ -1,0 +1,7 @@
+Development snapshot before caching chooser row metrics, MSVC 19.44 x64 Release, SDL dummy/software.
+The original diagnostic fixture was unattached (no CLayout); this is historical diagnostic evidence, not a layout gate.
+frame=0 textureLoads=724 cached=212
+frame=1 textureLoads=723 cached=423
+frame=2 textureLoads=723 cached=122
+frame=3 textureLoads=723 cached=333
+frame=4 textureLoads=723 cached=32

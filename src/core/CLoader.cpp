@@ -51,6 +51,30 @@ void load_map_resources(const std::shared_ptr<CGame> &game, const std::string &m
 
 void activate_map_scope(const std::shared_ptr<CGame> &game, const std::string &mapName);
 
+class CScopedGameMap {
+  public:
+    explicit CScopedGameMap(std::shared_ptr<CGame> game, std::shared_ptr<CMap> replacement = nullptr)
+        : game(std::move(game)), previous(this->game ? this->game->getMap() : nullptr) {
+        if (this->game) {
+            // Resource registration needs a detached map context, but it does not commit a scene change.
+            this->game->setMapForResourceLoad(std::move(replacement));
+        }
+    }
+
+    ~CScopedGameMap() {
+        if (game) {
+            game->setMapForResourceLoad(previous);
+        }
+    }
+
+    CScopedGameMap(const CScopedGameMap &) = delete;
+    CScopedGameMap &operator=(const CScopedGameMap &) = delete;
+
+  private:
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CMap> previous;
+};
+
 namespace {
 constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
 constexpr std::size_t MAX_TILESET_ID = 16384;
@@ -387,29 +411,6 @@ void apply_authored_map_metadata(const std::shared_ptr<CGame> &game, const std::
         }
     }
 }
-
-class CScopedGameMap {
-  public:
-    explicit CScopedGameMap(std::shared_ptr<CGame> game, std::shared_ptr<CMap> replacement = nullptr)
-        : game(std::move(game)), previous(this->game ? this->game->getMap() : nullptr) {
-        if (this->game) {
-            this->game->setMap(std::move(replacement));
-        }
-    }
-
-    ~CScopedGameMap() {
-        if (game) {
-            game->setMap(previous);
-        }
-    }
-
-    CScopedGameMap(const CScopedGameMap &) = delete;
-    CScopedGameMap &operator=(const CScopedGameMap &) = delete;
-
-  private:
-    std::shared_ptr<CGame> game;
-    std::shared_ptr<CMap> previous;
-};
 
 class CScopedObjectConfig {
   public:
@@ -1016,23 +1017,25 @@ std::shared_ptr<CMap> CMapLoader::loadRandomMapWithPlayer(const std::shared_ptr<
     return map;
 }
 
-void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) {
+void CMapLoader::save(const std::shared_ptr<CMap> &map, const std::string &name) { saveWithResult(map, name); }
+
+bool CMapLoader::saveWithResult(const std::shared_ptr<CMap> &map, const std::string &name) {
     if (!CSaveFormat::isValidSlotName(name)) {
         vstd::logger::warning("Rejected invalid save slot name during save:", name);
-        return;
+        return false;
     }
 
     auto envelope = build_save_envelope(map);
     if (!envelope) {
         vstd::logger::warning("Rejected invalid save snapshot:", name, "reason:", envelope.error());
-        return;
+        return false;
     }
 
     // Persist through the saved map's per-session resources provider; fall back to the process
     // singleton only when the map has already been detached from its game (compatibility path).
     auto game = map->getGame();
     auto resources = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
-    resources->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
+    return resources->save(CSaveFormat::primaryPath(name), CJsonUtil::to_string(*envelope, -1));
 }
 
 void CMapLoader::handleTileLayer(const std::shared_ptr<CMap> &map, const std::vector<std::string> &tileTypes,

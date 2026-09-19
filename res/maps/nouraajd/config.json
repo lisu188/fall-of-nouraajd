@@ -562,6 +562,7 @@
   "questDialog": {
     "class": "QuestDialog",
     "properties": {
+      "questIds": "amuletQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -597,7 +598,9 @@
                 "properties": {
                   "number": 0,
                   "nextStateId": "ACCEPT_QUEST",
-                  "text": "I'll hunt down the goblin and bring your talisman home."
+                  "text": "I'll hunt down the goblin and bring your talisman home.",
+                  "action": "start_amulet_quest",
+                  "actionLabel": "Accept quest"
                 }
               },
               {
@@ -620,8 +623,7 @@
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 0,
-                  "action": "start_amulet_quest"
+                  "number": 0
                 }
               }
             ]
@@ -642,12 +644,14 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Old Woman"
     }
   },
   "questReturnDialog": {
     "class": "QuestReturnDialog",
     "properties": {
+      "questIds": "amuletQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -659,13 +663,16 @@
                 "ref": "exitOption",
                 "properties": {
                   "number": 0,
-                  "action": "complete_amulet_quest"
+                  "action": "complete_amulet_quest",
+                  "text": "Return the amulet and accept her thanks.",
+                  "actionLabel": "Receive 50 gold"
                 }
               }
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Old Woman"
     }
   }
 }

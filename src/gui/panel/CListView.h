@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CProxyGraphicsObject;
 
 class CScript;
+class CButton;
 
 class CListView : public CProxyTargetGraphicsObject {
     V_META(CListView, CProxyTargetGraphicsObject,
@@ -45,7 +46,10 @@ class CListView : public CProxyTargetGraphicsObject {
            V_PROPERTY(CListView, bool, dragEnabled, getDragEnabled, setDragEnabled),
            V_PROPERTY(CListView, bool, showEmpty, getShowEmpty, setShowEmpty),
            V_PROPERTY(CListView, bool, grouping, getGrouping, setGrouping), V_METHOD(CListView, initialize),
-           V_METHOD(CListView, refreshFromRefreshEvent),
+           V_PROPERTY(CListView, bool, searchable, getSearchable, setSearchable),
+           V_PROPERTY(CListView, bool, rows, getRows, setRows),
+           V_METHOD(CListView, pagePrevious, void, std::shared_ptr<CGui>),
+           V_METHOD(CListView, pageNext, void, std::shared_ptr<CGui>), V_METHOD(CListView, refreshFromRefreshEvent),
            V_METHOD(CListView, refreshFromPropertyChanged, void, std::string),
            V_METHOD(CListView, refreshFromPropertiesChanged, void, std::set<std::string>),
            V_METHOD(CListView, refreshFromPropertySpecificChanged))
@@ -135,6 +139,13 @@ class CListView : public CProxyTargetGraphicsObject {
     int selectionThickness = 5;
 
     int shift = 0;
+    int focusedIndex = -1;
+    bool searchable = false;
+    bool rows = false;
+    bool searching = false;
+    std::string filterText;
+    std::shared_ptr<CButton> previousPageButton;
+    std::shared_ptr<CButton> nextPageButton;
 
     int xPrefferedSize = -1;
 
@@ -144,6 +155,25 @@ class CListView : public CProxyTargetGraphicsObject {
 
   public:
     CListView() = default;
+    struct ViewState {
+        int offset = 0;
+        int focusedIndex = -1;
+        std::string query;
+    };
+    ViewState getViewState() const { return {shift, focusedIndex, filterText}; }
+    void restoreViewState(const ViewState &state);
+    bool getSearchable() const { return searchable; }
+    void setSearchable(bool value) { searchable = value; }
+    bool getRows() const { return rows; }
+    void setRows(bool value) { rows = value; }
+    bool isSearching() const { return searching; }
+    void pagePrevious(std::shared_ptr<CGui> gui);
+    void pageNext(std::shared_ptr<CGui> gui);
+    int getCellSize(const std::shared_ptr<CGui> &gui) const;
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
+    bool textInput(std::shared_ptr<CGui> gui, const std::string &text);
+    bool mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int xrel, int yrel) override;
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
 
     bool getAllowOversize();
 
@@ -216,6 +246,7 @@ class CListView : public CProxyTargetGraphicsObject {
     void setYPrefferedSize(int yPrefferedSize);
 
   private:
+    void updateRowPaging(const std::shared_ptr<CGui> &gui, int itemCount);
     CListView::collection_pointer invokeCollection(std::shared_ptr<CGui> gui);
 
     void invokeCallback(std::shared_ptr<CGui> gui, int i, std::shared_ptr<CGameObject> object);

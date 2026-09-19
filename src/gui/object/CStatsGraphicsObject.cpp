@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
 #include "object/CPlayer.h"
+#include "gui/CUiTheme.h"
+#include "gui/CLayout.h"
 
 void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreature> creature, int x, int y, int w,
                                    int h, bool showNumeric, bool showExp) {
@@ -29,20 +31,25 @@ void CStatsGraphicsUtil::drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CC
         return;
     }
 
-    const int barCount = showExp ? 3 : 2;
+    showExp = showExp && creature->isPlayer();
+    const bool showMana = creature->getManaMax() > 0;
+    const int barCount = 1 + (showMana ? 1 : 0) + (showExp ? 1 : 0);
 
-    drawBar(gui, creature->getHpRatio(), 0, barCount, CColors::Red, x, y, w, h);
+    drawBar(gui, creature->getHpRatio(), 0, barCount, {125, 51, 57, 255}, x, y, w, h);
     if (showNumeric) {
-        drawValues(gui, creature->getHp(), creature->getHpMax(), 0, barCount, x, y, w, h);
+        drawValues(gui, "HP", creature->getHp(), creature->getHpMax(), 0, barCount, x, y, w, h);
     }
-    drawBar(gui, creature->getManaRatio(), 1, barCount, CColors::Blue, x, y, w, h);
-    if (showNumeric) {
-        drawValues(gui, creature->getMana(), creature->getManaMax(), 1, barCount, x, y, w, h);
+    if (showMana) {
+        drawBar(gui, creature->getManaRatio(), 1, barCount, {43, 78, 115, 255}, x, y, w, h);
+        if (showNumeric) {
+            drawValues(gui, "MP", creature->getMana(), creature->getManaMax(), 1, barCount, x, y, w, h);
+        }
     }
     if (showExp) {
-        drawBar(gui, creature->getExpRatio(), 2, barCount, CColors::Yellow, x, y, w, h);
+        const int index = showMana ? 2 : 1;
+        drawBar(gui, creature->getExpRatio(), index, barCount, {97, 81, 48, 255}, x, y, w, h);
         if (showNumeric) {
-            drawValues(gui, creature->getExp(), creature->getExpForNextLevel(), 2, barCount, x, y, w, h);
+            drawValues(gui, "XP", creature->getExp(), creature->getExpForNextLevel(), index, barCount, x, y, w, h);
         }
     }
 }
@@ -52,6 +59,33 @@ void CStatsGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_p
         return;
     }
     auto cret = creature->invoke<CCreature>(gui->getGame(), this->ptr());
+    if (getParent() == gui) {
+        const double scale = std::max(gui->getUiScale(), gui->getTextScale());
+        if (gui->getWidth() < 1200 * scale && cret) {
+            const int height = std::max(UiTheme::scaled(gui, 44),
+                                        gui->getTextManager()->measureText("HP 999 / 999", 0, "small").second +
+                                            UiTheme::scaled(gui, 16));
+            getLayout()->setRuntimeRect(0, 0, gui->getWidth(), height);
+            const int width = gui->getWidth() / 3;
+            const std::vector<std::tuple<std::string, int, int, int, SDL_Color>> resources{
+                {"HP", cret->getHp(), cret->getHpMax(), cret->getHpRatio(), {125, 51, 57, 255}},
+                {"MP", cret->getMana(), cret->getManaMax(), cret->getManaRatio(), {43, 78, 115, 255}},
+                {"XP", cret->getExp(), cret->getExpForNextLevel(), cret->getExpRatio(), {97, 81, 48, 255}}};
+            for (size_t index = 0; index < resources.size(); ++index) {
+                const auto &[label, current, maximum, ratio, color] = resources[index];
+                const int x = static_cast<int>(index) * width;
+                CStatsGraphicsUtil::drawBar(gui, ratio, 0, 1, color, x, 0, width, height);
+                if (label == "MP" && maximum <= 0)
+                    gui->getTextManager()->drawTextStyled("MP —", CUtil::rect(x, 0, width, height), "small",
+                                                          UiTheme::Text, true);
+                else
+                    CStatsGraphicsUtil::drawValues(gui, label, current, maximum, 0, 1, x, 0, width, height);
+            }
+            return;
+        }
+        getLayout()->setRuntimeRect(0, 0, static_cast<int>(312 * scale), static_cast<int>(132 * scale));
+        rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+    }
     CStatsGraphicsUtil::drawStats(gui, cret, rect->x, rect->y, rect->w, rect->h, true, true);
 }
 
@@ -68,7 +102,7 @@ void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio, int index
     filledBar.x = x;
     filledBar.y = y + index * h;
     filledBar.h = h;
-    filledBar.w = (int)(ratio / 100.0 * w);
+    filledBar.w = (int)(std::clamp(ratio, 0, 100) / 100.0 * w);
 
     CUtil::setRenderDrawColor(gui->getRenderer(), color);
     SDL_RenderFillRect(gui->getRenderer(), &filledBar);
@@ -79,14 +113,15 @@ void CStatsGraphicsUtil::drawBar(std::shared_ptr<CGui> gui, int ratio, int index
     emptyBar.h = h;
     emptyBar.w = w - filledBar.w;
 
-    CUtil::setRenderDrawColor(gui->getRenderer(), CColors::Black);
+    CUtil::setRenderDrawColor(gui->getRenderer(), UiTheme::Background);
     SDL_RenderFillRect(gui->getRenderer(), &emptyBar);
 }
 
-void CStatsGraphicsUtil::drawValues(std::shared_ptr<CGui> gui, int left, int right, int index, int barCount, int x,
-                                    int y, int w, int h) {
+void CStatsGraphicsUtil::drawValues(std::shared_ptr<CGui> gui, const std::string &label, int left, int right, int index,
+                                    int barCount, int x, int y, int w, int h) {
     h = h / std::max(1, barCount);
-    gui->getTextManager()->drawTextCentered(vstd::str(left) + "/" + vstd::str(right), x, y + index * h, w, h);
+    gui->getTextManager()->drawTextStyled(label + " " + vstd::str(left) + " / " + vstd::str(right),
+                                          CUtil::rect(x, y + index * h, w, h), "small", UiTheme::Text, true);
 }
 
 bool CStatsGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {

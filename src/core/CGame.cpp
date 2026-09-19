@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSceneManager.h"
 #include "plugin/CPluginRegistrar.h"
 #include "gui/CGui.h"
+#include "gui/panel/CGamePanel.h"
+#include "gui/CTooltip.h"
 
 CGame::CGame() {}
 
@@ -38,7 +40,22 @@ bool CGame::requestMapTransition(CMapTransitionRequest request) {
 
 std::shared_ptr<CMap> CGame::getMap() const { return map; }
 
-void CGame::setMap(std::shared_ptr<CMap> map) { this->map = map; }
+void CGame::setMap(std::shared_ptr<CMap> map) {
+    if (this->map != map && _gui) {
+        auto children = _gui->getChildren();
+        for (const auto &child : children) {
+            if (auto panel = vstd::cast<CGamePanel>(child))
+                panel->close();
+            else if (vstd::cast<CTooltip>(child))
+                _gui->removeChild(child);
+        }
+        _gui->clearDragSession();
+        _gui->releasePointerCapture();
+    }
+    this->map = map;
+}
+
+void CGame::setMapForResourceLoad(std::shared_ptr<CMap> map) { this->map = std::move(map); }
 
 std::shared_ptr<CGameContext> CGame::getContext() {
     if (!context) {

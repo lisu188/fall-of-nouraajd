@@ -16,16 +16,8 @@ story-gated crafting recipes, save/load, random maps, and an MCP engine API for 
   <img alt="Combat panel with player status and action inventory" src="./screenshots/combat.png" width="49%">
 </p>
 
-## walkthrough video
-A full automated playthrough of the Nouraajd campaign — exploring the town, recovering Rolf's skull,
-slaying Gooby, running Father Beren's letter/relic/cleanse chain, saving Victor, and returning the amulet.
-Click the poster to play [`screenshots/nouraajd-walkthrough.mp4`](./screenshots/nouraajd-walkthrough.mp4),
-generated headlessly by [`scripts/generate_walkthrough_video.py`](./scripts/generate_walkthrough_video.py).
-<p>
-  <a href="./screenshots/nouraajd-walkthrough.mp4">
-    <img alt="Fall of Nouraajd walkthrough video" src="./screenshots/nouraajd-walkthrough-poster.png" width="70%">
-  </a>
-</p>
+Current panel, map, frontend, and enlarged-text captures are available in [screenshots](./screenshots).
+The older walkthrough recording predates the interface overhaul and is no longer presented as a current UI preview.
 
 ## features
 - Explore authored maps such as Nouraajd, ritual, siege, and test maps, or start a random generated map.

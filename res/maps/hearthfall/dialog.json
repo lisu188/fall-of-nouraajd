@@ -2,6 +2,7 @@
   "elderDialog": {
     "class": "ElderDialog",
     "properties": {
+      "questIds": "hearthfallQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -25,7 +26,8 @@
                   "condition": "captain_down",
                   "action": "report_victory",
                   "nextStateId": "FREED",
-                  "text": "Watch-Captain Osric is dead. Hearthfall is yours again."
+                  "text": "Watch-Captain Osric is dead. Hearthfall is yours again.",
+                  "actionLabel": "Report victory"
                 }
               },
               {
@@ -91,7 +93,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Elder Maren"
     }
   }
 }

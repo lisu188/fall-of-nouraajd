@@ -2,6 +2,7 @@
   "vossDialog": {
     "class": "VossDialog",
     "properties": {
+      "questIds": "gravemoorQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -25,7 +26,9 @@
                   "condition": "ready_to_judge",
                   "action": "spare_voss",
                   "nextStateId": "SPARED",
-                  "text": "You will live, Voss - and spend that life repaying the marches."
+                  "text": "You will live, Voss - and spend that life repaying the marches.",
+                  "actionLabel": "Spare Voss - lasting choice",
+                  "consequential": true
                 }
               },
               {
@@ -35,7 +38,9 @@
                   "condition": "ready_to_judge",
                   "action": "execute_voss",
                   "nextStateId": "EXECUTED",
-                  "text": "The moor keeps what the usurper buries. It can keep you."
+                  "text": "The moor keeps what the usurper buries. It can keep you.",
+                  "actionLabel": "Execute Voss - lasting choice",
+                  "consequential": true
                 }
               },
               {
@@ -116,7 +121,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Quartermaster Voss"
     }
   }
 }

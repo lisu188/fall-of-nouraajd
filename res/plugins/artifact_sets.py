@@ -23,6 +23,7 @@ artifact can be disassembled back into its pieces by using it from the inventory
 
 See ``docs/design/compound_artifacts.md`` for the full design.
 """
+
 import json
 
 import game
@@ -48,6 +49,64 @@ class ArtifactSetRuntime:
     def __init__(self):
         self._sets = self._load_sets()
         self._by_combined = {definition["combined"]: definition for definition in self._sets.values()}
+        self._presentation = {}
+        for filename in ("items.json", "weapons.json", "armors.json"):
+            self._presentation.update(_read_config_json(filename))
+
+    def itemPresentation(self, item_id):
+        properties = self._presentation.get(item_id, {}).get("properties", {})
+        fallback = "".join(
+            " " + char if index and char.isupper() and item_id[index - 1].islower() else char
+            for index, char in enumerate(item_id)
+        ).replace("_", " ")
+        return properties.get("label") or fallback, properties.get("description", "")
+
+    def assemblyDetail(self, definition, disassembling=False, game_instance=None):
+        label, description = self.itemPresentation(definition["combined"])
+        pieces = [self.itemPresentation(item_id)[0] for item_id in definition["pieces"]]
+        if disassembling:
+            detail = [label, description, "", "Returns these pieces to your inventory:", *pieces]
+            detail.extend(["", "The combined artifact is removed. Its pieces are returned unequipped."])
+        else:
+            detail = [label, description, "", "Combines these equipped pieces:", *pieces]
+            detail.extend(["", "The new artifact is equipped and occupies the set's equipment slots."])
+        if game_instance is not None:
+            combined = game_instance.getObjectHandler().createObject(game_instance, definition["combined"])
+            if combined is not None:
+                detail.extend(self.resultingEquipmentDetail(game_instance, combined, disassembling))
+        detail.append("Cursed equipped artifacts cannot be taken apart.")
+        return "\n".join(detail)
+
+    @staticmethod
+    def resultingEquipmentDetail(game_instance, combined, disassembling):
+        detail = ["", "Bonuses removed" if disassembling else "Resulting bonuses"]
+        bonus = combined.getObjectProperty("bonus")
+        properties = json.loads(game.jsonify(bonus)).get("properties", {}) if bonus is not None else {}
+        labels = {"dmgMin": "Minimum damage", "dmgMax": "Maximum damage", "crit": "Critical chance"}
+        for name, value in sorted(properties.items()):
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and value:
+                words = "".join(" " + char.lower() if char.isupper() else char for char in name)
+                detail.append(labels.get(name, words.capitalize()) + f" {value:+g}")
+        interaction = combined.getObjectProperty("interaction")
+        if interaction is not None:
+            label = interaction.getStringProperty("label") or interaction.getStringProperty("typeId")
+            detail.extend(["", "Ability removed" if disassembling else "Granted ability", label])
+            detail.append(f"Mana cost: {interaction.getNumericProperty('manaCost')}")
+        configuration = game_instance.getSlotConfiguration()
+        occupied = set(combined.getCoveredSlots())
+        primary = ArtifactSetRuntime._primary_slot(game_instance, combined)
+        if primary is not None:
+            occupied.add(primary)
+        slots = configuration.getConfiguration()
+        names = []
+        for slot in sorted(occupied):
+            slot_name = slots[slot].getSlotName()
+            words = "".join(
+                " " + char.lower() if index and char.isupper() else char for index, char in enumerate(slot_name)
+            )
+            names.append(words)
+        detail.extend(["", "Slots released" if disassembling else "Occupied slots", ", ".join(names)])
+        return detail
 
     def _load_sets(self):
         sets = {}
@@ -91,9 +150,7 @@ class ArtifactSetRuntime:
 
     def _has_cursed_piece(self, player, definition):
         equipped = self._equipped_by_type(player)
-        return any(
-            equipped[piece_id].hasTag(CURSED_TAG) for piece_id in definition["pieces"] if piece_id in equipped
-        )
+        return any(equipped[piece_id].hasTag(CURSED_TAG) for piece_id in definition["pieces"] if piece_id in equipped)
 
     def assemble(self, game_instance, player, definition):
         """Fuse an equipped set into its combined artifact. Returns True on success."""
@@ -167,6 +224,14 @@ def get_runtime():
     return _RUNTIME
 
 
+def notifyResult(handler, message):
+    notify = getattr(handler, "notify", None)
+    if callable(notify):
+        notify(message)
+    else:
+        handler.showInfo(message, True)
+
+
 def maybe_offer_assembly(player):
     """Offered when a set completes: prompt the player to assemble each ready set."""
     if player is None or not player.isPlayer():
@@ -179,9 +244,22 @@ def maybe_offer_assembly(player):
             continue
         assemble_option = ASSEMBLE_PREFIX + definition["label"]
         options = [assemble_option, DECLINE_ASSEMBLE]
-        selection = handler.showSelection(game.list_string(game_instance, options))
-        if selection == assemble_option and runtime.assemble(game_instance, player, definition):
-            handler.showInfo("The pieces fuse into the " + definition["label"] + ".", True)
+        show_choice = getattr(handler, "showChoice", None)
+        if callable(show_choice):
+            choices = [
+                {
+                    "id": definition["id"],
+                    "label": definition["label"],
+                    "detail": runtime.assemblyDetail(definition, game_instance=game_instance),
+                }
+            ]
+            selection = show_choice("Assemble artifact", json.dumps(choices), "Assemble", DECLINE_ASSEMBLE)
+            accepted = selection == definition["id"]
+        else:
+            selection = handler.showSelection(game.list_string(game_instance, options))
+            accepted = selection == assemble_option
+        if accepted and runtime.assemble(game_instance, player, definition):
+            notifyResult(handler, "The pieces fuse into the " + definition["label"] + ".")
 
 
 def offer_disassembly(combined_item, player):
@@ -196,9 +274,24 @@ def offer_disassembly(combined_item, player):
     handler = game_instance.getGuiHandler()
     disassemble_option = DISASSEMBLE_PREFIX + definition["label"]
     options = [disassemble_option, DECLINE_DISASSEMBLE]
-    selection = handler.showSelection(game.list_string(game_instance, options))
-    if selection == disassemble_option and runtime.disassemble(game_instance, player, combined_item):
-        handler.showInfo("You separate the " + definition["label"] + " into its pieces.", True)
+    show_choice = getattr(handler, "showChoice", None)
+    if callable(show_choice):
+        cursed = bool(player.getSlotWithItem(combined_item)) and combined_item.hasTag(CURSED_TAG)
+        choices = [
+            {
+                "id": definition["id"],
+                "label": definition["label"],
+                "detail": runtime.assemblyDetail(definition, disassembling=True, game_instance=game_instance),
+                "enabled": not cursed,
+            }
+        ]
+        selection = show_choice("Disassemble artifact", json.dumps(choices), "Disassemble", DECLINE_DISASSEMBLE)
+        accepted = selection == definition["id"]
+    else:
+        selection = handler.showSelection(game.list_string(game_instance, options))
+        accepted = selection == disassemble_option
+    if accepted and runtime.disassemble(game_instance, player, combined_item):
+        notifyResult(handler, "You separate the " + definition["label"] + " into its pieces.")
 
 
 def _schedule_assembly_offer(event):

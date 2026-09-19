@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
+#include "gui/CDetailViewport.h"
+#include "gui/CUiTheme.h"
 #include "object/CPlayer.h"
 #include "object/CQuest.h"
 
@@ -69,8 +71,17 @@ void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SD
     if (!gui || !rect || rect->w <= 0 || rect->h <= 0) {
         return;
     }
+    for (const auto &child : getChildren()) {
+        auto list = vstd::cast<CListView>(child);
+        if (list && list->getCollection() == "questCollection") {
+            CGamePanel::renderObject(gui, rect, i);
+            return;
+        }
+    }
     refreshScrollLayout(gui);
-    auto viewport = CUtil::rect(rect->x, rect->y, rect->w, viewportHeight);
+    const int side = UiTheme::scaled(gui, 24);
+    const int top = UiTheme::scaled(gui, 116);
+    auto viewport = CUtil::rect(rect->x + side, rect->y + top, std::max(1, rect->w - side * 2), viewportHeight);
     auto textManager = gui->getTextManager();
     auto first = std::lower_bound(paragraphs.begin(), paragraphs.end(), scrollOffset,
                                   [](const auto &paragraph, int y) { return paragraph.y + paragraph.height <= y; });
@@ -79,8 +90,9 @@ void CGameQuestPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SD
         textManager->drawTextScrolled(paragraph->text, viewport, paragraph->y - scrollOffset);
     }
     const std::string position = scrollMaximum ? std::to_string(100LL * scrollOffset / scrollMaximum) + "%" : "100%";
-    auto footer = CUtil::rect(rect->x, rect->y + viewportHeight, rect->w, rect->h - viewportHeight);
-    textManager->drawTextCentered("Wheel / Up / Down / PgUp / PgDn / Home / End - " + position, footer);
+    auto footer =
+        CUtil::rect(rect->x + side, rect->y + top + viewportHeight, rect->w - side * 2, UiTheme::scaled(gui, 28));
+    textManager->drawTextStyled("Scroll: wheel / arrows / PgUp / PgDn - " + position, footer, "small", UiTheme::Muted);
 }
 
 void CGameQuestPanel::refreshScrollLayout(const std::shared_ptr<CGui> &gui) {
@@ -90,13 +102,14 @@ void CGameQuestPanel::refreshScrollLayout(const std::shared_ptr<CGui> &gui) {
     refreshTextCache(gui);
     const auto rect = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
     auto textManager = gui->getTextManager();
-    if (measuredTextManager.lock() != textManager) {
-        lineHeight = std::max(24, textManager->getTextureSize("Ag").second);
+    const int currentLineHeight = std::max(24, textManager->getTextureSize("Ag").second);
+    if (measuredTextManager.lock() != textManager || lineHeight != currentLineHeight) {
+        lineHeight = currentLineHeight;
         measuredTextManager = textManager;
         paragraphLayoutDirty = true;
     }
-    viewportHeight = std::max(0, rect->h - lineHeight * 2);
-    const int width = std::max(1, rect->w);
+    viewportHeight = std::max(0, rect->h - UiTheme::scaled(gui, 192));
+    const int width = std::max(1, rect->w - UiTheme::scaled(gui, 48));
     if (paragraphLayoutDirty || paragraphWidth != width) {
         paragraphs.clear();
         contentHeight = 0;
@@ -158,6 +171,11 @@ bool CGameQuestPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType typ
     if (type != SDL_KEYDOWN) {
         return true;
     }
+    if (detailsViewport.w > 0 && (key == SDLK_PAGEUP || key == SDLK_PAGEDOWN)) {
+        detailsOffset = std::clamp(detailsOffset + (key == SDLK_PAGEUP ? -1 : 1) * std::max(1, detailsViewport.h - 24),
+                                   0, detailsMaximum);
+        return true;
+    }
     refreshScrollLayout(gui);
     switch (key) {
     case SDLK_UP:
@@ -179,13 +197,24 @@ bool CGameQuestPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType typ
         scrollOffset = scrollMaximum;
         break;
     default:
-        break;
+        return CGamePanel::keyboardEvent(gui, type, key);
     }
     return true;
 }
 
 bool CGameQuestPanel::mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX,
                                       int wheelY) {
+    if (detailsViewport.w > 0) {
+        auto origin = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : nullptr;
+        SDL_Point point{x + (origin ? origin->x : 0), y + (origin ? origin->y : 0)};
+        if (!SDL_PointInRect(&point, &detailsViewport)) {
+            return false;
+        }
+        detailsOffset =
+            static_cast<int>(std::clamp(static_cast<long long>(detailsOffset) - static_cast<long long>(wheelY) * 72,
+                                        0LL, static_cast<long long>(detailsMaximum)));
+        return true;
+    }
     refreshScrollLayout(gui);
     scrollBy(-static_cast<long long>(wheelY) * lineHeight * 3);
     return true;
@@ -202,8 +231,18 @@ void CGameQuestPanel::refreshTextCache(const std::shared_ptr<CGui> &ptr) {
     // log on every rendered frame.
     auto player = resolveQuestSource(ptr);
     refreshQuestSubscriptions(player, resolveQuestStateSource(ptr));
+    if (activeTab == "history") {
+        const auto dialogue = player ? player->getStringProperty("uiDialogueHistory") : "";
+        const auto notifications = ptr ? ptr->getUiHistory() : "";
+        if (dialogue != cachedDialogueHistory || notifications != cachedNotificationHistory) {
+            cachedDialogueHistory = dialogue;
+            cachedNotificationHistory = notifications;
+            questTextDirty = true;
+        }
+    }
     if (questTextDirty) {
         cachedQuestText = buildText(player);
+        ++questTextVersion;
         questTextDirty = false;
         paragraphLayoutDirty = true;
     }
@@ -221,20 +260,227 @@ std::shared_ptr<CGameObject> CGameQuestPanel::resolveQuestStateSource(const std:
 }
 
 std::string CGameQuestPanel::buildText(const std::shared_ptr<CPlayer> &player) {
+    if (activeTab == "history") {
+        std::string text = "CONVERSATIONS\n\n";
+        auto appendHistory = [&text](const std::string &serialized) {
+            json entries;
+            try {
+                entries = json::parse(serialized.empty() ? "[]" : serialized);
+            } catch (const std::exception &) {
+                return;
+            }
+            if (!entries.is_array()) {
+                return;
+            }
+            for (const auto &entry : entries) {
+                if (entry.is_string()) {
+                    text += entry.get<std::string>() + "\n\n";
+                } else if (entry.is_object() && entry.contains("text") && entry["text"].is_string()) {
+                    if (entry.contains("speaker") && entry["speaker"].is_string()) {
+                        text += entry["speaker"].get<std::string>() + "\n";
+                    }
+                    text += entry["text"].get<std::string>() + "\n\n";
+                }
+            }
+        };
+        appendHistory(cachedDialogueHistory);
+        text += "RECENT UPDATES\n\n";
+        appendHistory(cachedNotificationHistory);
+        return text;
+    }
     if (!player) {
         return "No active quests.\n";
     }
-    std::string text = "";
-    for (auto quest : player->getCompletedQuests()) {
-        append_quest_line(text, quest, true);
-    }
-    for (auto quest : player->getQuests()) {
-        append_quest_line(text, quest, false);
+    std::string text;
+    if (activeTab == "completed") {
+        for (auto quest : player->getCompletedQuests()) {
+            append_quest_line(text, quest, true);
+        }
+    } else {
+        const auto tracked = player->getStringProperty("uiTrackedQuestId");
+        for (auto quest : player->getQuests()) {
+            if (quest && !tracked.empty() && quest->getName() == tracked) {
+                text += "TRACKED QUEST\n";
+                append_quest_line(text, quest, false);
+            }
+        }
+        for (auto quest : player->getQuests()) {
+            if (quest && (tracked.empty() || quest->getName() != tracked)) {
+                append_quest_line(text, quest, false);
+            }
+        }
     }
     if (text.empty()) {
-        text = "No active quests.\n";
+        text = activeTab == "completed" ? "No completed quests yet.\n" : "No active quests.\n";
     }
     return text;
+}
+
+void CGameQuestPanel::showActive(std::shared_ptr<CGui> gui) { switchTab(gui, "active"); }
+
+void CGameQuestPanel::showCompleted(std::shared_ptr<CGui> gui) { switchTab(gui, "completed"); }
+
+void CGameQuestPanel::showHistory(std::shared_ptr<CGui> gui) { switchTab(gui, "history"); }
+
+void CGameQuestPanel::switchTab(const std::shared_ptr<CGui> &gui, const std::string &tab) {
+    if (activeTab == tab) {
+        return;
+    }
+    auto &previous = tabStates[activeTab];
+    previous.selectedQuest = selectedQuest;
+    previous.scrollOffset = scrollOffset;
+    previous.detailsOffset = detailsOffset;
+    std::shared_ptr<CListView> list;
+    for (const auto &child : getChildren()) {
+        if (auto candidate = vstd::cast<CListView>(child);
+            candidate && candidate->getCollection() == "questCollection") {
+            list = candidate;
+            previous.list = list->getViewState();
+            break;
+        }
+    }
+    activeTab = tab;
+    const auto &restored = tabStates[tab];
+    selectedQuest = restored.selectedQuest;
+    scrollOffset = restored.scrollOffset;
+    detailsOffset = restored.detailsOffset;
+    selectedTextVersion = -1;
+    questTextDirty = true;
+    if (list) {
+        list->restoreViewState(restored.list);
+    }
+    refreshViews();
+}
+
+bool CGameQuestPanel::setTrackedQuest(std::shared_ptr<CGui> gui, const std::string &questId) {
+    auto player = resolveQuestSource(gui);
+    if (!player) {
+        return false;
+    }
+    if (!questId.empty()) {
+        auto quests = player->getQuests();
+        if (std::none_of(quests.begin(), quests.end(),
+                         [&questId](const auto &quest) { return quest && quest->getName() == questId; })) {
+            return false;
+        }
+    }
+    player->setStringProperty("uiTrackedQuestId", questId);
+    questTextDirty = true;
+    return true;
+}
+
+void CGameQuestPanel::chooseTrackedQuest(std::shared_ptr<CGui> gui) {
+    auto player = resolveQuestSource(gui);
+    if (!player || !gui || !gui->getGame()) {
+        return;
+    }
+    json choices = json::array();
+    choices[choices.size()] = {{"id", "clearTracking"},
+                               {"label", "Stop tracking"},
+                               {"detail", "Keep your journal available without a tracked objective."}};
+    for (const auto &quest : player->getQuests()) {
+        if (quest) {
+            choices[choices.size()] = {{"id", quest->getName()},
+                                       {"label", quest->getDescription()},
+                                       {"detail", quest->getObjective() + "\n" + quest->getHint()}};
+        }
+    }
+    const auto choice =
+        gui->getGame()->getGuiHandler()->showChoice("Track a quest", choices.dump(), "Track quest", "Back");
+    if (!choice.empty()) {
+        setTrackedQuest(gui, choice == "clearTracking" ? "" : choice);
+    }
+}
+
+CListView::collection_pointer CGameQuestPanel::questCollection(std::shared_ptr<CGui> gui) {
+    auto collection = std::make_shared<CListView::collection_type>();
+    auto player = resolveQuestSource(gui);
+    if (!player || activeTab == "history") {
+        return collection;
+    }
+    const auto quests = activeTab == "completed" ? player->getCompletedQuests() : player->getQuests();
+    for (const auto &quest : quests) {
+        collection->push_back(quest);
+    }
+    auto selected = selectedQuest.lock();
+    if (std::none_of(quests.begin(), quests.end(),
+                     [selected](const auto &quest) { return CGameObject::sameInstance(selected, quest); })) {
+        selectedQuest = quests.empty() ? nullptr : *quests.begin();
+        selectedTextVersion = -1;
+        detailsOffset = 0;
+    }
+    return collection;
+}
+
+void CGameQuestPanel::questCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    auto quests = questCollection(gui);
+    if (std::any_of(quests->begin(), quests->end(),
+                    [object](const auto &quest) { return CGameObject::sameInstance(object, quest); })) {
+        selectedQuest = object;
+        selectedTextVersion = -1;
+        detailsOffset = 0;
+        refreshViews();
+    }
+}
+
+bool CGameQuestPanel::questSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
+    return object && CGameObject::sameInstance(selectedQuest.lock(), object);
+}
+
+std::string CGameQuestPanel::getSelectedQuestText(std::shared_ptr<CGui> gui) {
+    refreshTextCache(gui);
+    if (activeTab == "history") {
+        return cachedQuestText;
+    }
+    auto quests = questCollection(gui);
+    auto current = selectedQuest.lock();
+    if (std::none_of(quests->begin(), quests->end(),
+                     [current](const auto &quest) { return CGameObject::sameInstance(current, quest); })) {
+        current = quests->empty() ? nullptr : *quests->begin();
+        selectedQuest = current;
+        selectedTextVersion = -1;
+    }
+    if (selectedTextVersion != questTextVersion) {
+        selectedQuestText.clear();
+        auto quest = vstd::cast<CQuest>(current);
+        if (quest) {
+            append_quest_line(selectedQuestText, quest, activeTab == "completed");
+            auto player = resolveQuestSource(gui);
+            if (activeTab == "active" && player && player->getStringProperty("uiTrackedQuestId") == quest->getName()) {
+                selectedQuestText = "TRACKED QUEST\n\n" + selectedQuestText;
+            }
+        } else {
+            selectedQuestText = activeTab == "completed" ? "No completed quests yet." : "No active quests.";
+        }
+        selectedTextVersion = questTextVersion;
+    }
+    return selectedQuestText;
+}
+
+void CGameQuestPanel::renderSelectedQuest(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    if (!gui || !rect) {
+        return;
+    }
+    const auto text = getSelectedQuestText(gui);
+    detailLayout.update(gui, text, rect->w);
+    const auto content = DetailViewport::contentRect(gui, rect, detailLayout.getContentHeight());
+    detailsViewport = *content;
+    detailsMaximum = std::max(0, detailLayout.getContentHeight() - content->h);
+    detailsOffset = std::clamp(detailsOffset, 0, detailsMaximum);
+    detailLayout.draw(gui, content, detailsOffset);
+    DetailViewport::drawScrollHint(gui, rect, content, detailsOffset, detailsMaximum);
+}
+
+void CGameQuestPanel::trackSelectedQuest(std::shared_ptr<CGui> gui) {
+    if (activeTab != "active") {
+        return;
+    }
+    getSelectedQuestText(gui);
+    if (auto quest = selectedQuest.lock()) {
+        auto player = resolveQuestSource(gui);
+        setTrackedQuest(
+            gui, player && player->getStringProperty("uiTrackedQuestId") == quest->getName() ? "" : quest->getName());
+    }
 }
 
 void CGameQuestPanel::refreshFromQuestsChanged() { questTextDirty = true; }

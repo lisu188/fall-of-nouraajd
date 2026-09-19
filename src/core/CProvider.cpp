@@ -262,6 +262,16 @@ std::list<std::string> buildResourceSearchPath() {
         auto canonicalModuleRoot = std::filesystem::weakly_canonical(moduleRoot, errorCode);
         if (!errorCode) {
             paths.push_back(canonicalModuleRoot.string());
+            // CMake multi-config builds put DLLs in Release/Debug and configure resources in the build root.
+            // Only admit that verified build parent, never an arbitrary working directory.
+            const auto configuration = canonicalModuleRoot.filename().string();
+            const auto buildRoot = canonicalModuleRoot.parent_path();
+            if ((configuration == "Release" || configuration == "Debug" || configuration == "RelWithDebInfo" ||
+                 configuration == "MinSizeRel") &&
+                std::filesystem::is_regular_file(buildRoot / "CMakeCache.txt", errorCode) &&
+                std::filesystem::is_directory(buildRoot / "config", errorCode)) {
+                paths.push_back(buildRoot.string());
+            }
         }
     }
     return paths;

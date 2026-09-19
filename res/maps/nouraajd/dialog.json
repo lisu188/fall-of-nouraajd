@@ -2,6 +2,7 @@
   "doorDialog": {
     "class": "DoorDialog",
     "properties": {
+      "questIds": "rolfQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -15,7 +16,8 @@
                   "number": 0,
                   "action": "open_door",
                   "nextStateId": "WELCOME",
-                  "text": "Present Rolf's letter and swear your aid."
+                  "text": "Present Rolf's letter and swear your aid.",
+                  "actionLabel": "Enter town"
                 }
               },
               {
@@ -25,7 +27,8 @@
                   "condition": "can_brace_gate",
                   "action": "brace_gate",
                   "nextStateId": "WARRIOR_GATE",
-                  "text": "Brace the gate before the town swallows itself."
+                  "text": "Brace the gate before the town swallows itself.",
+                  "actionLabel": "Warrior"
                 }
               },
               {
@@ -121,7 +124,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Nouraajd Gatekeeper"
     }
   },
   "askAboutGirl": {
@@ -143,7 +147,8 @@
     "ref": "exitOption",
     "properties": {
       "text": "Enough talk. Bring me a tankard of something strong.",
-      "action": "sell_beer"
+      "action": "sell_beer",
+      "actionLabel": "Browse drinks"
     }
   },
   "shouldGo": {
@@ -228,7 +233,8 @@
                   "condition": "can_shadow_robed_men",
                   "action": "shadow_robed_men",
                   "nextStateId": "ASSASIN_TRAIL",
-                  "text": "Shadow the robed men before their trail goes cold."
+                  "text": "Shadow the robed men before their trail goes cold.",
+                  "actionLabel": "Assasin"
                 }
               },
               {
@@ -327,7 +333,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Nouraajd Innkeeper"
     }
   }
 }

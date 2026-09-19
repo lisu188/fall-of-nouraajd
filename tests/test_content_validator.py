@@ -2086,6 +2086,73 @@ class ContentValidatorTest(unittest.TestCase):
             'unknown property "bogus" for class "CPropertyDerived"',
         )
 
+    def test_reviewed_presentation_properties_accept_typed_values_on_their_lineage(self):
+        root = self.make_fixture()
+        self.write_ui_presentation_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config.update(
+            {
+                "uiControl": {
+                    "class": "CButton",
+                    "properties": {
+                        "uiGroup": "Details",
+                        "uiHeading": False,
+                        "uiFooter": True,
+                        "uiTab": False,
+                        "uiFooterGroup": "actions",
+                        "uiOrder": 2,
+                    },
+                },
+                "conversation": {"class": "CDialog", "properties": {"speaker": "Rolf", "questIds": "mainQuest"}},
+                "speakerOverride": {"class": "CDialogState", "properties": {"speaker": "Narrator"}},
+                "response": {
+                    "class": "CDialogOption",
+                    "properties": {
+                        "actionLabel": "Return amulet",
+                        "afterCondition": "hasReturnedAmulet",
+                        "afterStateId": "THANKS",
+                        "consequential": True,
+                    },
+                },
+            }
+        )
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_reviewed_presentation_properties_reject_wrong_types_and_unrelated_objects(self):
+        root = self.make_fixture()
+        self.write_ui_presentation_schema_fixture(root)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        invalid = {
+            "uiControl": (
+                "CButton",
+                {"uiGroup": True, "uiHeading": "yes", "uiFooter": 1, "uiTab": [], "uiFooterGroup": 2, "uiOrder": True},
+            ),
+            "conversation": ("CDialog", {"speaker": 1, "questIds": ["mainQuest"]}),
+            "speakerOverride": ("CDialogState", {"speaker": False}),
+            "response": (
+                "CDialogOption",
+                {"actionLabel": [], "afterCondition": False, "afterStateId": 2, "consequential": "yes"},
+            ),
+        }
+        for key, (class_name, properties) in invalid.items():
+            config[key] = {"class": class_name, "properties": properties}
+        config["ordinaryItem"] = {"class": "CItem", "properties": {"uiGroup": "Details", "speaker": "Rolf"}}
+        config["misspelledControl"] = {"class": "CButton", "properties": {"uiGrop": "Details"}}
+        write_json(config_path, config)
+        issues = validate_repo(root)
+        for key, (class_name, properties) in invalid.items():
+            for property_name in properties:
+                self.assertIssueContains(
+                    issues, f"{key}.properties.{property_name}", f'for class "{class_name}" expected'
+                )
+        self.assertIssueContains(issues, "uiControl.properties.uiOrder", "expected int; got bool")
+        self.assertIssueContains(issues, "ordinaryItem.properties.uiGroup", 'unknown property "uiGroup"')
+        self.assertIssueContains(issues, "ordinaryItem.properties.speaker", 'unknown property "speaker"')
+        self.assertIssueContains(issues, "misspelledControl.properties.uiGrop", 'unknown property "uiGrop"')
+
     def test_creature_class_main_stat_numeric_stat_passes(self):
         root = self.make_fixture()
         self.write_creature_class_main_stat_fixture(root)
@@ -2732,6 +2799,33 @@ class ContentValidatorTest(unittest.TestCase):
                 void registerObjectTypes() {
                     CTypes::register_type<CPropertyBase, CGameObject>();
                     CTypes::register_type<CPropertyDerived, CPropertyBase, CGameObject>();
+                }
+            """).lstrip(),
+            encoding="utf-8",
+        )
+
+    def write_ui_presentation_schema_fixture(self, root):
+        self.write_property_schema_fixture(root)
+        (root / "src/object/CUiPresentationFixture.h").write_text(
+            textwrap.dedent("""
+                class CGameGraphicsObject {
+                    V_META(CGameGraphicsObject, CGameObject, vstd::meta::empty())
+                };
+                class CWidget {
+                    V_META(CWidget, CGameGraphicsObject, vstd::meta::empty())
+                };
+                class CButton {
+                    V_META(CButton, CWidget, vstd::meta::empty())
+                };
+            """).lstrip(),
+            encoding="utf-8",
+        )
+        (root / "src/object/CUiPresentationTypeRegistration.cpp").write_text(
+            textwrap.dedent("""
+                void registerUiTypes() {
+                    CTypes::register_type<CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CWidget, CGameGraphicsObject, CGameObject>();
+                    CTypes::register_type<CButton, CWidget, CGameGraphicsObject, CGameObject>();
                 }
             """).lstrip(),
             encoding="utf-8",
@@ -3416,6 +3510,49 @@ class ContentValidatorTest(unittest.TestCase):
         issues = validate_repo(root)
 
         self.assertEqual([], [str(issue) for issue in issues])
+
+    def testCampaignArtworkAcceptsExistingManifestAndScenarioResources(self):
+        manifest = valid_campaign_manifest()
+        manifest["artwork"] = "images/campaign.png"
+        manifest["scenarios"]["one"]["artwork"] = "images/chapter.png"
+        root = self.make_campaign_fixture(manifest=manifest)
+        image_root = root / "res/images"
+        image_root.mkdir(parents=True, exist_ok=True)
+        image_bytes = (REPO_ROOT / "res/images/tooltip.png").read_bytes()
+        for name in ("campaign.png", "chapter.png"):
+            (image_root / name).write_bytes(image_bytes)
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def testCampaignArtworkRejectsMissingResourcesAtBothLevels(self):
+        manifest = valid_campaign_manifest()
+        manifest["artwork"] = "images/missing.png"
+        manifest["scenarios"]["one"]["artwork"] = "images/missingChapter.png"
+        issues = validate_repo(self.make_campaign_fixture(manifest=manifest))
+
+        self.assertIssueContains(issues, "$.artwork", "must reference an existing PNG resource")
+        self.assertIssueContains(issues, "$.scenarios.one.artwork", "must reference an existing PNG resource")
+
+    def testCampaignArtworkRejectsInvalidTypesAndUnsafePaths(self):
+        for value, expected in (
+            (None, "must be a non-empty string"),
+            (42, "must be a non-empty string"),
+            ("", "must be a non-empty string"),
+            ("../images/campaign.png", "without traversal or absolute paths"),
+            ("images/../campaign.png", "without traversal or absolute paths"),
+            ("images\\campaign.png", "without traversal or absolute paths"),
+            ("C:/images/campaign.png", "without traversal or absolute paths"),
+            ("/images/campaign.png", "without traversal or absolute paths"),
+            ("images/campaign:stream.png", "without traversal or absolute paths"),
+            ("images/campaign.jpg", "without traversal or absolute paths"),
+        ):
+            with self.subTest(value=value):
+                manifest = valid_campaign_manifest()
+                manifest["artwork"] = value
+                manifest["scenarios"]["one"]["artwork"] = value
+                issues = validate_repo(self.make_campaign_fixture(manifest=manifest))
+                self.assertIssueContains(issues, "$.artwork", expected)
+                self.assertIssueContains(issues, "$.scenarios.one.artwork", expected)
 
     def test_campaign_directory_without_manifest_is_flagged(self):
         root = self.make_campaign_fixture()

@@ -18,6 +18,7 @@
   "tavernDialog2": {
     "class": "TavernDialog2",
     "properties": {
+      "questIds": "victorQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -191,18 +192,21 @@
                   "number": 0,
                   "text": "Break into the courtyard rite.",
                   "action": "spawn_cultists",
-                  "nextStateId": "EXIT"
+                  "nextStateId": "EXIT",
+                  "actionLabel": "Begin rescue"
                 }
               }
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Victor and the Innkeeper"
     }
   },
   "victorRewardDialog": {
     "class": "CDialog",
     "properties": {
+      "questIds": "victorQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -219,7 +223,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Victor"
     }
   }
 }

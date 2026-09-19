@@ -1,4 +1,5 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt
     from game import CEvent
     from game import CTrigger
     from game import CQuest
@@ -68,8 +69,10 @@ def load(self, context):
             return False
         quest_system.mark_victor_bad_end()
         _clear_victor_encounter(game_map)
-        game_map.getGame().getGuiHandler().showMessage(
-            "You find the courtyard scrubbed bare; Victor's daughter is gone, carried off with the cult's hush."
+        showReader(
+            game_map.getGame(),
+            "Victor's daughter",
+            "You find the courtyard scrubbed bare; Victor's daughter is gone, carried off with the cult's hush.",
         )
         return True
 
@@ -79,12 +82,12 @@ def load(self, context):
         quest_system = _quest_system_from(dialog)
         victor_state = quest_system.get_state("victor")
         if quest_system.victor_good_end():
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "Victor has already reclaimed his daughter; the courtyard now keeps a reverent quiet."
             )
             return False
         if victor_state == "bad_end":
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "The mayor mutters that the Cult of Marumi Baso vanished with Victor's daughter before help arrived."
             )
             return False
@@ -96,7 +99,7 @@ def load(self, context):
         reserved = set()
         leader_coords = _find_victor_spawn_coords(game_map, dialog.COURTYARD_LEADER_SPAWN, reserved)
         if leader_coords is None:
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "The courtyard is choked with bodies and barricades; the cult's hidden door cannot be reached yet."
             )
             return False
@@ -108,7 +111,7 @@ def load(self, context):
         leader.setController(target_ctrl)
         game_map.addObject(leader)
         if game_map.getObjectByName("cultLeaderQuest") is None:
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "The cult door shudders open, then slams shut before the leader can be drawn into the courtyard."
             )
             return False
@@ -130,14 +133,14 @@ def load(self, context):
 
         if placed_cultists == 0:
             _clear_victor_encounter(game_map)
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "The cult leader vanishes back through the branded door; the courtyard is too choked for a fight."
             )
             return False
 
         game_map.setNumericProperty("VICTOR_CULTISTS_PLACED", placed_cultists)
         quest_system.mark_victor_encounter_active()
-        game.getGuiHandler().showMessage(
+        game.getGuiHandler().notify(
             "The cultists reel toward the stained-glass door. Break their rite before Victor's daughter is taken."
         )
         return True
@@ -398,7 +401,7 @@ def load(self, context):
                 player = game_map.getPlayer()
                 quest_system = _get_quest_system(game_map)
                 _reset_player_quests(player)
-                game.getGuiHandler().showMessage(self.getStringProperty("text"))
+                showReader(game, "Nouraajd", self.getStringProperty("text"))
                 game_map.removeAll(lambda ob: ob.getStringProperty("type") == self.getStringProperty("type"))
                 quest_system.reset_all()
                 game_map.setBoolProperty("ASKED_ABOUT_GIRL", False)
@@ -440,8 +443,14 @@ def load(self, context):
             # Claim-first: set the claim flag before granting so a repeated dialog/trigger run cannot
             # grant the gold twice.
             if claim_once(game_map, "GOOBY_REWARD_CLAIMED"):
+                reward_before = rewardSnapshot(game_map.getPlayer())
                 game_map.getPlayer().addGold(MAIN_QUEST_GOLD_REWARD)
-            self.getGame().getGuiHandler().showMessage("Gooby lies butchered, and weary townsfolk dare a ragged cheer.")
+                showRewardReceipt(
+                    self.getGame(),
+                    "Nouraajd's thanks",
+                    reward_before,
+                    "Gooby lies butchered, and weary townsfolk dare a ragged cheer.",
+                )
 
     @register(context)
     class RolfQuest(CQuest):
@@ -458,7 +467,7 @@ def load(self, context):
             return "The cave entrance lies beyond Nouraajd's roads."
 
         def onComplete(self):
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 "Sergeant Rolf's skull proves his doom; Gooby still prowls the caverns beneath Nouraajd."
             )
 
@@ -573,9 +582,15 @@ def load(self, context):
             if not claim_once(game_map, "OCTOBOGZ_REWARD_CLAIMED"):
                 return
             player = game_map.getPlayer()
+            reward_before = rewardSnapshot(player)
             player.addGold(1000)
             player.addItem("ShadowBlade")
-            game.getGuiHandler().showMessage("The refugees press 1000 gold and the Shadow Blade into your hands.")
+            showRewardReceipt(
+                game,
+                "The OctoBogz bounty",
+                reward_before,
+                "The refugees press 1000 gold and the Shadow Blade into your hands.",
+            )
 
     @register(context)
     class AmuletQuest(CQuest):
@@ -598,14 +613,14 @@ def load(self, context):
     class GoobyTrigger(CTrigger):
         def trigger(self, object, event):
             game = self.getGame()
-            game.getGuiHandler().showMessage("Gooby is felled; the tunnels exhale a foul breath.")
+            game.getGuiHandler().notify("Gooby is felled; the tunnels exhale a foul breath.")
             _quest_system_from(self).mark_gooby_slain()
 
     @trigger(context, "onDestroy", "cave1")
     class CaveTrigger(CTrigger):
         def trigger(self, object, event):
             game = self.getGame()
-            game.getGuiHandler().showMessage(object.getStringProperty("message"))
+            game.getGuiHandler().notify(object.getStringProperty("message"))
             game_map = game.getMap()
             player = game_map.getPlayer()
             quest_system = _quest_system_from(self)
@@ -624,7 +639,7 @@ def load(self, context):
             player = game_map.getPlayer()
             player.addItem("holyRelic")
             _quest_system_from(self).mark_relic_obtained()
-            game.getGuiHandler().showMessage(obj.getStringProperty("message"))
+            game.getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "cave2")
     class OctoBogzCaveTrigger(CTrigger):
@@ -639,9 +654,9 @@ def load(self, context):
             if relic_returned:
                 game_map.setBoolProperty("OCTOBOGZ_CLEARED", True)
             if quest_system.is_relic_returned():
-                game.getGuiHandler().showMessage(object.getStringProperty("message"))
+                game.getGuiHandler().notify(object.getStringProperty("message"))
             else:
-                game.getGuiHandler().showMessage("The OctoBogz lie broken, yet their lair remains befouled.")
+                game.getGuiHandler().notify("The OctoBogz lie broken, yet their lair remains befouled.")
 
     @trigger(context, "onEnter", "nouraajdDoor")
     class NouraajdDoorTrigger(CTrigger):
@@ -661,10 +676,14 @@ def load(self, context):
                 return
             player.incProperty("warrior_barricades", 1)
             player.setBoolProperty("braced_nouraajd_gate", True)
+            reward_before = rewardSnapshot(player)
             player.addExp(750)
             self.open_door()
-            self.getGame().getGuiHandler().showMessage(
-                "You shoulder the warped gate back onto its braces; Rolf's last chalk marks point east."
+            showRewardReceipt(
+                self.getGame(),
+                "Rolf's last marks",
+                reward_before,
+                "You shoulder the warped gate back onto its braces; Rolf's last chalk marks point east.",
             )
 
         def open_door(self):
@@ -704,10 +723,14 @@ def load(self, context):
                 return
             player.incProperty("assasin_trails", 1)
             player.setBoolProperty("shadowed_robed_men", True)
+            reward_before = rewardSnapshot(player)
             player.addExp(750)
             self.asked_about_girl()
-            self.getGame().getGuiHandler().showMessage(
-                "You ghost after the robed men long enough to mark their courtyard turn and the child's yellow ribbon."
+            showRewardReceipt(
+                self.getGame(),
+                "The courtyard trail",
+                reward_before,
+                "You ghost after the robed men long enough to mark their courtyard turn and the child's yellow ribbon.",
             )
 
     @register(context)
@@ -766,9 +789,13 @@ def load(self, context):
                 return
             player.incProperty("wayfarer_routes", 1)
             player.setBoolProperty("charted_smuggler_route", True)
+            reward_before = rewardSnapshot(player)
             player.addExp(750)
-            self.getGame().getGuiHandler().showMessage(
-                "You chart forgotten courier alleys through Nouraajd; each hidden turn steadies your stride when the lane rots away."
+            showRewardReceipt(
+                self.getGame(),
+                "The courier alleys",
+                reward_before,
+                "You chart forgotten courier alleys through Nouraajd; each hidden turn steadies your stride when the lane rots away.",
             )
 
         def give_letter(self):
@@ -779,7 +806,7 @@ def load(self, context):
             issued = quest_system.give_letter(player)
             if issued and not player.hasItem(self._is_letter_to_beren):
                 player.addItem("letterToBeren")
-                self.getGame().getGuiHandler().showMessage("You accept the mayor's sealed missive, wax still warm.")
+                self.getGame().getGuiHandler().notify("You accept the mayor's sealed missive, wax still warm.")
 
         def has_letter_quest(self):
             quest_system = _quest_system_from(self)
@@ -859,9 +886,13 @@ def load(self, context):
                 return
             player.incProperty("inquisitor_clues", 1)
             player.setBoolProperty("inspected_stained_glass", True)
+            reward_before = rewardSnapshot(player)
             player.addExp(750)
-            self.getGame().getGuiHandler().showMessage(
-                "The stained glass hides a Marumi Baso seal; zeal hardens as you memorize the cult's patient cipher."
+            showRewardReceipt(
+                self.getGame(),
+                "The stained-glass cipher",
+                reward_before,
+                "The stained glass hides a Marumi Baso seal; zeal hardens as you memorize the cult's patient cipher.",
             )
 
         def can_decode_stained_glass_ward(self):
@@ -874,10 +905,14 @@ def load(self, context):
                 return
             player.incProperty("sorcerer_sigils", 1)
             player.setBoolProperty("decoded_stained_glass_ward", True)
+            reward_before = rewardSnapshot(player)
             player.addItem("Scroll")
             player.addExp(750)
-            self.getGame().getGuiHandler().showMessage(
-                "You unwind a cold ward from the stained glass and copy its safest stroke onto a blank scroll."
+            showRewardReceipt(
+                self.getGame(),
+                "The copied ward",
+                reward_before,
+                "You unwind a cold ward from the stained glass and copy its safest stroke onto a blank scroll.",
             )
 
         def can_deliver_letter(self):
@@ -901,7 +936,7 @@ def load(self, context):
             player.removeItem(self._is_letter_to_beren, True)
             quest_system.mark_letter_delivered(player)
             player.setBoolProperty("CAN_CRAFT_SCROLLS", True)
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 "Beren opens the chapel scriptorium to you; town portal scrolls can now be crafted."
             )
             if not quest_system.is_relic_returned():
@@ -916,7 +951,7 @@ def load(self, context):
             player.removeItem(lambda it: it.getName() == "holyRelic", True)
             quest_system.mark_relic_returned()
             player.setBoolProperty("CAN_BREW_GREATER_POTIONS", True)
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 "Relic dust settles into the alchemist's notes; stronger draughts are now possible."
             )
             if game_map.getBoolProperty("OCTOBOGZ_SLAIN"):
@@ -928,13 +963,15 @@ def load(self, context):
             quest_system = _quest_system_from(self)
             if self.can_finish_cleanse():
                 quest_system.mark_cave_purged()
-                self.getGame().getGuiHandler().showMessage(
-                    "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel."
+                showReader(
+                    self.getGame(),
+                    "The ritual chapel",
+                    "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel.",
                 )
                 self.getGame().getMap().getPlayer().checkQuests()
                 campaign.complete_scenario(self.getGame(), "completed", fallback_map="ritual")
             else:
-                self.getGame().getGuiHandler().showMessage("The cave still writhes with OctoBogz corruption.")
+                self.getGame().getGuiHandler().notify("The cave still writhes with OctoBogz corruption.")
 
     @register(context)
     class OctoBogzDialog(CDialog):
@@ -993,9 +1030,16 @@ def load(self, context):
             if not claim_once(game_map, "VICTOR_REWARD_GRANTED"):
                 return
             player = game.getMap().getPlayer()
+            reward_before = rewardSnapshot(player)
             player.addGold(500)
             player.healProc(100)
-            game.getGuiHandler().showDialog(game.createObject("victorRewardDialog"))
+            reward_dialog = game.createObject("victorRewardDialog")
+            reward_text = ""
+            for state in reward_dialog.getStates():
+                if state.getStringProperty("stateId") == "ENTRY":
+                    reward_text = state.getStringProperty("text")
+                    break
+            showRewardReceipt(game, "Victor's daughter is safe", reward_before, reward_text)
             game.getGuiHandler().showTrade(game.createObject("victorMarket"))
             quest_system.mark_victor_good_end()
             _clear_victor_encounter(game_map)
@@ -1017,7 +1061,7 @@ def load(self, context):
                 elif amulet_state == "not_started":
                     game.getGuiHandler().showDialog(game.createObject("questDialog"))
                 else:
-                    game.getGuiHandler().showMessage("The goblin still clutches my amulet; please bring it back!")
+                    game.getGuiHandler().notify("The goblin still clutches my amulet; please bring it back!")
 
     @register(context)
     class QuestDialog(CDialog):
@@ -1052,11 +1096,15 @@ def load(self, context):
                 if not claim_once(game_map, "AMULET_REWARD_CLAIMED"):
                     return
                 player.removeItem(lambda it: it.getName() == "preciousAmulet", True)
+                reward_before = rewardSnapshot(player)
                 player.addGold(50)
                 quest_system.finish_amulet()
                 remove_runtime_actors(game_map, names=("amuletGoblin", "oldWoman"))
-                game.getGuiHandler().showMessage(
-                    "The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks."
+                showRewardReceipt(
+                    game,
+                    "Amulet returned",
+                    reward_before,
+                    "The old woman presses 50 gold upon you, tears streaking her dust-caked cheeks.",
                 )
 
     if context.getMap():

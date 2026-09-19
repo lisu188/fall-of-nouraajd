@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -347,7 +347,7 @@ def _format_result_message(runtime, recipe, result, player=None, station=None):
     if reason == "locked":
         return f"That recipe is locked. {runtime.recipe_unlock_hint(recipe, station)}"
     if reason == "failed":
-        return "The reagents fizzled and nothing was created."
+        return "Craft failed. The listed reagents and gold were consumed."
     if reason == "missing:gold":
         return "You need more gold to craft this."
     if reason.startswith("missing:"):
@@ -366,6 +366,42 @@ def _get_station_identifier(station):
     return station_id
 
 
+def recipeChoice(runtime, player, recipe, station=None, last_result=""):
+    unlocked = runtime.is_unlocked(player, recipe)
+    missing = runtime.missing_requirements(player, recipe)
+    details = ["Creates", runtime.describe_outputs(recipe), "", "Ingredients (owned / needed)"]
+    for entry in recipe["inputs"]:
+        details.append(
+            f"{runtime.get_item_label(entry['item_id'])}: "
+            f"{count_inventory_matches(player, entry['item_id'])} / {entry['count']}"
+        )
+    if not recipe["inputs"]:
+        details.append("No ingredients required.")
+    details.extend(
+        [
+            "",
+            f"Gold: {player.getNumericProperty('gold')} owned / {recipe['gold']} needed",
+            f"Success chance: {recipe['success_chance']}%",
+        ]
+    )
+    if recipe["success_chance"] < 100:
+        details.append("The ingredients and gold are spent even if crafting fails.")
+    if not unlocked:
+        details.extend(["", "Locked", runtime.recipe_unlock_hint(recipe, station)])
+    elif missing:
+        details.extend(["", "Missing: " + ", ".join(missing)])
+    else:
+        details.extend(["", "Ready to craft."])
+    if last_result:
+        details.extend(["", "Last result", last_result])
+    return {
+        "id": recipe["id"],
+        "label": recipe["display_name"],
+        "detail": "\n".join(details),
+        "enabled": unlocked and not missing,
+    }
+
+
 def open_crafting_station(station, player):
     if not player or not player.isPlayer():
         return
@@ -376,11 +412,26 @@ def open_crafting_station(station, player):
     game_instance = station.getGame()
     handler = game_instance.getGuiHandler()
     station_label = station.getStringProperty("label") or station_id
+    last_result = ""
     while True:
         recipes, option_map = runtime.station_options(player, station_id, station)
         if not recipes:
             handler.showInfo(f"No known recipes for {station_label}.", True)
             return
+        show_choice = getattr(handler, "showChoice", None)
+        if callable(show_choice):
+            choices = [recipeChoice(runtime, player, recipe, station, last_result) for recipe in recipes]
+            selection = show_choice(station_label, json.dumps(choices), "Craft", "Leave station")
+            recipe = None
+            for candidate in recipes:
+                if candidate["id"] == selection:
+                    recipe = candidate
+                    break
+            if recipe is None:
+                break
+            result = runtime.execute_recipe(game_instance, player, recipe)
+            last_result = _format_result_message(runtime, recipe, result, player, station)
+            continue
         options = list(option_map.keys())
         options.append(LEAVE_OPTION)
         selection = handler.showSelection(game.list_string(game_instance, options))

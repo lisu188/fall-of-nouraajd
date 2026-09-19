@@ -64,6 +64,7 @@ MCP_EXCLUDED_EXPORTS = {
     "trigger",
 }
 MCP_ALLOWED_EXPORTS = {
+    "craftRecipe",
     "CGameLoader.loadGame",
     "CGameLoader.loadGui",
     "CGameLoader.startGame",
@@ -83,6 +84,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getLabel",
         "getName",
         "getNumericProperty",
+        "getObjectProperty",
         "getStringProperty",
         "getType",
         "getTypeId",
@@ -142,6 +144,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "addItems",
         "countItems",
         "getActions",
+        "getEffectiveInteractions",
         "getArchetypeClassId",
         "getArchetypeClassLabel",
         "getArchetypeRaceId",
@@ -2142,17 +2145,9 @@ class EngineMcpServer:
         x_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getXBounds"), z)
         y_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getYBounds"), z)
         if x_bounds is not None and (x < 0 or x > x_bounds):
-            return {
-                "error": (
-                    f"setTarget rejected: x={x} is outside map extents [0, {x_bounds}] for level z={z}"
-                )
-            }
+            return {"error": (f"setTarget rejected: x={x} is outside map extents [0, {x_bounds}] for level z={z}")}
         if y_bounds is not None and (y < 0 or y > y_bounds):
-            return {
-                "error": (
-                    f"setTarget rejected: y={y} is outside map extents [0, {y_bounds}] for level z={z}"
-                )
-            }
+            return {"error": (f"setTarget rejected: y={y} is outside map extents [0, {y_bounds}] for level z={z}")}
 
         can_step = getattr(game_map, "canStep", None)
         if callable(can_step):
@@ -2161,11 +2156,7 @@ class EngineMcpServer:
             except Exception:
                 passable = None
             if passable is False:
-                return {
-                    "error": (
-                        f"setTarget rejected: target ({x}, {y}, {z}) is not a passable tile"
-                    )
-                }
+                return {"error": (f"setTarget rejected: target ({x}, {y}, {z}) is not a passable tile")}
 
         return None
 
@@ -2252,7 +2243,7 @@ class EngineMcpServer:
     def _serializeValue(self, value: Any, registry: HandleRegistry, added: list[str]) -> Any:
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, (list, tuple, set, frozenset)):
             return [self._serializeValue(item, registry, added) for item in value]
         if isinstance(value, dict):
             return {str(key): self._serializeValue(item, registry, added) for key, item in value.items()}
@@ -2399,7 +2390,8 @@ class EngineMcpServer:
 
     @staticmethod
     def _write_stdio_message(payload: Any) -> None:
-        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        # ASCII JSON remains valid UTF-8 even when redirected Windows stdout uses a legacy code page.
+        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
         sys.stdout.write(body)
         sys.stdout.write("\n")
         sys.stdout.flush()
