@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CProvider.h"
 #include "core/CScript.h"
+#include "core/CSlotConfig.h"
 #include "core/CUtil.h"
 #include "gui/CAnimation.h"
 #include "gui/CGui.h"
@@ -32,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CEventHandler.h"
 #include "handler/CTooltipHandler.h"
 #include "object/CQuest.h"
+#include <cctype>
 #include <cstdlib>
 #include <exception>
 #include <utility>

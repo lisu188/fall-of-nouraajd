@@ -38,6 +38,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 
 namespace {
 constexpr int DRAG_PROXY_FALLBACK_SIZE = 50;
