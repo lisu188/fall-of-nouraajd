@@ -611,15 +611,18 @@ void CListView::setRefreshProperties(std::set<std::string> refreshProperties) {
 }
 
 void CListView::initialize() {
-    auto self = this->ptr<CListView>();
+    std::weak_ptr<CListView> weakSelf = this->ptr<CListView>();
     vstd::call_when(
-        [self]() {
-            return self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
-                   self->getGui()->getGame()->getMap() != nullptr;
+        [weakSelf]() {
+            auto self = weakSelf.lock();
+            return !self || (self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
+                             self->getGui()->getGame()->getMap() != nullptr);
         },
-        [self]() {
-            self->refreshSubscriptions();
-            self->refresh();
+        [weakSelf]() {
+            if (auto self = weakSelf.lock()) {
+                self->refreshSubscriptions();
+                self->refresh();
+            }
         });
 }
 
