@@ -325,13 +325,13 @@ CTargetController::CTargetController() {}
 
 std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shared_ptr<CCreature> creature) {
     if (!creature || !creature->getMap()) {
-        return vstd::later([]() { return ZERO; });
+        return vstd::make_ready_future(ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     auto sourceMap = deferredContext.map.lock();
     auto target_object = sourceMap ? sourceMap->getObjectByName(target) : nullptr;
     if (!target_object) {
-        return vstd::later([deferredContext]() { return deferredContext.fallback; });
+        return vstd::make_ready_future(deferredContext.fallback);
     }
     return vstd::async([deferredContext, target_object]() {
         std::shared_ptr<CCreature> creature;
@@ -351,12 +351,11 @@ std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr
         return vstd::later([]() { return ZERO; });
     }
     auto deferredContext = capture_deferred_creature_context(c);
-    return vstd::later([deferredContext]() {
-        std::shared_ptr<CCreature> creature;
-        std::shared_ptr<CMap> map;
-        return resolve_deferred_creature_context(deferredContext, creature, map) ? creature->getCoords()
-                                                                                 : deferredContext.fallback;
-    });
+    std::shared_ptr<CCreature> creature;
+    std::shared_ptr<CMap> map;
+    return vstd::make_ready_future(resolve_deferred_creature_context(deferredContext, creature, map)
+                                       ? creature->getCoords()
+                                       : deferredContext.fallback);
 }
 
 void CController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &) {}
@@ -374,24 +373,22 @@ std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shar
         return vstd::later([]() { return ZERO; });
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([deferredContext]() {
-        std::shared_ptr<CCreature> creature;
-        std::shared_ptr<CMap> map;
-        if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-            return deferredContext.fallback;
-        }
-        Coords target = creature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
-        return map->normalizeCoords(target);
-    });
+    std::shared_ptr<CCreature> resolvedCreature;
+    std::shared_ptr<CMap> map;
+    if (!resolve_deferred_creature_context(deferredContext, resolvedCreature, map)) {
+        return vstd::make_ready_future(deferredContext.fallback);
+    }
+    Coords target = resolvedCreature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
+    return vstd::make_ready_future(map->normalizeCoords(target));
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CNpcRandomController>();
     if (!creature || !creature->getMap()) {
-        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([self, deferredContext]() -> Coords {
+    return vstd::make_ready_future([self, deferredContext]() -> Coords {
         std::shared_ptr<CCreature> creature;
         std::shared_ptr<CMap> map;
         if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
@@ -434,7 +431,7 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
         }
 
         return creature->getCoords();
-    });
+    }());
 }
 
 void CNpcRandomController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &) { currentStep++; }
