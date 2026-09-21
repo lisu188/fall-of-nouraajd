@@ -1135,6 +1135,14 @@ void init_game_module(py::module_ &m) {
         .def("runUntilIdle", &vstd::event_loop<>::runUntilIdle, py::arg("maxIterations") = 1000,
              "Process ready work until idle or the iteration limit is reached.")
         .def("hasReadyWork", &vstd::event_loop<>::hasReadyWork, "Return whether immediate queued work is available.")
+        .def("getPendingTaskCount", &vstd::event_loop<>::getPendingTaskCount, "Return queued immediate task count.")
+        .def("getConditionalTaskCount", &vstd::event_loop<>::getConditionalTaskCount,
+             "Return registered conditional task count.")
+        .def("getDelayedTaskCount", &vstd::event_loop<>::getDelayedTaskCount, "Return registered delayed task count.")
+        .def("getFrameCallbackCount", &vstd::event_loop<>::getFrameCallbackCount,
+             "Return registered frame callback count.")
+        .def("getEventCallbackCount", &vstd::event_loop<>::getEventCallbackCount,
+             "Return registered SDL event callback count.")
         .def("invoke", &vstd::event_loop<>::invoke, "Queue a callable for later execution.");
 
     auto vector_string = py::bind_vector<std::vector<std::string>>(m, "std::vector<std::string>");
