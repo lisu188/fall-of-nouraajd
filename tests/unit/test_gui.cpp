@@ -2509,11 +2509,19 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
+    auto loop = vstd::event_loop<>::instance();
+    const auto baselineFrameCallbacks = loop->getFrameCallbackCount();
+    const auto baselineEventCallbacks = loop->getEventCallbackCount();
+
     auto firstGame = create_loader_gui_game();
     CGameLoader::loadGui(firstGame);
     auto firstGui = firstGame->getGui();
     auto firstContext = firstGame->getContext();
     expect_true(firstGui != nullptr, "first loader GUI session should create a GUI");
+    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks + 1,
+                "loading a GUI session should register exactly one frame callback");
+    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks + 1,
+                "loading a GUI session should register exactly one event callback");
 
     auto firstRecorder = attach_mouse_recorder(firstGui);
     int firstRenderCount = 0;
@@ -2523,6 +2531,10 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     expect_true(!firstContext->isActive(), "first context should be inactive after explicit shutdown");
     expect_true(firstGame->getGui() == nullptr, "first shutdown should detach the game GUI");
     expect_true(firstGui->getChildren().empty(), "first shutdown should clear GUI children");
+    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks,
+                "context shutdown should unregister the session frame callback");
+    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks,
+                "context shutdown should unregister the session event callback");
     drain_event_loop();
     expect_true(firstRecorder->button_count == 0, "first shutdown should prevent stale event dispatch");
     expect_true(firstRenderCount == 0, "first shutdown should prevent stale frame rendering");
@@ -2532,6 +2544,10 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     auto secondGui = secondGame->getGui();
     auto secondContext = secondGame->getContext();
     expect_true(secondGui != nullptr, "second loader GUI session should create a GUI");
+    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks + 1,
+                "a replacement GUI session should not accumulate old frame callbacks");
+    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks + 1,
+                "a replacement GUI session should not accumulate old event callbacks");
 
     auto secondRecorder = attach_mouse_recorder(secondGui);
     int secondRenderCount = 0;
@@ -2552,6 +2568,10 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     secondContext->shutdown();
     expect_true(!secondContext->isActive(), "second context should be inactive after explicit shutdown");
     const int renderCountAfterShutdown = secondRenderCount;
+    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks,
+                "second context shutdown should restore the frame callback baseline");
+    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks,
+                "second context shutdown should restore the event callback baseline");
     drain_event_loop();
     expect_true(secondRecorder->button_count == 1, "second shutdown should stop later event dispatch");
     expect_true(secondRenderCount == renderCountAfterShutdown, "second shutdown should stop later frame rendering");
