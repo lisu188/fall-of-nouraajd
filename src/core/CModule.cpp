@@ -1130,7 +1130,11 @@ void init_game_module(py::module_ &m) {
     py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
                                                                         "Global async event loop utility.")
         .def_static("instance", &CRuntimeBridge::event_loop_instance, "Return the singleton event loop instance.")
-        .def("run", &vstd::event_loop<>::run, "Process queued tasks/events once.")
+        .def("run", &vstd::event_loop<>::run, "Process one paced application frame.")
+        .def("runReady", &vstd::event_loop<>::runReady, "Process immediately ready tasks/events without frame pacing.")
+        .def("runUntilIdle", &vstd::event_loop<>::runUntilIdle, py::arg("maxIterations") = 1000,
+             "Process ready work until idle or the iteration limit is reached.")
+        .def("hasReadyWork", &vstd::event_loop<>::hasReadyWork, "Return whether immediate queued work is available.")
         .def("invoke", &vstd::event_loop<>::invoke, "Queue a callable for later execution.");
 
     auto vector_string = py::bind_vector<std::vector<std::string>>(m, "std::vector<std::string>");
