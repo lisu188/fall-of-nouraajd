@@ -2346,6 +2346,7 @@ int main() {
     test_scene_manager_transition_preserves_player_archetypes();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
+    test_map_move_restores_moving_flag_when_controller_future_fails();
     test_map_move_ignores_controller_future_after_transition_generation_changes();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_tile_movement_cost_deserialization();
