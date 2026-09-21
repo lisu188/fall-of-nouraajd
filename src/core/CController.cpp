@@ -348,7 +348,7 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
 
 std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr<CCreature> c) {
     if (!c) {
-        return vstd::later([]() { return ZERO; });
+        return vstd::make_ready_future(ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(c);
     std::shared_ptr<CCreature> creature;
@@ -448,10 +448,10 @@ void CGroundController::setTileType(std::string type) { _tileType = type; }
 std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CGroundController>();
     if (!creature || !creature->getMap()) {
-        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([self, deferredContext]() -> Coords {
+    return vstd::make_ready_future([self, deferredContext]() -> Coords {
         std::shared_ptr<CCreature> creature;
         std::shared_ptr<CMap> map;
         if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
@@ -468,7 +468,7 @@ std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shar
             return *vstd::random_element(possible);
         }
         return creature->getCoords();
-    });
+    }());
 }
 
 CRangeController::CRangeController() {}
@@ -476,10 +476,10 @@ CRangeController::CRangeController() {}
 std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CRangeController>();
     if (!creature || !creature->getMap()) {
-        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([self, deferredContext]() -> Coords {
+    return vstd::make_ready_future([self, deferredContext]() -> Coords {
         std::shared_ptr<CCreature> creature;
         std::shared_ptr<CMap> map;
         if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
@@ -496,7 +496,7 @@ std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::share
             return *vstd::random_element(possible);
         }
         return creature->getCoords();
-    });
+    }());
 }
 
 std::string CRangeController::getTarget() { return target; }
