@@ -586,7 +586,8 @@ void CMap::move() {
 
     map->moving = true;
 
-    vstd::logger::debug("Turn:", map->turn);
+    try {
+        vstd::logger::debug("Turn:", map->turn);
 
     auto transitionContext = game ? game->getContext() : nullptr;
     const auto expectedGeneration =
@@ -621,45 +622,23 @@ void CMap::move() {
         return creature && vstd::castable<CMoveable>(object) && is_active_creature(creature);
     };
 
-    std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>> coordinates =
-        std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>>();
-
-    std::vector<std::shared_ptr<CMapObject>> active_objects;
+    std::vector<std::shared_ptr<CCreature>> plannedCreatures;
+    std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
     for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
-        active_objects.push_back(object);
-    }
-
-    auto controller = [coordinates, canApplyDeferredMoveWork, map](std::shared_ptr<CMapObject> object) {
         auto creature = vstd::cast<CCreature>(object);
-        return creature->getController()->control(creature)->thenLater(
-            [creature, coordinates, canApplyDeferredMoveWork, map](Coords coords) {
-                // Keep planned steps for creatures that are still on this map's transition
-                // generation, even if the controller removed the creature during planning.
-                // The commit loop below interrupts non-active creatures; dropping them here
-                // would skip that interrupt. Stale results from a map transition are filtered
-                // by canApplyDeferredMoveWork().
-                if (canApplyDeferredMoveWork() && creature) {
-                    coordinates->push_back(std::make_pair(creature, coords));
-                }
-            });
-    };
-
-    std::vector<std::shared_ptr<vstd::future<void, Coords>>> pending;
-    for (const auto &object : active_objects) {
-        pending.push_back(controller(object));
+        plannedCreatures.push_back(creature);
+        pending.push_back(creature->getController()->control(creature));
     }
-    auto joined = vstd::async([pending]() {
-        for (const auto &future : pending) {
-            future->get();
+
+    auto plannedCoordinates = vstd::when_all(pending)->get();
+    std::list<std::pair<std::shared_ptr<CCreature>, Coords>> coordinates;
+    if (canApplyDeferredMoveWork()) {
+        for (std::size_t index = 0; index < plannedCoordinates.size(); ++index) {
+            coordinates.emplace_back(plannedCreatures[index], plannedCoordinates[index]);
         }
-        return std::set<void *>{};
-    });
+    }
 
-    bool round_complete = false;
-    joined->thenLater([&round_complete](std::set<void *>) { round_complete = true; });
-    vstd::wait_until([&round_complete]() { return round_complete; });
-
-    for (auto [creature, coords] : *coordinates) {
+    for (auto [creature, coords] : coordinates) {
         if (!canApplyDeferredMoveWork()) {
             break;
         }
@@ -706,6 +685,10 @@ void CMap::move() {
     map->turn++;
     map->recordDirectPropertyChanged("turn");
     map->signal("turnPassed");
+    } catch (...) {
+        map->moving = false;
+        throw;
+    }
 }
 
 int CMap::getTurn() { return turn; }
