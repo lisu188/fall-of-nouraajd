@@ -481,12 +481,10 @@ class FixedStepController : public CController {
         : target(target), removeBeforeReturn(remove_before_return) {}
 
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
-        return vstd::later([this, creature]() {
-            if (removeBeforeReturn && creature && creature->getMap()) {
-                creature->getMap()->removeObject(creature);
-            }
-            return target;
-        });
+        if (removeBeforeReturn && creature && creature->getMap()) {
+            creature->getMap()->removeObject(creature);
+        }
+        return vstd::make_ready_future(target);
     }
 
     void interrupt(std::shared_ptr<CCreature>) override { interruptCount++; }
@@ -508,13 +506,11 @@ class TransitionDuringControlController : public CController {
         : mapName(std::move(map_name)), target(target) {}
 
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
-        return vstd::later([this, creature]() {
-            futureRan = true;
-            if (creature && creature->getGame()) {
-                creature->getGame()->changeMap(mapName);
-            }
-            return target;
-        });
+        futureRan = true;
+        if (creature && creature->getGame()) {
+            creature->getGame()->changeMap(mapName);
+        }
+        return vstd::make_ready_future(target);
     }
 
     void onStepCommitted(std::shared_ptr<CCreature>, const Coords &) override { committedCount++; }
@@ -526,6 +522,13 @@ class TransitionDuringControlController : public CController {
     bool futureRan = false;
     int committedCount = 0;
     int interruptCount = 0;
+};
+
+class ThrowingController : public CController {
+  public:
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature>) override {
+        return vstd::async([]() -> Coords { throw std::runtime_error("planned movement failed"); });
+    }
 };
 
 class MovementOriginProbeCreature : public CCreature {
@@ -690,6 +693,28 @@ std::shared_ptr<CCreature> add_post_combat_hostile(const std::shared_ptr<CGame> 
     game->getMap()->addObject(hostile);
     hostile->setHp(hostile->getHpMax());
     return hostile;
+}
+
+void test_map_move_restores_moving_flag_when_controller_future_fails() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+
+    auto controller = std::make_shared<ThrowingController>();
+    auto creature = test_creature(game, "throwingWalker", ZERO, controller);
+    map->addObject(creature);
+
+    const int turnBefore = map->getTurn();
+    bool rethrown = false;
+    try {
+        map->move();
+    } catch (const std::runtime_error &error) {
+        rethrown = std::string(error.what()) == "planned movement failed";
+    }
+
+    expect_true(rethrown, "map move should propagate controller future failures to the caller");
+    expect_true(!map->isMoving(), "map move should clear the moving guard after a controller future failure");
+    expect_true(map->getTurn() == turnBefore, "a failed controller round must not advance the map turn");
 }
 
 void test_map_move_ignores_controller_future_after_transition_generation_changes() {
@@ -1711,7 +1736,7 @@ class TurnCountingController : public CController {
   public:
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
         controlCalls++;
-        return vstd::later([creature]() { return creature->getCoords(); });
+        return vstd::make_ready_future(creature->getCoords());
     }
 
     int controlCalls = 0;
