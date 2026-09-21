@@ -370,7 +370,7 @@ void CTargetController::setTarget(std::string target) { this->target = target; }
 
 std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shared_ptr<CCreature> creature) {
     if (!creature) {
-        return vstd::later([]() { return ZERO; });
+        return vstd::make_ready_future(ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     std::shared_ptr<CCreature> resolvedCreature;
