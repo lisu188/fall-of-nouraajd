@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTrigger.h"
 
 #include <atomic>
+#include <chrono>
 
 namespace {
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
@@ -630,7 +631,14 @@ void CMap::move() {
             pending.push_back(creature->getController()->control(creature));
         }
 
-        auto plannedCoordinates = vstd::when_all(pending)->get();
+        auto plannedFuture = vstd::when_all(pending);
+        auto loop = vstd::event_loop<>::instance();
+        while (!plannedFuture->isReady()) {
+            if (loop->runPostedTasks() == 0) {
+                plannedFuture->waitFor(std::chrono::milliseconds(1));
+            }
+        }
+        auto plannedCoordinates = plannedFuture->get();
         std::list<std::pair<std::shared_ptr<CCreature>, Coords>> coordinates;
         if (canApplyDeferredMoveWork()) {
             for (std::size_t index = 0; index < plannedCoordinates.size(); ++index) {
