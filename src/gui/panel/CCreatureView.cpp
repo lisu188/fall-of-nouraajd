@@ -41,13 +41,18 @@ int CCreatureView::getSizeX(std::shared_ptr<CGui> gui) { return 1; }
 int CCreatureView::getSizeY(std::shared_ptr<CGui> gui) { return 1; }
 
 void CCreatureView::initialize() {
-    auto self = this->ptr<CCreatureView>();
+    std::weak_ptr<CCreatureView> weakSelf = this->ptr<CCreatureView>();
     vstd::call_when(
-        [self]() {
-            return self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
-                   self->getGui()->getGame()->getMap() != nullptr;
+        [weakSelf]() {
+            auto self = weakSelf.lock();
+            return !self || (self->getGui() != nullptr && self->getGui()->getGame() != nullptr &&
+                             self->getGui()->getGame()->getMap() != nullptr);
         },
-        [self]() { self->refresh(); });
+        [weakSelf]() {
+            if (auto self = weakSelf.lock()) {
+                self->refresh();
+            }
+        });
 }
 
 CListView::collection_pointer CCreatureView::getEffects(std::shared_ptr<CGui>) {
