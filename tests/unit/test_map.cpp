@@ -481,10 +481,12 @@ class FixedStepController : public CController {
         : target(target), removeBeforeReturn(remove_before_return) {}
 
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
-        if (removeBeforeReturn && creature && creature->getMap()) {
-            creature->getMap()->removeObject(creature);
-        }
-        return vstd::make_ready_future(target);
+        return vstd::later([this, creature]() {
+            if (removeBeforeReturn && creature && creature->getMap()) {
+                creature->getMap()->removeObject(creature);
+            }
+            return target;
+        });
     }
 
     void interrupt(std::shared_ptr<CCreature>) override { interruptCount++; }
@@ -506,11 +508,13 @@ class TransitionDuringControlController : public CController {
         : mapName(std::move(map_name)), target(target) {}
 
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
-        futureRan = true;
-        if (creature && creature->getGame()) {
-            creature->getGame()->changeMap(mapName);
-        }
-        return vstd::make_ready_future(target);
+        return vstd::later([this, creature]() {
+            futureRan = true;
+            if (creature && creature->getGame()) {
+                creature->getGame()->changeMap(mapName);
+            }
+            return target;
+        });
     }
 
     void onStepCommitted(std::shared_ptr<CCreature>, const Coords &) override { committedCount++; }
@@ -1736,7 +1740,7 @@ class TurnCountingController : public CController {
   public:
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
         controlCalls++;
-        return vstd::make_ready_future(creature->getCoords());
+        return vstd::later([creature]() { return creature->getCoords(); });
     }
 
     int controlCalls = 0;
