@@ -167,10 +167,17 @@ void CMapGraphicsObject::showFootprint(std::shared_ptr<CGui> &gui, Coords::Direc
 }
 
 void CMapGraphicsObject::initialize() {
-    auto self = this->ptr<CMapGraphicsObject>();
+    std::weak_ptr<CMapGraphicsObject> weakSelf = this->ptr<CMapGraphicsObject>();
     vstd::call_when(
-        [self]() { return self->getGui() && self->getGui()->getGame() && self->getGui()->getGame()->getMap(); },
-        [self]() {
+        [weakSelf]() {
+            auto self = weakSelf.lock();
+            return !self || (self->getGui() && self->getGui()->getGame() && self->getGui()->getGame()->getMap());
+        },
+        [weakSelf]() {
+            auto self = weakSelf.lock();
+            if (!self || !self->getGui() || !self->getGui()->getGame() || !self->getGui()->getGame()->getMap()) {
+                return;
+            }
             self->getGui()->getGame()->getMap()->connect("turnPassed", self, "refreshAll");
             self->getGui()->getGame()->getMap()->connect("tileChanged", self, "refreshObject");
             self->getGui()->getGame()->getMap()->connect("objectChanged", self, "refreshObject");
