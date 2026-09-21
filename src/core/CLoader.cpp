@@ -1266,20 +1266,21 @@ void CGameLoader::loadGui(const std::shared_ptr<CGame> &game) {
     std::weak_ptr<CGame> weakGame = game;
     std::weak_ptr<CGameContext> weakContext = context;
     std::weak_ptr<CGui> weakGui = gui;
-    vstd::event_loop<>::instance()->registerFrameCallback([weakGame, weakContext, weakGui](int time) {
+    auto loop = vstd::event_loop<>::instance();
+    context->addEventLoopConnection(loop->connectFrameCallback([weakGame, weakContext, weakGui](int time) {
         auto game = weakGame.lock();
         auto context = weakContext.lock();
         auto gui = weakGui.lock();
         if (isLiveGuiSession(game, context, gui)) {
             gui->render(time);
         }
-    });
-    vstd::event_loop<>::instance()->registerEventCallback([weakGame, weakContext, weakGui](SDL_Event *event) {
+    }));
+    context->addEventLoopConnection(loop->connectEventCallback([weakGame, weakContext, weakGui](SDL_Event *event) {
         auto game = weakGame.lock();
         auto context = weakContext.lock();
         auto gui = weakGui.lock();
         return isLiveGuiSession(game, context, gui) && gui->event(event);
-    });
+    }));
 }
 
 bool CPluginLoader::isTrustedPluginPath(const std::string &path) { return is_allowed_python_plugin_path(path); }
