@@ -1,0 +1,53 @@
+name: vmeta migration diagnostics
+on:
+  push:
+    branches: [diagnostic/vmeta-startup-20260921]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect failing test output and source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import subprocess
+          repo = 'lisu188/fall-of-nouraajd'
+          for job in (106479704398, 106479142598, 106479142614):
+              print(f'=== JOB {job} ===', flush=True)
+              data = subprocess.check_output(['gh', 'api', f'repos/{repo}/actions/jobs/{job}/logs'], text=True)
+              lines = data.splitlines()
+              selected = set()
+              patterns = re.compile(r'(?:FAILED|Assertion|AssertionError|bad_any_cast|duplicate|not found|unresolved|Keeping the active|could not be created|Traceback|runtime_error|terminate called|test \(c\+\+\))', re.I)
+              matches = [i for i, line in enumerate(lines) if patterns.search(line) and not re.search(r'\.(?:cpp|hpp|h)\(\d+\)|warning [C-]|^.*\[\d+/\d+\]', line)]
+              for i in matches[-20:]:
+                  selected.update(range(max(0,i-3), min(len(lines),i+12)))
+              for i in sorted(selected):
+                  print(lines[i])
+          paths = ['test.py', 'src/handler/CObjectHandler.cpp', 'src/handler/CObjectHandler.h', 'src/core/CSerialization.cpp', 'src/core/CSerialization.h']
+          for name in paths:
+              path = pathlib.Path(name)
+              print(f'=== SOURCE {name} ===', flush=True)
+              if not path.exists():
+                  print('MISSING')
+                  continue
+              lines = path.read_text().splitlines()
+              selected = set()
+              if name == 'test.py':
+                  for start, end in ((1,100),(3640,3710)):
+                      selected.update(range(start-1,min(len(lines),end)))
+                  for i, line in enumerate(lines):
+                      if any(term in line for term in ('def new_game', 'def setUp(', 'logger', 'Logger', 'def start(')):
+                          selected.update(range(max(0,i-2),min(len(lines),i+16)))
+              else:
+                  selected.update(range(min(len(lines),300)))
+              for i in sorted(selected):
+                  print(f'{i+1}: {lines[i]}')
+          PY
