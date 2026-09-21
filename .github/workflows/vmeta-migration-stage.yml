@@ -1,0 +1,17 @@
+name: vmeta-migration-stage
+on:
+  push:
+    branches: [staging/vmeta-migration]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang-format
+      - run: python3 scripts/vmeta_migration_stage.py
+        env:
+          GH_TOKEN: ${{ github.token }}
