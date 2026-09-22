@@ -53,5 +53,5 @@ class CTextureUtil {
 
     static void setPixelColor(SDL_Surface *surface, int x, int y, std::tuple<Uint8, Uint8, Uint8, Uint8> color);
 
-    static std::unordered_set<std::pair<int, int>> calculateMask(SDL_Surface *pSurface);
+    static std::unordered_set<std::pair<int, int>, vstd::pair_hash> calculateMask(SDL_Surface *pSurface);
 };

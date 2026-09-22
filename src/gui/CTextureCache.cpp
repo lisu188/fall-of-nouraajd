@@ -169,8 +169,8 @@ fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl
                          getPixelColor(surface.get(), w - 1, 0), getPixelColor(surface.get(), w - 1, h - 1)) &&
         std::get<3>(maskPixel) == 255;
 
-    std::unordered_set<std::pair<int, int>> mask =
-        shouldAddMask ? calculateMask(surface.get()) : std::unordered_set<std::pair<int, int>>();
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> mask =
+        shouldAddMask ? calculateMask(surface.get()) : std::unordered_set<std::pair<int, int>, vstd::pair_hash>();
 
     for (auto verticalIndex = 0; verticalIndex < h; verticalIndex++) {
         for (auto horizontalIndex = 0; horizontalIndex < w; horizontalIndex++) {
@@ -188,10 +188,10 @@ fn::sdl::TexturePtr CTextureUtil::calculateAlpha(SDL_Renderer *renderer, fn::sdl
     return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(renderer, secondSurface.get())));
 }
 
-std::unordered_set<std::pair<int, int>> CTextureUtil::calculateMask(SDL_Surface *pSurface) {
-    std::unordered_set<std::pair<int, int>> checked;
-    std::unordered_set<std::pair<int, int>> remaining;
-    std::unordered_set<std::pair<int, int>> result;
+std::unordered_set<std::pair<int, int>, vstd::pair_hash> CTextureUtil::calculateMask(SDL_Surface *pSurface) {
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> checked;
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> remaining;
+    std::unordered_set<std::pair<int, int>, vstd::pair_hash> result;
 
     if (!pSurface || pSurface->w <= 0 || pSurface->h <= 0 ||
         pSurface->w > MAX_ALPHA_MASK_PIXELS / std::max(1, pSurface->h)) {
