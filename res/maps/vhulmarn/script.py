@@ -1,4 +1,5 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -39,7 +40,7 @@ def load(self, context):
             game = game_map.getGame()
             player = game_map.getPlayer()
             quest_system_flags_default(game_map)
-            game.getGuiHandler().showMessage(self.getStringProperty("text"))
+            showReader(game, "Vhulmarn", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(player, "drownedTitheQuest")
 
@@ -51,12 +52,12 @@ def load(self, context):
             game_map = self.getMap()
             game = game_map.getGame()
             if game_map.getBoolProperty("bell_tolled"):
-                game.getGuiHandler().showMessage(
+                game.getGuiHandler().notify(
                     "The bell's iron note still hangs over the tarn. It has been answered once; the deep does "
                     "not need asking twice."
                 )
                 return
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "You toll the drowned bell. The note goes out flat across the tarn, and the tarn answers: "
                 "the water bulges, and Deep-Spawn rise dripping onto the causeway."
             )
@@ -73,12 +74,16 @@ def load(self, context):
             player = game_map.getPlayer()
             if game_map.getBoolProperty("tithe_taken"):
                 return
+            reward_before = rewardSnapshot(player)
             player.addItem("tiaraOfTheDrownedTithe")
             game_map.setBoolProperty("tithe_taken", True)
-            game.getGuiHandler().showMessage(
+            showRewardReceipt(
+                game,
+                "Drowned Tithe",
+                reward_before,
                 "The offered gold is a tiara of the Order, and it is already warm. You lift the Tiara of the "
                 "Drowned Tithe from the altar - and far below, in Y'ha-nthlei, something that has dreamed of this "
-                "for a thousand tides opens an eye. Tekeli-li! Tekeli-li!"
+                "for a thousand tides opens an eye. Tekeli-li! Tekeli-li!",
             )
             if not game_map.getBoolProperty("boss_woken"):
                 boss = game.createObject("theNameless")
@@ -116,8 +121,10 @@ def load(self, context):
             return "The old tollman by the gate will talk. The causeway bell is best left silent."
 
         def onComplete(self):
-            self.getGame().getGuiHandler().showMessage(
-                "The tithe is uncovered, and it was never a debt that could be paid off - only carried."
+            showReader(
+                self.getGame(),
+                "The tithe",
+                "The tithe is uncovered, and it was never a debt that could be paid off - only carried.",
             )
 
     @register(context)
@@ -149,26 +156,28 @@ def load(self, context):
     @trigger(context, "onDestroy", "caveTarnMouth")
     class TarnMouthTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "caveSunkenWharf")
     class SunkenWharfTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "caveHybridWarren")
     class HybridWarrenTrigger(CTrigger):
         def trigger(self, obj, event):
-            obj.getGame().getGuiHandler().showMessage(obj.getStringProperty("message"))
+            obj.getGame().getGuiHandler().notify(obj.getStringProperty("message"))
 
     @trigger(context, "onDestroy", "theNamelessBoss")
     class NamelessTrigger(CTrigger):
         def trigger(self, obj, event):
             game_map = obj.getGame().getMap()
             game_map.setBoolProperty("boss_defeated", True)
-            obj.getGame().getGuiHandler().showMessage(
+            showReader(
+                obj.getGame(),
+                "The Nameless withdraws",
                 "The Nameless folds back into the tarn, and for one held breath the drowned bell will not ring. "
-                "It is not death. The deep is patient, and the stars will come right again."
+                "It is not death. The deep is patient, and the stars will come right again.",
             )
             # Boss-defeat transition: converge with the tithe pickup so the finale
             # completes once both requirements are met, in either order.

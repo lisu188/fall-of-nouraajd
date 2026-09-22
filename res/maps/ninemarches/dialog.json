@@ -2,6 +2,7 @@
   "mayorDialog": {
     "class": "MayorDialog",
     "properties": {
+      "questIds": "ninemarchesQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -9,8 +10,8 @@
             "stateId": "ENTRY",
             "text": "The Warden of Gravewatch looks up from a map stuck through with too many black pins. 'Another blade for the marches,' she says. 'Or another grave-robber. The marches will sort out which.'",
             "options": [
-              {"class": "CDialogOption", "properties": {"number": 0, "condition": "high_reputation", "nextStateId": "HIGH", "text": "(They cheer your name from here to the Cold Reach.)"}},
-              {"class": "CDialogOption", "properties": {"number": 1, "condition": "low_reputation", "nextStateId": "LOW", "text": "(The watch keeps their hands near their hilts.)"}},
+              {"class": "CDialogOption", "properties": {"number": 0, "condition": "high_reputation", "nextStateId": "HIGH", "text": "What are the marches saying about me?"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "low_reputation", "nextStateId": "LOW", "text": "What are the marches saying about me?"}},
               {"class": "CDialogOption", "properties": {"number": 2, "condition": "steady_reputation", "nextStateId": "STEADY", "text": "Tell me how the marches stand."}},
               {"class": "CDialogOption", "properties": {"number": 3, "nextStateId": "LORE", "text": "What is the Ninefold Crowning?"}},
               {"ref": "exitOption", "properties": {"number": 4}}
@@ -49,12 +50,14 @@
             "options": [{"ref": "exitOption", "properties": {"number": 0}}]
           }
         }
-      ]
+      ],
+      "speaker": "Warden of Gravewatch"
     }
   },
   "tavernDialog": {
     "class": "TavernDialog",
     "properties": {
+      "questIds": "ninemarchesQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -84,12 +87,14 @@
             "options": [{"ref": "exitOption", "properties": {"number": 0}}]
           }
         }
-      ]
+      ],
+      "speaker": "Gravewatch Innkeeper"
     }
   },
   "knightDialog": {
     "class": "KnightDialog",
     "properties": {
+      "questIds": "haldaQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -98,10 +103,11 @@
             "text": "A tall woman in dented oath-plate stands over a raider's corpse in the Reaved Fields, reading a ledger she has clearly read a hundred times. 'Ser Halda,' she says, without looking up. 'Once of Gravewatch. Now of nowhere, until a certain accounting is settled.'",
             "options": [
               {"class": "CDialogOption", "properties": {"number": 0, "condition": "not_met", "nextStateId": "OFFER", "text": "What accounting, Ser Halda?"}},
-              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I found your Raider Ledger. The names are yours."}},
-              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "How stands our cause, Ser Halda?"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I found your Raider Ledger. The names are yours.", "actionLabel": "Recruit companion"}},
+              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "How stands our cause, Ser Halda?", "afterCondition": "has_left", "afterStateId": "GONE"}},
               {"class": "CDialogOption", "properties": {"number": 3, "condition": "has_left", "nextStateId": "GONE", "text": "Halda..."}},
-              {"ref": "exitOption", "properties": {"number": 4}}
+              {"class": "CDialogOption", "properties": {"number": 4, "condition": "questInProgress", "nextStateId": "REMINDER", "text": "Remind me where to find the Raider Ledger."}},
+              {"ref": "exitOption", "properties": {"number": 5}}
             ]
           }
         },
@@ -111,7 +117,7 @@
             "stateId": "OFFER",
             "text": "'The raiders who broke the Marches' first muster carried a ledger of everyone they sold to the cult. It is out here in the fields, in a raider cache. Bring it to me, and my sword and my oath are yours to the Citadel and past it.'",
             "options": [
-              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll bring you the ledger."}},
+              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll bring you the ledger.", "actionLabel": "Accept quest"}},
               {"ref": "exitOption", "properties": {"number": 1}}
             ]
           }
@@ -147,13 +153,23 @@
             "text": "Ser Halda will not meet your eye. 'I gave you my oath and you spent it on things I will not name. Keep the Aegis. You clearly need the armor more than the honor.'",
             "options": [{"ref": "exitOption", "properties": {"number": 0}}]
           }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "REMINDER",
+            "text": "'The cache is near the old muster-graves. The raiders left it guarded, as raiders do.' She closes her ledger. 'Come back with it, and I will close this one for good.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
         }
-      ]
+      ],
+      "speaker": "Ser Halda"
     }
   },
   "witchDialog": {
     "class": "WitchDialog",
     "properties": {
+      "questIds": "morriganeQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -162,10 +178,11 @@
             "text": "In a hut on stilts over the plague-fen, a young witch stirs a cauldron that shows faces. 'Morrigane,' she says. 'The fen tells me you are the sort who finishes things. I have a thing that wants finishing.'",
             "options": [
               {"class": "CDialogOption", "properties": {"number": 0, "condition": "not_met", "nextStateId": "OFFER", "text": "What is it you need finished?"}},
-              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I recovered the Drowned Reliquary. Here."}},
-              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "How does the fen read our road, Morrigane?"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I recovered the Drowned Reliquary. Here.", "actionLabel": "Recruit companion"}},
+              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "How does the fen read our road, Morrigane?", "afterCondition": "has_left", "afterStateId": "GONE"}},
               {"class": "CDialogOption", "properties": {"number": 3, "condition": "has_left", "nextStateId": "GONE", "text": "Morrigane..."}},
-              {"ref": "exitOption", "properties": {"number": 4}}
+              {"class": "CDialogOption", "properties": {"number": 4, "condition": "questInProgress", "nextStateId": "REMINDER", "text": "Where should I search for the Drowned Reliquary?"}},
+              {"ref": "exitOption", "properties": {"number": 5}}
             ]
           }
         },
@@ -175,7 +192,7 @@
             "stateId": "OFFER",
             "text": "'My sister drowned in the fen with our family reliquary, and the fen will not give her rest until it is out of the water. Bring me the Drowned Reliquary, and my charms and my sight are yours all the way to the Citadel.'",
             "options": [
-              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll bring the reliquary up."}},
+              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll bring the reliquary up.", "actionLabel": "Accept quest"}},
               {"ref": "exitOption", "properties": {"number": 1}}
             ]
           }
@@ -211,13 +228,23 @@
             "text": "Morrigane's cauldron shows you a face you no longer like. 'I laid one ghost to rest and watched you make a dozen more. Keep the charm. I want nothing of yours near me now.'",
             "options": [{"ref": "exitOption", "properties": {"number": 0}}]
           }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "REMINDER",
+            "text": "'It lies in a drowned barrow, west and down. A dead colonel keeps it company, and he does not like to share.' She stirs the faces under the water. 'Go gently. The fen is listening.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
         }
-      ]
+      ],
+      "speaker": "Morrigane"
     }
   },
   "sellswordDialog": {
     "class": "SellswordDialog",
     "properties": {
+      "questIds": "corvynQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -226,10 +253,11 @@
             "text": "A lean man cleans a black blade in the ash of the Pyre-Waste, sitting like he owns the ruin. 'Corvyn,' he says. 'Late of a company I would rather not name, since I left it in a hurry and it would like a word. You have the look of someone the marches are about to use up. I could help with that - for a price with my name on it.'",
             "options": [
               {"class": "CDialogOption", "properties": {"number": 0, "condition": "not_met", "nextStateId": "OFFER", "text": "Name your price, turncoat."}},
-              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I have your company's Seal. Take it."}},
-              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "Still with me, Corvyn?"}},
+              {"class": "CDialogOption", "properties": {"number": 1, "condition": "can_recruit", "action": "recruit", "nextStateId": "JOINED", "text": "I have your company's Seal. Take it.", "actionLabel": "Recruit companion"}},
+              {"class": "CDialogOption", "properties": {"number": 2, "condition": "is_joined", "action": "banter", "nextStateId": "LOYAL", "text": "Still with me, Corvyn?", "afterCondition": "has_left", "afterStateId": "GONE"}},
               {"class": "CDialogOption", "properties": {"number": 3, "condition": "has_left", "nextStateId": "GONE", "text": "Corvyn..."}},
-              {"ref": "exitOption", "properties": {"number": 4}}
+              {"class": "CDialogOption", "properties": {"number": 4, "condition": "questInProgress", "nextStateId": "REMINDER", "text": "Where is your old company's cache?"}},
+              {"ref": "exitOption", "properties": {"number": 5}}
             ]
           }
         },
@@ -239,7 +267,7 @@
             "stateId": "OFFER",
             "text": "'My old company carries a signet seal that marks me a deserter. Get it off them - they camp in the Ashmarch cache - and I am your blade to the Citadel. I warn you fair: I have changed sides before. I do it for good reasons. Give me a good reason to stay and I will.'",
             "options": [
-              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll get your seal."}},
+              {"class": "CDialogOption", "properties": {"number": 0, "action": "start", "nextStateId": "ACCEPTED", "text": "I'll get your seal.", "actionLabel": "Accept quest"}},
               {"ref": "exitOption", "properties": {"number": 1}}
             ]
           }
@@ -275,8 +303,17 @@
             "text": "Corvyn is already shouldering his pack. 'You turned into a hero when I wasn't looking. Heroes get their sellswords killed for the story. Keep the blade - consider it severance.'",
             "options": [{"ref": "exitOption", "properties": {"number": 0}}]
           }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "REMINDER",
+            "text": "'The cache is deeper in the ash, well guarded. Bring the seal and my past is a closed account.' He grins, not kindly. 'I do like a closed account.'",
+            "options": [{"ref": "exitOption", "properties": {"number": 0}}]
+          }
         }
-      ]
+      ],
+      "speaker": "Corvyn"
     }
   }
 }

@@ -42,6 +42,7 @@ class CMapLoader {
     static std::shared_ptr<CMap> loadSavedMap(const std::shared_ptr<CGame> &game, const std::string &name);
 
     static void save(const std::shared_ptr<CMap> &map, const std::string &name);
+    static bool saveWithResult(const std::shared_ptr<CMap> &map, const std::string &name);
 
     static void loadFromTmx(const std::shared_ptr<CMap> &map, const std::shared_ptr<json> &mapc);
 

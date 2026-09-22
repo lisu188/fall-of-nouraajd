@@ -141,10 +141,10 @@ void test_tooltip_handler_builds_labels_descriptions_and_item_bonuses() {
 
     auto item_tooltip = CTooltipHandler::buildTooltip(item);
     expect_true(item_tooltip.find("Mossblade") != std::string::npos, "item tooltip should include the item label");
-    expect_true(item_tooltip.find(": 5") != std::string::npos,
-                "item tooltip should list positive integer bonuses with their value");
-    expect_true(item_tooltip.find("-3") == std::string::npos,
-                "item tooltip should hide non-positive bonuses such as negative crit");
+    expect_true(item_tooltip.find("Strength: +5") != std::string::npos,
+                "item tooltip should name positive modifiers and show their explicit plus sign");
+    expect_true(item_tooltip.find("Crit: -3") != std::string::npos,
+                "item tooltip should name negative modifiers and preserve their minus sign");
     expect_true(count_substring(item_tooltip, "A blade wrapped in moss.") == 1,
                 "item tooltips should include the description exactly once after deduplication");
 }

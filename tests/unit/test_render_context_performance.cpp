@@ -18,13 +18,18 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CDetailViewport.h"
+#include "gui/CLayout.h"
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
+#include "gui/CTextManager.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "test_harness.h"
 
 #include <cstddef>
 #include <memory>
+#include <iostream>
 
 namespace {
 
@@ -148,9 +153,112 @@ void test_render_context_stable_scene_frame_copies_do_not_grow() {
     expect_true(second.failedCopies == 0, "re-rendering an unchanged scene must not fail any copies");
 }
 
+void test_styled_text_reuses_bounded_cache() {
+    auto gui = make_headless_gui();
+    auto text = gui->getTextManager();
+    auto rect = CUtil::rect(0, 0, 600, 120);
+    constexpr int entries = 200;
+    constexpr int passes = 10;
+    for (int index = 0; index < entries; ++index) {
+        const auto measured = text->measureText("Inventory entry " + std::to_string(index), rect->w);
+        expect_true(measured.first > 0 && measured.second > 0, "bundled fonts must load in performance guards");
+    }
+    const auto loads = text->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int pass = 0; pass < passes; ++pass) {
+        for (int index = 0; index < entries; ++index) {
+            text->drawTextStyled("Inventory entry " + std::to_string(index), rect);
+        }
+    }
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(text->getTextureLoadCount() == loads, "unchanged text must not rasterize again on subsequent frames");
+    expect_true(text->getCachedTextureCount() == entries, "repeated text must retain exactly the warmed entries");
+    expect_true(copies.successfulCopies == entries * passes && copies.failedCopies == 0,
+                "cached text must issue exactly one successful copy per draw");
+    for (int index = 0; index < 800; ++index)
+        text->measureText("History entry " + std::to_string(index), rect->w);
+    expect_true(text->getCachedTextureCount() <= 512, "long sessions must respect the text texture budget");
+    expect_true(text->getCachedFontCount() <= 24, "font glyph caches must remain bounded");
+    text->clearCache();
+    const auto beforeInvalidation = text->getTextureLoadCount();
+    text->measureText("Inventory entry 0", rect->w);
+    expect_true(text->getTextureLoadCount() == beforeInvalidation + 1,
+                "explicit invalidation must rebuild obsolete font textures exactly once");
+    std::cout << "[text cache] warm entries=" << entries << " redraw copies=" << copies.successfulCopies
+              << " redraw loads=" << text->getTextureLoadCount() - beforeInvalidation - 1
+              << " texture budget=512 font budget=24\n";
+}
+
+void test_choice_layout_does_not_rasterize_hidden_rows_on_redraw() {
+    auto gui = make_headless_gui();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    std::vector<CGameCampaignBrowserPanel::ChoiceOption> choices;
+    for (int index = 0; index < 700; ++index)
+        choices.push_back({std::to_string(index), "Adventure " + std::to_string(index), "Preview", true});
+    browser->configureChoices("Saved adventures", choices, "Load save", "Back");
+    const auto bounds = CUtil::rect(0, 0, 1800, 1000);
+    auto layout = std::make_shared<CLayout>();
+    layout->setRuntimeRect(bounds);
+    browser->setLayout(layout);
+    browser->renderObject(gui, bounds, 0);
+    browser->renderObject(gui, bounds, 0);
+    const auto loads = gui->getTextManager()->getTextureLoadCount();
+    for (int frame = 0; frame < 4; ++frame)
+        browser->renderObject(gui, bounds, 0);
+    const auto redrawLoads = gui->getTextManager()->getTextureLoadCount() - loads;
+    expect_true(redrawLoads == 0, "unchanged long choice lists reuse row metrics without churning the text cache");
+    expect_true(browser->getChoiceViewport().h >= 400,
+                "the long-list render guard measures a usable viewport with valid panel geometry");
+    browser->configureChoices("Changed choices", {{"long", "A newly wrapped label for a different choice", "", true}},
+                              "Choose", "Back");
+    const auto changedBounds = CUtil::rect(0, 0, 600, 676);
+    layout->setRuntimeRect(changedBounds);
+    browser->renderObject(gui, changedBounds, 0);
+    expect_true(gui->getTextManager()->getTextureLoadCount() > loads,
+                "reconfigured choices and viewport changes must rebuild their text metrics");
+    std::cout << "[choice layout] rows=700 redraws=4 redraw texture loads=" << redrawLoads << " budget=0\n";
+}
+
+void test_detail_layout_draws_only_visible_cached_paragraphs() {
+    auto gui = make_headless_gui();
+    auto textManager = gui->getTextManager();
+    std::string text;
+    for (int index = 0; index < 700; ++index) {
+        text += "Journal entry " + std::to_string(index) + ": a discovered clue and its reward.\n";
+    }
+    DetailViewport::Layout layout;
+    const auto viewport = CUtil::rect(0, 0, 600, 180);
+    layout.update(gui, text, viewport->w);
+    const int bottom = std::max(0, layout.getContentHeight() - viewport->h);
+    textManager->clearCache();
+    const auto coldLoads = textManager->getTextureLoadCount();
+    layout.draw(gui, viewport, bottom);
+    const auto visibleLoads = textManager->getTextureLoadCount() - coldLoads;
+    expect_true(visibleLoads > 0 && visibleLoads <= 16,
+                "scrolling to a long detail ending must load only the visible paragraphs");
+    const auto warmLoads = textManager->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int frame = 0; frame < 25; ++frame) {
+        expect_true(!layout.update(gui, text, viewport->w), "warm detail frames must not remeasure hidden paragraphs");
+        layout.draw(gui, viewport, bottom);
+    }
+    const auto redrawLoads = textManager->getTextureLoadCount() - warmLoads;
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(redrawLoads == 0, "warm long-detail frames must load zero text textures");
+    expect_true(copies.successfulCopies == visibleLoads * 25 && copies.failedCopies == 0,
+                "long details must copy only their visible paragraphs on every redraw");
+    expect_true(textManager->getCachedTextureCount() <= 16,
+                "drawing long-detail endings must not repopulate the cache with hidden text");
+    std::cout << "[detail layout] paragraphs=700 redraws=25 visible loads=" << visibleLoads
+              << " visible budget=16 redraw texture loads=" << redrawLoads << " redraw budget=0\n";
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
     test_render_context_bulk_copy_accounting_is_exact();
     test_render_context_stable_scene_frame_copies_do_not_grow();
+    test_styled_text_reuses_bounded_cache();
+    test_choice_layout_does_not_rasterize_hidden_rows_on_redraw();
+    test_detail_layout_draws_only_visible_cached_paragraphs();
 }

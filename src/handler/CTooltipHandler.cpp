@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
 #include "object/CItem.h"
+#include "object/CInteraction.h"
+#include "object/CEffect.h"
 
 #include <set>
 #include <string>
@@ -36,7 +38,18 @@ void add_archetype_line(std::string &tooltip, std::set<std::string> &seen, const
 }
 } // namespace
 
+std::string CTooltipHandler::getSlotLabel(const std::string &slotName) {
+    static const std::map<std::string, std::string> labels = {
+        {"RightHand", "Right hand"}, {"LeftHand", "Left hand"}, {"Head", "Head"}, {"Chest", "Chest"},
+        {"Waist", "Waist"},          {"Feet", "Feet"},          {"Legs", "Legs"}, {"Hands", "Hands"}};
+    const auto found = labels.find(slotName);
+    return found == labels.end() ? slotName : found->second;
+}
+
 std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
+    if (!object) {
+        return "";
+    }
     std::string tooltip = object->getLabel();
     vstd::add_line(tooltip, object->getDescription());
     if (object->meta()->inherits("CCreature")) {
@@ -54,15 +67,35 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
     }
     if (object->meta()->inherits("CItem")) {
         auto bonus = vstd::cast<CItem>(object)->getBonus();
-        bonus->meta()->for_all_properties(bonus, [&](auto prop) {
-            // TODO: move to meta
-            if (prop->value_type() == std::type_index(typeid(int))) {
-                auto value = bonus->getNumericProperty(prop->name());
-                if (value > 0) {
-                    vstd::add_line(tooltip, vstd::camel(prop->name()) + ": " + vstd::str(value));
+        if (bonus) {
+            bonus->meta()->for_all_properties(bonus, [&](auto prop) {
+                // TODO: move to meta
+                if (prop->value_type() == std::type_index(typeid(int))) {
+                    auto value = bonus->getNumericProperty(prop->name());
+                    if (value != 0) {
+                        vstd::add_line(tooltip,
+                                       vstd::camel(prop->name()) + ": " + (value > 0 ? "+" : "") + vstd::str(value));
+                    }
                 }
-            }
-        });
+            });
+        }
+        auto item = vstd::cast<CItem>(object);
+        if (item->hasTag(CTag::Quest)) {
+            vstd::add_line(tooltip, "Quest item");
+        }
+        if (item->hasTag(CTag::Cursed)) {
+            vstd::add_line(tooltip, "Cursed: cannot be removed while equipped.");
+        }
+        if (!item->getCoveredSlots().empty()) {
+            vstd::add_line(tooltip, "Combined artifact: occupies " +
+                                        std::to_string(item->getCoveredSlots().size() + 1) + " equipment slots.");
+        }
+    }
+    if (auto action = vstd::cast<CInteraction>(object)) {
+        vstd::add_line(tooltip, "Mana cost: " + std::to_string(action->getManaCost()));
+    }
+    if (auto effect = vstd::cast<CEffect>(object)) {
+        vstd::add_line(tooltip, "Remaining: " + std::to_string(effect->getTimeLeft()) + " turns");
     }
     return tooltip;
 }

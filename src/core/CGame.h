@@ -56,6 +56,7 @@ struct CMapTransitionRequest;
 class CGame : public CGameObject {
     V_META(CGame, CGameObject, vstd::meta::empty())
     friend class CGameContext;
+    friend class CScopedGameMap;
 
   public:
     CGame();
@@ -104,6 +105,8 @@ class CGame : public CGameObject {
     std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
 
   private:
+    void setMapForResourceLoad(std::shared_ptr<CMap> map);
+
     std::shared_ptr<CGameContext> context;
     std::shared_ptr<CSceneManager> sceneManager;
     std::shared_ptr<CMap> map;

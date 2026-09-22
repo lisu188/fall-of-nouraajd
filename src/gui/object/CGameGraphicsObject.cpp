@@ -43,6 +43,9 @@ void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::share
 void CGameGraphicsObject::render(std::shared_ptr<CGui> renderer, int frameTime) {
     if (hasRenderableGui(renderer) && isVisible()) {
         renderBackground(renderer, getRect(), frameTime);
+        if (auto panel = vstd::cast<CGamePanel>(this->ptr<CGameGraphicsObject>())) {
+            panel->renderShell(renderer, getRect());
+        }
         renderObject(renderer, getRect(), frameTime);
         if (!isAttachedToGui(renderer)) {
             return;
@@ -173,6 +176,7 @@ void CGameGraphicsObject::removeChild(const std::shared_ptr<CGameGraphicsObject>
         child->removeParent();
         if (gui) {
             gui->releasePointerCaptureFor(child);
+            gui->releaseFocusFor(child);
             gui->cancelDragSessionFor(child);
         }
     }
@@ -276,7 +280,7 @@ std::shared_ptr<CScript> CGameGraphicsObject::getVisible() { return visible; }
 void CGameGraphicsObject::setVisible(std::shared_ptr<CScript> _visible) { CGameGraphicsObject::visible = _visible; }
 
 bool CGameGraphicsObject::isVisible() {
-    return !visible || visible->invoke<CGameObject>(getGame(), this->ptr<CGameObject>()) != nullptr;
+    return !runtimeHidden && (!visible || visible->invoke<CGameObject>(getGame(), this->ptr<CGameObject>()) != nullptr);
 }
 
 void CGameGraphicsObject::renderBackground(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int time) {

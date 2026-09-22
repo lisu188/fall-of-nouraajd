@@ -16,23 +16,10 @@ story-gated crafting recipes, save/load, random maps, and an MCP engine API for 
   <img alt="Combat panel with player status and action inventory" src="./screenshots/combat.png" width="49%">
 </p>
 
-## walkthrough video
-A full automated playthrough of the Nouraajd campaign — exploring the town, recovering Rolf's skull,
-slaying Gooby, running Father Beren's letter/relic/cleanse chain, saving Victor, and returning the amulet.
-Click the poster to play [`screenshots/nouraajd-walkthrough.mp4`](./screenshots/nouraajd-walkthrough.mp4),
-generated headlessly by [`scripts/generate_walkthrough_video.py`](./scripts/generate_walkthrough_video.py).
-<p>
-  <a href="./screenshots/nouraajd-walkthrough.mp4">
-    <img alt="Fall of Nouraajd walkthrough video" src="./screenshots/nouraajd-walkthrough-poster.png" width="70%">
-  </a>
-</p>
+Current panel, map, frontend, and enlarged-text captures are available in [screenshots](./screenshots).
+The older walkthrough recording predates the interface overhaul and is no longer presented as a current UI preview.
 
 ## features
-- Play **Long Live the Queen**, a three-chapter Castle campaign adapted to single-hero RPG play: capture
-  Terraneus in Homecoming, defeat the invaders in Guardian Angels, and liberate all seven Griffin Towers.
-  Select `CAMPAIGN` → `Long Live the Queen`; your chosen character, equipment, and progress carry between chapters.
-  The original-scale surface and underground maps are authored from Heroes III campaign geography, with new artwork
-  and English dialogue. See [campaign authoring and validation](docs/design/castle_campaign.md).
 - Explore authored maps such as Nouraajd, ritual, siege, and test maps, or start a random generated map.
 - Choose from Warrior, Sorcerer, Assasin, Inquisitor, and Wayfarer player classes.
 - Track active and completed quests in the journal, including objectives, rewards, and hints.

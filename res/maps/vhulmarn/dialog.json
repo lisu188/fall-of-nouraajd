@@ -2,6 +2,7 @@
   "tollmanDialog": {
     "class": "TollmanDialog",
     "properties": {
+      "questIds": "drownedTitheQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -61,7 +62,8 @@
                   "number": 0,
                   "nextStateId": "ACCEPT",
                   "text": "I'll cross to the altar. I have to know what the town owed.",
-                  "action": "hear_the_tithe"
+                  "action": "hear_the_tithe",
+                  "actionLabel": "Record objective"
                 }
               },
               {
@@ -88,12 +90,14 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Tollman"
     }
   },
   "widowDialog": {
     "class": "WidowDialog",
     "properties": {
+      "questIds": "drownedTitheQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -133,7 +137,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Widow"
     }
   }
 }

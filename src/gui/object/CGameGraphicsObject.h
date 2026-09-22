@@ -130,6 +130,7 @@ class CGameGraphicsObject : public CGameObject {
     void setVisible(std::shared_ptr<CScript> hidden);
 
     bool isVisible();
+    void setRuntimeHidden(bool value) { runtimeHidden = value; }
 
     std::string getBackground();
 
@@ -157,4 +158,5 @@ class CGameGraphicsObject : public CGameObject {
     std::string background;
 
     bool modal = false;
+    bool runtimeHidden = false;
 };

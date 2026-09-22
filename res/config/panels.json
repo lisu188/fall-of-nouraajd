@@ -4,6 +4,41 @@
     "properties": {
       "children": [
         {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "14%",
+                "w": "47%",
+                "h": "75%"
+              }
+            },
+            "render": "renderCharacterSheet",
+            "uiGroup": "1:Character"
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "53%",
+                "y": "14%",
+                "w": "45%",
+                "h": "5%"
+              }
+            },
+            "text": "Abilities",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "2:Abilities",
+            "uiHeading": true
+          }
+        },
+        {
           "class": "CListView",
           "properties": {
             "collection": "interactionsCollection",
@@ -11,10 +46,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "10%",
-                "w": "100%",
-                "x": "0%",
-                "y": "90%"
+                "x": "53%",
+                "y": "23%",
+                "w": "45%",
+                "h": "27%"
               }
             },
             "refreshEvent": "interactionsChanged",
@@ -23,7 +58,49 @@
               "properties": {
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
-            }
+            },
+            "rows": true,
+            "showEmpty": false,
+            "tileSize": 64,
+            "searchable": true,
+            "callback": "interactionsCallback",
+            "select": "interactionsSelect",
+            "uiGroup": "2:Abilities"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "53%",
+                "y": "53%",
+                "w": "45%",
+                "h": "36%"
+              }
+            },
+            "render": "renderAbilityDetails",
+            "uiGroup": "3:Ability details"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "91%",
+                "w": "28%",
+                "h": "6%"
+              }
+            },
+            "text": "Inspect modifiers",
+            "click": "inspectModifiers",
+            "uiFooter": true,
+            "uiFooterGroup": "1:Character",
+            "uiOrder": 0
           }
         }
       ],
@@ -42,12 +119,15 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "55.56%",
-          "minH": 600,
-          "minW": 800,
-          "w": "41.67%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Character"
     }
   },
   "creatureView": {
@@ -152,14 +232,17 @@
         }
       ],
       "layout": {
-        "class": "CLayout",
+        "class": "CCenteredLayout",
         "properties": {
-          "h": "100%",
-          "w": "100%",
-          "x": "0%",
-          "y": "0%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Choose an adventure"
     }
   },
   "campaignPanel": {
@@ -172,25 +255,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "15%",
-                "w": "100%",
-                "x": "0%",
-                "y": "0%"
-              }
-            },
-            "render": "renderTitle"
-          }
-        },
-        {
-          "class": "CWidget",
-          "properties": {
-            "layout": {
-              "class": "CLayout",
-              "properties": {
-                "h": "70%",
-                "w": "80%",
-                "x": "10%",
-                "y": "15%"
+                "x": "6%",
+                "y": "18%",
+                "w": "88%",
+                "h": "65%"
               }
             },
             "render": "renderBody"
@@ -199,29 +267,32 @@
         {
           "class": "CButton",
           "properties": {
-            "click": "clickAction",
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "10%",
-                "w": "30%",
-                "x": "35%",
-                "y": "90%"
+                "x": "63%",
+                "y": "89%",
+                "w": "31%",
+                "h": "8%"
               }
             },
-            "text": "CONTINUE"
+            "text": "Begin chapter",
+            "click": "clickAction"
           }
         }
       ],
       "layout": {
-        "class": "CLayout",
+        "class": "CCenteredLayout",
         "properties": {
-          "h": "100%",
-          "w": "100%",
-          "x": "0%",
-          "y": "0%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Chapter"
     }
   },
   "questionPanel": {
@@ -234,8 +305,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "75%",
-                "w": "100%"
+                "x": "4%",
+                "y": "17%",
+                "w": "92%",
+                "h": "62%"
               }
             },
             "render": "renderQuestion"
@@ -244,45 +317,48 @@
         {
           "class": "CButton",
           "properties": {
-            "click": "clickYes",
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "25%",
-                "w": "50%",
-                "x": "0%",
-                "y": "75%"
+                "x": "52%",
+                "y": "86%",
+                "w": "44%",
+                "h": "10%"
               }
             },
-            "text": "YES"
+            "text": "Confirm",
+            "click": "clickYes"
           }
         },
         {
           "class": "CButton",
           "properties": {
-            "click": "clickNo",
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "25%",
-                "w": "50%",
-                "x": "50%",
-                "y": "75%"
+                "x": "4%",
+                "y": "86%",
+                "w": "44%",
+                "h": "10%"
               }
             },
-            "text": "NO"
+            "text": "Cancel",
+            "click": "clickNo"
           }
         }
       ],
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "27.78%",
-          "minH": 300,
-          "minW": 400,
-          "w": "20.84%"
+          "x": "0",
+          "y": "0",
+          "w": "72%",
+          "h": "74%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Confirm action"
     }
   },
   "fightPanel": {
@@ -319,12 +395,13 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "50%",
-                "w": "25%",
-                "x": "18.75%",
-                "y": "16.67%"
+                "x": "2%",
+                "y": "14%",
+                "w": "23%",
+                "h": "37%"
               }
-            }
+            },
+            "uiGroup": "1:Your hero"
           }
         },
         {
@@ -357,12 +434,32 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "50%",
-                "w": "25%",
-                "x": "56.25%",
-                "y": "16.67%"
+                "x": "27%",
+                "y": "14%",
+                "w": "23%",
+                "h": "37%"
               }
-            }
+            },
+            "uiGroup": "2:Selected target"
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "53%",
+                "y": "11%",
+                "w": "45%",
+                "h": "5%"
+              }
+            },
+            "text": "Targets",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "2:Targets",
+            "uiHeading": true
           }
         },
         {
@@ -374,16 +471,19 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "10%",
-                "w": "40%",
-                "x": "30%",
-                "y": "5%"
+                "x": "53%",
+                "y": "18%",
+                "w": "45%",
+                "h": "23%"
               }
             },
             "select": "enemiesSelect",
             "showEmpty": false,
-            "xPrefferedSize": 4,
-            "yPrefferedSize": 1
+            "rows": true,
+            "tileSize": 64,
+            "searchable": false,
+            "dragEnabled": false,
+            "uiGroup": "2:Targets"
           }
         },
         {
@@ -392,13 +492,71 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "13%",
-                "w": "80%",
-                "x": "10%",
-                "y": "67%"
+                "x": "53%",
+                "y": "42%",
+                "w": "45%",
+                "h": "12%"
               }
             },
-            "render": "renderCombatStatus"
+            "render": "renderCombatStatus",
+            "uiGroup": "2:Target status"
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "54%",
+                "w": "30%",
+                "h": "5%"
+              }
+            },
+            "text": "Actions",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "3:Actions",
+            "uiHeading": true
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "35%",
+                "y": "54%",
+                "w": "30%",
+                "h": "5%"
+              }
+            },
+            "text": "Items",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "4:Items",
+            "uiHeading": true
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "69%",
+                "y": "54%",
+                "w": "29%",
+                "h": "5%"
+              }
+            },
+            "text": "Action preview",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "5:Preview",
+            "uiHeading": true
           }
         },
         {
@@ -410,10 +568,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "10%",
-                "w": "100%",
-                "x": "0%",
-                "y": "90%"
+                "x": "2%",
+                "y": "63%",
+                "w": "30%",
+                "h": "24%"
               }
             },
             "refreshEvent": "interactionsChanged",
@@ -423,7 +581,12 @@
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
             },
-            "select": "interactionsSelect"
+            "select": "interactionsSelect",
+            "rows": true,
+            "showEmpty": false,
+            "tileSize": 64,
+            "searchable": true,
+            "uiGroup": "3:Actions"
           }
         },
         {
@@ -435,10 +598,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "10%",
-                "w": "100%",
-                "x": "0%",
-                "y": "80%"
+                "x": "35%",
+                "y": "63%",
+                "w": "30%",
+                "h": "24%"
               }
             },
             "refreshEvent": "inventoryChanged",
@@ -449,19 +612,100 @@
               }
             },
             "rightClickCallback": "itemsRightClickCallback",
-            "select": "itemsSelect"
+            "select": "itemsSelect",
+            "rows": true,
+            "showEmpty": false,
+            "tileSize": 64,
+            "searchable": true,
+            "uiGroup": "4:Items"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "69%",
+                "y": "62%",
+                "w": "29%",
+                "h": "25%"
+              }
+            },
+            "render": "renderSelectionDetails",
+            "uiGroup": "5:Preview"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "49%",
+                "y": "91%",
+                "w": "24%",
+                "h": "6%"
+              }
+            },
+            "text": "Use selected item",
+            "click": "useSelectedItem",
+            "uiOrder": 1,
+            "uiFooter": true,
+            "uiFooterGroup": "4:Items"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "75%",
+                "y": "91%",
+                "w": "23%",
+                "h": "6%"
+              }
+            },
+            "text": "Execute action",
+            "click": "executeSelectedAction",
+            "uiOrder": 2,
+            "uiFooter": true,
+            "uiFooterGroup": "3:Actions"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "91%",
+                "w": "30%",
+                "h": "6%"
+              }
+            },
+            "text": "Combat log [L]",
+            "click": "showCombatLog",
+            "uiOrder": 0,
+            "uiFooter": true
           }
         }
       ],
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "55.56%",
-          "minH": 600,
-          "minW": 800,
-          "w": "41.67%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Combat",
+      "closeable": false
     }
   },
   "selectionPanel": {
@@ -470,10 +714,15 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "300",
-          "w": "300"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Choose"
     }
   },
   "infoPanel": {
@@ -482,12 +731,15 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "27.78%",
-          "minH": 300,
-          "minW": 400,
-          "w": "20.84%"
+          "x": "0",
+          "y": "0",
+          "w": "72%",
+          "h": "74%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Discovery"
     }
   },
   "inventoryPanel": {
@@ -495,33 +747,60 @@
     "properties": {
       "children": [
         {
-          "class": "CListView",
+          "class": "CTextWidget",
           "properties": {
-            "grouping": true,
-            "callback": "inventoryCallback",
-            "collection": "inventoryCollection",
-            "dragStart": "inventoryDragStart",
-            "dragCancel": "inventoryDragCancel",
-            "dragValidate": "inventoryDropValidate",
-            "drop": "inventoryDrop",
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "100%",
-                "w": "25%",
-                "x": "0%",
-                "y": "0%"
+                "x": "2%",
+                "y": "14%",
+                "w": "24%",
+                "h": "5%"
               }
             },
-            "refreshEvent": "inventoryChanged",
-            "refreshObject": {
-              "class": "CScript",
+            "text": "Equipment",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "1:Equipment",
+            "uiHeading": true
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
               "properties": {
-                "script": "self.getGui().getGame().getMap().getPlayer()"
+                "x": "28%",
+                "y": "14%",
+                "w": "39%",
+                "h": "5%"
               }
             },
-            "rightClickCallback": "inventoryRightClickCallback",
-            "select": "inventorySelect"
+            "text": "Bag",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "2:Bag",
+            "uiHeading": true
+          }
+        },
+        {
+          "class": "CTextWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "70%",
+                "y": "14%",
+                "w": "28%",
+                "h": "5%"
+              }
+            },
+            "text": "Item details",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "3:Item details",
+            "uiHeading": true
           }
         },
         {
@@ -536,10 +815,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "100%",
-                "w": "25%",
-                "x": "75%",
-                "y": "0%"
+                "x": "2%",
+                "y": "22%",
+                "w": "24%",
+                "h": "65%"
               }
             },
             "refreshEvent": "equippedChanged",
@@ -550,20 +829,131 @@
               }
             },
             "select": "equippedSelect",
-            "xPrefferedSize": 4,
-            "yPrefferedSize": 2
+            "rows": true,
+            "showEmpty": true,
+            "tileSize": 64,
+            "searchable": false,
+            "uiGroup": "1:Equipment"
+          }
+        },
+        {
+          "class": "CListView",
+          "properties": {
+            "grouping": true,
+            "callback": "inventoryCallback",
+            "collection": "inventoryCollection",
+            "dragStart": "inventoryDragStart",
+            "dragCancel": "inventoryDragCancel",
+            "dragValidate": "inventoryDropValidate",
+            "drop": "inventoryDrop",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "28%",
+                "y": "22%",
+                "w": "39%",
+                "h": "65%"
+              }
+            },
+            "refreshEvent": "inventoryChanged",
+            "refreshObject": {
+              "class": "CScript",
+              "properties": {
+                "script": "self.getGui().getGame().getMap().getPlayer()"
+              }
+            },
+            "rightClickCallback": "inventoryRightClickCallback",
+            "select": "inventorySelect",
+            "rows": true,
+            "showEmpty": false,
+            "tileSize": 64,
+            "searchable": true,
+            "uiGroup": "2:Bag"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "70%",
+                "y": "22%",
+                "w": "28%",
+                "h": "64%"
+              }
+            },
+            "render": "renderSelectionDetails",
+            "uiGroup": "3:Item details"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "49%",
+                "y": "91%",
+                "w": "15%",
+                "h": "6%"
+              }
+            },
+            "text": "Use",
+            "click": "useSelected",
+            "uiOrder": 0,
+            "uiFooter": true
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "66%",
+                "y": "91%",
+                "w": "15%",
+                "h": "6%"
+              }
+            },
+            "text": "Equip",
+            "click": "equipSelected",
+            "uiOrder": 1,
+            "uiFooter": true
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "83%",
+                "y": "91%",
+                "w": "15%",
+                "h": "6%"
+              }
+            },
+            "text": "Unequip",
+            "click": "unequipSelected",
+            "uiOrder": 2,
+            "uiFooter": true
           }
         }
       ],
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "55.56%",
-          "minH": 600,
-          "minW": 800,
-          "w": "41.67%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Inventory & equipment"
     }
   },
   "questPanel": {
@@ -572,12 +962,128 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "55.56%",
-          "minH": 600,
-          "minW": 800,
-          "w": "41.67%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Journal",
+      "children": [
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "8%",
+                "w": "22%",
+                "h": "6%"
+              }
+            },
+            "text": "Active",
+            "click": "showActive",
+            "uiOrder": 0,
+            "uiTab": true
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "26%",
+                "y": "8%",
+                "w": "22%",
+                "h": "6%"
+              }
+            },
+            "text": "Completed",
+            "click": "showCompleted",
+            "uiOrder": 1,
+            "uiTab": true
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "50%",
+                "y": "8%",
+                "w": "22%",
+                "h": "6%"
+              }
+            },
+            "text": "History",
+            "click": "showHistory",
+            "uiOrder": 2,
+            "uiTab": true
+          }
+        },
+        {
+          "class": "CListView",
+          "properties": {
+            "collection": "questCollection",
+            "callback": "questCallback",
+            "select": "questSelect",
+            "rows": true,
+            "searchable": true,
+            "showEmpty": false,
+            "dragEnabled": false,
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "24%",
+                "w": "34%",
+                "h": "62%"
+              }
+            },
+            "uiGroup": "1:Quests"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "render": "renderSelectedQuest",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "40%",
+                "y": "20%",
+                "w": "58%",
+                "h": "66%"
+              }
+            },
+            "uiGroup": "2:Details"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "trackSelectedQuest",
+            "text": "Track selected quest",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "68%",
+                "y": "91%",
+                "w": "30%",
+                "h": "6%"
+              }
+            },
+            "uiOrder": 3,
+            "uiFooter": true,
+            "uiFooterGroup": "2:Details"
+          }
+        }
+      ]
     }
   },
   "statsView": {
@@ -599,31 +1105,48 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "27.78%",
-          "minH": 300,
-          "minW": 400,
-          "w": "20.84%"
+          "x": "0",
+          "y": "0",
+          "w": "72%",
+          "h": "74%",
+          "minW": 640,
+          "minH": 480
         }
       },
       "children": [
         {
-          "class": "CListView",
+          "class": "CWidget",
           "properties": {
-            "showEmpty": false,
-            "grouping": true,
-            "collection": "itemsCollection",
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "100%",
-                "w": "100%",
-                "x": "0%",
-                "y": "0%"
+                "x": "4%",
+                "y": "17%",
+                "w": "92%",
+                "h": "66%"
               }
-            }
+            },
+            "render": "renderRewards"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "64%",
+                "y": "89%",
+                "w": "32%",
+                "h": "8%"
+              }
+            },
+            "text": "Continue",
+            "click": "collectRewards"
           }
         }
-      ]
+      ],
+      "title": "Rewards"
     }
   },
   "textPanel": {
@@ -632,12 +1155,15 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "55.56%",
-          "minH": 600,
-          "minW": 800,
-          "w": "41.67%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Chronicle"
     }
   },
   "tradePanel": {
@@ -645,65 +1171,60 @@
     "properties": {
       "children": [
         {
-          "class": "CButton",
+          "class": "CTextWidget",
           "properties": {
-            "click": "finalizeSell",
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "16.67%",
-                "vertical": "DOWN",
-                "w": "25%",
-                "x": "25%"
+                "x": "2%",
+                "y": "14%",
+                "w": "30%",
+                "h": "5%"
               }
             },
-            "text": "SELL"
+            "text": "Your inventory",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "1:Your inventory",
+            "uiHeading": true
           }
         },
         {
-          "class": "CButton",
+          "class": "CTextWidget",
           "properties": {
-            "click": "finalizeBuy",
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "16.67%",
-                "vertical": "DOWN",
-                "w": "25%",
-                "x": "50%"
+                "x": "35%",
+                "y": "14%",
+                "w": "30%",
+                "h": "5%"
               }
             },
-            "text": "BUY"
+            "text": "Merchant stock",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "2:Merchant stock",
+            "uiHeading": true
           }
         },
         {
-          "class": "CWidget",
+          "class": "CTextWidget",
           "properties": {
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "33.34%",
-                "w": "25%",
-                "x": "25%",
-                "y": "0"
+                "x": "69%",
+                "y": "14%",
+                "w": "29%",
+                "h": "5%"
               }
             },
-            "render": "renderSellCost"
-          }
-        },
-        {
-          "class": "CWidget",
-          "properties": {
-            "layout": {
-              "class": "CLayout",
-              "properties": {
-                "h": "33.34%",
-                "w": "25%",
-                "x": "50%",
-                "y": "0"
-              }
-            },
-            "render": "renderBuyCost"
+            "text": "Transaction",
+            "centered": false,
+            "textRole": "heading",
+            "uiGroup": "3:Transaction",
+            "uiHeading": true
           }
         },
         {
@@ -715,10 +1236,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "100%",
-                "w": "25%",
-                "x": "0%",
-                "y": "0%"
+                "x": "2%",
+                "y": "23%",
+                "w": "30%",
+                "h": "50%"
               }
             },
             "refreshEvent": "inventoryChanged",
@@ -728,7 +1249,12 @@
                 "script": "self.getGui().getGame().getMap().getPlayer()"
               }
             },
-            "select": "inventorySelect"
+            "select": "inventorySelect",
+            "rows": true,
+            "showEmpty": false,
+            "tileSize": 64,
+            "searchable": true,
+            "uiGroup": "1:Your inventory"
           }
         },
         {
@@ -739,10 +1265,10 @@
             "layout": {
               "class": "CLayout",
               "properties": {
-                "h": "100%",
-                "w": "25%",
-                "x": "75%",
-                "y": "0%"
+                "x": "35%",
+                "y": "23%",
+                "w": "30%",
+                "h": "50%"
               }
             },
             "refreshEvent": "itemsChanged",
@@ -752,19 +1278,138 @@
                 "script": "self.getParent().getMarket()"
               }
             },
-            "select": "marketSelect"
+            "select": "marketSelect",
+            "rows": true,
+            "showEmpty": false,
+            "tileSize": 64,
+            "searchable": true,
+            "uiGroup": "2:Merchant stock"
+          }
+        },
+        {
+          "class": "CWidget",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "69%",
+                "y": "22%",
+                "w": "29%",
+                "h": "65%"
+              }
+            },
+            "render": "renderTradeSummary",
+            "uiGroup": "3:Transaction"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "80%",
+                "w": "30%",
+                "h": "6%"
+              }
+            },
+            "text": "Add one to sell",
+            "click": "addSelectedForSale",
+            "uiOrder": 0,
+            "uiFooter": true,
+            "uiFooterGroup": "1:Your inventory"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "35%",
+                "y": "80%",
+                "w": "30%",
+                "h": "6%"
+              }
+            },
+            "text": "Add one to buy",
+            "click": "addSelectedForPurchase",
+            "uiOrder": 1,
+            "uiFooter": true,
+            "uiFooterGroup": "2:Merchant stock"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "2%",
+                "y": "91%",
+                "w": "20%",
+                "h": "6%"
+              }
+            },
+            "text": "Clear",
+            "click": "clearSelection",
+            "uiOrder": 2,
+            "uiFooter": true,
+            "uiFooterGroup": "3:Transaction"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "51%",
+                "y": "91%",
+                "w": "22%",
+                "h": "6%"
+              }
+            },
+            "text": "Review sale",
+            "click": "finalizeSell",
+            "uiOrder": 3,
+            "uiFooter": true,
+            "uiFooterGroup": "3:Transaction"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "75%",
+                "y": "91%",
+                "w": "23%",
+                "h": "6%"
+              }
+            },
+            "text": "Review purchase",
+            "click": "finalizeBuy",
+            "uiOrder": 4,
+            "uiFooter": true,
+            "uiFooterGroup": "3:Transaction"
           }
         }
       ],
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "55.56%",
-          "minH": 600,
-          "minW": 800,
-          "w": "41.67%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Trade"
     }
   },
   "dialogPanel": {
@@ -773,12 +1418,15 @@
       "layout": {
         "class": "CCenteredLayout",
         "properties": {
-          "h": "55.56%",
-          "minH": 600,
-          "minW": 800,
-          "w": "41.67%"
+          "x": "0",
+          "y": "0",
+          "w": "94%",
+          "h": "94%",
+          "minW": 640,
+          "minH": 480
         }
-      }
+      },
+      "title": "Conversation"
     }
   }
 }

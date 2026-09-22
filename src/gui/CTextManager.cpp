@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 constexpr std::size_t MAX_TEXT_TEXTURES = 512;
@@ -28,7 +29,10 @@ constexpr int MAX_TEXT_WRAP_WIDTH = 8192;
 
 std::string boundedText(std::string text) {
     if (text.size() > MAX_RENDER_TEXT_BYTES) {
-        text.resize(MAX_RENDER_TEXT_BYTES);
+        auto size = MAX_RENDER_TEXT_BYTES;
+        while (size > 0 && (static_cast<unsigned char>(text[size]) & 0xc0) == 0x80)
+            --size;
+        text.resize(size);
     }
     return text;
 }
@@ -36,57 +40,114 @@ std::string boundedText(std::string text) {
 int boundedWidth(int width) { return std::clamp(width, 0, MAX_TEXT_WRAP_WIDTH); }
 } // namespace
 
-SDL_Texture *CTextManager::getTexture(const std::string &text, int width) {
-    auto key = std::make_pair(boundedText(text), boundedWidth(width));
+SDL_Texture *CTextManager::getTexture(const std::string &text, int width, const std::string &role, SDL_Color color) {
+    if (auto gui = _gui.lock(); gui && gui->isHighContrast())
+        color = {255, 255, 255, 255};
+    const auto normalizedRole =
+        role == "title" || role == "heading" || role == "dialogue" || role == "small" ? role : "body";
+    const int size = getFontSize(normalizedRole);
+    const Uint32 packedColor = (Uint32(color.r) << 24) | (Uint32(color.g) << 16) | (Uint32(color.b) << 8) | color.a;
+    auto key = std::make_tuple(boundedText(text), boundedWidth(width), normalizedRole, size, packedColor);
     auto texture = _textures.find(key);
     if (texture == _textures.end()) {
         if (_textures.size() >= MAX_TEXT_TEXTURES) {
             _textures.clear();
         }
-        auto [inserted, _] = _textures.emplace(key, this->loadTexture(key.first, key.second));
+        auto [inserted, _] =
+            _textures.emplace(key, loadTexture(std::get<0>(key), std::get<1>(key), normalizedRole, size, color));
         return inserted->second.get();
     }
     return texture->second.get();
 }
 
-fn::sdl::TexturePtr CTextManager::loadTexture(std::string text, int width) {
-    if (!font || !_gui.lock() || !_gui.lock()->getRenderer()) {
+fn::sdl::TexturePtr CTextManager::loadTexture(const std::string &text, int width, const std::string &role, int size,
+                                              SDL_Color color) {
+    ++textureLoads;
+    auto gui = _gui.lock();
+    auto font = getFont(role, size);
+    if (!font || !gui || !gui->getRenderer()) {
         return nullptr;
     }
-    SDL_Color textColor = {255, 255, 255, 0};
     // in some sdl versions blended wrapped automatically treats 0 as not wrapper,
     // other versions fail on width=0
-    auto surface =
-        fn::sdl::SurfacePtr(SDL_SAFE(width ? TTF_RenderText_Blended_Wrapped(font.get(), text.c_str(), textColor, width)
-                                           : TTF_RenderText_Blended(font.get(), text.c_str(), textColor)));
+    auto surface = fn::sdl::SurfacePtr(SDL_SAFE(width ? TTF_RenderUTF8_Blended_Wrapped(font, text.c_str(), color, width)
+                                                      : TTF_RenderUTF8_Blended(font, text.c_str(), color)));
     if (!surface) {
         return nullptr;
     }
-    return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(_gui.lock()->getRenderer(), surface.get())));
+    return fn::sdl::TexturePtr(SDL_SAFE(SDL_CreateTextureFromSurface(gui->getRenderer(), surface.get())));
 }
 
 CTextManager::CTextManager(const std::shared_ptr<CGui> &_gui) {
     SDL_SAFE(TTF_Init());
-    constexpr const char *fontResource = "fonts/ampersand.ttf";
-    // Resolve through the owning game's per-session resources provider; fall back to the process
-    // singleton only when the manager is created without a live GUI/game (compatibility path).
-    auto game = _gui ? _gui->getGame() : nullptr;
-    auto resourcesProvider = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
-    const auto resolvedFont = resourcesProvider->getPath(fontResource);
-    if (resolvedFont.empty()) {
-        vstd::logger::error("CTextManager: cannot resolve font", fontResource, "resolved:", resolvedFont);
-    } else {
-        font.reset(SDL_SAFE(TTF_OpenFont(resolvedFont.c_str(), 24)));
-        if (!font) {
-            vstd::logger::error("CTextManager: cannot load font", fontResource, "resolved:", resolvedFont);
-        }
-    }
     this->_gui = _gui;
+}
+
+TTF_Font *CTextManager::getFont(const std::string &role, int size) {
+    const std::string family =
+        role == "title" || role == "heading" ? "SourceSerif4-Semibold.ttf" : "SourceSans3-Regular.ttf";
+    auto key = std::make_pair(family, size);
+    if (auto it = fonts.find(key); it != fonts.end())
+        return it->second.get();
+    // A bounded font cache also bounds native glyph caches after repeated scale changes.
+    if (fonts.size() >= 24)
+        fonts.clear();
+    auto gui = _gui.lock();
+    auto game = gui ? gui->getGame() : nullptr;
+    auto resourcesProvider = game ? game->getResourcesProvider() : CResourcesProvider::getInstance();
+    auto resolved = resourcesProvider->getPath("fonts/" + family);
+    if (resolved.empty())
+        resolved = resourcesProvider->getPath("fonts/ampersand.ttf");
+    if (resolved.empty())
+        return nullptr;
+    auto [it, _] = fonts.emplace(key, fn::sdl::FontPtr(TTF_OpenFont(resolved.c_str(), size)));
+    return it->second.get();
+}
+
+int CTextManager::getFontSize(const std::string &role) const {
+    const int base = role == "title"      ? 36
+                     : role == "heading"  ? 32
+                     : role == "dialogue" ? 28
+                     : role == "small"    ? 22
+                                          : 24;
+    auto gui = _gui.lock();
+    return std::clamp(static_cast<int>(std::lround(base * (gui ? gui->getTextScale() : 1.0))), 18, 144);
 }
 
 CTextManager::~CTextManager() {
     _textures.clear();
-    font.reset();
+    fonts.clear();
+}
+
+void CTextManager::clearCache() {
+    _textures.clear();
+    fonts.clear();
+}
+std::size_t CTextManager::getCachedTextureCount() const { return _textures.size(); }
+std::size_t CTextManager::getCachedFontCount() const { return fonts.size(); }
+
+std::pair<int, int> CTextManager::measureText(const std::string &text, int width, const std::string &role) {
+    int w = 0, h = 0;
+    if (auto texture = getTexture(text, width, role))
+        SDL_QueryTexture(texture, nullptr, nullptr, &w, &h);
+    return {w, h};
+}
+
+void CTextManager::drawTextStyled(const std::string &text, const std::shared_ptr<SDL_Rect> &rect,
+                                  const std::string &role, SDL_Color color, bool centered, int offsetY) {
+    auto gui = _gui.lock();
+    if (!gui || !rect || text.empty() || rect->w <= 0 || rect->h <= 0)
+        return;
+    auto texture = getTexture(text, rect->w, role, color);
+    if (!texture)
+        return;
+    SDL_Rect target{rect->x, rect->y + offsetY, 0, 0};
+    SDL_QueryTexture(texture, nullptr, nullptr, &target.w, &target.h);
+    if (centered) {
+        target.x += std::max(0, (rect->w - target.w) / 2);
+        target.y += std::max(0, (rect->h - target.h) / 2);
+    }
+    gui->getRenderContext().copy(texture, nullptr, &target, rect.get());
 }
 
 int CTextManager::countLines(const std::string &text, int w) {

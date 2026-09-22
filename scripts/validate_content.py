@@ -59,9 +59,9 @@ CAMPAIGN_MANIFEST_NAME = "campaign.json"
 CAMPAIGN_FORMAT = "fall-of-nouraajd-campaign"
 CAMPAIGN_SCHEMA_VERSION = 1
 CAMPAIGN_MANIFEST_REQUIRED_KEYS = {"format", "schemaVersion", "campaignId", "title", "start", "scenarios"}
-CAMPAIGN_MANIFEST_KEYS = CAMPAIGN_MANIFEST_REQUIRED_KEYS | {"description", "completionText"}
+CAMPAIGN_MANIFEST_KEYS = CAMPAIGN_MANIFEST_REQUIRED_KEYS | {"description", "completionText", "artwork"}
 CAMPAIGN_SCENARIO_REQUIRED_KEYS = {"map", "title", "briefing", "next"}
-CAMPAIGN_SCENARIO_KEYS = CAMPAIGN_SCENARIO_REQUIRED_KEYS | {"epilogue", "carryover"}
+CAMPAIGN_SCENARIO_KEYS = CAMPAIGN_SCENARIO_REQUIRED_KEYS | {"epilogue", "carryover", "artwork"}
 CAMPAIGN_CARRYOVER_GOLD_MAX = "gold_max"
 CAMPAIGN_CARRYOVER_ITEM_KEYS = ("items_allow", "items_deny")
 CAMPAIGN_CARRYOVER_KEYS = {CAMPAIGN_CARRYOVER_GOLD_MAX, *CAMPAIGN_CARRYOVER_ITEM_KEYS}
@@ -134,6 +134,27 @@ REVIEWED_DYNAMIC_PROPERTIES = {
     "CCreature": {"class", "race"},
     "CDialogState": {"condition"},
     "CScroll": {"singleUse"},
+}
+REVIEWED_DYNAMIC_PROPERTY_TYPES = {
+    # These properties are read through CGameObject's typed dynamic accessors by
+    # the common panel layout and dialogue renderer. Keep their scope and types
+    # explicit; unrelated objects and misspelled names must still be rejected.
+    "CGameGraphicsObject": {
+        "uiGroup": "std::string",
+        "uiHeading": "bool",
+        "uiFooter": "bool",
+        "uiTab": "bool",
+        "uiFooterGroup": "std::string",
+        "uiOrder": "int",
+    },
+    "CDialog": {"speaker": "std::string", "questIds": "std::string"},
+    "CDialogState": {"speaker": "std::string"},
+    "CDialogOption": {
+        "actionLabel": "std::string",
+        "afterCondition": "std::string",
+        "afterStateId": "std::string",
+        "consequential": "bool",
+    },
 }
 REVIEWED_DYNAMIC_PROPERTY_PREFIXES = {
     "CGameObject": ("campaign_", "plugin_", "quest_state_"),
@@ -2183,6 +2204,8 @@ class ContentValidator:
         for key in ("title", "description", "completionText"):
             if key in data and not (isinstance(data[key], str) and data[key]):
                 self._issue(path, f"$.{key}", "must be a non-empty string")
+        if "artwork" in data:
+            self._validate_campaign_artwork(path, "$.artwork", data["artwork"])
         scenarios = data.get("scenarios")
         if "scenarios" in data and not (isinstance(scenarios, dict) and scenarios):
             self._issue(path, "$.scenarios", "expected a non-empty object of scenarios")
@@ -2217,6 +2240,8 @@ class ContentValidator:
         for key in ("map", "title", "briefing", "epilogue"):
             if key in scenario and not (isinstance(scenario[key], str) and scenario[key]):
                 self._issue(path, f"{location}.{key}", "must be a non-empty string")
+        if "artwork" in scenario:
+            self._validate_campaign_artwork(path, f"{location}.artwork", scenario["artwork"])
         map_name = scenario.get("map")
         map_context = map_contexts_by_name.get(map_name) if isinstance(map_name, str) else None
         if isinstance(map_name, str) and map_name and map_context is None:
@@ -2231,6 +2256,22 @@ class ContentValidator:
                     self._issue(path, f"{location}.next.{outcome}", "must name a scenario in this campaign")
             self._validate_campaign_scenario_outcomes(path, location, map_name, map_context, routes)
         self._validate_campaign_carryover(path, location, scenario.get("carryover"))
+
+    def _validate_campaign_artwork(self, path: Path, location: str, artwork: Any) -> None:
+        if not isinstance(artwork, str) or not artwork:
+            self._issue(path, location, "must be a non-empty string")
+            return
+        if (
+            not artwork.startswith("images/")
+            or not artwork.endswith(".png")
+            or any(part in artwork for part in ("..", "\\", ":"))
+        ):
+            self._issue(path, location, "must be an images/...png resource without traversal or absolute paths")
+            return
+        resource_root = (self.repo_root / "res").resolve()
+        resource_path = (resource_root / artwork).resolve()
+        if not resource_path.is_relative_to(resource_root) or not resource_path.is_file():
+            self._issue(path, location, "must reference an existing PNG resource under res/")
 
     def _validate_campaign_scenario_outcomes(
         self, path: Path, location: str, map_name: Any, map_context: MapContext | None, routes: dict[str, Any]
@@ -2703,6 +2744,8 @@ class ContentValidator:
             base_properties = self._metadata_property_schema(base_class, seen)
             if base_properties:
                 properties.update(base_properties)
+        for property_name, type_token in REVIEWED_DYNAMIC_PROPERTY_TYPES.get(class_name, {}).items():
+            properties[property_name] = CppMetadataProperty(class_name, property_name, type_token)
         properties.update(self.metadata_properties.get(class_name, {}))
         if seen_classes is None:
             self._metadata_property_schema_cache[class_name] = properties

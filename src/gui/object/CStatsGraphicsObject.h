@@ -25,6 +25,8 @@ class CCreature;
 
 // TODO: move from here
 class CStatsGraphicsUtil {
+    friend class CStatsGraphicsObject;
+
   public:
     static void drawStats(std::shared_ptr<CGui> gui, std::shared_ptr<CCreature> creature, int x, int y, int h, int w,
                           bool showNumeric, bool showExp);
@@ -33,8 +35,8 @@ class CStatsGraphicsUtil {
     static void drawBar(std::shared_ptr<CGui> gui, int ratio, int index, int barCount, SDL_Color color, int x, int y,
                         int h, int w);
 
-    static void drawValues(std::shared_ptr<CGui> gui, int left, int right, int index, int barCount, int x, int y, int h,
-                           int w);
+    static void drawValues(std::shared_ptr<CGui> gui, const std::string &label, int left, int right, int index,
+                           int barCount, int x, int y, int h, int w);
 };
 
 class CStatsGraphicsObject : public CGameGraphicsObject {

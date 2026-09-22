@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <map>
 #include <optional>
 #include <string>
+#include <deque>
 
 class CTextureCache;
 
@@ -130,6 +131,22 @@ class CGui : public CGameGraphicsObject {
 
     int getTileCountY();
 
+    double getUiScale() const;
+    double getTextScale() const;
+    bool isHighContrast() const { return uiPreferences.value("highContrast", false); }
+    std::string getUiPreferences() const;
+    bool applyUiPreferences(const std::string &preferences);
+    void notify(const std::string &message);
+    void notifyAt(const std::shared_ptr<CMapObject> &target, const std::string &message);
+    std::string getActionFeedback() const;
+    std::string getUiHistory() const;
+    std::string getRecentNotification() const;
+    void previewObject(const std::shared_ptr<CGameGraphicsObject> &source, const std::shared_ptr<CGameObject> &object,
+                       int x, int y);
+    void focusWidget(const std::shared_ptr<CGameGraphicsObject> &widget);
+    bool isFocused(const CGameGraphicsObject *widget) const;
+    void releaseFocusFor(const std::shared_ptr<CGameGraphicsObject> &root);
+
   private:
     int height = 1080;
     int tileSize = 50;
@@ -202,6 +219,27 @@ class CGui : public CGameGraphicsObject {
     std::map<std::string, PanelGeometry> sessionPanelGeometry;
 
     std::weak_ptr<CGameGraphicsObject> pointerCapture;
+    std::weak_ptr<CGameGraphicsObject> focusedWidget;
+    std::set<SDL_Keycode> heldKeys;
+    std::set<SDL_Keycode> suppressedKeys;
+    std::vector<std::pair<std::weak_ptr<CGameGraphicsObject>, std::weak_ptr<CGameGraphicsObject>>> focusHistory;
+    json uiPreferences;
+    std::deque<std::string> activityHistory;
+    Uint32 notificationTime = 0;
+    std::weak_ptr<CMapObject> feedbackTarget;
+    std::weak_ptr<CMap> feedbackMap;
+    std::string actionFeedback;
+    std::weak_ptr<CMap> uiMap;
+    std::weak_ptr<CGameGraphicsObject> hoverSource;
+    std::weak_ptr<CGameObject> hoverObject;
+    SDL_Point hoverPosition{};
+    Uint32 hoverStarted = 0;
+    bool hoverSeen = false;
+    void renderHoverPreview();
+    void renderActionFeedback();
+    bool handleFocusKey(SDL_Event *event);
+    void loadUiPreferences();
+    SDL_Keycode remapKey(SDL_Keycode key) const;
 
     std::atomic<bool> active = true;
 };

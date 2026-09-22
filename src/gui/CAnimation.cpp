@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
+#include "gui/CUiTheme.h"
 
 void CAnimation::setObject(std::shared_ptr<CGameObject> _object) { object = _object; }
 
@@ -191,10 +192,20 @@ bool CAnimation::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int b
             std::shared_ptr<SDL_Rect> absPos = getLayout()->getRect(this->ptr<CAnimation>());
             gui->getGame()->getGuiHandler()->showTooltip(CTooltipHandler::buildTooltip(currentObject), absPos->x + x,
                                                          absPos->y + y);
+            return true;
         }
         return !hasCallback;
     }
     return callback(gui, type, button, x, y);
+}
+
+bool CAnimation::mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType, int x, int y, int, int) {
+    auto object = getObject();
+    if (!object || (object->getLabel().empty() && object->getDescription().empty()))
+        return false;
+    auto rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+    gui->previewObject(ptr<CGameGraphicsObject>(), object, rect->x + x, rect->y + y);
+    return true;
 }
 
 void CSelectionBox::setThickness(int _thickness) { this->thickness = _thickness; }
@@ -202,7 +213,7 @@ void CSelectionBox::setThickness(int _thickness) { this->thickness = _thickness;
 int CSelectionBox::getThickness() { return thickness; }
 
 void CSelectionBox::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    CUtil::setRenderDrawColor(gui->getRenderer(), CColors::Yellow);
+    CUtil::setRenderDrawColor(gui->getRenderer(), UiTheme::Accent);
     SDL_Rect tmp = {rect->x, rect->y, thickness, rect->h};
     SDL_Rect tmp2 = {rect->x, rect->y, rect->w, thickness};
     SDL_Rect tmp3 = {rect->x, rect->y + rect->h - thickness, rect->w, thickness};

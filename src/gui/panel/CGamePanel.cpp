@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,11 +20,69 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
+#include "gui/CTextManager.h"
+#include "gui/CUiTheme.h"
+#include "handler/CGuiHandler.h"
 #include "gui/object/CWidget.h"
+#include "gui/panel/CListView.h"
 
 #include <algorithm>
 
-bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) { return true; }
+bool CGamePanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) {
+    if (type == SDL_KEYDOWN && key == SDLK_ESCAPE) {
+        if (closeable) {
+            close();
+        } else if (getTypeId() == "fightPanel" && gui && gui->getGame()) {
+            gui->getGame()->getGuiHandler()->showPauseMenu();
+        }
+    }
+    return true;
+}
+
+int CGamePanel::getShellCloseWidth(const std::shared_ptr<CGui> &gui) {
+    return std::max(UiTheme::scaled(gui, 112), gui->getTextManager()->measureText("Close  ×", 0, "body").first);
+}
+
+int CGamePanel::getShellHeaderHeight(const std::shared_ptr<CGui> &gui) {
+    const int padding = UiTheme::scaled(gui, 24);
+    const int width = std::max(1, getSelfRect()->w - padding * 2 - (closeable ? getShellCloseWidth(gui) + padding : 0));
+    const int titleHeight =
+        gui->getTextManager()->measureText(title.empty() ? "Adventure" : title, width, "heading").second;
+    const int closeHeight = closeable ? gui->getTextManager()->measureText("Close  ×", 0, "body").second : 0;
+    return std::max(UiTheme::scaled(gui, 56), std::max(titleHeight, closeHeight) + UiTheme::scaled(gui, 16));
+}
+
+void CGamePanel::renderShell(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect) {
+    if (!gui || !rect || getParent() != gui) {
+        return;
+    }
+    auto renderer = gui->getRenderer();
+    SDL_BlendMode previous;
+    SDL_GetRenderDrawBlendMode(renderer, &previous);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    UiTheme::fill(renderer, SDL_Rect{0, 0, gui->getWidth(), gui->getHeight()}, {0, 0, 0, 120});
+    UiTheme::fill(renderer, *rect, UiTheme::Panel);
+    UiTheme::stroke(renderer, *rect, UiTheme::Border);
+    SDL_SetRenderDrawBlendMode(renderer, previous);
+    const int padding = UiTheme::scaled(gui, 24);
+    const int header = getShellHeaderHeight(gui);
+    const int closeWidth = getShellCloseWidth(gui);
+    layoutResponsiveChildren(gui, rect);
+    gui->getTextManager()->drawTextStyled(
+        title.empty() ? "Adventure" : title,
+        CUtil::rect(rect->x + padding, rect->y + UiTheme::scaled(gui, 8),
+                    std::max(1, rect->w - padding * 2 - (closeable ? closeWidth + padding : 0)),
+                    header - UiTheme::scaled(gui, 16)),
+        "heading", UiTheme::Text);
+    if (closeable) {
+        gui->getTextManager()->drawTextStyled("Close  ×",
+                                              CUtil::rect(rect->x + rect->w - padding - closeWidth,
+                                                          rect->y + UiTheme::scaled(gui, 8), closeWidth,
+                                                          header - UiTheme::scaled(gui, 16)),
+                                              "body", UiTheme::Accent, true);
+    }
+    UiTheme::fill(renderer, SDL_Rect{rect->x + padding, rect->y + header, rect->w - padding * 2, 1}, UiTheme::Border);
+}
 
 bool CGamePanel::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     if (button == SDL_BUTTON_LEFT) {
@@ -63,6 +121,69 @@ bool CGamePanel::mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType
 
 bool CGamePanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
     if (event && isAttachedToGui(gui) && isVisible()) {
+        if (responsiveNarrow && responsivePageCount > 0 && event->type == SDL_KEYDOWN &&
+            (event->key.keysym.sym == SDLK_LEFTBRACKET || event->key.keysym.sym == SDLK_RIGHTBRACKET)) {
+            responsivePage =
+                (responsivePage + (event->key.keysym.sym == SDLK_LEFTBRACKET ? -1 : 1) + responsivePageCount) %
+                responsivePageCount;
+            return true;
+        }
+        if (responsiveNarrow && responsivePageCount > 0 &&
+            (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP) &&
+            event->button.button == SDL_BUTTON_LEFT) {
+            auto rect = getSelfRect();
+            const int x = event->button.x - rect->x;
+            const int y = event->button.y - rect->y;
+            const bool inside = x >= responsiveHeaderRect.x && x < responsiveHeaderRect.x + responsiveHeaderRect.w &&
+                                y >= responsiveHeaderRect.y && y < responsiveHeaderRect.y + responsiveHeaderRect.h;
+            const int direction = x < rect->w / 2 ? -1 : 1;
+            if (event->type == SDL_MOUSEBUTTONDOWN) {
+                responsiveHeaderPressed = inside ? direction : 0;
+                if (inside)
+                    return true;
+            } else if (responsiveHeaderPressed) {
+                const bool matched = inside && responsiveHeaderPressed == direction;
+                responsiveHeaderPressed = 0;
+                if (matched)
+                    responsivePage = (responsivePage + direction + responsivePageCount) % responsivePageCount;
+                return true;
+            }
+        }
+        const auto id = getTypeId();
+        if (event->type == SDL_KEYDOWN && !event->key.repeat &&
+            (id == "inventoryPanel" || id == "characterPanel" || id == "questPanel")) {
+            auto preferences = json::parse(gui->getUiPreferences());
+            for (const auto &[action, panel] : std::map<std::string, std::string>{
+                     {"inventory", "inventoryPanel"}, {"character", "characterPanel"}, {"journal", "questPanel"}}) {
+                auto keyName = preferences.at("bindings").at(action).get<std::string>();
+                if (event->key.keysym.sym == SDL_GetKeyFromName(keyName.c_str())) {
+                    if (id == panel)
+                        close();
+                    else
+                        gui->getGame()->getGuiHandler()->openPanel(panel);
+                    return true;
+                }
+            }
+        }
+        if (getParent() == gui && closeable &&
+            (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP) &&
+            event->button.button == SDL_BUTTON_LEFT) {
+            auto rect = getSelfRect();
+            const int x = event->button.x - rect->x;
+            const int y = event->button.y - rect->y;
+            const bool inside = x >= rect->w - UiTheme::scaled(gui, 24) - getShellCloseWidth(gui) && x < rect->w &&
+                                y >= 0 && y < getShellHeaderHeight(gui) && !isInResizeHandle(x, y) && !isResizing();
+            if (event->type == SDL_MOUSEBUTTONDOWN && inside) {
+                closePressed = true;
+                return true;
+            }
+            if (event->type == SDL_MOUSEBUTTONUP && closePressed) {
+                closePressed = false;
+                if (inside)
+                    close();
+                return true;
+            }
+        }
         // A press on the resize handle is claimed before child dispatch: children (e.g. list views)
         // consume left button-downs even on empty cells, so a child covering the bottom-right corner
         // would otherwise swallow the grab. Same for the matching release while a resize is active,
@@ -98,11 +219,158 @@ void CGamePanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rec
     }
     int handle = std::clamp(resizeHandleSize, 1, std::min(rect->w, rect->h));
     SDL_Rect handleRect{rect->x + rect->w - handle, rect->y + rect->h - handle, handle, handle};
-    CUtil::setRenderDrawColor(renderer, CColors::Yellow);
+    CUtil::setRenderDrawColor(renderer, UiTheme::Accent);
     SDL_RenderFillRect(renderer, &handleRect);
 }
 
 bool CGamePanel::isResizable() { return resizable; }
+
+void CGamePanel::layoutResponsiveChildren(const std::shared_ptr<CGui> &gui, const std::shared_ptr<SDL_Rect> &rect) {
+    std::vector<std::string> groups;
+    auto children = getChildren();
+    for (const auto &child : children) {
+        auto group = child->getStringProperty("uiGroup");
+        if (!group.empty() && std::find(groups.begin(), groups.end(), group) == groups.end())
+            groups.push_back(group);
+    }
+    std::sort(groups.begin(), groups.end());
+    responsivePageCount = static_cast<int>(groups.size());
+    if (!responsivePageCount)
+        return;
+    responsivePage = std::clamp(responsivePage, 0, responsivePageCount - 1);
+    responsiveNarrow =
+        rect->w < UiTheme::scaled(gui, 1200) || gui->getTextScale() > 1.5 * std::max(1.0, gui->getHeight() / 1080.0);
+    if (!responsiveNarrow)
+        responsiveHeaderPressed = 0;
+    const double displayScale = std::max(1.0, gui->getHeight() / 1080.0);
+    const int padding = static_cast<int>(24 * displayScale);
+    const int gap = static_cast<int>(8 * displayScale);
+    const int availableWidth = std::max(1, rect->w - padding * 2);
+    std::vector<std::shared_ptr<CButton>> tabs;
+    std::vector<std::shared_ptr<CButton>> footer;
+    for (const auto &child : children) {
+        if (auto button = vstd::cast<CButton>(child)) {
+            if (button->getBoolProperty("uiTab"))
+                tabs.push_back(button);
+            if (button->getBoolProperty("uiFooter")) {
+                const auto page = button->getStringProperty("uiFooterGroup");
+                const bool hidden = responsiveNarrow && !page.empty() && page != groups[responsivePage];
+                button->setRuntimeHidden(hidden);
+                if (!hidden)
+                    footer.push_back(button);
+            }
+        }
+    }
+    auto orderButtons = [](auto &buttons) {
+        std::sort(buttons.begin(), buttons.end(), [](const auto &left, const auto &right) {
+            return left->getNumericProperty("uiOrder") < right->getNumericProperty("uiOrder");
+        });
+    };
+    orderButtons(tabs);
+    orderButtons(footer);
+    auto rowHeight = [&](const auto &buttons) {
+        if (buttons.empty())
+            return 0;
+        const int width = std::max(1, (availableWidth - gap * (static_cast<int>(buttons.size()) - 1)) /
+                                          static_cast<int>(buttons.size()));
+        int height = UiTheme::scaled(gui, 40);
+        for (const auto &button : buttons)
+            height =
+                std::max(height, gui->getTextManager()
+                                         ->measureText(button->getText(), std::max(1, width - UiTheme::scaled(gui, 16)),
+                                                       button->getTextRole())
+                                         .second +
+                                     UiTheme::scaled(gui, 16));
+        return height;
+    };
+    auto placeRow = [&](const auto &buttons, int y, int height) {
+        if (buttons.empty())
+            return;
+        const int width = std::max(1, (availableWidth - gap * (static_cast<int>(buttons.size()) - 1)) /
+                                          static_cast<int>(buttons.size()));
+        for (size_t index = 0; index < buttons.size(); ++index)
+            buttons[index]->getLayout()->setRuntimeRect(padding + static_cast<int>(index) * (width + gap), y, width,
+                                                        height);
+    };
+    const int tabHeight = rowHeight(tabs);
+    const int footerHeight = rowHeight(footer);
+    const int tabsTop = getShellHeaderHeight(gui) + gap;
+    const int groupTop = tabsTop + (tabs.empty() ? 0 : tabHeight + gap);
+    const int groupHeight =
+        std::max(static_cast<int>(48 * displayScale),
+                 gui->getTextManager()->measureText("Previous / Next region", availableWidth, "body").second + gap);
+    const int contentTop = groupTop + groupHeight + gap * 2;
+    const int contentBottom = rect->h - padding - (footer.empty() ? 0 : footerHeight + gap * 2);
+    if (responsiveNarrow) {
+        placeRow(tabs, tabsTop, tabHeight);
+        placeRow(footer, rect->h - padding - footerHeight, footerHeight);
+        responsiveHeaderRect = {padding, groupTop, availableWidth, groupHeight};
+        auto label = groups[responsivePage];
+        if (label.size() > 2 && label[1] == ':')
+            label.erase(0, 2);
+        gui->getTextManager()->drawTextStyled(
+            "‹  " + label + "  ›", CUtil::rect(rect->x + padding, rect->y + groupTop, availableWidth, groupHeight),
+            "body", UiTheme::Accent, true);
+    } else {
+        for (const auto &buttons : {tabs, footer})
+            for (const auto &button : buttons)
+                button->getLayout()->clearRuntimeRect();
+    }
+    int wideFooterTop = rect->y + rect->h - padding;
+    for (const auto &button : footer) {
+        wideFooterTop = std::min(wideFooterTop, button->getLayout()->getRect(button)->y);
+    }
+    for (const auto &child : children) {
+        auto group = child->getStringProperty("uiGroup");
+        if (group.empty())
+            continue;
+        auto layout = child->getLayout();
+        if (!layout)
+            continue;
+        const auto before = layout->getRect(child);
+        child->setRuntimeHidden(responsiveNarrow &&
+                                (group != groups[responsivePage] || child->getBoolProperty("uiHeading")));
+        if (!responsiveNarrow) {
+            layout->clearRuntimeRect();
+            if (auto list = vstd::cast<CListView>(child); list && !footer.empty()) {
+                const auto authored = layout->getRect(child);
+                const int pagerHeight = std::max(UiTheme::scaled(gui, 40),
+                                                 gui->getTextManager()->measureText("Previous", 0, "body").second +
+                                                     UiTheme::scaled(gui, 16));
+                const int height = std::min(authored->h, std::max(1, wideFooterTop - gap - pagerHeight -
+                                                                         UiTheme::scaled(gui, 4) - authored->y));
+                layout->setRuntimeRect(authored->x - rect->x, authored->y - rect->y, authored->w, height);
+            }
+            const auto after = layout->getRect(child);
+            if (before->w != after->w || before->h != after->h) {
+                if (auto proxy = vstd::cast<CProxyTargetGraphicsObject>(child))
+                    proxy->refresh();
+            }
+            continue;
+        }
+        if (group != groups[responsivePage])
+            continue;
+        int top = contentTop;
+        int bottom = contentBottom;
+        if (auto list = vstd::cast<CListView>(child)) {
+            if (list->getSearchable())
+                top += UiTheme::scaled(gui, 30);
+            bottom -=
+                std::max(UiTheme::scaled(gui, 40),
+                         gui->getTextManager()->measureText("Previous", 0, "body").second + UiTheme::scaled(gui, 16)) +
+                UiTheme::scaled(gui, 4);
+        }
+        const int height = std::max(1, bottom - top);
+        const int part = child->getNumericProperty("uiPart");
+        const int parts = std::max(1, child->getNumericProperty("uiParts"));
+        layout->setRuntimeRect(padding, top + part * height / parts, availableWidth, std::max(1, height / parts));
+        const auto after = layout->getRect(child);
+        if (before->w != after->w || before->h != after->h) {
+            if (auto proxy = vstd::cast<CProxyTargetGraphicsObject>(child))
+                proxy->refresh();
+        }
+    }
+}
 
 void CGamePanel::setResizable(bool _resizable) {
     resizable = _resizable;
@@ -263,8 +531,7 @@ void CGamePanel::refreshViews() {
 }
 
 CGamePanel::CGamePanel() {
-    // TODO: extract to json
-    setBackground("images/panel");
+    setBackground("");
     setModal(true);
 }
 

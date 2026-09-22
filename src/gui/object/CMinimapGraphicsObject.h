@@ -23,11 +23,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstddef>
 
 class CMinimapGraphicsObject : public CGameGraphicsObject {
-    V_META(CMinimapGraphicsObject, CGameGraphicsObject, vstd::meta::empty())
+    V_META(CMinimapGraphicsObject, CGameGraphicsObject,
+           V_METHOD(CMinimapGraphicsObject, browseLandmarks, void, std::shared_ptr<CGui>))
 
     fn::sdl::TexturePtr terrainTexture;
     SDL_Renderer *terrainRenderer = nullptr;
     std::size_t terrainSignature = 0;
+    bool expanded = false;
+    bool expandPressed = false;
 
   public:
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
@@ -41,4 +44,7 @@ class CMinimapGraphicsObject : public CGameGraphicsObject {
     bool mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) override;
 
     bool mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int xrel, int yrel) override;
+    void browseLandmarks(std::shared_ptr<CGui> gui);
+    void expandMap(std::shared_ptr<CGui> gui);
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
 };

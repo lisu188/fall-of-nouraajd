@@ -457,7 +457,16 @@ void test_fight_handler_reports_explicit_outcomes_and_final_status() {
     expect_true(cancelled_result.outcome == CFightOutcome::Cancelled && cancelled_result.rounds == 3,
                 "fight results should construct with explicit cancelled outcome data");
 
+    CFightHandler::recordCombatStatus(victory_game->getMap(), "Previous encounter event");
     const auto victory = CFightHandler::fightManyResult(victor, {defeated});
+    const auto combat_history = CFightHandler::getCombatHistory(victory_game->getMap());
+    expect_true(
+        combat_history.size() >= 3 && combat_history.front().starts_with("Combat round 1 begins.") &&
+            combat_history.back() == victory_game->getMap()->getStringProperty("combatStatus") &&
+            std::find(combat_history.begin(), combat_history.end(), "Previous encounter event") == combat_history.end(),
+        "real encounters must reset old history and record authoritative round/action/outcome messages in order");
+    expect_true(victory_game->getMap()->getNumericProperty("combatRound") == victory.rounds,
+                "the combat display round must come from the resolved encounter loop");
 
     expect_true(victory.outcome == CFightOutcome::AttackerVictory,
                 "direct attacker victory should be reported explicitly");

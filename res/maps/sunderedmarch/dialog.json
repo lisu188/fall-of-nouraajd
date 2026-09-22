@@ -2,6 +2,7 @@
   "seerDialog": {
     "class": "SeerDialog",
     "properties": {
+      "questIds": "seerHuntQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -16,7 +17,8 @@
                   "condition": "can_return_banner",
                   "action": "finish_seer_hunt",
                   "nextStateId": "THANKS",
-                  "text": "Lay the War-Banner of the March before her."
+                  "text": "Lay the War-Banner of the March before her.",
+                  "actionLabel": "Receive reward"
                 }
               },
               {
@@ -29,9 +31,18 @@
                 }
               },
               {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "questInProgress",
+                  "nextStateId": "REMINDER",
+                  "text": "Remind me where the War-Banner lies."
+                }
+              },
+              {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 2
+                  "number": 3
                 }
               }
             ]
@@ -49,7 +60,8 @@
                   "number": 0,
                   "action": "start_seer_hunt",
                   "nextStateId": "ACCEPTED",
-                  "text": "I'll bring you the banner."
+                  "text": "I'll bring you the banner.",
+                  "actionLabel": "Accept quest"
                 }
               },
               {
@@ -90,8 +102,24 @@
               }
             ]
           }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "REMINDER",
+            "text": "'West and down, into the plague-fen,' she says, turning back to her scales. 'The colonel will not give it up gently. Neither, in the end, will the crown.'",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
         }
-      ]
+      ],
+      "speaker": "The Seer"
     }
   }
 }

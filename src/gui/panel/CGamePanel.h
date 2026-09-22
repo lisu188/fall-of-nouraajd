@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,9 +25,18 @@ class CWidget;
 
 class CGamePanel : public CGameGraphicsObject {
     V_META(CGamePanel, CGameGraphicsObject, V_PROPERTY(CGamePanel, bool, resizable, isResizable, setResizable),
-           V_PROPERTY(CGamePanel, int, resizeHandleSize, getResizeHandleSize, setResizeHandleSize))
+           V_PROPERTY(CGamePanel, int, resizeHandleSize, getResizeHandleSize, setResizeHandleSize),
+           V_PROPERTY(CGamePanel, std::string, title, getTitle, setTitle),
+           V_PROPERTY(CGamePanel, bool, closeable, getCloseable, setCloseable))
   public:
     CGamePanel();
+    std::string getTitle() const { return title; }
+    void setTitle(std::string value) { title = std::move(value); }
+    bool getCloseable() const { return closeable; }
+    void setCloseable(bool value) { closeable = value; }
+    void renderShell(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect);
+    int getShellHeaderHeight(const std::shared_ptr<CGui> &gui);
+    int getShellCloseWidth(const std::shared_ptr<CGui> &gui);
 
     bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
 
@@ -115,6 +124,15 @@ class CGamePanel : public CGameGraphicsObject {
     void recordSessionGeometry();
 
     bool resizable = false;
+    std::string title;
+    bool closeable = true;
+    bool closePressed = false;
+    int responsivePage = 0;
+    int responsivePageCount = 0;
+    bool responsiveNarrow = false;
+    int responsiveHeaderPressed = 0;
+    SDL_Rect responsiveHeaderRect{};
+    void layoutResponsiveChildren(const std::shared_ptr<CGui> &gui, const std::shared_ptr<SDL_Rect> &rect);
     int resizeHandleSize = DEFAULT_HANDLE_SIZE;
     bool resizing = false;
     int resizeGrabOffsetW = 0;
