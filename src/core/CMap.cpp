@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTrigger.h"
 
 #include <atomic>
+#include <chrono>
 
 namespace {
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
@@ -586,126 +587,116 @@ void CMap::move() {
 
     map->moving = true;
 
-    vstd::logger::debug("Turn:", map->turn);
+    try {
+        vstd::logger::debug("Turn:", map->turn);
 
-    auto transitionContext = game ? game->getContext() : nullptr;
-    const auto expectedGeneration =
-        transitionContext ? transitionContext->captureTransitionGeneration() : CGameContext::TransitionGeneration{0};
-    auto canApplyDeferredMoveWork = [map, transitionContext, expectedGeneration]() {
-        if (transitionContext && !transitionContext->isTransitionGenerationCurrent(expectedGeneration)) {
-            return false;
-        }
-        auto game = map->getGame();
-        return !game || game->getMap() == map;
-    };
-
-    map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
-        map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));
-    });
-
-    auto is_active_creature = [map](const std::shared_ptr<CCreature> &creature) {
-        return creature && creature->getMap() == map && map->getObjectByName(creature->getName()) == creature &&
-               creature->isAlive();
-    };
-
-    auto should_interrupt_after_step = [map](const std::shared_ptr<CCreature> &creature, const Coords &target) {
-        auto objects = map->getObjectsAtCoords(target);
-        return std::any_of(objects.begin(), objects.end(), [&](const auto &object) {
-            return object != creature &&
-                   (vstd::cast<CCreature>(object) || (vstd::cast<CVisitable>(object) && !vstd::cast<CItem>(object)));
-        });
-    };
-
-    auto pred = [is_active_creature](std::shared_ptr<CMapObject> object) {
-        auto creature = vstd::cast<CCreature>(object);
-        return creature && vstd::castable<CMoveable>(object) && is_active_creature(creature);
-    };
-
-    std::shared_ptr<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>> coordinates =
-        std::make_shared<std::list<std::pair<std::shared_ptr<CCreature>, Coords>>>();
-
-    std::vector<std::shared_ptr<CMapObject>> active_objects;
-    for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
-        active_objects.push_back(object);
-    }
-
-    auto controller = [coordinates, canApplyDeferredMoveWork, map](std::shared_ptr<CMapObject> object) {
-        auto creature = vstd::cast<CCreature>(object);
-        return creature->getController()->control(creature)->thenLater(
-            [creature, coordinates, canApplyDeferredMoveWork, map](Coords coords) {
-                // Keep planned steps for creatures that are still on this map's transition
-                // generation, even if the controller removed the creature during planning.
-                // The commit loop below interrupts non-active creatures; dropping them here
-                // would skip that interrupt. Stale results from a map transition are filtered
-                // by canApplyDeferredMoveWork().
-                if (canApplyDeferredMoveWork() && creature) {
-                    coordinates->push_back(std::make_pair(creature, coords));
-                }
-            });
-    };
-
-    std::vector<std::shared_ptr<vstd::future<void, Coords>>> pending;
-    for (const auto &object : active_objects) {
-        pending.push_back(controller(object));
-    }
-    auto joined = vstd::async([pending]() {
-        for (const auto &future : pending) {
-            future->get();
-        }
-        return std::set<void *>{};
-    });
-
-    bool round_complete = false;
-    joined->thenLater([&round_complete](std::set<void *>) { round_complete = true; });
-    vstd::wait_until([&round_complete]() { return round_complete; });
-
-    for (auto [creature, coords] : *coordinates) {
-        if (!canApplyDeferredMoveWork()) {
-            break;
-        }
-        auto controller_ptr = creature->getController();
-        if (!is_active_creature(creature)) {
-            controller_ptr->interrupt(creature);
-            continue;
-        }
-
-        auto current = map->normalizeCoords(creature->getCoords());
-        auto target = map->normalizeCoords(coords);
-        if (target == current) {
-            controller_ptr->interrupt(creature);
-            continue;
-        }
-        if (!map->canStep(target)) {
-            controller_ptr->interrupt(creature);
-            continue;
-        }
-
-        const bool interrupt_after_step = should_interrupt_after_step(creature, target);
-        creature->moveTo(target);
-
-        if (!is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
-            controller_ptr->interrupt(creature);
-            continue;
-        }
-
-        controller_ptr->onStepCommitted(creature, target);
-        if (interrupt_after_step) {
-            controller_ptr->interrupt(creature);
-        }
-    }
-
-    map->forObjects(
-        [](std::shared_ptr<CMapObject> object) {
-            if (auto creature = vstd::cast<CCreature>(object)) {
-                creature->getController()->onTurnEnded(creature);
+        auto transitionContext = game ? game->getContext() : nullptr;
+        const auto expectedGeneration = transitionContext ? transitionContext->captureTransitionGeneration()
+                                                          : CGameContext::TransitionGeneration{0};
+        auto canApplyDeferredMoveWork = [map, transitionContext, expectedGeneration]() {
+            if (transitionContext && !transitionContext->isTransitionGenerationCurrent(expectedGeneration)) {
+                return false;
             }
-        },
-        [](std::shared_ptr<CMapObject> object) { return vstd::castable<CCreature>(object); });
+            auto game = map->getGame();
+            return !game || game->getMap() == map;
+        };
 
-    map->moving = false;
-    map->turn++;
-    map->recordDirectPropertyChanged("turn");
-    map->signal("turnPassed");
+        map->forObjects([map](std::shared_ptr<CMapObject> mapObject) {
+            map->getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onTurn));
+        });
+
+        auto is_active_creature = [map](const std::shared_ptr<CCreature> &creature) {
+            return creature && creature->getMap() == map && map->getObjectByName(creature->getName()) == creature &&
+                   creature->isAlive();
+        };
+
+        auto should_interrupt_after_step = [map](const std::shared_ptr<CCreature> &creature, const Coords &target) {
+            auto objects = map->getObjectsAtCoords(target);
+            return std::any_of(objects.begin(), objects.end(), [&](const auto &object) {
+                return object != creature &&
+                       (vstd::cast<CCreature>(object) || (vstd::cast<CVisitable>(object) && !vstd::cast<CItem>(object)));
+            });
+        };
+
+        auto pred = [is_active_creature](std::shared_ptr<CMapObject> object) {
+            auto creature = vstd::cast<CCreature>(object);
+            return creature && vstd::castable<CMoveable>(object) && is_active_creature(creature);
+        };
+
+        std::vector<std::shared_ptr<CCreature>> plannedCreatures;
+        std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
+        for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
+            auto creature = vstd::cast<CCreature>(object);
+            plannedCreatures.push_back(creature);
+            pending.push_back(creature->getController()->control(creature));
+        }
+
+        auto plannedFuture = vstd::when_all(pending);
+        auto loop = vstd::event_loop<>::instance();
+        while (!plannedFuture->isReady()) {
+            if (loop->runPostedTasks() == 0) {
+                plannedFuture->waitFor(std::chrono::milliseconds(1));
+            }
+        }
+        auto plannedCoordinates = plannedFuture->get();
+        std::list<std::pair<std::shared_ptr<CCreature>, Coords>> coordinates;
+        if (canApplyDeferredMoveWork()) {
+            for (std::size_t index = 0; index < plannedCoordinates.size(); ++index) {
+                coordinates.emplace_back(plannedCreatures[index], plannedCoordinates[index]);
+            }
+        }
+
+        for (auto [creature, coords] : coordinates) {
+            if (!canApplyDeferredMoveWork()) {
+                break;
+            }
+            auto controller_ptr = creature->getController();
+            if (!is_active_creature(creature)) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+
+            auto current = map->normalizeCoords(creature->getCoords());
+            auto target = map->normalizeCoords(coords);
+            if (target == current) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+            if (!map->canStep(target)) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+
+            const bool interrupt_after_step = should_interrupt_after_step(creature, target);
+            creature->moveTo(target);
+
+            if (!is_active_creature(creature) || map->normalizeCoords(creature->getCoords()) != target) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
+
+            controller_ptr->onStepCommitted(creature, target);
+            if (interrupt_after_step) {
+                controller_ptr->interrupt(creature);
+            }
+        }
+
+        map->forObjects(
+            [](std::shared_ptr<CMapObject> object) {
+                if (auto creature = vstd::cast<CCreature>(object)) {
+                    creature->getController()->onTurnEnded(creature);
+                }
+            },
+            [](std::shared_ptr<CMapObject> object) { return vstd::castable<CCreature>(object); });
+
+        map->moving = false;
+        map->turn++;
+        map->recordDirectPropertyChanged("turn");
+        map->signal("turnPassed");
+    } catch (...) {
+        map->moving = false;
+        throw;
+    }
 }
 
 int CMap::getTurn() { return turn; }

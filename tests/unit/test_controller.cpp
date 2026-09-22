@@ -64,10 +64,7 @@ std::shared_ptr<CTile> walkable_tile() {
     return tile;
 }
 
-Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future) {
-    vstd::event_loop<>::instance()->run();
-    return future->get();
-}
+Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future) { return future->get(); }
 
 std::shared_ptr<CTile> tile(bool can_step) {
     auto result = std::make_shared<CTile>();
