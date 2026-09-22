@@ -16,6 +16,7 @@
 
 
 def load(self, context):
+    from game import showReader, requirementMessage
     from game import randint
     from game import claim_once
     from game import CBuilding
@@ -31,7 +32,11 @@ def load(self, context):
 
     def show_info(building, text):
         if text and building.getMap():
-            building.getMap().getGame().getGuiHandler().showInfo(text, True)
+            showReader(building.getMap().getGame(), building.getStringProperty("label") or "Mapmaker's notes", text)
+
+    def notifyAdventure(building, text):
+        if text and building.getMap():
+            building.getMap().getGame().getGuiHandler().notify(text)
 
     def raise_base_stat(creature, stat, bonus):
         base_stats = creature.getObjectProperty("baseStats")
@@ -123,7 +128,7 @@ def load(self, context):
     class SignPost(CBuilding):
         def onEnter(self, event):
             if event.getCause().isPlayer():
-                self.getMap().getGame().getGuiHandler().showInfo(self.getStringProperty("text"), True)
+                showReader(self.getMap().getGame(), "Signpost", self.getStringProperty("text"))
 
     @register(context)
     class Chest(CBuilding):
@@ -173,7 +178,7 @@ def load(self, context):
                 return
             if claim_once(player, "learningStone_" + self.getName()):
                 player.addExp(self.getNumericProperty("exp"))
-                show_info(self, "Ancient runes etched into the stone sharpen your mind. You gain experience.")
+                notifyAdventure(self, "Ancient runes etched into the stone sharpen your mind. You gain experience.")
 
     @register(context)
     class Campfire(CBuilding):
@@ -183,7 +188,7 @@ def load(self, context):
                 return
             player.addGold(self.getNumericProperty("gold"))
             self.getGame().getRngHandler().addRandomLoot(player, self.getNumericProperty("value"))
-            show_info(self, "You scavenge supplies abandoned around a cold campfire.")
+            notifyAdventure(self, "You scavenge supplies abandoned around a cold campfire.")
             self.getMap().removeObjectByName(self.getName())
 
     @register(context)
@@ -213,7 +218,7 @@ def load(self, context):
             if self.getNumericProperty("turns") >= self.getNumericProperty("cooldown"):
                 self.setNumericProperty("turns", 0)
                 player.addGold(self.getNumericProperty("gold"))
-                show_info(self, "The miller shares the profits of the last harvest with you.")
+                notifyAdventure(self, "The miller shares the profits of the last harvest with you.")
 
     @register(context)
     class TreeOfKnowledge(CBuilding):
@@ -226,7 +231,11 @@ def load(self, context):
                 return
             cost = self.getNumericProperty("cost")
             if player.getGold() < cost:
-                show_info(self, "The tree whispers of enlightenment, but demands " + str(cost) + " gold as tribute.")
+                requirementMessage(
+                    self.getMap().getGame(),
+                    self,
+                    "The tree whispers of enlightenment, but demands " + str(cost) + " gold as tribute.",
+                )
                 return
             player.setBoolProperty(claim, True)
             player.takeGold(cost)
@@ -235,7 +244,7 @@ def load(self, context):
             missing = exp_for_next_level - player.getNumericProperty("exp")
             if missing > 0:
                 player.addExp(missing)
-            show_info(self, "You meditate beneath the Tree of Knowledge and reach a new level of understanding.")
+            notifyAdventure(self, "You meditate beneath the Tree of Knowledge and reach a new level of understanding.")
 
     @register(context)
     class TrainingGround(CBuilding):
@@ -252,7 +261,9 @@ def load(self, context):
             if not claim_once(player, "trained_" + self.getName()):
                 return
             raise_base_stat(player, stat, bonus)
-            show_info(self, "The training pays off. Your " + stat + " permanently increases by " + str(bonus) + ".")
+            notifyAdventure(
+                self, "The training pays off. Your " + stat + " permanently increases by " + str(bonus) + "."
+            )
 
     @register(context)
     class MercenaryCamp(TrainingGround):
@@ -280,7 +291,9 @@ def load(self, context):
             stats = ["strength", "agility", "stamina", "intelligence"]
             stat = stats[randint(0, len(stats) - 1)]
             raise_base_stat(player, stat, bonus)
-            show_info(self, "The witch brews a pungent draught. Your " + stat + " increases by " + str(bonus) + ".")
+            notifyAdventure(
+                self, "The witch brews a pungent draught. Your " + stat + " increases by " + str(bonus) + "."
+            )
 
     @register(context)
     class AdventureObelisk(CBuilding):
@@ -299,7 +312,7 @@ def load(self, context):
             if not player:
                 return
             if not self.getBoolProperty("enabled"):
-                show_info(self, "The tomb lies plundered and empty.")
+                notifyAdventure(self, "The tomb lies plundered and empty.")
                 return
             self.setBoolProperty("enabled", False)
             self.getGame().getRngHandler().addRandomLoot(player, self.getNumericProperty("value"))
@@ -308,7 +321,7 @@ def load(self, context):
             toll = min(player.getHp() - 1, player.getHpMax() * self.getNumericProperty("damage") // 100)
             if toll > 0:
                 player.setHp(player.getHp() - toll)
-            show_info(self, "You pry treasure from the warrior's tomb, but its restless guardian exacts a toll.")
+            notifyAdventure(self, "You pry treasure from the warrior's tomb, but its restless guardian exacts a toll.")
 
     @register(context)
     class Sirens(CBuilding):
@@ -325,7 +338,7 @@ def load(self, context):
             # applied straight to HP instead of through the damage pipeline.
             player.setHp(player.getHp() - sacrifice)
             player.addExp(sacrifice * self.getNumericProperty("expPerHp"))
-            show_info(self, "The sirens' song drains your life, yet their secrets harden your resolve.")
+            notifyAdventure(self, "The sirens' song drains your life, yet their secrets harden your resolve.")
 
     @register(context)
     class KeymastersTent(CBuilding):
@@ -339,7 +352,7 @@ def load(self, context):
             claim = "borderPass_" + color
             if not player.getBoolProperty(claim):
                 player.setBoolProperty(claim, True)
-                show_info(self, "The keymaster hands you the " + color + " pass.")
+                notifyAdventure(self, "The keymaster hands you the " + color + " pass.")
 
     @register(context)
     class BorderGuard(CBuilding):
@@ -354,7 +367,7 @@ def load(self, context):
             here = self.getCoords()
             there = player.getCoords()
             if here.z == there.z and abs(here.x - there.x) <= 1 and abs(here.y - there.y) <= 1:
-                show_info(self, "The border guard honors your " + color + " pass and stands aside.")
+                notifyAdventure(self, "The border guard honors your " + color + " pass and stands aside.")
                 game_map.removeObjectByName(self.getName())
 
     @register(context)

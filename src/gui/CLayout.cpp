@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CLayout.h"
 #include "core/CUtil.h"
 #include "gui/object/CProxyGraphicsObject.h"
+#include "gui/panel/CListView.h"
 
 #include <algorithm>
 #include <cmath>
@@ -231,6 +232,13 @@ int CProxyGraphicsLayout::getTileSize() { return tileSize; }
 std::shared_ptr<SDL_Rect> CProxyGraphicsLayout::getRect(std::shared_ptr<CGameGraphicsObject> object) {
     auto pRect = getParentRect(object);
     auto proxy = vstd::cast<CProxyGraphicsObject>(object);
+    if (object) {
+        auto list = vstd::cast<CListView>(object->getParent());
+        if (list && list->getRows() && proxy) {
+            const int height = list->getCellSize(list->getGui());
+            return CUtil::rect(pRect->x, pRect->y + proxy->getY() * height, pRect->w, height);
+        }
+    }
     const int safeTileSize = std::clamp(tileSize, 1, 512);
     if (!proxy) {
         return CUtil::rect(pRect->x, pRect->y, safeTileSize, safeTileSize);

@@ -1,4 +1,5 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -47,7 +48,7 @@ def load(self, context):
             if game_map.getBoolProperty("gravemoor_intro"):
                 return
             game_map.setBoolProperty("gravemoor_intro", True)
-            game_map.getGame().getGuiHandler().showMessage(self.getStringProperty("text"))
+            showReader(game_map.getGame(), "Gravemoor", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(event.getCause(), "gravemoorQuest")
 
@@ -59,9 +60,9 @@ def load(self, context):
             game_map = self.getMap()
             gravemoor_flags_default(game_map)
             game_map.setNumericProperty("loyalists_freed", game_map.getNumericProperty("loyalists_freed") + 1)
-            game_map.getGame().getGuiHandler().showMessage(self.getStringProperty("text"))
+            game_map.getGame().getGuiHandler().notify(self.getStringProperty("text"))
             if all_cages_open(game_map):
-                game_map.getGame().getGuiHandler().showMessage(
+                game_map.getGame().getGuiHandler().notify(
                     "All three cages stand open. The freed loyalists gather at the crossroads, waiting on the "
                     "Warden's judgment of Quartermaster Voss."
                 )
@@ -119,11 +120,15 @@ def load(self, context):
             if not self._pass_judgment(True):
                 return
             if claim_once(game_map, "judgment_reward_claimed"):
+                reward_before = rewardSnapshot(game_map.getPlayer())
                 game_map.getPlayer().addGold(SPARE_GOLD_REWARD)
-                self.getGame().getGuiHandler().showMessage(
+                showRewardReceipt(
+                    self.getGame(),
+                    "A debt sworn",
+                    reward_before,
                     "Voss chokes out where the occupation pay-chests are cached - "
                     f"{SPARE_GOLD_REWARD} gold - and swears his ledgers to the Warden's cause. "
-                    "The loyalists watch you spare him, and remember."
+                    "The loyalists watch you spare him, and remember.",
                 )
             campaign.complete_scenario(self.getGame(), "spared", fallback_map="usurpergate")
 
@@ -132,10 +137,14 @@ def load(self, context):
             if not self._pass_judgment(False):
                 return
             if claim_once(game_map, "judgment_reward_claimed"):
+                reward_before = rewardSnapshot(game_map.getPlayer())
                 game_map.getPlayer().addGold(EXECUTE_GOLD_REWARD)
-                self.getGame().getGuiHandler().showMessage(
+                showRewardReceipt(
+                    self.getGame(),
+                    "Judgment at the crossroads",
+                    reward_before,
                     f"The moor takes the traitor. His purse - {EXECUTE_GOLD_REWARD} gold - goes to the freed. "
-                    "The loyalists watch you do it, and remember that too."
+                    "The loyalists watch you do it, and remember that too.",
                 )
             campaign.complete_scenario(self.getGame(), "executed", fallback_map="usurpergate")
 

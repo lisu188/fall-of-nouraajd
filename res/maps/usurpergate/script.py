@@ -1,4 +1,5 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt, requirementMessage
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -85,9 +86,9 @@ def load(self, context):
             # the standard assault text. Wrath/standalone keep the full assault.
             if mercy_route_active(game):
                 apply_mercy_route(game_map)
-                game.getGuiHandler().showMessage(MERCY_ARRIVAL_TEXT)
+                showReader(game, "Voss keeps his word", MERCY_ARRIVAL_TEXT)
             else:
-                game.getGuiHandler().showMessage(self.getStringProperty("text"))
+                showReader(game, "Usurper's Gate", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(event.getCause(), "usurpergateQuest")
 
@@ -101,19 +102,25 @@ def load(self, context):
             if game_map.getBoolProperty("throne_taken"):
                 return
             if not game_map.getBoolProperty("usurper_defeated"):
-                game_map.getGame().getGuiHandler().showMessage(
+                requirementMessage(
+                    game_map.getGame(),
+                    self,
                     "The obsidian throne is cold and near - but the Usurper still commands the court behind you. "
-                    "No one sits while he stands."
+                    "No one sits while he stands.",
                 )
                 return
             game_map.setBoolProperty("throne_taken", True)
             if claim_once(game_map, "throne_reward_claimed"):
                 player = game_map.getPlayer()
+                reward_before = rewardSnapshot(player)
                 player.addGold(THRONE_GOLD_REWARD)
                 player.checkQuests()
-                game_map.getGame().getGuiHandler().showMessage(
+                showRewardReceipt(
+                    game_map.getGame(),
+                    "The Warden's throne",
+                    reward_before,
                     "You take the obsidian throne of the Wardenskeep. The treasury the Usurper hoarded - "
-                    f"{THRONE_GOLD_REWARD} gold - returns to the marches, and the marches return to their Warden."
+                    f"{THRONE_GOLD_REWARD} gold - returns to the marches, and the marches return to their Warden.",
                 )
             campaign.complete_scenario(self.getGame(), "completed")
 
@@ -164,7 +171,7 @@ def load(self, context):
             if game_map.getBoolProperty("usurper_defeated"):
                 return
             game_map.setBoolProperty("usurper_defeated", True)
-            object.getGame().getGuiHandler().showMessage(
+            object.getGame().getGuiHandler().notify(
                 "The Usurper falls at the foot of the dais, crown rolling from his hand. "
                 "The obsidian throne stands empty. Go and sit."
             )
@@ -172,6 +179,4 @@ def load(self, context):
     @trigger(context, "onDestroy", "housecarlEast")
     class BreachGuardTrigger(CTrigger):
         def trigger(self, object, event):
-            object.getGame().getGuiHandler().showMessage(
-                "The breach guard falls. The inner court lies open."
-            )
+            object.getGame().getGuiHandler().notify("The breach guard falls. The inner court lies open.")

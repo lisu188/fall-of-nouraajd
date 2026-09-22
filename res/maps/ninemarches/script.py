@@ -1,4 +1,5 @@
 def load(self, context):
+    from game import showReader, rewardSnapshot, showRewardReceipt, requirementMessage
     from game import CDialog
     from game import CEvent
     from game import CQuest
@@ -71,7 +72,7 @@ def load(self, context):
             game_map = self.getMap()
             game = game_map.getGame()
             quest_flags_default(game_map)
-            game.getGuiHandler().showMessage(self.getStringProperty("text"))
+            showReader(game, "The Nine Marches", self.getStringProperty("text"))
             game_map.removeAll(lambda ob: ob.getName() == self.getName())
             ensure_quest(game_map.getPlayer(), "ninemarchesQuest")
 
@@ -84,7 +85,7 @@ def load(self, context):
             game_map = self.getMap()
             game = game_map.getGame()
             if game_map.getBoolProperty("shrine_used"):
-                game.getGuiHandler().showMessage("The learning stone has taught you all it will.")
+                game.getGuiHandler().notify("The learning stone has taught you all it will.")
                 return
             player = game_map.getPlayer()
             player.addGold(120)
@@ -93,7 +94,7 @@ def load(self, context):
             # Gravewatch's scroll-crafting unlock: the crafting plugin reads this
             # map flag through the scribe recipes' unlockFlag configuration.
             game_map.setBoolProperty("CAN_CRAFT_SCROLLS", True)
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "You study Gravewatch's learning stone until the old drill-marks settle into your hands. You feel "
                 "steadier, and 120 gold in forgotten muster-pay falls from its hollow base. Among the drill-marks "
                 "you learn the scribe's copying-craft - Gravewatch's scribe desk will serve you now."
@@ -107,13 +108,13 @@ def load(self, context):
             game_map = self.getMap()
             game = game_map.getGame()
             if game_map.getBoolProperty("witch_used"):
-                game.getGuiHandler().showMessage("The witch-hut's cauldron has gone cold; its boon is already spent.")
+                game.getGuiHandler().notify("The witch-hut's cauldron has gone cold; its boon is already spent.")
                 return
             player = game_map.getPlayer()
             player.healProc(150)
             adjust_reputation(game_map, 1)
             game_map.setBoolProperty("witch_used", True)
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "The fen witch-hut's cauldron reads your marches-luck and mends you head to heel. The marches note "
                 "the courtesy of asking first."
             )
@@ -126,11 +127,11 @@ def load(self, context):
             game_map = self.getMap()
             game = game_map.getGame()
             if game_map.getBoolProperty("mine_claimed"):
-                game.getGuiHandler().showMessage("The grave-gold mine is already yours; its guards are already dead.")
+                game.getGuiHandler().notify("The grave-gold mine is already yours; its guards are already dead.")
                 return
             game_map.getPlayer().addGold(int(self.getNumericProperty("value")))
             game_map.setBoolProperty("mine_claimed", True)
-            game.getGuiHandler().showMessage(
+            game.getGuiHandler().notify(
                 "You take the Ashmarch grave-gold mine from the cult that worked it. Its takings are yours - blood-gold, "
                 "but spendable."
             )
@@ -144,7 +145,7 @@ def load(self, context):
                 return
             self.setBoolProperty("looted", True)
             self.getMap().getPlayer().addItem(self.getStringProperty("grants"))
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 f"You prise the {self.getStringProperty('color')} march-key from the Keeper's cache. One more gate "
                 "in the marches is now only waiting."
             )
@@ -163,13 +164,15 @@ def load(self, context):
                 game_map.removeObjectByName(self.getStringProperty("gate"))
                 game_map.setBoolProperty(flag, True)
                 bump_chapter(game_map, int(self.getNumericProperty("chapter")))
-                game.getGuiHandler().showMessage(
+                game.getGuiHandler().notify(
                     "The march-key turns, and the barred gate grinds open onto the deeper marches."
                 )
             else:
-                game.getGuiHandler().showMessage(
+                requirementMessage(
+                    game,
+                    self,
                     "A barred march-gate blocks the road. It opens only to the Keeper's key of the matching make - "
-                    "find its cache."
+                    "find its cache.",
                 )
 
     @register(context)
@@ -184,8 +187,8 @@ def load(self, context):
             game_map.incProperty("obelisks_read", 1)
             read = game_map.getNumericProperty("obelisks_read")
             game = game_map.getGame()
-            game.getGuiHandler().showInfo(self.getStringProperty("text"), True)
-            game.getGuiHandler().showMessage(f"A march-sigil burns into your memory. ({read}/6 obelisks read.)")
+            showReader(game, "March obelisk", self.getStringProperty("text"))
+            game.getGuiHandler().notify(f"A march-sigil burns into your memory. ({read}/6 obelisks read.)")
 
     @register(context)
     class ItemCache(CEvent):
@@ -196,7 +199,7 @@ def load(self, context):
                 return
             self.setBoolProperty("looted", True)
             self.getMap().getPlayer().addItem(self.getStringProperty("grants"))
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 "You recover something a companion in the marches has been waiting for."
             )
 
@@ -212,17 +215,23 @@ def load(self, context):
                 return
             if game_map.getNumericProperty("obelisks_read") < 6:
                 read = game_map.getNumericProperty("obelisks_read")
-                game.getGuiHandler().showMessage(
-                    f"The Citadel ground stays hard as a god's jaw. Read all six march-obelisks before you dig. ({read}/6 read.)"
+                requirementMessage(
+                    game,
+                    self,
+                    f"The Citadel ground stays hard as a god's jaw. Read all six march-obelisks before you dig. ({read}/6 read.)",
                 )
                 return
+            reward_before = rewardSnapshot(player)
             player.addItem("ninefoldCrown")
             game_map.setBoolProperty("crown_taken", True)
             bump_chapter(game_map, 4)
-            game.getGuiHandler().showMessage(
+            showRewardReceipt(
+                game,
+                "The Ninefold Crown",
+                reward_before,
                 "The six sigils sing as one and the Cyclopean Citadel gives up its god. You lift the Ninefold Crown "
                 "from the grave - and the grave lifts its owner after it. The cult has its crowned king at last, and "
-                "it is wearing your face."
+                "it is wearing your face.",
             )
             if not game_map.getBoolProperty("boss_woken"):
                 boss = game.createObject("theNinefoldKing")
@@ -276,9 +285,11 @@ def load(self, context):
             return "Keys open the roads; obelisks open the grave. Recruit the marches' lost - a knight, a witch, a turncoat - before the Citadel."
 
         def onComplete(self):
-            self.getGame().getGuiHandler().showMessage(
+            showReader(
+                self.getGame(),
+                "The marches remember",
                 "The crown is dug up and the Nine Marches are 'saved' the only way the cult ever meant - with a new "
-                "dead god on the throne of the world, and your name the last it answered to."
+                "dead god on the throne of the world, and your name the last it answered to.",
             )
 
     class CompanionQuest(CQuest):
@@ -383,6 +394,14 @@ def load(self, context):
         def has_left(self):
             return self.getGame().getMap().getBoolProperty(self.LEFT_FLAG)
 
+        def questInProgress(self):
+            game_map = self.getGame().getMap()
+            return (
+                game_map.getBoolProperty(self.STARTED_FLAG)
+                and not game_map.getBoolProperty(self.JOINED_FLAG)
+                and not self.can_recruit()
+            )
+
         def start(self):
             game_map = self.getGame().getMap()
             game_map.setBoolProperty(self.STARTED_FLAG, True)
@@ -394,8 +413,10 @@ def load(self, context):
                 return
             game_map.setBoolProperty(self.JOINED_FLAG, True)
             adjust_reputation(game_map, 2)
+            reward_before = rewardSnapshot(game_map.getPlayer())
             game_map.getPlayer().addItem(self.BOON)
             game_map.getPlayer().checkQuests()
+            showRewardReceipt(self.getGame(), "A companion's gift", reward_before)
 
         def banter(self):
             # Baldur's-Gate-style reputation reactivity: a companion may leave if your
@@ -407,7 +428,7 @@ def load(self, context):
                 left = rep >= self.LEAVE_AT if self.LEAVE_WHEN_ABOVE else rep <= self.LEAVE_AT
                 if left:
                     game_map.setBoolProperty(self.LEFT_FLAG, True)
-                    self.getGame().getGuiHandler().showMessage(self.LEAVE_MESSAGE)
+                    self.getGame().getGuiHandler().notify(self.LEAVE_MESSAGE)
 
     # Dialog action/condition callbacks are resolved on the exact registered class, so each
     # companion dialog re-declares the shared callbacks as thin delegates to the base logic.
@@ -431,6 +452,9 @@ def load(self, context):
 
         def has_left(self):
             return CompanionDialog.has_left(self)
+
+        def questInProgress(self):
+            return CompanionDialog.questInProgress(self)
 
         def start(self):
             return CompanionDialog.start(self)
@@ -461,6 +485,9 @@ def load(self, context):
 
         def has_left(self):
             return CompanionDialog.has_left(self)
+
+        def questInProgress(self):
+            return CompanionDialog.questInProgress(self)
 
         def start(self):
             return CompanionDialog.start(self)
@@ -498,6 +525,9 @@ def load(self, context):
 
         def has_left(self):
             return CompanionDialog.has_left(self)
+
+        def questInProgress(self):
+            return CompanionDialog.questInProgress(self)
 
         def start(self):
             return CompanionDialog.start(self)
@@ -544,10 +574,12 @@ def load(self, context):
         def trigger(self, obj, event):
             game_map = obj.getGame().getMap()
             game_map.setBoolProperty("boss_defeated", True)
-            obj.getGame().getGuiHandler().showMessage(
+            showReader(
+                obj.getGame(),
+                "The Crowned God falls",
                 "The Crowned God falls, and nine circlets of black iron crack apart on the Citadel stones. For the "
                 "first time in nine hundred years the Nine Marches are only quiet - not waiting. You still wear a "
-                "shard of its crown; the marches will remember that, too."
+                "shard of its crown; the marches will remember that, too.",
             )
             # Boss-defeat transition: converge with the crown pickup so the finale
             # completes once both requirements are met, in either order.

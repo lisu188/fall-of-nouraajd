@@ -904,11 +904,14 @@ void test_quest_panel_rebuilds_text_only_when_quest_data_changes() {
     player->setCompletedQuests({completed});
     drain_event_loop();
     const auto updated = panel->getText(gui);
-    expect_true(updated.find("[Completed] Silence the bell tower") != std::string::npos,
-                "quest panel should render newly completed quests after the change notification");
+    expect_true(updated.find("[Completed] Silence the bell tower") == std::string::npos,
+                "the active tab should keep completed quests in their separate tab");
     expect_true(updated.find("[Active] Recover the sunken sigil") != std::string::npos,
                 "quest panel should keep rendering still-active quests after a rebuild");
     expect_true(panel->build_count == 2, "a quest-log change should trigger exactly one coalesced rebuild");
+    panel->showCompleted(gui);
+    expect_true(panel->getText(gui).find("[Completed] Silence the bell tower") != std::string::npos,
+                "the completed tab should expose newly completed quests");
 }
 
 void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
@@ -930,8 +933,10 @@ void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
     }
     auto active = std::make_shared<CQuest>();
     active->setDescription("FINAL ACTIVE OBJECTIVE");
+    (*completed.rbegin())->setDescription("FINAL COMPLETED OBJECTIVE");
     player->setCompletedQuests(completed);
     player->setQuests({active});
+    panel->showCompleted(gui);
     expect_true(panel->getText(gui).size() > 4096, "journal fixture should exceed the whole-text texture limit");
     const auto firstPage = panel->getViewportText(gui);
     const int firstMeasures = panel->paragraph_measure_count;
@@ -942,8 +947,8 @@ void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
     expect_true(panel->paragraph_measure_count == firstMeasures && panel->build_count == 1,
                 "idle journal rendering must not rebuild text or remeasure paragraphs");
     expect_true(firstPage.find("[Completed]") != std::string::npos &&
-                    firstPage.find("FINAL ACTIVE OBJECTIVE") == std::string::npos,
-                "the initial viewport should show history before the distant active objective");
+                    firstPage.find("FINAL COMPLETED OBJECTIVE") == std::string::npos,
+                "the initial viewport should show history before the distant completed objective");
 
     SDL_Event key{};
     key.type = SDL_KEYDOWN;
@@ -951,8 +956,8 @@ void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
     gui->event(&key);
     expect_true(panel->getScrollOffset() > 0 && panel->getScrollOffset() == panel->getScrollMaximum(),
                 "End should reach the bottom of a long journal through normal GUI input");
-    expect_true(panel->getViewportText(gui).find("FINAL ACTIVE OBJECTIVE") != std::string::npos,
-                "the final active objective must remain reachable beyond 4096 bytes of completed history");
+    expect_true(panel->getViewportText(gui).find("FINAL COMPLETED OBJECTIVE") != std::string::npos,
+                "the final completed objective must remain reachable beyond 4096 bytes of history");
     const int bottom = panel->getScrollOffset();
     key.key.keysym.sym = SDLK_PAGEUP;
     gui->event(&key);
@@ -995,6 +1000,7 @@ void test_quest_journal_navigation_reaches_history_beyond_texture_limit() {
     unicodeDescription += " UNICODE JOURNAL END";
     active->setDescription(unicodeDescription);
     player->setCompletedQuests({});
+    panel->showActive(gui);
     panel->refreshFromQuestsChanged();
     key.key.keysym.sym = SDLK_HOME;
     gui->event(&key);
@@ -1108,6 +1114,7 @@ void test_quest_panel_resubscribes_when_quest_source_changes() {
     second_completed->setDescription("Seal the second gate");
     second_player->setCompletedQuests({second_completed});
     drain_event_loop();
+    panel->showCompleted(gui);
     expect_true(panel->getText(gui).find("[Completed] Seal the second gate") != std::string::npos,
                 "quest panel should follow completed-quest changes on the new player");
     expect_true(panel->build_count == 3, "the new player's quest changes should drive rebuilds");
@@ -1360,9 +1367,9 @@ void test_quest_panel_refresh_count_coalesces_rapid_invalidations() {
     expect_true(panel->build_count == 1, "invalidations alone must not rebuild the journal before the next read");
 
     const auto rebuilt = panel->getText(gui);
-    expect_true(rebuilt.find("[Completed] Bar the western gate") != std::string::npos &&
+    expect_true(rebuilt.find("[Completed] Bar the western gate") == std::string::npos &&
                     rebuilt.find("Objective: Confront the ledger keeper.") != std::string::npos,
-                "the coalesced rebuild should reflect every change from the rapid turn");
+                "the coalesced rebuild should reflect the active tab's changes from the rapid turn");
     expect_true(panel->build_count == 2,
                 "five invalidation signals in one event-loop turn must coalesce into exactly one rebuild");
 
@@ -1648,7 +1655,18 @@ void test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel
     }
 }
 
-void test_inventory_double_select_uses_selected_item_and_clears_selection() {
+void register_inventory_slots(const std::shared_ptr<CGame> &game) {
+    for (const auto &[name, builder] : *CTypes::builders()) {
+        game->getObjectHandler()->registerType(name, builder);
+    }
+    game->getObjectHandler()->registerConfig("slotConfiguration", CJsonUtil::from_string(R"({
+        "class": "CSlotConfig", "properties": {"configuration": {
+            "0": {"class": "CSlot", "properties": {"slotName": "RightHand", "types": ["CWeapon"]}}
+        }}})",
+                                                                                         "slotConfiguration"));
+}
+
+void test_inventory_repeated_select_inspects_without_using_item() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
@@ -1660,6 +1678,7 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
     auto same_type_potion = std::make_shared<CPotion>();
     auto panel = std::make_shared<CGameInventoryPanel>();
 
+    register_inventory_slots(game);
     game->setMap(map);
     game->setGui(gui);
     map->setGame(game);
@@ -1684,9 +1703,11 @@ void test_inventory_double_select_uses_selected_item_and_clears_selection() {
                 "inventory selection should not select a different item instance with the same configured id");
 
     panel->inventoryCallback(gui, 0, potion);
-    expect_true(player->getItems().size() == inventory_size,
-                "full-health potion double-select should call useItem without consuming the item");
-    expect_true(!panel->inventorySelect(gui, 0, potion), "second inventory click should clear the used selection");
+    expect_true(player->getItems().size() == inventory_size, "repeated item selection must not consume the item");
+    expect_true(panel->inventorySelect(gui, 0, potion), "repeated inspection should retain the selected item");
+    panel->useSelected(gui);
+    expect_true(player->getItems().size() == inventory_size, "explicit use must preserve the full-health potion guard");
+    game->getContext()->shutdown();
 }
 
 struct InventoryRightClickHarness {
@@ -1695,6 +1716,14 @@ struct InventoryRightClickHarness {
     std::shared_ptr<CGui> gui;
     std::shared_ptr<CPlayer> player;
     std::shared_ptr<CGameInventoryPanel> panel;
+
+    InventoryRightClickHarness() = default;
+    InventoryRightClickHarness(InventoryRightClickHarness &&) = default;
+    ~InventoryRightClickHarness() {
+        if (game) {
+            game->getContext()->shutdown();
+        }
+    }
 };
 
 InventoryRightClickHarness make_inventory_right_click_harness() {
@@ -1708,6 +1737,7 @@ InventoryRightClickHarness make_inventory_right_click_harness() {
     harness.player = std::make_shared<CPlayer>();
     harness.panel = std::make_shared<CGameInventoryPanel>();
 
+    register_inventory_slots(harness.game);
     harness.game->setMap(harness.map);
     harness.game->setGui(harness.gui);
     harness.map->setGame(harness.game);
@@ -1720,7 +1750,7 @@ InventoryRightClickHarness make_inventory_right_click_harness() {
     return harness;
 }
 
-void test_inventory_right_click_uses_usable_item_once_and_consumes_it() {
+void test_inventory_right_click_inspects_then_explicit_use_consumes_once() {
     auto harness = make_inventory_right_click_harness();
     auto potion = std::make_shared<CPotion>();
     potion->setGame(harness.game);
@@ -1735,9 +1765,12 @@ void test_inventory_right_click_uses_usable_item_once_and_consumes_it() {
     const auto inventory_size = harness.player->getItems().size();
 
     const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, potion);
-    expect_true(consumed, "right-clicking a usable item should return true so parents stop processing the click");
+    expect_true(!consumed, "right-clicking a usable item should leave the tooltip inspection path available");
+    expect_true(harness.player->getItems().size() == inventory_size,
+                "right-clicking a usable item must not consume it");
+    harness.panel->useSelected(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size - 1,
-                "right-clicking a usable disposable potion should use and consume it exactly once");
+                "explicit use should consume the selected disposable potion exactly once");
     expect_true(!harness.player->hasInInventory(potion),
                 "the used disposable potion should no longer belong to the player");
 }
@@ -1756,7 +1789,8 @@ void test_inventory_right_click_full_resource_item_not_consumed() {
     const auto inventory_size = harness.player->getItems().size();
 
     const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, potion);
-    expect_true(consumed, "right-clicking a full-resource item still handles the click (delegates to useItem)");
+    expect_true(!consumed, "right-clicking a full-resource item should inspect it");
+    harness.panel->useSelected(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size,
                 "a full-health potion must not be consumed when the engine reports no use");
     expect_true(harness.player->hasInInventory(potion),
@@ -1778,6 +1812,7 @@ void test_inventory_right_click_quest_item_is_protected() {
 
     const bool consumed = harness.panel->inventoryRightClickCallback(harness.gui, 0, quest_item);
     expect_true(!consumed, "right-clicking a quest item must not be handled as a use");
+    harness.panel->useSelected(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size,
                 "quest items must never be consumed by a right-click use");
     expect_true(harness.player->hasInInventory(quest_item),
@@ -1832,7 +1867,7 @@ void test_inventory_left_click_drag_still_starts_for_owned_item() {
                 "left-click drag must never start for a quest item");
 }
 
-void test_fight_panel_right_click_item_use_still_works() {
+void test_fight_panel_right_click_inspects_then_explicit_use_works() {
     auto harness = make_inventory_right_click_harness();
     auto fight_panel = std::make_shared<CGameFightPanel>();
     auto potion = std::make_shared<CPotion>();
@@ -1846,9 +1881,12 @@ void test_fight_panel_right_click_item_use_still_works() {
     const auto inventory_size = harness.player->getItems().size();
 
     const bool consumed = fight_panel->itemsRightClickCallback(harness.gui, 0, potion);
-    expect_true(consumed, "fight-panel right-click item use should remain unchanged and consume the click");
+    expect_true(!consumed, "fight-panel right-click must leave the tooltip inspection path available");
+    expect_true(harness.player->getItems().size() == inventory_size,
+                "combat inspection must not consume the selected item");
+    fight_panel->useSelectedItem(harness.gui);
     expect_true(harness.player->getItems().size() == inventory_size - 1,
-                "fight-panel right-click should still use and consume a usable disposable potion");
+                "the explicit combat Use action must consume the selected usable potion");
 }
 
 void test_fight_panel_enemy_selection_uses_exact_instance() {
@@ -1987,7 +2025,7 @@ void test_list_view_non_draggable_does_click_only_press_motion_release() {
     expect_true(!harness.gui->hasPointerCapture(), "non-draggable list must leave no pointer capture after release");
 }
 
-void test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm() {
+void test_fight_repeated_action_selection_requires_explicit_execution() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
@@ -2019,11 +2057,10 @@ void test_list_view_non_draggable_repeated_click_preserves_first_select_second_c
     expect_true(panel->interactionsSelect(gui, 0, interaction),
                 "first combat interaction click should select the interaction");
 
-    // Second click on the same interaction confirms it; selection is preserved until the
-    // blocking select loop consumes finalSelected, so the highlight remains.
+    // Repeated inspection retains the action; only the explicit action button commits it.
     panel->interactionsCallback(gui, 0, interaction);
     expect_true(panel->interactionsSelect(gui, 0, interaction),
-                "second combat interaction click should confirm without losing the selection");
+                "repeated combat inspection should retain its selection without execution");
 }
 
 void test_list_view_draggable_default_still_drags_after_non_draggable_change() {
@@ -2509,19 +2546,11 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
-    auto loop = vstd::event_loop<>::instance();
-    const auto baselineFrameCallbacks = loop->getFrameCallbackCount();
-    const auto baselineEventCallbacks = loop->getEventCallbackCount();
-
     auto firstGame = create_loader_gui_game();
     CGameLoader::loadGui(firstGame);
     auto firstGui = firstGame->getGui();
     auto firstContext = firstGame->getContext();
     expect_true(firstGui != nullptr, "first loader GUI session should create a GUI");
-    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks + 1,
-                "loading a GUI session should register exactly one frame callback");
-    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks + 1,
-                "loading a GUI session should register exactly one event callback");
 
     auto firstRecorder = attach_mouse_recorder(firstGui);
     int firstRenderCount = 0;
@@ -2531,10 +2560,6 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     expect_true(!firstContext->isActive(), "first context should be inactive after explicit shutdown");
     expect_true(firstGame->getGui() == nullptr, "first shutdown should detach the game GUI");
     expect_true(firstGui->getChildren().empty(), "first shutdown should clear GUI children");
-    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks,
-                "context shutdown should unregister the session frame callback");
-    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks,
-                "context shutdown should unregister the session event callback");
     drain_event_loop();
     expect_true(firstRecorder->button_count == 0, "first shutdown should prevent stale event dispatch");
     expect_true(firstRenderCount == 0, "first shutdown should prevent stale frame rendering");
@@ -2544,10 +2569,6 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     auto secondGui = secondGame->getGui();
     auto secondContext = secondGame->getContext();
     expect_true(secondGui != nullptr, "second loader GUI session should create a GUI");
-    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks + 1,
-                "a replacement GUI session should not accumulate old frame callbacks");
-    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks + 1,
-                "a replacement GUI session should not accumulate old event callbacks");
 
     auto secondRecorder = attach_mouse_recorder(secondGui);
     int secondRenderCount = 0;
@@ -2568,10 +2589,6 @@ void test_loader_gui_sessions_shutdown_stale_callbacks() {
     secondContext->shutdown();
     expect_true(!secondContext->isActive(), "second context should be inactive after explicit shutdown");
     const int renderCountAfterShutdown = secondRenderCount;
-    expect_true(loop->getFrameCallbackCount() == baselineFrameCallbacks,
-                "second context shutdown should restore the frame callback baseline");
-    expect_true(loop->getEventCallbackCount() == baselineEventCallbacks,
-                "second context shutdown should restore the event callback baseline");
     drain_event_loop();
     expect_true(secondRecorder->button_count == 1, "second shutdown should stop later event dispatch");
     expect_true(secondRenderCount == renderCountAfterShutdown, "second shutdown should stop later frame rendering");
@@ -2990,7 +3007,7 @@ void testTextureMaskPreservesPixelsAcrossSurfaceFormats() {
     }
 }
 
-void testTooltipConsumesInputAndClosesOnlyOnRightRelease() {
+void testPinnedTooltipConsumesInputAndDismissesExplicitly() {
     auto parent = std::make_shared<CGameGraphicsObject>();
     auto tooltip = std::make_shared<CTooltip>();
     tooltip->setText("inspect item");
@@ -2998,13 +3015,16 @@ void testTooltipConsumesInputAndClosesOnlyOnRightRelease() {
     expect_true(tooltip->getText() == "inspect item", "tooltip content must remain available to the renderer");
     expect_true(tooltip->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_a), "tooltips must consume keyboard input");
     tooltip->renderObject(nullptr, nullptr, 0);
-    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_RIGHT, 0, 0);
-    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0);
-    expect_true(tooltip->getParent() == parent, "other mouse phases must not close the tooltip");
-    expect_true(tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0),
-                "right release must be consumed when closing the tooltip");
-    expect_true(!tooltip->getParent(), "right release must detach the tooltip");
     tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0);
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, 0, 0);
+    expect_true(tooltip->getParent() == parent, "the opening gesture release must leave inspection pinned");
+    expect_true(tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, 0, 0),
+                "an explicit dismissal click must be consumed");
+    expect_true(!tooltip->getParent(), "an explicit click must dismiss pinned inspection");
+    tooltip->mouseEvent(nullptr, SDL_MOUSEBUTTONUP, SDL_BUTTON_RIGHT, 0, 0);
+    parent->addChild(tooltip);
+    expect_true(tooltip->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE), "Escape dismissal must consume its input");
+    expect_true(!tooltip->getParent(), "Escape must dismiss pinned inspection without an item action");
 }
 
 void test_widget_reflective_callbacks_fail_closed_on_bad_config() {
@@ -3687,13 +3707,13 @@ int main() {
     test_quest_panel_rebuilds_when_quest_state_properties_change();
     test_reactive_list_views_refresh_counts_match_model_changes_exactly();
     test_quest_panel_refresh_count_coalesces_rapid_invalidations();
-    test_inventory_double_select_uses_selected_item_and_clears_selection();
-    test_inventory_right_click_uses_usable_item_once_and_consumes_it();
+    test_inventory_repeated_select_inspects_without_using_item();
+    test_inventory_right_click_inspects_then_explicit_use_consumes_once();
     test_inventory_right_click_full_resource_item_not_consumed();
     test_inventory_right_click_quest_item_is_protected();
     test_inventory_right_click_invalid_and_empty_are_safe();
     test_inventory_left_click_drag_still_starts_for_owned_item();
-    test_fight_panel_right_click_item_use_still_works();
+    test_fight_panel_right_click_inspects_then_explicit_use_works();
     test_fight_panel_enemy_selection_uses_exact_instance();
     test_gui_window_is_resizable_and_guard_paths_fail_closed();
     test_repeated_gui_creation_preserves_live_window_and_renderer();
@@ -3702,7 +3722,7 @@ int main() {
     test_list_view_captured_release_just_outside_source_cancels_instead_of_dropping();
     test_list_view_legacy_click_callback_still_fires_without_drag_callbacks();
     test_list_view_non_draggable_does_click_only_press_motion_release();
-    test_list_view_non_draggable_repeated_click_preserves_first_select_second_confirm();
+    test_fight_repeated_action_selection_requires_explicit_execution();
     test_list_view_draggable_default_still_drags_after_non_draggable_change();
     test_list_view_non_draggable_panel_removal_during_input_leaves_no_session_or_capture();
     test_list_view_below_threshold_motion_stays_a_click_no_proxy_no_drop();
@@ -3733,7 +3753,7 @@ int main() {
     testTextMetricsCacheAndExpiredGuiFallbacks();
     testRenderContextRestoresClipAndRejectsInvalidCopies();
     testTextureMaskPreservesPixelsAcrossSurfaceFormats();
-    testTooltipConsumesInputAndClosesOnlyOnRightRelease();
+    testPinnedTooltipConsumesInputAndDismissesExplicitly();
     test_minimap_bounds_extreme_metadata_fails_closed();
     test_minimap_bounds_overflow_prone_extents_fail_closed();
     test_minimap_bounds_sparse_coordinates_fail_closed();

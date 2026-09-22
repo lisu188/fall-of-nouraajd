@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -29,7 +29,16 @@ class CPlayer;
 class CGameCharacterPanel : public CGamePanel {
     V_META(CGameCharacterPanel, CGamePanel,
            V_PROPERTY(CGameCharacterPanel, std::shared_ptr<CMapStringString>, charSheet, getCharSheet, setCharSheet),
-           V_METHOD(CGameCharacterPanel, interactionsCollection, CListView::collection_pointer, std::shared_ptr<CGui>))
+           V_METHOD(CGameCharacterPanel, interactionsCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(CGameCharacterPanel, interactionsCallback, void, std::shared_ptr<CGui>, int,
+                    std::shared_ptr<CGameObject>),
+           V_METHOD(CGameCharacterPanel, interactionsSelect, bool, std::shared_ptr<CGui>, int,
+                    std::shared_ptr<CGameObject>),
+           V_METHOD(CGameCharacterPanel, renderCharacterSheet, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>,
+                    int),
+           V_METHOD(CGameCharacterPanel, renderAbilityDetails, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>,
+                    int),
+           V_METHOD(CGameCharacterPanel, inspectModifiers, void, std::shared_ptr<CGui>))
 
     void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
@@ -41,6 +50,10 @@ class CGameCharacterPanel : public CGamePanel {
     // can extend the row list in one place.
     std::vector<std::pair<std::string, std::string>> buildCharacterSheetLines(const std::shared_ptr<CPlayer> &player);
 
+    std::string buildModifierSources(const std::shared_ptr<CPlayer> &player);
+
+    void inspectModifiers(std::shared_ptr<CGui> gui);
+
     std::shared_ptr<CMapStringString> getCharSheet();
 
     void setCharSheet(std::shared_ptr<CMapStringString> charSheet);
@@ -49,6 +62,25 @@ class CGameCharacterPanel : public CGamePanel {
 
     CListView::collection_pointer interactionsCollection(std::shared_ptr<CGui> gui);
 
+    void interactionsCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
+    bool interactionsSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
+    void renderCharacterSheet(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
+
+    void renderAbilityDetails(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
+
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
+
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
+
   private:
     std::shared_ptr<CMapStringString> charSheet;
+    std::weak_ptr<CGameObject> selectedAbility;
+    int sheetOffset = 0;
+    int sheetMaximum = 0;
+    SDL_Rect sheetViewport{};
+    int abilityOffset = 0;
+    int abilityMaximum = 0;
+    SDL_Rect abilityViewport{};
 };

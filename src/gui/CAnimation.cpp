@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 #include "gui/CGui.h"
 #include "gui/CTextureCache.h"
+#include "gui/CUiTheme.h"
 
 void CAnimation::setObject(std::shared_ptr<CGameObject> _object) { object = _object; }
 
@@ -128,56 +129,48 @@ void CDynamicAnimation::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<
 }
 
 void CDynamicAnimation::initialize() {
-    std::weak_ptr<CDynamicAnimation> weakSelf = this->ptr<CDynamicAnimation>();
-    vstd::call_when(
-        [weakSelf]() {
-            auto self = weakSelf.lock();
-            return !self || self->getObject() != nullptr;
-        },
-        [weakSelf]() {
-            auto self = weakSelf.lock();
-            if (!self) {
-                return;
-            }
-            auto currentObject = self->getObject();
-            if (!currentObject) {
-                return;
-            }
-            std::string path = currentObject->getAnimation();
-            const auto timingPath = path + "/" + "time.json";
-            // Load timing tables through the owning game's per-session configuration
-            // provider; fall back to the legacy process-wide accessor only when the
-            // animation is detached from a game (compatibility path).
-            auto game = self->getGame();
-            auto time = game ? game->getConfigurationProvider()->getConfiguration(timingPath)
-                             : CConfigurationProvider::getConfig(timingPath);
-            if (!time || !time->is_object() || time->empty()) {
-                vstd::logger::warning("CDynamicAnimation: missing or malformed timing table", path);
-                return;
-            }
-            self->size = time->size();
-            for (int i = 0; i < self->size; i++) {
-                const auto key = std::to_string(i);
-                if (!time->contains(key) || !(*time)[key].is_number_integer()) {
-                    vstd::logger::warning("CDynamicAnimation: invalid timing entry", key, "in", path);
-                    self->paths.clear();
-                    self->times.clear();
-                    self->size = 0;
-                    return;
-                }
-                const int frameTime = (*time)[key].get<int>();
-                if (frameTime == 0) {
-                    vstd::logger::warning("CDynamicAnimation: zero timing entry", key, "in", path);
-                    self->paths.clear();
-                    self->times.clear();
-                    self->size = 0;
-                    return;
-                }
-                self->paths.push_back(path + "/" + key + ".png");
-                self->times.push_back(frameTime);
-            }
-            self->initialized = self->size > 0;
-        });
+    auto self = this->ptr<CDynamicAnimation>();
+    vstd::call_when([self]() { return self->getObject() != nullptr; },
+                    [self]() {
+                        auto currentObject = self->getObject();
+                        if (!currentObject) {
+                            return;
+                        }
+                        std::string path = currentObject->getAnimation();
+                        const auto timingPath = path + "/" + "time.json";
+                        // Load timing tables through the owning game's per-session configuration
+                        // provider; fall back to the legacy process-wide accessor only when the
+                        // animation is detached from a game (compatibility path).
+                        auto game = self->getGame();
+                        auto time = game ? game->getConfigurationProvider()->getConfiguration(timingPath)
+                                         : CConfigurationProvider::getConfig(timingPath);
+                        if (!time || !time->is_object() || time->empty()) {
+                            vstd::logger::warning("CDynamicAnimation: missing or malformed timing table", path);
+                            return;
+                        }
+                        self->size = time->size();
+                        for (int i = 0; i < self->size; i++) {
+                            const auto key = std::to_string(i);
+                            if (!time->contains(key) || !(*time)[key].is_number_integer()) {
+                                vstd::logger::warning("CDynamicAnimation: invalid timing entry", key, "in", path);
+                                self->paths.clear();
+                                self->times.clear();
+                                self->size = 0;
+                                return;
+                            }
+                            const int frameTime = (*time)[key].get<int>();
+                            if (frameTime == 0) {
+                                vstd::logger::warning("CDynamicAnimation: zero timing entry", key, "in", path);
+                                self->paths.clear();
+                                self->times.clear();
+                                self->size = 0;
+                                return;
+                            }
+                            self->paths.push_back(path + "/" + key + ".png");
+                            self->times.push_back(frameTime);
+                        }
+                        self->initialized = self->size > 0;
+                    });
 }
 
 int CDynamicAnimation::get_ttl() { return vstd::rand(5000, 30000); }
@@ -199,10 +192,20 @@ bool CAnimation::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int b
             std::shared_ptr<SDL_Rect> absPos = getLayout()->getRect(this->ptr<CAnimation>());
             gui->getGame()->getGuiHandler()->showTooltip(CTooltipHandler::buildTooltip(currentObject), absPos->x + x,
                                                          absPos->y + y);
+            return true;
         }
         return !hasCallback;
     }
     return callback(gui, type, button, x, y);
+}
+
+bool CAnimation::mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType, int x, int y, int, int) {
+    auto object = getObject();
+    if (!object || (object->getLabel().empty() && object->getDescription().empty()))
+        return false;
+    auto rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+    gui->previewObject(ptr<CGameGraphicsObject>(), object, rect->x + x, rect->y + y);
+    return true;
 }
 
 void CSelectionBox::setThickness(int _thickness) { this->thickness = _thickness; }
@@ -210,7 +213,7 @@ void CSelectionBox::setThickness(int _thickness) { this->thickness = _thickness;
 int CSelectionBox::getThickness() { return thickness; }
 
 void CSelectionBox::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    CUtil::setRenderDrawColor(gui->getRenderer(), CColors::Yellow);
+    CUtil::setRenderDrawColor(gui->getRenderer(), UiTheme::Accent);
     SDL_Rect tmp = {rect->x, rect->y, thickness, rect->h};
     SDL_Rect tmp2 = {rect->x, rect->y, rect->w, thickness};
     SDL_Rect tmp3 = {rect->x, rect->y + rect->h - thickness, rect->w, thickness};
