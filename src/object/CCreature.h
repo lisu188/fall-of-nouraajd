@@ -77,8 +77,7 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
                       setClassTracks),
            V_PROPERTY(CCreature, std::set<std::shared_ptr<CCreatureTemplate>>, templates, getTemplates, setTemplates),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
-           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
-           V_METHOD(CCreature, getEffects, std::set<std::shared_ptr<CEffect>>))
+           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int))
 
   public:
     CCreature();

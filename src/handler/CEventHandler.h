@@ -68,7 +68,8 @@ class CGameEventCaused : public CGameEvent {
 };
 
 class CEventHandler : public CGameObject {
-    typedef std::unordered_multimap<std::pair<std::string, std::string>, std::shared_ptr<CTrigger>> TriggerMap;
+    typedef std::unordered_multimap<std::pair<std::string, std::string>, std::shared_ptr<CTrigger>, vstd::pair_hash>
+        TriggerMap;
 
   public:
     void gameEvent(std::shared_ptr<CMapObject> mapObject, std::shared_ptr<CGameEvent> event) const;

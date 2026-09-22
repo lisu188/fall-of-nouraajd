@@ -247,7 +247,7 @@ class CListView : public CProxyTargetGraphicsObject {
 
     void notifySourceDragCancel(std::shared_ptr<CGui> gui, int sourceIndex, std::shared_ptr<CGameObject> sourceObject);
 
-    std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>> proxyObjects;
+    std::unordered_map<std::pair<int, int>, std::shared_ptr<CProxyGraphicsObject>, vstd::pair_hash> proxyObjects;
 
     void doShift(const std::shared_ptr<CGui> &gui, int val);
 

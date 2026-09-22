@@ -28,7 +28,8 @@ class CTypes {
   public:
     static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *builders();
 
-    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>> *
+    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>,
+                              vstd::pair_hash> *
     serializers();
 
     static std::unordered_set<std::type_index> *pointer_types();

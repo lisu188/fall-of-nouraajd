@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CTextManager : public CGameObject {
     V_META(CTextManager, CGameObject, vstd::meta::empty())
-    std::unordered_map<std::pair<std::string, int>, fn::sdl::TexturePtr> _textures;
+    std::unordered_map<std::pair<std::string, int>, fn::sdl::TexturePtr, vstd::pair_hash> _textures;
 
   public:
     explicit CTextManager(const std::shared_ptr<CGui> &_gui = nullptr);

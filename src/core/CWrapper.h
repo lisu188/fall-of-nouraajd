@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace py = pybind11;
 
 template <fn::PythonWrapperBase T> class CWrapper : public T {
-    V_META(CWrapper<T>, T, vstd::meta::empty())
+    V_META_NAMED(CWrapper<T>, T, std::string("CWrapper<") + T::static_meta()->name() + ">", vstd::meta::empty())
 
   public:
     using T::T;
