@@ -1,0 +1,64 @@
+{
+  "castleCatherineDialog": {
+    "class": "CastleGriffinCliffOfficerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "The griffins once watched these heights for Erathia. Seven occupied towers still command their nesting grounds. Defeat each tower's defenders and raise our banner there. Their wings will carry word that Erathia is fighting back.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Give me the field report.",
+                  "action": "reportProgress",
+                  "nextStateId": "EXIT"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "castleChristianDialog": {
+    "class": "CastleGriffinCliffOfficerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "I counted seven towers along the northern cliffs. Their numbers run from west to east. Follow the roads and marked narrow passages toward the escarpment; after each battle, enter the tower again to claim it. We need all seven towers. Capturing other towns can supply you for the climb.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Give me the field report.",
+                  "action": "reportProgress",
+                  "nextStateId": "EXIT"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

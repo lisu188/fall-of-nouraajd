@@ -1,0 +1,64 @@
+{
+  "castleCatherineDialog": {
+    "class": "CastleHomecomingOfficerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "My father's kingdom should have welcomed us with its own banners. Instead, invaders hold the roads and Terraneus. Christian will keep our landing force together. Go inland, find the passage beneath the central hills, and reclaim that town for Erathia.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Give me the field report.",
+                  "action": "reportProgress",
+                  "nextStateId": "EXIT"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "castleChristianDialog": {
+    "class": "CastleHomecomingOfficerDialog",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "My scouts place Terraneus underground, beneath the central hills. The stone stairways connect the two levels. Our ferry links the eastern landing to the western coast, and the footprints mark narrow gaps: choose the far side to cross. Defeat the town's garrison, then enter again to raise our banner.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Give me the field report.",
+                  "action": "reportProgress",
+                  "nextStateId": "EXIT"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

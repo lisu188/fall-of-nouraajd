@@ -166,7 +166,14 @@ def load(self, context):
 
     @register(context)
     class Barrier(CInteraction):
-        pass
+        def configureEffect(self, effect):
+            caster = effect.getCaster()
+            if not caster:
+                return False
+            stats = bonus_stats(caster)
+            stats.setNumericProperty("normalResist", 10)
+            effect.setBonus(stats)
+            return True
 
     @register(context)
     class Chloroform(CInteraction):

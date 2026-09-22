@@ -30,9 +30,11 @@ CTypes::setters() {
     return &reg;
 }
 
-std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>> *
+std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>, vstd::pair_hash> *
 CTypes::serializers() {
-    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>> reg;
+    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>,
+                              vstd::pair_hash>
+        reg;
     return &reg;
 }
 
