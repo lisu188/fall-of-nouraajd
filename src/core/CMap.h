@@ -269,8 +269,6 @@ class CMap : public CGameObject {
     std::string mapName;
     std::uint64_t navigationRevision = 0;
 
-    std::shared_ptr<vstd::future<void, void>> _moveHelper = vstd::later([]() {});
-
     bool hasBounds(int z) const;
 
     bool isOutOfBounds(Coords coords) const;

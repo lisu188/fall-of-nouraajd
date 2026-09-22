@@ -219,9 +219,9 @@ class CGameObject : public vstd::stringable, public std::enable_shared_from_this
                         }
                     };
                     if constexpr (now) {
-                        vstd::now(task);
+                        vstd::call_now(task);
                     } else {
-                        vstd::later(task);
+                        vstd::call_later(task);
                     }
                 }
                 ++it;

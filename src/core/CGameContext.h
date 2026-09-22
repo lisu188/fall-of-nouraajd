@@ -96,6 +96,8 @@ class CGameContext {
 
     std::shared_ptr<CMapSessionStore> getMapSessionStore();
 
+    void addEventLoopConnection(vstd::event_loop<>::connection connection);
+
     bool isActive() const;
 
     void shutdown();
@@ -122,6 +124,7 @@ class CGameContext {
     std::shared_ptr<CResourcesProvider> resourcesProvider;
     std::shared_ptr<CConfigurationProvider> configurationProvider;
     std::shared_ptr<CMapSessionStore> mapSessionStore;
+    std::vector<vstd::event_loop<>::connection> eventLoopConnections;
     vstd::lazy<CSlotConfig> slotConfiguration;
     std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;

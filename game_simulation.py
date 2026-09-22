@@ -190,7 +190,9 @@ class GameSimulation:
         for _ in range(minimum_iterations):
             loop.run()
             iterations += 1
-        while drain and iterations < max_iterations and loop.run():
+        while drain and iterations < max_iterations:
+            if loop.runReady() == 0:
+                break
             iterations += 1
         self.refreshHandles()
         return {"pumped": iterations, "drain": bool(drain), "turn": self.gameMap.getTurn()}

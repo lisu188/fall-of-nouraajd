@@ -43,10 +43,15 @@ class _SpyEventLoop:
 
     def __init__(self):
         self.runs = 0
+        self.ready_runs = 0
 
     def run(self):
         self.runs += 1
         return False
+
+    def runReady(self):
+        self.ready_runs += 1
+        return 0
 
 
 class _FakeEventLoopFactory:
@@ -236,6 +241,13 @@ class NormalGameplaySmokeTest(unittest.TestCase):
         self.assertEqual(pumped["pumped"], 2)
         # 3 from advance pumps + 2 from explicit pump.
         self.assertEqual(loop.runs, 5)
+
+    def test_drain_stops_on_first_idle_ready_pump_without_running_frames(self):
+        sim, loop = _make_simulation()
+        pumped = sim.pumpEvents(0, drain=True, max_iterations=100)
+        self.assertEqual(pumped["pumped"], 0)
+        self.assertEqual(loop.runs, 0)
+        self.assertEqual(loop.ready_runs, 1)
 
     def test_validate_accepts_typical_walkthrough(self):
         steps = [

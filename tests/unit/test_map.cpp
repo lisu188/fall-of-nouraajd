@@ -528,6 +528,13 @@ class TransitionDuringControlController : public CController {
     int interruptCount = 0;
 };
 
+class ThrowingController : public CController {
+  public:
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature>) override {
+        return vstd::async([]() -> Coords { throw std::runtime_error("planned movement failed"); });
+    }
+};
+
 class MovementOriginProbeCreature : public CCreature {
   public:
     void afterMove() override {
@@ -690,6 +697,28 @@ std::shared_ptr<CCreature> add_post_combat_hostile(const std::shared_ptr<CGame> 
     game->getMap()->addObject(hostile);
     hostile->setHp(hostile->getHpMax());
     return hostile;
+}
+
+void test_map_move_restores_moving_flag_when_controller_future_fails() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto map = game->getMap();
+
+    auto controller = std::make_shared<ThrowingController>();
+    auto creature = test_creature(game, "throwingWalker", ZERO, controller);
+    map->addObject(creature);
+
+    const int turnBefore = map->getTurn();
+    bool rethrown = false;
+    try {
+        map->move();
+    } catch (const std::runtime_error &error) {
+        rethrown = std::string(error.what()) == "planned movement failed";
+    }
+
+    expect_true(rethrown, "map move should propagate controller future failures to the caller");
+    expect_true(!map->isMoving(), "map move should clear the moving guard after a controller future failure");
+    expect_true(map->getTurn() == turnBefore, "a failed controller round must not advance the map turn");
 }
 
 void test_map_move_ignores_controller_future_after_transition_generation_changes() {
@@ -2321,6 +2350,7 @@ int main() {
     test_scene_manager_transition_preserves_player_archetypes();
     test_scene_manager_null_and_legacy_missing_target_behavior();
     test_scene_manager_rejects_cross_game_requests();
+    test_map_move_restores_moving_flag_when_controller_future_fails();
     test_map_move_ignores_controller_future_after_transition_generation_changes();
     test_map_tiles_bounds_wrapping_and_object_cache();
     test_tile_movement_cost_deserialization();

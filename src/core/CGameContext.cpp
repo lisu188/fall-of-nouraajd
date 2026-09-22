@@ -118,6 +118,11 @@ std::shared_ptr<CMapSessionStore> CGameContext::getMapSessionStore() {
     return mapSessionStore;
 }
 
+void CGameContext::addEventLoopConnection(vstd::event_loop<>::connection connection) {
+    requireActiveService("event loop");
+    eventLoopConnections.push_back(std::move(connection));
+}
+
 std::string CMapSessionStore::makeKey(const std::string &mapName, const std::string &instanceId) {
     // Length-prefix the map name so distinct (mapName, instanceId) pairs never collide.
     return std::to_string(mapName.size()) + ":" + mapName + ":" + instanceId;
@@ -188,6 +193,7 @@ void CGameContext::shutdown(CGame *owner) {
     }
 
     advanceTransitionGeneration();
+    eventLoopConnections.clear();
     if (owner) {
         if (owner->sceneManager) {
             owner->sceneManager->resetTransition();
