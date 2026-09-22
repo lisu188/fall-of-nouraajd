@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -16,12 +16,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameInventoryPanel.h"
+#include "CManagementActions.h"
+#include <algorithm>
 #include "core/CGame.h"
 #include "core/CMap.h"
 #include "core/CSlotConfig.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
+#include "gui/CTextManager.h"
+#include "gui/CDetailViewport.h"
+#include "handler/CTooltipHandler.h"
 
 namespace {
 constexpr const char *INVENTORY_COLLECTION = "inventoryCollection";
@@ -102,47 +107,24 @@ CListView::collection_pointer CGameInventoryPanel::inventoryCollection(std::shar
 void CGameInventoryPanel::inventoryCallback(std::shared_ptr<CGui> gui, int index,
                                             std::shared_ptr<CGameObject> _newSelection) {
     auto newSelection = vstd::cast<CItem>(_newSelection);
-    if (newSelection && newSelection->hasTag(CTag::Quest)) {
-        return;
-    }
-    if (!CGameObject::sameInstance(selectedInventory.lock(), newSelection)) {
-        selectedEquipped.reset();
-        selectedInventory = newSelection;
-    } else if (selectedInventory.lock() && CGameObject::sameInstance(selectedInventory.lock(), newSelection)) {
-        gui->getGame()->getMap()->getPlayer()->useItem(newSelection);
-        selectedInventory.reset();
-    } else if (selectedInventory.lock() == nullptr && selectedEquipped.lock() != nullptr) {
-        gui->getGame()->getMap()->getPlayer()->equipItem(
-            gui->getGame()->getMap()->getPlayer()->getSlotWithItem(selectedEquipped.lock()), nullptr);
-        selectedEquipped.reset();
-    }
+    selectedEquipped.reset();
+    selectedInventory = newSelection;
+    selectedSlot.clear();
+    actionMessage.clear();
+    detailsOffset = 0;
+    updateActionAvailability(gui);
     refreshViews();
 }
 
 bool CGameInventoryPanel::inventoryRightClickCallback(std::shared_ptr<CGui> gui, int index,
                                                       std::shared_ptr<CGameObject> _newSelection) {
-    auto item = usable_item(_newSelection);
-    auto player = inventory_player(gui);
-    if (!player || !item || !player->hasInInventory(item)) {
-        // Empty cell, non-item, quest item, or an item that no longer belongs to the
-        // player: reset any pending selection and let parents keep processing the click.
-        selectedEquipped.reset();
-        selectedInventory.reset();
-        refreshViews();
-        return false;
-    }
-    // Delegate use semantics (heal/mana full-resource guards, disposable consumption)
-    // to CCreature::useItem(); the GUI must not duplicate that logic.
-    player->useItem(item);
-    selectedEquipped.reset();
-    selectedInventory.reset();
-    refreshViews();
-    return true;
+    inventoryCallback(gui, index, _newSelection);
+    // The animation's default right-click path opens an inspection tooltip.
+    return false;
 }
 
 bool CGameInventoryPanel::inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return object && !object->hasTag(CTag::Quest) && selectedInventory.lock() &&
-           CGameObject::sameInstance(selectedInventory.lock(), object);
+    return object && selectedInventory.lock() && CGameObject::sameInstance(selectedInventory.lock(), object);
 }
 
 bool CGameInventoryPanel::inventoryDragStart(std::shared_ptr<CGui> gui, int index,
@@ -206,23 +188,14 @@ CListView::collection_pointer CGameInventoryPanel::equippedCollection(std::share
 void CGameInventoryPanel::equippedCallback(std::shared_ptr<CGui> gui, int index,
                                            std::shared_ptr<CGameObject> _newSelection) {
     auto newSelection = vstd::cast<CItem>(_newSelection);
-    // Quest and cursed items cannot be selected out of their equipped slot: quest items
-    // must not be dropped, and cursed items stay locked until the curse is lifted.
-    if (newSelection && (newSelection->hasTag(CTag::Quest) || newSelection->hasTag(CTag::Cursed))) {
-        return;
-    }
-    std::string slotName = vstd::str(index);
-    if (selectedEquipped.lock()) {
-        gui->getGame()->getMap()->getPlayer()->equipItem(slotName, nullptr);
-        selectedEquipped.reset();
-    } else if (selectedInventory.lock() &&
-               gui->getGame()->getSlotConfiguration()->canFit(slotName, selectedInventory.lock())) {
-        gui->getGame()->getMap()->getPlayer()->equipItem(slotName, selectedInventory.lock());
+    selectedSlot = vstd::str(index);
+    selectedEquipped = newSelection;
+    if (newSelection || !selectedInventory.lock()) {
         selectedInventory.reset();
-    } else {
-        selectedInventory.reset();
-        selectedEquipped = newSelection;
     }
+    actionMessage.clear();
+    detailsOffset = 0;
+    updateActionAvailability(gui);
     refreshViews();
 }
 
@@ -276,19 +249,245 @@ void CGameInventoryPanel::equippedDrop(std::shared_ptr<CGui> gui, int index, std
 }
 
 bool CGameInventoryPanel::equippedSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object) {
-    return (!object || !object->hasTag(CTag::Quest)) &&
-           ((selectedInventory.lock() &&
+    return ((selectedInventory.lock() &&
              gui->getGame()->getSlotConfiguration()->canFit(vstd::str(index), selectedInventory.lock())) ||
-            (selectedEquipped.lock() && CGameObject::sameInstance(selectedEquipped.lock(), object)));
+            (selectedEquipped.lock() && CGameObject::sameInstance(selectedEquipped.lock(), object)) ||
+            selectedSlot == vstd::str(index));
 }
 
 CGameInventoryPanel::CGameInventoryPanel() {}
 
-bool CGameInventoryPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
-    if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_RIGHT) {
-        selectedInventory.reset();
-        selectedEquipped.reset();
-        refreshViews();
+std::string CGameInventoryPanel::selectedFittingSlot(const std::shared_ptr<CGui> &gui,
+                                                     const std::shared_ptr<CItem> &item) {
+    auto player = inventory_player(gui);
+    if (!player || !item)
+        return "";
+    const auto fitting = gui->getGame()->getSlotConfiguration()->getFittingSlots(item);
+    if (fitting.empty())
+        return "";
+    if (!selectedSlot.empty())
+        return fitting.count(selectedSlot) ? selectedSlot : "";
+    for (const auto &candidate : fitting) {
+        if (!player->getItemAtSlot(candidate))
+            return candidate;
     }
+    return *fitting.begin();
+}
+
+void CGameInventoryPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    updateActionAvailability(gui);
+    CGamePanel::renderObject(gui, rect, frameTime);
+}
+
+void CGameInventoryPanel::updateActionAvailability(const std::shared_ptr<CGui> &gui) {
+    const auto player = inventory_player(gui);
+    const auto bagItem = selectedInventory.lock();
+    const auto equippedItem = selectedEquipped.lock();
+    const auto slot = selectedFittingSlot(gui, bagItem);
+    ManagementActions::updateButtons(
+        this->ptr<CGameGraphicsObject>(),
+        {{"useSelected", ManagementActions::itemUseReason(player, bagItem).empty()},
+         {"equipSelected", ManagementActions::equipReason(player, bagItem, slot).empty()},
+         {"unequipSelected", player && equippedItem && player->hasEquipped(equippedItem) &&
+                                 !equippedItem->hasTag(CTag::Quest) && !equippedItem->hasTag(CTag::Cursed)}});
+}
+
+bool CGameInventoryPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    return CGamePanel::mouseEvent(gui, type, button, x, y);
+}
+
+std::string CGameInventoryPanel::getSelectionDetails(std::shared_ptr<CGui> gui) {
+    auto player = inventory_player(gui);
+    auto item = selectedInventory.lock();
+    const bool inBag = item != nullptr;
+    if (!item) {
+        item = selectedEquipped.lock();
+    }
+    std::string text = actionMessage.empty() ? "" : actionMessage + "\n\n";
+    if (!player || !item) {
+        if (player && !selectedSlot.empty() && slot_exists(gui, selectedSlot)) {
+            const auto configuration = gui->getGame()->getSlotConfiguration()->getConfiguration();
+            text += CTooltipHandler::getSlotLabel(configuration.at(selectedSlot)->getSlotName());
+            for (const auto &[slot, equipped] : player->getEquipped()) {
+                if (equipped && slot != selectedSlot && equipped->getCoveredSlots().contains(selectedSlot)) {
+                    return text + "\nOccupied by " + equipped->getLabel() +
+                           ".\nRemove this compound artifact before equipping another item here.\n\n" +
+                           CTooltipHandler::buildTooltip(equipped);
+                }
+            }
+            return text + "\nEmpty slot. Select compatible equipment from your bag, then choose Equip.";
+        }
+        return text +
+               "Select an item to inspect it.\nUse the labelled buttons to act.\nDrag equipment to a fitting slot.";
+    }
+    text += item->getLabel();
+    text += inBag ? "\nIn your bag" : "\nEquipped";
+    std::string comparison;
+    auto slots = gui->getGame()->getSlotConfiguration();
+    auto configuration = slots->getConfiguration();
+    const auto fitting = slots->getFittingSlots(item);
+    if (!fitting.empty()) {
+        text += "\nFits: ";
+        bool first = true;
+        for (const auto &slot : fitting) {
+            if (!first) {
+                text += ", ";
+            }
+            text +=
+                configuration.count(slot) ? CTooltipHandler::getSlotLabel(configuration.at(slot)->getSlotName()) : slot;
+            first = false;
+        }
+        if (inBag) {
+            auto targetSlot = fitting.count(selectedSlot) ? selectedSlot : *fitting.begin();
+            if (selectedSlot.empty()) {
+                for (const auto &candidate : fitting) {
+                    if (!player->getItemAtSlot(candidate)) {
+                        targetSlot = candidate;
+                        break;
+                    }
+                }
+            }
+            auto equipped = player->getItemAtSlot(targetSlot);
+            comparison += "\n\nItem bonus changes versus " + (equipped ? equipped->getLabel() : "empty slot") + ":";
+            auto bonus = item->getBonus();
+            auto previous = equipped ? equipped->getBonus() : nullptr;
+            bool changed = false;
+            if (bonus) {
+                bonus->meta()->for_all_properties(bonus, [&](auto property) {
+                    if (property->value_type() != std::type_index(typeid(int))) {
+                        return;
+                    }
+                    const auto key = property->name();
+                    const int difference =
+                        bonus->getNumericProperty(key) - (previous ? previous->getNumericProperty(key) : 0);
+                    if (difference != 0) {
+                        comparison +=
+                            "\n" + vstd::camel(key) + ": " + (difference > 0 ? "+" : "") + std::to_string(difference);
+                        changed = true;
+                    }
+                });
+            }
+            if (!changed) {
+                comparison += "\nNo numeric item bonus changes.";
+            }
+        }
+    }
+    if (item->hasTag(CTag::Quest)) {
+        text += "\nQuest item - kept for your journey.";
+    } else if (!inBag && item->hasTag(CTag::Cursed)) {
+        text += "\nCursed - cannot be unequipped until the curse is lifted.";
+    }
+    if (inBag && item->hasTag(CTag::Heal) && player->getHp() >= player->getHpMax()) {
+        text += "\nHealth is full.";
+    }
+    if (inBag && item->hasTag(CTag::Mana) && player->getMana() >= player->getManaMax()) {
+        text += "\nMana is full.";
+    }
+    if (inBag && !fitting.empty()) {
+        const auto reason = ManagementActions::equipReason(player, item, selectedFittingSlot(gui, item));
+        if (!reason.empty())
+            text += "\n" + reason;
+    }
+    text += comparison;
+    auto tooltip = CTooltipHandler::buildTooltip(item);
+    if (!item->getLabel().empty() && tooltip.starts_with(item->getLabel()))
+        tooltip.erase(0, item->getLabel().size());
+    text += "\n" + tooltip;
+    return text;
+}
+
+void CGameInventoryPanel::renderSelectionDetails(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
+                                                 int frameTime) {
+    if (gui && rect) {
+        const auto text = getSelectionDetails(gui);
+        detailLayout.update(gui, text, rect->w);
+        const int height = detailLayout.getContentHeight();
+        const auto content = DetailViewport::contentRect(gui, rect, height);
+        detailsViewport = *content;
+        detailsMaximum = std::max(0, height - content->h);
+        detailsOffset = std::clamp(detailsOffset, 0, detailsMaximum);
+        detailLayout.draw(gui, content, detailsOffset);
+        DetailViewport::drawScrollHint(gui, rect, content, detailsOffset, detailsMaximum);
+    }
+}
+
+void CGameInventoryPanel::useSelected(std::shared_ptr<CGui> gui) {
+    auto player = inventory_player(gui);
+    auto item = selectedInventory.lock();
+    actionMessage = ManagementActions::itemUseReason(player, item);
+    if (!actionMessage.empty()) {
+        return;
+    }
+    player->useItem(item);
+    if (!player->hasInInventory(item)) {
+        selectedInventory.reset();
+    }
+    refreshViews();
+}
+
+void CGameInventoryPanel::equipSelected(std::shared_ptr<CGui> gui) {
+    auto player = inventory_player(gui);
+    auto item = selectedInventory.lock();
+    if (!player || !item || !player->hasInInventory(item) || item->hasTag(CTag::Quest)) {
+        actionMessage = "Select equipment from your bag.";
+        return;
+    }
+    const auto slot = selectedFittingSlot(gui, item);
+    actionMessage = ManagementActions::equipReason(player, item, slot);
+    if (!actionMessage.empty())
+        return;
+    player->equipItem(slot, item);
+    if (player->getItemAtSlot(slot) == item) {
+        selectedInventory.reset();
+        selectedEquipped = item;
+        selectedSlot = slot;
+        actionMessage.clear();
+        detailsOffset = 0;
+    } else {
+        actionMessage = "Cannot equip here. Check cursed equipment and occupied artifact slots.";
+    }
+    refreshViews();
+}
+
+void CGameInventoryPanel::unequipSelected(std::shared_ptr<CGui> gui) {
+    auto player = inventory_player(gui);
+    auto item = selectedEquipped.lock();
+    if (!player || !item || item->hasTag(CTag::Quest) || item->hasTag(CTag::Cursed)) {
+        actionMessage = "Select removable equipment. Quest and cursed items cannot be removed.";
+        return;
+    }
+    auto slot = player->getSlotWithItem(item);
+    if (!slot_exists(gui, slot) || player->getItemAtSlot(slot) != item) {
+        selectedEquipped.reset();
+        return;
+    }
+    player->equipItem(slot, nullptr);
+    if (player->hasInInventory(item)) {
+        selectedInventory = item;
+        selectedEquipped.reset();
+        selectedSlot.clear();
+    }
+    refreshViews();
+}
+
+bool CGameInventoryPanel::mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX,
+                                          int wheelY) {
+    auto origin = getLayout() ? getLayout()->getRect(this->ptr<CGameGraphicsObject>()) : nullptr;
+    SDL_Point point{x + (origin ? origin->x : 0), y + (origin ? origin->y : 0)};
+    if (!SDL_PointInRect(&point, &detailsViewport)) {
+        return false;
+    }
+    detailsOffset =
+        static_cast<int>(std::clamp(static_cast<long long>(detailsOffset) - static_cast<long long>(wheelY) * 72, 0LL,
+                                    static_cast<long long>(detailsMaximum)));
     return true;
+}
+
+bool CGameInventoryPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) {
+    if (type == SDL_KEYDOWN && (key == SDLK_PAGEUP || key == SDLK_PAGEDOWN)) {
+        detailsOffset = std::clamp(detailsOffset + (key == SDLK_PAGEUP ? -1 : 1) * std::max(1, detailsViewport.h - 24),
+                                   0, detailsMaximum);
+        return true;
+    }
+    return CGamePanel::keyboardEvent(gui, type, key);
 }

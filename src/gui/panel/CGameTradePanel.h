@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "CGamePanel.h"
+#include "gui/CDetailViewport.h"
 #include "object/CPlayer.h"
 
 #include <vector>
@@ -34,11 +35,17 @@ class CGameTradePanel : public CGamePanel {
            V_METHOD(CGameTradePanel, marketSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
            V_METHOD(CGameTradePanel, renderSellCost, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
            V_METHOD(CGameTradePanel, renderBuyCost, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(CGameTradePanel, renderTradeSummary, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(CGameTradePanel, addSelectedForSale, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, addSelectedForPurchase, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, clearSelection, void, std::shared_ptr<CGui>),
            V_METHOD(CGameTradePanel, finalizeSell, void, std::shared_ptr<CGui>),
            V_METHOD(CGameTradePanel, finalizeBuy, void, std::shared_ptr<CGui>))
 
   public:
     CGameTradePanel();
+
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
     std::shared_ptr<CMarket> getMarket();
 
@@ -68,10 +75,30 @@ class CGameTradePanel : public CGamePanel {
 
     int getTotalBuyCost();
 
+    std::string getTradeSummary(std::shared_ptr<CGui> gui);
+
+    void renderTradeSummary(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
+
+    void addSelectedForSale(std::shared_ptr<CGui> gui);
+
+    void addSelectedForPurchase(std::shared_ptr<CGui> gui);
+
+    void clearSelection(std::shared_ptr<CGui> gui);
+
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
+
   private:
+    void updateActionAvailability(const std::shared_ptr<CGui> &gui);
+    DetailViewport::Layout detailLayout;
+    int detailsOffset = 0;
+    int detailsMaximum = 0;
+    SDL_Rect detailsViewport{};
     std::shared_ptr<CMarket> market;
     std::list<std::weak_ptr<CItem>> selectedInventory;
     std::list<std::weak_ptr<CItem>> selectedMarket;
+    std::weak_ptr<CItem> inspectedItem;
+    bool inspectedFromMarket = false;
+    std::string actionMessage;
 
     bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
 
@@ -87,4 +114,6 @@ class CGameTradePanel : public CGamePanel {
     bool isInventorySelected(std::shared_ptr<CItem> item);
 
     std::vector<std::string> getItemNames(std::list<std::weak_ptr<CItem>> items);
+
+    bool validatePendingTrade(std::shared_ptr<CGui> gui, bool sale, int expectedTotal);
 };

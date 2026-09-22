@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,9 +25,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CProxyGraphicsObject;
 class CMap;
+class CPlayer;
 
 class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     V_META(CMapGraphicsObject, CProxyTargetGraphicsObject, V_METHOD(CMapGraphicsObject, initialize),
+           V_METHOD(CMapGraphicsObject, commitDestination, void, std::shared_ptr<CGui>),
            V_METHOD(CMapGraphicsObject, refreshObject, void, Coords))
 
   public:
@@ -44,6 +46,9 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) override;
 
     void refreshObject(Coords coords);
+    void previewDestination(std::shared_ptr<CGui> gui, Coords destination);
+    void commitDestination(std::shared_ptr<CGui> gui);
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
   private:
     struct ProxyAnimationSlot {
@@ -55,6 +60,13 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     std::weak_ptr<CMap> cachedMap;
     int cachedProxyZ = 0;
     bool hasCachedProxyZ = false;
+    std::optional<Coords> previewTarget;
+    std::weak_ptr<CMap> previewMap;
+    std::weak_ptr<CPlayer> previewPlayer;
+    Coords previewOrigin = ZERO;
+    std::shared_ptr<CGameGraphicsObject> destinationButton;
+    void clearDestinationPreview();
+    void validateDestinationPreview(const std::shared_ptr<CGui> &gui);
 
     Coords guiToMap(std::shared_ptr<CGui> gui, Coords coords);
 

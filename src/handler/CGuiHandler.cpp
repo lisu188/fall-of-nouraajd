@@ -33,21 +33,35 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameTradePanel.h"
 #include "object/CDialog.h"
 #include "object/CMarket.h"
+#include "handler/CScriptHandler.h"
+
+#include <algorithm>
 
 namespace {
 std::shared_ptr<CLayout> create_tooltip_layout(const std::shared_ptr<CGame> &game, const std::string &text, int x,
                                                int y) {
-    auto textureSize = game->getGui()->getTextManager()->getTextureSize(text);
-    int width = vstd::percent(textureSize.first, 125);
-    int height = vstd::percent(textureSize.second, 125);
-
+    const auto gui = game->getGui();
+    const int padding = 16;
+    const int width = std::max(1, std::min(gui->getWidth() - 48, 520));
+    const auto textureSize = gui->getTextManager()->measureText(text, std::max(1, width - padding * 2), "body");
+    const int height = std::min(std::max(1, gui->getHeight() - 48), textureSize.second + padding * 2);
     auto layout = game->createObject<CLayout>();
-    layout->setRect(CUtil::centeredRect(x, y, width, height));
+    layout->setRect(CUtil::rect(std::clamp(x + 18, 24, std::max(24, gui->getWidth() - width - 24)),
+                                std::clamp(y + 18, 24, std::max(24, gui->getHeight() - height - 24)), width, height));
     return layout;
 }
 } // namespace
 
 CGuiHandler::CGuiHandler() {}
+
+void CGuiHandler::notify(std::string message) {
+    auto game = _game.lock();
+    if (game && game->getGui()) {
+        game->getGui()->notify(std::move(message));
+    } else {
+        vstd::logger::info(message);
+    }
+}
 
 void CGuiHandler::showMessage(std::string message) {
     auto game = _game.lock();
@@ -107,6 +121,20 @@ bool CGuiHandler::showQuestion(std::string question) {
     }
     std::shared_ptr<CGameQuestionPanel> panel = game->createObject<CGameQuestionPanel>("questionPanel");
     panel->setQuestion(question);
+    game->getGui()->pushChild(panel);
+    return panel->awaitAnswer();
+}
+
+bool CGuiHandler::showConfirm(std::string title, std::string body, std::string confirmLabel, std::string cancelLabel) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return false;
+    }
+    auto panel = game->createObject<CGameQuestionPanel>("questionPanel");
+    panel->setTitle(std::move(title));
+    panel->setQuestion(std::move(body));
+    panel->setConfirmLabel(std::move(confirmLabel));
+    panel->setCancelLabel(std::move(cancelLabel));
     game->getGui()->pushChild(panel);
     return panel->awaitAnswer();
 }
@@ -174,13 +202,101 @@ void CGuiHandler::showLoot(std::shared_ptr<CCreature> creature, std::set<std::sh
 
 CGuiHandler::CGuiHandler(std::shared_ptr<CGame> game) : _game(game) {}
 
+std::string CGuiHandler::showChoice(std::string title, std::string choicesJson, std::string actionLabel,
+                                    std::string backLabel) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return "";
+    }
+    auto options = CGameCampaignBrowserPanel::parseChoices(choicesJson);
+    auto panel = game->createObject<CGameCampaignBrowserPanel>("campaignBrowserPanel");
+    panel->configureChoices(std::move(title), std::move(options), std::move(actionLabel), std::move(backLabel));
+    game->getGui()->pushChild(panel);
+    return panel->awaitChoice();
+}
+
+std::pair<std::string, std::string> CGuiHandler::showCharacterCreationOptions(std::string classesJson,
+                                                                              std::string racesJson) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return {"", ""};
+    }
+    auto classes = CGameCampaignBrowserPanel::parseChoices(classesJson);
+    auto races = CGameCampaignBrowserPanel::parseChoices(racesJson);
+    if (classes.empty() || races.empty()) {
+        return {"", ""};
+    }
+    auto panel = game->createObject<CGameCampaignBrowserPanel>("campaignBrowserPanel");
+    panel->configureCharacterChoices(std::move(classes), std::move(races), characterPreview);
+    game->getGui()->pushChild(panel);
+    auto result = panel->awaitCharacterChoice();
+    characterPreview = panel->getPreviewedCharacter();
+    return result;
+}
+
+void CGuiHandler::showPauseMenu() {
+    auto game = _game.lock();
+    if (!game || !game->getGui() || !game->getMap()) {
+        return;
+    }
+    pybind11::gil_scoped_acquire gil;
+    game->getScriptHandler()->call_created_function("import ui\nui.pause(game)", {"game"}, game);
+}
+
+void CGuiHandler::showSaveMenu() {
+    auto game = _game.lock();
+    if (!game || !game->getGui() || !game->getMap()) {
+        return;
+    }
+    pybind11::gil_scoped_acquire gil;
+    game->getScriptHandler()->call_created_function("import ui\nui.saveMenu(game)", {"game"}, game);
+}
+
+std::string CGuiHandler::showTextInput(std::string title, std::string prompt, std::string initialValue) {
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return "";
+    }
+    auto panel = game->createObject<CGameCampaignBrowserPanel>("campaignBrowserPanel");
+    panel->configureTextInput(std::move(title), std::move(prompt), std::move(initialValue));
+    game->getGui()->pushChild(panel);
+    const bool wasTextInputActive = SDL_IsTextInputActive() == SDL_TRUE;
+    if (!wasTextInputActive)
+        SDL_StartTextInput();
+    const auto value = panel->awaitChoice();
+    if (!wasTextInputActive)
+        SDL_StopTextInput();
+    return value;
+}
+
+void CGuiHandler::showLoading(std::string message) {
+    hideLoading();
+    auto game = _game.lock();
+    if (!game || !game->getGui()) {
+        return;
+    }
+    auto panel = game->createObject<CGameTextPanel>("infoPanel");
+    panel->setTitle("Please wait");
+    panel->setText(std::move(message));
+    panel->setCloseable(false);
+    game->getGui()->pushChild(panel);
+    loadingPanel = panel;
+    game->getGui()->render(0);
+}
+
+void CGuiHandler::hideLoading() {
+    if (auto panel = loadingPanel.lock()) {
+        panel->close();
+    }
+    loadingPanel.reset();
+}
+
 std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
     auto game = _game.lock();
     if (!game || !game->getGui()) {
         return "";
     }
-
-    auto values = list ? list->getValues() : std::set<std::string>();
+    const auto values = list ? list->getValues() : std::set<std::string>();
     if (values.empty()) {
         vstd::logger::warning("Selection requested with an empty option list.");
         return "";
@@ -194,47 +310,11 @@ std::string CGuiHandler::showSelection(std::shared_ptr<CListString> list) {
         CPlaytestTrace::record("gui_panel_opened", fields);
     }
 
-    std::shared_ptr<CGamePanel> panel = game->createObject<CGamePanel>("selectionPanel");
-    vstd::cast<CCenteredLayout>(panel->getLayout())->setH(vstd::str(75 * values.size()));
-
-    std::shared_ptr<std::string> selected;
-
-    std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
-    int i = 0;
-    // TODO: unify with CGameDialogPanel
-    for (auto item : values) {
-        std::string clickName = vstd::str("click") + vstd::str(i);
-
-        panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
-            clickName, panel, [item, &selected](CGameGraphicsObject *self, std::shared_ptr<CGui> gui) {
-                selected = std::make_shared<std::string>(item);
-            });
-
-        std::shared_ptr<CButton> widget = game->createObject<CButton>("CButton");
-        widget->setClick(clickName);
-        widget->setText(item);
-
-        std::shared_ptr<CLayout> layout = game->createObject<CLayout>("CLayout");
-        const int y0 = 100 * i / values.size();
-        const int y1 = 100 * (i + 1) / values.size();
-        layout->setX(vstd::str(0) + "%");
-        layout->setY(vstd::str(y0) + "%");
-        layout->setW(vstd::str(100) + "%");
-        layout->setH(vstd::str(y1 - y0) + "%");
-        widget->setLayout(layout);
-        widgets.insert(widget);
-        i++;
+    auto choices = json::array();
+    for (const auto &value : values) {
+        choices[choices.size()] = json({{"id", value}, {"label", value}, {"detail", ""}});
     }
-
-    panel->setChildren(widgets);
-
-    game->getGui()->pushChild(panel);
-
-    vstd::wait_until([&]() { return selected != nullptr || !panel->getGui(); });
-
-    panel->close();
-
-    return selected ? *selected : "";
+    return showChoice("Choose an option", choices.dump(), "Select", "Back");
 }
 
 std::pair<std::string, std::string> CGuiHandler::showCharacterCreation(std::shared_ptr<CListString> classes,
@@ -260,68 +340,23 @@ std::pair<std::string, std::string> CGuiHandler::showCharacterCreation(std::shar
         CPlaytestTrace::record("gui_panel_opened", fields);
     }
 
-    std::shared_ptr<CGamePanel> panel = game->createObject<CGamePanel>("selectionPanel");
-    const std::size_t rows = classValues.size() > raceValues.size() ? classValues.size() : raceValues.size();
-    if (auto centered = vstd::cast<CCenteredLayout>(panel->getLayout())) {
-        centered->setW("600");
-        centered->setH(vstd::str(75 * rows));
+    auto classChoices = json::array();
+    auto raceChoices = json::array();
+    for (const auto &value : classValues) {
+        classChoices[classChoices.size()] = json({{"id", value}, {"label", value}, {"detail", ""}});
     }
-
-    std::shared_ptr<std::string> selectedClass;
-    std::shared_ptr<std::string> selectedRace;
-    std::set<std::shared_ptr<CGameGraphicsObject>> widgets;
-
-    // Builds one vertical column of option buttons occupying the [x, x+w] band.
-    // `selected` is a pointer to a caller-owned local (valid for the whole call,
-    // including the wait_until below); each button captures that pointer by value
-    // and writes the picked label into it on click. TODO: unify with showSelection.
-    auto buildColumn = [&](const std::set<std::string> &values, std::shared_ptr<std::string> *selected,
-                           const std::string &prefix, const std::string &x, const std::string &w) {
-        int i = 0;
-        for (auto item : values) {
-            std::string clickName = prefix + vstd::str(i);
-
-            panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
-                clickName, panel, [item, selected](CGameGraphicsObject *self, std::shared_ptr<CGui> gui) {
-                    *selected = std::make_shared<std::string>(item);
-                });
-
-            std::shared_ptr<CButton> widget = game->createObject<CButton>("CButton");
-            widget->setClick(clickName);
-            widget->setText(item);
-
-            std::shared_ptr<CLayout> layout = game->createObject<CLayout>("CLayout");
-            const int y0 = 100 * i / values.size();
-            const int y1 = 100 * (i + 1) / values.size();
-            layout->setX(x);
-            layout->setY(vstd::str(y0) + "%");
-            layout->setW(w);
-            layout->setH(vstd::str(y1 - y0) + "%");
-            widget->setLayout(layout);
-            widgets.insert(widget);
-            i++;
-        }
-    };
-
-    buildColumn(classValues, &selectedClass, "clickClass", "0%", "50%");
-    buildColumn(raceValues, &selectedRace, "clickRace", "50%", "50%");
-
-    panel->setChildren(widgets);
-
-    game->getGui()->pushChild(panel);
-
-    // Close once both a class and a race are chosen (or the panel is torn down).
-    vstd::wait_until([&]() { return (selectedClass && selectedRace) || !panel->getGui(); });
-
-    panel->close();
-
-    if (!selectedClass || !selectedRace) {
-        return {"", ""};
+    for (const auto &value : raceValues) {
+        raceChoices[raceChoices.size()] = json({{"id", value}, {"label", value}, {"detail", ""}});
     }
-    return {*selectedClass, *selectedRace};
+    return showCharacterCreationOptions(classChoices.dump(), raceChoices.dump());
 }
 
 void CGuiHandler::showCampaignScreen(std::string title, std::string body, std::string actionLabel) {
+    showCampaignArtworkScreen(std::move(title), std::move(body), std::move(actionLabel), "");
+}
+
+void CGuiHandler::showCampaignArtworkScreen(std::string title, std::string body, std::string actionLabel,
+                                            std::string artwork) {
     auto game = _game.lock();
     if (!game || !game->getGui()) {
         // Headless execution: log the full presentation content and return
@@ -340,8 +375,10 @@ void CGuiHandler::showCampaignScreen(std::string title, std::string body, std::s
         CPlaytestTrace::record("gui_panel_opened", fields);
     }
     std::shared_ptr<CGameCampaignPanel> panel = game->createObject<CGameCampaignPanel>("campaignPanel");
+    panel->setCloseable(false);
     panel->setTitle(title);
     panel->setBody(body);
+    panel->setArtwork(std::move(artwork));
     panel->setActionLabel(actionLabel);
     // The configured action button carries a placeholder label; stamp the
     // caller-supplied one (BEGIN / CONTINUE / RETURN) before showing.
@@ -383,15 +420,8 @@ std::string CGuiHandler::showCampaignSelection(std::shared_ptr<CMapStringString>
     std::shared_ptr<CGameCampaignBrowserPanel> panel =
         game->createObject<CGameCampaignBrowserPanel>("campaignBrowserPanel");
 
-    // Left column: one button per campaign, keyed by the STABLE campaign id.
-    // Duplicate display titles cannot collide because the click handler carries
-    // the id, never the title.
-    std::set<std::shared_ptr<CGameGraphicsObject>> widgets = panel->getChildren();
-    CGameCampaignBrowserPanel *browser = panel.get();
-    int i = 0;
-    const std::size_t count = titleValues.size();
+    std::vector<CGameCampaignBrowserPanel::ChoiceOption> options;
     for (const auto &[campaignId, title] : titleValues) {
-        std::string clickName = "clickCampaign" + vstd::str(i);
         std::string description;
         auto descriptionIt = descriptionValues.find(campaignId);
         if (descriptionIt != descriptionValues.end()) {
@@ -402,31 +432,10 @@ std::string CGuiHandler::showCampaignSelection(std::shared_ptr<CMapStringString>
         if (countIt != countValues.end()) {
             scenarios = countIt->second;
         }
-        std::string detail = title + "\n\n" + description + "\n\nChapters: " + vstd::str(scenarios);
-
-        panel->meta()->set_method<CGameGraphicsObject, void, std::shared_ptr<CGui>>(
-            clickName, panel, [campaignId, detail, browser](CGameGraphicsObject *self, std::shared_ptr<CGui> gui) {
-                browser->setSelectedId(campaignId);
-                browser->setDetailText(detail);
-            });
-
-        std::shared_ptr<CButton> widget = game->createObject<CButton>("CButton");
-        widget->setClick(clickName);
-        widget->setText(title);
-
-        std::shared_ptr<CLayout> layout = game->createObject<CLayout>("CLayout");
-        const int y0 = 100 * i / count;
-        const int y1 = 100 * (i + 1) / count;
-        layout->setX("0%");
-        layout->setY(vstd::str(y0) + "%");
-        layout->setW("50%");
-        layout->setH(vstd::str(y1 - y0) + "%");
-        widget->setLayout(layout);
-        widgets.insert(widget);
-        i++;
+        options.push_back({campaignId, title, description + "\n\nChapters: " + vstd::str(scenarios), true});
     }
 
-    panel->setChildren(widgets);
+    panel->configureChoices("Choose a campaign", std::move(options), "Create character", "Back");
     game->getGui()->pushChild(panel);
 
     return panel->awaitChoice();
@@ -451,6 +460,22 @@ std::shared_ptr<CGamePanel> CGuiHandler::openPanel(std::string panel) {
     if (!game || !game->getGui()) {
         return nullptr;
     }
+    const bool management = panel == "inventoryPanel" || panel == "characterPanel" || panel == "questPanel";
+    if (management) {
+        if (managementMap.lock() != game->getMap()) {
+            for (const auto &[name, cached] : managementPanels)
+                cached->close();
+            managementPanels.clear();
+            managementMap = game->getMap();
+        }
+        for (const auto *name : {"inventoryPanel", "characterPanel", "questPanel"}) {
+            if (panel != name) {
+                auto otherClass = game->getObjectHandler()->getClass(name);
+                if (auto other = vstd::cast<CGamePanel>(game->getGui()->findChild(otherClass)))
+                    other->close();
+            }
+        }
+    }
     auto panelClas = game->getObjectHandler()->getClass(panel);
     if (auto currentPanel = vstd::cast<CGamePanel>(game->getGui()->findChild(panelClas))) {
         return currentPanel;
@@ -460,7 +485,16 @@ std::shared_ptr<CGamePanel> CGuiHandler::openPanel(std::string panel) {
         CPlaytestTrace::addMapContext(fields, game->getMap());
         CPlaytestTrace::record("gui_panel_opened", fields);
     }
-    std::shared_ptr<CGamePanel> child = game->createObject<CGamePanel>(panel);
+    std::shared_ptr<CGamePanel> child;
+    if (management && managementPanels.contains(panel)) {
+        child = managementPanels.at(panel);
+    } else {
+        child = game->createObject<CGamePanel>(panel);
+        if (management && child)
+            managementPanels[panel] = child;
+    }
+    if (!child)
+        return nullptr;
     game->getGui()->pushChild(child);
     return child;
 }
@@ -476,6 +510,9 @@ void CGuiHandler::flipPanel(std::string panel, std::string hotkey) {
     } else {
         std::shared_ptr<CGamePanel> child = openPanel(panel);
         if (!child) {
+            return;
+        }
+        if (panel == "inventoryPanel" || panel == "characterPanel" || panel == "questPanel") {
             return;
         }
 

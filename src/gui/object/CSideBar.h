@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -26,13 +26,16 @@ class CSideBar : public CGameGraphicsObject {
            V_PROPERTY(CSideBar, std::shared_ptr<CMapStringString>, panelKeys, getPanelKeys, setPanelKeys),
            V_METHOD(CSideBar, clickInventory, void, std::shared_ptr<CGui>),
            V_METHOD(CSideBar, clickJournal, void, std::shared_ptr<CGui>),
-           V_METHOD(CSideBar, clickCharacter, void, std::shared_ptr<CGui>))
+           V_METHOD(CSideBar, clickCharacter, void, std::shared_ptr<CGui>),
+           V_METHOD(CSideBar, clickPause, void, std::shared_ptr<CGui>))
   public:
     void clickInventory(std::shared_ptr<CGui> gui);
 
     void clickJournal(std::shared_ptr<CGui> gui);
 
     void clickCharacter(std::shared_ptr<CGui> gui);
+    void clickPause(std::shared_ptr<CGui> gui);
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
 
     std::shared_ptr<CMapStringString> getPanelKeys();
 

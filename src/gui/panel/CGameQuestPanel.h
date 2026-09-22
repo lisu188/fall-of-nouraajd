@@ -18,7 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include "CGamePanel.h"
+#include "gui/CDetailViewport.h"
 
+#include <map>
 #include <vector>
 
 class CPlayer;
@@ -27,7 +29,16 @@ class CTextManager;
 class CGameQuestPanel : public CGamePanel {
     V_META(CGameQuestPanel, CGamePanel, V_METHOD(CGameQuestPanel, refreshFromQuestsChanged),
            V_METHOD(CGameQuestPanel, refreshFromMapPropertyChanged, void, std::string),
-           V_METHOD(CGameQuestPanel, refreshFromMapObjectChanged, void, Coords))
+           V_METHOD(CGameQuestPanel, refreshFromMapObjectChanged, void, Coords),
+           V_METHOD(CGameQuestPanel, showActive, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameQuestPanel, showCompleted, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameQuestPanel, showHistory, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameQuestPanel, chooseTrackedQuest, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameQuestPanel, questCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(CGameQuestPanel, questCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(CGameQuestPanel, questSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(CGameQuestPanel, renderSelectedQuest, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(CGameQuestPanel, trackSelectedQuest, void, std::shared_ptr<CGui>))
 
     void renderObject(std::shared_ptr<CGui> shared_ptr, std::shared_ptr<SDL_Rect> rect, int i) override;
 
@@ -39,6 +50,25 @@ class CGameQuestPanel : public CGamePanel {
     int getScrollOffset() const;
 
     int getScrollMaximum() const;
+
+    int getDetailsScrollOffset() const { return detailsOffset; }
+
+    void showActive(std::shared_ptr<CGui> gui);
+
+    void showCompleted(std::shared_ptr<CGui> gui);
+
+    void showHistory(std::shared_ptr<CGui> gui);
+
+    void chooseTrackedQuest(std::shared_ptr<CGui> gui);
+
+    bool setTrackedQuest(std::shared_ptr<CGui> gui, const std::string &questId);
+
+    CListView::collection_pointer questCollection(std::shared_ptr<CGui> gui);
+    void questCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+    bool questSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+    std::string getSelectedQuestText(std::shared_ptr<CGui> gui);
+    void renderSelectedQuest(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
+    void trackSelectedQuest(std::shared_ptr<CGui> gui);
 
     bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) override;
 
@@ -80,6 +110,15 @@ class CGameQuestPanel : public CGamePanel {
                                        int width);
 
   private:
+    struct TabState {
+        std::weak_ptr<CGameObject> selectedQuest;
+        int scrollOffset = 0;
+        int detailsOffset = 0;
+        CListView::ViewState list;
+    };
+    std::map<std::string, TabState> tabStates;
+    void switchTab(const std::shared_ptr<CGui> &gui, const std::string &tab);
+
     struct JournalParagraph {
         std::string text;
         int y;
@@ -116,4 +155,15 @@ class CGameQuestPanel : public CGamePanel {
     std::string cachedQuestText;
 
     bool questTextDirty = true;
+    std::string activeTab = "active";
+    std::string cachedDialogueHistory;
+    std::string cachedNotificationHistory;
+    std::weak_ptr<CGameObject> selectedQuest;
+    std::string selectedQuestText;
+    int questTextVersion = 0;
+    int selectedTextVersion = -1;
+    DetailViewport::Layout detailLayout;
+    int detailsOffset = 0;
+    int detailsMaximum = 0;
+    SDL_Rect detailsViewport{};
 };

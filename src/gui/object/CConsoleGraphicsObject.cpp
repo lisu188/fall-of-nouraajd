@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CConsoleGraphicsObject.h"
 #include "gui/CGui.h"
 #include "gui/CTextManager.h"
+#include "gui/CUiTheme.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -33,7 +34,17 @@ bool pythonConsoleEnabled() {
 } // namespace
 
 void CConsoleGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
-    gui->getTextManager()->drawText(consoleState, rect->x, rect->y, rect->w);
+    if (!inProgress)
+        return;
+    auto drawer = CUtil::rect(0, gui->getHeight() * 2 / 3, gui->getWidth(), gui->getHeight() / 3);
+    UiTheme::fill(gui->getRenderer(), *drawer, UiTheme::Background);
+    UiTheme::stroke(gui->getRenderer(), *drawer, UiTheme::Accent);
+    std::string history = "Developer console · F12 / Esc: close\n";
+    auto begin = consoleHistory.size() > 5 ? consoleHistory.size() - 5 : 0;
+    for (std::size_t i = begin; i < consoleHistory.size(); ++i)
+        history += consoleHistory[i] + "\n";
+    history += "> " + consoleState + "_";
+    gui->getTextManager()->drawTextStyled(history, UiTheme::inset(drawer, UiTheme::scaled(gui, 16)));
 }
 
 CConsoleGraphicsObject::CConsoleGraphicsObject() {
@@ -43,7 +54,7 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
         },
         [this](std::shared_ptr<CGui> gui, std::shared_ptr<CGameGraphicsObject> self, SDL_Event *event) {
             if (inProgress) {
-                if (event->key.keysym.sym == SDLK_TAB) {
+                if (event->key.keysym.sym == SDLK_F12 || event->key.keysym.sym == SDLK_ESCAPE) {
                     stopInput();
                 } else if (event->key.keysym.sym == SDLK_RETURN && consoleState.length() > 0) {
                     gui->getGame()->getScriptHandler()->call_created_function(consoleState, {"game"}, gui->getGame());
@@ -59,7 +70,7 @@ CConsoleGraphicsObject::CConsoleGraphicsObject() {
                 }
                 return true;
             } else {
-                if (event->key.keysym.sym == SDLK_TAB) {
+                if (event->key.keysym.sym == SDLK_F12) {
                     if (pythonConsoleEnabled()) {
                         startInput();
                         return true;
@@ -105,11 +116,13 @@ void CConsoleGraphicsObject::decrementHistoryIndex() {
 void CConsoleGraphicsObject::startInput() {
     SDL_StartTextInput();
     inProgress = true;
+    setModal(true);
 }
 
 void CConsoleGraphicsObject::stopInput() {
     SDL_StopTextInput();
     inProgress = false;
+    setModal(false);
     clearConsole();
 }
 

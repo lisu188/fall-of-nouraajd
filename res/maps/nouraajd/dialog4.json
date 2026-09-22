@@ -2,6 +2,7 @@
   "townHallDialog": {
     "class": "TownHallDialog",
     "properties": {
+      "questIds": "victorQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -61,7 +62,8 @@
                   "condition": "can_chart_wayfarer_route",
                   "action": "chart_wayfarer_route",
                   "nextStateId": "WAYFARER_ROUTE",
-                  "text": "Study the old courier routes hidden in your ledgers."
+                  "text": "Study the old courier routes hidden in your ledgers.",
+                  "actionLabel": "Wayfarer"
                 }
               },
               {
@@ -94,7 +96,8 @@
                   "number": 0,
                   "action": "give_letter",
                   "nextStateId": "THANKS",
-                  "text": "I'll deliver it."
+                  "text": "I'll deliver it.",
+                  "actionLabel": "Accept delivery"
                 }
               },
               {
@@ -149,7 +152,8 @@
                   "text": "Run to the courtyard now.",
                   "number": 0,
                   "action": "spawn_cultists",
-                  "nextStateId": "EXIT"
+                  "nextStateId": "EXIT",
+                  "actionLabel": "Begin rescue"
                 }
               },
               {
@@ -228,7 +232,8 @@
             "text": ""
           }
         }
-      ]
+      ],
+      "speaker": "Mayor Irvin"
     }
   }
 }

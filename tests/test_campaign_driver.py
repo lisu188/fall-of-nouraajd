@@ -25,6 +25,7 @@ import json
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -130,8 +131,8 @@ class ScreenFakeGuiHandler(FakeGuiHandler):
     """A GUI double exposing the engine's blocking campaign-presentation call.
 
     When showCampaignScreen exists the driver must route every briefing,
-    epilogue, and completion through it (with BEGIN/CONTINUE/RETURN action
-    labels) instead of the legacy showMessage fallback.
+    outcome, and completion through it with explicit action labels instead of
+    the legacy showMessage fallback.
     """
 
     def __init__(self):
@@ -140,6 +141,11 @@ class ScreenFakeGuiHandler(FakeGuiHandler):
 
     def showCampaignScreen(self, title, body, action_label):
         self.screens.append((title, body, action_label))
+
+
+class ArtworkFakeGuiHandler(ScreenFakeGuiHandler):
+    def showCampaignArtworkScreen(self, title, body, action_label, artwork):
+        self.screens.append((title, body, action_label, artwork))
 
 
 class FakeMap:
@@ -353,6 +359,51 @@ class CarryoverTest(unittest.TestCase):
         self.assertEqual(["sword"], player.item_type_ids())
 
 
+class CampaignArtworkTest(unittest.TestCase):
+    def testChapterCountsFollowPlayableRoutesWithoutCountingAlternativeEndings(self):
+        self.assertEqual("3", campaign.chapterCount(campaign.get_manifest("wardensRoad")))
+        self.assertEqual("3", campaign.chapterCount(campaign.get_manifest("fallOfNouraajd")))
+        data = manifest_fixture()
+        data["scenarios"]["aside"]["next"] = {"continued": "two"}
+        self.assertEqual("2-3", campaign.chapterCount(data))
+        data["scenarios"]["orphan"] = {"next": {}}
+        self.assertEqual("2-3", campaign.chapterCount(data), "unreachable metadata cannot inflate the chapter count")
+        data["scenarios"]["two"]["next"] = {"loop": "one"}
+        with self.assertRaisesRegex(campaign.CampaignError, "cycle"):
+            campaign.chapterCount(data)
+
+    def testOptionalArtworkPathsAreValidatedWithoutChangingOldManifests(self):
+        self.assertEqual(manifest_fixture(), campaign.validate_manifest(manifest_fixture()))
+        for target in ("campaign", "scenario"):
+            for value in ("images/buildings/chapel.png", 42, "../secret.png", "images/../secret.png", "images/x.jpg"):
+                with self.subTest(target=target, value=value):
+                    data = manifest_fixture()
+                    node = data if target == "campaign" else data["scenarios"]["one"]
+                    node["artwork"] = value
+                    if value == "images/buildings/chapel.png":
+                        self.assertEqual(data, campaign.validate_manifest(data))
+                    else:
+                        with self.assertRaises(campaign.CampaignError):
+                            campaign.validate_manifest(data)
+
+    def testMapArtworkRequiresKnownMetadataAndAnExistingAsset(self):
+        self.assertEqual("images/buildings/town_hall.png", campaign.artworkForMap("nouraajd"))
+        self.assertEqual("", campaign.artworkForMap("unknownMap"))
+        with patch.object(Path, "is_file", return_value=False):
+            self.assertEqual("", campaign.artworkForMap("nouraajd"))
+        with patch.object(campaign, "list_campaigns", side_effect=campaign.CampaignError("unavailable")):
+            self.assertEqual("", campaign.artworkForMap("nouraajd"))
+
+    def testArtworkPresenterPreservesOldThreeArgumentCompatibility(self):
+        game = FakeGame(FakePlayer())
+        game.gui_handler = ArtworkFakeGuiHandler()
+        campaign._show_screen(game, "Title", "Body", "Continue", artwork="images/buildings/chapel.png")
+        self.assertEqual([("Title", "Body", "Continue", "images/buildings/chapel.png")], game.gui_handler.screens)
+        game.gui_handler = ScreenFakeGuiHandler()
+        campaign._show_screen(game, "Title", "Body", "Continue", artwork="images/buildings/chapel.png")
+        self.assertEqual([("Title", "Body", "Continue")], game.gui_handler.screens)
+
+
 class CampaignStateStoreTest(unittest.TestCase):
     def test_begin_advance_finish_round_trip(self):
         store = campaign.CampaignStateStore(FakePlayer())
@@ -455,33 +506,56 @@ class CompleteScenarioTest(unittest.TestCase):
         self.assertIsNone(campaign.complete_scenario(game, "completed"))
         self.assertEqual([], game.map_changes)
 
-    def test_presentation_screens_flow_with_begin_continue_return_labels(self):
-        # [EPIC_10][STORY_04][SUBSTORY_01] With a screen-capable GUI handler the driver
-        # presents epilogues (CONTINUE), the next briefing (BEGIN), and the terminal
-        # completion (RETURN) as blocking campaign screens, in order, and never falls
-        # back to showMessage. A scenario without an epilogue shows no CONTINUE screen.
+    def test_presentation_screens_show_resolved_outcomes_carryover_and_explicit_actions(self):
         game, player = self.start_campaign()
         game.gui_handler = ScreenFakeGuiHandler()
 
         self.assertEqual("two", campaign.complete_scenario(game, "completed"))
         self.assertEqual(
             [
-                ("Chapter I", "Onward.", "CONTINUE"),
-                ("Chapter II", "End.", "BEGIN"),
+                ("Chapter I", "Outcome: Completed.\n\nOnward.\n\nNext chapter: Chapter II", "Continue"),
+                (
+                    "Chapter II",
+                    "End.\n\nCarryover\nGold carried: 100\nBag items carried: 1\n"
+                    "This chapter limits carried gold to 100.",
+                    "Begin chapter",
+                ),
             ],
             game.gui_handler.screens,
         )
         self.assertEqual([], game.gui_handler.messages, "screen-capable handlers bypass showMessage")
 
-        # Terminal completion: scenario two has no epilogue, so the only screen is
-        # the campaign completion with RETURN.
+        self.assertNotIn("Detour", str(game.gui_handler.screens), "an unplayed branch cannot appear in outcomes")
+        # A chapter without an epilogue still acknowledges its resolved outcome.
         game.gui_handler.screens.clear()
         self.assertEqual("", campaign.complete_scenario(game, "completed"))
         self.assertEqual(
-            [("Trial Campaign", "The trial ends.", "RETURN")],
+            [
+                ("Chapter II", "Outcome: Completed.", "Continue"),
+                ("Trial Campaign", "The trial ends.", "Return to adventure"),
+            ],
             game.gui_handler.screens,
         )
         self.assertEqual([], game.gui_handler.messages)
+
+    def testChapterOutcomeNextBriefingAndCompletionKeepTheirOwnArtwork(self):
+        data = manifest_fixture()
+        data["artwork"] = "images/buildings/town_hall.png"
+        data["scenarios"]["one"]["artwork"] = "images/buildings/chapel.png"
+        data["scenarios"]["two"]["artwork"] = "images/misc/closed_door.png"
+        (self.root / "trial" / campaign.CAMPAIGN_MANIFEST_NAME).write_text(json.dumps(data), encoding="utf-8")
+        game, _player = self.start_campaign()
+        game.gui_handler = ArtworkFakeGuiHandler()
+        self.assertEqual("two", campaign.complete_scenario(game, "completed"))
+        self.assertEqual(
+            ["images/buildings/chapel.png", "images/misc/closed_door.png"], [row[3] for row in game.gui_handler.screens]
+        )
+        game.gui_handler.screens.clear()
+        self.assertEqual("", campaign.complete_scenario(game, "completed"))
+        self.assertEqual(
+            ["images/misc/closed_door.png", "images/buildings/town_hall.png"],
+            [row[3] for row in game.gui_handler.screens],
+        )
 
     def test_unrouted_outcome_raises(self):
         game, _player = self.start_campaign()

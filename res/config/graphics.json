@@ -9,7 +9,8 @@
           "horizontal": "PARENT",
           "vertical": "DOWN"
         }
-      }
+      },
+      "priority": 10
     }
   },
   "gui": {
@@ -101,7 +102,7 @@
                 "y": "0%"
               }
             },
-            "text": "INVENTORY"
+            "text": "Inventory  I"
           }
         },
         {
@@ -117,7 +118,7 @@
                 "y": "25%"
               }
             },
-            "text": "JOURNAL"
+            "text": "Journal  J"
           }
         },
         {
@@ -133,17 +134,33 @@
                 "y": "50%"
               }
             },
-            "text": "CHARACTER"
+            "text": "Character  C"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickPause",
+            "text": "Pause  Esc",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "0",
+                "y": "75%",
+                "w": "100%",
+                "h": "25%"
+              }
+            }
           }
         }
       ],
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "200",
+          "h": "240",
           "horizontal": "RIGHT",
           "vertical": "UP",
-          "w": "200"
+          "w": "240"
         }
       },
       "panelKeys": {
@@ -169,10 +186,10 @@
       "layout": {
         "class": "CLayout",
         "properties": {
-          "h": "100",
+          "h": "132",
           "horizontal": "LEFT",
           "vertical": "UP",
-          "w": "200"
+          "w": "312"
         }
       },
       "visible": {

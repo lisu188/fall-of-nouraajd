@@ -2,6 +2,7 @@
   "dreamerDialog": {
     "class": "DreamerDialog",
     "properties": {
+      "questIds": "kadathAscentQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -61,7 +62,8 @@
                   "number": 0,
                   "nextStateId": "ACCEPT",
                   "text": "I have to see the throne. Point me to the road.",
-                  "action": "hear_the_ascent"
+                  "action": "hear_the_ascent",
+                  "actionLabel": "Record objective"
                 }
               },
               {
@@ -88,12 +90,14 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Dreamer"
     }
   },
   "lengPriestDialog": {
     "class": "LengPriestDialog",
     "properties": {
+      "questIds": "kadathAscentQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -133,7 +137,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Priest of Leng"
     }
   }
 }
