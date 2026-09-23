@@ -65,6 +65,9 @@ def loadQuestClasses():
     game_stub.QuestStateStore = QuestStateStore
     game_stub.claim_once = lambda *_args: True
     game_stub.remove_runtime_actors = lambda *_args, **_kwargs: 0
+    game_stub.showReader = lambda *_args, **_kwargs: None
+    game_stub.rewardSnapshot = lambda *_args, **_kwargs: {}
+    game_stub.showRewardReceipt = lambda *_args, **_kwargs: None
     game_stub.register = register
     game_stub.trigger = lambda context, *_args: register(context)
     game_stub.campaign = types.SimpleNamespace()
