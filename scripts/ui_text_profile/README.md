@@ -61,3 +61,35 @@ harness build directory. `choice-redesign-results.txt` retains both complete out
 texture loads were `729, 6, 0, 0, 0`, settling at 223 cache entries. The original unattached fixture yielded
 `715, 6, 0, 0, 0`, settling at 209 entries. Both stop rasterizing after warm-up; the historical unoptimized probe
 continued to load 723 textures per unchanged frame. These are operation counts, not elapsed-time speedup claims.
+
+## Long reward receipt rendering
+
+The September 19, 2026 receipt regression uses 241 distinct rewards, scrolls to the end, changes only the final
+reward label beyond byte 4096, and compares the rendered SDL pixels. Before switching receipts to the shared
+paragraph layout, the pixels did not change: the full-string texture path discarded the final reward. The same
+assertion passes with the paragraph layout. Reading and scrolling leave inventory and the map turn unchanged.
+
+The accompanying deterministic performance case uses 700 rows in a 600x180 viewport. It scrolls to the end,
+clears the text cache, renders once, then measures 25 unchanged frames. Both versions used Windows x64 Release,
+Visual Studio 2022 / MSVC 19.44, Python 3.12, and the same offscreen environment:
+
+```powershell
+$env:SDL_VIDEODRIVER = "dummy"
+$env:SDL_AUDIODRIVER = "dummy"
+$env:SDL_RENDER_DRIVER = "software"
+$env:PYTHONHOME = "C:/Users/andrz/git/fall-of-nouraajd/vcpkg_installed/x64-windows/tools/python3"
+ctest --test-dir cmake-build-release -C Release --output-on-failure -V `
+  -R '^(for_unit_tests.ui_management_unit_tests|performance.performance_guard_tests)$'
+```
+
+| Receipt renderer | Final-label pixel regression | Visible texture loads | New loads over 25 warm frames | Copies |
+| --- | --- | ---: | ---: | ---: |
+| Full-string renderer | Failed (truncated content) | 1 | 0 | 25 |
+| Shared paragraph layout | Passed | 7 | 0 | 150 |
+| Deterministic budget | Must pass | 1-16 | 0 | 1-400 |
+
+The earlier run returned exit 8 because the functional regression failed; the corrected run returned exit 0
+(management 0.33s, performance 2.08s). The higher visible work renders the actual final rows and scroll cue;
+the truncated result is not a valid performance target. No budget was relaxed. The receipt guard is part of the
+normal `performance_guard_tests` target, and the screenshot generator retains overflow, ending, and 720p/200%
+ending captures through `captureRewardReceipts`.

@@ -51,8 +51,9 @@ changing scenes also closes its reader. The search field retains ordinary `L` te
 Conversation choices retain authored order and conditional visibility. Consequential action labels precede authored
 response prose. Transcript/history views are read-only. Dialogue callbacks validate the owning scene, including
 queued scene changes, and cannot continue acting through a detached panel.
-The 25 authored conversations now contain 115 states and 210 options; added states/options make commitments and
-in-progress reminders explicit. Related quest context is shown only for the player's active matching quests.
+The 31 authored conversations contain 121 states and 222 options, including the six Castle campaign conversations.
+Added states/options make commitments and in-progress reminders explicit. Related quest context is shown only for
+the player's active matching quests.
 Map scripts route substantial lore to titled readers, observed reward gains to consolidated receipts, and routine
 discoveries/progress to History. Blocked world actions can anchor their resolved requirement beside the actual object.
 
@@ -83,6 +84,28 @@ executing an owned ability. These deterministic routes use explicit setup for re
 they complement the natural Nouraajd GUI quest walkthrough rather than establishing a complete campaign playthrough.
 Existing crafting, save, inventory, trade and Nouraajd walkthrough tests retain their gameplay assertions while
 using the new explicit interface actions.
+
+The initial Windows offscreen GUI sweep covered 47 cases: 44 passed across the initial run and focused regression reruns;
+three window-focus resize checks require isolated Linux/Xvfb and are not claimed as Windows passes. The sweep
+found and fixed Home/End scrolling in the journal's visible History pane and truncation of reward receipts beyond
+4096 bytes. Native and rendered regressions cover both. Named-save tests enter a name through SDL text input,
+explicitly confirm replacement, reload the result, and verify the recovery copy without touching existing saves.
+
+After integration with main on September 24, 2026, the engine was rebuilt with the approved `vstd` revision
+`15c7f0b32d19ada5f22de1ea2b8d61a3232dfee3`, which supplies the event-loop APIs used by main. `CListView` now names
+the dependency's explicit pair hash, matching the other coordinate caches. The fresh Windows offscreen run passed
+three receipt, inventory and journal GUI checks and regenerated 111 verified screenshots: every registered panel,
+all 15 authored maps, a random map and the frontend/overflow variants. The Castle Homecoming MCP route moved the
+real player through 167 steps, two authored combats and two portal traversals before confirming chapter completion.
+These focused results complement the full native, Linux/Xvfb, Windows and coverage checks required from CI.
+
+Combat history, dialogue history and defeat receipts have explicit string properties, preserving their existing JSON
+text through serialization. The native save regression checks each field separately, all three together and absent
+fields in both versioned and legacy saves. All ten cases pass; the eight nonempty-history cases rejected loading
+before the property declarations were added. The Castle partial-progress reload also passes after the change.
+Victor's quest journal keeps its player-carried outcome through travel and reload; real MCP routes cover active,
+rescued and timed-out outcomes, including the guarded 500-gold rescue reward. Those reload checks use native
+serialized snapshots and are separate evidence from the named-save UI tests.
 
 ## Rendering and cache evidence
 
@@ -128,6 +151,11 @@ redraws. The detail guard checks that copies correspond only to visible paragrap
 remeasured. These counts were obtained with the CTest performance command above using SDL dummy/software rendering;
 the [retained chooser profile](../../scripts/ui_text_profile/README.md#choice-list-cache-profile) records the earlier
 723-texture-per-redraw development result and its fixture limitations.
+
+The 700-row reward receipt guard adds seven visible texture loads and zero additional loads across 25 warm frames
+(150 successful copies, budget 400). Its final-row regression failed with the earlier truncated renderer and passes
+with the shared paragraph layout. Exact before/after commands and counts are retained in the
+[receipt profile](../../scripts/ui_text_profile/README.md#long-reward-receipt-rendering).
 
 Required Linux, Windows, full-suite and coverage evidence comes from the PR's path-selected `build` workflow. A
 successful focused local run or screenshot set alone is not a claim that those release checks have completed.

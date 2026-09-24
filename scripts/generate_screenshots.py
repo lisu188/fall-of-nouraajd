@@ -766,6 +766,53 @@ def capture_management(game, output_dir, player_class):
                 panel.close()
             gui.applyUiPreferences("{}")
             sim.gameInstance.getContext().shutdown()
+    written.extend(captureRewardReceipts(game, output_dir, player_class))
+    return written
+
+
+def captureRewardReceipts(game, output_dir, player_class):
+    """Keep long automatic reward acknowledgements and their ending in the visual gallery."""
+    import game_simulation
+
+    sim = game_simulation.GameSimulation.startGame(game, PANELS_MAP, player_class, load_gui=True)
+    gui = sim.gameInstance.getGui()
+    written = []
+    try:
+        rewards = []
+        for index in range(240):
+            item = sim.gameInstance.createObject("Scroll")
+            item.name = f"receiptCaptureScroll{index}"
+            item.label = f"Recovered scroll {index:03} from the forgotten archive"
+            rewards.append(item)
+        rewards[-1].label = "ZZZ Final receipt reward"
+        before_items = set(sim.player.getItems())
+        before_turn = sim.gameMap.getNumericProperty("turn")
+        for name, width, height, scale, at_end in (
+            ("overflow", 1920, 1080, 100, False),
+            ("ending", 1920, 1080, 100, True),
+            ("1280x720-200-ending", 1280, 720, 200, True),
+        ):
+            resizeCaptureWindow(sim, width, height)
+            gui.applyUiPreferences(f'{{"uiScale":{scale},"textScale":{scale}}}')
+
+            def prepare(panel, active_gui):
+                if at_end:
+                    for _ in rewards:
+                        panel.keyboardEvent(active_gui, 0x300, 1073741902)  # Page Down
+
+            path = output_dir / f"management-lootPanel-{name}.png"
+            _, info = _captureNativeCall(
+                game, sim, "showLoot", "CGameLootPanel", (sim.player, set(rewards)), path, prepare
+            )
+            if (info.get("width"), info.get("height")) != (width, height):
+                raise RuntimeError("The reward receipt capture has unexpected dimensions.")
+            if set(sim.player.getItems()) != before_items or sim.gameMap.getNumericProperty("turn") != before_turn:
+                raise RuntimeError("Reading the reward receipt changed inventory or spent a turn.")
+            written.append(path)
+            print(f"  [ok]   reward receipt {name}: {path.name}", flush=True)
+    finally:
+        gui.applyUiPreferences("{}")
+        sim.gameInstance.getContext().shutdown()
     return written
 
 
