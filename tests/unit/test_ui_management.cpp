@@ -474,6 +474,16 @@ void testJournalTabsTrackingAndRewardAcknowledgement() {
     rewards->setItems({reward});
     expect_true(rewards->getRewardsText().find("Ancient seal") != std::string::npos,
                 "rewards must have readable names");
+    std::set<std::shared_ptr<CItem>> groupedRewards{reward};
+    for (int i = 0; i < 3; ++i) {
+        auto scroll = std::make_shared<CItem>();
+        scroll->setLabel("Scroll");
+        groupedRewards.insert(scroll);
+    }
+    rewards->setItems(groupedRewards);
+    expect_true(rewards->getRewardsText() ==
+                    "These rewards will be added to your inventory.\n\n1 x Ancient seal\n3 x Scroll\n",
+                "reward receipts must render each distinct label once with its actual quantity");
     rewards->collectRewards(h.gui);
     expect_true(!h.player->hasInInventory(reward),
                 "the reward panel must leave granting to the original caller after dismissal");
@@ -505,6 +515,90 @@ void testDefeatReceiptRecordsActualLossesAfterRecovery() {
     expect_true(receipt["lostItems"].size() == 1 &&
                     receipt["lostItems"][0]["label"].get<std::string>() == lost->getLabel(),
                 "the receipt must not invent losses from generated winner loot or retained quest items");
+}
+
+void testLongRewardReceiptRendersItsFinalItemWithoutGrantingIt() {
+    ManagementHarness h;
+    auto rewards = std::make_shared<CGameLootPanel>();
+    std::set<std::shared_ptr<CItem>> items;
+    for (int i = 0; i < 240; ++i) {
+        auto item = std::make_shared<CItem>();
+        item->setLabel("Recovered relic " + std::to_string(1000 + i) + " from the forgotten archive");
+        items.insert(item);
+    }
+    auto finalItem = std::make_shared<CItem>();
+    finalItem->setLabel("ZZZ Final receipt reward A");
+    items.insert(finalItem);
+    rewards->setItems(items);
+    const auto text = rewards->getRewardsText();
+    expect_true(text.size() > 4096 && text.ends_with("1 x ZZZ Final receipt reward A\n"),
+                "the long receipt fixture must put its final item beyond the text texture byte limit");
+    const auto bounds = CUtil::rect(20, 20, 600, 180);
+    rewards->renderRewards(h.gui, bounds, 0);
+    const auto turn = h.map->getTurn();
+    const auto inventory = h.player->getItems();
+    rewards->mouseWheelEvent(h.gui, SDL_MOUSEWHEEL, bounds->x + 1, bounds->y + 1, 0, -1000000);
+    auto captureEnding = [&] {
+        SDL_SetRenderDrawColor(h.gui->getRenderer(), 0, 0, 0, 255);
+        SDL_RenderClear(h.gui->getRenderer());
+        rewards->renderRewards(h.gui, bounds, 0);
+        std::vector<Uint32> pixels(bounds->w * bounds->h);
+        expect_true(SDL_RenderReadPixels(h.gui->getRenderer(), bounds.get(), SDL_PIXELFORMAT_RGBA32, pixels.data(),
+                                         bounds->w * sizeof(Uint32)) == 0,
+                    "the offscreen receipt viewport must be readable for pixel comparison");
+        return pixels;
+    };
+    const auto firstEnding = captureEnding();
+    finalItem->setLabel("ZZZ Final receipt reward B");
+    const auto changedEnding = captureEnding();
+    expect_true(firstEnding != changedEnding,
+                "scrolling to the receipt ending must render the actual final item beyond 4096 bytes");
+    expect_true(h.map->getTurn() == turn && h.player->getItems() == inventory && rewards->getItems() == items,
+                "reading and scrolling a long receipt must neither spend turns nor grant or discard items");
+    rewards->collectRewards(h.gui);
+    rewards->collectRewards(h.gui);
+    expect_true(h.player->getItems() == inventory,
+                "repeated receipt acknowledgements must leave the existing caller in charge of granting rewards");
+}
+
+void testRewardReceiptKeepsMeasuredHeaderAndContinueVisible() {
+    ManagementHarness h;
+    const auto originalPreferences = h.gui->getUiPreferences();
+    h.gui->setWidth(1280);
+    h.gui->setHeight(720);
+    h.gui->applyUiPreferences(R"({"uiScale":200,"textScale":200})");
+    auto rewards = std::make_shared<CGameLootPanel>();
+    rewards->setGame(h.game);
+    rewards->setTitle("Rewards");
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(180, 94, 920, 532);
+    rewards->setLayout(layout);
+    h.gui->pushChild(rewards);
+    auto receipt = std::make_shared<CWidget>();
+    receipt->setStringProperty("render", "renderRewards");
+    auto receiptLayout = std::make_shared<CLayout>();
+    receiptLayout->setRect(37, 90, 846, 351);
+    receipt->setLayout(receiptLayout);
+    rewards->addChild(receipt);
+    auto proceed = std::make_shared<CButton>();
+    proceed->setText("Continue");
+    proceed->setStringProperty("click", "collectRewards");
+    auto buttonLayout = std::make_shared<CLayout>();
+    buttonLayout->setRect(589, 473, 294, 43);
+    proceed->setLayout(buttonLayout);
+    rewards->addChild(proceed);
+    const auto bounds = layout->getRect(rewards);
+    rewards->renderObject(h.gui, bounds, 0);
+    const auto body = receiptLayout->getRect(receipt);
+    const auto action = buttonLayout->getRect(proceed);
+    const int labelHeight = h.gui->getTextManager()->measureText("Continue", action->w, "body").second;
+    expect_true(body->y > bounds->y + rewards->getShellHeaderHeight(h.gui),
+                "enlarged receipt text must start below the measured title and close control");
+    expect_true(body->h >= labelHeight && body->y + body->h < action->y,
+                "a compact receipt must preserve a scrollable body above its Continue action");
+    expect_true(action->h >= labelHeight + UiTheme::scaled(h.gui, 16) && action->y + action->h <= bounds->y + bounds->h,
+                "Continue must fit its enlarged label and remain inside the compact reward panel");
+    h.gui->applyUiPreferences(originalPreferences);
 }
 
 void testCreatureStatusNamesAndDurationsAreInspectable() {
@@ -667,6 +761,47 @@ void testLegacyJournalReflowsWhenOnlyTextScaleChanges() {
     expect_true(journal->getScrollOffset() == endOffset,
                 "the legacy journal must retain each tab's reading position when switching tabs");
     h.gui->applyUiPreferences(original);
+}
+
+void testJournalHistoryNavigationUsesTheVisibleDetailPane() {
+    ManagementHarness h;
+    auto journal = std::make_shared<CGameQuestPanel>();
+    journal->setGame(h.game);
+    auto layout = std::make_shared<CLayout>();
+    layout->setRect(0, 0, 1000, 700);
+    journal->setLayout(layout);
+    for (int i = 0; i < 80; ++i) {
+        h.gui->notify("History entry " + std::to_string(i) + ": " +
+                      "A discovered road leads onward through the ruined valley. " +
+                      "The next clue remains in the journal for later reading.");
+    }
+    journal->showHistory(h.gui);
+    expect_true(journal->getSelectedQuestText(h.gui).size() > 4096,
+                "the history fixture must exercise content beyond a single text texture");
+    journal->renderSelectedQuest(h.gui, CUtil::rect(450, 100, 440, 180), 0);
+    const auto turn = h.map->getTurn();
+    journal->keyboardEvent(h.gui, SDL_KEYDOWN, SDLK_PAGEDOWN);
+    const int pageOffset = journal->getDetailsScrollOffset();
+    expect_true(pageOffset > 0, "Page Down must scroll the visible history pane");
+    journal->keyboardEvent(h.gui, SDL_KEYDOWN, SDLK_END);
+    const int endOffset = journal->getDetailsScrollOffset();
+    expect_true(endOffset > pageOffset, "End must reach the end of the visible history pane");
+    journal->keyboardEvent(h.gui, SDL_KEYDOWN, SDLK_DOWN);
+    expect_true(journal->getDetailsScrollOffset() == endOffset, "Down must stop at the history's end");
+    journal->keyboardEvent(h.gui, SDL_KEYDOWN, SDLK_UP);
+    expect_true(journal->getDetailsScrollOffset() > 0 && journal->getDetailsScrollOffset() < endOffset,
+                "Up must scroll the visible history pane toward earlier entries");
+    journal->keyboardEvent(h.gui, SDL_KEYDOWN, SDLK_HOME);
+    expect_true(journal->getDetailsScrollOffset() == 0, "Home must restore the first history viewport");
+    journal->keyboardEvent(h.gui, SDL_KEYDOWN, SDLK_UP);
+    expect_true(journal->getDetailsScrollOffset() == 0, "Up must stop at the history's beginning");
+    journal->keyboardEvent(h.gui, SDL_KEYDOWN, SDLK_DOWN);
+    const int lineOffset = journal->getDetailsScrollOffset();
+    expect_true(lineOffset > 0 && lineOffset < pageOffset, "Down must move the visible history by a small step");
+    journal->keyboardEvent(h.gui, SDL_KEYUP, SDLK_END);
+    expect_true(journal->getDetailsScrollOffset() == lineOffset, "key releases must not scroll the history again");
+    expect_true(journal->getScrollOffset() == 0 && h.map->getTurn() == turn,
+                "detail navigation must leave the legacy viewport and game turn unchanged");
 }
 
 void testJournalTabsPreserveTheirOwnSelectionSearchAndScroll() {
@@ -965,10 +1100,13 @@ int main() {
     testCharacterIdentityAndSignedItemDetails();
     testJournalTabsTrackingAndRewardAcknowledgement();
     testDefeatReceiptRecordsActualLossesAfterRecovery();
+    testLongRewardReceiptRendersItsFinalItemWithoutGrantingIt();
+    testRewardReceiptKeepsMeasuredHeaderAndContinueVisible();
     testCreatureStatusNamesAndDurationsAreInspectable();
     testManagementButtonsExposeAuthoritativeAvailability();
     testCompactCombatantCardsReserveReadableResourceBars();
     testLegacyJournalReflowsWhenOnlyTextScaleChanges();
+    testJournalHistoryNavigationUsesTheVisibleDetailPane();
     testJournalTabsPreserveTheirOwnSelectionSearchAndScroll();
     testCharacterModifierInspectionUsesTheActualCompositionSources();
     testWideInventoryPagingStaysAboveTheActionFooter();

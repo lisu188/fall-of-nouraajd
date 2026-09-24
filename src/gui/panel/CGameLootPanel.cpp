@@ -64,14 +64,52 @@ std::string CGameLootPanel::getRewardsText() const {
     return text;
 }
 
+void CGameLootPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    CGamePanel::renderObject(gui, rect, frameTime);
+    if (!gui || !rect) {
+        return;
+    }
+    const int padding = UiTheme::scaled(gui, 24);
+    const int gap = UiTheme::scaled(gui, 8);
+    const int width = std::max(1, rect->w - padding * 2);
+    int footerTop = rect->h - padding;
+    for (const auto &child : getChildren()) {
+        auto button = vstd::cast<CButton>(child);
+        if (!button || button->getStringProperty("click") != "collectRewards" || !button->getLayout()) {
+            continue;
+        }
+        auto textManager = gui->getTextManager();
+        const int buttonWidth = std::min(
+            width, std::max(width / 3, textManager->measureText(button->getText(), 0, button->getTextRole()).first +
+                                           UiTheme::scaled(gui, 32)));
+        const int buttonHeight =
+            std::max(UiTheme::scaled(gui, 40),
+                     textManager
+                             ->measureText(button->getText(), std::max(1, buttonWidth - UiTheme::scaled(gui, 16)),
+                                           button->getTextRole())
+                             .second +
+                         UiTheme::scaled(gui, 16));
+        footerTop -= buttonHeight;
+        button->getLayout()->setRuntimeRect(rect->w - padding - buttonWidth, footerTop, buttonWidth, buttonHeight);
+    }
+    const int contentTop = getShellHeaderHeight(gui) + gap;
+    for (const auto &child : getChildren()) {
+        if (child->getStringProperty("render") == "renderRewards" && child->getLayout()) {
+            child->getLayout()->setRuntimeRect(padding, contentTop, width, std::max(1, footerTop - gap - contentTop));
+        }
+    }
+}
+
 void CGameLootPanel::renderRewards(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     if (gui && rect) {
         const auto text = getRewardsText();
-        detailsViewport = *rect;
-        detailsMaximum =
-            std::max(0, gui->getTextManager()->getWrappedTextureSize(text, std::max(1, rect->w)).second - rect->h);
+        detailLayout.update(gui, text, rect->w);
+        const auto content = DetailViewport::contentRect(gui, rect, detailLayout.getContentHeight());
+        detailsViewport = *content;
+        detailsMaximum = std::max(0, detailLayout.getContentHeight() - content->h);
         detailsOffset = std::clamp(detailsOffset, 0, detailsMaximum);
-        gui->getTextManager()->drawTextScrolled(text, rect, -detailsOffset);
+        detailLayout.draw(gui, content, detailsOffset);
+        DetailViewport::drawScrollHint(gui, rect, content, detailsOffset, detailsMaximum);
     }
 }
 

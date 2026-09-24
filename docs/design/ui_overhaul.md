@@ -84,6 +84,12 @@ they complement the natural Nouraajd GUI quest walkthrough rather than establish
 Existing crafting, save, inventory, trade and Nouraajd walkthrough tests retain their gameplay assertions while
 using the new explicit interface actions.
 
+The final offscreen GUI sweep covers 47 cases: 44 passed across the initial run and focused regression reruns;
+three window-focus resize checks require isolated Linux/Xvfb and are not claimed as Windows passes. The sweep
+found and fixed Home/End scrolling in the journal's visible History pane and truncation of reward receipts beyond
+4096 bytes. Native and rendered regressions cover both. Named-save tests enter a name through SDL text input,
+explicitly confirm replacement, reload the result, and verify the recovery copy without touching existing saves.
+
 ## Rendering and cache evidence
 
 The opt-in [profile harness and complete samples](../../scripts/ui_text_profile/README.md) retain the exact workload
@@ -128,6 +134,11 @@ redraws. The detail guard checks that copies correspond only to visible paragrap
 remeasured. These counts were obtained with the CTest performance command above using SDL dummy/software rendering;
 the [retained chooser profile](../../scripts/ui_text_profile/README.md#choice-list-cache-profile) records the earlier
 723-texture-per-redraw development result and its fixture limitations.
+
+The 700-row reward receipt guard adds seven visible texture loads and zero additional loads across 25 warm frames
+(150 successful copies, budget 400). Its final-row regression failed with the earlier truncated renderer and passes
+with the shared paragraph layout. Exact before/after commands and counts are retained in the
+[receipt profile](../../scripts/ui_text_profile/README.md#long-reward-receipt-rendering).
 
 Required Linux, Windows, full-suite and coverage evidence comes from the PR's path-selected `build` workflow. A
 successful focused local run or screenshot set alone is not a claim that those release checks have completed.
