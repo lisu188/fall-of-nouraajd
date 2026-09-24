@@ -18,6 +18,8 @@
 import copy
 import importlib.util
 import json
+import re
+import shlex
 import sys
 import struct
 import types
@@ -503,6 +505,39 @@ class CastleCampaignAuthoringTest(unittest.TestCase):
                 for name, (obj, z) in after.items():
                     if name in ("castleCatherine", "castleChristian") or "Support" in name:
                         self.assertNotIn((obj["x"], obj["y"], z), landmark_cells)
+
+
+class CastleCampaignPackagingTest(unittest.TestCase):
+    def test_castle_resources_are_staged_and_installed(self):
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        staged = {}
+        for arguments in re.findall(r"(?m)^\s*configure_file\s*\(([^)]*)\)", cmake):
+            source, destination, *options = shlex.split(arguments)
+            staged[source] = (destination, options)
+
+        sources = {
+            "res/plugins/castle_campaign.py",
+            "res/campaigns/longLiveTheQueen/campaign.json",
+        }
+        for map_name in MAP_NAMES:
+            sources.add(f"res/campaigns/longLiveTheQueen/sources/{map_name}.json")
+            sources.update(
+                f"res/maps/{map_name}/{name}" for name in ("config.json", "dialog.json", "map.json", "script.py")
+            )
+        images = {path.relative_to(REPO_ROOT).as_posix() for path in (REPO_ROOT / "res/images/castle").glob("*.png")}
+        self.assertTrue(images, "the campaign requires its authored Castle artwork")
+        sources.update(images)
+        self.assertEqual([], sorted(sources - staged.keys()), "Castle resources missing from build staging")
+        for source in sorted(sources):
+            with self.subTest(resource=source):
+                self.assertTrue((REPO_ROOT / source).is_file(), "a staged campaign resource must exist")
+                destination, options = staged[source]
+                self.assertEqual(source.removeprefix("res/"), destination)
+                if source in images:
+                    self.assertIn("COPYONLY", options, "binary artwork must be copied without text substitution")
+
+        for directory in ("campaigns", "maps", "plugins", "images"):
+            self.assertRegex(cmake, rf"install\s*\(DIRECTORY\s+res/{directory}\s+DESTINATION\s+fall-of-nouraajd\s*\)")
 
 
 class CastleCampaignContentTest(unittest.TestCase):

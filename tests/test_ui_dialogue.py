@@ -169,7 +169,7 @@ class DialogueContentTest(unittest.TestCase):
         self.assertIn("50 gold", hand_in.get("actionLabel", ""))
 
     def testEveryAuthoredDialogueHasASpeakerAndValidRoutes(self):
-        count = 0
+        counts = {}
         base = {}
         for path in (ROOT / "res/config").glob("*.json"):
             value = json.loads(path.read_text(encoding="utf-8"))
@@ -210,7 +210,7 @@ class DialogueContentTest(unittest.TestCase):
                     states = properties.get("states")
                     if not isinstance(states, list):
                         continue
-                    count += 1
+                    counts[map_dir.name] = counts.get(map_dir.name, 0) + 1
                     self.assertTrue(properties.get("speaker"), (map_dir.name, dialog_id))
                     state_ids = {state["properties"]["stateId"] for state in states} | {"EXIT", ""}
                     self.assertIn("ENTRY", state_ids)
@@ -232,7 +232,24 @@ class DialogueContentTest(unittest.TestCase):
                             if option.get("text") == "Leave":
                                 self.assertFalse(option.get("action"), (map_dir.name, dialog_id))
                         self.assertEqual(len(numbers), len(set(numbers)))
-        self.assertEqual(25, count)
+        self.assertEqual(
+            {
+                "castleGriffinCliff": 2,
+                "castleGuardianAngels": 2,
+                "castleHomecoming": 2,
+                "gravemoor": 1,
+                "hearthfall": 1,
+                "kadath": 2,
+                "ninemarches": 5,
+                "nouraajd": 9,
+                "ritual": 3,
+                "sunderedmarch": 1,
+                "usurpergate": 1,
+                "vhulmarn": 2,
+            },
+            counts,
+            "Every authored map's conversations must be included in the structural audit.",
+        )
 
     def companionEnvironment(self):
         player = FakePlayer()
