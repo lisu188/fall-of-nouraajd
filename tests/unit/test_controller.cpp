@@ -245,26 +245,30 @@ void test_npc_random_controller_clears_stale_blocked_path() {
                 "NPC random controller should either stay put or replan to a passable step");
 }
 
-void test_ground_controller_ignores_stale_transition_generation() {
+void testGroundControllerReturnsReadyStepBeforeTransition() {
     auto game = std::make_shared<CGame>();
-    auto map = open_tile_map(game, 2, 1);
-    map->getTile(0, 0, 0)->setTileType("stone");
-    map->getTile(1, 0, 0)->setTileType("floor");
+    auto map = open_tile_map(game, 3, 3);
+    map->getTile(1, 1, 0)->setTileType("stone");
+    map->getTile(2, 1, 0)->setTileType("floor");
+    map->getTile(0, 1, 0)->setTileType("floor");
+    map->getTile(0, 1, 0)->setCanStep(false);
 
-    auto creature = creature_at(0, 0, 0);
+    auto creature = creature_at(1, 1, 0);
     creature->setGame(game);
-    creature->setName("unitStaleGroundWalker");
+    creature->setName("unitReadyGroundWalker");
     creature->setHp(1);
     auto controller = std::make_shared<CGroundController>();
     controller->setTileType("floor");
     creature->setController(controller);
     map->addObject(creature);
 
-    auto pending = controller->control(creature);
+    auto result = controller->control(creature);
+    expect_true(result->isReady(), "ground controller should resolve its step without deferred work");
     game->getContext()->advanceTransitionGeneration();
 
-    expect_true(resolve_coords(pending) == Coords(0, 0, 0),
-                "ground controller should ignore deferred steps from stale transition generations");
+    expect_true(resolve_coords(result) == Coords(2, 1, 0),
+                "ground controller should retain its already-resolved passable matching step after a later transition");
+    expect_true(creature->getCoords() == Coords(1, 1, 0), "controller planning should not commit a movement step");
 }
 
 void test_player_controller_prefers_longer_lower_cost_route() {
@@ -1179,7 +1183,7 @@ int main() {
     test_movement_controller_null_and_no_map_paths();
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();
-    test_ground_controller_ignores_stale_transition_generation();
+    testGroundControllerReturnsReadyStepBeforeTransition();
     test_player_controller_prefers_longer_lower_cost_route();
     test_player_controller_stops_and_clears_path_when_obstacle_appears();
     test_npc_random_controller_prefers_longer_lower_cost_route();
