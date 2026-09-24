@@ -28,15 +28,24 @@ The older walkthrough recording predates the interface overhaul and is no longer
 - Drive the engine through the HTTP or stdio MCP server for automated inspection and walkthroughs.
 
 ## controls
+
+Default controls. World-action bindings can be changed in Settings.
+
 ```text
-arrows - move
-space - skip turn / close window
-i - inventory
-j - quest log
-c - character sheet
-s - save
-tab - open/close python console when GAME_ENABLE_PYTHON_CONSOLE=1
+Arrows - move in the world; navigate lists in panels
+Space - wait when the world has focus; activate a focused control in panels
+Enter - activate a focused control or confirm a previewed route
+Tab - move interface focus
+Escape - close the top cancellable panel or open Pause, including during combat
+I / J / C - inventory / journal / character sheet
+M - expanded map
+L - combat log while fighting
+S - named save menu
+F12 - Python console when GAME_ENABLE_PYTHON_CONSOLE=1
 ```
+
+Left-click selects or previews; right-click inspects. Use the explicit Use, Equip, Buy, Craft, or Cast action to
+commit a choice. Reading, inspecting and scrolling do not advance turns.
 
 ## running
 ### ubuntu
@@ -67,8 +76,8 @@ set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_ROOT%\
 python play.py
 </pre>
 
-`python3 play.py` opens the start menu. `NEW` selects a map and player class, `LOAD` uses saved games, and `RANDOM`
-starts a generated map.
+`python3 play.py` opens the main menu with Continue, New adventure, Load game, Settings, Help and Quit.
+New adventure offers a campaign, standalone scenario or random map, followed by character creation.
 
 ### walkthrough video
 Regenerate the campaign walkthrough video (requires the `_game` build and the dev requirements). The script drives a
