@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "CGameLootPanel.h"
-#include "CButton.h"
+#include "gui/object/CWidget.h"
 #include <algorithm>
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
