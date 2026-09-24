@@ -85,7 +85,7 @@ they complement the natural Nouraajd GUI quest walkthrough rather than establish
 Existing crafting, save, inventory, trade and Nouraajd walkthrough tests retain their gameplay assertions while
 using the new explicit interface actions.
 
-The final offscreen GUI sweep covers 47 cases: 44 passed across the initial run and focused regression reruns;
+The initial Windows offscreen GUI sweep covered 47 cases: 44 passed across the initial run and focused regression reruns;
 three window-focus resize checks require isolated Linux/Xvfb and are not claimed as Windows passes. The sweep
 found and fixed Home/End scrolling in the journal's visible History pane and truncation of reward receipts beyond
 4096 bytes. Native and rendered regressions cover both. Named-save tests enter a name through SDL text input,
@@ -98,6 +98,14 @@ three receipt, inventory and journal GUI checks and regenerated 111 verified scr
 all 15 authored maps, a random map and the frontend/overflow variants. The Castle Homecoming MCP route moved the
 real player through 167 steps, two authored combats and two portal traversals before confirming chapter completion.
 These focused results complement the full native, Linux/Xvfb, Windows and coverage checks required from CI.
+
+Combat history, dialogue history and defeat receipts have explicit string properties, preserving their existing JSON
+text through serialization. The native save regression checks each field separately, all three together and absent
+fields in both versioned and legacy saves. All ten cases pass; the eight nonempty-history cases rejected loading
+before the property declarations were added. The Castle partial-progress reload also passes after the change.
+Victor's quest journal keeps its player-carried outcome through travel and reload; real MCP routes cover active,
+rescued and timed-out outcomes, including the guarded 500-gold rescue reward. Those reload checks use native
+serialized snapshots and are separate evidence from the named-save UI tests.
 
 ## Rendering and cache evidence
 
