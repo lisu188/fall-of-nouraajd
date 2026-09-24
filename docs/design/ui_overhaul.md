@@ -51,8 +51,9 @@ changing scenes also closes its reader. The search field retains ordinary `L` te
 Conversation choices retain authored order and conditional visibility. Consequential action labels precede authored
 response prose. Transcript/history views are read-only. Dialogue callbacks validate the owning scene, including
 queued scene changes, and cannot continue acting through a detached panel.
-The 25 authored conversations now contain 115 states and 210 options; added states/options make commitments and
-in-progress reminders explicit. Related quest context is shown only for the player's active matching quests.
+The 31 authored conversations contain 121 states and 222 options, including the six Castle campaign conversations.
+Added states/options make commitments and in-progress reminders explicit. Related quest context is shown only for
+the player's active matching quests.
 Map scripts route substantial lore to titled readers, observed reward gains to consolidated receipts, and routine
 discoveries/progress to History. Blocked world actions can anchor their resolved requirement beside the actual object.
 
@@ -89,6 +90,14 @@ three window-focus resize checks require isolated Linux/Xvfb and are not claimed
 found and fixed Home/End scrolling in the journal's visible History pane and truncation of reward receipts beyond
 4096 bytes. Native and rendered regressions cover both. Named-save tests enter a name through SDL text input,
 explicitly confirm replacement, reload the result, and verify the recovery copy without touching existing saves.
+
+After integration with main on September 24, 2026, the engine was rebuilt with the approved `vstd` revision
+`15c7f0b32d19ada5f22de1ea2b8d61a3232dfee3`, which supplies the event-loop APIs used by main. `CListView` now names
+the dependency's explicit pair hash, matching the other coordinate caches. The fresh Windows offscreen run passed
+three receipt, inventory and journal GUI checks and regenerated 111 verified screenshots: every registered panel,
+all 15 authored maps, a random map and the frontend/overflow variants. The Castle Homecoming MCP route moved the
+real player through 167 steps, two authored combats and two portal traversals before confirming chapter completion.
+These focused results complement the full native, Linux/Xvfb, Windows and coverage checks required from CI.
 
 ## Rendering and cache evidence
 
