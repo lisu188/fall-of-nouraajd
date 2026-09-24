@@ -18940,6 +18940,77 @@ class GameTest(unittest.TestCase):
             {"town": town_name, "cost": 10, "repeat_charged": False, "movement_steps": driver.log["steps"]}
         )
 
+    def testUiHistoryStringsSurviveVersionedAndLegacySaveLoad(self):
+        game = load_game_module()
+        values = {
+            "combatHistory": json.dumps(["Combat round 1 begins.", "Victory: the defender is defeated."]),
+            "uiDialogueHistory": json.dumps(
+                [{"speaker": "Keeper", "text": "Remember this warning.", "kind": "speech", "dialog": "keeper"}]
+            ),
+            "uiDefeatReceipt": json.dumps(
+                {"map": "test", "hp": 1, "x": 0, "y": 0, "z": 0, "lostItems": ["Dagger"], "lostItemCount": 1}
+            ),
+        }
+        checked = []
+        for encoding in ("versioned", "legacy"):
+            for selected_fields in (
+                (),
+                ("combatHistory",),
+                ("uiDialogueHistory",),
+                ("uiDefeatReceipt",),
+                tuple(values),
+            ):
+                with self.subTest(encoding=encoding, fields=selected_fields):
+                    game_instance, game_map, player = load_game_map_with_player("test")
+                    for field in selected_fields:
+                        owner = game_map if field == "combatHistory" else player
+                        owner.setStringProperty(field, values[field])
+                    expected_gold = player.getGold()
+                    expected_turn = game_map.getTurn()
+                    save_name = unique_save_name("ui-history-strings")
+                    primary_path = None
+                    try:
+                        self.assertTrue(game.CMapLoader.saveWithResult(game_map, save_name))
+                        primary_path = Path(game_instance.getResourcesProvider().getPath(f"save/{save_name}.json"))
+                        self.assertTrue(primary_path.is_file())
+                        if encoding == "legacy":
+                            snapshot = json.loads(game.jsonify(game_map))
+                            if not selected_fields:
+                                snapshot["properties"].pop("combatHistory", None)
+                                players = [
+                                    actor["properties"]
+                                    for actor in snapshot["properties"]["objects"]
+                                    if actor.get("properties", {}).get("name") == player.getName()
+                                ]
+                                self.assertEqual(1, len(players))
+                                players[0].pop("uiDialogueHistory", None)
+                                players[0].pop("uiDefeatReceipt", None)
+                                self.assertNotIn("combatHistory", snapshot["properties"])
+                                self.assertNotIn("uiDialogueHistory", players[0])
+                                self.assertNotIn("uiDefeatReceipt", players[0])
+                            primary_path.write_text(json.dumps(snapshot), encoding="utf-8")
+                        loaded_game = game.CGameLoader.loadGame()
+                        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                        loaded_map = loaded_game.getMap()
+                        self.assertIsNotNone(loaded_map, "UI history text must not make a save unloadable")
+                        loaded_player = loaded_map.getPlayer()
+                        self.assertIsNotNone(loaded_player)
+                        self.assertEqual("test", loaded_map.mapName)
+                        self.assertEqual(expected_turn, loaded_map.getTurn())
+                        self.assertEqual(expected_gold, loaded_player.getGold())
+                        for field in values:
+                            owner = loaded_map if field == "combatHistory" else loaded_player
+                            self.assertEqual(
+                                values[field] if field in selected_fields else "", owner.getStringProperty(field)
+                            )
+                        checked.append({"encoding": encoding, "fields": selected_fields})
+                    finally:
+                        if primary_path is not None:
+                            primary_path.unlink(missing_ok=True)
+                            primary_path.with_name(primary_path.name + ".bak").unlink(missing_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        (TEST_OUTPUT_DIR / "uiHistoryStringsSaveLoad.json").write_text(json.dumps(checked), encoding="utf-8")
+
     @game_test
     def test_castle_partial_capture_survives_save_load(self):
         from tests.castle_walkthrough import nativeDriver
