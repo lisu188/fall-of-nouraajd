@@ -908,9 +908,24 @@ def capture_frontend(game, output_dir, player_class):
 
     sim = FrontendSession.startGame(game, PANELS_MAP, player_class, load_gui=True)
     try:
+
+        def focusRegions(count):
+            def prepare(panel, gui):
+                for _ in range(count):
+                    keyCapture(sim, 9)
+
+            return prepare
+
         capture_flow(
             sim, "main-selected", lambda current: ui.mainMenu(current, in_session=True), prepare=key(1073741905)
         )
+        for region, count in (("details", 1), ("confirm", 2), ("back", 3)):
+            capture_flow(
+                sim,
+                "main-focus-" + region,
+                lambda current: ui.mainMenu(current, in_session=True),
+                prepare=focusRegions(count),
+            )
         capture_flow(sim, "new-adventure", ui.newAdventure)
         capture_flow(sim, "scenario-preview", ui.newAdventure, preceding_choices={"New adventure": "scenario"})
         capture_flow(sim, "character-preview", ui.chooseCharacter, "showCharacterCreationOptions", key(9, 1073741905))
@@ -932,6 +947,13 @@ def capture_frontend(game, output_dir, player_class):
             sim,
             "controls-disabled",
             lambda current: ui.configureBinding(current, ui.preferences(current)),
+            preceding_choices={"Controls": "save"},
+        )
+        capture_flow(
+            sim,
+            "controls-disabled-focused",
+            lambda current: ui.configureBinding(current, ui.preferences(current)),
+            prepare=focusRegions(2),
             preceding_choices={"Controls": "save"},
         )
         capture_flow(
@@ -990,6 +1012,13 @@ def capture_frontend(game, output_dir, player_class):
             capture_flow(sim, "settings-" + suffix, ui.showSettings)
             capture_flow(sim, "character-" + suffix, ui.chooseCharacter, "showCharacterCreationOptions", key(9, 9))
             if width == 1280 and ui_scale == text_scale == 200:
+                for region, count in (("confirm", 2), ("back", 3)):
+                    capture_flow(
+                        sim,
+                        "menu-focus-" + region + "-" + suffix,
+                        ui.newAdventure,
+                        prepare=focusRegions(count),
+                    )
                 capture_flow(sim, "campaign-artwork-" + suffix, ui.chooseCampaign, prepare=key(9))
                 capture_flow(sim, "chapter-artwork-" + suffix, chapterArtwork, "showCampaignArtworkScreen")
                 capture_flow(
@@ -1353,14 +1382,28 @@ def captureAcceptanceStates(game, output_dir, player_class):
         # A terminal authored chapter produces both the outcome and completion screen.
         manifest = next(row for row in campaign.list_campaigns() if row["campaignId"] == "longLiveTheQueen")
         terminal_id = next(key for key, chapter in manifest["scenarios"].items() if not chapter.get("next"))
+        terminal_map = manifest["scenarios"][terminal_id]["map"]
+        terminal_path = sim.gameInstance.getResourcesProvider().getPath(f"maps/{terminal_map}/map.json")
+        terminal_document = json.loads(Path(terminal_path).read_text(encoding="utf-8"))
+        terminal_mission = next(
+            json.loads(obj["properties"]["campaign_mission"].removeprefix("castleMission:"))
+            for layer in terminal_document["layers"]
+            for obj in layer.get("objects", [])
+            if obj.get("properties", {}).get("campaign_mission")
+        )
+        gold_before = player.getGold()
+        player.addGold(terminal_mission.get("victoryGold", 0))
+        gold_received = player.getGold() - gold_before
+        outcome_summary = f"Rewards received\nGold: +{gold_received}" if gold_received > 0 else ""
+        before = state()
         store = campaign.state(sim.gameInstance)
         store.begin(manifest["campaignId"], terminal_id)
         flowCaptures(
-            lambda: campaign.complete_scenario(sim.gameInstance, "completed"),
+            lambda: campaign.complete_scenario(sim.gameInstance, "completed", outcome_summary=outcome_summary),
             ["frontend-chapter-outcome", "frontend-campaign-complete"],
             helper="showCampaignScreen",
         )
-        if not store.finished() or store.history() != [(terminal_id, "completed")]:
+        if state() != before or not store.finished() or store.history() != [(terminal_id, "completed")]:
             raise RuntimeError("Campaign outcome acknowledgement did not preserve its committed result.")
     finally:
         gui.applyUiPreferences("{}")

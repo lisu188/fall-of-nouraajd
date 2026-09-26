@@ -18,6 +18,11 @@ Opening, closing and scene transitions consume the triggering input. Inspection 
 Held keys remain suppressed across panel changes until release, so acknowledging a reader cannot also wait a world
 turn or acknowledge the following reader. A fresh world press retains the existing movement/wait repeat behavior.
 
+Frontend choosers include their details and footer actions in Tab/Shift+Tab navigation. The active region has a
+visible border; Enter/Space activates its control, while Space remains ordinary text in a save-name field.
+Arrow-selected dialogue replies accept Enter, keypad Enter and Space only after an explicit selection. Transcript
+and objective readers keep all reply activation keys inert.
+
 I/J/C retain Inventory, Journal and Character navigation. M opens the expanded map; F12 opens the existing gated
 developer console. World clicks preview a destination; Travel or Enter commits it. Manual movement or waiting
 invalidates the previous preview. Settings remap gameplay bindings while reserving interface navigation keys.
@@ -56,6 +61,10 @@ Added states/options make commitments and in-progress reminders explicit. Relate
 the player's active matching quests.
 Map scripts route substantial lore to titled readers, observed reward gains to consolidated receipts, and routine
 discoveries/progress to History. Blocked world actions can anchor their resolved requirement beside the actual object.
+The Castle campaign uses the same presentation helpers: rest and progress go to History, garrison and landing
+requirements stay beside their object, and mission supplies/captures show observed reward gains. Victory gold is
+reported in the existing chapter outcome acknowledgment using the actual balance change; no presentation helper
+grants rewards or adds another victory dialog.
 
 ## Verification and accessibility
 
@@ -109,6 +118,13 @@ roll is deterministic. Defeat text comes from a real encounter's one-HP recovery
 browsers and artifact previews preserves turn, resources and inventory; acknowledgements do not repeat committed
 losses or campaign outcomes. The added screenshots passed PNG decoding/dimension checks at 1920x1080 through SDL
 dummy/software rendering. The historical 111-image baseline and five Castle landmark captures remain separate.
+
+The final keyboard pass regenerated the complete 135-image set, including six new focus/disabled captures and
+the chapter outcome's observed 400-gold reward. Independent visual review covers normal and 720p/200% focus,
+footer actions and hints. Chooser regressions reproduced eight failing assertions, and dialogue activation
+regressions reproduced four; both focused native suites pass after correction. The rebuilt Castle MCP campaign
+route and paid-rest check also pass (two tests, 19.17 seconds). These runtime checks retain the authored objective,
+reward and transition assertions rather than only changing flags.
 
 The same follow-up fixes shutdown of pending Python callbacks before interpreter finalization. Five fresh-process
 regressions pass; three reproduced shutdown failures before the fix, and the completed-work check releases all 200
