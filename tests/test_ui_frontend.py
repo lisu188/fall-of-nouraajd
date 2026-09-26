@@ -255,7 +255,7 @@ class FrontendChoiceTest(unittest.TestCase):
         detail = game.handler.screens[0][1][0]["detail"]
         self.assertIn("Health after recovery: 12", detail)
         self.assertIn("Iron sword x1", detail)
-        self.assertIn("You recovered in Nouraajd.", detail)
+        self.assertIn("You returned to the map entrance in Nouraajd.", detail)
         game_map.getStringProperty.assert_not_called()
         player.setStringProperty.assert_called_once_with("uiDefeatReceipt", "")
         player.removeItem.assert_not_called()
@@ -267,13 +267,24 @@ class FrontendChoiceTest(unittest.TestCase):
         game = FakeGame([""], game_map)
         ui.showDefeat(game)
         detail = game.handler.screens[0][1][0]["detail"]
-        self.assertIn("You recovered in Ritual.", detail)
+        self.assertIn("You returned to the map entrance in Ritual.", detail)
         self.assertIn("Health after recovery: 1", detail)
         self.assertIn("No inventory items were lost.", detail)
         game_map.getStringProperty.assert_called_once_with("mapName")
         player.setStringProperty.assert_called_once_with("uiDefeatReceipt", "")
         player.removeItem.assert_not_called()
         player.setHp.assert_not_called()
+
+    def testLegacyDefeatReceiptDoesNotExposeTheEngineMapType(self):
+        player = Mock()
+        player.getStringProperty.return_value = json.dumps({"map": "CMap", "hp": 1, "lostItems": []})
+        game_map = types.SimpleNamespace(getPlayer=lambda: player, getStringProperty=Mock(return_value="nouraajd"))
+        game = FakeGame(["continue"], game_map)
+        ui.showDefeat(game)
+        detail = game.handler.screens[0][1][0]["detail"]
+        self.assertIn("Nouraajd", detail)
+        self.assertNotIn("CMap", detail)
+        game_map.getStringProperty.assert_called_once_with("mapName")
 
     def testCancelledNewAdventureNeverStartsAMap(self):
         game = FakeGame([""])

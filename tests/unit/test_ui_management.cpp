@@ -489,8 +489,10 @@ void testJournalTabsTrackingAndRewardAcknowledgement() {
                 "the reward panel must leave granting to the original caller after dismissal");
 }
 
-void testDefeatReceiptRecordsActualLossesAfterRecovery() {
+void testDefeatReceiptRecordsActualLossesAfterRecovery(const std::string &mapLabel) {
     ManagementHarness h;
+    h.map->setMapName("nouraajd");
+    h.map->setLabel(mapLabel);
     auto lost = h.potion("lostPotion");
     auto questItem = h.potion("retainedQuestPotion");
     questItem->addTag(CTag::Quest);
@@ -510,6 +512,8 @@ void testDefeatReceiptRecordsActualLossesAfterRecovery() {
     expect_true(winner->hasInInventory(lost) && h.player->hasInInventory(questItem),
                 "defeat receipt must preserve winner loot and quest-item retention");
     const auto receipt = json::parse(h.player->getStringProperty("uiDefeatReceipt"));
+    expect_true(receipt["map"].get<std::string>() == (mapLabel.empty() ? "nouraajd" : mapLabel),
+                "the receipt names the actual recovery map while preserving an authored display label");
     expect_true(receipt["lostItemCount"].get<int>() == 1 && receipt["hp"].get<int>() == 1,
                 "the receipt must record exact losses and the resolved recovery HP");
     expect_true(receipt["lostItems"].size() == 1 &&
@@ -1099,7 +1103,8 @@ int main() {
     testTradeInspectionAndExactQuantities();
     testCharacterIdentityAndSignedItemDetails();
     testJournalTabsTrackingAndRewardAcknowledgement();
-    testDefeatReceiptRecordsActualLossesAfterRecovery();
+    testDefeatReceiptRecordsActualLossesAfterRecovery("");
+    testDefeatReceiptRecordsActualLossesAfterRecovery("The village of Nouraajd");
     testLongRewardReceiptRendersItsFinalItemWithoutGrantingIt();
     testRewardReceiptKeepsMeasuredHeaderAndContinueVisible();
     testCreatureStatusNamesAndDurationsAreInspectable();
