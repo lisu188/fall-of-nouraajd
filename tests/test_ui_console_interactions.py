@@ -66,8 +66,11 @@ def typeText(value):
     ready = harness.pump_event_loop_until(
         lambda: console.consoleState == expected and not sdl.SDL_HasEvent(0x303), timeout=2.0
     )
-    check.assertTrue(ready, f'console={console.consoleState!r}; expected={expected!r}; '
-                     f'modal={console.getBoolProperty("modal")}; textActive={sdl.SDL_IsTextInputActive()}')
+    check.assertTrue(
+        ready,
+        f'console={console.consoleState!r}; expected={expected!r}; '
+        f'modal={console.getBoolProperty("modal")}; textActive={sdl.SDL_IsTextInputActive()}',
+    )
 
 def snapshot():
     coords = player.getCoords()

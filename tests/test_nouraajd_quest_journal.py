@@ -215,6 +215,81 @@ class NouraajdQuestJournalTest(unittest.TestCase):
     def testLoadedTimedOutSaveMigratesBeforeUnreadDeparture(self):
         self.checkCompletedSaveMigration("bad_end", "was taken", "No reward")
 
+    def testFreshNouraajdLoadPreservesExistingPlayerOutcome(self):
+        for outcome in ("encounter_active", "good_end", "bad_end"):
+            with self.subTest(outcome=outcome):
+                game, nouraajd, _ritual, player = self.createSession()
+                player.setStringProperty("nouraajdVictorState", outcome)
+                before_player = dict(player.properties)
+                # Return travel constructs the new map before attaching the carried player.
+                nouraajd.player = None
+                pending = []
+                loadQuestClasses(context=game, pending=pending)
+                self.assertEqual("not_started", nouraajd.getStringProperty("quest_state_victor"))
+                before_map = dict(nouraajd.properties)
+                nouraajd.player = player
+                self.assertEqual(1, len(pending))
+                pending.pop()()
+
+                self.assertEqual(before_player, player.properties)
+                self.assertEqual(before_map, nouraajd.properties)
+
+    def testFreshNouraajdJournalKeepsCompletedOutcome(self):
+        for outcome, objective, reward, hint in (
+            ("good_end", "survived", "500 gold", "fled the courtyard alive"),
+            ("bad_end", "was taken", "No reward", "courtyard is empty"),
+        ):
+            with self.subTest(outcome=outcome):
+                game, nouraajd, _ritual, player = self.createSession()
+                player.setStringProperty("nouraajdVictorState", outcome)
+                nouraajd.setStringProperty("quest_state_victor", "not_started")
+                before_player = dict(player.properties)
+                before_map = dict(nouraajd.properties)
+                quest = self.quest_classes["VictorQuest"](game)
+
+                self.assertIn(objective, quest.getObjective())
+                self.assertIn(reward, quest.getReward())
+                self.assertIn(hint, quest.getHint())
+                self.assertTrue(quest.isCompleted())
+                self.assertEqual(before_player, player.properties)
+                self.assertEqual(before_map, nouraajd.properties)
+
+    def testUnrelatedQuestProgressPreservesCompletedVictorSnapshot(self):
+        for outcome in ("good_end", "bad_end"):
+            with self.subTest(outcome=outcome):
+                game, nouraajd, _ritual, player = self.createSession()
+                nouraajd.player = None
+                quest_system = self.quest_classes["QuestSystem"](nouraajd)
+                quest_system.initialize_defaults()
+                nouraajd.player = player
+                player.setStringProperty("nouraajdVictorState", outcome)
+                player.setNumericProperty("gold", 937)
+                player.setNumericProperty("hp", 41)
+                before_player = dict(player.properties)
+
+                quest_system.start_amulet()
+
+                self.assertEqual("active", quest_system.get_state("amulet"))
+                self.assertEqual("not_started", quest_system.get_state("victor"))
+                for flag in quest_system.LEGACY_BOOL_FLAGS:
+                    self.assertEqual(
+                        flag.evaluate(quest_system.get_state(flag.quest)), nouraajd.getBoolProperty(flag.name)
+                    )
+                self.assertEqual(before_player, player.properties)
+                self.assertTrue(self.quest_classes["VictorQuest"](game).isCompleted())
+
+    def testLegacySyncRetainsMeaningfulVictorSourceStatePrecedence(self):
+        for outcome in ("encounter_active", "good_end", "bad_end"):
+            with self.subTest(outcome=outcome):
+                _game, nouraajd, _ritual, player = self.createSession()
+                player.setStringProperty("nouraajdVictorState", "bad_end" if outcome == "good_end" else "good_end")
+                nouraajd.setStringProperty("quest_state_victor", outcome)
+
+                self.quest_classes["QuestSystem"](nouraajd).sync_legacy_flags()
+
+                self.assertEqual(outcome, player.getStringProperty("nouraajdVictorState"))
+                self.assertEqual(outcome, nouraajd.getStringProperty("quest_state_victor"))
+
     def testDependencyRegistrationDoesNotReadDetachedNouraajdState(self):
         game, nouraajd, ritual, player = self.createSession()
         player.setStringProperty("nouraajdVictorState", "good_end")

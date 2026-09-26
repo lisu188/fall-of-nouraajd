@@ -151,10 +151,13 @@ serialized snapshots and are separate evidence from the named-save UI tests.
 
 Pre-snapshot saves also migrate before an unread departure: Nouraajd queues its journal synchronization after
 script registration, because the native loader attaches the restored map and player afterward. The callback
-checks the active map and skips dependency-only registration for other maps. Both rescued and timed-out MCP
-fixtures failed before this correction and pass after loading an old-format snapshot and immediately requesting
-travel, without reading or serializing the restored player's journal first. Reward balances and guards remain
-unchanged; the two outcome cases run in one 18.14-second focused Windows offscreen check.
+checks the active map, migrates only missing snapshots and skips dependency-only registration for other maps.
+Both rescued and timed-out MCP fixtures failed before this correction and pass after loading an old-format snapshot
+and immediately requesting travel, without reading or serializing the restored player's journal first. Returning
+to a fresh Nouraajd, rereading the completed journal and accepting an unrelated quest retain the recorded ending;
+meaningful authored Victor states still take precedence over the snapshot. Reward balances and guards remain
+unchanged. The extended two-outcome route passes in 19.42 seconds on Windows offscreen, and 239 focused source
+checks pass, including regressions that failed before the return-trip safeguards.
 
 ## Rendering and cache evidence
 

@@ -237,7 +237,10 @@ def load(self, context):
             player = self.map.getPlayer()
             if player is not None:
                 state = self.map.getStringProperty(self.QUEST_KEYS["victor"])
-                if player.getStringProperty("nouraajdVictorState") != state:
+                saved_state = player.getStringProperty("nouraajdVictorState")
+                if state == "not_started" and saved_state in ("good_end", "bad_end"):
+                    return
+                if saved_state != state:
                     player.setStringProperty("nouraajdVictorState", state)
 
         # --- Rolf / Gooby ---
@@ -536,13 +539,16 @@ def load(self, context):
         def _getState(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
+            saved_state = player.getStringProperty("nouraajdVictorState") if player is not None else "not_started"
             if game_map.mapName == "nouraajd":
                 state = _quest_system_from(self).get_state("victor")
-                if player is not None and player.getStringProperty("nouraajdVictorState") != state:
+                if state == "not_started" and saved_state in ("good_end", "bad_end"):
+                    return saved_state
+                if player is not None and saved_state != state:
                     player.setStringProperty("nouraajdVictorState", state)
                 return state
             # The journal travels with the player; its original map state does not.
-            return player.getStringProperty("nouraajdVictorState") if player is not None else "not_started"
+            return saved_state
 
         def isCompleted(self):
             return self._getState() in ("good_end", "bad_end")
@@ -1133,7 +1139,10 @@ def load(self, context):
     def syncLoadedVictorState():
         # Save loading registers scripts before restoring the map and player.
         game_map = context.getMap()
-        if game_map and game_map.mapName == "nouraajd" and game_map.getPlayer() is not None:
+        if not game_map or game_map.mapName != "nouraajd":
+            return
+        player = game_map.getPlayer()
+        if player is not None and not player.getStringProperty("nouraajdVictorState"):
             _get_quest_system(game_map).sync_legacy_flags()
 
     event_loop.instance().invoke(syncLoadedVictorState)
