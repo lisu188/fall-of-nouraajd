@@ -44,6 +44,7 @@ class CGameCampaignBrowserPanel : public CGamePanel {
         bool enabled = true;
         std::map<std::string, std::string> previews;
         std::string image;
+        bool selected = false;
     };
 
     static std::vector<ChoiceOption> parseChoices(const std::string &choicesJson);

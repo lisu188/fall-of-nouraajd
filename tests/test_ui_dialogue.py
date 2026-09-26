@@ -512,9 +512,26 @@ class CraftingChoiceTest(unittest.TestCase):
         self.assertEqual(0, self.player.countItems("PotionA"))
         self.assertEqual(7, self.player.gold)
         self.assertFalse(menus[1][1][1]["enabled"])
+        self.assertEqual([False, True], [choice.get("selected", False) for choice in menus[1][1]])
         self.assertIn("Herb: 0 / 1", menus[1][1][1]["detail"])
         self.assertIn("You crafted Elixir.", menus[1][1][1]["detail"])
+        self.assertNotIn("Last result", menus[1][1][0]["detail"])
         self.assertNotIn("secondRecipe", menus[0][1][1]["detail"])
+
+    def testFailedSecondRecipeRetainsSelectionAndItsOwnResult(self):
+        second = copy.deepcopy(self.recipe)
+        second.update(id="secondRecipe", display_name="Mana potion", gold=7, success_chance=0)
+        self.runtime._recipes = {self.recipe["id"]: self.recipe, second["id"]: second}
+        menus = self.runStation("secondRecipe")
+        self.assertEqual(["firstRecipe", "secondRecipe"], [choice["id"] for choice in menus[1][1]])
+        self.assertEqual([False, True], [choice.get("selected", False) for choice in menus[1][1]])
+        self.assertFalse(menus[1][1][1]["enabled"], "The consumed recipe remains inspectable with no ingredients left")
+        self.assertIn("Herb: 0 / 1", menus[1][1][1]["detail"])
+        self.assertIn("Gold: 3 owned / 7 needed", menus[1][1][1]["detail"])
+        self.assertIn("The listed reagents and gold were consumed", menus[1][1][1]["detail"])
+        self.assertNotIn("Last result", menus[1][1][0]["detail"])
+        self.assertEqual(0, self.player.countItems("PotionA"))
+        self.assertEqual(3, self.player.gold)
 
     def testFailedCraftDisclosesAndConsumesItsCost(self):
         self.recipe["success_chance"] = 0

@@ -52,9 +52,13 @@ void testChoiceParsingPreservesOrderAndRejectsAmbiguousIds() {
     expect_true(choices.size() == 2 && choices[0].id == "zeta" && choices[1].id == "alpha",
                 "ordered choices must preserve caller order even when labels are equal");
     expect_true(choices[0].enabled && !choices[1].enabled, "unavailable choices must stay unavailable");
+    expect_true(!choices[0].selected && !choices[1].selected, "legacy choices retain their default selection behavior");
     for (const auto *invalid :
          {R"({})", R"([{"id":"","label":"Empty"}])", R"([{"id":"same","label":"One"},{"id":"same","label":"Two"}])",
           R"([{"id":"missingLabel"}])", R"([{"id":"one","label":"One","image":42}])",
+          R"([{"id":"one","label":"One","selected":"true"}])", R"([{"id":"one","label":"One","selected":1}])",
+          R"([{"id":"one","label":"One","selected":null}])",
+          R"([{"id":"one","label":"One","selected":true},{"id":"two","label":"Two","selected":true}])",
           R"([{"id":"one","label":"One","image":"images/../secret.png"}])"}) {
         bool rejected = false;
         try {
@@ -64,6 +68,51 @@ void testChoiceParsingPreservesOrderAndRejectsAmbiguousIds() {
         }
         expect_true(rejected, "malformed or ambiguous choices must be rejected");
     }
+}
+
+void testChoiceRestoresDisabledRecipeWithoutConfirmingIt() {
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    const auto options = CGameCampaignBrowserPanel::parseChoices(R"([
+        {"id":"healing","label":"Potion","detail":"90 gold","selected":false},
+        {"id":"mana","label":"Potion","detail":"640 gold. Missing reagents. Craft failed.",
+         "enabled":false,"selected":true}
+    ])");
+    browser->configureChoices("Alchemy", options, "Craft", "Leave station");
+    expect_true(browser->getSelectedId() == "mana" && browser->getDetailText().find("640 gold") != std::string::npos &&
+                    browser->getDetailText().find("Craft failed") != std::string::npos,
+                "a previously crafted recipe keeps its stable selection and matching result even when now unavailable");
+    expect_true(!browser->hasChoice(), "restoring a selection never commits another craft");
+    browser->clickSelect(nullptr);
+    expect_true(!browser->hasChoice(), "the restored recipe cannot craft again with missing ingredients");
+    browser->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_UP);
+    expect_true(browser->getSelectedId() == "healing" && browser->getDetailText().find("90 gold") != std::string::npos,
+                "restoring selection preserves authored order and permits navigation to another recipe");
+    browser->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(browser->awaitChoice() == "healing", "another available recipe still requires explicit confirmation");
+}
+
+void testRestoredChoiceRemainsVisibleAfterMeasuringLargeText() {
+    auto gui = std::make_shared<CGui>();
+    gui->setNumericProperty("width", 1280);
+    gui->setNumericProperty("height", 720);
+    gui->applyUiPreferences(R"({"uiScale":100,"textScale":200})");
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    std::vector<CGameCampaignBrowserPanel::ChoiceOption> rows;
+    for (int index = 0; index < 50; ++index)
+        rows.push_back({std::to_string(index), "Recipe", "Details", true});
+    rows.back().selected = true;
+    browser->configureChoices("Alchemy", rows, "Craft", "Leave station");
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 1200, 676}));
+    const auto viewport = browser->getChoiceViewport();
+    const int rowHeight = std::max(44, gui->getTextManager()->measureText("> Recipe", viewport.w - 20).second + 16);
+    const int visibleRows = std::max(1, viewport.h / rowHeight);
+    const int x = viewport.x + viewport.w / 2;
+    const int y = viewport.y + (visibleRows - 1) * rowHeight + rowHeight / 2;
+    browser->mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, x, y);
+    browser->mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, x, y);
+    expect_true(browser->getSelectedId() == "49" && !browser->hasChoice(),
+                "the restored final recipe remains visible and hit-testable after enlarged labels are measured");
+    gui->applyUiPreferences("{}");
 }
 
 void testArtworkPreservesAspectAndReclaimsMissingImages() {
@@ -452,6 +501,8 @@ int main() {
     type_registration::registerGuiWidgetTypes();
     type_registration::registerGuiAnimationTypes();
     testChoiceParsingPreservesOrderAndRejectsAmbiguousIds();
+    testChoiceRestoresDisabledRecipeWithoutConfirmingIt();
+    testRestoredChoiceRemainsVisibleAfterMeasuringLargeText();
     testArtworkPreservesAspectAndReclaimsMissingImages();
     testChoiceSelectionRequiresConfirmationAndBlocksDisabledRows();
     testChoiceCancellationAndLongLists();

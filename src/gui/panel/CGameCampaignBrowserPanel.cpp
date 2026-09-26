@@ -44,10 +44,12 @@ CGameCampaignBrowserPanel::parseChoices(const std::string &choicesJson) {
     }
     std::set<std::string> ids;
     std::vector<ChoiceOption> result;
+    bool hasSelection = false;
     for (const auto &entry : document) {
         if (!entry.is_object() || !entry.contains("id") || !entry["id"].is_string() || !entry.contains("label") ||
             !entry["label"].is_string() || (entry.contains("detail") && !entry["detail"].is_string()) ||
             (entry.contains("enabled") && !entry["enabled"].is_boolean()) ||
+            (entry.contains("selected") && !entry["selected"].is_boolean()) ||
             (entry.contains("image") && !entry["image"].is_string())) {
             throw std::invalid_argument("Every choice requires a string id and label.");
         }
@@ -56,6 +58,11 @@ CGameCampaignBrowserPanel::parseChoices(const std::string &choicesJson) {
         if (option.id.empty() || !ids.insert(option.id).second) {
             throw std::invalid_argument("Choice ids must be nonempty and unique.");
         }
+        option.selected = entry.value("selected", false);
+        if (option.selected && hasSelection) {
+            throw std::invalid_argument("Only one choice may be initially selected.");
+        }
+        hasSelection = hasSelection || option.selected;
         option.image = entry.value("image", std::string());
         if (!option.image.empty() && !UiArtwork::validPath(option.image))
             throw std::invalid_argument("Choice artwork must name an image resource.");
@@ -94,7 +101,9 @@ void CGameCampaignBrowserPanel::configureChoices(std::string titleValue, std::ve
     detailMeasuredWidth = 0;
     setChildren({});
     if (!options.empty()) {
-        selectIndex(0, 0);
+        const auto previous =
+            std::find_if(options.begin(), options.end(), [](const auto &option) { return option.selected; });
+        selectIndex(previous == options.end() ? 0 : static_cast<int>(previous - options.begin()), 0);
     } else {
         detailText = "No choices are available. Use Back to return.";
     }
@@ -378,6 +387,8 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
         auto &offset = column == 1 ? raceOffset : listOffset;
         const int selected = column == 1 ? selectedRaceIndex : selectedIndex;
         const int visibleRows = std::max(1, bounds.h / rowHeight);
+        if (selected >= 0)
+            offset = std::clamp(offset, std::max(0, selected - visibleRows + 1), selected);
         offset = std::clamp(offset, 0, std::max(0, static_cast<int>(values.size()) - visibleRows));
         if (characterChoices && !compactLayout) {
             gui->getTextManager()->drawTextStyled(column == 0 ? "CLASS" : "RACE",
