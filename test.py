@@ -135,6 +135,7 @@ FAST_TEST_PREFIXES = (
     "QuestStateHelperTest.",
     "SaveFixtureTest.",
     "TestRunnerSuiteTest.",
+    "UiPixelAnalysisTest.",
 )
 FAST_TEST_NAMES = {
     "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
@@ -2675,6 +2676,8 @@ def gui_object_record(obj):
 
 
 def panel_pixel_summary(data, width, height, panel_rect, regions=None):
+    from PIL import Image, ImageChops
+
     regions = regions or {}
     summary = {
         "inside": 0,
@@ -2682,47 +2685,44 @@ def panel_pixel_summary(data, width, height, panel_rect, regions=None):
         "tightBounds": None,
         "regions": {name: 0 for name in regions},
     }
-    bounds = None
-    for pixel_index in range(width * height):
-        offset = pixel_index * 4
-        if data[offset : offset + 3] == b"\x00\x00\x00":
-            continue
-        x = pixel_index % width
-        y = pixel_index // width
-        if rect_contains_point(panel_rect, x, y):
-            summary["inside"] += 1
-        else:
-            summary["outside"] += 1
-        bounds = (
-            (x, y, x, y)
-            if bounds is None
-            else (min(bounds[0], x), min(bounds[1], y), max(bounds[2], x), max(bounds[3], y))
-        )
-        for name, rect in regions.items():
-            if rect_contains_point(rect, x, y):
-                summary["regions"][name] += 1
+    if width <= 0 or height <= 0:
+        return summary
+    # A nonzero value in any RGB channel counts, even when alpha is zero.
+    red, green, blue = Image.frombytes("RGB", (width, height), data, "raw", "RGBX").split()
+    mask = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+
+    def count(rect):
+        left, top = max(0, rect[0]), max(0, rect[1])
+        right, bottom = min(width, rect_right(rect)), min(height, rect_bottom(rect))
+        if right <= left or bottom <= top:
+            return 0
+        return (right - left) * (bottom - top) - mask.crop((left, top, right, bottom)).histogram()[0]
+
+    summary["inside"] = count(panel_rect)
+    summary["outside"] = width * height - mask.histogram()[0] - summary["inside"]
+    summary["regions"] = {name: count(rect) for name, rect in regions.items()}
+    bounds = mask.getbbox()
     if bounds is not None:
-        summary["tightBounds"] = [bounds[0], bounds[1], bounds[2] - bounds[0] + 1, bounds[3] - bounds[1] + 1]
+        summary["tightBounds"] = [bounds[0], bounds[1], bounds[2] - bounds[0], bounds[3] - bounds[1]]
     return summary
 
 
 def pixel_diff_bounds(before, after, width, rect):
-    bounds = None
-    changed = 0
-    for row in range(rect[1], rect_bottom(rect)):
-        for col in range(rect[0], rect_right(rect)):
-            offset = (row * width + col) * 4
-            if before[offset : offset + 3] == after[offset : offset + 3]:
-                continue
-            changed += 1
-            bounds = (
-                (col, row, col, row)
-                if bounds is None
-                else (min(bounds[0], col), min(bounds[1], row), max(bounds[2], col), max(bounds[3], row))
-            )
+    from PIL import Image, ImageChops
+
+    if rect[2] <= 0 or rect[3] <= 0:
+        return None, 0
+    size = (width, len(before) // (width * 4))
+    box = (rect[0], rect[1], rect_right(rect), rect_bottom(rect))
+    before_image = Image.frombytes("RGB", size, before, "raw", "RGBX").crop(box)
+    after_image = Image.frombytes("RGB", size, after, "raw", "RGBX").crop(box)
+    red, green, blue = ImageChops.difference(before_image, after_image).split()
+    mask = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    bounds = mask.getbbox()
     if bounds is None:
         return None, 0
-    return (bounds[0], bounds[1], bounds[2] - bounds[0] + 1, bounds[3] - bounds[1] + 1), changed
+    changed = rect[2] * rect[3] - mask.histogram()[0]
+    return (rect[0] + bounds[0], rect[1] + bounds[1], bounds[2] - bounds[0], bounds[3] - bounds[1]), changed
 
 
 def annotate_panel_layout(source_path, output_path, summary):
@@ -22550,8 +22550,42 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.setHp(1)
 
         target = killer.getCoords()
-        player.moveTo(target.x, target.y, target.z)
-        pump_event_loop(5)
+
+        def recovered_state():
+            return (
+                coords_tuple(player.getCoords()),
+                player.getHp(),
+                player.getGold(),
+                tuple(sorted(item.getName() for item in player.getItems())),
+                game_map.getTurn(),
+            )
+
+        def resolve_loss():
+            player.moveTo(target.x, target.y, target.z)
+            pump_event_loop(5)
+
+        def acknowledge_defeat(panel):
+            self.assertEqual("Defeated", panel.getStringProperty("title"))
+            self.assertEqual("continue", panel.getSelectedId())
+            self.assertEqual(entry_coords, coords_tuple(player.getCoords()))
+            self.assertEqual(1, player.getHp())
+            self.assertIn("Health after recovery: 1", panel.getDetailText())
+            self.assertFalse(gui_contains_class(g, "CGameFightPanel"))
+            resolved = recovered_state()
+            panel.keyboardEvent(g.getGui(), SDL_KEYDOWN, SDLK_RETURN)
+            return resolved
+
+        _, resolved = run_blocking_panel_inspection(
+            self,
+            game,
+            g,
+            "CGameCampaignBrowserPanel",
+            resolve_loss,
+            acknowledge_defeat,
+            lambda panel: None,
+        )
+        self.assertEqual(resolved, recovered_state(), "Acknowledging defeat must not replay losses or advance a turn.")
+        self.assertEqual("", player.getStringProperty("uiDefeatReceipt"))
 
         self.assertIsNotNone(game_map.getObjectByName(player.getName()))
         self.assertEqual(entry_coords, coords_tuple(player.getCoords()))
@@ -24701,6 +24735,18 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
 
+    def testPixelAnalysisIsDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only UI tests are not installed with the game")
+        names = unittest.defaultTestLoader.getTestCaseNames(UiPixelAnalysisTest)
+        self.assertTrue(names)
+        for method in names:
+            test_name = f"UiPixelAnalysisTest.{method}"
+            self.assertEqual(f"{__name__}.{test_name}", UiPixelAnalysisTest(method).id())
+            for suite_name in ("fast", "full", "coverage-safe"):
+                self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+        self.assertNotIn("_UiPixelAnalysisTest", globals())
+
     def test_explicit_transition_wait_accepts_completed_slow_pump(self):
         from unittest.mock import Mock, patch
 
@@ -25058,6 +25104,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
+    from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
@@ -25072,7 +25119,11 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class PythonCallbackLifecycleTest(_PythonCallbackLifecycleTest):
         pass
 
+    class UiPixelAnalysisTest(_UiPixelAnalysisTest):
+        pass
+
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
+    del _UiPixelAnalysisTest
 
 
 class McpServerTest(unittest.TestCase):

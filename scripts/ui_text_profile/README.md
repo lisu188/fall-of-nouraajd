@@ -93,3 +93,40 @@ The earlier run returned exit 8 because the functional regression failed; the co
 the truncated result is not a valid performance target. No budget was relaxed. The receipt guard is part of the
 normal `performance_guard_tests` target, and the screenshot generator retains overflow, ending, and 720p/200%
 ending captures through `captureRewardReceipts`.
+
+## Screenshot pixel analysis
+
+The source-only `pixel_analysis.py` harness measures the two screenshot assertion helpers without importing
+the game or opening a display. It extracts only their AST definitions from `--source`. Both revisions use
+the same fixed 1920x1080 RGBA buffers: RGB `(17,19,23)` with opaque alpha before, and RGB `(17,20,23)` with
+zero alpha after. The summary panel is `(20,30,1880,1020)` with two clipped regions; the diff covers the
+whole frame. Each helper gets one warm-up and three measured samples, followed by a separate Python-work
+observation. The observation stops after 2,000 helper line events; it does not affect the timing samples.
+
+The September 26, 2026 comparison used Windows 11 x64, Python 3.12.13, Pillow 12.3.0, and these commands from
+the repository root. The baseline file is an ignored diagnostic input, not modified game/build resources.
+
+```powershell
+$pythonExecutable = "C:/Users/andrz/git/fall-of-nouraajd/vcpkg_installed/x64-windows/tools/python3/python.exe"
+$env:PYTHONPATH = "C:/Users/andrz/.codex/worktrees/ui-capture-python"
+& $pythonExecutable -c "import pathlib, subprocess; pathlib.Path('cmake-build-release/ui-pixel-baseline-e0228b60.py').write_bytes(subprocess.check_output(['git', '-c', 'core.excludesFile=', 'show', 'e0228b60:test.py']))"
+& $pythonExecutable scripts/ui_text_profile/pixel_analysis.py --source cmake-build-release/ui-pixel-baseline-e0228b60.py
+& $pythonExecutable scripts/ui_text_profile/pixel_analysis.py --source test.py
+& $pythonExecutable -m unittest tests.test_ui_pixel_analysis tests.test_test_runner_packaging -v
+& $pythonExecutable test.py --jobs 1 UiPixelAnalysisTest TestRunnerSuiteTest
+```
+
+| Helper | Baseline samples (seconds) | Pillow samples (seconds) | Baseline median | Pillow median | Python line events before / after |
+| --- | --- | --- | ---: | ---: | ---: |
+| `panel_pixel_summary` | 2.503553, 2.444670, 2.399151 | 0.014754, 0.014558, 0.014636 | 2.444670 | 0.014636 | >2,000 / 40 |
+| `pixel_diff_bounds` | 1.239284, 1.239606, 1.239951 | 0.020920, 0.020754, 0.020419 | 1.239606 | 0.020754 | >2,000 / 14 |
+
+Both versions return 1,917,600 inside pixels, 156,000 outside pixels, region counts 518,400 and 200, and
+tight bounds `[0,0,1920,1080]`. Both return 2,073,600 changed pixels with the same full-frame diff bounds.
+The regression suite separately checks independent small-image oracles, negative/clipped and overlapping
+summary regions, zero/empty input, sparse tight bounds, all three RGB channels including values of one,
+and alpha-only changes. Diff inputs retain the existing in-bounds screenshot-rectangle contract.
+
+Before the optimization, both helpers fail the fixed Full HD Python-work guard; afterward both pass its
+unchanged 2,000-line bound with identical results. Timing is supplemental only. No GUI timeout was extended:
+the real offscreen choice-layout and cave-defeat CLI regressions subsequently passed in 5.954s and 2.453s.
