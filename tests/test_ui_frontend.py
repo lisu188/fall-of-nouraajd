@@ -249,15 +249,31 @@ class FrontendChoiceTest(unittest.TestCase):
         player.getStringProperty.return_value = json.dumps(
             {"map": "nouraajd", "hp": 12, "lostItems": [{"id": "sword", "label": "Iron sword", "count": 1}]}
         )
-        game_map = Mock()
-        game_map.getPlayer.return_value = player
+        game_map = types.SimpleNamespace(getPlayer=lambda: player, getStringProperty=Mock())
         game = FakeGame(["continue"], game_map)
         ui.showDefeat(game)
         detail = game.handler.screens[0][1][0]["detail"]
         self.assertIn("Health after recovery: 12", detail)
         self.assertIn("Iron sword x1", detail)
+        self.assertIn("You recovered in Nouraajd.", detail)
+        game_map.getStringProperty.assert_not_called()
         player.setStringProperty.assert_called_once_with("uiDefeatReceipt", "")
         player.removeItem.assert_not_called()
+
+    def testDefeatFallsBackToTheExposedMapPropertyWithoutReplayingLosses(self):
+        player = Mock()
+        player.getStringProperty.return_value = json.dumps({"hp": 1, "lostItems": []})
+        game_map = types.SimpleNamespace(getPlayer=lambda: player, getStringProperty=Mock(return_value="ritual"))
+        game = FakeGame([""], game_map)
+        ui.showDefeat(game)
+        detail = game.handler.screens[0][1][0]["detail"]
+        self.assertIn("You recovered in Ritual.", detail)
+        self.assertIn("Health after recovery: 1", detail)
+        self.assertIn("No inventory items were lost.", detail)
+        game_map.getStringProperty.assert_called_once_with("mapName")
+        player.setStringProperty.assert_called_once_with("uiDefeatReceipt", "")
+        player.removeItem.assert_not_called()
+        player.setHp.assert_not_called()
 
     def testCancelledNewAdventureNeverStartsAMap(self):
         game = FakeGame([""])
