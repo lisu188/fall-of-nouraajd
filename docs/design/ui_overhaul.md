@@ -99,6 +99,23 @@ all 15 authored maps, a random map and the frontend/overflow variants. The Castl
 real player through 167 steps, two authored combats and two portal traversals before confirming chapter completion.
 These focused results complement the full native, Linux/Xvfb, Windows and coverage checks required from CI.
 
+The September 26 follow-up adds 18 captures through `scripts/generate_screenshots.py --acceptance-only`: populated
+save/load lists, selected abilities and modifier sources, expanded map and landmarks, crafting previews/results,
+artifact assembly/disassembly including their scrolled endings, resolved defeat, chapter outcome and campaign
+completion. These are disposable visual fixtures with explicit equipment, statistics and campaign-position setup,
+separate from the real-player MCP routes above. Save metadata comes from an isolated native save that is removed
+after capture. Crafting costs, consumed ingredients and outputs are checked against resolved operations; the failed
+roll is deterministic. Defeat text comes from a real encounter's one-HP recovery and actual losses. Cancelling
+browsers and artifact previews preserves turn, resources and inventory; acknowledgements do not repeat committed
+losses or campaign outcomes. The added screenshots passed PNG decoding/dimension checks at 1920x1080 through SDL
+dummy/software rendering. The historical 111-image baseline and five Castle landmark captures remain separate.
+
+The same follow-up fixes shutdown of pending Python callbacks before interpreter finalization. Five fresh-process
+regressions pass; three reproduced shutdown failures before the fix, and the completed-work check releases all 200
+captured objects. Three Windows dummy/software GUI regressions now use the current sidebar geometry and separate
+input pumps. Real window-focus/resize checks still require Linux/Xvfb; these local results do not establish full CI
+or coverage completion.
+
 Combat history, dialogue history and defeat receipts have explicit string properties, preserving their existing JSON
 text through serialization. The native save regression checks each field separately, all three together and absent
 fields in both versioned and legacy saves. All ten cases pass; the eight nonempty-history cases rejected loading
