@@ -88,6 +88,8 @@ class ConsoleUiInteractionTest(unittest.TestCase):
                     self.skipTest(f"{tool} is required for isolated console GUI tests.")
             command = ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", *command]
         environment = os.environ.copy()
+        if environment.get("GAME_BUILD_DIR"):
+            environment["GAME_BUILD_DIR"] = str((ROOT / environment["GAME_BUILD_DIR"]).resolve())
         with tempfile.TemporaryDirectory(prefix="nouraajd-console-ui-") as temporary:
             environment.update(
                 SDL_VIDEODRIVER="x11" if os.name == "posix" else "dummy",
@@ -152,6 +154,26 @@ class ConsoleUiInteractionTest(unittest.TestCase):
                     else:
                         isolated_os.killpg.assert_not_called()
                         process.kill.assert_called_once_with()
+
+    def testChildResolvesRelativeBuildDirectoryAgainstSourceRoot(self):
+        for build_dir in ("cmake-build-release", "alternate-build/Debug tree", str(ROOT / "absolute-build")):
+            with self.subTest(build_dir=build_dir):
+                process = Mock(returncode=0)
+                process.communicate.return_value = ("", "")
+                environment = {"GAME_BUILD_DIR": build_dir, "GAME_BUILD_CONFIG": "Release"}
+                with (
+                    patch(__name__ + ".os", SimpleNamespace(name="nt", environ=environment)),
+                    patch(__name__ + ".subprocess.Popen", return_value=process) as launch,
+                ):
+                    self.runChild("")
+                child_environment = launch.call_args.kwargs["env"]
+                self.assertEqual(str((ROOT / build_dir).resolve()), child_environment["GAME_BUILD_DIR"])
+                self.assertTrue(Path(child_environment["GAME_BUILD_DIR"]).is_absolute())
+                self.assertEqual("Release", child_environment["GAME_BUILD_CONFIG"])
+                self.assertEqual(ROOT, launch.call_args.kwargs["cwd"])
+                self.assertEqual(
+                    build_dir, environment["GAME_BUILD_DIR"], "The parent environment must remain unchanged."
+                )
 
     def testDisabledConsoleDoesNotOpenOrConsumeWorldMovement(self):
         self.runChild(
