@@ -231,6 +231,107 @@ void testNamedSaveInputEditingAndCancellation() {
     expect_true(browser->awaitChoice().empty(), "Escape discards entered text");
 }
 
+void testManagedChoiceFocusReachesDetailsAndFooterActions() {
+    auto gui = std::make_shared<CGui>();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    std::string longDetail;
+    for (int line = 0; line < 80; ++line)
+        longDetail += "Readable objective and reward details.\n";
+    const std::vector<CGameCampaignBrowserPanel::ChoiceOption> options{{"first", "First", longDetail, true},
+                                                                       {"second", "Second", "Another choice", true}};
+    const auto bounds = std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 1800, 1000});
+    browser->configureChoices("Choose", options, "Accept", "Back");
+    renderBrowser(browser, gui, bounds);
+    auto actionPixel = [&]() {
+        const auto action = browser->getConfirmationBounds();
+        SDL_Rect pixel{action.x, action.y, 1, 1};
+        Uint32 color = 0;
+        SDL_RenderReadPixels(gui->getRenderer(), &pixel, SDL_PIXELFORMAT_RGBA32, &color, sizeof(color));
+        return color;
+    };
+    const auto unfocusedAction = actionPixel();
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_DOWN);
+    expect_true(browser->getSelectedId() == "first" && browser->getDetailScrollOffset() > 0,
+                "Tab reaches readable details and arrows scroll them without changing the choice");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    renderBrowser(browser, gui, bounds);
+    expect_true(unfocusedAction != actionPixel(), "the focused action has a visible focus border");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "Tab reaches Back and Space cancels without confirming the preview");
+    browser->configureChoices("Choose", options, "Accept", "Back");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(browser->hasChoice() && browser->awaitChoice() == "first",
+                "Space activates the initial selected choice just like Enter");
+    browser->configureChoices("Locked", {{"locked", "Locked", "Missing requirement", false}}, "Accept", "Back");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(!browser->hasChoice(), "a disabled action remains inert when reached by keyboard focus");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "Enter on focused Back cancels a disabled choice");
+}
+
+void testManagedChoiceShiftTabUsesTheInputEventModifier() {
+    auto gui = std::make_shared<CGui>();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    browser->configureChoices("Choose", {{"first", "First", "Details", true}}, "Accept", "Back");
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 1800, 1000}));
+    gui->pushChild(browser);
+    SDL_SetModState(KMOD_NONE);
+    SDL_Event key{};
+    key.type = SDL_KEYDOWN;
+    key.key.keysym.sym = SDLK_TAB;
+    key.key.keysym.mod = KMOD_SHIFT;
+    gui->event(&key);
+    key.key.keysym.sym = SDLK_RETURN;
+    key.key.keysym.mod = KMOD_NONE;
+    gui->event(&key);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "Shift+Tab reverses from choices to Back using the SDL event's modifier");
+}
+
+void testTextEntrySpaceAndCompactCharacterFooterFocus() {
+    auto gui = std::make_shared<CGui>();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    browser->configureTextInput("Save", "Name", "Suggested");
+    browser->appendInput("Before");
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 900, 676}));
+    gui->pushChild(browser);
+    SDL_Event input{};
+    input.type = SDL_KEYDOWN;
+    input.key.keysym.sym = SDLK_SPACE;
+    gui->event(&input);
+    input = {};
+    input.type = SDL_TEXTINPUT;
+    input.text.text[0] = ' ';
+    gui->event(&input);
+    expect_true(!browser->hasChoice() && browser->getInputText() == "Before ",
+                "Space remains printable text while the save-name field is focused");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    gui->event(&input);
+    expect_true(browser->getInputText() == "Before ",
+                "text input cannot edit the name while a footer action has focus");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(browser->hasChoice() && browser->awaitChoice() == "Before ",
+                "Tab leaves the name field and Space activates the focused Save action");
+    browser->configureCharacterChoices({{"warrior", "Warrior", "Health 20", true}},
+                                       {{"human", "Human", "Balanced", true}});
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 900, 676}));
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    expect_true(browser->getActivePage() == 2, "character focus reaches class, race and preview pages in order");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "compact character creation reaches both footer actions after its preview page");
+}
+
 void testCharacterBackPreservesPreviewWithoutConfirmingIt() {
     auto browser = std::make_shared<CGameCampaignBrowserPanel>();
     const std::vector<CGameCampaignBrowserPanel::ChoiceOption> classes = {{"warrior", "Warrior", "Strength", true},
@@ -508,6 +609,9 @@ int main() {
     testChoiceCancellationAndLongLists();
     testCharacterPreviewDoesNotStartUntilExplicitConfirmation();
     testNamedSaveInputEditingAndCancellation();
+    testManagedChoiceFocusReachesDetailsAndFooterActions();
+    testManagedChoiceShiftTabUsesTheInputEventModifier();
+    testTextEntrySpaceAndCompactCharacterFooterFocus();
     testCharacterBackPreservesPreviewWithoutConfirmingIt();
     testManagementPanelsReuseStateAndDoNotStack();
     testNarrowFrontendKeepsChoicesAndPreviewOnKeyboardPages();

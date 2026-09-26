@@ -398,7 +398,8 @@ void CGameDialogPanel::selectOption(const std::shared_ptr<CDialogOption> &option
 
 bool CGameDialogPanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
     if (event && event->type == SDL_KEYDOWN && event->key.repeat &&
-        (CUtil::parseKey(event->key.keysym.sym) > 0 || event->key.keysym.sym == SDLK_RETURN)) {
+        (CUtil::parseKey(event->key.keysym.sym) > 0 || event->key.keysym.sym == SDLK_RETURN ||
+         event->key.keysym.sym == SDLK_KP_ENTER || event->key.keysym.sym == SDLK_SPACE)) {
         return true;
     }
     return CGamePanel::event(gui, event);
@@ -459,7 +460,7 @@ bool CGameDialogPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType ty
             }
             reload();
         }
-    } else if (key == SDLK_RETURN && focusedChoice >= 0) {
+    } else if ((key == SDLK_RETURN || key == SDLK_KP_ENTER || key == SDLK_SPACE) && focusedChoice >= 0) {
         selectOption(focusedChoice);
     } else if (const int index = CUtil::parseKey(key) - 1; index >= 0 && options.contains(index)) {
         selectOption(index);
