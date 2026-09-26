@@ -538,6 +538,32 @@ class CompleteScenarioTest(unittest.TestCase):
         )
         self.assertEqual([], game.gui_handler.messages)
 
+    def testObservedRewardSummaryStaysInExistingOutcomeScreen(self):
+        game, player = self.start_campaign()
+        game.gui_handler = ScreenFakeGuiHandler()
+        self.assertEqual(
+            "two", campaign.complete_scenario(game, "completed", outcome_summary="Rewards received\nGold: +200")
+        )
+        self.assertEqual(2, len(game.gui_handler.screens))
+        self.assertIn("Rewards received\nGold: +200", game.gui_handler.screens[0][1])
+        self.assertNotIn("Rewards received", game.gui_handler.screens[1][1])
+        self.assertEqual(100, player.gold)
+        self.assertEqual(["mapTwo"], game.map_changes)
+        self.assertEqual([("one", "completed")], campaign.CampaignStateStore(player).history())
+
+    def testRewardSummaryRemainsAvailableToLegacyHandler(self):
+        game, player = self.start_campaign()
+        campaign.complete_scenario(game, "completed", outcome_summary="Rewards received\nGold: +200")
+        self.assertEqual(2, len(game.gui_handler.messages))
+        self.assertIn("Gold: +200", game.gui_handler.messages[0])
+
+    def testEmptyRewardSummaryDoesNotChangeDefaultOutcomeOrAddScreens(self):
+        game, _ = self.start_campaign()
+        game.gui_handler = ScreenFakeGuiHandler()
+        campaign.complete_scenario(game, "completed", outcome_summary="")
+        self.assertEqual("Outcome: Completed.\n\nOnward.\n\nNext chapter: Chapter II", game.gui_handler.screens[0][1])
+        self.assertEqual(2, len(game.gui_handler.screens))
+
     def testChapterOutcomeNextBriefingAndCompletionKeepTheirOwnArtwork(self):
         data = manifest_fixture()
         data["artwork"] = "images/buildings/town_hall.png"
