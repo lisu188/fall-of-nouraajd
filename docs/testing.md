@@ -104,6 +104,13 @@ python3 test.py --suite full
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
 `python3 test.py --suite gameplay --jobs "$(nproc)"`.
 
+The console and expanded-map interaction checks run once in `gameplay`, `full`, and `coverage-safe`. To run only
+these checks, use `python3 test.py ConsoleUiInteractionTest UiMinimapInteractionTest`. Their children use guarded
+Xvfb on Linux and SDL dummy/software rendering on Windows, with separate preferences and silent audio. They verify
+console editing, history bounds, cancellation and focus restoration, plus landmark inspection, explicit travel,
+empty lists and stale scene transitions. Missing `_game` or Linux display tooling is reported as a skip; other
+import errors and child failures remain failures.
+
 ## Campaign scenario gates
 Campaign, quest, dialog, trigger, and content-routing changes should report which scenario subset ran. A skipped
 scenario is not a pass; include the skip reason in the issue or PR final report.

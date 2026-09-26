@@ -36,7 +36,7 @@ used by the screenshot tests -- to produce that set:
 * ``frontend-<state>.png`` for the real main menu, character creation, settings,
     disabled and selected choices, overflowing content, save naming, confirmations,
     loading, errors, defeat, chapter outcomes and campaign completion.
-* Service, ability and expanded-map states use disposable native fixtures. Crafting
+* Service, ability, developer-console and expanded-map states use disposable native fixtures. Crafting
     results and defeat acknowledgements follow actual resolved engine operations;
     all other previews cancel before committing their displayed action.
 
@@ -1211,6 +1211,27 @@ def captureAcceptanceStates(game, output_dir, player_class):
         gui.applyUiPreferences("{}")
         resizeCaptureWindow(sim, 1920, 1080)
 
+        before = state()
+        console = next(child for child in gui.getChildren() if child.getType() == "CConsoleGraphicsObject")
+        keyCapture(sim, 1073741893)  # F12
+        if not console.getBoolProperty("modal"):
+            raise RuntimeError("The isolated developer-console fixture did not open.")
+        for key in (ord("i"), ord("j"), ord("c")):
+            keyCapture(sim, key)
+        if any(gui.findChild(name) for name in ("CGameInventoryPanel", "CGameQuestPanel", "CGameCharacterPanel")):
+            raise RuntimeError("World navigation stole input from the developer console.")
+        for command in ("game.getMap().getTurn()", "game.getMap().getPlayer().getHp()"):
+            console.setStringProperty("consoleState", command)
+            keyCapture(sim, 27)
+            keyCapture(sim, 1073741893)
+        if not console.getBoolProperty("modal"):
+            raise RuntimeError("The developer console did not reopen for its history capture.")
+        console.setStringProperty("consoleState", "game.getMap().getPlayer().getGold()")
+        record("frontend-developer-console")
+        keyCapture(sim, 27)
+        if console.getBoolProperty("modal") or state() != before:
+            raise RuntimeError("Closing the developer console changed the session or retained focus.")
+
         # Only this disposable slot appears in the list: never expose or modify a player's saves.
         provider = sim.gameInstance.getResourcesProvider()
         existing_slots = set(provider.getFiles("SAVE"))
@@ -1439,7 +1460,9 @@ def main():
     # Captures must not read or overwrite the player's persisted interface settings.
     preference_path = output_dir / ".capture-preferences.json"
     previous_preferences = os.environ.get("GAME_UI_PREFERENCES_PATH")
+    previous_console = os.environ.get("GAME_ENABLE_PYTHON_CONSOLE")
     os.environ["GAME_UI_PREFERENCES_PATH"] = str(preference_path)
+    os.environ["GAME_ENABLE_PYTHON_CONSOLE"] = "1"
     try:
         generateScreenshots(args, output_dir)
     finally:
@@ -1448,6 +1471,10 @@ def main():
             os.environ.pop("GAME_UI_PREFERENCES_PATH", None)
         else:
             os.environ["GAME_UI_PREFERENCES_PATH"] = previous_preferences
+        if previous_console is None:
+            os.environ.pop("GAME_ENABLE_PYTHON_CONSOLE", None)
+        else:
+            os.environ["GAME_ENABLE_PYTHON_CONSOLE"] = previous_console
 
 
 def generateScreenshots(args, output_dir):

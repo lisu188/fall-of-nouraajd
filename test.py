@@ -163,6 +163,8 @@ GAMEPLAY_TEST_PREFIXES = (
     "ManagementMcpWalkthroughTest.",
     "ArtifactPreviewTest.",
     "PythonCallbackLifecycleTest.",
+    "ConsoleUiInteractionTest.",
+    "UiMinimapInteractionTest.",
 )
 GAMEPLAY_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_http_notification_response_declares_empty_body",
@@ -24721,6 +24723,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
             ManagementMcpWalkthroughTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
+            ConsoleUiInteractionTest,
+            UiMinimapInteractionTest,
         ):
             names = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(names)
@@ -24734,6 +24738,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
+        self.assertNotIn("_ConsoleUiInteractionTest", globals())
+        self.assertNotIn("_UiMinimapInteractionTest", globals())
 
     def testPixelAnalysisIsDiscoveredOnceInSourceSuites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
@@ -25106,6 +25112,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
     from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
+    from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
+    from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
         pass
@@ -25122,8 +25130,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class UiPixelAnalysisTest(_UiPixelAnalysisTest):
         pass
 
+    class ConsoleUiInteractionTest(_ConsoleUiInteractionTest):
+        pass
+
+    class UiMinimapInteractionTest(_UiMinimapInteractionTest):
+        pass
+
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _UiPixelAnalysisTest
+    del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 
 class McpServerTest(unittest.TestCase):

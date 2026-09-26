@@ -22,13 +22,17 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
                 def capture(args, output_dir):
                     isolated = Path(generate_screenshots.os.environ["GAME_UI_PREFERENCES_PATH"])
                     self.assertNotEqual(player_preferences, isolated)
+                    self.assertEqual("1", generate_screenshots.os.environ["GAME_ENABLE_PYTHON_CONSOLE"])
                     isolated.write_text("{}", encoding="utf-8")
                     if fail:
                         raise RuntimeError("capture failed")
 
                 with (
                     patch.object(generate_screenshots.sys, "argv", ["capture", "--output-dir", directory]),
-                    patch.dict(generate_screenshots.os.environ, {"GAME_UI_PREFERENCES_PATH": str(player_preferences)}),
+                    patch.dict(
+                        generate_screenshots.os.environ,
+                        {"GAME_UI_PREFERENCES_PATH": str(player_preferences), "GAME_ENABLE_PYTHON_CONSOLE": "0"},
+                    ),
                     patch.object(generate_screenshots, "generateScreenshots", side_effect=capture),
                 ):
                     if fail:
@@ -39,6 +43,7 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
                     self.assertEqual(
                         str(player_preferences), generate_screenshots.os.environ["GAME_UI_PREFERENCES_PATH"]
                     )
+                    self.assertEqual("0", generate_screenshots.os.environ["GAME_ENABLE_PYTHON_CONSOLE"])
                 self.assertFalse((output / ".capture-preferences.json").exists())
                 self.assertEqual('{"textScale":150}', player_preferences.read_text(encoding="utf-8"))
 

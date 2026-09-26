@@ -119,12 +119,21 @@ browsers and artifact previews preserves turn, resources and inventory; acknowle
 losses or campaign outcomes. The added screenshots passed PNG decoding/dimension checks at 1920x1080 through SDL
 dummy/software rendering. The historical 111-image baseline and five Castle landmark captures remain separate.
 
-The final keyboard pass regenerated the complete 135-image set, including six new focus/disabled captures and
-the chapter outcome's observed 400-gold reward. Independent visual review covers normal and 720p/200% focus,
+The final keyboard and console pass regenerated the complete 136-image set, including six new focus/disabled
+captures, the active diagnostic drawer and the chapter outcome's observed 400-gold reward. Independent visual review
+covers normal and 720p/200% focus,
 footer actions and hints. Chooser regressions reproduced eight failing assertions, and dialogue activation
 regressions reproduced four; both focused native suites pass after correction. The rebuilt Castle MCP campaign
 route and paid-rest check also pass (two tests, 19.17 seconds). These runtime checks retain the authored objective,
 reward and transition assertions rather than only changing flags.
+
+The console retains its configured priority above the navigation dock; the old child override let I/J/C open
+management panels above it depending on sibling order, consuming subsequent typed text. A deterministic regression
+reproduced the priority collision, and five repeated full-GUI command/focus checks pass after removing that override.
+The capture tool enables the existing development setting only in its isolated process and restores it afterward.
+Console and expanded-map interaction/runner checks pass locally (25 tests, no skips). These paths are included in
+the canonical coverage suite; the earlier run recorded 15,709/17,551 lines (89.50%). Final CI results are recorded
+on the delivery PR, separately from these focused local checks.
 
 The same follow-up fixes shutdown of pending Python callbacks before interpreter finalization. Five fresh-process
 regressions pass; three reproduced shutdown failures before the fix, and the completed-work check releases all 200
