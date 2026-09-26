@@ -40,6 +40,10 @@ from http import HTTPStatus
 from pathlib import Path
 import unittest
 
+if __name__ == "__main__":
+    # Integration fixtures import this harness after the runner changes into the build directory.
+    sys.modules["test"] = sys.modules[__name__]
+
 import game_simulation
 import mcp
 import quest_state
@@ -24636,6 +24640,14 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+
+    def testImportedHarnessUsesExecutingModule(self):
+        import test as harness
+
+        self.assertIs(harness, sys.modules[__name__])
+        self.assertEqual(REPO_ROOT, harness.REPO_ROOT)
+        self.assertEqual(build_dir, harness.build_dir)
+        self.assertEqual(extension_dirs, harness.extension_dirs)
 
     def test_blocking_panel_inspection_closes_after_assertion_or_input_failure(self):
         from itertools import product
