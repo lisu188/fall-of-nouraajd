@@ -157,6 +157,7 @@ GAMEPLAY_TEST_PREFIXES = (
     "DialogueMcpWalkthroughTest.",
     "ManagementMcpWalkthroughTest.",
     "ArtifactPreviewTest.",
+    "PythonCallbackLifecycleTest.",
 )
 GAMEPLAY_EXCLUDED_TEST_NAMES = {
     "McpServerTest.test_http_notification_response_declares_empty_body",
@@ -21399,6 +21400,22 @@ def assert_rendered_map_proxy_cells(test_case, g):
     test_case.assertEqual(0, sum(count == 0 for count in proxy_counts))
 
 
+def assert_rendered_map_proxy_grid(test_case, g):
+    gui = g.getGui()
+    map_graph = collect_gui_children(gui, "CMapGraphicsObject")[0]
+    x, y, width, height = resolved_rect(map_graph)
+    tile = gui.getNumericProperty("tileSize")
+    expected = {
+        (x + column * tile, y + row * tile, tile, tile)
+        for column in range(width // tile + 1)
+        for row in range(height // tile + 1)
+    }
+    cells = [child for child in map_graph.getChildren() if child.getType() in {"", "CProxyGraphicsObject"}]
+    test_case.assertEqual(len(expected), len(cells), "Map proxy cells must cover the resized viewport exactly once.")
+    test_case.assertEqual(expected, {resolved_rect(cell) for cell in cells})
+    assert_rendered_map_proxy_cells(test_case, g)
+
+
 def queue_panel_observer(game, g, class_name):
     observed = {"open": False}
 
@@ -21485,26 +21502,21 @@ def readJournalTabs(panel, gui, *, active=(), completed=()):
 
 
 def assert_quest_log_hotkey_opens_panel(test_case, game, g, active=(), completed=()):
-    observed = {"open": False, "text": ""}
-
-    def observe_open_panel():
-        observed["open"] = gui_contains_class(g, "CGameQuestPanel")
-        if observed["open"]:
-            observed["text"] = readJournalTabs(
-                g.getGuiHandler().openPanel("questPanel"), g.getGui(), active=active, completed=completed
-            )
-
+    initial_turn = g.getMap().getTurn()
+    test_case.assertFalse(gui_contains_class(g, "CGameQuestPanel"))
     push_quest_log_key()
-    game.event_loop.instance().invoke(observe_open_panel)
+    wait_for_panel_class(test_case, g, "CGameQuestPanel")
+    panel = find_top_level_panel(g, "CGameQuestPanel")
+    text = readJournalTabs(panel, g.getGui(), active=active, completed=completed)
     push_quest_log_key()
-    pump_event_loop(10)
-
-    test_case.assertTrue(observed["open"], "The j hotkey should open the quest log panel.")
-    test_case.assertFalse(gui_contains_class(g, "CGameQuestPanel"), "The second j hotkey should close the quest log.")
+    wait_for_panel_closed(test_case, g, "CGameQuestPanel")
+    test_case.assertEqual(
+        initial_turn, g.getMap().getTurn(), "Opening, reading, and closing the journal takes no turn."
+    )
     for quest_id in active:
-        test_case.assertIn(nouraajd_quest_status_line("Active", quest_id), observed["text"])
+        test_case.assertIn(nouraajd_quest_status_line("Active", quest_id), text)
     for quest_id in completed:
-        test_case.assertIn(nouraajd_quest_status_line("Completed", quest_id), observed["text"])
+        test_case.assertIn(nouraajd_quest_status_line("Completed", quest_id), text)
 
 
 def nouraajd_quest_status_line(status, quest_id):
@@ -21829,7 +21841,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         target, keycode, scancode = find_adjacent_walkable_direction(game_map, initial)
 
         assert_player_moves_to_key_target(self, game_map, player, target, keycode, scancode)
-        assert_rendered_map_proxy_cells(self, g)
+        assert_rendered_map_proxy_grid(self, g)
 
     def test_mouse_click_moves_player(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
@@ -21866,9 +21878,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         )
         self.assertEqual((0, 0, width, height), resolved_rect(gui))
         self.assertEqual((0, 0, width, height), resolved_rect(map_graph))
-        tile = gui.getNumericProperty("tileSize")
-        self.assertEqual((width // tile + 1, height // tile + 1), tuple(map_graph.getRuntimeGridSize(gui)))
-        assert_rendered_map_proxy_cells(self, g)
+        assert_rendered_map_proxy_grid(self, g)
         panel = open_layout_panel(self, g, "inventoryPanel")
         try:
             assert_rect_on_screen(self, "inventoryPanel", resolved_rect(panel), width=width, height=height)
@@ -24089,16 +24099,21 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         self.assertEqual("nouraajd", g.getMap().mapName)
 
     def test_sidebar_mouse_opens_inventory_until_hotkey_closes_it(self):
-        game, g, _, _ = create_xvfb_gameplay_session(self)
-
-        push_sdl_mouse_click(1820, 25)
-        observed = queue_panel_observer(game, g, "CGameInventoryPanel")
+        _, g, game_map, _ = create_xvfb_gameplay_session(self)
+        initial_turn = game_map.getTurn()
+        sidebar = collect_gui_children(g.getGui(), "CSideBar")[0]
+        inventory_buttons = [
+            button
+            for button in find_descendants_by_type(sidebar, "CButton")
+            if button.getStringProperty("click") == "clickInventory"
+        ]
+        self.assertEqual(1, len(inventory_buttons))
+        push_sdl_mouse_click(*rect_center(resolved_rect(inventory_buttons[0])))
+        wait_for_panel_class(self, g, "CGameInventoryPanel")
         push_sdl_key_event(ord("i"), 0, SDL_KEYDOWN)
         push_sdl_key_event(ord("i"), 0, SDL_KEYUP)
-        pump_event_loop(5)
-
-        self.assertTrue(observed["open"])
-        self.assertFalse(gui_contains_class(g, "CGameInventoryPanel"))
+        wait_for_panel_closed(self, g, "CGameInventoryPanel")
+        self.assertEqual(initial_turn, game_map.getTurn(), "Opening and closing inventory takes no turn.")
 
     def test_save_hotkey_writes_loadable_map(self):
         self.exerciseNamedSaveHotkey()
@@ -24655,7 +24670,12 @@ class TestRunnerSuiteTest(unittest.TestCase):
     def test_ui_mcp_routes_are_discovered_once_in_native_suites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only UI tests are not installed with the game")
-        for test_class in (DialogueMcpWalkthroughTest, ManagementMcpWalkthroughTest, ArtifactPreviewTest):
+        for test_class in (
+            DialogueMcpWalkthroughTest,
+            ManagementMcpWalkthroughTest,
+            ArtifactPreviewTest,
+            PythonCallbackLifecycleTest,
+        ):
             names = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(names)
             for method in names:
@@ -24667,6 +24687,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
+        self.assertNotIn("_PythonCallbackLifecycleTest", globals())
 
     def test_explicit_transition_wait_accepts_completed_slow_pump(self):
         from unittest.mock import Mock, patch
@@ -25022,6 +25043,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
@@ -25035,7 +25057,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class ArtifactPreviewTest(_ArtifactPreviewTest):
         pass
 
-    del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest
+    class PythonCallbackLifecycleTest(_PythonCallbackLifecycleTest):
+        pass
+
+    del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
 
 
 class McpServerTest(unittest.TestCase):

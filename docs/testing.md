@@ -141,16 +141,19 @@ checks campaign transition into the later maps:
 python3 test.py \
   GameTest.test_map_walkthrough_nouraajd \
   McpServerTest.test_stdio_map_walkthrough_nouraajd \
-  GameTest.test_campaign_transitions_preserve_player_and_start_siege
+  GameTest.test_campaign_transitions_preserve_player_and_start_siege \
+  GameTest.test_campaign_driver_routes_full_campaign_with_carryover
 ```
 
 Normal pull request CI runs content validation plus the fast Nouraajd smoke and targeted quest/reward gates whenever
 native validation is required. The existing `gameplay` and `ui` suites still run after those gates; the campaign gates
 are early, named checks, not a replacement for required gameplay validation.
 
-Full-route campaign scenarios run in the Linux job on the weekly schedule, when manually dispatched with
-`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. If the full-route subset is
-not selected, CI prints the skip reason and does not treat the skipped route as passed.
+The dedicated full-route campaign gate runs in the Linux job on the weekly schedule, when manually dispatched with
+`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. These four tests also belong
+to the normal `gameplay` suite. A skip message for the dedicated gate does not mean they were excluded from that
+suite; inspect the individual test results before reporting whether a route ran. A skipped gate itself is never
+counted as passed.
 
 For any quest, campaign, dialog-trigger, or content-routing issue final report, include:
 - which of the fast content validation, fast smoke, targeted quest/reward, and full-route subsets ran;
