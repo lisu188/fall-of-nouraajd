@@ -19309,16 +19309,39 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         import campaign as campaign_module
 
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        unrelated_game = game.CGameLoader.loadGame()
+        self.addCleanup(unrelated_game.getContext().shutdown)
+        owned_handler = g.getGuiHandler()
         screens = []
         original = game.CGuiHandler.showCampaignScreen
         original_artwork = game.CGuiHandler.showCampaignArtworkScreen
         artwork = []
+        unrelated_deliveries = []
+        unrelated_artwork_changes = []
+
+        def deliver_unrelated_readers():
+            # The process-wide event loop can still contain another session's readers.
+            unrelated_handler = unrelated_game.getGuiHandler()
+            unrelated_handler.showCampaignScreen("The chapel ritual", "Another session's reader.", "Continue")
+            unrelated_deliveries.append("reader")
+            before_artwork = list(artwork)
+            unrelated_handler.showCampaignArtworkScreen(
+                "Another session's chapter", "Another session's briefing.", "Begin chapter", artwork[0]
+            )
+            unrelated_artwork_changes.append(artwork != before_artwork)
+            unrelated_deliveries.append("artwork")
 
         def capture_screen(self_, title, body, action_label):
+            if self_ is not owned_handler:
+                return original(self_, title, body, action_label)
             self.assertTrue(body, "campaign screens always carry body text")
             screens.append((title, action_label))
 
         def capture_artwork_screen(self_, title, body, action_label, image):
+            if self_ is not owned_handler:
+                return original_artwork(self_, title, body, action_label, image)
             self.assertTrue(image, "authored chapter artwork must reach the native screen")
             artwork.append(image)
             capture_screen(self_, title, body, action_label)
@@ -19326,12 +19349,13 @@ class GameTest(unittest.TestCase):
         game.CGuiHandler.showCampaignScreen = capture_screen
         game.CGuiHandler.showCampaignArtworkScreen = capture_artwork_screen
         try:
-            g = game.CGameLoader.loadGame()
             campaign_module.start(g, "wardensRoad", "Warrior")
             self.assertEqual([("Chapter I - Hearthfall", "Begin chapter")], screens)
 
+            self.assertTrue(game.event_loop.instance().invoke(deliver_unrelated_readers))
             campaign_module.complete_scenario(g, "completed")
             pump_event_loop(10)
+            self.assertEqual(["reader", "artwork"], unrelated_deliveries)
             self.assertEqual(
                 [
                     ("Chapter I - Hearthfall", "Begin chapter"),
@@ -19340,6 +19364,7 @@ class GameTest(unittest.TestCase):
                 ],
                 screens,
             )
+            self.assertEqual([False], unrelated_artwork_changes, "other sessions must not enter the artwork recorder")
 
             campaign_module.complete_scenario(g, "spared")
             pump_event_loop(10)
