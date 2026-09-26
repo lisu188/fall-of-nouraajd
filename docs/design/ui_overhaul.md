@@ -140,6 +140,13 @@ Victor's quest journal keeps its player-carried outcome through travel and reloa
 rescued and timed-out outcomes, including the guarded 500-gold rescue reward. Those reload checks use native
 serialized snapshots and are separate evidence from the named-save UI tests.
 
+Pre-snapshot saves also migrate before an unread departure: Nouraajd queues its journal synchronization after
+script registration, because the native loader attaches the restored map and player afterward. The callback
+checks the active map and skips dependency-only registration for other maps. Both rescued and timed-out MCP
+fixtures failed before this correction and pass after loading an old-format snapshot and immediately requesting
+travel, without reading or serializing the restored player's journal first. Reward balances and guards remain
+unchanged; the two outcome cases run in one 18.14-second focused Windows offscreen check.
+
 ## Rendering and cache evidence
 
 The opt-in [profile harness and complete samples](../../scripts/ui_text_profile/README.md) retain the exact workload

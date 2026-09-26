@@ -6,6 +6,7 @@
 import json
 import os
 import unittest
+import uuid
 from unittest.mock import patch
 
 
@@ -28,6 +29,7 @@ class DialogueMcpWalkthroughTest(unittest.TestCase):
         self.environment.start()
         self.addCleanup(self.environment.stop)
         self.harness = harness.McpServerTest(methodName="runTest")
+        self.build_dir = harness.build_dir
         self.process = self.harness._start_stdio_mcp_process()
         self.addCleanup(self.harness._shutdown_process, self.process)
         self.harness._initialize_stdio_mcp(self.process)
@@ -146,6 +148,74 @@ class DialogueMcpWalkthroughTest(unittest.TestCase):
         self.assertFalse(self.condition(dialog, "is_joined"))
         self.action(dialog, "banter")
         self.assertEqual(1, self.call(self.player, "countItems", "aegisOfHalda"))
+
+    def testUnreadLegacyVictorEndingSurvivesLoadAndDeparture(self):
+        for outcome, objective in (("good_end", "survived"), ("bad_end", "was taken")):
+            with self.subTest(outcome=outcome):
+                self.startMap("nouraajd")
+                self.walkTo("nouraajdTavern")
+                self.action(self.dialog("tavernDialog1"), "asked_about_girl")
+                self.action(self.dialog("tavernDialog2"), "talked_to_victor")
+                self.walkTo("nouraajdTownHall")
+                self.action(self.dialog("townHallDialog"), "spawn_cultists")
+                gold_before = self.call(self.player, "getGold")
+                if outcome == "good_end":
+                    self.walkTo("cultLeaderQuest")
+                    # Resolve the authored encounter as in the other focused quest fixtures.
+                    self.call(self.game_map, "removeObjectByName", "cultLeaderQuest")
+                    self.pump()
+                else:
+                    self.walkTo("nouraajdTavern")
+                    for _ in range(76):
+                        self.call(self.game_map, "move")
+                    self.pump()
+                gold_after = gold_before + (500 if outcome == "good_end" else 0)
+                self.assertEqual(gold_after, self.call(self.player, "getGold"))
+                self.assertEqual(outcome, self.call(self.game_map, "getStringProperty", "quest_state_victor"))
+                self.call(self.player, "checkQuests")
+                self.assertIn("victorQuest", self.questNames("getCompletedQuests"))
+                self.walkTo("nouraajdChapel")
+
+                # Recreate the pre-snapshot save format from a resolved, real-player route.
+                # Retain all map defaults: their presence is what bypassed the old migration.
+                snapshot = json.loads(self.engine("jsonify", self.game_map))
+                properties = snapshot["properties"]
+                for key in ("rolf", "main", "beren_chain", "octobogz_contract", "amulet", "victor"):
+                    self.assertTrue(properties[f"quest_state_{key}"])
+                saved_player = next(obj["properties"] for obj in properties["objects"] if obj.get("class") == "CPlayer")
+                saved_player.pop("nouraajdVictorState", None)
+                slot = "ui-legacy-victor-" + uuid.uuid4().hex
+                save_path = self.build_dir / "save" / f"{slot}.json"
+                save_path.parent.mkdir(exist_ok=True)
+                self.assertFalse(save_path.exists())
+                try:
+                    save_path.write_text(json.dumps(snapshot), encoding="utf-8")
+                    self.game = self.engine("CGameLoader.loadGame")
+                    self.engine("CGameLoader.loadSavedGame", self.game, slot)
+                    self.game_map = self.call(self.game, "getMap")
+                    self.player = self.call(self.game_map, "getPlayer")
+                    self.assertEqual(gold_after, self.call(self.player, "getGold"))
+                    self.assertEqual(
+                        outcome == "good_end", self.call(self.game_map, "getBoolProperty", "VICTOR_REWARD_GRANTED")
+                    )
+                    # Do not inspect/serialize the player or read a quest before leaving:
+                    # computed journal properties used to hide the missing load-time migration.
+                    # Queue departure before any event-loop pump, using the saved chapel position.
+                    self.call(self.game, "changeMap", "ritual")
+                    self.pump()
+                    self.game_map = self.call(self.game, "getMap")
+                    self.player = self.call(self.game_map, "getPlayer")
+                    self.assertEqual("ritual", self.call(self.game_map, "getStringProperty", "mapName"))
+                    self.assertEqual(gold_after, self.call(self.player, "getGold"))
+                    self.assertEqual(outcome, self.call(self.player, "getStringProperty", "nouraajdVictorState"))
+                    quests = self.call(self.player, "getCompletedQuests")
+                    victor = next(quest for quest in quests if self.call(quest, "getTypeId") == "victorQuest")
+                    journal = json.loads(self.engine("jsonify", victor))["properties"]
+                    self.assertIn(objective, journal["objective"])
+                    self.assertIn("No reward" if outcome == "bad_end" else "500 gold", journal["reward"])
+                    self.assertEqual("", self.call(self.game_map, "getStringProperty", "quest_state_victor"))
+                finally:
+                    save_path.unlink(missing_ok=True)
 
     def testVossRequiresAllCagesAndCommitsOneSceneTransition(self):
         self.startMap("gravemoor")

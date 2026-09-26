@@ -12,6 +12,7 @@ def load(self, context):
     from game import claim_once
     from game import remove_runtime_actors
     from game import ensure_quest
+    from game import event_loop
     from game import register, trigger
 
     # The plugin sandbox only allows importing the game and json modules;
@@ -1128,3 +1129,11 @@ def load(self, context):
 
     if context.getMap():
         _get_quest_system(context.getMap()).initialize_defaults()
+
+    def syncLoadedVictorState():
+        # Save loading registers scripts before restoring the map and player.
+        game_map = context.getMap()
+        if game_map and game_map.mapName == "nouraajd" and game_map.getPlayer() is not None:
+            _get_quest_system(game_map).sync_legacy_flags()
+
+    event_loop.instance().invoke(syncLoadedVictorState)
