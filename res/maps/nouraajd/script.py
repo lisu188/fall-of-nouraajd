@@ -12,6 +12,7 @@ def load(self, context):
     from game import claim_once
     from game import remove_runtime_actors
     from game import ensure_quest
+    from game import event_loop
     from game import register, trigger
 
     # The plugin sandbox only allows importing the game and json modules;
@@ -230,6 +231,17 @@ def load(self, context):
             LegacyBoolFlag("VICTOR_HELP", "victor", states=("good_end",)),
             LegacyBoolFlag("VICTOR_REWARD_CLAIMED", "victor", states=("good_end",)),
         )
+
+        def sync_legacy_flags(self):
+            super().sync_legacy_flags()
+            player = self.map.getPlayer()
+            if player is not None:
+                state = self.map.getStringProperty(self.QUEST_KEYS["victor"])
+                saved_state = player.getStringProperty("nouraajdVictorState")
+                if state == "not_started" and saved_state in ("good_end", "bad_end"):
+                    return
+                if saved_state != state:
+                    player.setStringProperty("nouraajdVictorState", state)
 
         # --- Rolf / Gooby ---
         def ensure_main_quest(self, player):
@@ -524,11 +536,25 @@ def load(self, context):
 
     @register(context)
     class VictorQuest(CQuest):
+        def _getState(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer()
+            saved_state = player.getStringProperty("nouraajdVictorState") if player is not None else "not_started"
+            if game_map.mapName == "nouraajd":
+                state = _quest_system_from(self).get_state("victor")
+                if state == "not_started" and saved_state in ("good_end", "bad_end"):
+                    return saved_state
+                if player is not None and saved_state != state:
+                    player.setStringProperty("nouraajdVictorState", state)
+                return state
+            # The journal travels with the player; its original map state does not.
+            return saved_state
+
         def isCompleted(self):
-            return _quest_system_from(self).victor_has_ended()
+            return self._getState() in ("good_end", "bad_end")
 
         def getObjective(self):
-            state = _quest_system_from(self).get_state("victor")
+            state = self._getState()
             if state == "encounter_active":
                 return "Defeat the cult leader in the courtyard before Victor's daughter is taken."
             if state == "good_end":
@@ -540,7 +566,7 @@ def load(self, context):
             return "Find Victor's missing daughter."
 
         def getReward(self):
-            if _quest_system_from(self).get_state("victor") == "bad_end":
+            if self._getState() == "bad_end":
                 return "No reward if Victor's daughter is taken."
             return (
                 "500 gold, healing, and one-time access to buy Victor's remaining potions "
@@ -548,7 +574,7 @@ def load(self, context):
             )
 
         def getHint(self):
-            state = _quest_system_from(self).get_state("victor")
+            state = self._getState()
             if state == "encounter_active":
                 return f"The cultists began their rite; you have {VICTOR_COURTYARD_TIMEOUT_TURNS} turns from first contact."
             if state == "good_end":
@@ -1109,3 +1135,14 @@ def load(self, context):
 
     if context.getMap():
         _get_quest_system(context.getMap()).initialize_defaults()
+
+    def syncLoadedVictorState():
+        # Save loading registers scripts before restoring the map and player.
+        game_map = context.getMap()
+        if not game_map or game_map.mapName != "nouraajd":
+            return
+        player = game_map.getPlayer()
+        if player is not None and not player.getStringProperty("nouraajdVictorState"):
+            _get_quest_system(game_map).sync_legacy_flags()
+
+    event_loop.instance().invoke(syncLoadedVictorState)

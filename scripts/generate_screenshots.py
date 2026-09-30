@@ -35,7 +35,10 @@ used by the screenshot tests -- to produce that set:
 * ``map-random.png`` for a freshly generated random map.
 * ``frontend-<state>.png`` for the real main menu, character creation, settings,
     disabled and selected choices, overflowing content, save naming, confirmations,
-    loading, and errors. Captures cancel before committing any frontend action.
+    loading, errors, defeat, chapter outcomes and campaign completion.
+* Service, ability, developer-console and expanded-map states use disposable native fixtures. Crafting
+    results and defeat acknowledgements follow actual resolved engine operations;
+    all other previews cancel before committing their displayed action.
 
 Requirements: the ``_game`` module must be built (see the project README) and
 ``pillow`` installed (``pip install -r requirements-dev.txt``). A real SDL
@@ -49,6 +52,7 @@ Usage::
 
     python3 scripts/generate_screenshots.py --output-dir screenshots
     python3 scripts/generate_screenshots.py --panels-only
+    python3 scripts/generate_screenshots.py --acceptance-only
     python3 scripts/generate_screenshots.py --maps nouraajd ritual --no-random
 """
 
@@ -462,12 +466,20 @@ def _configure_panel(game_instance, panel_name, panel):
     # which is prepared by _prepare_player_for_panels before capture.
 
 
-def _captureNativeCall(game, sim, helper_name, panel_class, arguments, path, prepare=None):
+def _captureNativeCall(game, sim, helper_name, panel_class, arguments, path, prepare=None, open_action=None):
     """Capture a deliberately opened native modal, then cancel without triggering its action."""
     captured = {}
 
     def captureAndClose():
         panel = sim.gameInstance.getGui().findChild(panel_class)
+        if panel is None and open_action is not None:
+            captured["attempts"] = captured.get("attempts", 0) + 1
+            if captured["attempts"] < 1000:
+                game.event_loop.instance().invoke(captureAndClose)
+                return
+            captured["error"] = f"{open_action} did not open {panel_class}"
+            sim.gameInstance.getContext().shutdown()
+            return
         try:
             if panel is None:
                 raise RuntimeError(f"Native helper {helper_name} did not open {panel_class}")
@@ -495,8 +507,10 @@ def _captureNativeCall(game, sim, helper_name, panel_class, arguments, path, pre
                     sim.gameInstance.getGuiHandler().flipPanel(resource, "x")
 
     game.event_loop.instance().invoke(captureAndClose)
-    result = NATIVE_GUI_HELPERS[helper_name](sim.gameInstance.getGuiHandler(), *arguments)
-    if "error" in captured or not captured:
+    result = (
+        open_action() if open_action else NATIVE_GUI_HELPERS[helper_name](sim.gameInstance.getGuiHandler(), *arguments)
+    )
+    if "error" in captured or "bytes" not in captured:
         raise RuntimeError(captured.get("error", f"No capture callback ran for {helper_name}"))
     return result, captured
 
@@ -766,6 +780,53 @@ def capture_management(game, output_dir, player_class):
                 panel.close()
             gui.applyUiPreferences("{}")
             sim.gameInstance.getContext().shutdown()
+    written.extend(captureRewardReceipts(game, output_dir, player_class))
+    return written
+
+
+def captureRewardReceipts(game, output_dir, player_class):
+    """Keep long automatic reward acknowledgements and their ending in the visual gallery."""
+    import game_simulation
+
+    sim = game_simulation.GameSimulation.startGame(game, PANELS_MAP, player_class, load_gui=True)
+    gui = sim.gameInstance.getGui()
+    written = []
+    try:
+        rewards = []
+        for index in range(240):
+            item = sim.gameInstance.createObject("Scroll")
+            item.name = f"receiptCaptureScroll{index}"
+            item.label = f"Recovered scroll {index:03} from the forgotten archive"
+            rewards.append(item)
+        rewards[-1].label = "ZZZ Final receipt reward"
+        before_items = set(sim.player.getItems())
+        before_turn = sim.gameMap.getNumericProperty("turn")
+        for name, width, height, scale, at_end in (
+            ("overflow", 1920, 1080, 100, False),
+            ("ending", 1920, 1080, 100, True),
+            ("1280x720-200-ending", 1280, 720, 200, True),
+        ):
+            resizeCaptureWindow(sim, width, height)
+            gui.applyUiPreferences(f'{{"uiScale":{scale},"textScale":{scale}}}')
+
+            def prepare(panel, active_gui):
+                if at_end:
+                    for _ in rewards:
+                        panel.keyboardEvent(active_gui, 0x300, 1073741902)  # Page Down
+
+            path = output_dir / f"management-lootPanel-{name}.png"
+            _, info = _captureNativeCall(
+                game, sim, "showLoot", "CGameLootPanel", (sim.player, set(rewards)), path, prepare
+            )
+            if (info.get("width"), info.get("height")) != (width, height):
+                raise RuntimeError("The reward receipt capture has unexpected dimensions.")
+            if set(sim.player.getItems()) != before_items or sim.gameMap.getNumericProperty("turn") != before_turn:
+                raise RuntimeError("Reading the reward receipt changed inventory or spent a turn.")
+            written.append(path)
+            print(f"  [ok]   reward receipt {name}: {path.name}", flush=True)
+    finally:
+        gui.applyUiPreferences("{}")
+        sim.gameInstance.getContext().shutdown()
     return written
 
 
@@ -847,9 +908,24 @@ def capture_frontend(game, output_dir, player_class):
 
     sim = FrontendSession.startGame(game, PANELS_MAP, player_class, load_gui=True)
     try:
+
+        def focusRegions(count):
+            def prepare(panel, gui):
+                for _ in range(count):
+                    keyCapture(sim, 9)
+
+            return prepare
+
         capture_flow(
             sim, "main-selected", lambda current: ui.mainMenu(current, in_session=True), prepare=key(1073741905)
         )
+        for region, count in (("details", 1), ("confirm", 2), ("back", 3)):
+            capture_flow(
+                sim,
+                "main-focus-" + region,
+                lambda current: ui.mainMenu(current, in_session=True),
+                prepare=focusRegions(count),
+            )
         capture_flow(sim, "new-adventure", ui.newAdventure)
         capture_flow(sim, "scenario-preview", ui.newAdventure, preceding_choices={"New adventure": "scenario"})
         capture_flow(sim, "character-preview", ui.chooseCharacter, "showCharacterCreationOptions", key(9, 1073741905))
@@ -871,6 +947,13 @@ def capture_frontend(game, output_dir, player_class):
             sim,
             "controls-disabled",
             lambda current: ui.configureBinding(current, ui.preferences(current)),
+            preceding_choices={"Controls": "save"},
+        )
+        capture_flow(
+            sim,
+            "controls-disabled-focused",
+            lambda current: ui.configureBinding(current, ui.preferences(current)),
+            prepare=focusRegions(2),
             preceding_choices={"Controls": "save"},
         )
         capture_flow(
@@ -929,6 +1012,13 @@ def capture_frontend(game, output_dir, player_class):
             capture_flow(sim, "settings-" + suffix, ui.showSettings)
             capture_flow(sim, "character-" + suffix, ui.chooseCharacter, "showCharacterCreationOptions", key(9, 9))
             if width == 1280 and ui_scale == text_scale == 200:
+                for region, count in (("confirm", 2), ("back", 3)):
+                    capture_flow(
+                        sim,
+                        "menu-focus-" + region + "-" + suffix,
+                        ui.newAdventure,
+                        prepare=focusRegions(count),
+                    )
                 capture_flow(sim, "campaign-artwork-" + suffix, ui.chooseCampaign, prepare=key(9))
                 capture_flow(sim, "chapter-artwork-" + suffix, chapterArtwork, "showCampaignArtworkScreen")
                 capture_flow(
@@ -1030,6 +1120,321 @@ def capture_dialogue_context(game, output_dir, player_class):
     return written
 
 
+def captureAcceptanceStates(game, output_dir, player_class):
+    """Capture real service and outcome flows in a disposable, isolated game session.
+
+    Inventory, stats and campaign position are explicit fixture setup, not a gameplay
+    walkthrough. Costs, rewards, defeat receipts and outcome copy come from production
+    operations. Browsing and cancelled previews must preserve the prepared state.
+    """
+    import campaign
+    import crafting
+    import artifact_sets
+    import game_simulation
+    import json
+    import ui
+    import uuid
+    from unittest.mock import patch
+
+    sim = game_simulation.GameSimulation.startGame(game, PANELS_MAP, player_class, load_gui=True)
+    gui = sim.gameInstance.getGui()
+    player = sim.player
+    written = []
+    save_paths = []
+
+    def state():
+        coords = player.getCoords()
+        return (
+            sim.gameMap.getNumericProperty("turn"),
+            (coords.x, coords.y, coords.z),
+            player.getGold(),
+            player.getHp(),
+            player.getMana(),
+            tuple(sorted(item.getName() for item in player.getItems())),
+            tuple(sorted((slot, item.getName()) for slot, item in player.getEquipped().items() if item)),
+        )
+
+    def record(name):
+        path = output_dir / (name + ".png")
+        sim.pumpEvents(2)
+        info = sim.captureGuiScreenshot(path=path)
+        if (info.get("width"), info.get("height")) != (1920, 1080):
+            raise RuntimeError(f"Unexpected acceptance capture dimensions: {name}")
+        written.append(path)
+        print(f"  [ok]   acceptance {name}: {info.get('bytes', 0)} bytes", flush=True)
+
+    def previewChoice(panel, choice_id, limit=100):
+        for _ in range(limit):
+            if panel.getSelectedId() == choice_id:
+                return
+            keyCapture(sim, 1073741905)
+        raise RuntimeError(f"Could not select capture choice {choice_id}")
+
+    def flowCaptures(flow, names, helper="showChoice", decisions=(), prepare=None):
+        captures = []
+        panel_class = (
+            "CGameCampaignPanel"
+            if helper in ("showCampaignScreen", "showCampaignArtworkScreen")
+            else "CGameCampaignBrowserPanel"
+        )
+
+        def capture(handler, *arguments):
+            index = len(captures)
+            if index >= len(names):
+                raise RuntimeError(f"Unexpected extra {helper} while capturing {names}")
+            name = names[index]
+            path = output_dir / (name + ".png")
+
+            def inspect(panel, current_gui):
+                if index and index <= len(decisions):
+                    if panel.getSelectedId() != decisions[index - 1] or "Last result" not in panel.getDetailText():
+                        raise RuntimeError("The recipe result is not shown beside the selected recipe's details.")
+                if index < len(decisions):
+                    previewChoice(panel, decisions[index], len(json.loads(arguments[1])))
+                if prepare:
+                    prepare(panel, current_gui)
+
+            result, info = _captureNativeCall(game, sim, helper, panel_class, arguments, path, inspect)
+            if (info.get("width"), info.get("height")) != (1920, 1080):
+                raise RuntimeError(f"Unexpected acceptance capture dimensions: {name}")
+            captures.append(path)
+            print(f"  [ok]   acceptance {name}: {info.get('bytes', 0)} bytes", flush=True)
+            return decisions[index] if index < len(decisions) else result
+
+        with patch.object(game.CGuiHandler, helper, capture):
+            flow()
+        if len(captures) != len(names):
+            raise RuntimeError(f"Expected captures {names}; received {len(captures)}")
+        written.extend(captures)
+
+    try:
+        gui.applyUiPreferences("{}")
+        resizeCaptureWindow(sim, 1920, 1080)
+
+        before = state()
+        console = next(child for child in gui.getChildren() if child.getType() == "CConsoleGraphicsObject")
+        keyCapture(sim, 1073741893)  # F12
+        if not console.getBoolProperty("modal"):
+            raise RuntimeError("The isolated developer-console fixture did not open.")
+        for key in (ord("i"), ord("j"), ord("c")):
+            keyCapture(sim, key)
+        if any(gui.findChild(name) for name in ("CGameInventoryPanel", "CGameQuestPanel", "CGameCharacterPanel")):
+            raise RuntimeError("World navigation stole input from the developer console.")
+        for command in ("game.getMap().getTurn()", "game.getMap().getPlayer().getHp()"):
+            console.setStringProperty("consoleState", command)
+            keyCapture(sim, 27)
+            keyCapture(sim, 1073741893)
+        if not console.getBoolProperty("modal"):
+            raise RuntimeError("The developer console did not reopen for its history capture.")
+        console.setStringProperty("consoleState", "game.getMap().getPlayer().getGold()")
+        record("frontend-developer-console")
+        keyCapture(sim, 27)
+        if console.getBoolProperty("modal") or state() != before:
+            raise RuntimeError("Closing the developer console changed the session or retained focus.")
+
+        # Only this disposable slot appears in the list: never expose or modify a player's saves.
+        provider = sim.gameInstance.getResourcesProvider()
+        existing_slots = set(provider.getFiles("SAVE"))
+        slot = "Before-the-northern-gate-" + uuid.uuid4().hex[:8]
+        while slot in existing_slots:
+            slot = "Before-the-northern-gate-" + uuid.uuid4().hex[:8]
+        if not game.CMapLoader.saveWithResult(sim.gameMap, slot):
+            raise RuntimeError("Could not create the isolated save-list fixture.")
+        save_path = Path(provider.getPath("save/" + slot + ".json"))
+        save_paths.append(save_path)
+        row = ui.readSavePreview(provider, slot)
+        if "Map:" not in row["detail"] or "Saved:" not in row["detail"]:
+            raise RuntimeError("Save-list capture has no native save metadata.")
+        before = state()
+        with patch.object(ui, "savedGames", return_value=[row]):
+            flowCaptures(lambda: ui.loadMenu(sim.gameInstance), ["frontend-load-list"])
+            flowCaptures(lambda: ui.saveMenu(sim.gameInstance), ["frontend-save-list"])
+        if state() != before:
+            raise RuntimeError("Cancelling save/load browsing changed the session.")
+
+        panel = sim.gameInstance.getGuiHandler().openPanel("characterPanel")
+        try:
+            if not list(player.getEffectiveInteractions()):
+                raise RuntimeError("Character capture needs an owned ability.")
+            sim.pumpEvents(2)
+            abilities = next(
+                child
+                for child in panel.getChildren()
+                if child.getStringProperty("collection") == "interactionsCollection"
+            )
+            clickCaptureWidget(sim, abilities, row=True)
+            record("management-character-ability-selected")
+            modifiers = next(
+                child for child in panel.getChildren() if child.getStringProperty("click") == "inspectModifiers"
+            )
+            clickCaptureWidget(sim, modifiers)
+            record("management-character-modifiers")
+            keyCapture(sim, 27)
+        finally:
+            panel.close()
+        keyCapture(sim, ord("m"))
+        record("management-expanded-map")
+        map_panel = next(child for child in gui.getChildren() if child.getStringProperty("title") == "Map & landmarks")
+        map_view = next(child for child in map_panel.getChildren() if child.getType() == "CMinimapGraphicsObject")
+        landmarks = next(
+            child for child in map_view.getChildren() if child.getStringProperty("click") == "browseLandmarks"
+        )
+        path = output_dir / "management-map-landmarks.png"
+        _captureNativeCall(
+            game,
+            sim,
+            "showChoice",
+            "CGameCampaignBrowserPanel",
+            (),
+            path,
+            open_action=lambda: clickCaptureWidget(sim, landmarks),
+        )
+        written.append(path)
+        keyCapture(sim, 27)
+        if state() != before:
+            raise RuntimeError("Inspecting abilities, modifiers or landmarks changed the session.")
+
+        # The authored recipe controls produce their own ingredient counts and restrictions.
+        station = sim.gameMap.getObjectByName("alchemyTable1")
+        player.setNumericProperty("gold", 2000)
+        for item_id in ("LesserLifePotion", "LesserManaPotion"):
+            for _ in range(2):
+                player.addItem(sim.gameInstance.createObject(item_id))
+        before = state()
+        flowCaptures(
+            lambda: crafting.open_crafting_station(station, player),
+            ["management-crafting-ready"],
+            prepare=lambda panel, current_gui: previewChoice(panel, "brew_life_potion"),
+        )
+        if state() != before:
+            raise RuntimeError("Cancelling recipe browsing consumed ingredients.")
+        gold_before = player.getGold()
+        life_before = player.countItems("LifePotion")
+        life_reagents_before = player.countItems("LesserLifePotion")
+        flowCaptures(
+            lambda: crafting.open_crafting_station(station, player),
+            ["management-crafting-review", "management-crafting-success"],
+            decisions=("brew_life_potion",),
+        )
+        if (
+            player.getGold() != gold_before - 20
+            or player.countItems("LifePotion") != life_before + 1
+            or player.countItems("LesserLifePotion") != life_reagents_before - 2
+        ):
+            raise RuntimeError("The captured successful craft did not resolve its authoritative cost/output.")
+        gold_before = player.getGold()
+        mana_before = player.countItems("ManaPotion")
+        mana_reagents_before = player.countItems("LesserManaPotion")
+        # Force a legal failed roll; the production craft still owns payment and result text.
+        with patch.object(crafting, "randint", return_value=100):
+            flowCaptures(
+                lambda: crafting.open_crafting_station(station, player),
+                ["management-crafting-failure-review", "management-crafting-failure"],
+                decisions=("brew_mana_potion",),
+            )
+        if (
+            player.getGold() != gold_before - 640
+            or player.countItems("ManaPotion") != mana_before
+            or player.countItems("LesserManaPotion") != mana_reagents_before - 2
+        ):
+            raise RuntimeError("The captured failed craft did not consume its authoritative cost.")
+
+        runtime = artifact_sets.get_runtime()
+        definition = runtime.set_for_combined("ArmorOfTheDamned")
+        for slot_id in list(player.getEquipped()):
+            player.equipItem(slot_id, None)
+        for piece_id in definition["pieces"]:
+            piece = sim.gameInstance.createObject(piece_id)
+            player.addItem(piece)
+            slot_id = next(iter(sim.gameInstance.getSlotConfiguration().getFittingSlots(piece)))
+            player.equipItem(slot_id, piece)
+        sim.pumpEvents(3)  # Drain the ordinary on-equip offers through the global cancel adapter.
+        before = state()
+        flowCaptures(lambda: artifact_sets.maybe_offer_assembly(player), ["management-artifact-assembly"])
+        flowCaptures(
+            lambda: artifact_sets.maybe_offer_assembly(player),
+            ["management-artifact-assembly-ending"],
+            prepare=lambda panel, current_gui: keyCapture(sim, 1073741902),
+        )
+        if state() != before:
+            raise RuntimeError("Cancelling assembly changed equipment.")
+        if not runtime.assemble(sim.gameInstance, player, definition):
+            raise RuntimeError("Could not resolve the disposable artifact fixture.")
+        combined = player.getItemAtSlot("3")
+        before = state()
+        flowCaptures(lambda: artifact_sets.offer_disassembly(combined, player), ["management-artifact-disassembly"])
+        flowCaptures(
+            lambda: artifact_sets.offer_disassembly(combined, player),
+            ["management-artifact-disassembly-ending"],
+            prepare=lambda panel, current_gui: keyCapture(sim, 1073741902),
+        )
+        if state() != before:
+            raise RuntimeError("Cancelling disassembly changed equipment.")
+
+        # Drive the production defeat resolver, then display its committed receipt once.
+        # The artifact's 250 armor would clamp physical hits to zero in this fixture.
+        player.equipItem("3", None)
+        enemy = sim.gameInstance.createObject("GoblinThief")
+        enemy.name = "captureDefeatOpponent"
+        enemy.setCoords(player.getCoords())
+        sim.gameMap.addObject(enemy)
+        enemy.setHp(enemy.getHpMax())
+        enemy.setMana(enemy.getManaMax())
+        enemy_stats = enemy.getObjectProperty("baseStats")
+        for property_name in ("hit", "dmgMin", "dmgMax"):
+            enemy_stats.setNumericProperty(property_name, 10000)
+        player.setFightController(sim.gameInstance.createObject("CFightController"))
+        player.setHp(1)
+        outcome = game.CFightHandler.fightManyOutcome(enemy, [player])
+        raw_receipt = player.getStringProperty("uiDefeatReceipt")
+        if not raw_receipt:
+            raise RuntimeError(f"No defeat receipt after {outcome}: " + sim.gameMap.getStringProperty("combatHistory"))
+        receipt = json.loads(raw_receipt)
+        if receipt.get("hp") != 1 or receipt.get("lostItemCount", 0) == 0:
+            raise RuntimeError("Defeat capture has no resolved one-HP recovery and item losses.")
+        entry = (sim.gameMap.getEntryX(), sim.gameMap.getEntryY(), sim.gameMap.getEntryZ())
+        if tuple(receipt[key] for key in ("x", "y", "z")) != entry or receipt.get("map") != PANELS_MAP:
+            raise RuntimeError("Defeat capture did not identify the actual map entrance recovery.")
+        before = state()
+        flowCaptures(lambda: ui.showDefeat(sim.gameInstance), ["frontend-defeat"])
+        if state() != before or player.getStringProperty("uiDefeatReceipt"):
+            raise RuntimeError("Defeat acknowledgement replayed losses or retained a stale receipt.")
+
+        # A terminal authored chapter produces both the outcome and completion screen.
+        manifest = next(row for row in campaign.list_campaigns() if row["campaignId"] == "longLiveTheQueen")
+        terminal_id = next(key for key, chapter in manifest["scenarios"].items() if not chapter.get("next"))
+        terminal_map = manifest["scenarios"][terminal_id]["map"]
+        terminal_path = sim.gameInstance.getResourcesProvider().getPath(f"maps/{terminal_map}/map.json")
+        terminal_document = json.loads(Path(terminal_path).read_text(encoding="utf-8"))
+        terminal_mission = next(
+            json.loads(obj["properties"]["campaign_mission"].removeprefix("castleMission:"))
+            for layer in terminal_document["layers"]
+            for obj in layer.get("objects", [])
+            if obj.get("properties", {}).get("campaign_mission")
+        )
+        gold_before = player.getGold()
+        player.addGold(terminal_mission.get("victoryGold", 0))
+        gold_received = player.getGold() - gold_before
+        outcome_summary = f"Rewards received\nGold: +{gold_received}" if gold_received > 0 else ""
+        before = state()
+        store = campaign.state(sim.gameInstance)
+        store.begin(manifest["campaignId"], terminal_id)
+        flowCaptures(
+            lambda: campaign.complete_scenario(sim.gameInstance, "completed", outcome_summary=outcome_summary),
+            ["frontend-chapter-outcome", "frontend-campaign-complete"],
+            helper="showCampaignScreen",
+        )
+        if state() != before or not store.finished() or store.history() != [(terminal_id, "completed")]:
+            raise RuntimeError("Campaign outcome acknowledgement did not preserve its committed result.")
+    finally:
+        gui.applyUiPreferences("{}")
+        sim.gameInstance.getContext().shutdown()
+        for path in save_paths:
+            path.unlink(missing_ok=True)
+        ui.SAVE_PREVIEW_CACHE.clear()
+    return written
+
+
 def main():
     parser = argparse.ArgumentParser(description="Regenerate the coverage screenshot set.")
     parser.add_argument("--output-dir", default=str(REPO_ROOT / "screenshots"))
@@ -1044,6 +1449,9 @@ def main():
         "--management-only", action="store_true", help="Capture only selected and compact management states."
     )
     selection.add_argument("--frontend-only", action="store_true", help="Capture only frontend states.")
+    selection.add_argument(
+        "--acceptance-only", action="store_true", help="Capture service, session outcome, ability and map states."
+    )
     parser.add_argument("--no-random", action="store_true", help="Skip the random-map screenshot.")
     args = parser.parse_args()
 
@@ -1052,7 +1460,9 @@ def main():
     # Captures must not read or overwrite the player's persisted interface settings.
     preference_path = output_dir / ".capture-preferences.json"
     previous_preferences = os.environ.get("GAME_UI_PREFERENCES_PATH")
+    previous_console = os.environ.get("GAME_ENABLE_PYTHON_CONSOLE")
     os.environ["GAME_UI_PREFERENCES_PATH"] = str(preference_path)
+    os.environ["GAME_ENABLE_PYTHON_CONSOLE"] = "1"
     try:
         generateScreenshots(args, output_dir)
     finally:
@@ -1061,6 +1471,10 @@ def main():
             os.environ.pop("GAME_UI_PREFERENCES_PATH", None)
         else:
             os.environ["GAME_UI_PREFERENCES_PATH"] = previous_preferences
+        if previous_console is None:
+            os.environ.pop("GAME_ENABLE_PYTHON_CONSOLE", None)
+        else:
+            os.environ["GAME_ENABLE_PYTHON_CONSOLE"] = previous_console
 
 
 def generateScreenshots(args, output_dir):
@@ -1077,25 +1491,33 @@ def generateScreenshots(args, output_dir):
     written = []
     failures = 0
 
-    capture_registered = not (args.maps_only or args.management_only or args.frontend_only)
+    acceptance_only = getattr(args, "acceptance_only", False)
+    capture_registered = not (args.maps_only or args.management_only or args.frontend_only or acceptance_only)
     if capture_registered:
         print(f"Capturing {len(panels)} panel screenshots on the '{PANELS_MAP}' map...", flush=True)
         written.extend(capture_panels(game, output_dir, args.player, panels))
-    if not (args.maps_only or args.frontend_only):
+    if not (args.maps_only or args.frontend_only or acceptance_only):
         try:
             written.extend(capture_management(game, output_dir, args.player))
             written.extend(capture_dialogue_context(game, output_dir, args.player))
         except Exception:
             failures += 1
             print(f"  [fail] management states:\n{traceback.format_exc()}", flush=True)
-    if not (args.maps_only or args.management_only):
+    if not (args.maps_only or args.management_only or acceptance_only):
         try:
             written.extend(capture_frontend(game, output_dir, args.player))
         except Exception:
             failures += 1
             print(f"  [fail] frontend states:\n{traceback.format_exc()}", flush=True)
 
-    if not (args.panels_only or args.management_only or args.frontend_only):
+    if acceptance_only or not (args.maps_only or args.management_only or args.frontend_only):
+        try:
+            written.extend(captureAcceptanceStates(game, output_dir, args.player))
+        except Exception:
+            failures += 1
+            print(f"  [fail] acceptance states:\n{traceback.format_exc()}", flush=True)
+
+    if not (args.panels_only or args.management_only or args.frontend_only or acceptance_only):
         print(f"Capturing {len(maps)} map screenshots...", flush=True)
         for map_name in maps:
             try:

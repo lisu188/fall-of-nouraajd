@@ -44,6 +44,7 @@ class CGameCampaignBrowserPanel : public CGamePanel {
         bool enabled = true;
         std::map<std::string, std::string> previews;
         std::string image;
+        bool selected = false;
     };
 
     static std::vector<ChoiceOption> parseChoices(const std::string &choicesJson);
@@ -118,6 +119,10 @@ class CGameCampaignBrowserPanel : public CGamePanel {
     bool event(std::shared_ptr<CGui> gui, SDL_Event *event) override;
 
   private:
+    enum class FocusRegion { Choices, Race, Details, Confirm, Back };
+    FocusRegion focusRegion = FocusRegion::Choices;
+    void setFocusRegion(FocusRegion region);
+    void moveFocus(bool backward);
     struct DetailParagraph {
         std::string text;
         int y;
@@ -139,6 +144,7 @@ class CGameCampaignBrowserPanel : public CGamePanel {
     SDL_Rect detailRect() const;
     SDL_Rect actionRect() const;
     SDL_Rect backRect() const;
+    SDL_Rect inputRect() const;
     SDL_Rect pageRect(int page) const;
     void selectPage(int page);
     void scrollDetail(int delta);

@@ -30,6 +30,8 @@ constexpr int CONFIRM_TARGET = 2'000'000;
 constexpr int BACK_TARGET = 2'000'001;
 constexpr int RACE_TARGET = 1'000'000;
 constexpr int PAGE_TARGET = 3'000'000;
+constexpr int INPUT_TARGET = 4'000'000;
+constexpr int DETAIL_TARGET = 4'000'001;
 
 bool containsPoint(const SDL_Rect &rect, int x, int y) {
     return x >= rect.x && y >= rect.y && x < rect.x + rect.w && y < rect.y + rect.h;
@@ -44,10 +46,12 @@ CGameCampaignBrowserPanel::parseChoices(const std::string &choicesJson) {
     }
     std::set<std::string> ids;
     std::vector<ChoiceOption> result;
+    bool hasSelection = false;
     for (const auto &entry : document) {
         if (!entry.is_object() || !entry.contains("id") || !entry["id"].is_string() || !entry.contains("label") ||
             !entry["label"].is_string() || (entry.contains("detail") && !entry["detail"].is_string()) ||
             (entry.contains("enabled") && !entry["enabled"].is_boolean()) ||
+            (entry.contains("selected") && !entry["selected"].is_boolean()) ||
             (entry.contains("image") && !entry["image"].is_string())) {
             throw std::invalid_argument("Every choice requires a string id and label.");
         }
@@ -56,6 +60,11 @@ CGameCampaignBrowserPanel::parseChoices(const std::string &choicesJson) {
         if (option.id.empty() || !ids.insert(option.id).second) {
             throw std::invalid_argument("Choice ids must be nonempty and unique.");
         }
+        option.selected = entry.value("selected", false);
+        if (option.selected && hasSelection) {
+            throw std::invalid_argument("Only one choice may be initially selected.");
+        }
+        hasSelection = hasSelection || option.selected;
         option.image = entry.value("image", std::string());
         if (!option.image.empty() && !UiArtwork::validPath(option.image))
             throw std::invalid_argument("Choice artwork must name an image resource.");
@@ -85,6 +94,7 @@ void CGameCampaignBrowserPanel::configureChoices(std::string titleValue, std::ve
     selectedRaceIndex = -1;
     activeColumn = 0;
     activePage = 0;
+    focusRegion = FocusRegion::Choices;
     pressedTarget = hoveredTarget = -1;
     selectedId.clear();
     detailImage.clear();
@@ -94,7 +104,9 @@ void CGameCampaignBrowserPanel::configureChoices(std::string titleValue, std::ve
     detailMeasuredWidth = 0;
     setChildren({});
     if (!options.empty()) {
-        selectIndex(0, 0);
+        const auto previous =
+            std::find_if(options.begin(), options.end(), [](const auto &option) { return option.selected; });
+        selectIndex(previous == options.end() ? 0 : static_cast<int>(previous - options.begin()), 0);
     } else {
         detailText = "No choices are available. Use Back to return.";
     }
@@ -117,8 +129,38 @@ int CGameCampaignBrowserPanel::getActivePage() const { return activePage; }
 
 void CGameCampaignBrowserPanel::selectPage(int page) {
     activePage = std::clamp(page, 0, characterChoices ? 2 : 1);
-    if (activePage < (characterChoices ? 2 : 1))
+    if (activePage < (characterChoices ? 2 : 1)) {
         activeColumn = activePage;
+        focusRegion = activeColumn == 0 ? FocusRegion::Choices : FocusRegion::Race;
+    } else {
+        focusRegion = FocusRegion::Details;
+    }
+}
+
+void CGameCampaignBrowserPanel::setFocusRegion(FocusRegion region) {
+    focusRegion = region;
+    if (region == FocusRegion::Choices || region == FocusRegion::Race) {
+        activeColumn = region == FocusRegion::Race ? 1 : 0;
+        if (compactLayout)
+            activePage = activeColumn;
+    } else if (region == FocusRegion::Details && compactLayout) {
+        activePage = characterChoices ? 2 : 1;
+    }
+}
+
+void CGameCampaignBrowserPanel::moveFocus(bool backward) {
+    std::vector<FocusRegion> regions{FocusRegion::Choices};
+    if (!textInputMode) {
+        if (characterChoices)
+            regions.push_back(FocusRegion::Race);
+        regions.push_back(FocusRegion::Details);
+    }
+    regions.push_back(FocusRegion::Confirm);
+    regions.push_back(FocusRegion::Back);
+    const auto position = std::find(regions.begin(), regions.end(), focusRegion);
+    const int count = static_cast<int>(regions.size());
+    const int index = position == regions.end() ? 0 : static_cast<int>(position - regions.begin());
+    setFocusRegion(regions[(index + (backward ? count - 1 : 1)) % count]);
 }
 
 void CGameCampaignBrowserPanel::appendInput(const std::string &text) {
@@ -134,8 +176,14 @@ void CGameCampaignBrowserPanel::appendInput(const std::string &text) {
 }
 
 bool CGameCampaignBrowserPanel::event(std::shared_ptr<CGui> gui, SDL_Event *inputEvent) {
+    if (managedChoices && inputEvent && inputEvent->type == SDL_KEYDOWN && inputEvent->key.keysym.sym == SDLK_TAB &&
+        isAttachedToGui(gui) && isVisible()) {
+        moveFocus((inputEvent->key.keysym.mod & KMOD_SHIFT) != 0);
+        return true;
+    }
     if (textInputMode && inputEvent && inputEvent->type == SDL_TEXTINPUT && isAttachedToGui(gui) && isVisible()) {
-        appendInput(inputEvent->text.text);
+        if (focusRegion == FocusRegion::Choices)
+            appendInput(inputEvent->text.text);
         return true;
     }
     return CGamePanel::event(gui, inputEvent);
@@ -274,6 +322,10 @@ SDL_Rect CGameCampaignBrowserPanel::backRect() const {
     return {panelWidth * 4 / 100, panelHeight - buttonHeight - hintHeight - 24, panelWidth * 25 / 100, buttonHeight};
 }
 
+SDL_Rect CGameCampaignBrowserPanel::inputRect() const {
+    return {panelWidth / 25, headerHeight, panelWidth * 23 / 25, buttonHeight + 16};
+}
+
 SDL_Rect CGameCampaignBrowserPanel::pageRect(int page) const {
     const int margin = std::max(16, panelWidth / 40);
     const int count = characterChoices ? 3 : 2;
@@ -282,6 +334,8 @@ SDL_Rect CGameCampaignBrowserPanel::pageRect(int page) const {
 }
 
 int CGameCampaignBrowserPanel::hitTarget(int x, int y) const {
+    if (textInputMode && containsPoint(inputRect(), x, y))
+        return INPUT_TARGET;
     if (compactLayout) {
         for (int page = 0; page <= (characterChoices ? 2 : 1); ++page)
             if (containsPoint(pageRect(page), x, y))
@@ -293,6 +347,9 @@ int CGameCampaignBrowserPanel::hitTarget(int x, int y) const {
     if (containsPoint(backRect(), x, y)) {
         return BACK_TARGET;
     }
+    if (!textInputMode && (!compactLayout || activePage == (characterChoices ? 2 : 1)) &&
+        containsPoint(detailRect(), x, y))
+        return DETAIL_TARGET;
     for (int column = 0; !textInputMode && column <= (characterChoices ? 1 : 0); ++column) {
         if (compactLayout && activePage != column)
             continue;
@@ -323,13 +380,17 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
     }
     panelWidth = rect->w;
     panelHeight = rect->h;
+    const std::string navigationHint = textInputMode
+                                           ? "Tab / Shift+Tab: focus  |  Enter: activate  |  Esc: back"
+                                           : "Tab / Shift+Tab: focus  |  Enter / Space: activate  |  Esc: back";
     const int bodyLine = gui->getTextManager()->measureText("Ag", panelWidth, "body").second;
-    hintHeight = gui->getTextManager()->measureText("Ag", panelWidth, "small").second + 4;
+    hintHeight = gui->getTextManager()->measureText(navigationHint, std::max(1, panelWidth - 40), "small").second + 4;
     const int actionTextHeight =
         gui->getTextManager()->measureText(actionLabel, panelWidth * 37 / 100 - 24, "body").second;
     const int backTextHeight = gui->getTextManager()->measureText(backLabel, panelWidth * 25 / 100 - 24, "body").second;
     buttonHeight = std::max(48, std::max(actionTextHeight, backTextHeight) + 24);
     compactLayout = !textInputMode && panelWidth < static_cast<int>(1200 * gui->getTextScale());
+    setFocusRegion(focusRegion);
     headerHeight = getShellHeaderHeight(gui) + (characterChoices && !compactLayout ? hintHeight : 0) + 16;
     footerHeight = buttonHeight + hintHeight + 40;
     const int labelWidth = compactLayout      ? panelWidth - std::max(16, panelWidth / 40) * 2
@@ -378,6 +439,8 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
         auto &offset = column == 1 ? raceOffset : listOffset;
         const int selected = column == 1 ? selectedRaceIndex : selectedIndex;
         const int visibleRows = std::max(1, bounds.h / rowHeight);
+        if (selected >= 0)
+            offset = std::clamp(offset, std::max(0, selected - visibleRows + 1), selected);
         offset = std::clamp(offset, 0, std::max(0, static_cast<int>(values.size()) - visibleRows));
         if (characterChoices && !compactLayout) {
             gui->getTextManager()->drawTextStyled(column == 0 ? "CLASS" : "RACE",
@@ -394,7 +457,9 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
                                                                          : UiTheme::Panel);
             if (index == selected) {
                 UiTheme::stroke(gui->getRenderer(), *absolute(rowRect),
-                                activeColumn == column ? UiTheme::Accent : UiTheme::Border);
+                                focusRegion == (column == 0 ? FocusRegion::Choices : FocusRegion::Race)
+                                    ? UiTheme::Accent
+                                    : UiTheme::Border);
             }
             const std::string marker = index == selected ? "> " : "  ";
             gui->getTextManager()->drawTextStyled(
@@ -410,10 +475,11 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
         }
     }
     if (textInputMode) {
-        SDL_Rect inputRect{panelWidth / 25, headerHeight, panelWidth * 23 / 25, buttonHeight + 16};
+        const auto inputRect = this->inputRect();
         fill(inputRect, inputSelectAll ? UiTheme::Selection : UiTheme::Background);
-        UiTheme::stroke(gui->getRenderer(), *absolute(inputRect), UiTheme::Accent);
-        std::string visibleInput = inputText + "|";
+        UiTheme::stroke(gui->getRenderer(), *absolute(inputRect),
+                        focusRegion == FocusRegion::Choices ? UiTheme::Accent : UiTheme::Border);
+        std::string visibleInput = inputText + (focusRegion == FocusRegion::Choices ? "|" : "");
         while (visibleInput.size() > 1 &&
                gui->getTextManager()->measureText(visibleInput, 0, "body").first > inputRect.w - 32) {
             visibleInput.erase(0, 1);
@@ -432,6 +498,8 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
     } else if (!compactLayout || activePage == (characterChoices ? 2 : 1)) {
         const auto detail = absolute(detailRect());
         renderDetail(gui, detail, frameTime);
+        if (focusRegion == FocusRegion::Details)
+            UiTheme::stroke(gui->getRenderer(), *detail, UiTheme::Accent);
         if (detailHeight > detail->h) {
             SDL_Rect track{detail->x + detail->w - 4, detail->y, 4, detail->h};
             UiTheme::fill(gui->getRenderer(), track, UiTheme::Border);
@@ -444,14 +512,15 @@ void CGameCampaignBrowserPanel::renderObject(std::shared_ptr<CGui> gui, std::sha
     fill(backRect(), UiTheme::Panel);
     fill(actionRect(), canConfirm() ? UiTheme::Selection : UiTheme::Background);
     UiTheme::stroke(gui->getRenderer(), *absolute(backRect()),
-                    hoveredTarget == BACK_TARGET ? UiTheme::Accent : UiTheme::Border);
-    UiTheme::stroke(gui->getRenderer(), *absolute(actionRect()), canConfirm() ? UiTheme::Accent : UiTheme::Border);
+                    focusRegion == FocusRegion::Back || hoveredTarget == BACK_TARGET ? UiTheme::Accent
+                                                                                     : UiTheme::Border);
+    UiTheme::stroke(gui->getRenderer(), *absolute(actionRect()),
+                    focusRegion == FocusRegion::Confirm || hoveredTarget == CONFIRM_TARGET ? UiTheme::Accent
+                                                                                           : UiTheme::Border);
     gui->getTextManager()->drawTextStyled(backLabel, absolute(backRect()), "body", UiTheme::Text, true);
     gui->getTextManager()->drawTextStyled(actionLabel, absolute(actionRect()), "body",
                                           canConfirm() ? UiTheme::Text : UiTheme::Muted, true);
-    gui->getTextManager()->drawTextStyled(compactLayout      ? "Tab: next page  |  Enter: confirm  |  Esc: back"
-                                          : characterChoices ? "Tab: class/race  |  Enter: begin  |  Esc: back"
-                                                             : "Enter: confirm  |  Esc: back",
+    gui->getTextManager()->drawTextStyled(navigationHint,
                                           absolute({20, panelHeight - hintHeight - 10, panelWidth - 40, hintHeight}),
                                           "small", UiTheme::Muted, true);
 }
@@ -546,9 +615,12 @@ bool CGameCampaignBrowserPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_Eve
         // Escape is a cancel path: it resolves the browser to an empty stable id.
         clickCancel(gui);
     } else if (managedChoices && type == SDL_KEYDOWN) {
-        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
-            clickSelect(gui);
-        } else if (textInputMode) {
+        if (key == SDLK_TAB) {
+            moveFocus((SDL_GetModState() & KMOD_SHIFT) != 0);
+        } else if (key == SDLK_RETURN || key == SDLK_KP_ENTER ||
+                   (key == SDLK_SPACE && (!textInputMode || focusRegion != FocusRegion::Choices))) {
+            focusRegion == FocusRegion::Back ? clickCancel(gui) : clickSelect(gui);
+        } else if (textInputMode && focusRegion == FocusRegion::Choices) {
             if (key == SDLK_BACKSPACE) {
                 if (inputSelectAll) {
                     inputText.clear();
@@ -567,21 +639,22 @@ bool CGameCampaignBrowserPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_Eve
                 inputText.clear();
                 inputSelectAll = false;
             }
-        } else if (compactLayout && (key == SDLK_TAB || key == SDLK_LEFT || key == SDLK_RIGHT)) {
+        } else if (focusRegion == FocusRegion::Confirm || focusRegion == FocusRegion::Back) {
+            if (key == SDLK_LEFT || key == SDLK_RIGHT)
+                setFocusRegion(key == SDLK_LEFT ? FocusRegion::Back : FocusRegion::Confirm);
+        } else if (!textInputMode && compactLayout && (key == SDLK_LEFT || key == SDLK_RIGHT)) {
             const int count = characterChoices ? 3 : 2;
-            const bool previous = key == SDLK_LEFT || (key == SDLK_TAB && (SDL_GetModState() & KMOD_SHIFT));
+            const bool previous = key == SDLK_LEFT;
             selectPage((activePage + (previous ? count - 1 : 1)) % count);
-        } else if (compactLayout && activePage == (characterChoices ? 2 : 1) && (key == SDLK_UP || key == SDLK_DOWN)) {
+        } else if (focusRegion == FocusRegion::Details && (key == SDLK_UP || key == SDLK_DOWN)) {
             scrollDetail((key == SDLK_UP ? -1 : 1) * hintHeight);
         } else if (key == SDLK_UP || key == SDLK_DOWN) {
             moveSelection(key == SDLK_UP ? -1 : 1);
-        } else if (key == SDLK_TAB && characterChoices) {
-            activeColumn = 1 - activeColumn;
         } else if ((key == SDLK_LEFT || key == SDLK_RIGHT) && characterChoices) {
-            activeColumn = key == SDLK_LEFT ? 0 : 1;
+            setFocusRegion(key == SDLK_LEFT ? FocusRegion::Choices : FocusRegion::Race);
         } else if (key == SDLK_PAGEUP || key == SDLK_PAGEDOWN) {
             scrollDetail((key == SDLK_PAGEUP ? -1 : 1) * std::max(40, detailRect().h - 40));
-        } else if (compactLayout && activePage == (characterChoices ? 2 : 1) && (key == SDLK_HOME || key == SDLK_END)) {
+        } else if (focusRegion == FocusRegion::Details && (key == SDLK_HOME || key == SDLK_END)) {
             scrollDetail(key == SDLK_HOME ? -detailHeight : detailHeight);
         } else if (key == SDLK_HOME) {
             selectIndex(0, activeColumn);
@@ -606,13 +679,20 @@ bool CGameCampaignBrowserPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventT
             pressedTarget = -1;
             if (activate) {
                 if (target == CONFIRM_TARGET) {
+                    setFocusRegion(FocusRegion::Confirm);
                     clickSelect(gui);
                 } else if (target == BACK_TARGET) {
+                    setFocusRegion(FocusRegion::Back);
                     clickCancel(gui);
+                } else if (target == INPUT_TARGET) {
+                    setFocusRegion(FocusRegion::Choices);
+                } else if (target == DETAIL_TARGET) {
+                    setFocusRegion(FocusRegion::Details);
                 } else if (target >= PAGE_TARGET) {
                     selectPage(target - PAGE_TARGET);
                 } else {
                     activeColumn = target >= RACE_TARGET ? 1 : 0;
+                    setFocusRegion(activeColumn == 0 ? FocusRegion::Choices : FocusRegion::Race);
                     selectIndex(target - (activeColumn == 1 ? RACE_TARGET : 0), activeColumn);
                 }
             }
@@ -633,11 +713,15 @@ bool CGameCampaignBrowserPanel::mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_
 bool CGameCampaignBrowserPanel::mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX,
                                                 int wheelY) {
     if (managedChoices) {
+        if (textInputMode)
+            return true;
         if ((!compactLayout || activePage == (characterChoices ? 2 : 1)) && containsPoint(detailRect(), x, y)) {
+            setFocusRegion(FocusRegion::Details);
             scrollDetail(-wheelY * 48);
         } else {
             if (!compactLayout)
                 activeColumn = characterChoices && containsPoint(listRect(1), x, y) ? 1 : 0;
+            setFocusRegion(activeColumn == 0 ? FocusRegion::Choices : FocusRegion::Race);
             moveSelection(-wheelY);
         }
     }

@@ -11,7 +11,7 @@ import types
 import unittest
 from unittest import mock
 
-from tests.test_castle_campaign import FakeMap, FakeObject, FakePlayer, loadCastleModule
+from tests.test_castle_campaign import FakeMap, FakeObject, FakePlayer, loadCastleModule, presentationApi
 
 
 class TownPlayer(FakePlayer):
@@ -52,7 +52,10 @@ class CastleTownServicesTest(unittest.TestCase):
         self.registry = {}
         self.game = self.game_map.game
         self.game.getGuiHandler = lambda: types.SimpleNamespace(
-            showMessage=self.game_map.messages.append, showDialog=self.dialogs.append
+            showMessage=self.game_map.messages.append,
+            showDialog=self.dialogs.append,
+            notify=self.game_map.notifications.append,
+            showCampaignScreen=lambda *args: self.game_map.readers.append(args),
         )
         self.game.createObject = lambda kind: self.registry.get(kind, DialogObject)(game_map=self.game_map)
 
@@ -79,6 +82,7 @@ class CastleTownServicesTest(unittest.TestCase):
             claim_once=claimOnce,
             register=register,
             campaign=types.SimpleNamespace(state=lambda game: None),
+            **presentationApi(),
         )
         patcher = mock.patch.dict(sys.modules, {"game": game_api})
         patcher.start()

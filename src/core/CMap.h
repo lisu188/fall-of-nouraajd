@@ -66,6 +66,7 @@ class CMap : public CGameObject {
 
     V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
            V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+           V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
            V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
@@ -241,6 +242,10 @@ class CMap : public CGameObject {
 
     std::string getMapName();
 
+    std::string getCombatHistory();
+
+    void setCombatHistory(std::string history);
+
     void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
 
   private:
@@ -267,6 +272,7 @@ class CMap : public CGameObject {
     bool moving = false;
     bool playerTriggersRegistered = false;
     std::string mapName;
+    std::string combatHistory;
     std::uint64_t navigationRevision = 0;
 
     bool hasBounds(int z) const;

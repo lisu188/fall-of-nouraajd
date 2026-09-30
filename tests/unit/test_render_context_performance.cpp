@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CSdlResources.h"
 #include "gui/CTextManager.h"
 #include "gui/panel/CGameCampaignBrowserPanel.h"
+#include "gui/panel/CGameLootPanel.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "test_harness.h"
 
@@ -253,6 +254,43 @@ void test_detail_layout_draws_only_visible_cached_paragraphs() {
               << " visible budget=16 redraw texture loads=" << redrawLoads << " redraw budget=0\n";
 }
 
+void test_reward_receipt_draws_only_visible_cached_rows() {
+    auto gui = make_headless_gui();
+    auto textManager = gui->getTextManager();
+    auto rewards = std::make_shared<CGameLootPanel>();
+    std::set<std::shared_ptr<CItem>> items;
+    for (int index = 0; index < 700; ++index) {
+        auto item = std::make_shared<CItem>();
+        item->setLabel("Recovered relic " + std::to_string(1000 + index) + " from the forgotten archive");
+        items.insert(item);
+    }
+    rewards->setItems(items);
+    const auto viewport = CUtil::rect(0, 0, 600, 180);
+    rewards->renderRewards(gui, viewport, 0);
+    rewards->mouseWheelEvent(gui, SDL_MOUSEWHEEL, 1, 1, 0, -1000000);
+    textManager->clearCache();
+    const auto coldLoads = textManager->getTextureLoadCount();
+    rewards->renderRewards(gui, viewport, 0);
+    const auto visibleLoads = textManager->getTextureLoadCount() - coldLoads;
+    expect_true(visibleLoads > 0 && visibleLoads <= 16,
+                "long reward receipts must rasterize only a bounded visible set after scrolling");
+    const auto warmLoads = textManager->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int frame = 0; frame < 25; ++frame) {
+        rewards->renderRewards(gui, viewport, 0);
+    }
+    const auto redrawLoads = textManager->getTextureLoadCount() - warmLoads;
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(redrawLoads == 0, "warm long-receipt frames must load zero additional text textures");
+    expect_true(copies.successfulCopies > 0 && copies.successfulCopies <= 16 * 25 && copies.failedCopies == 0,
+                "long reward receipts must copy only visible rows on each warm frame");
+    expect_true(textManager->getCachedTextureCount() <= 16,
+                "warm receipt redraws must not repopulate the texture cache with hidden rows");
+    std::cout << "[reward receipt] rows=700 redraws=25 visible loads=" << visibleLoads
+              << " visible budget=16 redraw texture loads=" << redrawLoads
+              << " redraw budget=0 copies=" << copies.successfulCopies << " copy budget=400\n";
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
@@ -261,4 +299,5 @@ void run_render_context_performance_tests() {
     test_styled_text_reuses_bounded_cache();
     test_choice_layout_does_not_rasterize_hidden_rows_on_redraw();
     test_detail_layout_draws_only_visible_cached_paragraphs();
+    test_reward_receipt_draws_only_visible_cached_rows();
 }

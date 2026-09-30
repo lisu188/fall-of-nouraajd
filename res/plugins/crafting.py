@@ -413,6 +413,7 @@ def open_crafting_station(station, player):
     handler = game_instance.getGuiHandler()
     station_label = station.getStringProperty("label") or station_id
     last_result = ""
+    selected_id = ""
     while True:
         recipes, option_map = runtime.station_options(player, station_id, station)
         if not recipes:
@@ -420,7 +421,12 @@ def open_crafting_station(station, player):
             return
         show_choice = getattr(handler, "showChoice", None)
         if callable(show_choice):
-            choices = [recipeChoice(runtime, player, recipe, station, last_result) for recipe in recipes]
+            choices = []
+            for recipe in recipes:
+                selected = recipe["id"] == selected_id
+                choice = recipeChoice(runtime, player, recipe, station, last_result if selected else "")
+                choice["selected"] = selected
+                choices.append(choice)
             selection = show_choice(station_label, json.dumps(choices), "Craft", "Leave station")
             recipe = None
             for candidate in recipes:
@@ -429,6 +435,7 @@ def open_crafting_station(station, player):
                     break
             if recipe is None:
                 break
+            selected_id = recipe["id"]
             result = runtime.execute_recipe(game_instance, player, recipe)
             last_result = _format_result_message(runtime, recipe, result, player, station)
             continue

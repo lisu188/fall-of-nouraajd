@@ -455,14 +455,15 @@ def start(game, campaign_id, player_class, race_id=""):
     return store
 
 
-def complete_scenario(game, outcome, fallback_map=None):
+def complete_scenario(game, outcome, fallback_map=None, outcome_summary=""):
     """Report the active scenario's outcome and let the manifest route it.
 
     Map scripts call this instead of hardcoding game.changeMap(next_map).
     With no active campaign (standalone map play) the legacy behavior is kept:
     the map changes to ``fallback_map`` when one is given, otherwise nothing
-    happens. Returns the next scenario id, "" when the campaign finished, or
-    None when no campaign was active.
+    happens. Optional outcome_summary describes rewards already committed by the
+    caller and is included in the existing outcome acknowledgment. Returns the
+    next scenario id, "" when the campaign finished, or None when no campaign was active.
     """
     store = state(game)
     if store is None or not store.active():
@@ -477,6 +478,8 @@ def complete_scenario(game, outcome, fallback_map=None):
     outcome_body = "Outcome: " + outcome.replace("_", " ").capitalize() + "."
     if current.get("epilogue"):
         outcome_body += "\n\n" + current["epilogue"]
+    if outcome_summary:
+        outcome_body += "\n\n" + outcome_summary
     if target_id is not None:
         outcome_body += "\n\nNext chapter: " + manifest["scenarios"][target_id]["title"]
     _show_screen(
@@ -484,7 +487,7 @@ def complete_scenario(game, outcome, fallback_map=None):
         current["title"],
         outcome_body,
         ACTION_CONTINUE,
-        fallback_text=current.get("epilogue", outcome_body),
+        fallback_text=outcome_body if outcome_summary else current.get("epilogue", outcome_body),
         artwork=current.get("artwork", ""),
     )
     if target_id is None:

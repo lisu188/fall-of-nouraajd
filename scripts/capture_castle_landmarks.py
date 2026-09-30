@@ -89,6 +89,9 @@ def viewportEvidence(simulation, object_name, tile_size):
     proxy_rects = {}
     cell_sizes = set()
     for proxy in map_graph.getChildren():
+        # Grid proxies constructed directly have no configured type; named controls are overlays.
+        if proxy.getType() not in {"", "CProxyGraphicsObject"}:
+            continue
         rect = list(proxy.getResolvedRect())
         cell_sizes.add(tuple(rect[2:]))
         for graphic in proxy.getChildren():

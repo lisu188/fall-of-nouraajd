@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import ast
+import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
@@ -136,10 +137,12 @@ class ArtifactPreviewTest(unittest.TestCase):
             game = harness.load_game_module()
         except (ImportError, ModuleNotFoundError) as error:
             self.skipTest(str(error))
-        import artifact_sets
-
         instance = game.CGameLoader.loadGame()
         self.addCleanup(instance.getContext().shutdown)
+        path = Path(__file__).resolve().parents[1] / "res/plugins/artifact_sets.py"
+        spec = importlib.util.spec_from_file_location("artifact_preview_under_test", path)
+        artifact_sets = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(artifact_sets)
         runtime = artifact_sets.ArtifactSetRuntime()
         for item_id, required in (
             ("ArmorOfTheDamned", ("Armor +250", "Doom", "Right hand, Left hand, Head, Chest")),

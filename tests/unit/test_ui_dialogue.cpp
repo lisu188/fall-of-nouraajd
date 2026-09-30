@@ -137,13 +137,27 @@ void testEscapeAndUnfocusedEnterNeverCommitAReply() {
     auto button = vstd::cast<CWidget>(*harness.panel->getChildren().begin());
     const auto retainedClick = button->getClick();
     harness.key(SDLK_RETURN);
-    expect_true(harness.panel->getGui() != nullptr, "Enter without a chosen reply must leave the conversation open");
+    harness.key(SDLK_KP_ENTER);
+    harness.key(SDLK_SPACE);
+    expect_true(harness.panel->getGui() != nullptr,
+                "activation keys without a chosen reply must leave the conversation open");
     harness.key(SDLK_ESCAPE);
     expect_true(!harness.panel->getGui(), "Escape must close the conversation");
     harness.panel->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(retainedClick, harness.panel,
                                                                                            harness.gui);
-    expect_true(harness.actionCount == 0, "Escape and unfocused Enter must never invoke a reply action");
+    expect_true(harness.actionCount == 0, "Escape and unfocused activation keys must never invoke a reply action");
     expect_true(harness.history() == history, "cancelling must not record a reply that was never selected");
+}
+
+void testArrowSelectedReplyAcceptsEachActivationKey() {
+    for (const auto key : {SDLK_RETURN, SDLK_KP_ENTER, SDLK_SPACE}) {
+        DialogueHarness harness;
+        harness.key(SDLK_DOWN);
+        expect_true(harness.actionCount == 0, "arrow selection must not commit a reply");
+        harness.key(key);
+        expect_true(harness.actionCount == 1, "Enter, keypad Enter and Space must activate the chosen reply");
+        expect_true(!harness.panel->getGui(), "activating the EXIT reply must dismiss the conversation");
+    }
 }
 
 void testQuestContextOnlyShowsRelatedActiveObjectivesAndIsReadOnly() {
@@ -168,6 +182,8 @@ void testQuestContextOnlyShowsRelatedActiveObjectivesAndIsReadOnly() {
                 "the objective must have a full scrollable reader for enlarged or long text");
     harness.key(SDLK_1);
     harness.key(SDLK_RETURN);
+    harness.key(SDLK_KP_ENTER);
+    harness.key(SDLK_SPACE);
     expect_true(harness.actionCount == 0 && harness.history() == history,
                 "reading objective details must not select replies or impersonate spoken dialogue");
     harness.key(SDLK_ESCAPE);
@@ -188,7 +204,9 @@ void testHistoryIsReadOnlyAndReturnsToTheSameConversation() {
     expect_true(harness.panel->getChildren().empty(), "history must not expose executable reply buttons");
     harness.key(SDLK_1);
     harness.key(SDLK_RETURN);
-    expect_true(harness.actionCount == 0, "numeric shortcuts and Enter must not run actions in history");
+    harness.key(SDLK_KP_ENTER);
+    harness.key(SDLK_SPACE);
+    expect_true(harness.actionCount == 0, "numeric shortcuts and activation keys must not run actions in history");
     expect_true(harness.history() == history, "reading and reloading history must not duplicate transcript entries");
     harness.key(SDLK_ESCAPE);
     expect_true(harness.panel->getGui() != nullptr && harness.panel->getTitle() == "The witness",
@@ -470,6 +488,7 @@ int main() {
     type_registration::registerGuiPanelTypes();
     type_registration::registerGuiWidgetTypes();
     testEscapeAndUnfocusedEnterNeverCommitAReply();
+    testArrowSelectedReplyAcceptsEachActivationKey();
     testQuestContextOnlyShowsRelatedActiveObjectivesAndIsReadOnly();
     testHistoryIsReadOnlyAndReturnsToTheSameConversation();
     testAReplyRechecksItsConditionAfterTheButtonWasCreated();

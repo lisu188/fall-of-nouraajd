@@ -815,6 +815,10 @@ void CMap::setMapName(std::string mapName) { this->mapName = mapName; }
 
 std::string CMap::getMapName() { return mapName; }
 
+std::string CMap::getCombatHistory() { return combatHistory; }
+
+void CMap::setCombatHistory(std::string history) { combatHistory = std::move(history); }
+
 void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new) {
     if (!object) {
         return;

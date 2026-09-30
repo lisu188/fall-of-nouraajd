@@ -21,6 +21,7 @@ class CastleLandmarkCaptureTest(unittest.TestCase):
 
         def proxy(represented, coords):
             return types.SimpleNamespace(
+                getType=lambda: "",
                 getResolvedRect=lambda: (*coords, cell_size, cell_size),
                 getChildren=lambda: [types.SimpleNamespace(getObject=lambda: represented)],
             )
@@ -48,6 +49,26 @@ class CastleLandmarkCaptureTest(unittest.TestCase):
         self.assertEqual([64, 64, 32, 32], evidence["playerRect"])
         self.assertEqual([32, 64, 32, 32], evidence["landmarkRect"])
         simulation.gameInstance.getGui().findChild("CMapGraphicsObject").refreshAll.assert_called_once()
+
+    def testViewportIgnoresWorldActionOverlayAndStillChecksCellGeometry(self):
+        for cell_size in (32, 50):
+            with self.subTest(cell_size=cell_size):
+                simulation = self.simulation(cell_size=cell_size)
+                overlay = types.SimpleNamespace(
+                    getType=lambda: "CButton",
+                    getResolvedRect=mock.Mock(return_value=(0, 40, 400, 56)),
+                    getChildren=mock.Mock(return_value=[]),
+                )
+                simulation.gameInstance.getGui().findChild("CMapGraphicsObject").getChildren().append(overlay)
+                if cell_size == 32:
+                    evidence = capture.viewportEvidence(simulation, "Terraneus", 32)
+                    self.assertEqual([64, 64, 32, 32], evidence["playerRect"])
+                    self.assertEqual([32, 64, 32, 32], evidence["landmarkRect"])
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "do not match requested 32px"):
+                        capture.viewportEvidence(simulation, "Terraneus", 32)
+                overlay.getResolvedRect.assert_not_called()
+                overlay.getChildren.assert_not_called()
 
     def test_stale_size_camera_missing_landmark_and_wrong_floor_are_rejected(self):
         cases = (
