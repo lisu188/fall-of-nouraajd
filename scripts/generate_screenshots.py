@@ -1007,9 +1007,11 @@ def capture_frontend(game, output_dir, player_class):
             sim,
             "load-error",
             lambda current: ui.showError(
-                current, "The saved adventure could not be loaded. Choose another save or its recovery copy."
+                current,
+                "The saved adventure could not be loaded. Choose another save or its recovery copy.",
+                "Load failed",
             ),
-            "showInfo",
+            "showCampaignScreen",
         )
         capture_flow(
             sim,

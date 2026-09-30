@@ -256,3 +256,15 @@ panel, a visible nonempty reader titled Stat modifiers, and retained Character a
 invalid-state regression subcases failed before the guards and pass afterward. All 19 screenshot-tooling tests
 pass, and the 22 affected acceptance screenshots are regenerated offscreen and decoded. This correction changes
 capture tooling and evidence; gameplay and rendering rules are unchanged.
+
+The final visual audit reviewed all 116 frontend, management and registered-panel images. It also found that
+Loading displayed an active Continue button and accepted dismissal despite being marked non-closeable, and that
+error feedback used the generic Discovery title. Non-closeable text readers now show muted Please wait feedback,
+consume dismissal keys and clicks, retain scrolling, and still close when the engine calls hideLoading. A pressed
+Continue cannot survive disabling and re-enabling dismissal. Native regressions reproduced nine failed assertions
+before the fix and pass afterward while preserving player resources and world input isolation. Errors now use the
+shared titled reader; save and load failures name their operation, preserve the current session, and acknowledge
+without reporting success. Three frontend regressions fail before the title change and pass afterward. The combined
+focused Python check runs 72 tests successfully. Updated screenshots use the freshly rebuilt native module and
+normally configured resources. Loading texture counts remain six initial loads and zero across 25 warm redraws;
+the [profile notes](../../scripts/ui_text_profile/README.md) retain the exact before/after commands.

@@ -175,3 +175,24 @@ shortage, bounded refresh work (budget 16), successful software-renderer copies 
 Native management fixtures additionally cover explicit caster targeting, legacy Buff targeting, enemy targeting,
 exact-cost availability, lost ownership, defeat and combined restrictions. Defeat and lost ownership take priority
 over mana shortages because replenishing mana cannot restore those actions. No existing guard was weakened.
+
+## Non-closeable loading reader
+
+The final visual audit found that the loading reader rendered Continue and accepted dismissal input despite
+`setCloseable(false)`. Windows x64 Release checks used the same SDL dummy/software environment as above. A GUI-routed
+input regression produced nine failed assertions before the fix and passes afterward, including a mouse press
+whose release arrives after dismissal has been disabled. Ordinary readers and programmatic `hideLoading` still close.
+
+Exact baseline and final commands (with the respective reader implementation):
+
+```powershell
+cmake --build cmake-build-release --config Release --target ui_frontend_unit_tests performance_guard_tests _game -j 4
+ctest --test-dir cmake-build-release -C Release --output-on-failure -R '^for_unit_tests.ui_frontend_unit_tests$'
+ctest --test-dir cmake-build-release -C Release --output-on-failure --verbose -R '^performance.performance_guard_tests$'
+cmake -S . -B cmake-build-release
+```
+
+The unchanged waiting-reader workload records six initial texture loads (budget eight) and zero new loads across
+25 warm redraws both before and after the fix. It also requires successful software-renderer copies and an attached
+reader. The Character, text, chooser, paragraph and receipt counts above remain unchanged; no existing budget is
+relaxed. These deterministic operation counts are the comparison, not a claimed elapsed-time improvement.

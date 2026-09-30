@@ -31,6 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/panel/CGameCampaignBrowserPanel.h"
 #include "gui/panel/CGameCharacterPanel.h"
 #include "gui/panel/CGameLootPanel.h"
+#include "gui/panel/CGameTextPanel.h"
 #include "gui/object/CGameGraphicsObject.h"
 #include "handler/CObjectHandler.h"
 #include "object/CInteraction.h"
@@ -395,6 +396,35 @@ void testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability() {
     game->getContext()->shutdown();
 }
 
+void testLoadingReaderReusesWarmTextures() {
+    auto gui = make_headless_gui();
+    auto reader = std::make_shared<CGameTextPanel>();
+    reader->setTitle("Please wait");
+    reader->setText("Loading saved adventure...");
+    reader->setCloseable(false);
+    reader->setLayout(std::make_shared<CLayout>());
+    reader->getLayout()->setRect(40, 30, 900, 640);
+    gui->pushChild(reader);
+    auto text = gui->getTextManager();
+    text->clearCache();
+    const auto before = text->getTextureLoadCount();
+    gui->render(0);
+    const auto initialLoads = text->getTextureLoadCount() - before;
+    expect_true(initialLoads > 0 && initialLoads <= 8, "the waiting reader uses a bounded initial texture set");
+    const auto warm = text->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int frame = 0; frame < 25; ++frame)
+        gui->render(0);
+    const auto redrawLoads = text->getTextureLoadCount() - warm;
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(redrawLoads == 0, "an unchanged waiting footer and message load zero textures over 25 redraws");
+    expect_true(copies.successfulCopies > 0 && copies.failedCopies == 0 && reader->getParent() == gui,
+                "the waiting reader renders successfully and remains attached after redraws");
+    std::cout << "[loading reader] redraws=25 initial loads=" << initialLoads
+              << " initial budget=8 redraw loads=" << redrawLoads << " redraw budget=0\n";
+    reader->close();
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
@@ -405,4 +435,5 @@ void run_render_context_performance_tests() {
     test_detail_layout_draws_only_visible_cached_paragraphs();
     test_reward_receipt_draws_only_visible_cached_rows();
     testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability();
+    testLoadingReaderReusesWarmTextures();
 }
