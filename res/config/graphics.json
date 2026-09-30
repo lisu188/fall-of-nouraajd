@@ -27,9 +27,6 @@
           "ref": "statsGraphics"
         },
         {
-          "properties": {
-            "priority": 1
-          },
           "ref": "consoleGraphics"
         },
         {

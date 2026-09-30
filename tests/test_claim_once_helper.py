@@ -19,6 +19,7 @@ import sys
 import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,21 +45,14 @@ def load_game_with_native_stub():
     native.playtest_trace_enabled = lambda: False
     native.set_logger_sink = lambda *args, **kwargs: None
 
-    original_native = sys.modules.get("_game")
-    sys.modules["_game"] = native
-    if str(REPO_ROOT) not in sys.path:
-        sys.path.insert(0, str(REPO_ROOT))
-
-    try:
+    with (
+        patch.dict(sys.modules, {"_game": native}),
+        patch.object(sys, "path", [str(REPO_ROOT / "res"), str(REPO_ROOT), *sys.path]),
+    ):
         spec = importlib.util.spec_from_file_location("claim_once_game_under_test", REPO_ROOT / "res" / "game.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module
-    finally:
-        if original_native is None:
-            sys.modules.pop("_game", None)
-        else:
-            sys.modules["_game"] = original_native
 
 
 class ClaimOnceHelperTest(unittest.TestCase):
@@ -78,6 +72,27 @@ class ClaimOnceHelperTest(unittest.TestCase):
         self.assertTrue(self.game.claim_once(owner, "reward_claimed"))
         self.assertFalse(self.game.claim_once(owner, "reward_claimed"))
         self.assertTrue(owner.getBoolProperty("reward_claimed"))
+
+
+class NativeStubIsolationTest(unittest.TestCase):
+    def testNativeStubRestoresMissingBlockedAndLoadedImports(self):
+        absent = object()
+        for original in (absent, None, types.ModuleType("_game")):
+            with self.subTest(state=repr(original)), patch.dict(sys.modules):
+                if original is absent:
+                    sys.modules.pop("_game", None)
+                else:
+                    sys.modules["_game"] = original
+                original_paths = list(sys.path)
+                load_game_with_native_stub()
+                self.assertEqual(original_paths, sys.path)
+                if original is absent:
+                    self.assertFalse("_game" in sys.modules)
+                else:
+                    self.assertTrue(
+                        "_game" in sys.modules, "source-only discovery must retain its native import blocker"
+                    )
+                    self.assertIs(original, sys.modules["_game"])
 
 
 if __name__ == "__main__":

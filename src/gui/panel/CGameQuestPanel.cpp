@@ -171,9 +171,30 @@ bool CGameQuestPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType typ
     if (type != SDL_KEYDOWN) {
         return true;
     }
-    if (detailsViewport.w > 0 && (key == SDLK_PAGEUP || key == SDLK_PAGEDOWN)) {
-        detailsOffset = std::clamp(detailsOffset + (key == SDLK_PAGEUP ? -1 : 1) * std::max(1, detailsViewport.h - 24),
-                                   0, detailsMaximum);
+    if (detailsViewport.w > 0) {
+        const int step = UiTheme::scaled(gui, 24);
+        switch (key) {
+        case SDLK_UP:
+            detailsOffset = std::max(0, detailsOffset - step);
+            break;
+        case SDLK_DOWN:
+            detailsOffset = std::min(detailsMaximum, detailsOffset + step);
+            break;
+        case SDLK_PAGEUP:
+        case SDLK_PAGEDOWN:
+            detailsOffset =
+                std::clamp(detailsOffset + (key == SDLK_PAGEUP ? -1 : 1) * std::max(1, detailsViewport.h - step), 0,
+                           detailsMaximum);
+            break;
+        case SDLK_HOME:
+            detailsOffset = 0;
+            break;
+        case SDLK_END:
+            detailsOffset = detailsMaximum;
+            break;
+        default:
+            return CGamePanel::keyboardEvent(gui, type, key);
+        }
         return true;
     }
     refreshScrollLayout(gui);

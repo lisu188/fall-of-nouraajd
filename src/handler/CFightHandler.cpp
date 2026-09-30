@@ -695,7 +695,7 @@ void CFightHandler::defeatedCreature(const std::shared_ptr<CCreature> &a, const 
     encounterMap->removeObject(b);
     if (b->isPlayer()) {
         json receipt = {
-            {"map", encounterMap->getLabel().empty() ? encounterMap->getTypeId() : encounterMap->getLabel()},
+            {"map", encounterMap->getLabel().empty() ? encounterMap->getMapName() : encounterMap->getLabel()},
             {"hp", b->getHp()},
             {"x", b->getPosX()},
             {"y", b->getPosY()},

@@ -22,13 +22,17 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
                 def capture(args, output_dir):
                     isolated = Path(generate_screenshots.os.environ["GAME_UI_PREFERENCES_PATH"])
                     self.assertNotEqual(player_preferences, isolated)
+                    self.assertEqual("1", generate_screenshots.os.environ["GAME_ENABLE_PYTHON_CONSOLE"])
                     isolated.write_text("{}", encoding="utf-8")
                     if fail:
                         raise RuntimeError("capture failed")
 
                 with (
                     patch.object(generate_screenshots.sys, "argv", ["capture", "--output-dir", directory]),
-                    patch.dict(generate_screenshots.os.environ, {"GAME_UI_PREFERENCES_PATH": str(player_preferences)}),
+                    patch.dict(
+                        generate_screenshots.os.environ,
+                        {"GAME_UI_PREFERENCES_PATH": str(player_preferences), "GAME_ENABLE_PYTHON_CONSOLE": "0"},
+                    ),
                     patch.object(generate_screenshots, "generateScreenshots", side_effect=capture),
                 ):
                     if fail:
@@ -39,6 +43,7 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
                     self.assertEqual(
                         str(player_preferences), generate_screenshots.os.environ["GAME_UI_PREFERENCES_PATH"]
                     )
+                    self.assertEqual("0", generate_screenshots.os.environ["GAME_ENABLE_PYTHON_CONSOLE"])
                 self.assertFalse((output / ".capture-preferences.json").exists())
                 self.assertEqual('{"textScale":150}', player_preferences.read_text(encoding="utf-8"))
 
@@ -91,6 +96,58 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
 
 
 class ScreenshotPanelSetupTest(unittest.TestCase):
+    def testTargetedAcceptanceCaptureDoesNotRepeatTheBaselineAndVerifiesEveryArtifact(self):
+        args = SimpleNamespace(
+            maps=None,
+            player="Warrior",
+            maps_only=False,
+            management_only=False,
+            frontend_only=False,
+            acceptance_only=True,
+            panels_only=False,
+            no_random=False,
+        )
+        output = Path("screenshots")
+        paths = [output / "frontend-defeat.png", output / "management-crafting-failure.png"]
+        with (
+            patch.object(generate_screenshots, "_reexec_under_xvfb_if_needed"),
+            patch.object(generate_screenshots, "_bootstrap_paths"),
+            patch.object(generate_screenshots, "_load_game_module", return_value=Mock()),
+            patch.object(generate_screenshots, "_suppress_blocking_popups"),
+            patch.object(generate_screenshots, "captureAcceptanceStates", return_value=paths) as capture,
+            patch.object(generate_screenshots, "capture_panels") as panels,
+            patch.object(generate_screenshots, "capture_management") as management,
+            patch.object(generate_screenshots, "capture_frontend") as frontend,
+            patch.object(generate_screenshots, "capture_map") as maps,
+            patch.object(generate_screenshots, "verifyScreenshot") as verify,
+        ):
+            generate_screenshots.generateScreenshots(args, output)
+        capture.assert_called_once()
+        for omitted in (panels, management, frontend, maps):
+            omitted.assert_not_called()
+        self.assertEqual(paths, [call.args[0] for call in verify.call_args_list])
+
+    def testTargetedAcceptanceCaptureFailureCannotReportSuccess(self):
+        args = SimpleNamespace(
+            maps=None,
+            player="Warrior",
+            maps_only=False,
+            management_only=False,
+            frontend_only=False,
+            acceptance_only=True,
+            panels_only=False,
+            no_random=False,
+        )
+        with (
+            patch.object(generate_screenshots, "_reexec_under_xvfb_if_needed"),
+            patch.object(generate_screenshots, "_bootstrap_paths"),
+            patch.object(generate_screenshots, "_load_game_module", return_value=Mock()),
+            patch.object(generate_screenshots, "_suppress_blocking_popups"),
+            patch.object(generate_screenshots, "captureAcceptanceStates", side_effect=RuntimeError("no receipt")),
+        ):
+            with self.assertRaisesRegex(SystemExit, "1 screenshot target"):
+                generate_screenshots.generateScreenshots(args, Path("screenshots"))
+
     def testReadmeAliasesRefreshOnlyFromThisRunsCapturedFrames(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -268,6 +325,42 @@ class ScreenshotPanelSetupTest(unittest.TestCase):
                     Path("unwritable.png"),
                 )
         panel.close.assert_called_once()
+
+    def testNativeButtonCaptureWaitsForItsModalInsteadOfCapturingTheUnderlyingPanel(self):
+        panel = Mock()
+        sim = Mock()
+        sim.gameInstance.getGui.return_value.findChild.side_effect = [None, panel]
+        sim.captureGuiScreenshot.return_value = {"bytes": 100}
+        callbacks = []
+        game = SimpleNamespace(event_loop=SimpleNamespace(instance=lambda: SimpleNamespace(invoke=callbacks.append)))
+
+        def click():
+            callbacks.pop(0)()
+            sim.captureGuiScreenshot.assert_not_called()
+            callbacks.pop(0)()
+
+        info = generate_screenshots._captureNativeCall(
+            game, sim, "showChoice", "CGameCampaignBrowserPanel", (), Path("landmarks.png"), open_action=click
+        )[1]
+        self.assertEqual(100, info["bytes"])
+        panel.close.assert_called_once()
+
+    def testNativeButtonCaptureCannotPassOnOnlyAnAttemptWithoutAnArtifact(self):
+        sim = Mock()
+        sim.gameInstance.getGui.return_value.findChild.return_value = None
+        callbacks = []
+        game = SimpleNamespace(event_loop=SimpleNamespace(instance=lambda: SimpleNamespace(invoke=callbacks.append)))
+        with self.assertRaisesRegex(RuntimeError, "No capture callback"):
+            generate_screenshots._captureNativeCall(
+                game,
+                sim,
+                "showChoice",
+                "CGameCampaignBrowserPanel",
+                (),
+                Path("missing.png"),
+                open_action=lambda: callbacks.pop(0)(),
+            )
+        sim.captureGuiScreenshot.assert_not_called()
 
 
 if __name__ == "__main__":

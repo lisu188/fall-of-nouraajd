@@ -18,6 +18,11 @@ Opening, closing and scene transitions consume the triggering input. Inspection 
 Held keys remain suppressed across panel changes until release, so acknowledging a reader cannot also wait a world
 turn or acknowledge the following reader. A fresh world press retains the existing movement/wait repeat behavior.
 
+Frontend choosers include their details and footer actions in Tab/Shift+Tab navigation. The active region has a
+visible border; Enter/Space activates its control, while Space remains ordinary text in a save-name field.
+Arrow-selected dialogue replies accept Enter, keypad Enter and Space only after an explicit selection. Transcript
+and objective readers keep all reply activation keys inert.
+
 I/J/C retain Inventory, Journal and Character navigation. M opens the expanded map; F12 opens the existing gated
 developer console. World clicks preview a destination; Travel or Enter commits it. Manual movement or waiting
 invalidates the previous preview. Settings remap gameplay bindings while reserving interface navigation keys.
@@ -51,10 +56,15 @@ changing scenes also closes its reader. The search field retains ordinary `L` te
 Conversation choices retain authored order and conditional visibility. Consequential action labels precede authored
 response prose. Transcript/history views are read-only. Dialogue callbacks validate the owning scene, including
 queued scene changes, and cannot continue acting through a detached panel.
-The 25 authored conversations now contain 115 states and 210 options; added states/options make commitments and
-in-progress reminders explicit. Related quest context is shown only for the player's active matching quests.
+The 31 authored conversations contain 121 states and 222 options, including the six Castle campaign conversations.
+Added states/options make commitments and in-progress reminders explicit. Related quest context is shown only for
+the player's active matching quests.
 Map scripts route substantial lore to titled readers, observed reward gains to consolidated receipts, and routine
 discoveries/progress to History. Blocked world actions can anchor their resolved requirement beside the actual object.
+The Castle campaign uses the same presentation helpers: rest and progress go to History, garrison and landing
+requirements stay beside their object, and mission supplies/captures show observed reward gains. Victory gold is
+reported in the existing chapter outcome acknowledgment using the actual balance change; no presentation helper
+grants rewards or adds another victory dialog.
 
 ## Verification and accessibility
 
@@ -83,6 +93,71 @@ executing an owned ability. These deterministic routes use explicit setup for re
 they complement the natural Nouraajd GUI quest walkthrough rather than establishing a complete campaign playthrough.
 Existing crafting, save, inventory, trade and Nouraajd walkthrough tests retain their gameplay assertions while
 using the new explicit interface actions.
+
+The initial Windows offscreen GUI sweep covered 47 cases: 44 passed across the initial run and focused regression reruns;
+three window-focus resize checks require isolated Linux/Xvfb and are not claimed as Windows passes. The sweep
+found and fixed Home/End scrolling in the journal's visible History pane and truncation of reward receipts beyond
+4096 bytes. Native and rendered regressions cover both. Named-save tests enter a name through SDL text input,
+explicitly confirm replacement, reload the result, and verify the recovery copy without touching existing saves.
+
+After integration with main on September 24, 2026, the engine was rebuilt with the approved `vstd` revision
+`15c7f0b32d19ada5f22de1ea2b8d61a3232dfee3`, which supplies the event-loop APIs used by main. `CListView` now names
+the dependency's explicit pair hash, matching the other coordinate caches. The fresh Windows offscreen run passed
+three receipt, inventory and journal GUI checks and regenerated 111 verified screenshots: every registered panel,
+all 15 authored maps, a random map and the frontend/overflow variants. The Castle Homecoming MCP route moved the
+real player through 167 steps, two authored combats and two portal traversals before confirming chapter completion.
+These focused results complement the full native, Linux/Xvfb, Windows and coverage checks required from CI.
+
+The September 26 follow-up adds 18 captures through `scripts/generate_screenshots.py --acceptance-only`: populated
+save/load lists, selected abilities and modifier sources, expanded map and landmarks, crafting previews/results,
+artifact assembly/disassembly including their scrolled endings, resolved defeat, chapter outcome and campaign
+completion. These are disposable visual fixtures with explicit equipment, statistics and campaign-position setup,
+separate from the real-player MCP routes above. Save metadata comes from an isolated native save that is removed
+after capture. Crafting costs, consumed ingredients and outputs are checked against resolved operations; the failed
+roll is deterministic. Defeat text comes from a real encounter's one-HP recovery and actual losses. Cancelling
+browsers and artifact previews preserves turn, resources and inventory; acknowledgements do not repeat committed
+losses or campaign outcomes. The added screenshots passed PNG decoding/dimension checks at 1920x1080 through SDL
+dummy/software rendering. The historical 111-image baseline and five Castle landmark captures remain separate.
+
+The final keyboard and console pass regenerated the complete 136-image set, including six new focus/disabled
+captures, the active diagnostic drawer and the chapter outcome's observed 400-gold reward. Independent visual review
+covers normal and 720p/200% focus,
+footer actions and hints. Chooser regressions reproduced eight failing assertions, and dialogue activation
+regressions reproduced four; both focused native suites pass after correction. The rebuilt Castle MCP campaign
+route and paid-rest check also pass (two tests, 19.17 seconds). These runtime checks retain the authored objective,
+reward and transition assertions rather than only changing flags.
+
+The console retains its configured priority above the navigation dock; the old child override let I/J/C open
+management panels above it depending on sibling order, consuming subsequent typed text. A deterministic regression
+reproduced the priority collision, and five repeated full-GUI command/focus checks pass after removing that override.
+The capture tool enables the existing development setting only in its isolated process and restores it afterward.
+Console and expanded-map interaction/runner checks pass locally (25 tests, no skips). These paths are included in
+the canonical coverage suite; the earlier run recorded 15,709/17,551 lines (89.50%). Final CI results are recorded
+on the delivery PR, separately from these focused local checks.
+
+The same follow-up fixes shutdown of pending Python callbacks before interpreter finalization. Five fresh-process
+regressions pass; three reproduced shutdown failures before the fix, and the completed-work check releases all 200
+captured objects. Three Windows dummy/software GUI regressions now use the current sidebar geometry and separate
+input pumps. Real window-focus/resize checks still require Linux/Xvfb; these local results do not establish full CI
+or coverage completion.
+
+Combat history, dialogue history and defeat receipts have explicit string properties, preserving their existing JSON
+text through serialization. The native save regression checks each field separately, all three together and absent
+fields in both versioned and legacy saves. All ten cases pass; the eight nonempty-history cases rejected loading
+before the property declarations were added. The Castle partial-progress reload also passes after the change.
+Victor's quest journal keeps its player-carried outcome through travel and reload; real MCP routes cover active,
+rescued and timed-out outcomes, including the guarded 500-gold rescue reward. Those reload checks use native
+serialized snapshots and are separate evidence from the named-save UI tests.
+
+Pre-snapshot saves also migrate before an unread departure: Nouraajd queues its journal synchronization after
+script registration, because the native loader attaches the restored map and player afterward. The callback
+checks the active map, migrates only missing snapshots and skips dependency-only registration for other maps.
+Both rescued and timed-out MCP fixtures failed before this correction and pass after loading an old-format snapshot
+and immediately requesting travel, without reading or serializing the restored player's journal first. Returning
+to a fresh Nouraajd, rereading the completed journal and accepting an unrelated quest retain the recorded ending;
+meaningful authored Victor states still take precedence over the snapshot. Reward balances and guards remain
+unchanged. The extended two-outcome route passes in 19.42 seconds on Windows offscreen, and 239 focused source
+checks pass, including regressions that failed before the return-trip safeguards.
 
 ## Rendering and cache evidence
 
@@ -128,6 +203,11 @@ redraws. The detail guard checks that copies correspond only to visible paragrap
 remeasured. These counts were obtained with the CTest performance command above using SDL dummy/software rendering;
 the [retained chooser profile](../../scripts/ui_text_profile/README.md#choice-list-cache-profile) records the earlier
 723-texture-per-redraw development result and its fixture limitations.
+
+The 700-row reward receipt guard adds seven visible texture loads and zero additional loads across 25 warm frames
+(150 successful copies, budget 400). Its final-row regression failed with the earlier truncated renderer and passes
+with the shared paragraph layout. Exact before/after commands and counts are retained in the
+[receipt profile](../../scripts/ui_text_profile/README.md#long-reward-receipt-rendering).
 
 Required Linux, Windows, full-suite and coverage evidence comes from the PR's path-selected `build` workflow. A
 successful focused local run or screenshot set alone is not a claim that those release checks have completed.

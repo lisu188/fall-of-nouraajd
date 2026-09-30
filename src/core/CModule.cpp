@@ -17,9 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <utility>
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <optional>
 #include <stdexcept>
+#include <unordered_map>
 
 #include "CGlobal.h"
 #include "../../vstd/veventloop.h"
@@ -84,6 +86,51 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
+
+namespace {
+class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCallbacks> {
+  public:
+    bool invoke(vstd::event_loop<> &loop, std::function<void()> callback) {
+        if (!active.load()) {
+            return false;
+        }
+        const auto id = nextId++;
+        callbacks.emplace(id, std::move(callback));
+        const auto weak = weak_from_this();
+        if (!loop.invoke([weak, id]() {
+                auto owner = weak.lock();
+                if (!owner || !owner->active.load()) {
+                    return;
+                }
+                py::gil_scoped_acquire gil;
+                if (!owner->active.load()) {
+                    return;
+                }
+                auto pending = owner->callbacks.extract(id);
+                if (!pending.empty()) {
+                    pending.mapped()();
+                }
+            })) {
+            callbacks.erase(id);
+            return false;
+        }
+        return true;
+    }
+
+    void shutdown() {
+        active.store(false);
+        // Release Python captures while the interpreter is alive. The native queue retains
+        // only weak references and must neither invoke nor destroy Python callbacks at exit.
+        auto pending = std::move(callbacks);
+        callbacks.clear();
+    }
+
+  private:
+    std::atomic_bool active{true};
+    std::size_t nextId = 0;
+    std::unordered_map<std::size_t, std::function<void()>> callbacks;
+};
+} // namespace
 
 PYBIND11_MAKE_OPAQUE(std::vector<std::string>);
 
@@ -1155,11 +1202,19 @@ void init_game_module(py::module_ &m) {
     cplugin.def(py::init_alias<>()).def("load", &CPlugin::load, "Load plugin content through a registrar.");
     m.attr("CPluginBase") = cplugin;
 
+    auto pythonEventCallbacks = std::make_shared<CPythonEventCallbacks>();
+    py::module_::import("atexit").attr("register")(
+        py::cpp_function([pythonEventCallbacks]() { pythonEventCallbacks->shutdown(); }));
     py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
                                                                         "Global async event loop utility.")
         .def_static("instance", &CRuntimeBridge::event_loop_instance, "Return the singleton event loop instance.")
         .def("run", &vstd::event_loop<>::run, "Process queued tasks/events once.")
-        .def("invoke", &vstd::event_loop<>::invoke, "Queue a callable for later execution.");
+        .def(
+            "invoke",
+            [pythonEventCallbacks](vstd::event_loop<> &loop, std::function<void()> callback) {
+                return pythonEventCallbacks->invoke(loop, std::move(callback));
+            },
+            "Queue a callable for later execution; cancel pending calls when Python exits.");
 
     auto vector_string = py::bind_vector<std::vector<std::string>>(m, "std::vector<std::string>");
     vector_string.doc() = "Mutable list of strings.";

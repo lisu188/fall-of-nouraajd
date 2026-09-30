@@ -836,7 +836,10 @@ def showDefeat(game):
         for item in lost
         if isinstance(item, dict)
     )
-    detail = "You recovered in " + displayName(str(receipt.get("map", game_map.getMapName()))) + "."
+    recovery_map = receipt.get("map")
+    if not recovery_map or recovery_map == "CMap":
+        recovery_map = game_map.getStringProperty("mapName")
+    detail = "You returned to the map entrance in " + displayName(str(recovery_map)) + "."
     if "hp" in receipt:
         detail += "\nHealth after recovery: " + str(receipt["hp"])
     detail += "\n\nItems lost\n" + (items or "No inventory items were lost.")

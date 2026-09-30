@@ -52,9 +52,13 @@ void testChoiceParsingPreservesOrderAndRejectsAmbiguousIds() {
     expect_true(choices.size() == 2 && choices[0].id == "zeta" && choices[1].id == "alpha",
                 "ordered choices must preserve caller order even when labels are equal");
     expect_true(choices[0].enabled && !choices[1].enabled, "unavailable choices must stay unavailable");
+    expect_true(!choices[0].selected && !choices[1].selected, "legacy choices retain their default selection behavior");
     for (const auto *invalid :
          {R"({})", R"([{"id":"","label":"Empty"}])", R"([{"id":"same","label":"One"},{"id":"same","label":"Two"}])",
           R"([{"id":"missingLabel"}])", R"([{"id":"one","label":"One","image":42}])",
+          R"([{"id":"one","label":"One","selected":"true"}])", R"([{"id":"one","label":"One","selected":1}])",
+          R"([{"id":"one","label":"One","selected":null}])",
+          R"([{"id":"one","label":"One","selected":true},{"id":"two","label":"Two","selected":true}])",
           R"([{"id":"one","label":"One","image":"images/../secret.png"}])"}) {
         bool rejected = false;
         try {
@@ -64,6 +68,51 @@ void testChoiceParsingPreservesOrderAndRejectsAmbiguousIds() {
         }
         expect_true(rejected, "malformed or ambiguous choices must be rejected");
     }
+}
+
+void testChoiceRestoresDisabledRecipeWithoutConfirmingIt() {
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    const auto options = CGameCampaignBrowserPanel::parseChoices(R"([
+        {"id":"healing","label":"Potion","detail":"90 gold","selected":false},
+        {"id":"mana","label":"Potion","detail":"640 gold. Missing reagents. Craft failed.",
+         "enabled":false,"selected":true}
+    ])");
+    browser->configureChoices("Alchemy", options, "Craft", "Leave station");
+    expect_true(browser->getSelectedId() == "mana" && browser->getDetailText().find("640 gold") != std::string::npos &&
+                    browser->getDetailText().find("Craft failed") != std::string::npos,
+                "a previously crafted recipe keeps its stable selection and matching result even when now unavailable");
+    expect_true(!browser->hasChoice(), "restoring a selection never commits another craft");
+    browser->clickSelect(nullptr);
+    expect_true(!browser->hasChoice(), "the restored recipe cannot craft again with missing ingredients");
+    browser->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_UP);
+    expect_true(browser->getSelectedId() == "healing" && browser->getDetailText().find("90 gold") != std::string::npos,
+                "restoring selection preserves authored order and permits navigation to another recipe");
+    browser->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(browser->awaitChoice() == "healing", "another available recipe still requires explicit confirmation");
+}
+
+void testRestoredChoiceRemainsVisibleAfterMeasuringLargeText() {
+    auto gui = std::make_shared<CGui>();
+    gui->setNumericProperty("width", 1280);
+    gui->setNumericProperty("height", 720);
+    gui->applyUiPreferences(R"({"uiScale":100,"textScale":200})");
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    std::vector<CGameCampaignBrowserPanel::ChoiceOption> rows;
+    for (int index = 0; index < 50; ++index)
+        rows.push_back({std::to_string(index), "Recipe", "Details", true});
+    rows.back().selected = true;
+    browser->configureChoices("Alchemy", rows, "Craft", "Leave station");
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 1200, 676}));
+    const auto viewport = browser->getChoiceViewport();
+    const int rowHeight = std::max(44, gui->getTextManager()->measureText("> Recipe", viewport.w - 20).second + 16);
+    const int visibleRows = std::max(1, viewport.h / rowHeight);
+    const int x = viewport.x + viewport.w / 2;
+    const int y = viewport.y + (visibleRows - 1) * rowHeight + rowHeight / 2;
+    browser->mouseEvent(gui, SDL_MOUSEBUTTONDOWN, SDL_BUTTON_LEFT, x, y);
+    browser->mouseEvent(gui, SDL_MOUSEBUTTONUP, SDL_BUTTON_LEFT, x, y);
+    expect_true(browser->getSelectedId() == "49" && !browser->hasChoice(),
+                "the restored final recipe remains visible and hit-testable after enlarged labels are measured");
+    gui->applyUiPreferences("{}");
 }
 
 void testArtworkPreservesAspectAndReclaimsMissingImages() {
@@ -180,6 +229,107 @@ void testNamedSaveInputEditingAndCancellation() {
     browser->appendInput("Discard me");
     browser->keyboardEvent(nullptr, SDL_KEYDOWN, SDLK_ESCAPE);
     expect_true(browser->awaitChoice().empty(), "Escape discards entered text");
+}
+
+void testManagedChoiceFocusReachesDetailsAndFooterActions() {
+    auto gui = std::make_shared<CGui>();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    std::string longDetail;
+    for (int line = 0; line < 80; ++line)
+        longDetail += "Readable objective and reward details.\n";
+    const std::vector<CGameCampaignBrowserPanel::ChoiceOption> options{{"first", "First", longDetail, true},
+                                                                       {"second", "Second", "Another choice", true}};
+    const auto bounds = std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 1800, 1000});
+    browser->configureChoices("Choose", options, "Accept", "Back");
+    renderBrowser(browser, gui, bounds);
+    auto actionPixel = [&]() {
+        const auto action = browser->getConfirmationBounds();
+        SDL_Rect pixel{action.x, action.y, 1, 1};
+        Uint32 color = 0;
+        SDL_RenderReadPixels(gui->getRenderer(), &pixel, SDL_PIXELFORMAT_RGBA32, &color, sizeof(color));
+        return color;
+    };
+    const auto unfocusedAction = actionPixel();
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_DOWN);
+    expect_true(browser->getSelectedId() == "first" && browser->getDetailScrollOffset() > 0,
+                "Tab reaches readable details and arrows scroll them without changing the choice");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    renderBrowser(browser, gui, bounds);
+    expect_true(unfocusedAction != actionPixel(), "the focused action has a visible focus border");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "Tab reaches Back and Space cancels without confirming the preview");
+    browser->configureChoices("Choose", options, "Accept", "Back");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(browser->hasChoice() && browser->awaitChoice() == "first",
+                "Space activates the initial selected choice just like Enter");
+    browser->configureChoices("Locked", {{"locked", "Locked", "Missing requirement", false}}, "Accept", "Back");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(!browser->hasChoice(), "a disabled action remains inert when reached by keyboard focus");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "Enter on focused Back cancels a disabled choice");
+}
+
+void testManagedChoiceShiftTabUsesTheInputEventModifier() {
+    auto gui = std::make_shared<CGui>();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    browser->configureChoices("Choose", {{"first", "First", "Details", true}}, "Accept", "Back");
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 1800, 1000}));
+    gui->pushChild(browser);
+    SDL_SetModState(KMOD_NONE);
+    SDL_Event key{};
+    key.type = SDL_KEYDOWN;
+    key.key.keysym.sym = SDLK_TAB;
+    key.key.keysym.mod = KMOD_SHIFT;
+    gui->event(&key);
+    key.key.keysym.sym = SDLK_RETURN;
+    key.key.keysym.mod = KMOD_NONE;
+    gui->event(&key);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "Shift+Tab reverses from choices to Back using the SDL event's modifier");
+}
+
+void testTextEntrySpaceAndCompactCharacterFooterFocus() {
+    auto gui = std::make_shared<CGui>();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    browser->configureTextInput("Save", "Name", "Suggested");
+    browser->appendInput("Before");
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 900, 676}));
+    gui->pushChild(browser);
+    SDL_Event input{};
+    input.type = SDL_KEYDOWN;
+    input.key.keysym.sym = SDLK_SPACE;
+    gui->event(&input);
+    input = {};
+    input.type = SDL_TEXTINPUT;
+    input.text.text[0] = ' ';
+    gui->event(&input);
+    expect_true(!browser->hasChoice() && browser->getInputText() == "Before ",
+                "Space remains printable text while the save-name field is focused");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    gui->event(&input);
+    expect_true(browser->getInputText() == "Before ",
+                "text input cannot edit the name while a footer action has focus");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_SPACE);
+    expect_true(browser->hasChoice() && browser->awaitChoice() == "Before ",
+                "Tab leaves the name field and Space activates the focused Save action");
+    browser->configureCharacterChoices({{"warrior", "Warrior", "Health 20", true}},
+                                       {{"human", "Human", "Balanced", true}});
+    renderBrowser(browser, gui, std::make_shared<SDL_Rect>(SDL_Rect{0, 0, 900, 676}));
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    expect_true(browser->getActivePage() == 2, "character focus reaches class, race and preview pages in order");
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_TAB);
+    browser->keyboardEvent(gui, SDL_KEYDOWN, SDLK_RETURN);
+    expect_true(browser->hasChoice() && browser->awaitChoice().empty(),
+                "compact character creation reaches both footer actions after its preview page");
 }
 
 void testCharacterBackPreservesPreviewWithoutConfirmingIt() {
@@ -452,11 +602,16 @@ int main() {
     type_registration::registerGuiWidgetTypes();
     type_registration::registerGuiAnimationTypes();
     testChoiceParsingPreservesOrderAndRejectsAmbiguousIds();
+    testChoiceRestoresDisabledRecipeWithoutConfirmingIt();
+    testRestoredChoiceRemainsVisibleAfterMeasuringLargeText();
     testArtworkPreservesAspectAndReclaimsMissingImages();
     testChoiceSelectionRequiresConfirmationAndBlocksDisabledRows();
     testChoiceCancellationAndLongLists();
     testCharacterPreviewDoesNotStartUntilExplicitConfirmation();
     testNamedSaveInputEditingAndCancellation();
+    testManagedChoiceFocusReachesDetailsAndFooterActions();
+    testManagedChoiceShiftTabUsesTheInputEventModifier();
+    testTextEntrySpaceAndCompactCharacterFooterFocus();
     testCharacterBackPreservesPreviewWithoutConfirmingIt();
     testManagementPanelsReuseStateAndDoNotStack();
     testNarrowFrontendKeepsChoicesAndPreviewOnKeyboardPages();

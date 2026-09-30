@@ -21,11 +21,11 @@ class TestRunnerPackagingTest(unittest.TestCase):
         for name in ("test.py", "game_simulation.py", "mcp.py", "quest_state.py"):
             shutil.copy2(ROOT / name, self.package / name)
 
-    def runPackaged(self, *arguments):
+    def runPackaged(self, *arguments, build_dir=None):
         environment = os.environ.copy()
         environment.pop("PYTHONPATH", None)
         environment.update(
-            GAME_BUILD_DIR=str(self.package / "no-native-build"),
+            GAME_BUILD_DIR=str(build_dir or self.package / "no-native-build"),
             GAME_TEST_JOBS="1",
             GAME_TEST_OUTPUT_DIR=str(self.package / "test-output"),
             SDL_VIDEODRIVER="dummy",
@@ -55,12 +55,26 @@ class TestRunnerPackagingTest(unittest.TestCase):
         source_tests = self.package / "tests"
         source_tests.mkdir()
         (source_tests / "__init__.py").write_text("", encoding="utf-8")
+        shutil.copy2(
+            ROOT / "tests/test_python_callback_lifecycle.py", source_tests / "test_python_callback_lifecycle.py"
+        )
         (source_tests / "test_ui_mcp_dialogue.py").write_text(
             'raise ImportError("deliberate source-test import failure")\n', encoding="utf-8"
         )
         result = self.runPackaged("test.py", "--help")
         self.assertNotEqual(0, result.returncode)
         self.assertIn("deliberate source-test import failure", result.stderr)
+
+    def testCliHarnessImportKeepsTheSourceRunnerWhenBuildHasACopy(self):
+        build_dir = self.package / "build"
+        build_dir.mkdir()
+        shutil.copy2(ROOT / "test.py", build_dir / "test.py")
+        result = self.runPackaged(
+            "test.py", "TestRunnerSuiteTest.testImportedHarnessUsesExecutingModule", build_dir="build"
+        )
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("Ran 1 test", result.stdout + result.stderr)
+        self.assertNotIn("skipped", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":

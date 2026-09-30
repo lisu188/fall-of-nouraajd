@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "CGamePanel.h"
 #include "CListView.h"
+#include "gui/CDetailViewport.h"
 #include "gui/CGui.h"
 #include "object/CItem.h"
 
@@ -40,6 +41,8 @@ class CGameLootPanel : public CGamePanel {
 
     std::string getRewardsText() const;
 
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
     void renderRewards(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
     void collectRewards(std::shared_ptr<CGui> gui);
@@ -47,6 +50,7 @@ class CGameLootPanel : public CGamePanel {
     bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
 
   private:
+    DetailViewport::Layout detailLayout;
     int detailsOffset = 0;
     int detailsMaximum = 0;
     SDL_Rect detailsViewport{};
