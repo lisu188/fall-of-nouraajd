@@ -16,9 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 #include "core/CGame.h"
+#include "core/CController.h"
 #include "core/CGameContext.h"
 #include "core/CJsonUtil.h"
 #include "core/CMap.h"
+#include "core/CStats.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
 #include "gui/CGui.h"
@@ -28,10 +30,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CWidget.h"
 #include "gui/panel/CGameCampaignBrowserPanel.h"
 #include "gui/panel/CGameCampaignPanel.h"
+#define GAME_UNIT_TESTS
+#include "gui/panel/CGameTextPanel.h"
+#undef GAME_UNIT_TESTS
 #include "handler/CGuiHandler.h"
 #include "handler/CObjectHandler.h"
+#include "object/CPlayer.h"
 #include "test_harness.h"
 #include <cstdio>
+#include <cstdint>
+#include <vector>
 
 #include <pybind11/embed.h>
 
@@ -488,6 +496,153 @@ void testContinueReadersAllowEscapeAndCloseWithoutStartingAChapter() {
                 "Escape cannot bypass a chapter briefing's explicit Begin chapter action");
 }
 
+void testLoadingConsumesDismissalInputUntilExplicitlyClosed() {
+    auto game = std::make_shared<CGame>();
+    for (const auto &[name, builder] : *CTypes::builders())
+        game->getObjectHandler()->registerType(name, builder);
+    game->getObjectHandler()->registerType("CPlayerController", [] { return std::make_shared<CPlayerController>(); });
+    game->getObjectHandler()->registerType("CPlayerFightController",
+                                           [] { return std::make_shared<CPlayerFightController>(); });
+    game->getObjectHandler()->registerConfig("infoPanel", CJsonUtil::from_string(R"({
+        "class":"CGameTextPanel","properties":{"layout":{"class":"CLayout",
+        "properties":{"x":"40","y":"30","w":"900","h":"640"}}}})"));
+    auto map = std::make_shared<CMap>();
+    auto gui = std::make_shared<CGui>();
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    player->getBaseStats()->setStamina(10);
+    player->getBaseStats()->setIntelligence(10);
+    player->setHp(17);
+    player->setMana(12);
+    map->setObjects({player});
+    expect_true(map->getPlayer() == player, "loading input fixture uses the map's actual player");
+    struct WorldInputProbe : CGameGraphicsObject {
+        int inputs = 0;
+        bool keyboardEvent(std::shared_ptr<CGui>, SDL_EventType, SDL_Keycode) override {
+            ++inputs;
+            return true;
+        }
+        bool mouseEvent(std::shared_ptr<CGui>, SDL_EventType, int, int, int) override {
+            ++inputs;
+            return true;
+        }
+    };
+    auto world = std::make_shared<WorldInputProbe>();
+    world->setLayout(std::make_shared<CLayout>());
+    world->getLayout()->setRect(0, 0, 1920, 1080);
+    gui->pushChild(world);
+    const auto turn = map->getTurn();
+    const auto hp = player->getHp();
+    const auto mana = player->getMana();
+    const auto items = player->getItems();
+    auto handler = game->getGuiHandler();
+    auto key = [&](SDL_Keycode value) {
+        SDL_Event event{};
+        event.key.keysym.sym = value;
+        event.type = SDL_KEYDOWN;
+        gui->event(&event);
+        event.type = SDL_KEYUP;
+        gui->event(&event);
+    };
+    auto click = [&](int x, int y) {
+        SDL_Event event{};
+        event.button.button = SDL_BUTTON_LEFT;
+        event.button.x = x;
+        event.button.y = y;
+        event.type = SDL_MOUSEBUTTONDOWN;
+        gui->event(&event);
+        event.type = SDL_MOUSEBUTTONUP;
+        gui->event(&event);
+    };
+    auto loading = [&] {
+        handler->showLoading("Loading saved adventure...");
+        return std::dynamic_pointer_cast<CGameTextPanel>(gui->findChild("CGameTextPanel"));
+    };
+    for (auto value : {SDLK_RETURN, SDLK_SPACE, SDLK_ESCAPE}) {
+        auto reader = loading();
+        expect_true(reader && !reader->getCloseable(), "loading creates a non-closeable text reader");
+        if (!reader)
+            continue;
+        expect_true(!reader->getContinueRectForTest(), "loading must not expose an active Continue hit region");
+        key(value);
+        expect_true(reader->getParent() == gui, "loading consumes Enter, Space and Escape without dismissal");
+    }
+    auto reader = loading();
+    if (reader) {
+        const auto rect = reader->getLayout()->getRect(reader);
+        click(rect->x + rect->w / 2, rect->y + rect->h - 40);
+        expect_true(reader->getParent() == gui, "clicking the loading footer cannot dismiss it");
+        click(rect->x + rect->w - 32, rect->y + 20);
+        expect_true(reader->getParent() == gui, "clicking the absent loading close control cannot dismiss it");
+        if (!reader->getParent())
+            gui->pushChild(reader);
+        std::string progress;
+        for (int index = 0; index < 40; ++index)
+            progress += "Loading stage " + std::to_string(index) + ": Preparing the saved world.\n";
+        reader->setText(progress);
+        gui->render(0);
+        const auto body = reader->getBodyRectForTest();
+        auto pixels = [&] {
+            std::vector<std::uint32_t> result(static_cast<std::size_t>(body->w) * body->h);
+            expect_true(SDL_RenderReadPixels(gui->getRenderer(), body.get(), SDL_PIXELFORMAT_RGBA32, result.data(),
+                                             body->w * sizeof(std::uint32_t)) == 0,
+                        "loading scroll fixture can read the software-rendered body");
+            return result;
+        };
+        const auto beginning = pixels();
+        key(SDLK_PAGEDOWN);
+        gui->render(0);
+        expect_true(beginning != pixels() && reader->getParent() == gui,
+                    "a non-closeable reader still scrolls its overflowing text without dismissal");
+        handler->hideLoading();
+        expect_true(!reader->getParent(), "hideLoading still closes the reader programmatically");
+    }
+    expect_true(world->inputs == 0 && map->getTurn() == turn && player->getHp() == hp && player->getMana() == mana &&
+                    player->getItems() == items,
+                "loading input and scrolling cannot reach the world or alter player resources, items, or turns");
+    gui->removeChild(world);
+    for (auto value : {SDLK_RETURN, SDLK_SPACE, SDLK_ESCAPE}) {
+        auto normal = loading();
+        normal->setCloseable(true);
+        gui->render(0);
+        expect_true(normal->getContinueRectForTest() != nullptr, "normal readers retain their Continue hit region");
+        key(value);
+        expect_true(!normal->getParent(), "normal readers still dismiss through Enter, Space and Escape");
+    }
+    auto normal = loading();
+    normal->setCloseable(true);
+    gui->render(0);
+    const auto footer = normal->getContinueRectForTest();
+    click(footer->x + footer->w / 2, footer->y + footer->h / 2);
+    expect_true(!normal->getParent(), "normal readers still dismiss through the Continue button");
+    auto disabledDuringPress = loading();
+    disabledDuringPress->setCloseable(true);
+    gui->render(0);
+    const auto pressedFooter = disabledDuringPress->getContinueRectForTest();
+    SDL_Event release{};
+    release.button.button = SDL_BUTTON_LEFT;
+    release.button.x = pressedFooter->x + pressedFooter->w / 2;
+    release.button.y = pressedFooter->y + pressedFooter->h / 2;
+    release.type = SDL_MOUSEBUTTONDOWN;
+    gui->event(&release);
+    disabledDuringPress->setCloseable(false);
+    release.type = SDL_MOUSEBUTTONUP;
+    gui->event(&release);
+    expect_true(disabledDuringPress->getParent() == gui,
+                "disabling dismissal during a Continue press prevents its matching release from closing the reader");
+    disabledDuringPress->setCloseable(true);
+    gui->event(&release);
+    expect_true(disabledDuringPress->getParent() == gui,
+                "re-enabling dismissal cannot reuse a stale Continue press after its release was consumed");
+    handler->hideLoading();
+    game->getContext()->shutdown();
+}
+
 void testLongReaderRetainsItsEndingBeyondTheTextCacheEntryLimit() {
     auto gui = std::make_shared<CGui>();
     auto reader = std::make_shared<CGameCampaignPanel>();
@@ -617,6 +772,7 @@ int main() {
     testNarrowFrontendKeepsChoicesAndPreviewOnKeyboardPages();
     testEnlargedCharacterPreviewRetainsReadableViewport();
     testContinueReadersAllowEscapeAndCloseWithoutStartingAChapter();
+    testLoadingConsumesDismissalInputUntilExplicitlyClosed();
     testLongReaderRetainsItsEndingBeyondTheTextCacheEntryLimit();
     testLongChoiceDetailsRemainReadableWithoutConfirmingTheirAction();
     testReaderLayoutKeepsLargeTextBetweenHeaderAndAction();

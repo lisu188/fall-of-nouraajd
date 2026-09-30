@@ -14013,7 +14013,10 @@ class GameTest(unittest.TestCase):
         rows = json.loads(handler.showChoice.call_args_list[0].args[1])
         self.assertEqual(["continue", "new", "load", "settings", "help", "quit"], [row["id"] for row in rows])
         self.assertFalse(rows[0]["enabled"])
-        handler.showInfo.assert_called_once_with("No saved adventures are available yet.", False)
+        handler.showCampaignScreen.assert_called_once_with(
+            "Error", "No saved adventures are available yet.", "Continue"
+        )
+        handler.showInfo.assert_not_called()
         self.assertFalse(state["active"])
 
     def test_new_game_mode_menu_keeps_authored_scenarios_available(self):
@@ -14068,7 +14071,8 @@ class GameTest(unittest.TestCase):
             patch.object(ui, "chooseCharacter") as choose_character,
         ):
             self.assertFalse(ui.newAdventure(fake_game))
-        handler.showInfo.assert_called_once_with("No campaigns are available.", False)
+        handler.showCampaignScreen.assert_called_once_with("Error", "No campaigns are available.", "Continue")
+        handler.showInfo.assert_not_called()
         choose_character.assert_not_called()
         loader.startGameWithPlayer.assert_not_called()
         self.assertEqual(

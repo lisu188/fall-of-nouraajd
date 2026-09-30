@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <set>
 #include <string>
+#include <algorithm>
 
 namespace {
 // Appends a single archetype line, skipping empty text and any description that
@@ -37,6 +38,20 @@ void add_archetype_line(std::string &tooltip, std::set<std::string> &seen, const
     vstd::add_line(tooltip, line);
 }
 } // namespace
+
+std::string CTooltipHandler::getStatLabel(const std::string &key) {
+    static const std::map<std::string, std::string> labels = {{"dmgMin", "Minimum damage"},
+                                                              {"dmgMax", "Maximum damage"},
+                                                              {"crit", "Critical chance"},
+                                                              {"hit", "Hit chance"},
+                                                              {"fireResist", "Fire resistance"},
+                                                              {"frostResist", "Frost resistance"},
+                                                              {"normalResist", "Physical resistance"},
+                                                              {"thunderResist", "Thunder resistance"},
+                                                              {"shadowResist", "Shadow resistance"}};
+    const auto label = labels.find(key);
+    return label == labels.end() ? vstd::camel(key) : label->second;
+}
 
 std::string CTooltipHandler::getSlotLabel(const std::string &slotName) {
     static const std::map<std::string, std::string> labels = {
@@ -74,7 +89,7 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
                     auto value = bonus->getNumericProperty(prop->name());
                     if (value != 0) {
                         vstd::add_line(tooltip,
-                                       vstd::camel(prop->name()) + ": " + (value > 0 ? "+" : "") + vstd::str(value));
+                                       getStatLabel(prop->name()) + ": " + (value > 0 ? "+" : "") + vstd::str(value));
                     }
                 }
             });
@@ -93,9 +108,36 @@ std::string CTooltipHandler::buildTooltip(std::shared_ptr<CGameObject> object) {
     }
     if (auto action = vstd::cast<CInteraction>(object)) {
         vstd::add_line(tooltip, "Mana cost: " + std::to_string(action->getManaCost()));
+        const bool selfTarget = action->getSelfTarget() || action->effectRoutesToCaster(action->getEffect());
+        vstd::add_line(tooltip, selfTarget ? "Targeting: Yourself" : "Targeting: One enemy");
     }
     if (auto effect = vstd::cast<CEffect>(object)) {
         vstd::add_line(tooltip, "Remaining: " + std::to_string(effect->getTimeLeft()) + " turns");
     }
     return tooltip;
+}
+
+std::string CTooltipHandler::buildAbilityDetails(const std::shared_ptr<CInteraction> &action,
+                                                 const std::shared_ptr<CCreature> &actor) {
+    auto text = buildTooltip(action);
+    if (!action || !actor) {
+        return text;
+    }
+    if (!actor->isAlive()) {
+        vstd::add_line(text, "Unavailable: You are defeated.");
+    } else {
+        const auto available = actor->getEffectiveInteractions();
+        const bool owned = std::any_of(available.begin(), available.end(), [action](const auto &candidate) {
+            return CGameObject::sameInstance(candidate, action);
+        });
+        if (!owned) {
+            vstd::add_line(text, "Unavailable: This ability is no longer available to this hero.");
+        } else if (action->getManaCost() > actor->getMana()) {
+            vstd::add_line(text, "Unavailable: Needs " + std::to_string(action->getManaCost() - actor->getMana()) +
+                                     " more mana.");
+        } else {
+            vstd::add_line(text, "Available in combat. Select a living enemy to execute.");
+        }
+    }
+    return text;
 }

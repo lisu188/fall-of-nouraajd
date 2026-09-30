@@ -194,6 +194,7 @@ void testCombatInspectionAndUnavailableActionFeedback() {
     auto action = std::make_shared<CInteraction>();
     action->setLabel("Frost bolt");
     action->setManaCost(h.player->getMana() + 4);
+    h.player->addAction(action);
     panel->interactionsCallback(h.gui, 0, action);
     panel->interactionsCallback(h.gui, 0, action);
     expect_true(panel->interactionsSelect(h.gui, 0, action), "an unaffordable action must remain inspectable");
@@ -206,6 +207,132 @@ void testCombatInspectionAndUnavailableActionFeedback() {
     panel->cancel();
     panel->executeSelectedAction(h.gui);
     expect_true(panel->isCancelled(), "an explicit action must not revive a cancelled encounter");
+}
+
+void testAbilityInspectionExplainsTargetingAndCurrentAvailabilityWithoutExecuting() {
+    expect_true(CTooltipHandler::buildAbilityDetails(nullptr, nullptr).empty(),
+                "missing ability inspection must fail closed without an actor");
+    struct CountingInteraction : CInteraction {
+        int executions = 0;
+        void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++executions; }
+    };
+    const struct {
+        bool selfTarget;
+        bool legacyBuff;
+        const char *targeting;
+        const char *combatTarget;
+    } cases[] = {{true, false, "Targeting: Yourself", "Target: Yourself"},
+                 {false, true, "Targeting: Yourself", "Target: Yourself"},
+                 {false, false, "Targeting: One enemy", "Target: Ash sentinel"}};
+    for (const auto &testCase : cases) {
+        ManagementHarness h;
+        auto weapon = std::make_shared<CWeapon>();
+        weapon->setGame(h.game);
+        weapon->setName("abilityInspectionWeapon");
+        weapon->getBonus()->setStrength(2);
+        h.player->addItem(weapon);
+        h.player->equipItem("0", weapon);
+        h.potion("abilityInspectionPotion");
+        auto action = std::make_shared<CountingInteraction>();
+        action->setGame(h.game);
+        action->setName("inspectedWard");
+        action->setLabel("Inspected ward");
+        action->setDescription("Creates a protective barrier for three turns.");
+        action->setManaCost(17);
+        action->setSelfTarget(testCase.selfTarget);
+        if (testCase.legacyBuff) {
+            auto effect = std::make_shared<CEffect>();
+            effect->addTag(CTag::Buff);
+            action->setEffect(effect);
+        }
+        h.player->setActions({action});
+        h.player->setMana(17);
+        auto character = std::make_shared<CGameCharacterPanel>();
+        character->interactionsCallback(h.gui, 0, action);
+        auto combat = std::make_shared<CGameFightPanel>();
+        auto enemy = std::make_shared<CCreature>();
+        enemy->setGame(h.game);
+        enemy->setName("abilityInspectionEnemy");
+        enemy->setLabel("Ash sentinel");
+        enemy->getBaseStats()->setStamina(10);
+        enemy->setHp(enemy->getHpMax());
+        combat->setEnemy(enemy);
+        combat->interactionsCallback(h.gui, 0, action);
+        const auto hpBefore = h.player->getHp();
+        const auto enemyHpBefore = enemy->getHp();
+        const auto statsBefore = h.player->getStats()->modifier();
+        const auto equipmentBefore = h.player->getEquipped();
+        const auto inventoryBefore = h.player->getItems();
+        const auto turnBefore = h.map->getTurn();
+        auto expectReadOnly = [&](int mana) {
+            expect_true(action->executions == 0 && h.player->getHp() == hpBefore && h.player->getMana() == mana &&
+                            enemy->getHp() == enemyHpBefore && h.player->getStats()->modifier() == statsBefore &&
+                            h.player->getEquipped() == equipmentBefore && h.player->getItems() == inventoryBefore &&
+                            h.map->getTurn() == turnBefore,
+                        "ability inspection must not execute, advance turns, or alter resources, stats, or equipment");
+            expect_true(combat->getEnemy() == enemy && combat->interactionsSelect(h.gui, 0, action),
+                        "reading an ability must retain the selected combat action and actual enemy");
+        };
+        auto expectOnce = [](const std::string &text, const std::string &value, const char *message) {
+            const auto position = text.find(value);
+            expect_true(position != std::string::npos && text.find(value, position + value.size()) == std::string::npos,
+                        message);
+        };
+        for (const auto &text : {CTooltipHandler::buildTooltip(action), character->getAbilityDetails(h.gui),
+                                 combat->getSelectionDetails(h.gui)}) {
+            expectOnce(text, action->getDescription(), "every ability inspector must retain its authored effect once");
+            expectOnce(text, "Mana cost: 17", "every ability inspector must show authoritative mana cost exactly once");
+            expectOnce(text, testCase.targeting,
+                       "ability inspectors must explain explicit, legacy-buff, and opponent targeting consistently");
+        }
+        const auto ready = character->getAbilityDetails(h.gui);
+        expect_true(CTooltipHandler::buildAbilityDetails(action, nullptr) == CTooltipHandler::buildTooltip(action),
+                    "an ability without an actor must show only metadata without guessing availability");
+        expect_true(ready.find("Available in combat") != std::string::npos && ready.find("Needs ") == std::string::npos,
+                    "an owned ability at its exact mana cost must be described as available in combat");
+        expect_true(combat->getSelectionDetails(h.gui).find(testCase.combatTarget) != std::string::npos,
+                    "the combat preview must retain its actual target alongside the shared targeting explanation");
+        expectReadOnly(17);
+
+        h.player->setMana(14);
+        for (int reading = 0; reading < 3; ++reading) {
+            for (const auto &text : {character->getAbilityDetails(h.gui), combat->getSelectionDetails(h.gui)}) {
+                expectOnce(text, "Needs 3 more mana",
+                           "both ability views must show the current exact mana shortage once");
+                expect_true(text.find("Available in combat") == std::string::npos,
+                            "an unaffordable ability must not retain stale ready wording");
+            }
+        }
+        expectReadOnly(14);
+
+        h.player->setMana(17);
+        expect_true(character->getAbilityDetails(h.gui).find("Available in combat") != std::string::npos,
+                    "replenishing mana must update availability without reselecting the ability");
+        h.player->setHp(0);
+        expect_true(character->getAbilityDetails(h.gui).find("Unavailable: You are defeated.") != std::string::npos,
+                    "a defeated hero must not retain ready wording even with sufficient mana");
+        h.player->setMana(0);
+        expect_true(character->getAbilityDetails(h.gui).find("Unavailable: You are defeated.") != std::string::npos,
+                    "defeat must take precedence over a mana shortage");
+        h.player->setMana(17);
+        h.player->setHp(hpBefore);
+        h.player->setActions({});
+        expect_true(h.player->getEffectiveInteractions().empty(),
+                    "the removed-ability fixture must have no owned actions");
+        for (const auto &text : {character->getAbilityDetails(h.gui), combat->getSelectionDetails(h.gui)}) {
+            expect_true(text.find("no longer available") != std::string::npos &&
+                            text.find("Available in combat") == std::string::npos,
+                        "a removed ability must remain inspectable while clearly reporting its current unavailability");
+        }
+        expectReadOnly(17);
+        h.player->setMana(0);
+        for (const auto &text : {character->getAbilityDetails(h.gui), combat->getSelectionDetails(h.gui)}) {
+            expect_true(text.find("no longer available") != std::string::npos &&
+                            text.find("Needs ") == std::string::npos,
+                        "a removed ability must explain lost ownership before an irrelevant mana shortage");
+        }
+        expectReadOnly(0);
+    }
 }
 
 void testCombatLogIsBoundedOrderedAndReadOnly() {
@@ -430,6 +557,79 @@ void testCharacterIdentityAndSignedItemDetails() {
     expect_true(tooltip.find("3 equipment slots") != std::string::npos,
                 "combined artifact occupancy must be explained");
     expect_true(CTooltipHandler::buildTooltip(nullptr).empty(), "an expired inspector target must fail closed");
+}
+
+void testItemAndCharacterStatLabelsStayConsistentWithoutChangingStats() {
+    ManagementHarness h;
+    expect_true(CTooltipHandler::getStatLabel("agility") == "Agility" &&
+                    CTooltipHandler::getStatLabel("futureBonus") == vstd::camel("futureBonus"),
+                "other stat names must keep the existing readable fallback");
+    const struct {
+        const char *key;
+        const char *label;
+        int equipped;
+        int candidate;
+    } stats[] = {{"dmgMin", "Minimum damage", 3, 7},
+                 {"dmgMax", "Maximum damage", 9, 4},
+                 {"crit", "Critical chance", -2, 3},
+                 {"hit", "Hit chance", 6, -1},
+                 {"fireResist", "Fire resistance", -4, 2},
+                 {"frostResist", "Frost resistance", 5, -3},
+                 {"normalResist", "Physical resistance", 7, -2},
+                 {"thunderResist", "Thunder resistance", -6, 4},
+                 {"shadowResist", "Shadow resistance", 8, -4}};
+    auto equipped = std::make_shared<CWeapon>();
+    equipped->setGame(h.game);
+    equipped->setName("readableEquippedBlade");
+    equipped->setLabel("Proven blade");
+    auto candidate = std::make_shared<CWeapon>();
+    candidate->setGame(h.game);
+    candidate->setName("readableCandidateBlade");
+    candidate->setLabel("Unfamiliar blade");
+    for (const auto &stat : stats) {
+        equipped->getBonus()->setNumericProperty(stat.key, stat.equipped);
+        candidate->getBonus()->setNumericProperty(stat.key, stat.candidate);
+    }
+    h.player->addItem(equipped);
+    h.player->equipItem("0", equipped);
+    h.player->addItem(candidate);
+    const auto equippedBefore = equipped->getBonus()->modifier();
+    const auto candidateBefore = candidate->getBonus()->modifier();
+    const auto playerBefore = h.player->getStats()->modifier();
+    const auto inventoryBefore = h.player->getItems();
+
+    auto inventory = std::make_shared<CGameInventoryPanel>();
+    inventory->inventoryCallback(h.gui, 0, candidate);
+    const auto details = inventory->getSelectionDetails(h.gui);
+    const auto tooltip = CTooltipHandler::buildTooltip(candidate);
+    auto character = std::make_shared<CGameCharacterPanel>();
+    const auto modifiers = character->buildModifierSources(h.player);
+    expect_true(details.find("Item bonus changes versus Proven blade:") != std::string::npos,
+                "comparison must identify the actual equipped item");
+    const auto equipmentStart = modifiers.find("Equipment: Proven blade\n");
+    expect_true(equipmentStart != std::string::npos, "modifier inspection must identify the equipped source");
+    const auto equipmentText =
+        equipmentStart == std::string::npos
+            ? std::string()
+            : modifiers.substr(equipmentStart, modifiers.find("\n\n", equipmentStart) - equipmentStart);
+    auto signedValue = [](int value) { return (value > 0 ? "+" : "") + std::to_string(value); };
+    for (const auto &stat : stats) {
+        const std::string label = stat.label;
+        expect_true(tooltip.find(label + ": " + signedValue(stat.candidate)) != std::string::npos,
+                    ("item tooltip must show the readable label and signed bonus for " + label).c_str());
+        expect_true(details.find(label + ": " + signedValue(stat.candidate - stat.equipped)) != std::string::npos,
+                    ("equipment comparison must show the readable label and signed difference for " + label).c_str());
+        expect_true(
+            equipmentText.find(label + ": " + signedValue(stat.equipped)) != std::string::npos,
+            ("character modifier source must use the same readable label and signed bonus for " + label).c_str());
+    }
+    expect_true(equipped->getBonus()->modifier() == equippedBefore &&
+                    candidate->getBonus()->modifier() == candidateBefore &&
+                    h.player->getStats()->modifier() == playerBefore,
+                "readable stat inspection must not change item bonuses or composed numeric stats");
+    expect_true(h.player->getItems() == inventoryBefore && h.player->getItemAtSlot("0") == equipped &&
+                    h.player->hasInInventory(candidate),
+                "inspecting comparison and modifier details must not equip or remove either weapon");
 }
 
 void testJournalTabsTrackingAndRewardAcknowledgement() {
@@ -1099,9 +1299,11 @@ int main() {
     testInventoryInspectionNeverConsumesAnItem();
     testEquipmentRequiresAnExplicitActionAndKeepsCurses();
     testCombatInspectionAndUnavailableActionFeedback();
+    testAbilityInspectionExplainsTargetingAndCurrentAvailabilityWithoutExecuting();
     testCombatLogIsBoundedOrderedAndReadOnly();
     testTradeInspectionAndExactQuantities();
     testCharacterIdentityAndSignedItemDetails();
+    testItemAndCharacterStatLabelsStayConsistentWithoutChangingStats();
     testJournalTabsTrackingAndRewardAcknowledgement();
     testDefeatReceiptRecordsActualLossesAfterRecovery("");
     testDefeatReceiptRecordsActualLossesAfterRecovery("The village of Nouraajd");

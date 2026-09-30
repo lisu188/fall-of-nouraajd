@@ -68,6 +68,8 @@ class CGameCharacterPanel : public CGamePanel {
 
     void renderCharacterSheet(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
+    std::string getAbilityDetails(std::shared_ptr<CGui> gui);
+
     void renderAbilityDetails(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
 
     bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;

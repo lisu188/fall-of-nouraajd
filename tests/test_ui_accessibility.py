@@ -1,5 +1,6 @@
-"""Checks for the shared palette and bundled font assets; no game window is created."""
+"""Checks for readable UI content, shared colors, and font assets; no game window is created."""
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -16,6 +17,18 @@ def luminance(color):
 
 
 class UiAccessibilityTest(unittest.TestCase):
+    def testConfiguredAbilitiesHaveReadableLabelsAndDescriptions(self):
+        interactions = json.loads((ROOT / "res/config/interactions.json").read_text(encoding="utf-8"))
+        self.assertTrue(interactions)
+        for ability_id, definition in interactions.items():
+            for field in ("label", "description"):
+                with self.subTest(ability=ability_id, field=field):
+                    value = definition.get("properties", {}).get(field)
+                    self.assertIsInstance(value, str)
+                    self.assertTrue(value.strip(), f"{ability_id} needs an authored {field}")
+                    if field == "label":
+                        self.assertNotRegex(value, r"[a-z][A-Z]|_", "Ability labels must use readable words")
+
     def testSharedTextColorsMeetBodyContrast(self):
         source = (ROOT / "src/gui/CUiTheme.h").read_text(encoding="utf-8")
         palette = {

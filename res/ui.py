@@ -86,8 +86,8 @@ def notify(game, text):
         gui.notify(text)
 
 
-def showError(game, text):
-    game.getGuiHandler().showInfo(text, False)
+def showError(game, text, title="Error"):
+    game.getGuiHandler().showCampaignScreen(title, text, "Continue")
 
 
 def recordSessionSave(game, slot, operation):
@@ -429,7 +429,9 @@ def loadGame(game, slot, ask_replace=True):
             if loaded is None or loaded == previous:
                 raise ValueError("Save loader retained the previous map")
     except Exception:
-        showError(game, "The saved adventure could not be loaded. Choose another save or its recovery copy.")
+        showError(
+            game, "The saved adventure could not be loaded. Choose another save or its recovery copy.", "Load failed"
+        )
         return False
     recordSessionSave(game, slot, "load")
     notify(game, "Loaded " + displayName(slot) + ".")
@@ -462,7 +464,9 @@ def saveGame(game, slot):
                 raise OSError("Save write failed")
     except Exception:
         showError(
-            game, "Your adventure could not be saved. Check that the save location is writable and has free space."
+            game,
+            "Your adventure could not be saved. Check that the save location is writable and has free space.",
+            "Save failed",
         )
         return False
     SAVE_PREVIEW_CACHE.clear()
