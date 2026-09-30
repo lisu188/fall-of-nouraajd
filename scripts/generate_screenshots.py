@@ -414,6 +414,44 @@ def searchCaptureSelection(sim, view, label):
         raise RuntimeError("Searching and inspecting advanced a game turn.")
 
 
+def captureCharacterModifiers(sim, panel, record):
+    gui = sim.gameInstance.getGui()
+
+    def requireCharacter():
+        if panel.getParent() != gui or gui.findChild("CGameCharacterPanel") != panel or not panel.isVisible():
+            raise RuntimeError("Character panel is not attached and visible for the modifiers capture.")
+
+    requireCharacter()
+    modifiers = next(
+        (
+            child
+            for child in panel.getChildren()
+            if child.isVisible() and child.getStringProperty("click") == "inspectModifiers"
+        ),
+        None,
+    )
+    if modifiers is None:
+        raise RuntimeError("The Character panel has no visible Inspect modifiers control.")
+    clickCaptureWidget(sim, modifiers)
+    sim.pumpEvents(2)
+    reader = gui.findChild("CGameTextPanel")
+    if (
+        reader is None
+        or reader.getParent() != gui
+        or not reader.isVisible()
+        or reader.getStringProperty("title") != "Stat modifiers"
+        or not reader.getText().strip()
+    ):
+        raise RuntimeError("Stat modifiers reader is not attached and visible after Inspect modifiers.")
+    try:
+        record("management-character-modifiers")
+    finally:
+        keyCapture(sim, 27)
+    requireCharacter()
+    if gui.findChild("CGameTextPanel") == reader:
+        raise RuntimeError("Closing the Stat modifiers reader did not dismiss it.")
+
+
 # ---------------------------------------------------------------------------
 # Panel configuration
 #
@@ -1359,14 +1397,7 @@ def captureAcceptanceStates(game, output_dir, player_class):
                 player.setMana(original_mana)
                 gui.applyUiPreferences("{}")
                 resizeCaptureWindow(sim, 1920, 1080)
-                keyCapture(sim, ord("/"))
-                keyCapture(sim, 27)  # End search and clear its filter before the next view.
-            modifiers = next(
-                child for child in panel.getChildren() if child.getStringProperty("click") == "inspectModifiers"
-            )
-            clickCaptureWidget(sim, modifiers)
-            record("management-character-modifiers")
-            keyCapture(sim, 27)
+            captureCharacterModifiers(sim, panel, record)
         finally:
             panel.close()
         keyCapture(sim, ord("m"))

@@ -248,3 +248,11 @@ surface; it now reads supported native properties. The initial screenshot attemp
 Character selection accessor; the final capture uses normal search/keyboard routing and rendered review instead.
 Corrected focused tests and the complete screenshot command pass. These setup failures do not establish engine
 regressions or expand the public MCP surface.
+
+Final image review caught a capture-sequence defect: redundant search-cleanup keys after the compact ability view
+closed Character before the modifier-reader capture, leaving a valid PNG of the world. The search helper already
+ends and clears its filter, so those extra keys are removed. Capture now requires the current visible Character
+panel, a visible nonempty reader titled Stat modifiers, and retained Character after reader dismissal. Eight
+invalid-state regression subcases failed before the guards and pass afterward. All 19 screenshot-tooling tests
+pass, and the 22 affected acceptance screenshots are regenerated offscreen and decoded. This correction changes
+capture tooling and evidence; gameplay and rendering rules are unchanged.
