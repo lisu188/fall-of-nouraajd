@@ -75,9 +75,11 @@ void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
     const int top = getShellHeaderHeight(gui) + UiTheme::scaled(gui, 16);
     auto textManager = gui->getTextManager();
     const int width = std::max(1, rect->w - padding * 2);
-    const std::string buttonLabel = "Continue | PgUp / PgDn to read";
-    const int buttonHeight = std::max(UiTheme::scaled(gui, 44),
-                                      textManager->measureText(buttonLabel, width - padding).second + UiTheme::scaled(gui, 16));
+    const bool closeable = getCloseable();
+    const std::string buttonLabel = closeable ? "Continue | PgUp / PgDn to read" : "Please wait | PgUp / PgDn to read";
+    const int buttonHeight =
+        std::max(UiTheme::scaled(gui, 44),
+                 textManager->measureText(buttonLabel, width - padding).second + UiTheme::scaled(gui, 16));
     const int footer = buttonHeight + padding * 2;
     auto viewport = CUtil::rect(rect->x + padding, rect->y + top, std::max(1, rect->w - padding * 2),
                                 std::max(1, rect->h - top - footer));
@@ -94,10 +96,17 @@ void CGameTextPanel::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL
         }
     }
     auto button = CUtil::rect(rect->x + padding, rect->y + rect->h - padding - buttonHeight, width, buttonHeight);
-    continueRect = button;
-    CUtil::setRenderDrawColor(gui->getRenderer(), UiTheme::Selection);
-    SDL_RenderFillRect(gui->getRenderer(), button.get());
-    textManager->drawTextStyled(scrollMaximum ? buttonLabel : "Continue", button, "body", UiTheme::Text, true);
+    continueRect = closeable ? button : nullptr;
+    if (closeable) {
+        CUtil::setRenderDrawColor(gui->getRenderer(), UiTheme::Selection);
+        SDL_RenderFillRect(gui->getRenderer(), button.get());
+    } else {
+        continuePressed = false;
+    }
+    textManager->drawTextStyled(scrollMaximum ? buttonLabel
+                                : closeable   ? "Continue"
+                                              : "Please wait",
+                                button, "body", closeable ? UiTheme::Text : UiTheme::Muted, true);
 }
 
 bool CGameTextPanel::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
@@ -117,7 +126,8 @@ bool CGameTextPanel::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type
     case SDLK_SPACE:
     case SDLK_RETURN:
     case SDLK_ESCAPE:
-        close();
+        if (getCloseable())
+            close();
         break;
     case SDLK_UP:
         scrollOffset -= UiTheme::scaled(gui, 32);
@@ -150,6 +160,10 @@ bool CGameTextPanel::mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType, i
 }
 
 bool CGameTextPanel::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
+    if (!getCloseable()) {
+        continuePressed = false;
+        return true;
+    }
     if (button == SDL_BUTTON_LEFT && getLayout()) {
         auto rect = getLayout()->getRect(this->ptr<CGameGraphicsObject>());
         if (!continueRect) {

@@ -211,3 +211,60 @@ with the shared paragraph layout. Exact before/after commands and counts are ret
 
 Required Linux, Windows, full-suite and coverage evidence comes from the PR's path-selected `build` workflow. A
 successful focused local run or screenshot set alone is not a claim that those release checks have completed.
+
+## Shared item and ability inspection
+
+The September 30 acceptance audit found two remaining presentation gaps: item bonuses and equipment comparisons
+still exposed abbreviated stat names, and Character ability details lacked targeting, current availability and
+authored effect descriptions. Item tooltips, comparisons and Character modifier sources now share the existing
+readable stat vocabulary. Resource IDs, signed numeric bonuses and comparison calculations are unchanged.
+
+All 51 configured interactions have effect descriptions reviewed against their current action and effect rules.
+The shared tooltip shows the authoritative mana cost and distinguishes caster targeting from one-enemy targeting,
+including the legacy Buff routing rule. Character and Combat reuse the same current availability explanation.
+Reading these views does not simulate damage, invoke an action, consume resources or advance turns. Combat retains
+its actual selected target and explicit execution control; caster-targeted abilities still require the existing
+living-enemy encounter context.
+
+Native regressions reproduced 48 failed assertions before the presentation fixes: 18 stat-label checks and 30
+ability targeting/availability checks. They cover changing mana and ownership without reselection, defeat, signed
+bonuses, preserved target selection and unchanged player/world state. A source-only check rejects missing ability
+names or descriptions; its original-resource run produced 52 failing subtests. The MCP inspection regression moves
+the real Warrior to Nouraajd's authored merchant, reads the owned Attack and the merchant's Dagger of Vile Heart,
+and checks native metadata and unchanged state. These focused results are separate from the required PR checks.
+
+The screenshot generator selects an owned ability with a mana requirement and captures both its available and
+unavailable states at 1080p and at 720p with 200% UI/text scaling, restoring the original mana afterward. The
+complete offscreen run regenerated and verified 139 images, including all 15 registered panels, all 15 authored
+maps and a random map. Both compact ability states fit their full metadata; the bounded PageDown check found no
+overflow in this fixture. Native fixtures cover scrolling independently of these screenshots.
+
+The Character rendering performance guard measures
+bounded texture refresh when availability changes and requires zero new textures across 25 unchanged redraws in
+each state. Exact commands and measurements are retained in the [profile notes](../../scripts/ui_text_profile/README.md).
+
+The initial MCP fixture tried the unbound `getDescription` accessor and a tooltip helper outside the MCP export
+surface; it now reads supported native properties. The initial screenshot attempt similarly tried an unbound
+Character selection accessor; the final capture uses normal search/keyboard routing and rendered review instead.
+Corrected focused tests and the complete screenshot command pass. These setup failures do not establish engine
+regressions or expand the public MCP surface.
+
+Final image review caught a capture-sequence defect: redundant search-cleanup keys after the compact ability view
+closed Character before the modifier-reader capture, leaving a valid PNG of the world. The search helper already
+ends and clears its filter, so those extra keys are removed. Capture now requires the current visible Character
+panel, a visible nonempty reader titled Stat modifiers, and retained Character after reader dismissal. Eight
+invalid-state regression subcases failed before the guards and pass afterward. All 19 screenshot-tooling tests
+pass, and the 22 affected acceptance screenshots are regenerated offscreen and decoded. This correction changes
+capture tooling and evidence; gameplay and rendering rules are unchanged.
+
+The final visual audit reviewed all 116 frontend, management and registered-panel images. It also found that
+Loading displayed an active Continue button and accepted dismissal despite being marked non-closeable, and that
+error feedback used the generic Discovery title. Non-closeable text readers now show muted Please wait feedback,
+consume dismissal keys and clicks, retain scrolling, and still close when the engine calls hideLoading. A pressed
+Continue cannot survive disabling and re-enabling dismissal. Native regressions reproduced nine failed assertions
+before the fix and pass afterward while preserving player resources and world input isolation. Errors now use the
+shared titled reader; save and load failures name their operation, preserve the current session, and acknowledge
+without reporting success. Three frontend regressions fail before the title change and pass afterward. The combined
+focused Python check runs 72 tests successfully. Updated screenshots use the freshly rebuilt native module and
+normally configured resources. Loading texture counts remain six initial loads and zero across 25 warm redraws;
+the [profile notes](../../scripts/ui_text_profile/README.md) retain the exact before/after commands.

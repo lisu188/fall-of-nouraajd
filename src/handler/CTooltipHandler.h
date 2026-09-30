@@ -19,9 +19,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "object/CGameObject.h"
 
+class CCreature;
+class CInteraction;
+
 class CTooltipHandler : public CGameObject {
 
   public:
     static std::string buildTooltip(std::shared_ptr<CGameObject> object);
+    static std::string buildAbilityDetails(const std::shared_ptr<CInteraction> &action,
+                                           const std::shared_ptr<CCreature> &actor);
+    static std::string getStatLabel(const std::string &key);
     static std::string getSlotLabel(const std::string &slotName);
 };

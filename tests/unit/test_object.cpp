@@ -143,7 +143,7 @@ void test_tooltip_handler_builds_labels_descriptions_and_item_bonuses() {
     expect_true(item_tooltip.find("Mossblade") != std::string::npos, "item tooltip should include the item label");
     expect_true(item_tooltip.find("Strength: +5") != std::string::npos,
                 "item tooltip should name positive modifiers and show their explicit plus sign");
-    expect_true(item_tooltip.find("Crit: -3") != std::string::npos,
+    expect_true(item_tooltip.find("Critical chance: -3") != std::string::npos,
                 "item tooltip should name negative modifiers and preserve their minus sign");
     expect_true(count_substring(item_tooltip, "A blade wrapped in moss.") == 1,
                 "item tooltips should include the description exactly once after deduplication");

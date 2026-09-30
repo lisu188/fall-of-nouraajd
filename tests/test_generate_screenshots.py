@@ -96,6 +96,101 @@ class ScreenshotDisplayIsolationTest(unittest.TestCase):
 
 
 class ScreenshotPanelSetupTest(unittest.TestCase):
+    def modifierFixture(self):
+        sim = Mock()
+        gui = sim.gameInstance.getGui.return_value
+        panel = Mock()
+        panel.getParent.return_value = gui
+        panel.isVisible.return_value = True
+        button = Mock()
+        button.getStringProperty.return_value = "inspectModifiers"
+        button.isVisible.return_value = True
+        panel.getChildren.return_value = [button]
+        reader = Mock()
+        reader.getParent.return_value = gui
+        reader.isVisible.return_value = True
+        reader.getStringProperty.return_value = "Stat modifiers"
+        reader.getText.return_value = "Hero base\nStrength: +5\nCurrent totals\nStrength: +8"
+        displayed = {"CGameCharacterPanel": panel}
+        gui.findChild.side_effect = lambda name: displayed.get(name)
+        return sim, gui, panel, button, reader, displayed
+
+    def testModifiersCannotCaptureAfterCharacterHasClosedOrBecomeHidden(self):
+        for unavailable in ("detached", "hidden", "replaced"):
+            with self.subTest(unavailable=unavailable):
+                sim, gui, panel, button, reader, displayed = self.modifierFixture()
+                if unavailable == "detached":
+                    panel.getParent.return_value = None
+                    displayed.clear()
+                elif unavailable == "hidden":
+                    panel.isVisible.return_value = False
+                else:
+                    displayed["CGameCharacterPanel"] = Mock()
+                record = Mock()
+                with (
+                    patch.object(generate_screenshots, "clickCaptureWidget") as click,
+                    patch.object(generate_screenshots, "keyCapture") as key,
+                    self.assertRaisesRegex(RuntimeError, "Character panel is not attached and visible"),
+                ):
+                    generate_screenshots.captureCharacterModifiers(sim, panel, record)
+                click.assert_not_called()
+                key.assert_not_called()
+                record.assert_not_called()
+
+    def testModifiersCannotCaptureWorldOrAnotherReaderAfterClick(self):
+        for invalid_reader in ("missing", "wrong title", "hidden", "detached", "empty"):
+            with self.subTest(invalid_reader=invalid_reader):
+                sim, gui, panel, button, reader, displayed = self.modifierFixture()
+                if invalid_reader == "wrong title":
+                    reader.getStringProperty.return_value = "Discovery"
+                elif invalid_reader == "hidden":
+                    reader.isVisible.return_value = False
+                elif invalid_reader == "detached":
+                    reader.getParent.return_value = None
+                elif invalid_reader == "empty":
+                    reader.getText.return_value = ""
+
+                def click(*args):
+                    if invalid_reader != "missing":
+                        displayed["CGameTextPanel"] = reader
+
+                record = Mock()
+                with (
+                    patch.object(generate_screenshots, "clickCaptureWidget", side_effect=click),
+                    patch.object(generate_screenshots, "keyCapture") as key,
+                    self.assertRaisesRegex(RuntimeError, "Stat modifiers reader is not attached and visible"),
+                ):
+                    generate_screenshots.captureCharacterModifiers(sim, panel, record)
+                record.assert_not_called()
+                key.assert_not_called()
+
+    def testModifiersCaptureRequiresVisibleReaderAndPreservesCharacterAfterDismissal(self):
+        sim, gui, panel, button, reader, displayed = self.modifierFixture()
+
+        def click(actual_sim, actual_button):
+            self.assertIs(sim, actual_sim)
+            self.assertIs(button, actual_button)
+            displayed["CGameTextPanel"] = reader
+
+        def record(name):
+            self.assertEqual("management-character-modifiers", name)
+            self.assertIs(reader, displayed["CGameTextPanel"])
+            self.assertIs(panel, displayed["CGameCharacterPanel"])
+
+        def dismiss(actual_sim, key):
+            self.assertIs(sim, actual_sim)
+            self.assertEqual(27, key)
+            del displayed["CGameTextPanel"]
+
+        with (
+            patch.object(generate_screenshots, "clickCaptureWidget", side_effect=click) as click_mock,
+            patch.object(generate_screenshots, "keyCapture", side_effect=dismiss) as key_mock,
+        ):
+            generate_screenshots.captureCharacterModifiers(sim, panel, record)
+        click_mock.assert_called_once()
+        key_mock.assert_called_once()
+        self.assertIs(panel, displayed["CGameCharacterPanel"])
+
     def testTargetedAcceptanceCaptureDoesNotRepeatTheBaselineAndVerifiesEveryArtifact(self):
         args = SimpleNamespace(
             maps=None,

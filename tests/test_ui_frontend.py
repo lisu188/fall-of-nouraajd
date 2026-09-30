@@ -80,6 +80,8 @@ class FakeHandler:
 
     def showCampaignScreen(self, title, body, action):
         self.screens.append((title, body, action))
+        if title in {"Error", "Load failed", "Save failed"}:
+            self.errors.append(body)
 
     def showTextInput(self, title, prompt, initial_value):
         return self.input_value
@@ -222,6 +224,19 @@ class FrontendChoiceTest(unittest.TestCase):
         self.assertEqual([("Help", ui.helpText(game), "Continue")], game.handler.screens)
         self.assertEqual([], game.handler.errors)
 
+    def testErrorsUseATitledScrollableAcknowledgementWithoutChangingSession(self):
+        current = object()
+        game = FakeGame(current=current)
+        before_settings = game.gui.getUiPreferences()
+        message = "This operation failed. Choose another adventure or go Back."
+        ui.showError(game, message)
+        self.assertEqual([("Error", message, "Continue")], game.handler.screens)
+        self.assertEqual([message], game.handler.errors)
+        self.assertIs(current, game.current)
+        self.assertTrue(game.context.active)
+        self.assertEqual(before_settings, game.gui.getUiPreferences())
+        self.assertEqual([], game.gui.notifications)
+
     def testCampaignBrowserIncludesSavedChapterProgress(self):
         game = FakeGame(["story"])
         manifest = {
@@ -321,7 +336,7 @@ class FrontendChoiceTest(unittest.TestCase):
         ):
             self.assertFalse(ui.newAdventure(game))
         self.assertTrue(any("No scenarios are available" in error for error in game.handler.errors))
-        self.assertEqual(["New adventure", "New adventure"], [screen[0] for screen in game.handler.screens])
+        self.assertEqual(["New adventure", "Error", "New adventure"], [screen[0] for screen in game.handler.screens])
         loader.startGameWithPlayer.assert_not_called()
 
     def testScenarioPreviewUsesOnlyTheAuthoredArrivalAndKeepsStableId(self):
@@ -394,8 +409,9 @@ class FrontendSaveTest(unittest.TestCase):
             self.assertFalse(ui.saveGame(game, "later-attempt"))
             self.assertEqual(status, ui.sessionSaveStatus(game))
         ui.pause(game)
-        self.assertIn(status, game.handler.screens[0][1][0]["detail"])
-        self.assertIn(status, game.handler.screens[0][1][1]["detail"])
+        pause_screen = next(screen for screen in game.handler.screens if screen[0] == "Paused")
+        self.assertIn(status, pause_screen[1][0]["detail"])
+        self.assertIn(status, pause_screen[1][1]["detail"])
         self.assertEqual(original_settings, game.gui.settings)
         self.assertEqual("No successful save in this session.", ui.sessionSaveStatus(FakeGame()))
 
@@ -503,6 +519,9 @@ class FrontendSaveTest(unittest.TestCase):
             self.assertFalse(ui.saveGame(game, "journey"))
         self.assertEqual([], game.gui.notifications)
         self.assertIn("could not be saved", game.handler.errors[0])
+        self.assertTrue(game.handler.screens, "Save failures must use a titled reader.")
+        self.assertEqual("Save failed", game.handler.screens[-1][0])
+        self.assertEqual("Continue", game.handler.screens[-1][2])
 
     def testSuccessfulSaveUsesNativeStatusAndNotifies(self):
         game = FakeGame(current=object())
@@ -558,6 +577,9 @@ class FrontendSaveTest(unittest.TestCase):
         self.assertIs(current, game.current)
         self.assertEqual([], game.gui.notifications)
         self.assertIn("could not be loaded", game.handler.errors[0])
+        self.assertTrue(game.handler.screens, "Load failures must use a titled reader.")
+        self.assertEqual("Load failed", game.handler.screens[-1][0])
+        self.assertEqual("Continue", game.handler.screens[-1][2])
         self.assertEqual(["Loading saved adventure...", "closed"], game.handler.loading)
 
     def testLoadCancellationDoesNotCallLoader(self):
@@ -692,7 +714,9 @@ class FrontendSafetyDetailsTest(unittest.TestCase):
                     patch.object(ui.campaign, "list_campaigns", side_effect=error),
                 ):
                     self.assertFalse(ui.newAdventure(game))
-                self.assertEqual(["New adventure", "New adventure"], [screen[0] for screen in game.handler.screens])
+                self.assertEqual(
+                    ["New adventure", "Error", "New adventure"], [screen[0] for screen in game.handler.screens]
+                )
                 self.assertEqual(1, len(game.handler.errors))
                 loader.startGameWithPlayer.assert_not_called()
                 loader.startRandomGameWithPlayer.assert_not_called()
