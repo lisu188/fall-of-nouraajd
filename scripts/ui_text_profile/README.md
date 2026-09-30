@@ -130,3 +130,48 @@ and alpha-only changes. Diff inputs retain the existing in-bounds screenshot-rec
 Before the optimization, both helpers fail the fixed Full HD Python-work guard; afterward both pass its
 unchanged 2,000-line bound with identical results. Timing is supplemental only. No GUI timeout was extended:
 the real offscreen choice-layout and cave-defeat CLI regressions subsequently passed in 5.954s and 2.453s.
+
+## Current ability availability and inspection labels
+
+The September 30, 2026 follow-up used Windows x64 Release, Visual Studio 2022 / MSVC 19.44, Python 3.12 and
+SDL dummy/software. The native management regression first ran against the old inspection behavior with only
+the Character detail getter extracted for testing. It reported 48 failed assertions: 18 abbreviated stat labels
+and 30 missing targeting/availability explanations. The same behavior checks pass after using shared metadata.
+
+Exact baseline and final commands from the repository root:
+
+```powershell
+$env:SDL_VIDEODRIVER = "dummy"
+$env:SDL_AUDIODRIVER = "dummy"
+$env:SDL_RENDER_DRIVER = "software"
+$env:PYTHONHOME = "C:/Users/andrz/git/fall-of-nouraajd/vcpkg_installed/x64-windows/tools/python3"
+cmake --build cmake-build-release --config Release --target ui_management_unit_tests --parallel 8
+ctest --test-dir cmake-build-release -C Release --output-on-failure --verbose -R '^for_unit_tests.ui_management_unit_tests$'
+cmake --build cmake-build-release --config Release --target performance_guard_tests --parallel 8
+cmake -S . -B cmake-build-release
+ctest --test-dir cmake-build-release -C Release --output-on-failure --verbose -L performance
+
+# After the shared inspection change and the combined ownership/mana regressions:
+cmake -S . -B cmake-build-release
+cmake --build cmake-build-release --config Release --target ui_management_unit_tests performance_guard_tests _game --parallel 8
+ctest --test-dir cmake-build-release -C Release --output-on-failure --verbose -R '^(for_unit_tests.ui_management_unit_tests|performance.performance_guard_tests)$'
+```
+
+The first performance attempt used stale local build resources and failed three sparse-map path checks. Rebuilding
+the unchanged guard and configuring the source resources restored the baseline; no assertions or budgets changed.
+The final combined run passes both CTest entries. Operation counts are the performance evidence, not a timing ratio:
+
+| Workload | Before inspection change | After inspection change |
+| --- | --- | --- |
+| 200 cached strings, 2,000 copies | 0 new texture loads | 0 new texture loads |
+| 700 choices, four warm redraws | 0 new texture loads | 0 new texture loads |
+| 700 detail paragraphs, 25 warm redraws | 6 visible loads, 0 warm loads | 6 visible loads, 0 warm loads |
+| 700 receipt rows, 25 warm redraws | 7 visible loads, 0 warm loads | 7 visible loads, 0 warm loads |
+| Selected Character ability, available | Availability absent | 1 initial load, 0 loads over 25 warm redraws |
+| Same ability after mana shortage | Availability absent | 1 refresh load, 0 loads over 25 warm redraws |
+
+The new Character guard uses a real player-owned action with wrapped prose. It checks the current exact mana
+shortage, bounded refresh work (budget 16), successful software-renderer copies and unchanged HP/mana/world turn.
+Native management fixtures additionally cover explicit caster targeting, legacy Buff targeting, enemy targeting,
+exact-cost availability, lost ownership, defeat and combined restrictions. Defeat and lost ownership take priority
+over mana shortages because replenishing mana cannot restore those actions. No existing guard was weakened.

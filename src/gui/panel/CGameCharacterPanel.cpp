@@ -111,18 +111,8 @@ std::string CGameCharacterPanel::buildModifierSources(const std::shared_ptr<CPla
             }
             const auto value = static_cast<long long>(stats->getNumericProperty(property->name())) * count;
             if (value != 0) {
-                static const std::map<std::string, std::string> labels = {{"dmgMin", "Minimum damage"},
-                                                                          {"dmgMax", "Maximum damage"},
-                                                                          {"crit", "Critical chance"},
-                                                                          {"hit", "Hit chance"},
-                                                                          {"fireResist", "Fire resistance"},
-                                                                          {"frostResist", "Frost resistance"},
-                                                                          {"normalResist", "Physical resistance"},
-                                                                          {"thunderResist", "Thunder resistance"},
-                                                                          {"shadowResist", "Shadow resistance"}};
-                const auto label = labels.find(property->name());
-                values += "\n" + (label == labels.end() ? vstd::camel(property->name()) : label->second) + ": " +
-                          (value > 0 ? "+" : "") + std::to_string(value);
+                values += "\n" + CTooltipHandler::getStatLabel(property->name()) + ": " + (value > 0 ? "+" : "") +
+                          std::to_string(value);
             }
         });
         if (!values.empty()) {
@@ -258,14 +248,20 @@ void CGameCharacterPanel::renderCharacterSheet(std::shared_ptr<CGui> gui, std::s
     gui->getTextManager()->drawTextScrolled(text, rect, -sheetOffset);
 }
 
+std::string CGameCharacterPanel::getAbilityDetails(std::shared_ptr<CGui> gui) {
+    auto ability = vstd::cast<CInteraction>(selectedAbility.lock());
+    auto game = gui ? gui->getGame() : nullptr;
+    auto map = game ? game->getMap() : nullptr;
+    return ability ? CTooltipHandler::buildAbilityDetails(ability, map ? map->getPlayer() : nullptr)
+                   : "Select an ability to read its effects and cost.";
+}
+
 void CGameCharacterPanel::renderAbilityDetails(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect,
                                                int frameTime) {
     if (!gui || !rect) {
         return;
     }
-    auto ability = selectedAbility.lock();
-    std::string text =
-        ability ? CTooltipHandler::buildTooltip(ability) : "Select an ability to read its effects and cost.";
+    const auto text = getAbilityDetails(gui);
     abilityViewport = *rect;
     abilityMaximum =
         std::max(0, gui->getTextManager()->getWrappedTextureSize(text, std::max(1, rect->w)).second - rect->h);

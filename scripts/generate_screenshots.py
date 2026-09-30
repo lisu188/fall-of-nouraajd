@@ -1154,11 +1154,11 @@ def captureAcceptanceStates(game, output_dir, player_class):
             tuple(sorted((slot, item.getName()) for slot, item in player.getEquipped().items() if item)),
         )
 
-    def record(name):
+    def record(name, dimensions=(1920, 1080)):
         path = output_dir / (name + ".png")
         sim.pumpEvents(2)
         info = sim.captureGuiScreenshot(path=path)
-        if (info.get("width"), info.get("height")) != (1920, 1080):
+        if (info.get("width"), info.get("height")) != dimensions:
             raise RuntimeError(f"Unexpected acceptance capture dimensions: {name}")
         written.append(path)
         print(f"  [ok]   acceptance {name}: {info.get('bytes', 0)} bytes", flush=True)
@@ -1254,16 +1254,113 @@ def captureAcceptanceStates(game, output_dir, player_class):
 
         panel = sim.gameInstance.getGuiHandler().openPanel("characterPanel")
         try:
-            if not list(player.getEffectiveInteractions()):
-                raise RuntimeError("Character capture needs an owned ability.")
+            owned_abilities = sorted(
+                (action for action in player.getEffectiveInteractions() if action.getNumericProperty("manaCost") > 0),
+                key=lambda action: (action.getNumericProperty("manaCost"), action.getTypeId(), action.getName()),
+            )
+            if not owned_abilities:
+                raise RuntimeError("Character capture needs an owned ability with a mana requirement.")
+            ability = owned_abilities[0]
+            label = ability.getStringProperty("label")
+            description = ability.getStringProperty("description")
+            mana_cost = ability.getNumericProperty("manaCost")
+            tooltip = game.CTooltipHandler.buildTooltip(ability)
+            if (
+                not label
+                or not description
+                or any(text not in tooltip for text in (label, description, f"Mana cost: {mana_cost}"))
+            ):
+                raise RuntimeError(
+                    "Character ability capture needs authored name, effect and authoritative mana metadata."
+                )
             sim.pumpEvents(2)
             abilities = next(
                 child
                 for child in panel.getChildren()
                 if child.getStringProperty("collection") == "interactionsCollection"
             )
-            clickCaptureWidget(sim, abilities, row=True)
-            record("management-character-ability-selected")
+            original_mana = player.getMana()
+
+            def captureCompactAbilityDetails(name):
+                try:
+                    resizeCaptureWindow(sim, 1280, 720)
+                    if not gui.applyUiPreferences('{"uiScale":200,"textScale":200}'):
+                        raise RuntimeError("Could not apply compact Character ability capture scale.")
+                    sim.pumpEvents(3)
+                    for _ in range(3):
+                        visible = {
+                            child.getStringProperty("uiGroup")
+                            for child in panel.getChildren()
+                            if child.isVisible() and child.getStringProperty("uiGroup")
+                        }
+                        if visible == {"3:Ability details"}:
+                            break
+                        keyCapture(sim, ord("]"))
+                    else:
+                        raise RuntimeError(f"Compact Character ability details are not visible: {visible}")
+                    details = next(
+                        child
+                        for child in panel.getChildren()
+                        if child.isVisible() and child.getStringProperty("render") == "renderAbilityDetails"
+                    )
+
+                    def detailPixels():
+                        x, y, width, height = details.getResolvedRect()
+                        pixels, image_width, image_height = gui.read_pixels()
+                        if not (0 <= x < x + width <= image_width and 0 <= y < y + height <= image_height):
+                            raise RuntimeError("Compact Character ability details extend outside the capture.")
+                        pixels = bytes(pixels)
+                        return b"".join(
+                            pixels[(row * image_width + x) * 4 : (row * image_width + x + width) * 4]
+                            for row in range(y, y + height)
+                        )
+
+                    previous = detailPixels()
+                    for _ in range(8):
+                        keyCapture(sim, 1073741899)  # Page Up resets the next ability state to its beginning.
+                        current = detailPixels()
+                        if current == previous:
+                            break
+                        previous = current
+                    else:
+                        raise RuntimeError("Could not reach the beginning of compact Character ability details.")
+                    compact_name = name + "-1280x720-200"
+                    record(compact_name, (1280, 720))
+                    beginning = previous
+                    for _ in range(8):
+                        keyCapture(sim, 1073741902)  # Page Down uses the panel's normal input routing.
+                        current = detailPixels()
+                        if current == previous:
+                            break
+                        previous = current
+                    else:
+                        raise RuntimeError("Could not reach the ending of compact Character ability details.")
+                    if current != beginning:
+                        record(compact_name + "-ending", (1280, 720))
+                finally:
+                    gui.applyUiPreferences("{}")
+                    resizeCaptureWindow(sim, 1920, 1080)
+
+            try:
+                player.setMana(max(original_mana, mana_cost))
+                searchCaptureSelection(sim, abilities, label)
+                available_state = state()
+                record("management-character-ability-selected")
+                captureCompactAbilityDetails("management-character-ability-selected")
+                if state() != available_state:
+                    raise RuntimeError("Reading an available ability changed the session.")
+                player.setMana(0)
+                unavailable_state = state()
+                record("management-character-ability-unavailable")
+                captureCompactAbilityDetails("management-character-ability-unavailable")
+                if state() != unavailable_state:
+                    raise RuntimeError("Reading an unavailable ability changed the session.")
+            finally:
+                player.setMana(original_mana)
+                gui.applyUiPreferences("{}")
+                resizeCaptureWindow(sim, 1920, 1080)
+                keyCapture(sim, ord("/"))
+                keyCapture(sim, 27)  # End search and clear its filter before the next view.
             modifiers = next(
                 child for child in panel.getChildren() if child.getStringProperty("click") == "inspectModifiers"
             )

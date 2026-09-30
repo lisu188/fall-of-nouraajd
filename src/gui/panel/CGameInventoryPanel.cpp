@@ -361,8 +361,8 @@ std::string CGameInventoryPanel::getSelectionDetails(std::shared_ptr<CGui> gui) 
                     const int difference =
                         bonus->getNumericProperty(key) - (previous ? previous->getNumericProperty(key) : 0);
                     if (difference != 0) {
-                        comparison +=
-                            "\n" + vstd::camel(key) + ": " + (difference > 0 ? "+" : "") + std::to_string(difference);
+                        comparison += "\n" + CTooltipHandler::getStatLabel(key) + ": " + (difference > 0 ? "+" : "") +
+                                      std::to_string(difference);
                         changed = true;
                     }
                 });

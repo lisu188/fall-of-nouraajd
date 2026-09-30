@@ -174,6 +174,49 @@ class ManagementMcpWalkthroughTest(unittest.TestCase):
         self.assertFalse(self.call(market, "sellItem", self.player, item))
         self.assertEqual(before, self.call(self.player, "countItems", "Scroll"))
 
+    def testInspectionAtTheAuthoredMerchantLoadsAbilityDescriptionsAndItemBonusesWithoutTakingTurns(self):
+        merchant = self.walkTo("market1")
+        market = self.call(merchant, "getObjectProperty", "market")
+        stock = self.call(market, "getItems")
+        weapon = next((item for item in stock if self.call(item, "getTypeId") == "DaggerOfVileHeart"), None)
+        self.assertIsNotNone(weapon, "The visited merchant must offer its authored Dagger of Vile Heart")
+        actions = self.call(self.player, "getEffectiveInteractions")
+        attack = next((action for action in actions if self.call(action, "getTypeId") == "Attack"), None)
+        self.assertIsNotNone(attack, "Inspection must use the real Warrior's owned Attack ability")
+        description = self.call(attack, "getStringProperty", "description")
+        self.assertIn("attack", description.lower(), "The owned ability must explain its authored effect")
+        mana_cost = self.call(attack, "getNumericProperty", "manaCost")
+        self.assertEqual(0, mana_cost, "Inspection must retain the authored Attack mana cost")
+        self.assertFalse(self.call(attack, "getBoolProperty", "selfTarget"))
+        bonus = self.call(weapon, "getObjectProperty", "bonus")
+        stat_values = {
+            label: self.call(bonus, "getNumericProperty", key)
+            for key, label in (
+                ("dmgMin", "Minimum damage"),
+                ("dmgMax", "Maximum damage"),
+                ("crit", "Critical chance"),
+            )
+        }
+        self.assertTrue(all(value > 0 for value in stat_values.values()), "The stock item must have real stat bonuses")
+
+        def snapshot():
+            return {
+                "turn": self.call(self.game_map, "getTurn"),
+                "player": json.loads(self.engine("jsonify", self.player)),
+                "market": json.loads(self.engine("jsonify", market)),
+            }
+
+        before = snapshot()
+        for _ in range(3):
+            self.assertEqual(description, self.call(attack, "getStringProperty", "description"))
+            self.assertEqual(mana_cost, self.call(attack, "getNumericProperty", "manaCost"))
+            self.assertFalse(self.call(attack, "getBoolProperty", "selfTarget"))
+            self.assertEqual("Dagger of Vile Heart", self.call(weapon, "getStringProperty", "label"))
+            for key, label in (("dmgMin", "Minimum damage"), ("dmgMax", "Maximum damage"), ("crit", "Critical chance")):
+                self.assertEqual(stat_values[label], self.call(bonus, "getNumericProperty", key))
+        self.pump()
+        self.assertEqual(before, snapshot(), "Repeated inspection must preserve turns, resources, equipment, and stock")
+
     def testCombatActionAtTheAuthoredEnemyUsesAnOwnedAbility(self):
         self.walkTo("cave1")
         self.call(self.game_map, "removeObjectByName", "cave1")

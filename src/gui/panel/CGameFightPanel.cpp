@@ -386,10 +386,7 @@ std::string CGameFightPanel::getSelectionDetails(std::shared_ptr<CGui> gui) {
     if (!action || !player) {
         return text + "Select an action or item to inspect it.\nSelect an enemy to change your target.";
     }
-    text += CTooltipHandler::buildTooltip(action);
-    if (action->getManaCost() > player->getMana()) {
-        text += "\nNeeds " + std::to_string(action->getManaCost() - player->getMana()) + " more mana.";
-    }
+    text += CTooltipHandler::buildAbilityDetails(action, player);
     auto target = enemy.lock();
     const bool selfTarget = action->getSelfTarget() || action->effectRoutesToCaster(action->getEffect());
     text += "\nTarget: " + (selfTarget ? std::string("Yourself") : target ? target->getLabel() : "No target");
