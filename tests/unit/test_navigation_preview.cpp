@@ -206,6 +206,7 @@ void testCompletedPollingAbandonsBlockedRouteBeforeMovement() {
 }
 
 void testNpcRoutesUseSessionBudgetAndDoNotReplanDuringBlockedOrStaleControl() {
+    const auto saved_rng = vstd::rng();
     PreviewFixture fixture(5, false);
     for (int x = 1; x <= 3; ++x)
         fixture.map->getTile(Coords(x, 0, 0))->setMovementCost(30);
@@ -213,7 +214,26 @@ void testNpcRoutesUseSessionBudgetAndDoNotReplanDuringBlockedOrStaleControl() {
     fixture.player->setController(controller);
     auto service = fixture.map->getNavigationService();
     auto budget = service->budget();
-    vstd::rng().seed(4);
+    auto route_rng = vstd::rng();
+    bool target_seed_found = false;
+    for (unsigned seed = 0; seed < 1024; ++seed) {
+        vstd::rng().seed(seed);
+        const auto candidate_rng = vstd::rng();
+        const auto dx = vstd::rand(-5, 5);
+        const auto dy = vstd::rand(-5, 5);
+        if (fixture.map->normalizeCoords(Coords(dx, dy, 0)) == Coords(4, 0, 0)) {
+            route_rng = candidate_rng;
+            target_seed_found = true;
+            break;
+        }
+    }
+    expect_true(target_seed_found,
+                "the NPC reuse fixture must select its authored destination without assuming an RNG sequence");
+    if (!target_seed_found) {
+        vstd::rng() = saved_rng;
+        return;
+    }
+    vstd::rng() = route_rng;
     const auto searches = service->searchCount();
     const auto first = controller->control(fixture.player)->get();
     expect_true(first == Coords(0, 1, 0) && service->searchCount() == searches + 1,
@@ -228,18 +248,19 @@ void testNpcRoutesUseSessionBudgetAndDoNotReplanDuringBlockedOrStaleControl() {
                 "a blocked NPC route is abandoned without another random search in the same control call");
     expect_true(budget->used() < bytes, "blocked NPC cancellation releases its charged route storage");
     fixture.map->getTile(first)->setCanStep(true);
-    vstd::rng().seed(4);
+    vstd::rng() = route_rng;
     expect_true(controller->control(fixture.player)->get() == first && service->searchCount() == searches + 2,
                 "a later wandering decision searches independently instead of resuming the old route");
     fixture.game->getContext()->advanceTransitionGeneration();
     expect_true(controller->control(fixture.player)->get() == ZERO && service->searchCount() == searches + 2,
                 "a changed session generation abandons the NPC route without planning in that call");
-    vstd::rng().seed(4);
+    vstd::rng() = route_rng;
     expect_true(controller->control(fixture.player)->get() == first, "a fresh request can plan in the new generation");
     const auto latestSearch = service->searchCount();
     fixture.player->setController(std::make_shared<CNpcRandomController>());
     expect_true(controller->control(fixture.player)->get() == ZERO && service->searchCount() == latestSearch,
                 "a route owned by a replaced NPC controller cannot continue");
+    vstd::rng() = saved_rng;
     std::cout << "[NPC route reuse] warm_reads=256 additional_searches=0 additional_retained_bytes=0\n";
 }
 } // namespace
