@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
+#include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
@@ -616,6 +618,54 @@ void test_weighted_target_flow_field_is_single_build_and_materialization_bounded
                 "repeated weighted reads should keep reusing the cached target flow field");
 }
 
+class CombatActionCountProbe : public CInteraction {
+  public:
+    int calls = 0;
+    void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+};
+
+void testMonsterRoleCallbackAndStateGrowthAreBounded() {
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "roleActor", Coords(0, 0, 0), "opponent");
+    auto opponent = make_actor(fixture, "opponent", Coords(1, 0, 0), "roleActor");
+    actor->setNpc(false);
+    opponent->setNpc(false);
+    auto role = std::make_shared<CCreatureClass>();
+    role->setStringProperty("combatRole", "boundedRole");
+    actor->setCreatureClass(role);
+    auto signature = std::make_shared<CombatActionCountProbe>();
+    signature->setGame(fixture.game);
+    signature->setName("signature");
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "boundedRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    actor->addAction(signature);
+    auto attack = std::make_shared<CombatActionCountProbe>();
+    attack->setGame(fixture.game);
+    attack->setName("attack");
+    attack->setTypeId("Attack");
+    actor->addAction(attack);
+    for (int i = 0; i < 64; ++i) {
+        auto excluded = std::make_shared<CombatActionCountProbe>();
+        excluded->setName("excluded" + std::to_string(i));
+        excluded->setBoolProperty("enemySignature", true);
+        excluded->setStringProperty("enemyRole", "otherRole");
+        actor->addAction(excluded);
+    }
+    const auto actionCount = actor->getInteractions().size();
+    CMonsterFightController controller;
+    constexpr int turns = 200;
+    for (int i = 0; i < turns; ++i) {
+        expect_true(controller.control(actor, opponent),
+                    "bounded role fixture should take exactly one action per turn");
+    }
+    expect_true(signature->calls == 1 && attack->calls == turns - 1,
+                "200 role turns must produce one signature callback and 199 ordinary callbacks");
+    expect_true(actor->getInteractions().size() == actionCount && actor->getEffects().empty(),
+                "role selection must not accumulate actions or effects across turns");
+    expect_true(fixture.map->getObjects().empty(), "combat role selection must not spawn map objects");
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -682,5 +732,6 @@ void run_engine_hotspot_performance_tests() {
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
     test_bulk_inventory_property_notifications_are_count_bounded();
+    testMonsterRoleCallbackAndStateGrowthAreBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
 }

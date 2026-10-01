@@ -130,6 +130,8 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "EnemyRoleContractTest.",
+    "MonsterBalanceRunnerTest.",
     "NativeCallgrindToolTest.",
     "NativeTestProfileSourceTest.",
     "PlayerIdentityContentTest.",
@@ -162,6 +164,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "EnemyRoleRuntimeTest.",
     "NativeTestProfileRuntimeTest.",
     "PlayerIdentityMcpTest.",
     "EffectSemanticRuntimeTest.",
@@ -25156,6 +25159,19 @@ class TestRunnerSuiteTest(unittest.TestCase):
                     with self.assertRaisesRegex(AssertionError, "fixture failure"):
                         run_blocking_panel_inspection(self, game, g, "CGameLootPanel", action, inspect, close_input)
 
+    def test_source_contracts_are_discovered_once_in_fast_suites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only contracts are not installed with the game")
+        for test_class in (EnemyRoleContractTest, MonsterBalanceRunnerTest):
+            methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
+            self.assertTrue(methods)
+            for method in methods:
+                test_name = f"{test_class.__name__}.{method}"
+                self.assertEqual(f"{__name__}.{test_name}", test_class(method).id())
+                for suite_name in ("fast", "full", "coverage-safe"):
+                    self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+            self.assertNotIn("_" + test_class.__name__, globals())
+
     def test_ui_mcp_routes_are_discovered_once_in_native_suites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only UI tests are not installed with the game")
@@ -25172,6 +25188,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             PythonCallbackLifecycleTest,
             ConsoleUiInteractionTest,
             UiMinimapInteractionTest,
+            EnemyRoleRuntimeTest,
         ):
             names = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(names)
@@ -25193,6 +25210,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
         self.assertNotIn("_UiMinimapInteractionTest", globals())
+        self.assertNotIn("_EnemyRoleRuntimeTest", globals())
 
     def testPixelAnalysisIsDiscoveredOnceInSourceSuites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
@@ -25594,6 +25612,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
     from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
+    from tests.test_enemy_roles import EnemyRolesTest as _EnemyRoleContractTest
+    from tests.test_monster_balance_runner import MonsterBalanceRunnerTest as _MonsterBalanceRunnerTest
+    from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
         pass
@@ -25643,6 +25664,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class PythonCallbackLifecycleTest(_PythonCallbackLifecycleTest):
         pass
 
+    class EnemyRoleContractTest(_EnemyRoleContractTest):
+        pass
+
+    class MonsterBalanceRunnerTest(_MonsterBalanceRunnerTest):
+        pass
+
+    class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
+        pass
+
     class UiPixelAnalysisTest(_UiPixelAnalysisTest):
         pass
 
@@ -25658,6 +25688,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _NativeCallgrindToolTest
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
+    del _EnemyRoleRuntimeTest
+    del _EnemyRoleContractTest
+    del _MonsterBalanceRunnerTest
     del _PlayerIdentityContentTest
     del _PlayerIdentityMcpTest
     del _NavigationMcpWalkthroughTest

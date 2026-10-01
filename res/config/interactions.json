@@ -557,5 +557,77 @@
       "manaCost": 15,
       "description": "For 3 turns, the enemy may be unable to act each turn. Higher Agility helps them resist."
     }
+  },
+  "enemyBrace": {
+    "class": "EnemyBrace",
+    "properties": {
+      "label": "Brace",
+      "animation": "images/interactions/barrier",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "brute",
+      "enemyRoleTrigger": "wounded",
+      "selfTarget": true,
+      "description": "Once per enemy, decorate an ordinary attack below half health: gain 1 point of Physical resistance and lose 1 point of frost resistance for 1 turn.",
+      "roleEffect": {
+        "ref": "enemyBraceEffect"
+      }
+    }
+  },
+  "enemyArcaneBolt": {
+    "class": "EnemyArcaneBolt",
+    "properties": {
+      "label": "Arcane Bolt",
+      "animation": "images/interactions/frostbolt",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "mage",
+      "enemyRoleTrigger": "opening",
+      "selfTarget": true,
+      "description": "Once per enemy, convert 1 point of an ordinary attack to frost without changing its damage budget, then lose 1 point of Physical resistance for 1 turn.",
+      "roleEffect": {
+        "ref": "enemyArcaneBoltEffect"
+      },
+      "roleDamage": {
+        "class": "CDamage"
+      }
+    }
+  },
+  "enemyOpeningStrike": {
+    "class": "EnemyOpeningStrike",
+    "properties": {
+      "label": "Opening Strike",
+      "animation": "images/interactions/backstab",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "thief",
+      "enemyRoleTrigger": "guarded",
+      "selfTarget": false,
+      "description": "Once per enemy, decorate an ordinary attack against a guarded opponent or while wounded: reduce enemy block by 1 point for 1 turn.",
+      "roleEffect": {
+        "ref": "enemyOpeningStrikeEffect"
+      }
+    }
+  },
+  "enemyRitualHex": {
+    "class": "EnemyRitualHex",
+    "properties": {
+      "label": "Ritual Hex",
+      "animation": "images/interactions/endlesspain",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "cultist",
+      "enemyRoleTrigger": "critical",
+      "minimumMana": 5,
+      "minimumPacketHit": 10,
+      "selfTarget": false,
+      "description": "Once per enemy at quarter health with at least 5 mana remaining, make an ordinary attack. When its resolved hit is at least 10 damage and the target's physical and shadow resistance differ, convert 1 damage point to shadow. Reduce shadow resistance by 1 for 1 turn. No mana is spent.",
+      "roleEffect": {
+        "ref": "enemyRitualHexEffect"
+      },
+      "roleDamage": {
+        "class": "CDamage"
+      }
+    }
   }
 }
