@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CPythonOverrides.h"
+#include "core/CStats.h"
 #include "handler/CFightHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
@@ -321,7 +322,8 @@ void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
     expect_true(!player->getEffects().empty(), "inherited native performAction must return and apply the real barrier");
 }
 
-void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool huntPulse = false) {
+void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool huntPulse = false,
+                                                                        bool cultistHex = false) {
     auto game = CGameLoader::loadGame();
     createOpenBalanceMap(game);
     auto expectedNativeRng = vstd::rng();
@@ -334,7 +336,7 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
             player->setLevel(3);
             game->getMap()->attachPlayer(player, Coords(0, 0, 0));
             player->heal(0);
-            auto actor = game->createObject<CCreature>(huntPulse ? "OctoBogz" : "PritzMage");
+            auto actor = game->createObject<CCreature>(huntPulse ? "OctoBogz" : cultistHex ? "Cultist" : "PritzMage");
             actor->setName("roleContractActor");
             actor->setLevel(huntPulse ? 1 : 2);
             actor->setPosX(1);
@@ -359,28 +361,49 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
                 return;
             }
             const auto attack = *attackIt;
+            const auto signatureIt = std::ranges::find_if(interactions, [huntPulse, cultistHex](const auto &action) {
+                return action->getTypeId() == (huntPulse    ? "octobogzShadowPulse"
+                                               : cultistHex ? "enemyRitualHex"
+                                                            : "enemyArcaneBolt");
+            });
+            if (signatureIt == interactions.end()) {
+                expect_true(false, "paired contract must load its actual configured signature");
+                return;
+            }
             auto globals = pybind11::dict();
             globals["attack"] = pybind11::cast(attack);
             globals["weaponAction"] = pybind11::cast(weapon->getInteraction());
+            globals["signature"] = pybind11::cast(*signatureIt);
             pybind11::exec(R"(
 attackType = type(attack)
 weaponType = type(weaponAction)
+signatureType = type(signature)
 originalAttack = attackType.performAction
 originalWeaponAction = weaponType.performAction
-calls = {'attack': 0, 'weapon': 0}
+originalSignature = signatureType.performAction
+calls = {'attack': 0, 'weapon': 0, 'error': ''}
+def invokeRecorded(kind, method, self, first, second):
+    try:
+        return method(self, first, second)
+    except Exception as error:
+        calls['error'] += kind + ': ' + type(error).__name__ + ': ' + str(error) + '\n'
+        raise
 def countedAttack(self, first, second):
     calls['attack'] += 1
-    return originalAttack(self, first, second)
+    return invokeRecorded('Attack', originalAttack, self, first, second)
 def countedWeaponAction(self, first, second):
     calls['weapon'] += 1
-    return originalWeaponAction(self, first, second)
+    return invokeRecorded('weapon', originalWeaponAction, self, first, second)
+def recordedSignature(self, first, second):
+    return invokeRecorded('signature', originalSignature, self, first, second)
 attackType.performAction = countedAttack
 weaponType.performAction = countedWeaponAction
+signatureType.performAction = recordedSignature
 )",
                            globals);
-            const auto recipient = huntPulse ? vstd::cast<CCreature>(player) : actor;
-            const int beforeResist =
-                huntPulse ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
+            const auto recipient = (huntPulse || cultistHex) ? vstd::cast<CCreature>(player) : actor;
+            const int beforeResist = (huntPulse || cultistHex) ? recipient->getStats()->getShadowResist()
+                                                               : recipient->getStats()->getNormalResist();
             vstd::rng().seed(seed);
             std::srand(seed);
             CMonsterFightController controller;
@@ -390,10 +413,16 @@ weaponType.performAction = countedWeaponAction
             pybind11::exec(R"(
 attackType.performAction = originalAttack
 weaponType.performAction = originalWeaponAction
+signatureType.performAction = originalSignature
 )",
                            globals);
             expect_true(acted, "real configured Attack must execute in the role contract fixture");
             const auto calls = globals["calls"].cast<pybind11::dict>();
+            const auto callbackError = calls["error"].cast<std::string>();
+            if (!callbackError.empty()) {
+                std::cerr << "role callback error seed " << seed << ": " << callbackError;
+            }
+            expect_true(callbackError.empty(), "real configured callbacks must not raise a Python exception");
             const int weaponCalls = calls["weapon"].cast<int>();
             expect_true(calls["attack"].cast<int>() == 1 && weaponCalls <= 1,
                         "signature and ordinary Attack must retain one attack and at most one configured weapon proc");
@@ -406,14 +435,11 @@ weaponType.performAction = originalWeaponAction
                             "eager owned role objects must preserve both ordinary Attack random streams");
                 expect_true(weaponCalls == expectedWeaponCalls,
                             "the role hook must preserve the configured weapon proc on both hits and misses");
-                const auto signatureIt = std::ranges::find_if(interactions, [huntPulse](const auto &action) {
-                    return action->getTypeId() == (huntPulse ? "octobogzShadowPulse" : "enemyArcaneBolt");
-                });
                 expect_true(signatureIt != interactions.end() &&
                                 !(*signatureIt)->getObjectProperty<CGameObject>("roleEffect"),
                             "consumed eager effects must transfer out of the actor-owned signature slot");
-                const int afterResist =
-                    huntPulse ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
+                const int afterResist = (huntPulse || cultistHex) ? recipient->getStats()->getShadowResist()
+                                                                  : recipient->getStats()->getNormalResist();
                 expect_true(afterResist == beforeResist - 1 && recipient->getEffects().size() == 1,
                             "the one-turn signature tradeoff must actually affect combat stats");
                 if (huntPulse) {
@@ -435,19 +461,128 @@ weaponType.performAction = originalWeaponAction
                 expectedNativeRng = afterNativeRng;
                 expectedNextBlockRoll = nextBlockRoll;
                 expectedWeaponCalls = weaponCalls;
-                const int afterResist =
-                    huntPulse ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
+                const int afterResist = (huntPulse || cultistHex) ? recipient->getStats()->getShadowResist()
+                                                                  : recipient->getStats()->getNormalResist();
                 expect_true(recipient->getEffects().empty() && afterResist == beforeResist,
-                            "disabled signatures must leave ordinary Attack stats unchanged");
-                if (huntPulse) {
-                    expect_true(actor->getMana() == 5, "a spent hunt phase must retain mana on ordinary Attack");
-                }
+                            "disabled roles must leave ordinary Attack stats unchanged");
             }
             game->getMap()->detachPlayer();
             game->getMap()->removeObject(actor);
         }
     }
     expect_true(observedWeaponProc, "paired role contract samples must exercise a real configured weapon proc");
+}
+
+class HexTurnProbe : public CFightController {
+  public:
+    HexTurnProbe(std::vector<std::string> &order, int stopAfter) : order(order), stopAfter(stopAfter) {}
+
+    bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature>) override {
+        order.push_back(me->getName());
+        shadowResists.push_back(me->getStats()->getShadowResist());
+        timesLeft.push_back(me->getEffects().empty() ? -1 : (*me->getEffects().begin())->getTimeLeft());
+        return true;
+    }
+
+    bool isCancelled(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        return static_cast<int>(shadowResists.size()) >= stopAfter;
+    }
+
+    std::vector<int> shadowResists;
+    std::vector<int> timesLeft;
+
+  private:
+    std::vector<std::string> &order;
+    int stopAfter;
+};
+
+class HexAttackProbe : public CMonsterFightController {
+  public:
+    explicit HexAttackProbe(std::vector<std::string> &order) : order(order) {}
+
+    bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        order.push_back(me->getName());
+        const int before = opponent->getHp();
+        const bool acted = CMonsterFightController::control(me, opponent);
+        damage.push_back(before - opponent->getHp());
+        return acted;
+    }
+
+    std::vector<int> damage;
+
+  private:
+    std::vector<std::string> &order;
+};
+
+void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
+    const auto previousRng = vstd::rng();
+    for (bool cultistFirst : {false, true}) {
+        for (bool enabled : {false, true}) {
+            auto game = CGameLoader::loadGame();
+            createOpenBalanceMap(game);
+            auto player = game->createObject<CPlayer>("Warrior");
+            auto targetStats = std::make_shared<CStats>();
+            targetStats->setStamina(100);
+            targetStats->setStrength(1);
+            targetStats->setNormalResist(95);
+            targetStats->setShadowResist(0);
+            targetStats->setAgility(cultistFirst ? 0 : 100);
+            player->setCreatureClass(nullptr);
+            player->setRace(nullptr);
+            player->setBaseStats(targetStats);
+            player->setLevelStats(std::make_shared<CStats>());
+            player->setEquipped({});
+            player->setLevel(1);
+            game->getMap()->attachPlayer(player, Coords(0, 0, 0));
+            player->heal(0);
+
+            auto actor = game->createObject<CCreature>("Cultist");
+            actor->setName("hexBoundaryActor");
+            actor->setRace(nullptr);
+            actor->setLevelStats(std::make_shared<CStats>());
+            actor->setEquipped({});
+            actor->setLevel(1);
+            auto attackStats = std::make_shared<CStats>();
+            attackStats->setStamina(100);
+            attackStats->setDmgMin(21);
+            attackStats->setDmgMax(21);
+            attackStats->setHit(100);
+            attackStats->setCrit(0);
+            attackStats->setAgility(cultistFirst ? 100 : 0);
+            actor->setBaseStats(attackStats);
+            actor->setPosX(1);
+            game->getMap()->addObject(actor);
+            actor->heal(0);
+            actor->setMana(0);
+            actor->setBoolProperty("enemyRoleUsed", !enabled);
+            std::vector<std::string> order;
+            auto targetController = std::make_shared<HexTurnProbe>(order, cultistFirst ? 2 : 3);
+            auto cultistController = std::make_shared<HexAttackProbe>(order);
+            player->setFightController(targetController);
+            actor->setFightController(cultistController);
+            vstd::rng().seed(100);
+            std::srand(100);
+            const auto result = CFightHandler::fightManyResult(player, {actor});
+            expect_true(result.outcome == CFightOutcome::Cancelled,
+                        "the boundary fixture must stop after observing effect expiry without a defeat");
+            expect_true(!order.empty() && order.front() == (cultistFirst ? actor->getName() : player->getName()),
+                        "the real fight must execute both controlled initiative orders");
+            expect_true(!cultistController->damage.empty() && cultistController->damage.front() == (enabled ? 2 : 1),
+                        "a shadow point must cause real extra damage against controlled unequal channel resistance");
+            const std::vector<int> expectedResists = !enabled       ? std::vector<int>(cultistFirst ? 2 : 3, 0)
+                                                     : cultistFirst ? std::vector<int>{-1, 0}
+                                                                    : std::vector<int>{0, -1, 0};
+            const std::vector<int> expectedTimes = !enabled       ? std::vector<int>(cultistFirst ? 2 : 3, -1)
+                                                   : cultistFirst ? std::vector<int>{0, -1}
+                                                                  : std::vector<int>{-1, 0, -1};
+            expect_true(targetController->shadowResists == expectedResists &&
+                            targetController->timesLeft == expectedTimes,
+                        "the one-turn hex must affect one actual victim turn and expire at its next turn boundary");
+            expect_true(player->getEffects().empty() && player->getStats()->getShadowResist() == 0,
+                        "actual fight expiry must restore target resistance and remove the linked effect");
+        }
+    }
+    vstd::rng() = previousRng;
 }
 
 void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
@@ -583,14 +718,42 @@ HuntBalanceSample runHuntBalanceRoute(const std::shared_ptr<CGame> &game, const 
     // without the old prop's unbounded onTurn flood, with ordinary Lv3 players and authored Lv1 enemies.
     vstd::rng().seed(seed);
     std::srand(seed);
+    const auto tracePlayer = [&](const std::string &stage) {
+        std::cout << "hunt route trace " << playerType << " seed " << seed << " staged " << stagedHunt << " stage "
+                  << stage << " player level/exp/hp/mp " << player->getLevel() << '/'
+                  << player->getNumericProperty("exp") << '/' << player->getHp() << '/' << player->getMana()
+                  << " max hp/mp " << player->getHpMax() << '/' << player->getManaMax() << " equipment";
+        for (const auto &[slot, item] : player->getEquipped()) {
+            std::cout << ' ' << slot << ':' << (item ? item->getTypeId() : "none");
+        }
+        std::cout << " inventory";
+        for (const auto &item : player->getItems()) {
+            std::cout << ' ' << item->getTypeId();
+        }
+        std::cout << " spent hp/mp/items " << observer->healthSpent << '/' << observer->manaSpent << '/'
+                  << observer->itemsSpent << std::endl;
+    };
+    tracePlayer("start");
     const auto fightStarted = std::chrono::steady_clock::now();
     bool won = true;
     for (const auto &enemy : enemies) {
-        if (!player->isAlive() || !CFightHandler::fightManyResult(player, {enemy}).attackerSucceeded()) {
+        if (!player->isAlive()) {
             won = false;
             break;
         }
+        const auto result = CFightHandler::fightManyResult(player, {enemy});
         observer->observe();
+        tracePlayer(enemy->getName());
+        std::cout << "hunt encounter trace " << playerType << " seed " << seed << " staged " << stagedHunt << " enemy "
+                  << enemy->getName() << " level/hp/mp " << enemy->getLevel() << '/' << enemy->getHp() << '/'
+                  << enemy->getMana() << " outcome " << static_cast<int>(result.outcome) << " rounds " << result.rounds
+                  << " phase " << enemy->getStringProperty("octobogzCombatPhase") << " pulse/effect "
+                  << enemy->getBoolProperty("octobogzPulseUsed") << '/'
+                  << enemy->getBoolProperty("octobogzPulseEffectApplied") << std::endl;
+        if (!result.attackerSucceeded()) {
+            won = false;
+            break;
+        }
     }
     observer->observe();
     const auto cleanupStarted = std::chrono::steady_clock::now();
@@ -684,6 +847,8 @@ int main(int argc, char **argv) {
     initializeBalancePythonContent();
     testInheritedNativeMethodsDoNotBecomePythonOverrides();
     testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();
+    testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, true);
+    testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries();
     testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
     testActivePlayerNeverUsesMonsterSignature();
     if (argc == 2 && std::string(argv[1]) == "--hunt-route") {

@@ -87,7 +87,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 restored = game_map.getObjectByName(alpha_name)
                 assert restored.getBoolProperty('octobogzPulseUsed') and restored.getMana() == 1
                 pulse = next(action for action in restored.getActions() if action.getTypeId() == 'octobogzShadowPulse')
-                assert not pulse.hasProperty('roleEffect') or pulse.getObjectProperty('roleEffect') is None
+                assert json.loads(game.jsonify(pulse))['properties'].get('roleEffect') is None
                 linked = [active for active in player.getEffects() if active.getCaster() == restored]
                 assert len(linked) == 1 and linked[0].getVictim() == player and linked[0].getTimeLeft() == 1
                 director = instance.createObject('OctobogzHuntDirector')

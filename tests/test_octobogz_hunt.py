@@ -505,6 +505,23 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertNotIn("getManaCost", called)
         self.assertNotIn("getLabel", called)
 
+    def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
+        import textwrap
+
+        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
+        tree = ast.parse((ROOT / "tests/test_octobogz_runtime.py").read_text(encoding="utf-8"))
+        python_methods = {"loads", "uuid4", "unlink", "get", "append"}
+        script_methods = {"start", "synchronize", "accept_quest"}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "runChild":
+                calls = {
+                    call.func.attr
+                    for call in ast.walk(ast.parse(textwrap.dedent(node.args[0].value)))
+                    if isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                }
+                self.assertEqual(set(), calls - published - python_methods - script_methods - {"Coords"})
+
     def phaseActor(self, roll=11):
         actor = Actor("alpha")
         actor.game = self.game

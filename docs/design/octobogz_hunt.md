@@ -40,7 +40,8 @@ configured Attack. The shadow brood warns on its first eligible attack; the
 Alpha warns only at or below half health. Warning still executes that Attack.
 The next eligible affordable attack costs five mana once, converts one point of
 that same damage roll from normal to shadow, and applies shadow resistance -1
-for one turn. With insufficient mana it executes ordinary Attack and ends the
+for one turn. This post-hit debuff helps only a later shadow attack while it
+remains active; it is not a guaranteed benefit in a solo fight. With insufficient mana it executes ordinary Attack and ends the
 phase. Ordinary item and spell turns retain priority and preserve a pending
 phase. Hunt actors never also use their composed brute-class signature.
 
@@ -137,3 +138,34 @@ The old coverage job timed out at the unchanged 60-second native limits for both
 balance entries and handler tests. It never reached a passing coverage gate.
 The revised source-level route, current full matrix, runtime saves, MCP
 walkthrough, performance checks, and coverage still require completed CI evidence.
+
+
+## First valid source-level route measurements
+
+Head `85ca07a0`, run `36856329653`, reached the actual bound native comparator.
+The role matrix passed in16.12 seconds on Linux; the source-level hunt route
+completed in4.43 seconds. Linux median HP/mana/items were identical in both
+modes for all five classes, and every baseline-winning seed remained winning.
+Real Alpha/brood pulse effects were observed. The route still failed the existing
+baseline-winning witness for Warrior, Sorcerer and Wayfarer (zero of11).
+Those assertions are retained while authored preparation is examined.
+
+Windows job `110350757593` completed the route in6.63 seconds and exposed a
+separate real budget failure: Assasin mana median120 to140 (16.7 percent).
+Warrior HP136 to137, mana34 to34, items2 to2 and one baseline win;
+Sorcerer HP84 to84, mana90 to90, items0 to0 and zero wins;
+Assasin HP81 to84, items3 to3 and nine baseline wins;
+Inquisitor HP162 to162, mana144 to144, items4 to4 and four wins;
+Wayfarer HP81 to81, mana100 to100, items1 to1 and zero wins.
+Every baseline-winning seed was preserved. Sorcerer/Wayfarer failed their
+witnesses in addition to the Assasin mana budget. The same Windows run also
+reported a separate controller-unit-test segmentation fault. These are failing
+acceptance results, not a reason to relax any comparison.
+
+The comparator intentionally starts level-three templates with authored equipment,
+empty inventories and experience zero on a tiny open map. It sequentially fights
+three level-one actors, with no exploration, services or rest. Native route
+traces record initial HP/mana, equipment/inventory/experience and each encounter's
+outcome, survivors, phase use and observed costs without changing random streams,
+loadouts or route state. Actual authored journey preparation is a separate MCP
+acceptance requirement and cannot replace this fixed no-rest balance comparator.
