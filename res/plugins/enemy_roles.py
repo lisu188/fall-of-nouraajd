@@ -15,9 +15,11 @@ def load(self, context):
         def performAction(self, first, second):
             if first.getBoolProperty("enemyRoleUsed"):
                 return
-            attack = next(
-                (action for action in first.getEffectiveInteractions() if action.getTypeId() == "Attack"), None
-            )
+            attack = None
+            for action in first.getEffectiveInteractions():
+                if action.getTypeId() == "Attack":
+                    attack = action
+                    break
             if attack is None:
                 return
             first.setBoolProperty("enemyRoleUsed", True)

@@ -288,7 +288,10 @@ def load(self, context):
     def ordinaryAttack(first, second):
         if second is None or not first.isAlive() or not second.isAlive():
             return None
-        return next((action for action in first.getEffectiveInteractions() if action.getTypeId() == "Attack"), None)
+        for action in first.getEffectiveInteractions():
+            if action.getTypeId() == "Attack":
+                return action
+        return None
 
     @register(context)
     class OctobogzCharge(CInteraction):

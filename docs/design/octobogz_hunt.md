@@ -99,6 +99,13 @@ failed Attack/proc, RNG and effect-application proofs, including zero observed
 Alpha/brood pulse applications. Its route medians do not validate the revised
 mechanics; fresh actual-bound evidence remains required after the API correction.
 
+Head `cf14afaf` exposed another plugin contract mismatch: the native builtin
+allowlist excludes `next`, so Attack lookup still stopped before combat callbacks.
+Both helpers now use simple loops without expanding the sandbox. Focused plugin
+tests run under that actual allowlist and reproduce the prior `NameError` before
+passing with the correction. Zero-application medians from that failed run remain
+invalid evidence for the revised phases.
+
 ## Retained failed harder challenge
 
 Before the attack-preserving revision, head `ab269855` tested matched level-two

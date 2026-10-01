@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import ast
+import builtins
 import importlib.util
 import json
 import re
@@ -214,6 +215,10 @@ class HuntMap(Properties):
 
 class OctobogzHuntTest(unittest.TestCase):
     def setUp(self):
+        loader = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        allowed = loader.split("allowedNames =", 1)[1].split("};", 1)[0]
+        sandbox_builtins = {name: getattr(builtins, name) for name in re.findall(r'"([^"]+)"', allowed)}
+        sandbox_builtins["__import__"] = builtins.__import__
         self.registered = {}
         self.pending = []
         game_stub = types.ModuleType("game")
@@ -228,12 +233,14 @@ class OctobogzHuntTest(unittest.TestCase):
                 "hunt_attack_under_test", ROOT / "res/plugins/interaction.py"
             )
             attack_module = importlib.util.module_from_spec(attack_spec)
+            attack_module.__dict__["__builtins__"] = sandbox_builtins
             attack_spec.loader.exec_module(attack_module)
             attack_module.load(None, None)
             spec = importlib.util.spec_from_file_location(
                 "octobogz_hunt_under_test", ROOT / "res/plugins/octobogz_hunt.py"
             )
             self.module = importlib.util.module_from_spec(spec)
+            self.module.__dict__["__builtins__"] = sandbox_builtins
             spec.loader.exec_module(self.module)
             self.module.load(None, None)
         self.game = Mock()
