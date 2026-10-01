@@ -451,6 +451,10 @@ class NarrativeRouteTest(unittest.TestCase):
             def call(self, handle, method, args=None):
                 args = args or []
                 if handle == "player":
+                    if method == "isAlive":
+                        return True
+                    if method == "getStringProperty" and args == ["uiDefeatReceipt"]:
+                        return ""
                     if method == "moveTo":
                         destination = tuple(args)
                         assert destination in walkable
