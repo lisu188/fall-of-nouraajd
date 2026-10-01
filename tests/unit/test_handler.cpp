@@ -43,6 +43,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CQuest.h"
 #include "object/CTrigger.h"
 #include "test_harness.h"
+#include "native_test_profile.h"
 
 #include <SDL.h>
 #include <pybind11/embed.h>
@@ -61,6 +62,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 namespace {
+
+CNativeTestProfile &nativeTestProfile() {
+    static CNativeTestProfile profile("handler");
+    return profile;
+}
 
 void testGameplayMetadataIsAvailableBeforePluginLoading() {
     const auto expectMetadata = []<typename T>(const char *message) {
@@ -205,8 +211,8 @@ class CompletedQuest : public CQuest {
 };
 
 std::shared_ptr<CGame> load_empty_game() {
-    auto game = CGameLoader::loadGame();
-    CGameLoader::startGame(game, "empty");
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startGame(empty)", [&] { CGameLoader::startGame(game, "empty"); });
     return game;
 }
 
@@ -2051,37 +2057,67 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
-    testGameplayMetadataIsAvailableBeforePluginLoading();
+    nativeTestProfile().run("testGameplayMetadataIsAvailableBeforePluginLoading",
+                            testGameplayMetadataIsAvailableBeforePluginLoading);
 
-    test_script_handler_executes_commands_and_wraps_functions();
-    test_handler_constructors_are_covered_by_native_tests();
-    test_creature_scale_preserves_level_plus_sw_invariant();
-    test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions();
-    test_rng_handler_builds_encounters_from_concrete_creature_sw();
-    test_rng_handler_scales_fresh_creatures_before_map_insertion();
-    test_rng_handler_excludes_noncombatants_from_encounters();
-    test_rng_handler_excludes_archetype_definitions_from_encounters();
-    test_rng_handler_excludes_player_templates_from_encounters();
-    test_rng_handler_captures_encounter_power_and_scale_baseline();
-    test_rng_handler_encounter_candidates_stay_in_stable_power_buckets();
-    test_rng_handler_distinguishes_associated_classes_with_neutral_scale();
-    test_creature_subtype_inventory_is_enumerable_on_loaded_game();
-    test_event_handler_trigger_registration_uses_named_comparison_helpers();
-    test_fight_handler_rejects_stale_and_cross_map_participants();
-    test_fight_handler_attributes_lethal_effects_to_valid_casters();
-    test_fight_handler_reports_explicit_outcomes_and_final_status();
-    test_fight_handler_reports_invalid_result_metadata();
-    test_fight_handler_reports_cancelled_quit_event();
-    test_fight_handler_ends_original_started_controllers();
-    test_fight_handler_reports_cancelled_closed_fight_panel();
-    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels();
-    test_fight_handler_returns_cancelled_when_player_control_cancels();
-    test_fight_panel_resets_status_between_sequential_encounters();
-    test_fight_handler_counts_effect_duration_as_progress();
-    test_playtest_trace_records_native_limits_and_quest_completion();
-    test_playtest_trace_environment_targets_and_fallback_ids();
-    test_fight_handler_records_outcome_trace_metadata();
-    test_player_respawn_normalizes_wrapped_entry_coords();
+    nativeTestProfile().run("test_script_handler_executes_commands_and_wraps_functions",
+                            test_script_handler_executes_commands_and_wraps_functions);
+    nativeTestProfile().run("test_handler_constructors_are_covered_by_native_tests",
+                            test_handler_constructors_are_covered_by_native_tests);
+    nativeTestProfile().run("test_creature_scale_preserves_level_plus_sw_invariant",
+                            test_creature_scale_preserves_level_plus_sw_invariant);
+    nativeTestProfile().run("test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions",
+                            test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions);
+    nativeTestProfile().run("test_rng_handler_builds_encounters_from_concrete_creature_sw",
+                            test_rng_handler_builds_encounters_from_concrete_creature_sw);
+    nativeTestProfile().run("test_rng_handler_scales_fresh_creatures_before_map_insertion",
+                            test_rng_handler_scales_fresh_creatures_before_map_insertion);
+    nativeTestProfile().run("test_rng_handler_excludes_noncombatants_from_encounters",
+                            test_rng_handler_excludes_noncombatants_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_archetype_definitions_from_encounters",
+                            test_rng_handler_excludes_archetype_definitions_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_player_templates_from_encounters",
+                            test_rng_handler_excludes_player_templates_from_encounters);
+    nativeTestProfile().run("test_rng_handler_captures_encounter_power_and_scale_baseline",
+                            test_rng_handler_captures_encounter_power_and_scale_baseline);
+    nativeTestProfile().run("test_rng_handler_encounter_candidates_stay_in_stable_power_buckets",
+                            test_rng_handler_encounter_candidates_stay_in_stable_power_buckets);
+    nativeTestProfile().run("test_rng_handler_distinguishes_associated_classes_with_neutral_scale",
+                            test_rng_handler_distinguishes_associated_classes_with_neutral_scale);
+    nativeTestProfile().run("test_creature_subtype_inventory_is_enumerable_on_loaded_game",
+                            test_creature_subtype_inventory_is_enumerable_on_loaded_game);
+    nativeTestProfile().run("test_event_handler_trigger_registration_uses_named_comparison_helpers",
+                            test_event_handler_trigger_registration_uses_named_comparison_helpers);
+    nativeTestProfile().run("test_fight_handler_rejects_stale_and_cross_map_participants",
+                            test_fight_handler_rejects_stale_and_cross_map_participants);
+    nativeTestProfile().run("test_fight_handler_attributes_lethal_effects_to_valid_casters",
+                            test_fight_handler_attributes_lethal_effects_to_valid_casters);
+    nativeTestProfile().run("test_fight_handler_reports_explicit_outcomes_and_final_status",
+                            test_fight_handler_reports_explicit_outcomes_and_final_status);
+    nativeTestProfile().run("test_fight_handler_reports_invalid_result_metadata",
+                            test_fight_handler_reports_invalid_result_metadata);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_quit_event",
+                            test_fight_handler_reports_cancelled_quit_event);
+    nativeTestProfile().run("test_fight_handler_ends_original_started_controllers",
+                            test_fight_handler_ends_original_started_controllers);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_closed_fight_panel",
+                            test_fight_handler_reports_cancelled_closed_fight_panel);
+    nativeTestProfile().run("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
+                            test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
+    nativeTestProfile().run("test_fight_handler_returns_cancelled_when_player_control_cancels",
+                            test_fight_handler_returns_cancelled_when_player_control_cancels);
+    nativeTestProfile().run("test_fight_panel_resets_status_between_sequential_encounters",
+                            test_fight_panel_resets_status_between_sequential_encounters);
+    nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
+                            test_fight_handler_counts_effect_duration_as_progress);
+    nativeTestProfile().run("test_playtest_trace_records_native_limits_and_quest_completion",
+                            test_playtest_trace_records_native_limits_and_quest_completion);
+    nativeTestProfile().run("test_playtest_trace_environment_targets_and_fallback_ids",
+                            test_playtest_trace_environment_targets_and_fallback_ids);
+    nativeTestProfile().run("test_fight_handler_records_outcome_trace_metadata",
+                            test_fight_handler_records_outcome_trace_metadata);
+    nativeTestProfile().run("test_player_respawn_normalizes_wrapped_entry_coords",
+                            test_player_respawn_normalizes_wrapped_entry_coords);
 
     return finish_tests();
 }

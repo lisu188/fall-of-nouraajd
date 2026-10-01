@@ -130,6 +130,8 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "NativeTestProfileSourceTest.",
+    "NativeTestProfileRuntimeTest.",
     "CoverageReportTest.",
     "PlayBootstrapTest.",
     "QuestStateHelperTest.",
@@ -25179,6 +25181,8 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
+    from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
     from tests.test_paid_actions import PaidActionRuntimeTest as _PaidActionRuntimeTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
     from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
@@ -25187,6 +25191,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
+        pass
+
+    class NativeTestProfileSourceTest(_NativeTestProfileSourceTest):
+        pass
+
+    class NativeTestProfileRuntimeTest(_NativeTestProfileRuntimeTest):
         pass
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
@@ -25212,6 +25222,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _PaidActionRuntimeTest
+    del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
     del _UiPixelAnalysisTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
