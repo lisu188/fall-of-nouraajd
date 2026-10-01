@@ -610,3 +610,68 @@ streams and reports bounded timeout diagnostics. This deterministic manual
 decision proof supplements the two natural automatic victories and does not
 alter their controllers or the fixed seeded balance matrices. Its native passage,
 both complete authored routes and canonical coverage remain fresh CI gates.
+
+## Exact-head results and ordinary recovery correction
+
+Head `64c3f096`, build 36926439067, passed normal native tests and performance
+guards on Linux and Windows. Windows job 110586430561 passed its full validation:
+Warrior completed 1521 adjacent steps at 6375 XP/112 HP/147 MP/1200 gold, and Sorcerer
+completed 1492 steps at 6375 XP/91 HP/175 MP/1200 gold. Both native defeat receipts stayed
+empty. The hunt unittest total took 324.948 seconds (the progress marker measured the case at 324.953 seconds). Its deterministic native replay
+also survived, used three paid Barriers, preserved the source and parent session,
+and observed a Brood packet of 40→39 normal+1 shadow with 105→100 enemy MP.
+
+Linux job 110585393750 remained failed. Its Warrior automatic route completed 1451
+steps with 6375 XP/112 HP/147 MP/1200 gold, but the manual replay lost after the two
+paid defensive turns and two ordinary attacks. Its genuine 16→15 normal+1 shadow
+packet spent five mana, yet the hero fell from 85 HP through 69, 58 and 28 before its
+next turn, leaving the Brood at 13 HP. The earned partial save still contained four
+LifePotions and nine lesser heals. Those unused items establish an available
+ordinary recovery choice; the positive packet does not waive the actual defeat.
+Sorcerer earned level four and reached the hunt road at 91 HP/175 MP, then lost on
+the Scout approach at turn 979 with 6000 XP, losing 19 carried items. The failed Linux hunt unittest total took 201.467 seconds (its progress marker measured 201.434 seconds). Different encounter outcomes prevent treating
+that case duration as a matched performance ratio.
+
+The next deterministic replay retains the same initial save and seed. After the
+mandatory defensive window, a hero below 50% HP may spend a real combat turn on the
+strongest currently carried disposable Heal-only potion. Selection is stable by
+power, type and name, and excludes items absent from the initial loaded inventory.
+Native `useItem` must consume that exact identity once, increase HP by the ordinary
+capped 20%-of-maximum-per-power formula, and leave mana and enemy resources intact.
+There are no direct heal calls or new items. This ordinary decision is separate
+from the unchanged automatic routes and balance comparisons.
+
+Effect proof is also strengthened: `octobogzPulseEffectApplied` alone is not enough
+because the flag is set before transfer. A positive packet must observe the actual
+configured effect attached to the loaded player, with its caster linked to the
+same enemy, duration and total time one, and an exact shadowResist−1 bonus with all
+other numeric modifiers zero. Its remaining time may be one or zero while still
+attached; removal at the following effect boundary defines expiry. Regression
+checks reject flag-only, wrong-endpoint, wrong-duration and wrong-bonus evidence.
+
+Sorcerer's failed Linux inventory contained eight LifePotions, five stronger
+Fountain tonics, five DarkBeers and one lesser heal. Its existing AI estimates and
+consumes the least powerful Heal first: a power-one heal at 91 maximum HP restores 18,
+equal to the authored OctoBogz's estimated incoming 18, so the strict net-gain gate
+can skip healing while stronger stock remains. The test's ordinary preparation
+therefore visits the authored market at `(106,111,0)` and sells only carried
+power-one Heal-only disposable items through its actual `CMarket.buyItem`.
+The same item identity must leave player inventory and enter the existing shop;
+gold must increase by the native quoted price. Stronger stock, equipment, HP, MP,
+XP, quests, objective state and map turn remain unchanged by the transaction.
+No shop stock or gold is created, and the existing AI is retained. Fresh native
+and prepared-route results must establish whether this ordinary preparation
+resolves the observed failure; source tests alone do not establish survival.
+
+
+The same head's completed coverage job 110585393806 passed the full native partial-save
+fixture in 37.655 seconds. Warrior completed the automatic route at 6375 XP/112 HP/147 MP/1200
+gold with no defeat, and its seed-100 replay survived with one paid Barrier and an Alpha
+packet of 18→17 normal+1 shadow spending exactly five enemy mana. That older replay still
+had only the effect flag, so it does not establish the new linked-object proof. Sorcerer
+completed Scout and Alpha, restored 91 HP/175 MP before Brood, then lost at turn 1317 with
+6250 XP and 23 carried items in the defeat receipt. The three Python shards finished in
+1363.296, 1438.149 and 1502.961 seconds; the final shard failed its Sorcerer subtest. The
+coverage phase returned exit code one and produced no canonical eligible-line percentage.
+Artifact `11194943840` (`linux-coverage-report`, 12,696,559 bytes) retains those diagnostics
+remotely. This completed failure is separate from the earlier phase timeout.

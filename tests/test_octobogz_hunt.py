@@ -1962,6 +1962,15 @@ class OctobogzHuntTest(unittest.TestCase):
                     "effect": True,
                     "enemyManaBefore": 105,
                     "enemyManaAfter": 100,
+                    "linkedEffect": {
+                        "typeId": "octobogzShadowPulseEffect",
+                        "caster": "actualBrood",
+                        "victim": "earnedWarrior",
+                        "duration": 1,
+                        "time": 1,
+                        "timeTotal": 1,
+                        "bonus": {"class": "CStats", "properties": {"shadowResist": -1, "normalResist": 0}},
+                    },
                 }
             ],
         }
@@ -2070,6 +2079,234 @@ class OctobogzHuntTest(unittest.TestCase):
         data["properties"]["effects"] = None
         walker.engine.return_value = json.dumps(data)
         self.assertIsNone(walker.captureDecisionReplayState(slot)["playerBefore"]["effects"])
+
+    def testReplayRequiresTheActuallyLinkedPulseEffectAndAcceptsAttachedTimeZeroBeforeRemoval(self):
+        walker, expected, result = self.decisionReplayFixture()
+        for time_left in (0, 1):
+            result["positivePackets"][0]["linkedEffect"]["time"] = time_left
+            walker.validateDecisionReplay(result, expected)
+        for field, value in (
+            ("typeId", "flagOnly"),
+            ("caster", "otherEnemy"),
+            ("victim", "otherPlayer"),
+            ("duration", 2),
+            ("timeTotal", 2),
+            ("time", -1),
+            ("time", 2),
+        ):
+            with self.subTest(field=field, value=value):
+                altered = deepcopy(result)
+                altered["positivePackets"][0]["linkedEffect"][field] = value
+                with self.assertRaises(AssertionError):
+                    walker.validateDecisionReplay(altered, expected)
+        for field, value in (("shadowResist", 0), ("normalResist", 1)):
+            altered = deepcopy(result)
+            altered["positivePackets"][0]["linkedEffect"]["bonus"]["properties"][field] = value
+            with self.assertRaises(AssertionError):
+                walker.validateDecisionReplay(altered, expected)
+        del result["positivePackets"][0]["linkedEffect"]
+        with self.assertRaises(KeyError):
+            walker.validateDecisionReplay(result, expected)
+
+    def testReplayRecoveryConsumesOnlyTheActualLoadedPotionOnceWithItsNativeCappedHeal(self):
+        walker, expected, result = self.decisionReplayFixture()
+        potion = {"name": "earnedLifePotion", "typeId": "LifePotion", "power": 2}
+        expected["playerBefore"]["inventory"] = [potion]
+        result["playerBefore"]["inventory"] = [potion]
+        healing = {
+            "action": "UseItem",
+            "item": potion,
+            "hpBefore": 28,
+            "hpAfter": 72,
+            "hpMax": 112,
+            "manaBefore": 78,
+            "manaAfter": 78,
+            "enemyHpBefore": 13,
+            "enemyHpAfter": 13,
+            "enemyManaBefore": 100,
+            "enemyManaAfter": 100,
+            "consumedOnce": True,
+            "healOnlyDisposable": True,
+            "cost": 0,
+            "refund": 0,
+            "inventoryCountBefore": 4,
+            "inventoryCountAfter": 3,
+        }
+        result["decisions"].append(healing)
+        walker.validateDecisionReplay(result, expected)
+        for field, value in (
+            ("hpAfter", 73),
+            ("manaAfter", 79),
+            ("enemyHpAfter", 0),
+            ("enemyManaAfter", 95),
+            ("consumedOnce", False),
+            ("healOnlyDisposable", False),
+            ("inventoryCountAfter", 4),
+            ("item", {"name": "fabricatedPotion", "typeId": "LifePotion", "power": 2}),
+        ):
+            with self.subTest(field=field):
+                altered = deepcopy(result)
+                altered["decisions"][-1][field] = value
+                with self.assertRaises(AssertionError):
+                    walker.validateDecisionReplay(altered, expected)
+        result["decisions"].append(healing)
+        with self.assertRaises(AssertionError):
+            walker.validateDecisionReplay(result, expected)
+
+    def authoredMarketFixture(self, corruption=None):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        walker.walkTo = Mock()
+        actor, market = {"__handle__": "authoredMarketActor"}, {"__handle__": "authoredMarket"}
+        metadata = {
+            "weak": {
+                "name": "earnedBeer",
+                "typeId": "DarkBeer",
+                "power": 1,
+                "heal": True,
+                "mana": False,
+                "singleUse": True,
+            },
+            "strong": {
+                "name": "earnedLife",
+                "typeId": "LifePotion",
+                "power": 2,
+                "heal": True,
+                "mana": False,
+                "singleUse": True,
+            },
+            "mana": {
+                "name": "manaBeer",
+                "typeId": "SpicedBeer",
+                "power": 1,
+                "heal": False,
+                "mana": True,
+                "singleUse": True,
+            },
+            "dual": {
+                "name": "dualPotion",
+                "typeId": "RejuvenationPotion",
+                "power": 1,
+                "heal": True,
+                "mana": True,
+                "singleUse": True,
+            },
+            "reusable": {
+                "name": "reusableHeal",
+                "typeId": "reusableHeal",
+                "power": 1,
+                "heal": True,
+                "mana": False,
+                "singleUse": False,
+            },
+        }
+        handles = {name: {"__handle__": name} for name in metadata}
+        inventory = list(handles.values())
+        stock, purchases, gold = [], [], [200]
+        properties = {
+            "hp": 91,
+            "mana": 175,
+            "exp": 6000,
+            "level": 4,
+            "equipped": {"body": "actualRobe"},
+            "uiDefeatReceipt": "",
+        }
+        walker.object = lambda name: actor
+        walker.coords = lambda handle=None: (106, 111, 0)
+        walker.questNames = lambda *args: ["unchangedQuest"]
+
+        def engine(name, handle):
+            self.assertEqual(("jsonify", "player"), (name, handle))
+            return json.dumps({"properties": {**properties, "gold": gold[0], "items": inventory}})
+
+        def call(handle, method, *args):
+            if handle == "map":
+                return 930 if method == "getTurn" else "unchanged-hunt-registry"
+            if handle == "player":
+                return list(inventory) if method == "getItems" else gold[0]
+            if handle == actor:
+                self.assertEqual(("getObjectProperty", "market"), (method, *args))
+                return market
+            if handle == market:
+                if method == "getItems":
+                    return list(stock)
+                if method == "getBuyCost":
+                    return 320
+                self.assertEqual("buyItem", method)
+                self.assertEqual("player", args[0])
+                item = args[1]
+                self.assertIn(item, inventory)
+                purchases.append(item)
+                gold[0] += 319 if corruption == "price" else 320
+                stock.append({"__handle__": "fabricatedClone"} if corruption == "clone" else item)
+                if corruption != "retained":
+                    inventory.remove(item)
+                if corruption == "resources":
+                    properties["mana"] -= 1
+                if corruption == "equipment":
+                    properties["equipped"]["body"] = "replacementRobe"
+                if corruption == "strong":
+                    inventory.remove(handles["strong"])
+                return
+            data = metadata[handle["__handle__"]]
+            if method == "hasTag":
+                return data[args[0]]
+            if method in ("getNumericProperty", "getBoolProperty"):
+                return data[args[0]]
+            return data["typeId"] if method == "getTypeId" else data["name"]
+
+        walker.engine, walker.call = engine, call
+        return walker, handles, inventory, stock, purchases, gold
+
+    def testSorcererMarketPreparationSellsOnlyOwnedWeakHealAndKeepsAllOtherStockAndComposition(self):
+        walker, handles, inventory, stock, purchases, gold = self.authoredMarketFixture()
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket()
+        walker.walkTo.assert_called_once_with("market1")
+        self.assertEqual([handles["weak"]], purchases)
+        self.assertEqual([handles["weak"]], stock)
+        self.assertEqual([handles[name] for name in ("strong", "mana", "dual", "reusable")], inventory)
+        self.assertEqual(520, gold[0])
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket()
+        self.assertEqual([handles["weak"]], purchases)
+        self.assertEqual(520, gold[0])
+
+    def testMarketPreparationRejectsClonedRetainedMispricedItemsAndChangedNativeResourcesOrGear(self):
+        for corruption in ("price", "clone", "retained", "resources", "equipment", "strong"):
+            with self.subTest(corruption=corruption):
+                walker, *rest = self.authoredMarketFixture(corruption)
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.prepareHealingStockAtAuthoredMarket()
+        walker, handles, inventory, stock, purchases, gold = self.authoredMarketFixture()
+        inventory.remove(handles["strong"])
+        with self.assertRaises(AssertionError):
+            walker.prepareHealingStockAtAuthoredMarket()
+        self.assertEqual([], purchases)
+        self.assertEqual(200, gold[0])
+
+    def testOrdinaryMarketPreparationRequiresActualArrivalAndPrecedesTheUnchangedHuntAi(self):
+        walker, *rest = self.authoredMarketFixture()
+        walker.coords = lambda handle=None: (106, 111, 0) if handle else (107, 111, 0)
+        with self.assertRaises(AssertionError):
+            walker.prepareHealingStockAtAuthoredMarket()
+        source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        methods = {node.name: node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef)}
+        route = ast.get_source_segment(
+            source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
+        )
+        self.assertLess(
+            route.index("self.prepareThroughCatacombs()"), route.index("self.prepareHealingStockAtAuthoredMarket()")
+        )
+        self.assertLess(
+            route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index('self.walkTo("ambientOctobogzNet")')
+        )
+        self.assertLess(route.index("self.prepareHealingStockAtAuthoredMarket()"), route.index("self.enterHunt()"))
+        self.assertIn(
+            'if player_class == "Sorcerer":\n                    self.prepareHealingStockAtAuthoredMarket()', route
+        )
 
     def testAutomaticActualKillsWithoutPulseStillRequireAnIndependentOrdinaryDecisionWitness(self):
         walker, expected, result = self.decisionReplayFixture()

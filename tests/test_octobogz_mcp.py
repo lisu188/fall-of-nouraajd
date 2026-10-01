@@ -316,6 +316,58 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def nearbyRolfEnemies(self):
         return self.nearbyAuthoredPritz((19, 10, 0))
 
+    def marketTransactionState(self):
+        player = json.loads(self.engine("jsonify", self.player))["properties"]
+        return {
+            "player": {key: value for key, value in player.items() if key not in ("items", "gold")},
+            "turn": self.call(self.game_map, "getTurn"),
+            "registry": self.call(self.game_map, "getStringProperty", "octobogzHuntRegistry"),
+            "quests": self.questNames(),
+            "completed": self.questNames("getCompletedQuests"),
+        }
+
+    def prepareHealingStockAtAuthoredMarket(self):
+        self.walkTo("market1")
+        market_actor = self.object("market1")
+        self.assertEqual((106, 111, 0), self.coords(market_actor))
+        self.assertEqual(self.coords(market_actor), self.coords())
+        market = self.call(market_actor, "getObjectProperty", "market")
+        self.assertIsNotNone(market)
+        inventory = self.call(self.player, "getItems")
+        strong = [
+            item
+            for item in inventory
+            if self.call(item, "hasTag", "heal") and self.call(item, "getNumericProperty", "power") > 1
+        ]
+        self.assertTrue(strong, "Ordinary preparation must retain genuinely earned stronger healing stock")
+        weak = [
+            item
+            for item in inventory
+            if self.call(item, "hasTag", "heal")
+            and not self.call(item, "hasTag", "mana")
+            and self.call(item, "getNumericProperty", "power") == 1
+            and self.call(item, "getBoolProperty", "singleUse")
+        ]
+        weak.sort(key=lambda item: (self.call(item, "getTypeId"), self.call(item, "getName")))
+        self.assertLessEqual(len(weak), 128)
+        before = self.marketTransactionState()
+        sold = []
+        for item in weak:
+            identity = item["__handle__"]
+            self.assertIn(identity, [owned["__handle__"] for owned in self.call(self.player, "getItems")])
+            gold_before = self.call(self.player, "getGold")
+            price = self.call(market, "getBuyCost", item)
+            self.assertGreater(price, 0)
+            self.call(market, "buyItem", self.player, item)
+            self.assertEqual(gold_before + price, self.call(self.player, "getGold"))
+            self.assertNotIn(identity, [owned["__handle__"] for owned in self.call(self.player, "getItems")])
+            self.assertIn(identity, [stocked["__handle__"] for stocked in self.call(market, "getItems")])
+            self.assertEqual(before, self.marketTransactionState())
+            sold.append({"name": self.call(item, "getName"), "typeId": self.call(item, "getTypeId"), "price": price})
+        for item in strong:
+            self.assertIn(item["__handle__"], [owned["__handle__"] for owned in self.call(self.player, "getItems")])
+        print("MCP hunt ordinary authored market preparation", {"sold": sold, "strongStock": len(strong)}, flush=True)
+
     def prepareThroughRolf(self):
         self.recoverOnRoadPair((44, 106, 0), (44, 107, 0), "opened gate road recovery")
         self.snapshot("before original Rolf cave")
@@ -575,6 +627,24 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertLessEqual(decision["refund"], decision["cost"])
             self.assertEqual(decision["cost"] - decision["refund"], decision["manaBefore"] - decision["manaAfter"])
         self.assertTrue(any(decision["refund"] < decision["cost"] for decision in barriers))
+        consumed_names = set()
+        for decision in (entry for entry in result["decisions"] if entry["action"] == "UseItem"):
+            self.assertTrue(decision["consumedOnce"])
+            self.assertTrue(decision["healOnlyDisposable"])
+            self.assertIn(decision["item"], expected["playerBefore"]["inventory"])
+            self.assertNotIn(decision["item"]["name"], consumed_names)
+            consumed_names.add(decision["item"]["name"])
+            self.assertEqual(0, decision["cost"])
+            self.assertEqual(0, decision["refund"])
+            self.assertEqual(decision["manaBefore"], decision["manaAfter"])
+            self.assertEqual(decision["enemyHpBefore"], decision["enemyHpAfter"])
+            self.assertEqual(decision["enemyManaBefore"], decision["enemyManaAfter"])
+            self.assertEqual(decision["inventoryCountBefore"] - 1, decision["inventoryCountAfter"])
+            self.assertGreater(decision["hpAfter"], decision["hpBefore"])
+            self.assertEqual(
+                min(decision["hpMax"], decision["hpBefore"] + decision["item"]["power"] * decision["hpMax"] // 5),
+                decision["hpAfter"],
+            )
         self.assertTrue(result["positivePackets"], "A real paid defensive turn must expose a positive pulse")
         for packet in result["positivePackets"]:
             self.assertIn(packet["slot"], ("brood", "alpha"))
@@ -584,6 +654,19 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertEqual(1, packet["shadow"])
             self.assertEqual(packet["damage_roll"] - 1, packet["normal"])
             self.assertEqual(5, packet["enemyManaBefore"] - packet["enemyManaAfter"])
+            effect = packet["linkedEffect"]
+            self.assertEqual("octobogzShadowPulseEffect", effect["typeId"])
+            actor = next(actor for actor in expected["actorsBefore"] if actor["slot"] == packet["slot"])
+            self.assertEqual(actor["name"], effect["caster"])
+            self.assertEqual(expected["playerBefore"]["name"], effect["victim"])
+            self.assertEqual(1, effect["duration"])
+            self.assertEqual(1, effect["timeTotal"])
+            self.assertIn(effect["time"], (0, 1))
+            bonus = effect["bonus"]["properties"]
+            self.assertEqual(-1, bonus["shadowResist"])
+            self.assertTrue(
+                all(value == 0 for key, value in bonus.items() if key != "shadowResist" and isinstance(value, int))
+            )
         return result["positivePackets"]
 
     def requireDecisionReplayExecutable(self):
@@ -704,6 +787,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 self.prepareThroughRolf()
                 self.probeCoordinateReadCosts()
                 self.prepareThroughCatacombs()
+                if player_class == "Sorcerer":
+                    self.prepareHealingStockAtAuthoredMarket()
                 self.walkTo("questGiver")
                 if player_class == "Warrior":
                     self.action(self.dialog("dialog"), "accept_quest")

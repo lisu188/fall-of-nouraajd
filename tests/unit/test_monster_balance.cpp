@@ -1084,7 +1084,8 @@ struct HuntDecisionActor {
 
 class HuntDecisionController : public CFightController {
   public:
-    explicit HuntDecisionController(std::vector<HuntDecisionActor> actors) : actors(std::move(actors)) {}
+    HuntDecisionController(const std::shared_ptr<CPlayer> &player, std::vector<HuntDecisionActor> actors)
+        : actors(std::move(actors)), player(player), carriedItems(player->getItems()) {}
 
     void observe() {
         for (auto &entry : actors) {
@@ -1098,6 +1099,31 @@ class HuntDecisionController : public CFightController {
                                   : nullptr;
                 const int raw = actor->getNumericProperty("enemyRoleAttackBudget");
                 const bool effect = actor->getBoolProperty("octobogzPulseEffectApplied");
+                json linkedEffect = nullptr;
+                auto victim = player.lock();
+                StatsModifier expectedBonus;
+                expectedBonus.shadowResist = -1;
+                auto victimMap = victim ? victim->getMap() : nullptr;
+                if (victimMap && victimMap->getPlayer() == victim &&
+                    victimMap->getObjectByName(victim->getName()) == victim) {
+                    for (const auto &active : victim->getEffects()) {
+                        // A one-turn effect still contributes at zero until the next native removal pass.
+                        if (active && active->getTypeId() == "octobogzShadowPulseEffect" &&
+                            active->getCaster() == actor && active->getVictim() == victim &&
+                            active->getDuration() == 1 && active->getTimeLeft() >= 0 && active->getTimeLeft() <= 1 &&
+                            active->getTimeTotal() == 1 && active->getBonus() &&
+                            active->getBonus()->modifier() == expectedBonus) {
+                            linkedEffect = {{"typeId", active->getTypeId()},
+                                            {"caster", active->getCaster()->getName()},
+                                            {"victim", active->getVictim()->getName()},
+                                            {"duration", active->getDuration()},
+                                            {"time", active->getTimeLeft()},
+                                            {"timeTotal", active->getTimeTotal()},
+                                            {"bonus", *object_serialize(active->getBonus())}};
+                            break;
+                        }
+                    }
+                }
                 json observation = {{"slot", entry.slot},
                                     {"name", actor->getName()},
                                     {"damage_roll", raw},
@@ -1105,15 +1131,16 @@ class HuntDecisionController : public CFightController {
                                     {"shadow", packet ? packet->getShadow() : 0},
                                     {"pulse", pulse},
                                     {"effect", effect},
+                                    {"linkedEffect", linkedEffect},
                                     {"enemyManaBefore", entry.mana},
                                     {"enemyManaAfter", mana},
                                     {"phaseBefore", entry.phase},
                                     {"phaseAfter", phase}};
                 pulseObservations[pulseObservations.size()] = observation;
                 if (raw > 0 && packet && packet->getNormal() == raw - 1 && packet->getShadow() == 1 && effect &&
-                    packet->getFire() == 0 && packet->getFrost() == 0 && packet->getThunder() == 0 &&
-                    entry.phase == "charged" && phase == "spent" && entry.mana - mana == 5 &&
-                    entry.items == actor->getItems()) {
+                    !linkedEffect.is_null() && packet->getFire() == 0 && packet->getFrost() == 0 &&
+                    packet->getThunder() == 0 && entry.phase == "charged" && phase == "spent" &&
+                    entry.mana - mana == 5 && entry.items == actor->getItems()) {
                     positivePackets[positivePackets.size()] = observation;
                 }
             }
@@ -1156,6 +1183,63 @@ class HuntDecisionController : public CFightController {
         const auto phase = opponent->getStringProperty("octobogzCombatPhase");
         const int turn = ++playerTurns[opponent->getName()];
         const bool chooseBarrier = (slot == "brood" && turn <= 2) || (slot == "alpha" && phase == "charged");
+        requireHuntDecision(decisions.size() < 256, "manual hunt decisions exceeded their fixed observation bound");
+        if (!chooseBarrier && me->getHpRatio() < 50) {
+            std::vector<std::shared_ptr<CItem>> healingItems;
+            for (const auto &item : me->getItems()) {
+                if (item && carriedItems.contains(item) && item->hasTag(CTag::Heal) && !item->hasTag(CTag::Mana) &&
+                    item->isDisposable() && item->getBoolProperty("singleUse") && item->getPower() > 0) {
+                    healingItems.push_back(item);
+                }
+            }
+            std::sort(healingItems.begin(), healingItems.end(), [](const auto &left, const auto &right) {
+                return std::tuple(-left->getPower(), left->getTypeId(), left->getName()) <
+                       std::tuple(-right->getPower(), right->getTypeId(), right->getName());
+            });
+            if (!healingItems.empty()) {
+                const auto item = healingItems.front();
+                requireHuntDecision(carriedItems.contains(item) && me->hasInInventory(item),
+                                    "manual recovery must consume an item genuinely carried in the loaded save");
+                const int hpBefore = me->getHp();
+                const int hpMax = me->getHpMax();
+                const int manaBefore = me->getMana();
+                const int enemyHpBefore = opponent->getHp();
+                const int enemyManaBefore = opponent->getMana();
+                const auto inventoryCountBefore = me->getItems().size();
+                const int healAmount = std::max(1, static_cast<int>(item->getPower() * 20 / 100.0 * hpMax));
+                me->useItem(item);
+                requireHuntDecision(!me->hasInInventory(item) && me->getItems().size() + 1 == inventoryCountBefore,
+                                    "native useItem must consume the actual carried healing item exactly once");
+                requireHuntDecision(
+                    me->getHp() > hpBefore && me->getHp() == std::min(hpMax, hpBefore + healAmount) &&
+                        me->getMana() == manaBefore && opponent->getHp() == enemyHpBefore &&
+                        opponent->getMana() == enemyManaBefore,
+                    "the ordinary healing item must restore its capped percentage without other grants");
+                decisions[decisions.size()] = {{"action", "UseItem"},
+                                               {"slot", slot},
+                                               {"target", opponent->getName()},
+                                               {"round", map->getNumericProperty("combatRound")},
+                                               {"phase", phase},
+                                               {"item", huntItemIdentity(item)},
+                                               {"consumedOnce", true},
+                                               {"healOnlyDisposable", true},
+                                               {"inventoryCountBefore", inventoryCountBefore},
+                                               {"inventoryCountAfter", me->getItems().size()},
+                                               {"hpBefore", hpBefore},
+                                               {"hpAfter", me->getHp()},
+                                               {"hpMax", hpMax},
+                                               {"manaBefore", manaBefore},
+                                               {"manaAfter", me->getMana()},
+                                               {"cost", 0},
+                                               {"refund", 0},
+                                               {"enemyHpBefore", enemyHpBefore},
+                                               {"enemyHpAfter", opponent->getHp()},
+                                               {"enemyManaBefore", enemyManaBefore},
+                                               {"enemyManaAfter", opponent->getMana()}};
+                observe();
+                return true;
+            }
+        }
         const std::string actionId = chooseBarrier ? "Barrier" : "Attack";
         const auto actions = me->getEffectiveInteractions();
         const auto selected =
@@ -1169,7 +1253,6 @@ class HuntDecisionController : public CFightController {
         const int enemyManaBefore = opponent->getMana();
         requireHuntDecision(cost >= 0 && manaBefore >= cost, "the loaded hero must pay its configured action cost");
         const int refund = std::clamp(action->getCommittedManaRefund(me), 0, cost);
-        requireHuntDecision(decisions.size() < 256, "manual hunt decisions exceeded their fixed observation bound");
         if (chooseBarrier) {
             requireHuntDecision(cost == 17, "the learned Barrier must retain its full configured mana cost");
             if (slot == "brood") {
@@ -1215,6 +1298,8 @@ class HuntDecisionController : public CFightController {
     std::vector<HuntDecisionActor> actors;
 
   private:
+    std::weak_ptr<CPlayer> player;
+    const std::set<std::shared_ptr<CItem>> carriedItems;
     std::map<std::string, int> playerTurns;
 };
 
@@ -1344,7 +1429,7 @@ void testManualHuntDecisionFromEarnedSave(const std::string &saveSlot) {
                 "the earned Warrior must already know its configured Attack and Barrier");
         }
         ordinaryController = player->getFightController();
-        controller = std::make_shared<HuntDecisionController>(actors);
+        controller = std::make_shared<HuntDecisionController>(player, actors);
         player->setFightController(controller);
         requireHuntDecision(report["playerBefore"].dump() == huntPlayerSnapshot(player).dump() &&
                                 report["playerComposedStatsBefore"].dump() ==
