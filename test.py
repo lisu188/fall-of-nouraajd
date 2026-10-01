@@ -19523,10 +19523,10 @@ class GameTest(unittest.TestCase):
                             cleanup_save_slot(save_name)
 
                     assertSavedEntries(source_map, map_name + "-source")
-                    g.changeMap("empty")
+                    g.changeMap("test")
                     pump_event_loop(10)
                     destination = g.getMap()
-                    self.assertEqual("empty", destination.mapName)
+                    self.assertEqual("test", destination.mapName)
                     self.assertEqual(player, destination.getPlayer())
                     player.checkQuests()
                     self.assertEqual(active_before, quest_names(player))
@@ -22885,7 +22885,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 for quest_id in ids:
                     quest = find_player_quest(player, quest_id)
                     self.assertIsNotNone(quest)
-                    self.assertIn(f"[{status}] {quest.getDescription()}", text)
+                    self.assertIn(f"[{status}] {quest.getStringProperty('description')}", text)
                     self.assertIn(quest.getObjective(), text)
             return text
 

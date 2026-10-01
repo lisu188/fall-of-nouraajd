@@ -72,7 +72,7 @@ def mapQuest(source_map):
                 return QUEST_JOURNAL_UNAVAILABLE_HINT
             if name == "getReward":
                 return "Reward details are unavailable in this older save."
-            description = quest.getDescription() or "Quest"
+            description = quest.getStringProperty("description") or "Quest"
             completed = membership(quest) if completed is None else completed
             if completed:
                 return description + " Completed; outcome details are unavailable."

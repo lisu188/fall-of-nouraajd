@@ -60,9 +60,6 @@ class JournalObject:
     def getTypeId(self):
         return self.getStringProperty("typeId")
 
-    def getDescription(self):
-        return self.getStringProperty("description")
-
     def getObjective(self):
         return self.getStringProperty("objective")
 
