@@ -136,11 +136,8 @@ class CastleWalkthrough:
         for step, arrival in route:
             portal_cost = None
             if step != arrival:
-                source_tile = self.call(self.gameMap, "getTile", list(step))
                 target_tile = self.call(self.gameMap, "getTile", list(arrival))
-                source_coords = self.call(source_tile, "getCoords")
-                target_coords = self.call(target_tile, "getCoords")
-                portal_cost = self.call(self.gameMap, "lookupNavigationStepCost", [source_coords, target_coords])
+                portal_cost = self.call(self.gameMap, "lookupNavigationStepCost", list(step) + list(arrival))
                 terrain_cost = max(1, self.call(target_tile, "getNumericProperty", ["movementCost"]))
                 assert portal_cost == terrain_cost, ("Castle connectors retain their authored unit cost", step, arrival)
             guards = [name for name in self.guardsByCell.get(step, ()) if self.object(name)]

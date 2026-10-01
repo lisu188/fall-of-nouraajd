@@ -768,6 +768,13 @@ void init_game_module(py::module_ &m) {
              "Return cardinal neighbors plus enabled registered navigation edges.")
         .def("lookupNavigationStepCost", &CMap::lookupNavigationStepCost, py::arg("fromCoords"), py::arg("toCoords"),
              "Price a graph step using destination terrain plus a registered connector surcharge.")
+        .def(
+            "lookupNavigationStepCost",
+            [](std::shared_ptr<CMap> self, int fromX, int fromY, int fromZ, int toX, int toY, int toZ) {
+                return self->lookupNavigationStepCost(Coords(fromX, fromY, fromZ), Coords(toX, toY, toZ));
+            },
+            py::arg("fromX"), py::arg("fromY"), py::arg("fromZ"), py::arg("toX"), py::arg("toY"), py::arg("toZ"),
+            "Price a graph step from integer coordinates without creating tile handles.")
         .def("registerNavigationEdge", &map_register_navigation_edge, py::arg("source"), py::arg("target"),
              py::arg("enabled") = true, py::arg("bidirectional") = false, py::arg("movementCost") = 1,
              py::arg("sourceObjectName") = py::none(), "Register a navigation edge for map pathing.")
