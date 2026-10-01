@@ -20,9 +20,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CPythonOverrides.h"
 #include "handler/CFightHandler.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
+#include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
@@ -31,12 +33,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/embed.h>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <memory>
 #include <vector>
 
-void init_game_module(pybind11::module_ &module);
-PYBIND11_EMBEDDED_MODULE(_monster_balance_game, module) { init_game_module(module); }
+extern "C" PyObject *PyInit__game();
 
 namespace {
 void createOpenBalanceMap(const std::shared_ptr<CGame> &game) {
@@ -58,6 +60,9 @@ struct RoleBalanceSample {
     int healthSpent;
     int manaSpent;
     int itemsSpent;
+    double setupMilliseconds;
+    double fightMilliseconds;
+    double cleanupMilliseconds;
 };
 
 class PlayerResourceObserver {
@@ -231,6 +236,7 @@ void testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls() {
 
 RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const std::string &playerType,
                                       const std::string &monsterType, unsigned seed, bool rolesEnabled) {
+    const auto setupStarted = std::chrono::steady_clock::now();
     auto map = game->getMap();
     auto player = game->createObject<CPlayer>(playerType);
     const auto ordinaryController = player->getFightController();
@@ -259,14 +265,21 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     enemy->setFightController(std::make_shared<ObservedFightController>(enemy->getFightController(), observer));
     vstd::rng().seed(seed);
     std::srand(seed);
+    const auto fightStarted = std::chrono::steady_clock::now();
     const auto result = CFightHandler::fightManyResult(player, {enemy});
     observer->observe();
-    RoleBalanceSample sample{result.attackerSucceeded(), observer->healthSpent, observer->manaSpent,
-                             observer->itemsSpent};
+    const auto cleanupStarted = std::chrono::steady_clock::now();
+    RoleBalanceSample sample{
+        result.attackerSucceeded(), observer->healthSpent, observer->manaSpent, observer->itemsSpent, 0, 0, 0};
     map->detachPlayer();
     if (map->getObjectByName(enemy->getName()) == enemy) {
         map->removeObject(enemy);
     }
+    const auto finished = std::chrono::steady_clock::now();
+    const auto milliseconds = [](auto elapsed) { return std::chrono::duration<double, std::milli>(elapsed).count(); };
+    sample.setupMilliseconds = milliseconds(fightStarted - setupStarted);
+    sample.fightMilliseconds = milliseconds(cleanupStarted - fightStarted);
+    sample.cleanupMilliseconds = milliseconds(finished - cleanupStarted);
     return sample;
 }
 
@@ -274,10 +287,29 @@ void initializeBalancePythonContent() {
     std::cerr << "monster balance: initializing bindings\n";
     auto sys = pybind11::module_::import("sys");
     sys.attr("path").attr("insert")(0, GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT);
-    sys.attr("modules")["_game"] = pybind11::module_::import("_monster_balance_game");
+    const auto nativeModule = pybind11::module_::import("_game");
+    expect_true(nativeModule.attr("CInteraction").attr("__module__").cast<std::string>() == "_game",
+                "embedded native classes must have the production module identity");
     pybind11::module_::import("game");
     pybind11::module_::import("json");
     std::cerr << "monster balance: game and json initialized\n";
+}
+
+void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
+    auto game = CGameLoader::loadGame();
+    auto barrier = game->createObject<CInteraction>("Barrier");
+    expect_true(CPythonOverrides::find_override(barrier.get(), "performAction").is_none(),
+                "a Python interaction inheriting native performAction must not recurse through an override");
+    expect_true(!CPythonOverrides::find_override(barrier.get(), "configureEffect").is_none(),
+                "the harness must still recognize an authored Python configureEffect override");
+    auto effect = game->createObject<CEffect>("BarrierEffect");
+    expect_true(CPythonOverrides::find_override(effect.get(), "getCaster").is_none(),
+                "a Python effect must inherit native methods without treating them as overrides");
+    auto player = game->createObject<CPlayer>("Sorcerer");
+    player->heal(0);
+    player->addMana(0);
+    barrier->onAction(player, player);
+    expect_true(!player->getEffects().empty(), "inherited native performAction must return and apply the real barrier");
 }
 
 void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
@@ -293,10 +325,20 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
              {"Gooby", "Pritz", "OctoBogz", "PritzMage", "GoblinThief", "Cultist", "CultLeader"}) {
             std::vector<int> baselineHp, roleHp, baselineMana, roleMana, baselineItems, roleItems;
             int baselineWins = 0;
+            double setupMilliseconds = 0, fightMilliseconds = 0, cleanupMilliseconds = 0;
             for (unsigned seed = 100; seed < 111; ++seed) {
                 const auto baseline = runRoleBalanceFight(game, playerType, monsterType, seed, false);
                 const auto roles = runRoleBalanceFight(game, playerType, monsterType, seed, true);
                 baselineWins += baseline.won ? 1 : 0;
+                setupMilliseconds += baseline.setupMilliseconds + roles.setupMilliseconds;
+                fightMilliseconds += baseline.fightMilliseconds + roles.fightMilliseconds;
+                cleanupMilliseconds += baseline.cleanupMilliseconds + roles.cleanupMilliseconds;
+                if (baseline.won && !roles.won) {
+                    std::cerr << "role victory regression " << playerType << '/' << monsterType << " seed " << seed
+                              << " baseline hp/mana/items " << baseline.healthSpent << '/' << baseline.manaSpent << '/'
+                              << baseline.itemsSpent << " roles " << roles.healthSpent << '/' << roles.manaSpent << '/'
+                              << roles.itemsSpent << '\n';
+                }
                 expect_true(!baseline.won || roles.won, "monster role must preserve every seeded baseline victory");
                 baselineHp.push_back(baseline.healthSpent);
                 roleHp.push_back(roles.healthSpent);
@@ -312,7 +354,9 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
             }
             std::cout << "role balance " << playerType << '/' << monsterType << " hp " << median(baselineHp) << " -> "
                       << median(roleHp) << " mana " << median(baselineMana) << " -> " << median(roleMana) << " items "
-                      << median(baselineItems) << " -> " << median(roleItems) << '\n';
+                      << median(baselineItems) << " -> " << median(roleItems) << " baseline wins " << baselineWins
+                      << "/11 setup/fight/cleanup ms " << setupMilliseconds << '/' << fightMilliseconds << '/'
+                      << cleanupMilliseconds << std::endl;
             expect_true(std::abs(median(roleHp) - median(baselineHp)) * 10 <= median(baselineHp),
                         "monster roles must keep median health expenditure within 10 percent of baseline");
             expect_true(std::abs(median(roleMana) - median(baselineMana)) * 10 <= median(baselineMana),
@@ -330,6 +374,7 @@ void testActivePlayerNeverUsesMonsterSignature() {
     auto player = game->createObject<CPlayer>("Warrior");
     game->getMap()->attachPlayer(player, Coords(0, 0, 0));
     player->setCreatureClass(game->createObject<CCreatureClass>("bruteClass"));
+    player->addAction(game->createObject<CInteraction>("Attack"));
     player->setHp(1);
     player->setMana(0);
     auto enemy = game->createObject<CCreature>("OctoBogz");
@@ -344,8 +389,13 @@ void testActivePlayerNeverUsesMonsterSignature() {
 } // namespace
 
 int main() {
+    if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
+        std::cerr << "Cannot register the real embedded _game module\n";
+        return 1;
+    }
     pybind11::scoped_interpreter interpreter{};
     initializeBalancePythonContent();
+    testInheritedNativeMethodsDoNotBecomePythonOverrides();
     testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
     testActivePlayerNeverUsesMonsterSignature();
     testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget();

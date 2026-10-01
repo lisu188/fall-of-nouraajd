@@ -56,7 +56,7 @@ class EnemyRolesTest(unittest.TestCase):
 
     def testArcaneBoltSplitsOneRollWithoutIncreasingItsBudget(self):
         action = self.registered["EnemyArcaneBolt"]()
-        for roll in (0, 1, 11, 12):
+        for roll in (1, 11, 12):
             self.properties.clear()
             self.actor.getDmg.return_value = roll
             self.actor.getDmg.reset_mock()
@@ -73,8 +73,23 @@ class EnemyRolesTest(unittest.TestCase):
         for roll in (0, 1, 11, 12):
             self.properties.clear()
             self.actor.getDmg.return_value = roll
+            self.target.hurt.reset_mock()
             action.performAction(self.actor, self.target)
-            self.target.hurt.assert_called_with(roll * 80 // 100)
+            if roll * 80 // 100:
+                self.target.hurt.assert_called_once_with(roll * 80 // 100)
+            else:
+                self.target.hurt.assert_not_called()
+
+    def testMissesDoNotConsumeBlockRollsThroughZeroDamage(self):
+        self.actor.getDmg.return_value = 0
+        for class_name in ("EnemyArcaneBolt", "EnemyOpeningStrike"):
+            with self.subTest(class_name=class_name):
+                self.properties.clear()
+                self.target.hurt.reset_mock()
+                self.actor.getGame.reset_mock()
+                self.registered[class_name]().performAction(self.actor, self.target)
+                self.target.hurt.assert_not_called()
+                self.actor.getGame.assert_not_called()
 
     def testEffectsCannotBeAppliedTwiceAndHaveNoTickDamage(self):
         effect = Mock()
