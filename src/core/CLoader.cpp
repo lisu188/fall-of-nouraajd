@@ -76,6 +76,25 @@ class CScopedGameMap {
 };
 
 namespace {
+class ScopedResourceScope {
+  public:
+    explicit ScopedResourceScope(std::shared_ptr<CResourcesProvider> provider)
+        : provider(std::move(provider)), previous(this->provider->getActiveScope()) {}
+
+    ~ScopedResourceScope() {
+        if (!committed) {
+            provider->setActiveScope(previous);
+        }
+    }
+
+    void commit() { committed = true; }
+
+  private:
+    std::shared_ptr<CResourcesProvider> provider;
+    std::string previous;
+    bool committed = false;
+};
+
 constexpr const char *PLUGIN_MANIFEST_PATH = "plugins/manifest.json";
 constexpr std::size_t MAX_TILESET_ID = 16384;
 constexpr int MAX_TMX_LAYER_CELLS = 1'000'000;
@@ -465,6 +484,8 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
         return std::unexpected("cannot restore save without a game");
     }
 
+    ScopedResourceScope resourceScope(game->getResourcesProvider());
+
     {
         CScopedGameMap scopedMap(game);
         load_map_resources(game, saveDocument.mapName);
@@ -494,6 +515,7 @@ restore_save_document(const std::shared_ptr<CGame> &game, const CSaveFormat::Dec
         return std::unexpected(rehydrateError);
     }
 
+    resourceScope.commit();
     return map;
 }
 

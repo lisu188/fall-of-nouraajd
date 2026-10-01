@@ -26,6 +26,10 @@ class CPluginRegistrar;
 
 namespace native_plugin {
 
+// Initializes each host's serializer/cast metadata without enabling gameplay construction.
+// Kept local to the host, which may embed game_core objects rather than import its DLL.
+void registerGameplayTypeMetadata();
+
 // Registers every content-constructible gameplay type from plugin/CGameplayTypeTable.h.
 // Invoked by the native_gameplay plugin's game_plugin_load_v2 entry point.
 GAME_CORE_EXPORT bool register_gameplay_types(CPluginRegistrar &registrar);

@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include "core/CGame.h"
 #include "core/CJsonUtil.h"
+#include "core/CLoader.h"
 #include "core/CStats.h"
 #include "core/CMap.h"
 #include "core/CTypeRegistration.h"
@@ -727,7 +728,7 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     creature->hurt(-4.0f);
     expect_true(creature->getHp() == 999, "negative floating damage should clamp to zero damage");
     creature->hurt(5);
-    expect_true(creature->getHp() == 999, "over-armor damage should clamp to zero damage");
+    expect_true(creature->getHp() == 998, "over-armor positive damage must retain one point after rounding");
 
     creature->setMana(999);
     creature->addMana(1);
@@ -744,6 +745,72 @@ void test_creature_inventory_equipment_and_ratio_helpers() {
     creature->setGold(25);
     creature->takeGold(5);
     expect_true(creature->getGold() == 20, "takeGold should subtract from creature gold");
+}
+
+void test_creature_armor_caps_mitigation_for_loot_stacks_and_effects() {
+    auto game = CGameLoader::loadGame();
+    auto creature = std::make_shared<CCreature>();
+    creature->setGame(game);
+    bool testedHighArmor = false;
+    for (const auto &type : game->getObjectHandler()->getAllSubTypes("CItem")) {
+        auto item = game->createObject<CItem>(type);
+        if (!item || !item->getBonus() || item->getBonus()->getArmor() <= 0) {
+            continue;
+        }
+        auto base = stats_with_main(10, 10);
+        base->setBlock(-item->getBonus()->getBlock());
+        base->setNormalResist(-item->getBonus()->getNormalResist());
+        creature->setBaseStats(base);
+        creature->setEquipped({{"0", item}});
+        creature->setHp(1000);
+        const auto armor = creature->getStats()->getArmor();
+        const int expectedDamage = std::max(1, static_cast<int>(100 * ((100 - std::min(95, armor)) / 100.0)));
+        creature->hurt(100);
+        expect_true(creature->getHp() == 1000 - expectedDamage,
+                    "every configured armor bonus must use capped percentage mitigation without immunity");
+        testedHighArmor = testedHighArmor || armor >= 100;
+    }
+    expect_true(testedHighArmor, "the armor regression must exercise the shipped high-armor artifacts");
+
+    auto base = stats_with_main(10, 10);
+    auto first = std::make_shared<CItem>();
+    first->getBonus()->setArmor(70);
+    auto second = std::make_shared<CItem>();
+    second->getBonus()->setArmor(60);
+    creature->setBaseStats(base);
+    creature->setEquipped({{"2", first}, {"5", second}});
+    auto effect = std::make_shared<CEffect>();
+    effect->setTypeId("unitArmorScalingEffect");
+    effect->getBonus()->setArmor(creature->getStats()->getArmor() * 75 / 100);
+    creature->addEffect(effect);
+    expect_true(creature->getStats()->getArmor() == 227,
+                "the mitigation cap must preserve raw equipment and self-scaling effect bonuses");
+    expect_true(creature->getStats()->getText(1).find("Armor: 95%") != std::string::npos,
+                "aggregate stat text must show effective capped armor mitigation");
+    creature->setHp(1000);
+    creature->hurt(100);
+    expect_true(creature->getHp() == 995, "stacked equipment and armor buffs must retain incoming damage");
+
+    auto damage = std::make_shared<CDamage>();
+    damage->setNormal(1);
+    damage->setFire(1);
+    damage->setFrost(1);
+    damage->setThunder(1);
+    damage->setShadow(1);
+    creature->setHp(1000);
+    creature->hurt(damage);
+    expect_true(creature->getHp() == 995, "every positive damage channel must retain one point through armor");
+    creature->hurt(0);
+    creature->hurt(-1);
+    expect_true(creature->getHp() == 995, "zero and negative damage must not become minimum damage");
+    base->setNormalResist(100);
+    creature->hurt(100);
+    expect_true(creature->getHp() == 995, "full resistance must still negate its damage channel");
+    base->setNormalResist(0);
+    base->setBlock(100);
+    creature->hurt(100);
+    expect_true(creature->getHp() == 995, "successful blocking must still negate damage after capped armor");
+    creature->removeEffect(effect);
 }
 
 void test_equip_item_same_instance_is_noop_and_keeps_cursed_lock() {
@@ -3047,6 +3114,67 @@ void test_creature_get_dmg_allow_crit_flag_gates_the_crit_double() {
 // legacy Buff-tagged effect without selfTarget stays a self-buff, and every other effect
 // routes to the opponent -- so routing no longer depends solely on effect tags while old
 // buff configs still work.
+class PaidActionProbe : public CInteraction {
+  public:
+    int performed = 0;
+    int queried = 0;
+    int refund = 3;
+
+    void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++performed; }
+    int getCommittedManaRefund(std::shared_ptr<CCreature>) override {
+        ++queried;
+        return refund;
+    }
+};
+
+void test_paid_actions_reject_unaffordable_casts_and_bound_refunds() {
+    auto actor = std::make_shared<CCreature>();
+    actor->getBaseStats()->setStrength(20);
+    actor->getBaseStats()->setMainStat("strength");
+    auto victim = std::make_shared<CCreature>();
+    auto action = std::make_shared<PaidActionProbe>();
+    action->setTypeId("paidActionProbe");
+    action->setManaCost(17);
+    actor->addAction(action);
+    auto armor = std::make_shared<CArmor>();
+    auto response = std::make_shared<PaidActionProbe>();
+    response->setTypeId("armorResponseProbe");
+    response->setManaCost(0);
+    armor->setInteraction(response);
+    victim->setEquipped({{"3", armor}});
+
+    actor->setMana(16);
+    actor->useAction(action, victim);
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 16 && action->performed == 0 && action->queried == 0 && response->performed == 0,
+                "unaffordable calls must not debit, execute, query a refund, or trigger armor");
+    actor->setMana(40);
+    actor->useAction(action, victim);
+    actor->useAction(action, victim);
+    expect_true(actor->getMana() == 12 && action->performed == 2 && action->queried == 2 && response->performed == 2,
+                "every accepted cast should debit full cost then apply exactly one bounded refund");
+    actor->setMana(17);
+    action->refund = 100;
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 17, "refund cannot exceed the paid base cost");
+    action->refund = -5;
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 0, "negative refund must not restore mana through the zero sentinel");
+    action->setManaCost(0);
+    action->refund = 100;
+    const auto queries = action->queried;
+    action->onAction(actor, victim);
+    expect_true(actor->getMana() == 0 && action->queried == queries, "free actions cannot receive mana refunds");
+    action->setManaCost(-1);
+    const auto actions = action->performed;
+    action->onAction(actor, victim);
+    actor->useAction(action, victim);
+    expect_true(action->performed == actions && actor->getMana() == 0, "negative-cost actions must fail closed");
+    action->onAction(nullptr, victim);
+    CInteraction ordinary;
+    expect_true(ordinary.getCommittedManaRefund(actor) == 0, "ordinary actions keep the zero-refund default");
+}
+
 void test_interaction_effect_routes_to_caster_via_self_target() {
     auto interaction = std::make_shared<CInteraction>();
 
@@ -3442,6 +3570,7 @@ int main() {
     test_creature_get_dmg_allow_crit_flag_gates_the_crit_double();
     test_creature_get_dmg_hit_chance_is_not_inverted();
     test_interaction_effect_routes_to_caster_via_self_target();
+    test_paid_actions_reject_unaffordable_casts_and_bound_refunds();
     test_tooltip_handler_builds_labels_descriptions_and_item_bonuses();
     test_market_guard_paths_and_item_transfers();
     test_market_prices_are_bounded_and_non_exploitable();
@@ -3456,6 +3585,7 @@ int main() {
     test_owned_tile_move_synchronizes_wrapped_equivalent_coordinates_without_navigation_change();
     test_animation_property_events_invalidate_cached_graphics_object();
     test_creature_inventory_equipment_and_ratio_helpers();
+    test_creature_armor_caps_mitigation_for_loot_stacks_and_effects();
     test_equip_item_same_instance_is_noop_and_keeps_cursed_lock();
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();

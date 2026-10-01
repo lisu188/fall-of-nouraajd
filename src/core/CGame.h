@@ -58,6 +58,7 @@ class CGame : public CGameObject {
     V_META(CGame, CGameObject, vstd::meta::empty())
     friend class CGameContext;
     friend class CScopedGameMap;
+    friend class CSceneManager;
 
   public:
     CGame();

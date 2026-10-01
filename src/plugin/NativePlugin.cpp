@@ -32,6 +32,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace native_plugin {
 
+void registerGameplayTypeMetadata() {
+#define FN_TYPE(T, ...) CTypes::register_type_metadata<T, __VA_ARGS__>();
+#define FN_WRAPPED(T, ...)                                                                                             \
+    CTypes::register_type_metadata<T, __VA_ARGS__>();                                                                  \
+    CTypes::register_type_metadata<CWrapper<T>, T, __VA_ARGS__>();
+    FN_GAMEPLAY_TYPES(FN_TYPE, FN_WRAPPED)
+#undef FN_WRAPPED
+#undef FN_TYPE
+}
+
 bool register_gameplay_types(CPluginRegistrar &registrar) {
     bool registered = true;
 #define FN_TYPE(T, ...) registered = registrar.registerType<T, __VA_ARGS__>() && registered;

@@ -71,6 +71,7 @@ def loadQuestClasses(game_map=None, context=None, pending=None):
     game_stub.register = register
     game_stub.trigger = lambda context, *_args: register(context)
     game_stub.campaign = types.SimpleNamespace()
+    game_stub.narrative = types.SimpleNamespace()
     callbacks = pending if pending is not None else []
     game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=callbacks.append))
     if context is None:

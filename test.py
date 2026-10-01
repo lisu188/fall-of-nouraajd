@@ -155,6 +155,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "PaidActionRuntimeTest.",
     "ConsoleEventIsolationTest.",
     "ConsoleEventProcessTest.",
     "GameTest.",
@@ -219,6 +220,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_multilevel": 25.0,
     "McpServerTest.test_stdio_map_walkthrough_nouraajd": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
+    "McpServerTest.test_stdio_narrative_outcomes_complete_with_natural_objectives": 200.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
@@ -15955,12 +15957,16 @@ class GameTest(unittest.TestCase):
             market_refs = [item["ref"] for item in config["tavernBeerMarket"]["properties"]["items"]]
 
             self.assertEqual(market.getTypeId(), "tavernBeerMarket")
+            self.assertEqual(100, market.getNumericProperty("sell"))
             self.assertEqual(market_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
             self.assertEqual(labels, ["Dark Beer", "Dark Beer", "Spiced Beer"])
             self.assertTrue(
                 all(ref in potions for ref in market_refs),
                 "Configured tavern beers should exist in potions.json",
             )
+            game.narrative.recordGateApproach(g, "threatened")
+            g.createObject("tavernDialog1").sell_beer()
+            self.assertEqual(105, captured["market"].getNumericProperty("sell"))
 
             log = {
                 "market_type": market.getTypeId(),
@@ -18824,13 +18830,18 @@ class GameTest(unittest.TestCase):
             self.assertFalse(loaded_store.finished())
             self.assertEqual("yes", loaded_store.get_var("spared_cultist", default="no"))
 
-            # Manifest routing keeps working on the loaded game: reporting the
-            # scenario outcome advances the campaign and requests the next map.
+            # The restored campaign commits its next chapter only when the destination is ready.
             self.assertEqual("cleansing", campaign_module.complete_scenario(loaded_game, "completed"))
-            self.assertEqual("cleansing", loaded_store.scenario())
-            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("recovery", loaded_store.scenario())
+            self.assertEqual([], loaded_store.history())
             self.assertEqual("TransitionPending", loaded_game.getSceneManager().getTransitionStateName())
             self.assertEqual("ritual", loaded_game.getSceneManager().getPendingMapName())
+            pump_event_loop(10)
+            self.assertEqual("cleansing", loaded_store.scenario())
+            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("ritual", loaded_game.getMap().mapName)
+            self.assertTrue(loaded_game.getMap().getPlayer() == loaded_player)
+            self.assertEqual("Idle", loaded_game.getSceneManager().getTransitionStateName())
         finally:
             for path in (save_path, backup_path):
                 if path.exists():
@@ -24130,21 +24141,34 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         )
 
         transitions = []
-        original_change_map = game.CGame.changeMap
+        transition_phases = []
+        original_prepared_change_map = game.CGame.changeMapWithPreparation
         try:
 
-            def capture_change_map(self, map_name):
+            def capturePreparedChangeMap(game_instance, map_name, beforeEntry, completion):
                 transitions.append(map_name)
+                self_map = game_instance.getMap()
+                pending = json.loads(player.getStringProperty("campaign_pendingTransition"))
+                self.assertEqual(game_map, self_map)
+                self.assertEqual(map_name, pending["targetMap"])
+                self.assertEqual("", pending["targetScenario"], "this walkthrough starts a standalone map")
+                beforeEntry()
+                transition_phases.append("prepared")
+                completion(True)
+                transition_phases.append("completed")
+                return True
 
-            game.CGame.changeMap = capture_change_map
+            game.CGame.changeMapWithPreparation = capturePreparedChangeMap
             show_dialog_with_keyboard(self, game, g, beren, [2])
             run_blocking_gui_action(game, beren.finish_cleanse)
         finally:
-            game.CGame.changeMap = original_change_map
+            game.CGame.changeMapWithPreparation = original_prepared_change_map
 
         player.checkQuests()
         pump_event_loop(5)
         self.assertEqual(["ritual"], transitions)
+        self.assertEqual(["prepared", "completed"], transition_phases)
+        self.assertEqual("", player.getStringProperty("campaign_pendingTransition"))
         self.assertEqual("purged", quest_state("beren_chain"))
         self.assertTrue(game_map.getBoolProperty("CAVE_PURGED"))
         assert_completed("cleanseCaveQuest")
@@ -24750,6 +24774,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only UI tests are not installed with the game")
         for test_class in (
+            PaidActionRuntimeTest,
             DialogueMcpWalkthroughTest,
             ManagementMcpWalkthroughTest,
             NavigationMcpWalkthroughTest,
@@ -24768,6 +24793,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                     self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
                 self.assertFalse(test_name_matches_suite(test_name, "fast"))
         self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
+        self.assertNotIn("_PaidActionRuntimeTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
         self.assertNotIn("_NavigationMcpWalkthroughTest", globals())
         self.assertNotIn("_NavigationCallbackTest", globals())
@@ -25146,11 +25172,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_paid_actions import PaidActionRuntimeTest as _PaidActionRuntimeTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
     from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
     from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
+
+    class PaidActionRuntimeTest(_PaidActionRuntimeTest):
+        pass
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
         pass
@@ -25180,6 +25210,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
+    del _PaidActionRuntimeTest
     del _UiPixelAnalysisTest
     del _NavigationMcpWalkthroughTest
     del _NavigationCallbackTest
@@ -25234,6 +25265,15 @@ class McpServerTest(unittest.TestCase):
             def loadGame():
                 return "game"
 
+        class CMapLoader:
+            @staticmethod
+            def saveWithResult(game_map, name):
+                return game_map is not None and bool(name)
+
+            @staticmethod
+            def save(game_map, name):
+                return None
+
         class NativeLike:
             append = list.append
 
@@ -25247,6 +25287,7 @@ class McpServerTest(unittest.TestCase):
         module.jsonify = jsonify
         module.set_logger_sink = set_logger_sink
         module.CGameLoader = CGameLoader
+        module.CMapLoader = CMapLoader
         module.NativeLike = NativeLike
         module.CPluginLoader = CPluginLoader
         module.event_loop = event_loop
@@ -25256,6 +25297,9 @@ class McpServerTest(unittest.TestCase):
         self.assertNotIn("top_level", server.exports)
         self.assertIn("jsonify", server.exports)
         self.assertIn("CGameLoader.loadGame", server.exports)
+        self.assertIn("CMapLoader.saveWithResult", server.exports)
+        self.assertNotIn("CMapLoader.save", server.exports)
+        self.assertTrue(server.exports["CMapLoader.saveWithResult"].callable_obj("map", "fresh-slot"))
         self.assertIn("event_loop.instance", server.exports)
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("NativeLike.append", server.exports)
@@ -25388,6 +25432,7 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("CGameLoader.loadGame", server.exports)
         self.assertIn("CGameLoader.loadGui", server.exports)
         self.assertIn("CGameLoader.startGameWithPlayer", server.exports)
+        self.assertIn("CMapLoader.saveWithResult", server.exports)
         self.assertIn("event_loop.instance", server.exports)
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("CGuiHandler.openPanel", server.exports)
@@ -25499,6 +25544,26 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(handle["__type__"], "CDialog")
         method_names = {method["name"] for method in handle["pythonMethods"]}
         self.assertEqual({"invokeAction", "invokeCondition"}, method_names)
+
+    def test_siege_handle_exports_only_the_guarded_breach_action(self):
+        server = self.make_stub_server()
+
+        class SpawnPoint:
+            def sealBreach(self):
+                return True
+
+            def completePendingSeal(self):
+                raise AssertionError("Internal gate callbacks are not MCP actions")
+
+        handle = server._serialize_result(SpawnPoint())
+        self.assertEqual({"sealBreach"}, {method["name"] for method in handle.get("pythonMethods", [])})
+        response = server._engine_handle_call({"handle": handle["__handle__"], "method": "sealBreach", "args": []})
+        self.assertFalse(response["isError"])
+        self.assertTrue(response["structuredContent"]["result"])
+        denied = server._engine_handle_call(
+            {"handle": handle["__handle__"], "method": "completePendingSeal", "args": []}
+        )
+        self.assertTrue(denied["isError"])
 
     def test_engine_handle_call_rejects_private_methods(self):
         server = self.make_stub_server()
@@ -25977,6 +26042,60 @@ class McpServerTest(unittest.TestCase):
 
     def test_stdio_map_walkthrough_ritual(self):
         self._assert_mcp_walkthrough("ritual")
+
+    def test_stdio_narrative_outcomes_complete_with_natural_objectives(self):
+        import uuid
+        import campaign as campaign_module
+        from tests.narrative_walkthrough import NarrativeWalkthrough
+
+        proc = self._start_stdio_mcp_process("ritual")
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            for class_id in ("Warrior", "Sorcerer"):
+                for outcome in ("good", "bad"):
+                    with self.subTest(class_id=class_id, outcome=outcome):
+                        game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(
+                            session, "ritual", class_id
+                        )
+                        driver = NarrativeWalkthrough(
+                            lambda name, args: self._mcp_engine_call(
+                                session, name, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+                            ),
+                            lambda handle, method, args: self._mcp_handle_call(
+                                session, handle, method, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+                            ),
+                            game_handle,
+                            map_handle,
+                            player_handle,
+                        )
+                        for name, value in (
+                            (campaign_module.CAMPAIGN_ID_PROPERTY, "fallOfNouraajd"),
+                            (campaign_module.CAMPAIGN_SCENARIO_PROPERTY, "cleansing"),
+                        ):
+                            driver.call(driver.player, "setStringProperty", [name, value])
+                        save_name = "narrative-" + uuid.uuid4().hex
+                        save_paths = [build_dir / "save" / (save_name + suffix) for suffix in (".json", ".json.bak")]
+                        try:
+                            driver.ritual(outcome, save_name=save_name)
+                            log = driver.siege()
+                            self.assertTrue(
+                                driver.call(
+                                    driver.player, "getBoolProperty", [campaign_module.CAMPAIGN_FINISHED_PROPERTY]
+                                )
+                            )
+                            self.assertEqual(
+                                f"cleansing:{outcome}_ending,siege:completed",
+                                driver.call(
+                                    driver.player, "getStringProperty", [campaign_module.CAMPAIGN_HISTORY_PROPERTY]
+                                ),
+                            )
+                            self._write_mcp_walkthrough_log(f"narrative-{class_id}-{outcome}", log)
+                        finally:
+                            for path in save_paths:
+                                path.unlink(missing_ok=True)
+        finally:
+            self._shutdown_process(proc)
 
     def test_stdio_map_walkthrough_siege(self):
         self._assert_mcp_walkthrough("siege")

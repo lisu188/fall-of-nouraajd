@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <limits>
 
 class CCreature;
+class CMap;
 
 template <fn::CoordsLike CoordsLike> std::list<Coords> near_coords(const CoordsLike &coords) {
     auto shifted = CARDINAL_DIRECTIONS | std::views::transform([&coords](const Coords &offset) {
@@ -72,6 +73,9 @@ class CPathFinder {
     using Neighbors = std::function<std::vector<Coords>(const Coords &)>;
     using Distance = std::function<double(const Coords &, const Coords &)>;
     using StepCost = std::function<int(const Coords &, const Coords &)>;
+
+    // Geometric distance is admissible for ordinary map steps, but not for enabled portal edges.
+    static Distance mapHeuristic(const std::shared_ptr<CMap> &map);
 
     // Distances must be admissible for optimal routes. Searches fail closed on resource limits.
     static std::shared_ptr<vstd::future<Coords, void>> findNextStep(Coords start, Coords goal, const CanStep &canStep,

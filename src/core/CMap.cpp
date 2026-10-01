@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CSceneManager.h"
 #include "core/CSerialization.h"
 #include "object/CItem.h"
+#include "object/CCreature.h"
 #include "object/CTrigger.h"
 
 #include <atomic>
@@ -52,6 +53,18 @@ int normalize_wrapped_axis(int value, int max_value) {
     return static_cast<int>(normalized);
 }
 } // namespace
+
+CMap::~CMap() {
+    const auto dyingMap = weak_from_this();
+    for (const auto &[name, object] : mapObjects) {
+        // A carried player can remain in this map's snapshot while already owned by its destination.
+        if (object && !object->owningMap.owner_before(dyingMap) && !dyingMap.owner_before(object->owningMap)) {
+            if (auto creature = vstd::cast<CCreature>(object)) {
+                creature->releaseEffectReferences();
+            }
+        }
+    }
+}
 
 std::map<int, std::pair<int, int>> CMap::getBounds() {
     std::map<int, std::pair<int, int>> bounds;
@@ -968,8 +981,7 @@ void CMap::dumpPaths(std::string path) {
         currentPlayer->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
         [](auto) -> std::optional<Coords> { return std::nullopt; },
         [this](auto coords) { return this->getNavigationNeighbors(coords); },
-        [this](auto from, auto to) { return this->getDistance(from, to); },
-        [this](auto, auto to) { return this->lookupMovementCost(to); });
+        CPathFinder::mapHeuristic(this->ptr<CMap>()), [this](auto, auto to) { return this->lookupMovementCost(to); });
 }
 
 std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {
