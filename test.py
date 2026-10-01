@@ -15145,7 +15145,7 @@ class GameTest(unittest.TestCase):
                     if name:
                         placed_names.add(name)
 
-        runtime_spawned_targets = {"gooby1", "amuletGoblin", "cultLeaderQuest"}
+        runtime_spawned_targets = {"player", "gooby1", "amuletGoblin", "cultLeaderQuest"}
         missing_targets = sorted(
             target for target in trigger_targets if target not in placed_names and target not in runtime_spawned_targets
         )
@@ -27768,8 +27768,8 @@ class McpServerTest(unittest.TestCase):
                 )
             )
             actor = self._mcp_get_object_by_name(session, map_handle, state["slots"][slot]["name"])
-            self._mcp_handle_call(session, actor, "setHp", [0])
-            self._mcp_handle_call(session, map_handle, "removeObject", [actor])
+            self._mcp_handle_call(session, actor, "setNumericProperty", ["hp", 0])
+            self._mcp_handle_call(session, map_handle, "removeObjectByName", [state["slots"][slot]["name"]])
             self._mcp_pump_event_loop(session)
         self._mcp_handle_call(session, player_handle, "checkQuests")
         self.assertEqual("octobogz_slain_pending_letter", quest_state(map_handle, "beren_chain"))

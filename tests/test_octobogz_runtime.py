@@ -46,6 +46,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
             save_slot = 'unit-octobogz-' + uuid.uuid4().hex
             save_path = None
             try:
+                director.synchronize(game_map)
                 registry_text = game_map.getStringProperty('octobogzHuntRegistry')
                 assert registry_text.startswith('octobogzHunt.v1:')
                 assert json.loads(game.jsonify(game_map))['properties']['octobogzHuntRegistry'] == registry_text
@@ -58,7 +59,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 game_map = instance.getMap()
                 player = game_map.getPlayer()
                 for _ in range(3): loop.run()
-                assert state() == expected_state
+                assert state() == expected_state, (expected_state, state())
                 alpha = game_map.getObjectByName(alpha_name)
                 assert alpha.getHp() == 9 and alpha.getMana() == 6
                 assert alpha.getStringProperty('octobogzCombatPhase') == 'charged'

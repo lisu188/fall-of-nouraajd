@@ -88,7 +88,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def walkRoute(self, target, *, allow_removed=False):
         route = []
         planned_target = None
-        stalled_steps = {}
+        blockers = None
         for _ in range(512):
             actor = self.call(self.game_map, "getObjectByName", target) if isinstance(target, str) else None
             if isinstance(target, str):
@@ -112,10 +112,18 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 route = []
                 continue
             if self.step(step) != expected:
-                stalled = (current, step)
-                stalled_steps[stalled] = stalled_steps.get(stalled, 0) + 1
-                if stalled_steps[stalled] > 1:
-                    self.walkable.discard(step)
+                # Player victories restore the origin, including repeated fights in a cave cell.
+                if blockers is None:
+                    blockers = [
+                        candidate
+                        for candidate in self.call(self.game_map, "getObjects")
+                        if not self.call(candidate, "getBoolProperty", "canStep")
+                    ]
+                for blocker in blockers:
+                    if self.coords(blocker) == step and not self.call(
+                        self.game_map, "canStep", self.call(blocker, "getCoords")
+                    ):
+                        self.walkable.discard(step)
                 route = []
         self.fail(("Bounded adjacent hunt route did not reach its target", target, self.snapshot("route blocked")))
 
@@ -205,7 +213,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def observeActors(self, stage, actors):
         for slot, actor in actors.items():
             self.assertIsNotNone(actor, slot)
-            packet = self.call(actor, "getObjectProperty", "enemyRoleDamagePacket")
+            properties = json.loads(self.engine("jsonify", actor))["properties"]
+            packet = (
+                self.call(actor, "getObjectProperty", "enemyRoleDamagePacket")
+                if properties.get("enemyRoleDamagePacket") is not None
+                else None
+            )
             observation = {
                 "stage": stage,
                 "slot": slot,

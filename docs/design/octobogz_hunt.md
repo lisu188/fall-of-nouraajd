@@ -289,3 +289,39 @@ This is a pending authored playability witness, separate from the unchanged
 fixed no-rest comparator. The older relic boundary fixture now prepares the
 authoritative Beren quest state alongside its derived legacy flag; it does not
 claim natural relic progression or real combat.
+
+Head84e5a743 passed both strict native comparisons and all native performance
+guards on Linux and Windows. Linux job110461267304 completed the770-fight role
+entry in2.12seconds and the110-fight hunt entry in1.53seconds; Windows
+job110462066418 completed them in3.85 and2.44seconds. Instrumented coverage
+also passed the native entries within their unchanged budgets. Its Python phase
+failed, so no canonical coverage percentage or authored-route acceptance was
+established.
+
+The new walkthrough incorrectly blacklisted a destination after two combat
+rollbacks. Native player victories deliberately return to the pre-step origin,
+so several real Pritschers in one cave cell can cause several successful
+nonarrivals. The helper now retains those cells and masks only false native
+terrain or object passability. For an object it passes that object's existing
+Coords handle to the bound `CMap.canStep`; it creates no Coords or new binding.
+Three consecutive victory rollbacks and a removed blocker have focused
+regressions. The512-step limit, cardinal movement, actual map turns and defeat
+receipt checks remain unchanged.
+
+The same run exposed two old quest-boundary MCP calls outside the export
+allowlist, an omitted runtime player trigger target, and an optional actor packet
+read before any packet existed. Those fixtures now use the existing generic HP
+property and removal-by-name APIs, recognize the attached player, and inspect
+actual serialized property presence before reading an owned packet. All five
+new focused regressions fail against the preceding fixtures and pass after the
+repairs. Dedicated combat movement still contains no HP/stat/item mutations.
+
+The native partial-save fixture had directly changed health, mana and phase
+without synchronizing the registry recovery snapshot before its exact-state
+assertion. It now synchronizes before saving, as ordinary player turns do, while
+retaining exact saved registry bytes and all loaded HP/mana, identity, phase,
+effect and one-time reward assertions. Linux's ordinary Warrior did reach
+level3 with3125XP at Rolf's cave and later defeat the scout alive, but its
+observer failed afterward; this is partial real preparation/combat evidence,
+not completion of either required authored route. Fresh full-suite, MCP and
+canonical coverage acceptance remain required.

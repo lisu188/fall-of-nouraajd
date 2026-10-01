@@ -545,6 +545,45 @@ class OctobogzHuntTest(unittest.TestCase):
                 if index == 1 and isinstance(node.args[0], ast.Name) and node.args[0].id == "tile":
                     self.assertIn(node.args[index].value, assignments["MCP_ALLOWED_HANDLE_METHODS"]["CGameObject"])
 
+    def testLegacyQuestBoundaryMcpUsesOnlyExportedHandleMethods(self):
+        module = ast.parse((ROOT / "mcp.py").read_text(encoding="utf-8"))
+        allowed = next(
+            ast.literal_eval(node.value)
+            for node in module.body
+            if isinstance(node, ast.Assign)
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == "MCP_ALLOWED_HANDLE_METHODS"
+        )
+        methods = set().union(*allowed.values())
+        tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        fixture = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "_mcp_walkthrough_nouraajd"
+        )
+        for node in ast.walk(fixture):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "_mcp_handle_call"
+                and len(node.args) > 2
+                and isinstance(node.args[2], ast.Constant)
+            ):
+                self.assertIn(node.args[2].value, methods)
+
+    def testExistingTriggerTargetValidationRecognizesTheAttachedPlayer(self):
+        tree = ast.parse((ROOT / "test.py").read_text(encoding="utf-8"))
+        checker = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "test_nouraajd_trigger_targets"
+        )
+        checker.decorator_list = []
+        namespace = {"REPO_ROOT": ROOT, "json": json, "re": re}
+        exec(compile(ast.Module(body=[checker], type_ignores=[]), "trigger-target-check", "exec"), namespace)
+        success, log = namespace[checker.name](self)
+        self.assertTrue(success, log)
+
     def testMcpRouteUsesOnlyAdjacentNativeMovementAndActualMapTurnsAfterBlockersOrRollback(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
@@ -564,6 +603,8 @@ class OctobogzHuntTest(unittest.TestCase):
             if method == "getBoolProperty":
                 self.assertEqual("canStep", args[0])
                 return handle != (1, 0, 0)
+            if method == "getObjects":
+                return []
             if method == "getStringProperty":
                 self.assertEqual("uiDefeatReceipt", args[0])
                 return ""
@@ -593,6 +634,87 @@ class OctobogzHuntTest(unittest.TestCase):
         native = (ROOT / "src/object/CMapObject.cpp").read_text(encoding="utf-8")
         self.assertIn("if (is_registered && is_step_move)", native)
         self.assertIn("const bool can_step = map->canStep(target)", native)
+
+    def testMcpRouteRetainsWalkableCellAcrossThreeVictoriousCombatRollbacks(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        walker.walkable = {(0, 0, 0), (1, 0, 0)}
+        walker.movement_steps = 0
+        walker.pump = lambda: None
+        state = {"coords": (0, 0, 0), "turn": 0, "wins": 0, "object_reads": 0}
+        walker.coords = lambda handle=None: state["coords"]
+
+        def call(handle, method, *args):
+            if method == "getTile":
+                return "tile"
+            if method in ("getBoolProperty", "isAlive"):
+                return True
+            if method == "getStringProperty":
+                return ""
+            if method == "getObjects":
+                state["object_reads"] += 1
+                return []
+            if method == "moveTo":
+                self.assertEqual((1, 0, 0), args)
+                if state["wins"] < 3:
+                    state["wins"] += 1
+                else:
+                    state["coords"] = args
+            if method == "getTurn":
+                return state["turn"]
+            if method == "move":
+                state["turn"] += 1
+
+        walker.call = call
+        walker.walkCoords((1, 0, 0))
+        self.assertEqual(3, state["wins"])
+        self.assertEqual(4, walker.movement_steps)
+        self.assertEqual(1, state["object_reads"])
+        self.assertIn((1, 0, 0), walker.walkable)
+
+    def testMcpRouteChecksTheLiveNativeBlockerAfterItsRemoval(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        walker.walkable = {(0, 0, 0), (1, 0, 0)}
+        walker.movement_steps = 0
+        walker.pump = lambda: None
+        state = {"coords": (0, 0, 0), "turn": 0, "native_checks": 0}
+        walker.coords = lambda handle=None: (1, 0, 0) if handle == "removed-blocker" else state["coords"]
+
+        def call(handle, method, *args):
+            if method == "getTile":
+                return "tile"
+            if method == "getBoolProperty":
+                return handle != "removed-blocker"
+            if method == "getObjects":
+                return ["removed-blocker"]
+            if method == "getCoords":
+                self.assertEqual("removed-blocker", handle)
+                return "real-coords-handle"
+            if method == "canStep":
+                self.assertEqual(("real-coords-handle",), args)
+                state["native_checks"] += 1
+                return True
+            if method == "getStringProperty":
+                return ""
+            if method == "isAlive":
+                return True
+            if method == "moveTo" and state["turn"]:
+                state["coords"] = args
+            if method == "getTurn":
+                return state["turn"]
+            if method == "move":
+                state["turn"] += 1
+
+        walker.call = call
+        walker.walkCoords((1, 0, 0))
+        self.assertEqual(1, state["native_checks"])
+        self.assertEqual(2, walker.movement_steps)
+        self.assertIn((1, 0, 0), walker.walkable)
 
     def testMcpAdjacentMovementRejectsLiveRespawnAndUnexplainedTransit(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
@@ -696,6 +818,7 @@ class OctobogzHuntTest(unittest.TestCase):
         before = actor.properties.copy()
         walker.phase_observations = []
         walker.call = lambda handle, method, *args: getattr(handle, method)(*args)
+        walker.engine = lambda export, handle: json.dumps({"properties": {"enemyRoleDamagePacket": "owned"}})
         with patch("builtins.print"):
             walker.observeActors("after combat", {"alpha": actor})
         self.assertEqual(before, actor.properties)
@@ -708,6 +831,21 @@ class OctobogzHuntTest(unittest.TestCase):
         source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
         self.assertIn('observed["pulse"] and observed["damage_roll"] > 0 and observed["shadow"] == 1', source)
         self.assertNotRegex(source, r'"(?:setHp|setMana|setLevel|setNumericProperty|setBoolProperty)"')
+
+    def testMcpActorObservationDoesNotReadAnAbsentNativePacketProperty(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        actor = Actor("scout")
+        actor.getObjectProperty = Mock(side_effect=IndexError("Native dynamic object property is absent"))
+        walker.phase_observations = []
+        walker.call = lambda handle, method, *args: getattr(handle, method)(*args)
+        walker.engine = lambda export, handle: json.dumps({"properties": {}})
+        with patch("builtins.print"):
+            walker.observeActors("after scout", {"scout": actor})
+        actor.getObjectProperty.assert_not_called()
+        observed = walker.phase_observations[0]
+        self.assertEqual((0, 0), (observed["normal"], observed["shadow"]))
 
     def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
         import textwrap
