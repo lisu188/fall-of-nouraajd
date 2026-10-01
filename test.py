@@ -156,6 +156,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "PaidActionRuntimeTest.",
     "ConsoleEventIsolationTest.",
     "ConsoleEventProcessTest.",
     "GameTest.",
@@ -25226,6 +25227,7 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_player_identity_content import PlayerIdentityContentTest as _PlayerIdentityContentTest
+    from tests.test_paid_actions import PaidActionRuntimeTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
