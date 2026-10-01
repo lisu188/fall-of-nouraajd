@@ -356,20 +356,37 @@ void test_player_controller_stops_and_clears_path_when_obstacle_appears() {
 }
 
 void test_npc_random_controller_prefers_longer_lower_cost_route() {
-    vstd::rng().seed(4);
+    const auto saved_rng = vstd::rng();
     auto game = std::make_shared<CGame>();
-    weighted_detour_map(game);
+    auto map = weighted_detour_map(game);
     auto creature = creature_at(0, 0, 0);
     creature->setGame(game);
 
     auto controller = std::make_shared<CNpcRandomController>();
-    auto first = resolve_coords(controller->control(creature));
-    expect_true(first == Coords(0, 1, 0), "NPC random controller should start on the cheaper weighted detour");
-    creature->moveTo(first);
-    controller->onStepCommitted(creature, first);
-
-    auto second = resolve_coords(controller->control(creature));
-    expect_true(second == Coords(1, 1, 0), "NPC random controller should keep following the weighted detour path");
+    bool target_seed_found = false;
+    for (unsigned seed = 0; seed < 1024; ++seed) {
+        vstd::rng().seed(seed);
+        const auto candidate_rng = vstd::rng();
+        const int dx = vstd::rand(-5, 5);
+        const int dy = vstd::rand(-5, 5);
+        if (map->normalizeCoords(Coords(dx, dy, 0)) == Coords(4, 0, 0)) {
+            vstd::rng() = candidate_rng;
+            target_seed_found = true;
+            break;
+        }
+    }
+    expect_true(target_seed_found, "the NPC fixture must choose its authored target without assuming an RNG sequence");
+    if (target_seed_found) {
+        for (const auto &expected_step : expected_weighted_detour_path()) {
+            const auto actual_step = resolve_coords(controller->control(creature));
+            expect_true(actual_step == expected_step,
+                        "NPC random controller should follow the cheaper weighted detour");
+            creature->moveTo(actual_step);
+            controller->onStepCommitted(creature, actual_step);
+        }
+        expect_true(creature->getCoords() == Coords(4, 0, 0), "NPC weighted detour should reach the authored target");
+    }
+    vstd::rng() = saved_rng;
 }
 
 void test_target_controller_flow_field_prefers_longer_lower_cost_route() {
