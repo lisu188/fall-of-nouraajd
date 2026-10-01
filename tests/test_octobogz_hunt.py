@@ -472,6 +472,18 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertEqual(1, actor.damage_rolls)
         self.assertEqual(0, duplicate.getNumericProperty("octobogzDamageBudget"))
 
+    def testMissedPulseAndRoundedZeroTickDoNotConsumeBlockDice(self):
+        effect = self.createObject("OctobogzShadowPulseEffect")
+        victim = Mock()
+        effect.getVictim = lambda: victim
+        for budget, ticks in ((0, (2, 1)), (1, (2,))):
+            effect.setNumericProperty("octobogzDamageBudget", budget)
+            for remaining in ticks:
+                effect.getTimeLeft = lambda: remaining
+                effect.onEffect()
+        victim.hurt.assert_not_called()
+        victim.getGame.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -316,6 +316,9 @@ def load(self, context):
     class OctobogzShadowPulseEffect(CEffect):
         def onEffect(self):
             budget = self.getNumericProperty("octobogzDamageBudget")
+            tick_damage = budget // 2 if self.getTimeLeft() == 2 else budget - budget // 2
+            if not tick_damage:
+                return
             damage = self.getVictim().getGame().createObject("CDamage")
-            damage.setNumericProperty("shadow", budget // 2 if self.getTimeLeft() == 2 else budget - budget // 2)
+            damage.setNumericProperty("shadow", tick_damage)
             self.getVictim().hurt(damage)

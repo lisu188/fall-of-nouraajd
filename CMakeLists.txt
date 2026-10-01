@@ -849,6 +849,22 @@ endif ()
 target_compile_definitions(monster_balance_unit_tests PRIVATE
     GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
 )
+add_test(NAME for_unit_tests.octobogz_hunt_balance COMMAND monster_balance_unit_tests --hunt-route)
+set_tests_properties(for_unit_tests.octobogz_hunt_balance PROPERTIES
+    LABELS "for_unit_tests;unit;monster_balance_unit_tests"
+    TIMEOUT 60
+)
+if (WIN32)
+    get_test_property(for_unit_tests.monster_balance_unit_tests ENVIRONMENT HUNT_TEST_ENVIRONMENT)
+    if (HUNT_TEST_ENVIRONMENT)
+        set_tests_properties(for_unit_tests.octobogz_hunt_balance PROPERTIES ENVIRONMENT "${HUNT_TEST_ENVIRONMENT}")
+    endif ()
+    get_test_property(for_unit_tests.monster_balance_unit_tests ENVIRONMENT_MODIFICATION HUNT_TEST_ENVIRONMENT_MODIFICATION)
+    if (HUNT_TEST_ENVIRONMENT_MODIFICATION)
+        set_tests_properties(for_unit_tests.octobogz_hunt_balance PROPERTIES
+            ENVIRONMENT_MODIFICATION "${HUNT_TEST_ENVIRONMENT_MODIFICATION}")
+    endif ()
+endif ()
 add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
 add_game_unit_test(ui_management_unit_tests tests/unit/test_ui_management.cpp)
 add_game_unit_test(ui_navigation_unit_tests tests/unit/test_ui_navigation.cpp)

@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
 #include "object/CEffect.h"
+#include "object/CEvent.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CPlayer.h"
@@ -386,9 +387,138 @@ void testActivePlayerNeverUsesMonsterSignature() {
     expect_true(controller.control(player, enemy), "player should retain an ordinary attack");
     expect_true(!player->getBoolProperty("enemyRoleUsed"), "player must never use a monster signature");
 }
+
+struct HuntBalanceSample {
+    RoleBalanceSample resources;
+    int alphaPulses;
+    int broodPulses;
+};
+
+HuntBalanceSample runHuntBalanceRoute(const std::shared_ptr<CGame> &game, const std::string &playerType, unsigned seed,
+                                      bool stagedHunt) {
+    const auto setupStarted = std::chrono::steady_clock::now();
+    auto map = game->getMap();
+    auto player = game->createObject<CPlayer>(playerType);
+    const auto ordinaryController = player->getFightController();
+    player->setLevel(3);
+    map->attachPlayer(player, Coords(0, 0, 0));
+    player->setFightController(ordinaryController);
+    player->heal(0);
+    player->addMana(0);
+    const auto director = game->createObject<CEvent>("OctobogzHuntDirector");
+    std::vector<std::shared_ptr<CCreature>> enemies;
+    for (const auto &slot : {"scout", "alpha", "brood"}) {
+        auto enemy = game->createObject<CCreature>("OctoBogz");
+        enemy->setName("routeOctobogz" + std::string(slot));
+        enemy->setLevel(2);
+        enemy->setPosX(1);
+        map->addObject(enemy);
+        enemy->heal(0);
+        enemy->addMana(0);
+        if (stagedHunt) {
+            pybind11::cast(director).attr("configureActor")(enemy, slot);
+        } else {
+            enemy->setBoolProperty("enemyRoleUsed", true);
+        }
+        enemies.push_back(enemy);
+    }
+    auto observer = std::make_shared<PlayerResourceObserver>(player);
+    player->setFightController(std::make_shared<ObservedFightController>(ordinaryController, observer));
+    for (const auto &enemy : enemies) {
+        enemy->setFightController(std::make_shared<ObservedFightController>(enemy->getFightController(), observer));
+    }
+    // The original cave configured three OctoBogz. Compare that fixed footprint,
+    // without the old prop's unbounded onTurn flood, at the same Lv3/Lv2 challenge as the role matrix.
+    vstd::rng().seed(seed);
+    std::srand(seed);
+    const auto fightStarted = std::chrono::steady_clock::now();
+    bool won = true;
+    for (const auto &enemy : enemies) {
+        if (!player->isAlive() || !CFightHandler::fightManyResult(player, {enemy}).attackerSucceeded()) {
+            won = false;
+            break;
+        }
+        observer->observe();
+    }
+    observer->observe();
+    const auto cleanupStarted = std::chrono::steady_clock::now();
+    HuntBalanceSample sample{{won, observer->healthSpent, observer->manaSpent, observer->itemsSpent, 0, 0, 0},
+                             enemies[1]->getBoolProperty("octobogzPulseUsed") ? 1 : 0,
+                             enemies[2]->getBoolProperty("octobogzPulseUsed") ? 1 : 0};
+    map->detachPlayer();
+    for (const auto &enemy : enemies) {
+        if (map->getObjectByName(enemy->getName()) == enemy) {
+            map->removeObject(enemy);
+        }
+    }
+    const auto finished = std::chrono::steady_clock::now();
+    const auto milliseconds = [](auto elapsed) { return std::chrono::duration<double, std::milli>(elapsed).count(); };
+    sample.resources.setupMilliseconds = milliseconds(fightStarted - setupStarted);
+    sample.resources.fightMilliseconds = milliseconds(cleanupStarted - fightStarted);
+    sample.resources.cleanupMilliseconds = milliseconds(finished - cleanupStarted);
+    return sample;
+}
+
+void testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget() {
+    const auto previousRng = vstd::rng();
+    auto game = CGameLoader::loadGame();
+    createOpenBalanceMap(game);
+    const auto median = [](std::vector<int> values) {
+        std::sort(values.begin(), values.end());
+        return values[values.size() / 2];
+    };
+    int allAlphaPulses = 0, allBroodPulses = 0;
+    for (const auto &playerType : {"Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"}) {
+        std::vector<int> baselineHp, huntHp, baselineMana, huntMana, baselineItems, huntItems;
+        int baselineWins = 0, alphaPulses = 0, broodPulses = 0;
+        double setupMilliseconds = 0, fightMilliseconds = 0, cleanupMilliseconds = 0;
+        for (unsigned seed = 100; seed < 111; ++seed) {
+            const auto baseline = runHuntBalanceRoute(game, playerType, seed, false).resources;
+            const auto hunt = runHuntBalanceRoute(game, playerType, seed, true);
+            baselineWins += baseline.won ? 1 : 0;
+            alphaPulses += hunt.alphaPulses;
+            broodPulses += hunt.broodPulses;
+            if (baseline.won && !hunt.resources.won) {
+                std::cerr << "hunt victory regression " << playerType << " seed " << seed << " baseline hp/mana/items "
+                          << baseline.healthSpent << '/' << baseline.manaSpent << '/' << baseline.itemsSpent << " hunt "
+                          << hunt.resources.healthSpent << '/' << hunt.resources.manaSpent << '/'
+                          << hunt.resources.itemsSpent << '\n';
+            }
+            expect_true(!baseline.won || hunt.resources.won,
+                        "staged hunt must preserve every seeded baseline route victory");
+            setupMilliseconds += baseline.setupMilliseconds + hunt.resources.setupMilliseconds;
+            fightMilliseconds += baseline.fightMilliseconds + hunt.resources.fightMilliseconds;
+            cleanupMilliseconds += baseline.cleanupMilliseconds + hunt.resources.cleanupMilliseconds;
+            baselineHp.push_back(baseline.healthSpent);
+            huntHp.push_back(hunt.resources.healthSpent);
+            baselineMana.push_back(baseline.manaSpent);
+            huntMana.push_back(hunt.resources.manaSpent);
+            baselineItems.push_back(baseline.itemsSpent);
+            huntItems.push_back(hunt.resources.itemsSpent);
+        }
+        expect_true(baselineWins > 0, "ordinary hunt baseline must include real victories over all three actors");
+        expect_true(median(baselineHp) > 0, "three-actor route baseline must cause nonzero incoming damage");
+        std::cout << "hunt route balance " << playerType << " hp " << median(baselineHp) << " -> " << median(huntHp)
+                  << " mana " << median(baselineMana) << " -> " << median(huntMana) << " items "
+                  << median(baselineItems) << " -> " << median(huntItems) << " baseline wins " << baselineWins
+                  << "/11 alpha/brood pulses " << alphaPulses << '/' << broodPulses << " setup/fight/cleanup ms "
+                  << setupMilliseconds << '/' << fightMilliseconds << '/' << cleanupMilliseconds << std::endl;
+        expect_true(std::abs(median(huntHp) - median(baselineHp)) * 10 <= median(baselineHp),
+                    "hunt route must keep median health expenditure within 10 percent of baseline");
+        expect_true(std::abs(median(huntMana) - median(baselineMana)) * 10 <= median(baselineMana),
+                    "hunt route must keep median mana expenditure within 10 percent of baseline");
+        expect_true(std::abs(median(huntItems) - median(baselineItems)) * 10 <= median(baselineItems),
+                    "hunt route must keep median item expenditure within 10 percent of baseline");
+        allAlphaPulses += alphaPulses;
+        allBroodPulses += broodPulses;
+    }
+    expect_true(allAlphaPulses > 0 && allBroodPulses > 0,
+                "route comparison must exercise actual wounded Alpha and shadow brood pulses");
+    vstd::rng() = previousRng;
+}
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
     if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
         std::cerr << "Cannot register the real embedded _game module\n";
         return 1;
@@ -398,6 +528,10 @@ int main() {
     testInheritedNativeMethodsDoNotBecomePythonOverrides();
     testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
     testActivePlayerNeverUsesMonsterSignature();
-    testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget();
+    if (argc == 2 && std::string(argv[1]) == "--hunt-route") {
+        testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget();
+    } else {
+        testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget();
+    }
     return finish_tests();
 }
