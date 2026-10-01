@@ -517,7 +517,8 @@ std::shared_ptr<CInteraction> monsterRoleAction(const std::shared_ptr<CCreature>
         const auto effect = action->hasProperty("roleEffect")
                                 ? vstd::cast<CEffect>(action->getObjectProperty<CGameObject>("roleEffect"))
                                 : action->getEffect();
-        if (eligible && !caster_already_has_effect(me, effect) &&
+        const auto recipient = action->getSelfTarget() ? me : opponent;
+        if (eligible && !caster_already_has_effect(recipient, effect) &&
             (!selected || action->getName() < selected->getName())) {
             selected = action;
         }

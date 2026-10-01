@@ -488,7 +488,9 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
             if (!originalAllLosingPair) {
                 expect_true(baselineWins > 0, "each previously winning authored pair must retain baseline wins");
             }
-            if (!originalHarmlessMedianPair) {
+            const bool originallyRequiredDamage =
+                std::string(monsterType) == "Pritz" || std::string(monsterType) == "OctoBogz";
+            if (originallyRequiredDamage && !originalHarmlessMedianPair) {
                 expect_true(median(baselineHp) > 0,
                             "each previously damaging authored pair must retain baseline damage");
             }

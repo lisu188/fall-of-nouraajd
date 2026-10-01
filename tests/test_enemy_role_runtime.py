@@ -26,6 +26,9 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                      'PritzMage': 'enemyArcaneBolt', 'GoblinThief': 'enemyOpeningStrike',
                      'Cultist': 'enemyRitualHex', 'CultLeader': 'enemyRitualHex'}
             for index, (template, signature_id) in enumerate(cases.items()):
+                if template == 'CultLeader':
+                    game.CFightHandler.applyEffects(player)
+                    game.CFightHandler.applyEffects(player)
                 actor = instance.createObject(template)
                 actor.name = 'roleRuntime' + str(index)
                 actor.x, actor.y, actor.z = 3 + index, 5, 0
@@ -50,6 +53,13 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                 saved = json.loads(game.jsonify(actor))
                 assert saved['properties']['enemyRoleUsed'], saved
             assert not player.getBoolProperty('enemyRoleUsed')
+            expected_effects = {}
+            for index in range(len(cases)):
+                actor = game_map.getObjectByName('roleRuntime' + str(index))
+                signature = next(action for action in actor.getEffectiveInteractions() if action.getBoolProperty('enemySignature'))
+                recipient = actor if signature.getBoolProperty('selfTarget') else player
+                expected_effects[index] = {effect.name for effect in recipient.getEffects() if effect.getCaster() == actor}
+            assert sum(len(names) for names in expected_effects.values()) >= 5
             slot = 'unit-enemy-roles-' + uuid.uuid4().hex
             provider = instance.getResourcesProvider()
             save_path = None
@@ -68,7 +78,8 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                     assert not signature.hasProperty('roleEffect') or signature.getObjectProperty('roleEffect') is None, index
                     recipient = actor if signature.getBoolProperty('selfTarget') else loaded_player
                     linked = [effect for effect in recipient.getEffects() if effect.getCaster() == actor]
-                    assert len(linked) == 1 and linked[0].getVictim() == recipient, index
+                    assert {effect.name for effect in linked} == expected_effects[index], index
+                    assert all(effect.getVictim() == recipient for effect in linked), index
                     assert actor.getFightController().control(actor, loaded_player), index
                     assert actor.getBoolProperty('enemyRoleUsed'), index
             finally:
