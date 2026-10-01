@@ -370,6 +370,7 @@ class DialogueContentTest(unittest.TestCase):
             _quest_system_from=lambda owner: quest_system,
             claim_once=claimOnce,
             _clear_victor_encounter=cleared.append,
+            narrative=types.SimpleNamespace(victorResponse=lambda game: ""),
         )
         loadClasses("res/maps/nouraajd/script.py", ["CultLeaderQuestTrigger"], namespace)
         trigger = namespace["CultLeaderQuestTrigger"]()
