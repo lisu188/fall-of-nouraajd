@@ -71,6 +71,7 @@ MCP_ALLOWED_EXPORTS = {
     "CGameLoader.startGameWithPlayer",
     "CGameLoader.startRandomGameWithPlayer",
     "CGameLoader.loadSavedGame",
+    "CMapLoader.saveWithResult",
     "event_loop.instance",
     "jsonify",
     "logger",

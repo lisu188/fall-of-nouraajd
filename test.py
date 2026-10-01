@@ -217,6 +217,7 @@ DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_multilevel": 25.0,
     "McpServerTest.test_stdio_map_walkthrough_nouraajd": 45.0,
     "McpServerTest.test_stdio_map_walkthrough_ritual": 45.0,
+    "McpServerTest.test_stdio_narrative_outcomes_complete_with_natural_objectives": 200.0,
     "McpServerTest.test_stdio_map_walkthrough_siege": 30.0,
     "McpServerTest.test_stdio_map_walkthrough_test": 20.0,
     "McpServerTest.test_stdio_map_walkthrough_vhulmarn": 30.0,
@@ -25236,6 +25237,15 @@ class McpServerTest(unittest.TestCase):
             def loadGame():
                 return "game"
 
+        class CMapLoader:
+            @staticmethod
+            def saveWithResult(game_map, name):
+                return game_map is not None and bool(name)
+
+            @staticmethod
+            def save(game_map, name):
+                return None
+
         class NativeLike:
             append = list.append
 
@@ -25249,6 +25259,7 @@ class McpServerTest(unittest.TestCase):
         module.jsonify = jsonify
         module.set_logger_sink = set_logger_sink
         module.CGameLoader = CGameLoader
+        module.CMapLoader = CMapLoader
         module.NativeLike = NativeLike
         module.CPluginLoader = CPluginLoader
         module.event_loop = event_loop
@@ -25258,6 +25269,9 @@ class McpServerTest(unittest.TestCase):
         self.assertNotIn("top_level", server.exports)
         self.assertIn("jsonify", server.exports)
         self.assertIn("CGameLoader.loadGame", server.exports)
+        self.assertIn("CMapLoader.saveWithResult", server.exports)
+        self.assertNotIn("CMapLoader.save", server.exports)
+        self.assertTrue(server.exports["CMapLoader.saveWithResult"].callable_obj("map", "fresh-slot"))
         self.assertIn("event_loop.instance", server.exports)
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("NativeLike.append", server.exports)
@@ -25390,6 +25404,7 @@ class McpServerTest(unittest.TestCase):
         self.assertIn("CGameLoader.loadGame", server.exports)
         self.assertIn("CGameLoader.loadGui", server.exports)
         self.assertIn("CGameLoader.startGameWithPlayer", server.exports)
+        self.assertIn("CMapLoader.saveWithResult", server.exports)
         self.assertIn("event_loop.instance", server.exports)
         self.assertNotIn("CPluginLoader.loadDynamicPlugin", server.exports)
         self.assertNotIn("CGuiHandler.openPanel", server.exports)
@@ -25979,6 +25994,60 @@ class McpServerTest(unittest.TestCase):
 
     def test_stdio_map_walkthrough_ritual(self):
         self._assert_mcp_walkthrough("ritual")
+
+    def test_stdio_narrative_outcomes_complete_with_natural_objectives(self):
+        import uuid
+        import campaign as campaign_module
+        from tests.narrative_walkthrough import NarrativeWalkthrough
+
+        proc = self._start_stdio_mcp_process("ritual")
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            for class_id in ("Warrior", "Sorcerer"):
+                for outcome in ("good", "bad"):
+                    with self.subTest(class_id=class_id, outcome=outcome):
+                        game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(
+                            session, "ritual", class_id
+                        )
+                        driver = NarrativeWalkthrough(
+                            lambda name, args: self._mcp_engine_call(
+                                session, name, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+                            ),
+                            lambda handle, method, args: self._mcp_handle_call(
+                                session, handle, method, args, timeout=MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS
+                            ),
+                            game_handle,
+                            map_handle,
+                            player_handle,
+                        )
+                        for name, value in (
+                            (campaign_module.CAMPAIGN_ID_PROPERTY, "fallOfNouraajd"),
+                            (campaign_module.CAMPAIGN_SCENARIO_PROPERTY, "cleansing"),
+                        ):
+                            driver.call(driver.player, "setStringProperty", [name, value])
+                        save_name = "narrative-" + uuid.uuid4().hex
+                        save_paths = [build_dir / "save" / (save_name + suffix) for suffix in (".json", ".json.bak")]
+                        try:
+                            driver.ritual(outcome, save_name=save_name)
+                            log = driver.siege()
+                            self.assertTrue(
+                                driver.call(
+                                    driver.player, "getBoolProperty", [campaign_module.CAMPAIGN_FINISHED_PROPERTY]
+                                )
+                            )
+                            self.assertEqual(
+                                f"cleansing:{outcome}_ending,siege:completed",
+                                driver.call(
+                                    driver.player, "getStringProperty", [campaign_module.CAMPAIGN_HISTORY_PROPERTY]
+                                ),
+                            )
+                            self._write_mcp_walkthrough_log(f"narrative-{class_id}-{outcome}", log)
+                        finally:
+                            for path in save_paths:
+                                path.unlink(missing_ok=True)
+        finally:
+            self._shutdown_process(proc)
 
     def test_stdio_map_walkthrough_siege(self):
         self._assert_mcp_walkthrough("siege")
