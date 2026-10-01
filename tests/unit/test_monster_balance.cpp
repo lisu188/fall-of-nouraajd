@@ -393,6 +393,15 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
         for (bool enabled : {false, true}) {
             auto player = game->createObject<CPlayer>("Warrior");
             player->setLevel(3);
+            if (resolvedHit > 0) {
+                auto baseStats = player->getBaseStats();
+                baseStats->setNormalResist(95);
+                baseStats->setShadowResist(0);
+                const auto stats = player->getStats();
+                expect_true(
+                    stats->getNormalResist() == 95 && stats->getShadowResist() == 0,
+                    "the raw-hit boundary must satisfy the same controlled unequal-ward condition in both modes");
+            }
             if (equalWards) {
                 const auto originalStats = player->getStats();
                 auto baseStats = player->getBaseStats();
