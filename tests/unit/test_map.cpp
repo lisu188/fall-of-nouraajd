@@ -39,6 +39,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CTile.h"
 #include "object/CTrigger.h"
 #include "test_harness.h"
+#include "native_test_profile.h"
 #include "veventloop.h"
 
 #include <pybind11/embed.h>
@@ -56,6 +57,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 namespace {
+
+CNativeTestProfile &nativeTestProfile() {
+    static CNativeTestProfile profile("map");
+    return profile;
+}
 
 void pump_event_loop_iterations(int iterations = 10) {
     auto loop = vstd::event_loop<>::instance();
@@ -153,7 +159,7 @@ bool has_trace_event_reason(const std::vector<json> &records, const std::string 
 }
 
 void test_scene_manager_state_duplicate_and_player_transfer() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto old_map = game->getMap();
     auto player = old_map->getPlayer();
@@ -194,7 +200,7 @@ void test_game_change_map_duplicate_requests_commit_once() {
     TraceReset reset;
     CPlaytestTrace::configure(true);
 
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto old_map = game->getMap();
     auto player = old_map->getPlayer();
@@ -236,7 +242,7 @@ void test_game_change_map_duplicate_requests_commit_once() {
 }
 
 void test_scene_manager_transition_generation_start_and_commit() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
 
     auto context = game->getContext();
@@ -264,7 +270,7 @@ void test_scene_manager_transition_generation_start_and_commit() {
 }
 
 void test_scene_manager_stale_transition_generation_clears_pending_state() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
 
     auto old_map = game->getMap();
@@ -294,9 +300,9 @@ void test_scene_manager_trace_rejections_and_completion() {
     expect_true(!standalone_manager->requestMapChange(nullptr, "ritual"),
                 "trace-enabled scene manager should reject null-game requests");
 
-    auto first_game = CGameLoader::loadGame();
+    auto first_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(first_game, "test", "Warrior");
-    auto second_game = CGameLoader::loadGame();
+    auto second_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(second_game, "test", "Warrior");
     auto first_manager = first_game->getSceneManager();
 
@@ -321,7 +327,7 @@ void test_scene_manager_trace_rejections_and_completion() {
 }
 
 void test_scene_manager_repeated_transitions_and_controller_usability() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto player = game->getMap()->getPlayer();
     game->getMap()->setTurn(5);
@@ -364,7 +370,7 @@ void test_scene_manager_repeated_transitions_and_controller_usability() {
 // object survives the test -> ritual -> siege transitions intact. This is a
 // characterization test asserting that contract.
 void test_scene_manager_transition_preserves_player_archetypes() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto player = game->getMap()->getPlayer();
 
@@ -421,7 +427,7 @@ void test_scene_manager_null_and_legacy_missing_target_behavior() {
                 "null-game rejection should leave scene manager idle");
     CGameLoader::changeMap(nullptr, "ritual");
 
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto old_player = game->getMap()->getPlayer();
     game->getMap()->setTurn(19);
@@ -454,9 +460,9 @@ void test_scene_manager_null_and_legacy_missing_target_behavior() {
 }
 
 void test_scene_manager_rejects_cross_game_requests() {
-    auto game_a = CGameLoader::loadGame();
+    auto game_a = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game_a, "test", "Warrior");
-    auto game_b = CGameLoader::loadGame();
+    auto game_b = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game_b, "test", "Warrior");
 
     auto manager_a = game_a->getSceneManager();
@@ -701,7 +707,7 @@ std::shared_ptr<CCreature> add_post_combat_hostile(const std::shared_ptr<CGame> 
 }
 
 void test_map_move_restores_moving_flag_when_controller_future_fails() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
 
@@ -723,7 +729,7 @@ void test_map_move_restores_moving_flag_when_controller_future_fails() {
 }
 
 void test_map_move_ignores_controller_future_after_transition_generation_changes() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
 
@@ -929,7 +935,7 @@ void test_map_tiles_bounds_wrapping_and_object_cache() {
 }
 
 void test_tile_movement_cost_deserialization() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
 
     auto omitted = game->createObject<CTile>("GrassTile");
     expect_true(omitted && omitted->getMovementCost() == 1,
@@ -956,7 +962,7 @@ void test_tile_movement_cost_deserialization() {
 }
 
 void test_map_movement_cost_default_lookup_without_materializing() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     auto map = std::make_shared<CMap>();
     game->setMap(map);
     map->setGame(game);
@@ -1146,7 +1152,7 @@ void test_map_navigation_neighbors_include_registered_edges() {
 }
 
 void test_map_dump_paths_uses_navigation_neighbors() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     auto map = std::make_shared<CMap>();
     game->setMap(map);
     map->setGame(game);
@@ -1288,7 +1294,7 @@ void test_map_defensive_branches_and_strict_validation() {
 }
 
 void test_map_move_interrupts_invalid_planned_steps() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     auto map = std::make_shared<CMap>();
     game->setMap(map);
     map->setGame(game);
@@ -1482,7 +1488,7 @@ void test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes() {
 }
 
 void test_map_player_trigger_registration_is_idempotent() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     auto map = std::make_shared<CMap>();
     game->setMap(map);
     map->setGame(game);
@@ -1499,7 +1505,7 @@ void test_map_player_trigger_registration_is_idempotent() {
 }
 
 void test_map_player_detach_attach_transfer_api() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto old_map = game->getMap();
     auto player = old_map->getPlayer();
@@ -1631,7 +1637,7 @@ void test_map_keeps_tiles_and_objects_separate_by_z() {
 }
 
 void test_can_step_checks_default_tile_passability_without_materializing() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "multilevel", "Warrior");
     auto map = game->getMap();
 
@@ -1645,7 +1651,7 @@ void test_can_step_checks_default_tile_passability_without_materializing() {
 }
 
 void test_animation_provider_uses_dynamic_animation_for_directory_resources() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     auto object = std::make_shared<CGameObject>();
     object->setAnimation("images/monsters/octobogz");
 
@@ -1716,7 +1722,7 @@ void test_game_context_owns_a_map_session_store() {
 }
 
 void test_scene_manager_reload_vs_persistent_transition_requests() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto store = game->getContext()->getMapSessionStore();
     auto source_map = game->getMap();
@@ -1815,7 +1821,7 @@ class PreparedPlayerEntryProbe : public CEvent {
 };
 
 void test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto source = game->getMap();
     auto player = source->getPlayer();
@@ -1878,7 +1884,7 @@ void test_scene_manager_preparation_precedes_entry_and_restores_failed_attachmen
 }
 
 void test_scene_manager_prepared_request_rejection_failure_and_cancellation() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto source = game->getMap();
     const auto sourceScope = game->getResourcesProvider()->getActiveScope();
@@ -1909,7 +1915,7 @@ void test_scene_manager_prepared_request_rejection_failure_and_cancellation() {
 
 void test_scene_manager_destination_entry_shutdown_cancels_commit() {
     for (const bool carryTurn : {true, false}) {
-        auto game = CGameLoader::loadGame();
+        auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
         CGameLoader::startGameWithPlayer(game, "test", "Warrior");
         auto source = game->getMap();
         auto player = source->getPlayer();
@@ -1948,7 +1954,7 @@ void test_scene_manager_destination_entry_shutdown_cancels_commit() {
 }
 
 void test_map_move_blocks_new_turn_while_transition_pending() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
 
@@ -2059,7 +2065,7 @@ void test_set_base_stats_preserves_current_hp_and_mana() {
 }
 
 void test_post_combat_player_victory_returns_to_origin() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2085,7 +2091,7 @@ void test_post_combat_player_victory_returns_to_origin() {
 }
 
 void test_post_combat_player_defeat_skips_further_movement() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2134,7 +2140,7 @@ std::vector<int> capture_player_effective_stats(const std::shared_ptr<CStats> &s
 // effective stats must come back identical after the defeat->recovery cycle. This is a
 // characterization test of that contract (no production change).
 void test_post_combat_defeat_recovery_preserves_player_archetypes() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2200,7 +2206,7 @@ void test_post_combat_defeat_recovery_preserves_player_archetypes() {
 }
 
 void test_post_combat_player_cancellation_returns_to_origin() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2226,7 +2232,7 @@ void test_post_combat_player_cancellation_returns_to_origin() {
 }
 
 void test_post_combat_player_multi_opponent_cell_returns_to_origin() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2255,7 +2261,7 @@ void test_post_combat_player_multi_opponent_cell_returns_to_origin() {
 }
 
 void test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2286,7 +2292,7 @@ void test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell() {
 }
 
 void test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2321,7 +2327,7 @@ void test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present
 // pre-step origin and the commit loop must interrupt the path controller, so a subsequent move
 // cycle does not automatically retarget the same enemy cell.
 void test_post_combat_player_path_stops_after_encounter() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2374,7 +2380,7 @@ void pick_isolated_step(const std::shared_ptr<CMap> &map, Coords &origin, Coords
 }
 
 void test_post_combat_player_suppresses_destination_visit_events() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
     auto map = game->getMap();
     auto player = map->getPlayer();
@@ -2424,8 +2430,9 @@ void test_post_combat_player_suppresses_destination_visit_events() {
 // is the normal path and must behave identically to the legacy call and never crash.
 void test_loader_race_overloads_preserve_default_and_attach_race() {
     // Legacy three-argument path: template's default race, no raceId override.
-    auto legacy_game = CGameLoader::loadGame();
-    CGameLoader::startGameWithPlayer(legacy_game, "test", "Warrior");
+    auto legacy_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startGameWithPlayer",
+                            [&] { CGameLoader::startGameWithPlayer(legacy_game, "test", "Warrior"); });
     auto legacy_player = legacy_game->getMap()->getPlayer();
     expect_true(legacy_player != nullptr, "legacy three-argument startGameWithPlayer should attach a player");
     const std::string default_race_id = legacy_player->getRaceId();
@@ -2434,8 +2441,9 @@ void test_loader_race_overloads_preserve_default_and_attach_race() {
 
     // New four-argument path with an empty raceId must behave identically to the legacy path:
     // same default race id, no race object attached, no crash.
-    auto empty_game = CGameLoader::loadGame();
-    CGameLoader::startGameWithPlayer(empty_game, "test", "Warrior", std::string());
+    auto empty_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startGameWithPlayer",
+                            [&] { CGameLoader::startGameWithPlayer(empty_game, "test", "Warrior", std::string()); });
     auto empty_player = empty_game->getMap()->getPlayer();
     expect_true(empty_player != nullptr, "four-argument loader with empty raceId should attach a player");
     expect_true(empty_player->getRaceId() == default_race_id,
@@ -2446,14 +2454,17 @@ void test_loader_race_overloads_preserve_default_and_attach_race() {
     // the active map is replaced. Because no such race content exists, the resolved CCreatureRace is
     // null, so the loader aborts without switching maps or attaching a partial player
     // ([EPIC_04][STORY_04][SUBSTORY_02]). Starting from a fresh game leaves no active map.
-    auto race_game = CGameLoader::loadGame();
-    CGameLoader::startGameWithPlayer(race_game, "test", "Warrior", "nonexistent-race");
+    auto race_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startGameWithPlayer", [&] {
+        CGameLoader::startGameWithPlayer(race_game, "test", "Warrior", "nonexistent-race");
+    });
     expect_true(race_game->getMap() == nullptr,
                 "an unknown raceId must abort before replacing the active map (no partial player)");
 
     // The random-map four-argument overload with an empty raceId must also load without crashing.
-    auto random_game = CGameLoader::loadGame();
-    CGameLoader::startRandomGameWithPlayer(random_game, "Warrior", std::string());
+    auto random_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startRandomGameWithPlayer",
+                            [&] { CGameLoader::startRandomGameWithPlayer(random_game, "Warrior", std::string()); });
     auto random_player = random_game->getMap()->getPlayer();
     expect_true(random_player != nullptr,
                 "four-argument startRandomGameWithPlayer with empty raceId should attach a player");
@@ -2466,7 +2477,7 @@ void test_loader_race_overloads_preserve_default_and_attach_race() {
 // active map and its player completely unchanged -- no map switch, no partial player -- while a
 // subsequent start with an empty raceId still succeeds.
 void test_loader_invalid_race_leaves_active_map_unchanged() {
-    auto game = CGameLoader::loadGame();
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
 
     auto original_map = game->getMap();
@@ -2540,55 +2551,100 @@ void test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_i
 int main() {
     pybind11::scoped_interpreter guard{};
 
-    test_loader_race_overloads_preserve_default_and_attach_race();
-    test_loader_invalid_race_leaves_active_map_unchanged();
-    test_scene_manager_state_duplicate_and_player_transfer();
-    test_game_change_map_duplicate_requests_commit_once();
-    test_scene_manager_transition_generation_start_and_commit();
-    test_scene_manager_stale_transition_generation_clears_pending_state();
-    test_scene_manager_trace_rejections_and_completion();
-    test_scene_manager_repeated_transitions_and_controller_usability();
-    test_scene_manager_transition_preserves_player_archetypes();
-    test_scene_manager_null_and_legacy_missing_target_behavior();
-    test_scene_manager_rejects_cross_game_requests();
-    test_map_move_restores_moving_flag_when_controller_future_fails();
-    test_map_move_ignores_controller_future_after_transition_generation_changes();
-    test_map_tiles_bounds_wrapping_and_object_cache();
-    test_tile_movement_cost_deserialization();
-    test_map_movement_cost_default_lookup_without_materializing();
-    test_map_navigation_edges_update_revision();
-    test_navigation_step_cost_preserves_terrain_and_prices_connectors();
-    test_map_navigation_neighbors_include_registered_edges();
-    test_map_dump_paths_uses_navigation_neighbors();
-    test_map_defensive_branches_and_strict_validation();
-    test_map_move_interrupts_invalid_planned_steps();
-    test_creature_tracks_pending_move_origin_only_during_after_move();
-    test_map_object_relocate_without_move_hooks_updates_spatial_state_once();
-    test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes();
-    test_map_player_trigger_registration_is_idempotent();
-    test_map_player_detach_attach_transfer_api();
-    test_map_keeps_tiles_and_objects_separate_by_z();
-    test_can_step_checks_default_tile_passability_without_materializing();
-    test_animation_provider_uses_dynamic_animation_for_directory_resources();
-    test_map_session_store_put_get_evict_and_ownership();
-    test_game_context_owns_a_map_session_store();
-    test_scene_manager_reload_vs_persistent_transition_requests();
-    test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment();
-    test_scene_manager_prepared_request_rejection_failure_and_cancellation();
-    test_scene_manager_destination_entry_shutdown_cancels_commit();
-    test_map_move_blocks_new_turn_while_transition_pending();
-    test_map_add_object_fills_hp_and_mana_from_composed_stats();
-    test_set_base_stats_preserves_current_hp_and_mana();
-    test_post_combat_player_victory_returns_to_origin();
-    test_post_combat_player_defeat_skips_further_movement();
-    test_post_combat_defeat_recovery_preserves_player_archetypes();
-    test_post_combat_player_cancellation_returns_to_origin();
-    test_post_combat_player_multi_opponent_cell_returns_to_origin();
-    test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell();
-    test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present();
+    nativeTestProfile().run("test_loader_race_overloads_preserve_default_and_attach_race",
+                            test_loader_race_overloads_preserve_default_and_attach_race);
+    nativeTestProfile().run("test_loader_invalid_race_leaves_active_map_unchanged",
+                            test_loader_invalid_race_leaves_active_map_unchanged);
+    nativeTestProfile().run("test_scene_manager_state_duplicate_and_player_transfer",
+                            test_scene_manager_state_duplicate_and_player_transfer);
+    nativeTestProfile().run("test_game_change_map_duplicate_requests_commit_once",
+                            test_game_change_map_duplicate_requests_commit_once);
+    nativeTestProfile().run("test_scene_manager_transition_generation_start_and_commit",
+                            test_scene_manager_transition_generation_start_and_commit);
+    nativeTestProfile().run("test_scene_manager_stale_transition_generation_clears_pending_state",
+                            test_scene_manager_stale_transition_generation_clears_pending_state);
+    nativeTestProfile().run("test_scene_manager_trace_rejections_and_completion",
+                            test_scene_manager_trace_rejections_and_completion);
+    nativeTestProfile().run("test_scene_manager_repeated_transitions_and_controller_usability",
+                            test_scene_manager_repeated_transitions_and_controller_usability);
+    nativeTestProfile().run("test_scene_manager_transition_preserves_player_archetypes",
+                            test_scene_manager_transition_preserves_player_archetypes);
+    nativeTestProfile().run("test_scene_manager_null_and_legacy_missing_target_behavior",
+                            test_scene_manager_null_and_legacy_missing_target_behavior);
+    nativeTestProfile().run("test_scene_manager_rejects_cross_game_requests",
+                            test_scene_manager_rejects_cross_game_requests);
+    nativeTestProfile().run("test_map_move_restores_moving_flag_when_controller_future_fails",
+                            test_map_move_restores_moving_flag_when_controller_future_fails);
+    nativeTestProfile().run("test_map_move_ignores_controller_future_after_transition_generation_changes",
+                            test_map_move_ignores_controller_future_after_transition_generation_changes);
+    nativeTestProfile().run("test_map_tiles_bounds_wrapping_and_object_cache",
+                            test_map_tiles_bounds_wrapping_and_object_cache);
+    nativeTestProfile().run("test_tile_movement_cost_deserialization", test_tile_movement_cost_deserialization);
+    nativeTestProfile().run("test_map_movement_cost_default_lookup_without_materializing",
+                            test_map_movement_cost_default_lookup_without_materializing);
+    nativeTestProfile().run("test_map_navigation_edges_update_revision", test_map_navigation_edges_update_revision);
+    nativeTestProfile().run("test_navigation_step_cost_preserves_terrain_and_prices_connectors",
+                            test_navigation_step_cost_preserves_terrain_and_prices_connectors);
+    nativeTestProfile().run("test_map_navigation_neighbors_include_registered_edges",
+                            test_map_navigation_neighbors_include_registered_edges);
+    nativeTestProfile().run("test_map_dump_paths_uses_navigation_neighbors",
+                            test_map_dump_paths_uses_navigation_neighbors);
+    nativeTestProfile().run("test_map_defensive_branches_and_strict_validation",
+                            test_map_defensive_branches_and_strict_validation);
+    nativeTestProfile().run("test_map_move_interrupts_invalid_planned_steps",
+                            test_map_move_interrupts_invalid_planned_steps);
+    nativeTestProfile().run("test_creature_tracks_pending_move_origin_only_during_after_move",
+                            test_creature_tracks_pending_move_origin_only_during_after_move);
+    nativeTestProfile().run("test_map_object_relocate_without_move_hooks_updates_spatial_state_once",
+                            test_map_object_relocate_without_move_hooks_updates_spatial_state_once);
+    nativeTestProfile().run("test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes",
+                            test_map_owned_objects_and_tiles_remember_owner_when_active_map_changes);
+    nativeTestProfile().run("test_map_player_trigger_registration_is_idempotent",
+                            test_map_player_trigger_registration_is_idempotent);
+    nativeTestProfile().run("test_map_player_detach_attach_transfer_api", test_map_player_detach_attach_transfer_api);
+    nativeTestProfile().run("test_map_keeps_tiles_and_objects_separate_by_z",
+                            test_map_keeps_tiles_and_objects_separate_by_z);
+    nativeTestProfile().run("test_can_step_checks_default_tile_passability_without_materializing",
+                            test_can_step_checks_default_tile_passability_without_materializing);
+    nativeTestProfile().run("test_animation_provider_uses_dynamic_animation_for_directory_resources",
+                            test_animation_provider_uses_dynamic_animation_for_directory_resources);
+    nativeTestProfile().run("test_map_session_store_put_get_evict_and_ownership",
+                            test_map_session_store_put_get_evict_and_ownership);
+    nativeTestProfile().run("test_game_context_owns_a_map_session_store", test_game_context_owns_a_map_session_store);
+    nativeTestProfile().run("test_scene_manager_reload_vs_persistent_transition_requests",
+                            test_scene_manager_reload_vs_persistent_transition_requests);
+    nativeTestProfile().run("test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment",
+                            test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment);
+    nativeTestProfile().run("test_scene_manager_prepared_request_rejection_failure_and_cancellation",
+                            test_scene_manager_prepared_request_rejection_failure_and_cancellation);
+    nativeTestProfile().run("test_scene_manager_destination_entry_shutdown_cancels_commit",
+                            test_scene_manager_destination_entry_shutdown_cancels_commit);
+    nativeTestProfile().run("test_map_move_blocks_new_turn_while_transition_pending",
+                            test_map_move_blocks_new_turn_while_transition_pending);
+    nativeTestProfile().run("test_map_add_object_fills_hp_and_mana_from_composed_stats",
+                            test_map_add_object_fills_hp_and_mana_from_composed_stats);
+    nativeTestProfile().run("test_set_base_stats_preserves_current_hp_and_mana",
+                            test_set_base_stats_preserves_current_hp_and_mana);
+    nativeTestProfile().run("test_post_combat_player_victory_returns_to_origin",
+                            test_post_combat_player_victory_returns_to_origin);
+    nativeTestProfile().run("test_post_combat_player_defeat_skips_further_movement",
+                            test_post_combat_player_defeat_skips_further_movement);
+    nativeTestProfile().run("test_post_combat_defeat_recovery_preserves_player_archetypes",
+                            test_post_combat_defeat_recovery_preserves_player_archetypes);
+    nativeTestProfile().run("test_post_combat_player_cancellation_returns_to_origin",
+                            test_post_combat_player_cancellation_returns_to_origin);
+    nativeTestProfile().run("test_post_combat_player_multi_opponent_cell_returns_to_origin",
+                            test_post_combat_player_multi_opponent_cell_returns_to_origin);
+    nativeTestProfile().run("test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell",
+                            test_post_combat_victory_keeps_object_cache_at_origin_not_hostile_cell);
+    nativeTestProfile().run("test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present",
+                            test_post_combat_cancellation_keeps_object_cache_at_origin_with_foe_present);
 
-    test_post_combat_player_path_stops_after_encounter();
-    test_post_combat_player_suppresses_destination_visit_events();
-    test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_ids();
+    nativeTestProfile().run("test_post_combat_player_path_stops_after_encounter",
+                            test_post_combat_player_path_stops_after_encounter);
+    nativeTestProfile().run("test_post_combat_player_suppresses_destination_visit_events",
+                            test_post_combat_player_suppresses_destination_visit_events);
+    nativeTestProfile().run("test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_ids",
+                            test_playtest_trace_objectref_distinguishes_creature_spawn_from_archetype_ids);
     return finish_tests();
 }

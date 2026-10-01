@@ -44,6 +44,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CQuest.h"
 #include "object/CTrigger.h"
 #include "test_harness.h"
+#include "native_test_profile.h"
 
 #include <SDL.h>
 #include <pybind11/embed.h>
@@ -65,6 +66,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 namespace {
+
+CNativeTestProfile &nativeTestProfile() {
+    static CNativeTestProfile profile("handler");
+    return profile;
+}
 
 void testGameplayMetadataIsAvailableBeforePluginLoading() {
     const auto expectMetadata = []<typename T>(const char *message) {
@@ -241,8 +247,8 @@ class QuestLifecycleProbe : public CQuest {
 };
 
 std::shared_ptr<CGame> load_empty_game() {
-    auto game = CGameLoader::loadGame();
-    CGameLoader::startGame(game, "empty");
+    auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
+    nativeTestProfile().run("CGameLoader::startGame(empty)", [&] { CGameLoader::startGame(game, "empty"); });
     return game;
 }
 
@@ -1371,24 +1377,26 @@ std::shared_ptr<json> make_unit_creature_config(int sw) {
 
 void primeEncounterFixtureLevels(const std::shared_ptr<CGame> &game, int budget, int samples,
                                  const std::string &fixture) {
-    // These samples assert candidate membership, not XP progression. Prime copied configs after
-    // checking their authored prototypes so every sample avoids replaying unrelated level unlocks.
-    // The fresh-template XP regression and raw baseline remain separate and unmodified.
-    auto handler = game->getObjectHandler();
-    std::size_t primed = 0;
-    for (const auto &type : handler->getAllSubTypes("CCreature")) {
-        auto resolvedClass = handler->getType(handler->getClass(type));
-        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
-            continue;
+    nativeTestProfile().run("primeEncounterFixtureLevels", [&] {
+        // These samples assert candidate membership, not XP progression. Prime copied configs after
+        // checking their authored prototypes so every sample avoids replaying unrelated level unlocks.
+        // The fresh-template XP regression and raw baseline remain separate and unmodified.
+        auto handler = game->getObjectHandler();
+        std::size_t primed = 0;
+        for (const auto &type : handler->getAllSubTypes("CCreature")) {
+            auto resolvedClass = handler->getType(handler->getClass(type));
+            if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+                continue;
+            }
+            auto config = CJsonUtil::clone(handler->getConfig(type));
+            (*config)["properties"]["exp"] = 0;
+            (*config)["properties"]["level"] = budget;
+            handler->registerConfig(type, config);
+            ++primed;
         }
-        auto config = CJsonUtil::clone(handler->getConfig(type));
-        (*config)["properties"]["exp"] = 0;
-        (*config)["properties"]["level"] = budget;
-        handler->registerConfig(type, config);
-        ++primed;
-    }
-    std::cout << "[encounter-fixture] " << fixture << " templates=" << primed << " level=" << budget
-              << " samples=" << samples << " maxSamplingLevelUps=0\n";
+        std::cout << "[encounter-fixture] " << fixture << " templates=" << primed << " level=" << budget
+                  << " samples=" << samples << " maxSamplingLevelUps=0\n";
+    });
 }
 
 void test_rng_handler_scales_fresh_creatures_before_map_insertion() {
@@ -1805,23 +1813,26 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     // set-membership comparison, not a sequence comparison.
     const int kFullBudget = 60;
     primeEncounterFixtureLevels(game, kFullBudget, 256, "full-power-buckets");
-    CRngHandler rng_handler(game);
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
     bool producedFullEncounter = false;
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
-            if (!creature) {
-                continue;
+    nativeTestProfile().run("encounter samples(full-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kFullBudget,
+                            "full-budget sampling must not replay fixture level-ups");
+                producedFullEncounter = true;
+                expect_true(eligibleSwBuckets.contains(creature->getSw()),
+                            "every encounter creature's sw must be drawn from a registered eligible power bucket");
+                expect_true(creature->getSw() <= kFullBudget,
+                            "every encounter creature's sw must respect the requested power budget");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
             }
-            expect_true(creature->getLevel() == kFullBudget, "full-budget sampling must not replay fixture level-ups");
-            producedFullEncounter = true;
-            expect_true(eligibleSwBuckets.contains(creature->getSw()),
-                        "every encounter creature's sw must be drawn from a registered eligible power bucket");
-            expect_true(creature->getSw() <= kFullBudget,
-                        "every encounter creature's sw must respect the requested power budget");
-            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
-                        "scaled encounter creatures must keep getScale() == level + sw");
         }
-    }
+    });
     expect_true(producedFullEncounter,
                 "a full power budget should assemble at least one encounter from the eligible buckets");
 
@@ -1832,21 +1843,23 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     // regardless of which low bucket the RNG happens to sample.
     const int kTightBudget = kHighSw - 1; // 8: below the high bucket, so it is never eligible
     primeEncounterFixtureLevels(game, kTightBudget, 256, "tight-power-buckets");
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
-            if (!creature) {
-                continue;
+    nativeTestProfile().run("encounter samples(tight-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kTightBudget,
+                            "tight-budget sampling must not replay fixture level-ups");
+                expect_true(creature->getSw() <= kTightBudget,
+                            "a tight power budget must exclude every bucket whose sw exceeds the budget");
+                expect_true(creature->getSw() != kHighSw,
+                            "the high power bucket must never be sampled when the budget is below its sw");
+                expect_true(creature->getType() != highId,
+                            "the high archetype must never be assembled under a sub-threshold power budget");
             }
-            expect_true(creature->getLevel() == kTightBudget,
-                        "tight-budget sampling must not replay fixture level-ups");
-            expect_true(creature->getSw() <= kTightBudget,
-                        "a tight power budget must exclude every bucket whose sw exceeds the budget");
-            expect_true(creature->getSw() != kHighSw,
-                        "the high power bucket must never be sampled when the budget is below its sw");
-            expect_true(creature->getType() != highId,
-                        "the high archetype must never be assembled under a sub-threshold power budget");
         }
-    }
+    });
 
     // (3) Empty-encounter equivalence: a clamped-to-zero (or non-positive) budget leaves
     // random_components with nothing to decompose, so no candidate is ever drawn. This
@@ -2073,44 +2086,46 @@ void test_rng_handler_excludes_player_templates_from_encounters() {
                 "no other monster template may share the high monster's sw bucket for the determinism proof");
 
     primeEncounterFixtureLevels(game, 60, 256, "player-exclusion");
-    CRngHandler rng_handler(game);
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
 
     bool sawRegisteredMonster = false;
     bool producedEncounter = false;
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(60)) {
-            if (!creature) {
-                continue;
-            }
-            expect_true(creature->getLevel() == 60, "player-exclusion sampling must not replay fixture level-ups");
-            producedEncounter = true;
+    nativeTestProfile().run("encounter samples(player-exclusion)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(60)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == 60, "player-exclusion sampling must not replay fixture level-ups");
+                producedEncounter = true;
 
-            // (1) A player template must NEVER be assembled into a random encounter. The
-            // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
-            // never construct as a CPlayer-derived instance. getType() carries the resolved class
-            // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
-            expect_true(creature->getType() != "CPlayer",
-                        "random encounters must never select a CPlayer-classed template");
-            expect_true(!creature->meta()->inherits("CPlayer"),
-                        "no assembled encounter creature may be a CPlayer-derived player template");
+                // (1) A player template must NEVER be assembled into a random encounter. The
+                // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
+                // never construct as a CPlayer-derived instance. getType() carries the resolved class
+                // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
+                expect_true(creature->getType() != "CPlayer",
+                            "random encounters must never select a CPlayer-classed template");
+                expect_true(!creature->meta()->inherits("CPlayer"),
+                            "no assembled encounter creature may be a CPlayer-derived player template");
 
-            // (3) Every assembled creature's sw must remain one of the unchanged monster power
-            // buckets -- the player filter must not perturb monster sw selection.
-            expect_true(monsterSwBuckets.contains(creature->getSw()),
-                        "encounter creatures must keep an unchanged registered monster sw power bucket");
-            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
-                        "scaled encounter creatures must keep getScale() == level + sw");
+                // (3) Every assembled creature's sw must remain one of the unchanged monster power
+                // buckets -- the player filter must not perturb monster sw selection.
+                expect_true(monsterSwBuckets.contains(creature->getSw()),
+                            "encounter creatures must keep an unchanged registered monster sw power bucket");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
 
-            // (2) Genuine monster candidates are still selected. Any creature drawn from the
-            // exclusive high-sw bucket is provably the registered high monster; confirm its config
-            // id via getTypeId() (getType() is the class name "CCreature", not the config key).
-            if (creature->getSw() == kMonsterHighSw) {
-                expect_true(creature->getTypeId() == monsterHighId,
-                            "the exclusive high-sw bucket must only ever yield the registered high monster");
-                sawRegisteredMonster = true;
+                // (2) Genuine monster candidates are still selected. Any creature drawn from the
+                // exclusive high-sw bucket is provably the registered high monster; confirm its config
+                // id via getTypeId() (getType() is the class name "CCreature", not the config key).
+                if (creature->getSw() == kMonsterHighSw) {
+                    expect_true(creature->getTypeId() == monsterHighId,
+                                "the exclusive high-sw bucket must only ever yield the registered high monster");
+                    sawRegisteredMonster = true;
+                }
             }
         }
-    }
+    });
 
     // (2) Genuine monster candidates are still selected after the player exclusion.
     expect_true(producedEncounter,
@@ -2279,46 +2294,85 @@ int main() {
             std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
         std::cout << "[handler-test] EXIT " << name << " elapsedMs=" << elapsed << std::endl;
     };
-    testGameplayMetadataIsAvailableBeforePluginLoading();
+    nativeTestProfile().run("testGameplayMetadataIsAvailableBeforePluginLoading",
+                            testGameplayMetadataIsAvailableBeforePluginLoading);
 
-    test_script_handler_executes_commands_and_wraps_functions();
-    test_handler_constructors_are_covered_by_native_tests();
-    test_creature_scale_preserves_level_plus_sw_invariant();
-    test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions();
-    test_rng_handler_builds_encounters_from_concrete_creature_sw();
-    test_rng_handler_scales_fresh_creatures_before_map_insertion();
-    test_rng_handler_excludes_noncombatants_from_encounters();
-    test_rng_handler_excludes_archetype_definitions_from_encounters();
-    test_rng_handler_excludes_player_templates_from_encounters();
-    test_rng_handler_captures_encounter_power_and_scale_baseline();
-    test_rng_handler_encounter_candidates_stay_in_stable_power_buckets();
-    test_rng_handler_distinguishes_associated_classes_with_neutral_scale();
-    test_creature_subtype_inventory_is_enumerable_on_loaded_game();
-    test_event_handler_trigger_registration_uses_named_comparison_helpers();
-    test_fight_handler_rejects_stale_and_cross_map_participants();
-    test_fight_handler_attributes_lethal_effects_to_valid_casters();
-    test_fight_handler_reports_explicit_outcomes_and_final_status();
-    test_fight_handler_reports_invalid_result_metadata();
-    test_fight_handler_reports_cancelled_quit_event();
-    test_fight_handler_ends_original_started_controllers();
-    runTimedGuiCancellationTest("test_fight_handler_reports_cancelled_closed_fight_panel",
-                                test_fight_handler_reports_cancelled_closed_fight_panel);
-    runTimedGuiCancellationTest("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
-                                test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
-    runTimedGuiCancellationTest("test_fight_handler_returns_cancelled_when_player_control_cancels",
-                                test_fight_handler_returns_cancelled_when_player_control_cancels);
-    test_fight_panel_resets_status_between_sequential_encounters();
-    test_fight_handler_counts_effect_duration_as_progress();
-    test_player_quest_completion_ignores_reentry_and_captures_final_callback_state();
-    test_player_quest_completion_accepts_cleared_active_set();
-    test_player_quest_completion_skips_removed_snapshot_entries();
-    test_player_quest_completion_defers_new_quests_until_next_pass();
-    test_player_quest_completion_restores_guard_after_native_exceptions();
-    test_player_capture_quest_journal_passes_membership_without_completing();
-    test_playtest_trace_records_native_limits_and_quest_completion();
-    test_playtest_trace_environment_targets_and_fallback_ids();
-    test_fight_handler_records_outcome_trace_metadata();
-    test_player_respawn_normalizes_wrapped_entry_coords();
+    nativeTestProfile().run("test_script_handler_executes_commands_and_wraps_functions",
+                            test_script_handler_executes_commands_and_wraps_functions);
+    nativeTestProfile().run("test_handler_constructors_are_covered_by_native_tests",
+                            test_handler_constructors_are_covered_by_native_tests);
+    nativeTestProfile().run("test_creature_scale_preserves_level_plus_sw_invariant",
+                            test_creature_scale_preserves_level_plus_sw_invariant);
+    nativeTestProfile().run("test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions",
+                            test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions);
+    nativeTestProfile().run("test_rng_handler_builds_encounters_from_concrete_creature_sw",
+                            test_rng_handler_builds_encounters_from_concrete_creature_sw);
+    nativeTestProfile().run("test_rng_handler_scales_fresh_creatures_before_map_insertion",
+                            test_rng_handler_scales_fresh_creatures_before_map_insertion);
+    nativeTestProfile().run("test_rng_handler_excludes_noncombatants_from_encounters",
+                            test_rng_handler_excludes_noncombatants_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_archetype_definitions_from_encounters",
+                            test_rng_handler_excludes_archetype_definitions_from_encounters);
+    nativeTestProfile().run("test_rng_handler_excludes_player_templates_from_encounters",
+                            test_rng_handler_excludes_player_templates_from_encounters);
+    nativeTestProfile().run("test_rng_handler_captures_encounter_power_and_scale_baseline",
+                            test_rng_handler_captures_encounter_power_and_scale_baseline);
+    nativeTestProfile().run("test_rng_handler_encounter_candidates_stay_in_stable_power_buckets",
+                            test_rng_handler_encounter_candidates_stay_in_stable_power_buckets);
+    nativeTestProfile().run("test_rng_handler_distinguishes_associated_classes_with_neutral_scale",
+                            test_rng_handler_distinguishes_associated_classes_with_neutral_scale);
+    nativeTestProfile().run("test_creature_subtype_inventory_is_enumerable_on_loaded_game",
+                            test_creature_subtype_inventory_is_enumerable_on_loaded_game);
+    nativeTestProfile().run("test_event_handler_trigger_registration_uses_named_comparison_helpers",
+                            test_event_handler_trigger_registration_uses_named_comparison_helpers);
+    nativeTestProfile().run("test_fight_handler_rejects_stale_and_cross_map_participants",
+                            test_fight_handler_rejects_stale_and_cross_map_participants);
+    nativeTestProfile().run("test_fight_handler_attributes_lethal_effects_to_valid_casters",
+                            test_fight_handler_attributes_lethal_effects_to_valid_casters);
+    nativeTestProfile().run("test_fight_handler_reports_explicit_outcomes_and_final_status",
+                            test_fight_handler_reports_explicit_outcomes_and_final_status);
+    nativeTestProfile().run("test_fight_handler_reports_invalid_result_metadata",
+                            test_fight_handler_reports_invalid_result_metadata);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_quit_event",
+                            test_fight_handler_reports_cancelled_quit_event);
+    nativeTestProfile().run("test_fight_handler_ends_original_started_controllers",
+                            test_fight_handler_ends_original_started_controllers);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_closed_fight_panel", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_reports_cancelled_closed_fight_panel",
+                                    test_fight_handler_reports_cancelled_closed_fight_panel);
+    });
+    nativeTestProfile().run("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels", [&] {
+        runTimedGuiCancellationTest("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
+                                    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
+    });
+    nativeTestProfile().run("test_fight_handler_returns_cancelled_when_player_control_cancels", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_returns_cancelled_when_player_control_cancels",
+                                    test_fight_handler_returns_cancelled_when_player_control_cancels);
+    });
+    nativeTestProfile().run("test_fight_panel_resets_status_between_sequential_encounters",
+                            test_fight_panel_resets_status_between_sequential_encounters);
+    nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
+                            test_fight_handler_counts_effect_duration_as_progress);
+    nativeTestProfile().run("test_player_quest_completion_ignores_reentry_and_captures_final_callback_state",
+                            test_player_quest_completion_ignores_reentry_and_captures_final_callback_state);
+    nativeTestProfile().run("test_player_quest_completion_accepts_cleared_active_set",
+                            test_player_quest_completion_accepts_cleared_active_set);
+    nativeTestProfile().run("test_player_quest_completion_skips_removed_snapshot_entries",
+                            test_player_quest_completion_skips_removed_snapshot_entries);
+    nativeTestProfile().run("test_player_quest_completion_defers_new_quests_until_next_pass",
+                            test_player_quest_completion_defers_new_quests_until_next_pass);
+    nativeTestProfile().run("test_player_quest_completion_restores_guard_after_native_exceptions",
+                            test_player_quest_completion_restores_guard_after_native_exceptions);
+    nativeTestProfile().run("test_player_capture_quest_journal_passes_membership_without_completing",
+                            test_player_capture_quest_journal_passes_membership_without_completing);
+    nativeTestProfile().run("test_playtest_trace_records_native_limits_and_quest_completion",
+                            test_playtest_trace_records_native_limits_and_quest_completion);
+    nativeTestProfile().run("test_playtest_trace_environment_targets_and_fallback_ids",
+                            test_playtest_trace_environment_targets_and_fallback_ids);
+    nativeTestProfile().run("test_fight_handler_records_outcome_trace_metadata",
+                            test_fight_handler_records_outcome_trace_metadata);
+    nativeTestProfile().run("test_player_respawn_normalizes_wrapped_entry_coords",
+                            test_player_respawn_normalizes_wrapped_entry_coords);
 
     return finish_tests();
 }

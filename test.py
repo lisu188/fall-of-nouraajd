@@ -130,6 +130,8 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "NativeCallgrindToolTest.",
+    "NativeTestProfileSourceTest.",
     "PlayerIdentityContentTest.",
     "EffectContractTest.",
     "CharacterCreationFlowTest.",
@@ -160,6 +162,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "NativeTestProfileRuntimeTest.",
     "PlayerIdentityMcpTest.",
     "EffectSemanticRuntimeTest.",
     "CharacterPreviewRuntimeTest.",
@@ -25576,6 +25579,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_native_callgrind import NativeCallgrindToolTest as _NativeCallgrindToolTest
+    from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
+    from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
     from tests.test_player_identity_mcp import PlayerIdentityMcpTest as _PlayerIdentityMcpTest
     from tests.test_player_identity_content import PlayerIdentityContentTest as _PlayerIdentityContentTest
     from tests.test_effect_semantics import EffectContractTest as _EffectContractTest
@@ -25590,6 +25596,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
+        pass
+
+    class NativeTestProfileSourceTest(_NativeTestProfileSourceTest):
+        pass
+
+    class NativeCallgrindToolTest(_NativeCallgrindToolTest):
+        pass
+
+    class NativeTestProfileRuntimeTest(_NativeTestProfileRuntimeTest):
         pass
 
     class EffectContractTest(_EffectContractTest):
@@ -25639,6 +25654,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _PaidActionRuntimeTest
+    del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
+    del _NativeCallgrindToolTest
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
     del _PlayerIdentityContentTest
