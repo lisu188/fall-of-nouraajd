@@ -255,3 +255,22 @@ before movement and records their actual pulse, phase, raw packet and mana after
 combat or road retreat. At least one positive shadow packet across the real melee
 and caster routes is required; a phase flag alone cannot satisfy this witness.
 Fresh native, full-suite, coverage and authored-route outcomes remain pending.
+
+Head9708a446 passed the fixed110-fight hunt comparison and closed phase/packet
+contracts on Linux and Windows (Windows hunt entry5.66seconds). This does not
+establish authored-route playability: Linux gameplay exposed a bare-JSON registry
+string interpreted as an object by save loading, an unexported legacy fixture
+director call, a closed Sorcerer town gate, and a Warrior return from the cave
+to the map entry before the hunt completed. Windows still rejected its inherited
+role matrix at Warrior/Cultist HP4 to3. Full-suite/coverage/MCP acceptance failed.
+
+The registry now uses the opaque `octobogzHunt.v1:` string envelope, retaining
+raw JSON reads for in-memory legacy compatibility without changing the native
+save schema. A real runtime regression asserts the exact registry string in the
+versioned save snapshot and reloads partial actors, HP/mana, owned effects and
+phases. The legacy quest-boundary MCP fixture enters the real lair instead of
+calling an unpublished director method. The dedicated combat route opens the
+authored Sorcerer gate and rejects both a changed defeat receipt and any
+unexplained multi-cell arrival; being alive after native respawn is insufficient.
+Source regressions cover both failures. Real ordinary preparation and recovery
+must still produce completed melee/caster hunts before this work is accepted.

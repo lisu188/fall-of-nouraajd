@@ -4831,7 +4831,7 @@ def completeOctobogzFixture(game_map):
     """Resolve three actor deaths for quest boundary fixtures; this is not a combat walkthrough."""
     game_map.getGame().createObject("OctobogzHuntDirector").start(game_map)
     for slot in ("scout", "brood", "alpha"):
-        state = json.loads(game_map.getStringProperty("octobogzHuntRegistry"))
+        state = json.loads(game_map.getStringProperty("octobogzHuntRegistry").removeprefix("octobogzHunt.v1:"))
         record = state["slots"][slot]
         if record["status"] == "dead":
             continue
@@ -16622,7 +16622,7 @@ class GameTest(unittest.TestCase):
 
             # The cave monster template id is not mutated by loading any class.
             g.createObject("OctobogzHuntDirector").start(game_map)
-            hunt_state = json.loads(game_map.getStringProperty("octobogzHuntRegistry"))
+            hunt_state = json.loads(game_map.getStringProperty("octobogzHuntRegistry").removeprefix("octobogzHunt.v1:"))
             scout = game_map.getObjectByName(hunt_state["slots"]["scout"]["name"])
             self.assertEqual("OctoBogz", scout.getTypeId())
 
@@ -27738,11 +27738,16 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual("gooby_slain", quest_state(map_handle, "main"))
 
         self._mcp_handle_call(session, map_handle, "removeObjectByName", ["catacombs"])
-        director = self._mcp_handle_call(session, game_handle, "createObject", ["OctobogzHuntDirector"])
-        self._mcp_handle_call(session, director, "start", [map_handle])
+        # This existing fixture checks quest boundaries; the dedicated hunt test drives real adjacent combat.
+        cave = self._mcp_get_object_by_name(session, map_handle, "cave2")
+        cave_properties = json.loads(self._mcp_engine_call(session, "jsonify", [cave]))["properties"]
+        self._mcp_handle_call(session, player_handle, "moveTo", [cave_properties["pos" + axis] for axis in "xyz"])
+        self._mcp_pump_event_loop(session)
         for slot in ("scout", "brood", "alpha"):
             state = json.loads(
-                self._mcp_handle_call(session, map_handle, "getStringProperty", ["octobogzHuntRegistry"])
+                self._mcp_handle_call(session, map_handle, "getStringProperty", ["octobogzHuntRegistry"]).removeprefix(
+                    "octobogzHunt.v1:"
+                )
             )
             actor = self._mcp_get_object_by_name(session, map_handle, state["slots"][slot]["name"])
             self._mcp_handle_call(session, actor, "setHp", [0])

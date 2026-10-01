@@ -22,7 +22,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     questNames = dialogue_mcp.DialogueMcpWalkthroughTest.questNames
 
     def state(self):
-        return json.loads(self.call(self.game_map, "getStringProperty", "octobogzHuntRegistry"))
+        return json.loads(
+            self.call(self.game_map, "getStringProperty", "octobogzHuntRegistry").removeprefix("octobogzHunt.v1:")
+        )
 
     def refresh(self):
         self.game_map = self.call(self.game, "getMap")
@@ -46,12 +48,14 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "gold": self.call(self.player, "getGold"),
             "items": [item["properties"].get("typeId") for item in data.get("items") or []],
             "turn": self.call(self.game_map, "getTurn"),
+            "defeat": self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
         }
         print("MCP hunt journey", result, flush=True)
         return result
 
     def step(self, destination):
         origin = self.coords()
+        defeat_before = self.call(self.player, "getStringProperty", "uiDefeatReceipt")
         self.assertEqual(1, sum(abs(a - b) for a, b in zip(origin, destination)))
         tile = self.call(self.game_map, "getTile", *destination)
         self.assertIsNotNone(tile, destination)
@@ -65,8 +69,13 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual(turn + 1, self.call(self.game_map, "getTurn"))
         if not self.call(self.player, "isAlive"):
             self.fail(self.snapshot("defeated during movement"))
+        if self.call(self.player, "getStringProperty", "uiDefeatReceipt") != defeat_before:
+            self.fail(self.snapshot("lost authored combat and respawned"))
         arrival = self.coords()
-        self.assertLessEqual(sum(abs(a - b) for a, b in zip(origin, arrival)), 1)
+        if sum(abs(a - b) for a, b in zip(origin, arrival)) > 1:
+            self.fail(
+                ("Unexpected movement without an authored transit", origin, destination, self.snapshot("arrival"))
+            )
         self.movement_steps += 1
         return arrival
 
@@ -199,6 +208,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.walkTo("nouraajdDoor")
                     self.action(self.dialog("doorDialog"), "brace_gate")
                 else:
+                    self.walkTo("nouraajdDoor")
+                    self.action(self.dialog("doorDialog"), "open_door")
+                    _, self.walkable = authoredRegion("nouraajd")
                     self.walkTo("nouraajdChapel")
                     self.action(self.dialog("berenDialog"), "decode_stained_glass_ward")
                 self.walkTo("questGiver")

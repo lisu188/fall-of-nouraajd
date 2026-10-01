@@ -5,6 +5,7 @@
 import json
 
 REGISTRY_PROPERTY = "octobogzHuntRegistry"
+REGISTRY_PREFIX = "octobogzHunt.v1:"
 SLOT_NAMES = ("scout", "brood", "alpha")
 ACTOR_NAMES = ("octobogzScout", "octobogzShadowBrood", "octobogzAlpha")
 SPAWN_CELLS = ((165, 21, 0), (165, 20, 0), (166, 20, 0))
@@ -14,11 +15,11 @@ RECOVERY_FLAGS = ("octobogzPulseUsed", "octobogzPulseEffectApplied", "enemyRoleU
 
 def huntState(game_map):
     text = game_map.getStringProperty(REGISTRY_PROPERTY)
-    return json.loads(text) if text else None
+    return json.loads(text.removeprefix(REGISTRY_PREFIX)) if text else None
 
 
 def saveHuntState(game_map, state):
-    game_map.setStringProperty(REGISTRY_PROPERTY, json.dumps(state, sort_keys=True))
+    game_map.setStringProperty(REGISTRY_PROPERTY, REGISTRY_PREFIX + json.dumps(state, sort_keys=True))
 
 
 def load(self, context):

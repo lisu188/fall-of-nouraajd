@@ -21,7 +21,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
             player = game_map.getPlayer()
             for _ in range(3): loop.run()
             director = instance.createObject('OctobogzHuntDirector')
-            state = lambda: json.loads(game_map.getStringProperty('octobogzHuntRegistry'))
+            state = lambda: json.loads(game_map.getStringProperty('octobogzHuntRegistry').removeprefix('octobogzHunt.v1:'))
             game_map.removeObjectByName('cave2')
             assert not game_map.getBoolProperty('OCTOBOGZ_SLAIN')
             assert not game_map.getBoolProperty('octobogzHuntCleared')
@@ -46,12 +46,19 @@ class OctobogzRuntimeTest(unittest.TestCase):
             save_slot = 'unit-octobogz-' + uuid.uuid4().hex
             save_path = None
             try:
+                registry_text = game_map.getStringProperty('octobogzHuntRegistry')
+                assert registry_text.startswith('octobogzHunt.v1:')
+                assert json.loads(game.jsonify(game_map))['properties']['octobogzHuntRegistry'] == registry_text
+                expected_state = state()
                 assert game.CMapLoader.saveWithResult(game_map, save_slot)
                 save_path = Path(instance.getResourcesProvider().getPath('save/' + save_slot + '.json'))
+                saved_snapshot = json.loads(save_path.read_text(encoding='utf-8'))['snapshot']
+                assert saved_snapshot['properties']['octobogzHuntRegistry'] == registry_text
                 game.CGameLoader.loadSavedGame(instance, save_slot)
                 game_map = instance.getMap()
                 player = game_map.getPlayer()
                 for _ in range(3): loop.run()
+                assert state() == expected_state
                 alpha = game_map.getObjectByName(alpha_name)
                 assert alpha.getHp() == 9 and alpha.getMana() == 6
                 assert alpha.getStringProperty('octobogzCombatPhase') == 'charged'
@@ -142,7 +149,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 legacy.append(actor)
             director = instance.createObject('OctobogzHuntDirector')
             director.synchronize(game_map)
-            registry = json.loads(game_map.getStringProperty('octobogzHuntRegistry'))
+            registry = json.loads(game_map.getStringProperty('octobogzHuntRegistry').removeprefix('octobogzHunt.v1:'))
             assert registry['stage'] == 'brood'
             for index, slot in enumerate(('scout', 'brood', 'alpha')):
                 record = registry['slots'][slot]

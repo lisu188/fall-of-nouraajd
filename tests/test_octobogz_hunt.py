@@ -306,6 +306,20 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIn("you\u2014common", config["cave1"]["properties"]["message"])
         self.assertIn("knives\u2014please", json.dumps(config, ensure_ascii=False))
 
+    def testRegistryUsesAnOpaqueStringEnvelopeAndReadsLegacyJson(self):
+        self.director.start(self.game_map)
+        expected = self.state()
+        text = self.game_map.getStringProperty(self.module.REGISTRY_PROPERTY)
+        self.assertTrue(text.startswith("octobogzHunt.v1:"))
+        # The native dynamic-property loader attempts to coerce JSON-looking strings into objects.
+        with self.assertRaises(json.JSONDecodeError):
+            json.loads(text)
+        self.assertEqual(expected, json.loads(text.removeprefix(self.module.REGISTRY_PREFIX)))
+        self.game_map.setStringProperty(self.module.REGISTRY_PROPERTY, json.dumps(expected))
+        self.assertEqual(expected, self.state())
+        self.director.synchronize(self.game_map)
+        self.assertTrue(self.game_map.getStringProperty(self.module.REGISTRY_PROPERTY).startswith("octobogzHunt.v1:"))
+
     def testFreshHuntHasExactlyThreeDeathsAndRepeatInteractionsCannotCompleteEarly(self):
         self.director.start(self.game_map)
         self.director.start(self.game_map)
@@ -503,7 +517,7 @@ class OctobogzHuntTest(unittest.TestCase):
             for node in ast.walk(tree)
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
         }
-        python_methods = {"append", "capitalize", "dumps", "get", "index", "loads", "sort", "values"}
+        python_methods = {"append", "capitalize", "dumps", "get", "index", "loads", "removeprefix", "sort", "values"}
         self.assertEqual(set(), called - published - local - python_methods)
         self.assertTrue({"getEffectiveInteractions", "setCaster", "setVictim", "addEffect", "addAction"} <= published)
         self.assertNotIn("getInteractions", called)
@@ -550,6 +564,9 @@ class OctobogzHuntTest(unittest.TestCase):
             if method == "getBoolProperty":
                 self.assertEqual("canStep", args[0])
                 return handle != (1, 0, 0)
+            if method == "getStringProperty":
+                self.assertEqual("uiDefeatReceipt", args[0])
+                return ""
             if method == "moveTo":
                 self.assertEqual("player", handle)
                 self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["coords"], args)))
@@ -576,6 +593,40 @@ class OctobogzHuntTest(unittest.TestCase):
         native = (ROOT / "src/object/CMapObject.cpp").read_text(encoding="utf-8")
         self.assertIn("if (is_registered && is_step_move)", native)
         self.assertIn("const bool can_step = map->canStep(target)", native)
+
+    def testMcpAdjacentMovementRejectsLiveRespawnAndUnexplainedTransit(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for respawn in (True, False):
+            with self.subTest(respawn=respawn):
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map = "player", "map"
+                walker.movement_steps = 0
+                walker.pump = lambda: None
+                walker.snapshot = lambda stage: stage
+                state = {"coords": (165, 21, 0), "turn": 0, "receipt": ""}
+                walker.coords = lambda handle=None: state["coords"]
+
+                def call(handle, method, *args):
+                    if method == "getStringProperty":
+                        self.assertEqual("uiDefeatReceipt", args[0])
+                        return state["receipt"]
+                    if method == "getTile":
+                        return "tile"
+                    if method in ("getBoolProperty", "isAlive"):
+                        return True
+                    if method == "getTurn":
+                        return state["turn"]
+                    if method == "move":
+                        state["turn"] += 1
+                        state["coords"] = (110, 111, 0)
+                        state["receipt"] = "defeated" if respawn else ""
+
+                walker.call = call
+                expected = "lost authored combat and respawned" if respawn else "Unexpected movement"
+                with self.assertRaisesRegex(AssertionError, expected):
+                    walker.step((166, 21, 0))
+                self.assertEqual(0, walker.movement_steps)
 
     def testEachHuntSlotPreservesTheOriginalCaveAnchorAndTenCellRange(self):
         self.director.start(self.game_map)
@@ -627,7 +678,7 @@ class OctobogzHuntTest(unittest.TestCase):
         bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
         published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
         tree = ast.parse((ROOT / "tests/test_octobogz_runtime.py").read_text(encoding="utf-8"))
-        python_methods = {"loads", "uuid4", "unlink", "get", "append"}
+        python_methods = {"loads", "uuid4", "unlink", "get", "append", "removeprefix", "startswith", "read_text"}
         script_methods = {"start", "synchronize", "accept_quest"}
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "runChild":
