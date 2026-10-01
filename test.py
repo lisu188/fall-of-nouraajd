@@ -156,6 +156,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "PlayerIdentityMcpTest.",
     "PaidActionRuntimeTest.",
     "ConsoleEventIsolationTest.",
     "ConsoleEventProcessTest.",
@@ -24839,6 +24840,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             self.skipTest("Source-only UI tests are not installed with the game")
         for test_class in (
             DialogueMcpWalkthroughTest,
+            PlayerIdentityMcpTest,
             ManagementMcpWalkthroughTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
@@ -24854,6 +24856,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                     self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
                 self.assertFalse(test_name_matches_suite(test_name, "fast"))
         self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
+        self.assertNotIn("_PlayerIdentityMcpTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
@@ -25228,6 +25231,7 @@ SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_player_identity_mcp import PlayerIdentityMcpTest as _PlayerIdentityMcpTest
     from tests.test_player_identity_content import PlayerIdentityContentTest as _PlayerIdentityContentTest
     from tests.test_paid_actions import PaidActionRuntimeTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
@@ -25237,6 +25241,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
+        pass
+
+    class PlayerIdentityMcpTest(_PlayerIdentityMcpTest):
         pass
 
     class PlayerIdentityContentTest(_PlayerIdentityContentTest):
@@ -25263,6 +25270,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _UiPixelAnalysisTest
     del _PlayerIdentityContentTest
+    del _PlayerIdentityMcpTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 

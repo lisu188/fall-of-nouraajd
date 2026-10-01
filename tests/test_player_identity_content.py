@@ -203,6 +203,24 @@ class PlayerIdentityContentTest(unittest.TestCase):
         player.race = None
         self.assertFalse(dialog.canOfferOutlanderRations())
 
+    def test_claim_is_persistent_before_resource_callbacks_can_reenter(self):
+        for race_id, suffix, gold, hp, mana in RACE_SERVICES:
+            with self.subTest(race_id=race_id):
+                player, dialog = self.createPlayer(race_id=race_id)
+                original_grant = player.addGold
+                nested_results = []
+
+                def reenterGrant(amount):
+                    self.assertTrue(player.getBoolProperty("nouraajdRaceServiceClaimed"))
+                    self.assertEqual(race_id, player.properties["nouraajdRaceServiceKind"])
+                    nested_results.append(getattr(dialog, "claim" + suffix)())
+                    original_grant(amount)
+
+                player.addGold = reenterGrant
+                self.assertTrue(getattr(dialog, "claim" + suffix)())
+                self.assertEqual([False], nested_results)
+                self.assertEqual((30 + gold, 30 + hp, 30 + mana), (player.gold, player.hp, player.mana))
+
     def test_authored_options_resolve_to_methods_and_preserve_the_existing_roster_and_costs(self):
         config = json.loads((ROOT / "res/maps/nouraajd/dialog4.json").read_text())
         entry = config["townHallDialog"]["properties"]["states"][0]["properties"]
