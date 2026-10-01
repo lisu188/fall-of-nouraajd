@@ -11,6 +11,7 @@ on:
       - "src/**"
       - "res/**"
       - "quest_state.py"
+      - "tests/test_android_runtime_assets.py"
   pull_request:
     types:
       - opened
@@ -24,6 +25,7 @@ on:
       - "src/**"
       - "res/**"
       - "quest_state.py"
+      - "tests/test_android_runtime_assets.py"
   workflow_dispatch:
 
 concurrency:
@@ -64,6 +66,9 @@ jobs:
             test -d "${ANDROID_HOME}/platforms/android-37.0" || \
             test -d "${ANDROID_HOME}/platforms/android-37.1"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/29.0.14206865" >> "${GITHUB_ENV}"
+
+      - name: Validate Android runtime extraction
+        run: python3 -m unittest discover -s tests -p test_android_runtime_assets.py -v
 
       - name: Install host build tools
         run: |
