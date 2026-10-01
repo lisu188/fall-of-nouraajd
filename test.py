@@ -25155,9 +25155,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
-    from tests.test_paid_actions import PaidActionRuntimeTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_paid_actions import PaidActionRuntimeTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
     from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
