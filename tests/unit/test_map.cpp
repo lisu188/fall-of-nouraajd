@@ -2385,7 +2385,8 @@ void test_post_combat_player_suppresses_destination_visit_events() {
 void test_loader_race_overloads_preserve_default_and_attach_race() {
     // Legacy three-argument path: template's default race, no raceId override.
     auto legacy_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
-    CGameLoader::startGameWithPlayer(legacy_game, "test", "Warrior");
+    nativeTestProfile().run("CGameLoader::startGameWithPlayer",
+                            [&] { CGameLoader::startGameWithPlayer(legacy_game, "test", "Warrior"); });
     auto legacy_player = legacy_game->getMap()->getPlayer();
     expect_true(legacy_player != nullptr, "legacy three-argument startGameWithPlayer should attach a player");
     const std::string default_race_id = legacy_player->getRaceId();
@@ -2395,7 +2396,8 @@ void test_loader_race_overloads_preserve_default_and_attach_race() {
     // New four-argument path with an empty raceId must behave identically to the legacy path:
     // same default race id, no race object attached, no crash.
     auto empty_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
-    CGameLoader::startGameWithPlayer(empty_game, "test", "Warrior", std::string());
+    nativeTestProfile().run("CGameLoader::startGameWithPlayer",
+                            [&] { CGameLoader::startGameWithPlayer(empty_game, "test", "Warrior", std::string()); });
     auto empty_player = empty_game->getMap()->getPlayer();
     expect_true(empty_player != nullptr, "four-argument loader with empty raceId should attach a player");
     expect_true(empty_player->getRaceId() == default_race_id,
@@ -2407,13 +2409,16 @@ void test_loader_race_overloads_preserve_default_and_attach_race() {
     // null, so the loader aborts without switching maps or attaching a partial player
     // ([EPIC_04][STORY_04][SUBSTORY_02]). Starting from a fresh game leaves no active map.
     auto race_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
-    CGameLoader::startGameWithPlayer(race_game, "test", "Warrior", "nonexistent-race");
+    nativeTestProfile().run("CGameLoader::startGameWithPlayer", [&] {
+        CGameLoader::startGameWithPlayer(race_game, "test", "Warrior", "nonexistent-race");
+    });
     expect_true(race_game->getMap() == nullptr,
                 "an unknown raceId must abort before replacing the active map (no partial player)");
 
     // The random-map four-argument overload with an empty raceId must also load without crashing.
     auto random_game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
-    CGameLoader::startRandomGameWithPlayer(random_game, "Warrior", std::string());
+    nativeTestProfile().run("CGameLoader::startRandomGameWithPlayer",
+                            [&] { CGameLoader::startRandomGameWithPlayer(random_game, "Warrior", std::string()); });
     auto random_player = random_game->getMap()->getPlayer();
     expect_true(random_player != nullptr,
                 "four-argument startRandomGameWithPlayer with empty raceId should attach a player");

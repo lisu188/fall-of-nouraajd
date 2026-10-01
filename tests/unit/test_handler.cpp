@@ -1157,24 +1157,26 @@ std::shared_ptr<json> make_unit_creature_config(int sw) {
 
 void primeEncounterFixtureLevels(const std::shared_ptr<CGame> &game, int budget, int samples,
                                  const std::string &fixture) {
-    // These samples assert candidate membership, not XP progression. Prime copied configs after
-    // checking their authored prototypes so every sample avoids replaying unrelated level unlocks.
-    // The fresh-template XP regression and raw baseline remain separate and unmodified.
-    auto handler = game->getObjectHandler();
-    std::size_t primed = 0;
-    for (const auto &type : handler->getAllSubTypes("CCreature")) {
-        auto resolvedClass = handler->getType(handler->getClass(type));
-        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
-            continue;
+    nativeTestProfile().run("primeEncounterFixtureLevels", [&] {
+        // These samples assert candidate membership, not XP progression. Prime copied configs after
+        // checking their authored prototypes so every sample avoids replaying unrelated level unlocks.
+        // The fresh-template XP regression and raw baseline remain separate and unmodified.
+        auto handler = game->getObjectHandler();
+        std::size_t primed = 0;
+        for (const auto &type : handler->getAllSubTypes("CCreature")) {
+            auto resolvedClass = handler->getType(handler->getClass(type));
+            if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+                continue;
+            }
+            auto config = CJsonUtil::clone(handler->getConfig(type));
+            (*config)["properties"]["exp"] = 0;
+            (*config)["properties"]["level"] = budget;
+            handler->registerConfig(type, config);
+            ++primed;
         }
-        auto config = CJsonUtil::clone(handler->getConfig(type));
-        (*config)["properties"]["exp"] = 0;
-        (*config)["properties"]["level"] = budget;
-        handler->registerConfig(type, config);
-        ++primed;
-    }
-    std::cout << "[encounter-fixture] " << fixture << " templates=" << primed << " level=" << budget
-              << " samples=" << samples << " maxSamplingLevelUps=0\n";
+        std::cout << "[encounter-fixture] " << fixture << " templates=" << primed << " level=" << budget
+                  << " samples=" << samples << " maxSamplingLevelUps=0\n";
+    });
 }
 
 void test_rng_handler_scales_fresh_creatures_before_map_insertion() {
@@ -1591,23 +1593,26 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     // set-membership comparison, not a sequence comparison.
     const int kFullBudget = 60;
     primeEncounterFixtureLevels(game, kFullBudget, 256, "full-power-buckets");
-    CRngHandler rng_handler(game);
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
     bool producedFullEncounter = false;
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
-            if (!creature) {
-                continue;
+    nativeTestProfile().run("encounter samples(full-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kFullBudget,
+                            "full-budget sampling must not replay fixture level-ups");
+                producedFullEncounter = true;
+                expect_true(eligibleSwBuckets.contains(creature->getSw()),
+                            "every encounter creature's sw must be drawn from a registered eligible power bucket");
+                expect_true(creature->getSw() <= kFullBudget,
+                            "every encounter creature's sw must respect the requested power budget");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
             }
-            expect_true(creature->getLevel() == kFullBudget, "full-budget sampling must not replay fixture level-ups");
-            producedFullEncounter = true;
-            expect_true(eligibleSwBuckets.contains(creature->getSw()),
-                        "every encounter creature's sw must be drawn from a registered eligible power bucket");
-            expect_true(creature->getSw() <= kFullBudget,
-                        "every encounter creature's sw must respect the requested power budget");
-            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
-                        "scaled encounter creatures must keep getScale() == level + sw");
         }
-    }
+    });
     expect_true(producedFullEncounter,
                 "a full power budget should assemble at least one encounter from the eligible buckets");
 
@@ -1618,21 +1623,23 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     // regardless of which low bucket the RNG happens to sample.
     const int kTightBudget = kHighSw - 1; // 8: below the high bucket, so it is never eligible
     primeEncounterFixtureLevels(game, kTightBudget, 256, "tight-power-buckets");
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
-            if (!creature) {
-                continue;
+    nativeTestProfile().run("encounter samples(tight-budget)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == kTightBudget,
+                            "tight-budget sampling must not replay fixture level-ups");
+                expect_true(creature->getSw() <= kTightBudget,
+                            "a tight power budget must exclude every bucket whose sw exceeds the budget");
+                expect_true(creature->getSw() != kHighSw,
+                            "the high power bucket must never be sampled when the budget is below its sw");
+                expect_true(creature->getType() != highId,
+                            "the high archetype must never be assembled under a sub-threshold power budget");
             }
-            expect_true(creature->getLevel() == kTightBudget,
-                        "tight-budget sampling must not replay fixture level-ups");
-            expect_true(creature->getSw() <= kTightBudget,
-                        "a tight power budget must exclude every bucket whose sw exceeds the budget");
-            expect_true(creature->getSw() != kHighSw,
-                        "the high power bucket must never be sampled when the budget is below its sw");
-            expect_true(creature->getType() != highId,
-                        "the high archetype must never be assembled under a sub-threshold power budget");
         }
-    }
+    });
 
     // (3) Empty-encounter equivalence: a clamped-to-zero (or non-positive) budget leaves
     // random_components with nothing to decompose, so no candidate is ever drawn. This
@@ -1859,44 +1866,46 @@ void test_rng_handler_excludes_player_templates_from_encounters() {
                 "no other monster template may share the high monster's sw bucket for the determinism proof");
 
     primeEncounterFixtureLevels(game, 60, 256, "player-exclusion");
-    CRngHandler rng_handler(game);
+    auto rng_handler = nativeTestProfile().run("CRngHandler::CRngHandler", [&] { return CRngHandler(game); });
 
     bool sawRegisteredMonster = false;
     bool producedEncounter = false;
-    for (int attempt = 0; attempt < 256; attempt++) {
-        for (const auto &creature : rng_handler.getRandomEncounter(60)) {
-            if (!creature) {
-                continue;
-            }
-            expect_true(creature->getLevel() == 60, "player-exclusion sampling must not replay fixture level-ups");
-            producedEncounter = true;
+    nativeTestProfile().run("encounter samples(player-exclusion)", [&] {
+        for (int attempt = 0; attempt < 256; attempt++) {
+            for (const auto &creature : rng_handler.getRandomEncounter(60)) {
+                if (!creature) {
+                    continue;
+                }
+                expect_true(creature->getLevel() == 60, "player-exclusion sampling must not replay fixture level-ups");
+                producedEncounter = true;
 
-            // (1) A player template must NEVER be assembled into a random encounter. The
-            // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
-            // never construct as a CPlayer-derived instance. getType() carries the resolved class
-            // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
-            expect_true(creature->getType() != "CPlayer",
-                        "random encounters must never select a CPlayer-classed template");
-            expect_true(!creature->meta()->inherits("CPlayer"),
-                        "no assembled encounter creature may be a CPlayer-derived player template");
+                // (1) A player template must NEVER be assembled into a random encounter. The
+                // load-bearing guard is the meta-inheritance check: a filtered CPlayer template can
+                // never construct as a CPlayer-derived instance. getType() carries the resolved class
+                // name (src/core/CSerialization.cpp:391), so it must never be CPlayer either.
+                expect_true(creature->getType() != "CPlayer",
+                            "random encounters must never select a CPlayer-classed template");
+                expect_true(!creature->meta()->inherits("CPlayer"),
+                            "no assembled encounter creature may be a CPlayer-derived player template");
 
-            // (3) Every assembled creature's sw must remain one of the unchanged monster power
-            // buckets -- the player filter must not perturb monster sw selection.
-            expect_true(monsterSwBuckets.contains(creature->getSw()),
-                        "encounter creatures must keep an unchanged registered monster sw power bucket");
-            expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
-                        "scaled encounter creatures must keep getScale() == level + sw");
+                // (3) Every assembled creature's sw must remain one of the unchanged monster power
+                // buckets -- the player filter must not perturb monster sw selection.
+                expect_true(monsterSwBuckets.contains(creature->getSw()),
+                            "encounter creatures must keep an unchanged registered monster sw power bucket");
+                expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
+                            "scaled encounter creatures must keep getScale() == level + sw");
 
-            // (2) Genuine monster candidates are still selected. Any creature drawn from the
-            // exclusive high-sw bucket is provably the registered high monster; confirm its config
-            // id via getTypeId() (getType() is the class name "CCreature", not the config key).
-            if (creature->getSw() == kMonsterHighSw) {
-                expect_true(creature->getTypeId() == monsterHighId,
-                            "the exclusive high-sw bucket must only ever yield the registered high monster");
-                sawRegisteredMonster = true;
+                // (2) Genuine monster candidates are still selected. Any creature drawn from the
+                // exclusive high-sw bucket is provably the registered high monster; confirm its config
+                // id via getTypeId() (getType() is the class name "CCreature", not the config key).
+                if (creature->getSw() == kMonsterHighSw) {
+                    expect_true(creature->getTypeId() == monsterHighId,
+                                "the exclusive high-sw bucket must only ever yield the registered high monster");
+                    sawRegisteredMonster = true;
+                }
             }
         }
-    }
+    });
 
     // (2) Genuine monster candidates are still selected after the player exclusion.
     expect_true(producedEncounter,

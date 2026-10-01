@@ -32,6 +32,19 @@ int main(int argc, char **argv) {
     if (mode == "return-code") {
         return profile.run("return-code", [] { return 17; });
     }
+    if (mode == "sampling-batches") {
+        int samples = 0;
+        profile.run("unchanged-sampling", [&] {
+            for (const char *batch : {"full-budget", "tight-budget", "player-exclusion"}) {
+                profile.run(batch, [&] {
+                    for (int attempt = 0; attempt < 256; ++attempt) {
+                        ++samples;
+                    }
+                });
+            }
+        });
+        return samples == 768 ? 0 : 5;
+    }
     int calls = 0;
     const int result = profile.run("outer", [&] {
         return profile.run("setup", [&] { ++calls; return 42; });
@@ -97,6 +110,32 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         self.assertRegex(cmake, r'LABELS "for_unit_tests;unit;\$\{target_name\}"\s+TIMEOUT 60')
         workflow = (ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
         self.assertIn("coverage/", workflow)
+
+    def testMeasuredHotCasesKeepTheirSamplingCountsAndExposeNestedPhases(self):
+        handler = (ROOT / "tests/unit/test_handler.cpp").read_text(encoding="utf-8")
+        self.assertTrue('nativeTestProfile().run("primeEncounterFixtureLevels",' in handler)
+        for test_name, phases, loops in (
+            (
+                "test_rng_handler_encounter_candidates_stay_in_stable_power_buckets",
+                ("CRngHandler::CRngHandler", "encounter samples(full-budget)", "encounter samples(tight-budget)"),
+                2,
+            ),
+            (
+                "test_rng_handler_excludes_player_templates_from_encounters",
+                ("CRngHandler::CRngHandler", "encounter samples(player-exclusion)"),
+                1,
+            ),
+        ):
+            body = handler.split(f"void {test_name}() {{", 1)[1].split("\n}\n", 1)[0]
+            self.assertEqual(loops, body.count("for (int attempt = 0; attempt < 256; attempt++)"))
+            for phase in phases:
+                self.assertTrue(f'nativeTestProfile().run("{phase}",' in body)
+        map_source = (ROOT / "tests/unit/test_map.cpp").read_text(encoding="utf-8")
+        race_case = map_source.split("void test_loader_race_overloads_preserve_default_and_attach_race() {", 1)[1]
+        race_case = race_case.split("\n}\n", 1)[0]
+        self.assertEqual(3, race_case.count('nativeTestProfile().run("CGameLoader::startGameWithPlayer",'))
+        self.assertTrue('nativeTestProfile().run("CGameLoader::startRandomGameWithPlayer",' in race_case)
+        self.assertEqual(1, race_case.count("CGameLoader::startRandomGameWithPlayer(random_game"))
 
 
 class NativeTestProfileRuntimeTest(unittest.TestCase):
@@ -182,6 +221,23 @@ class NativeTestProfileRuntimeTest(unittest.TestCase):
         result = self.runFixture("return-code")
         self.assertEqual(17, result.returncode, result.stdout + result.stderr)
         self.assertEqual(["START", "DONE"], [row["event"] for row in self.records()])
+
+    def testNestedSamplingBatchesRunEveryIterationOnce(self):
+        result = self.runFixture("sampling-batches")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual(
+            [
+                ("START", "unchanged-sampling"),
+                ("START", "full-budget"),
+                ("DONE", "full-budget"),
+                ("START", "tight-budget"),
+                ("DONE", "tight-budget"),
+                ("START", "player-exclusion"),
+                ("DONE", "player-exclusion"),
+                ("DONE", "unchanged-sampling"),
+            ],
+            [(record["event"], record["name"]) for record in self.records()],
+        )
 
     def testUnavailableDiagnosticOutputDoesNotChangeTheAction(self):
         if self.output.exists():
