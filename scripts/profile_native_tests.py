@@ -53,6 +53,18 @@ def commandInfo(command, cwd):
     return {"command": command, "returnCode": result.returncode, "firstLine": lines[0] if lines else ""}
 
 
+def parentInfo(repo_root):
+    command = ["git", "cat-file", "-p", "HEAD"]
+    result = subprocess.run(command, cwd=repo_root, capture_output=True, text=True, timeout=15)
+    parents = []
+    for line in result.stdout.splitlines():
+        if not line:
+            break
+        if re.fullmatch(r"parent [0-9a-f]{40,64}", line):
+            parents.append(line.split()[1])
+    return {"command": command, "returnCode": result.returncode, "firstLine": " ".join(parents)}
+
+
 def buildMetadata(repo_root, build_dir, tools):
     cache_path = build_dir / "CMakeCache.txt"
     cache = {}
@@ -64,7 +76,7 @@ def buildMetadata(repo_root, build_dir, tools):
     compiler = cache.get("CMAKE_CXX_COMPILER", "c++")
     return {
         "checkout": commandInfo(["git", "rev-parse", "HEAD"], repo_root),
-        "parents": commandInfo(["git", "show", "-s", "--format=%P", "HEAD"], repo_root),
+        "parents": parentInfo(repo_root),
         "cmake": cache,
         "compiler": commandInfo([compiler, "--version"], repo_root),
         "valgrind": commandInfo([tools["valgrind"], "--version"], repo_root),
@@ -84,6 +96,21 @@ def profileCommand(binary, profile_path, valgrind_log, tools):
         "--log-file=" + str(valgrind_log),
         str(binary),
     ]
+
+
+def requiredRuntimeFiles(repo_root, build_dir):
+    modules = sorted(build_dir.glob("_game*.so"))
+    if not modules:
+        raise RuntimeError("Build _game and its native plugin dependencies before profiling")
+    paths = {
+        "module": projectPath(repo_root, modules[0]),
+        "nativeMarkerPlugin": projectPath(repo_root, build_dir / "plugins/native/native_marker_plugin.so"),
+        "nativeGameplay": projectPath(repo_root, build_dir / "plugins/native/native_gameplay.so"),
+    }
+    for path in paths.values():
+        if not path.is_file() or path.stat().st_size == 0:
+            raise RuntimeError("Required native runtime file is missing or empty: " + str(path))
+    return {name: str(path) for name, path in paths.items()}
 
 
 def validProfile(profile_path):
@@ -196,10 +223,12 @@ def run(args):
     native_timing_files = {
         suite: projectPath(repo_root, Path("coverage/native-test-profiles") / (suite + ".tsv")) for suite in suites
     }
+    runtime_files = {}
     if not args.metadata_only:
         for binary in binaries.values():
             if not binary.is_file():
                 raise RuntimeError("Build the complete native test target before profiling: " + str(binary))
+        runtime_files = requiredRuntimeFiles(repo_root, build_dir)
         for timing_file in native_timing_files.values():
             if timing_file.exists():
                 raise ValueError("Preserve earlier native timing evidence before profiling: " + str(timing_file))
@@ -214,6 +243,7 @@ def run(args):
         "kind": "diagnostic-callgrind-setup" if args.metadata_only else "diagnostic-callgrind",
         "normalCTestTimeoutUnchanged": 60,
         "nativeTimingFiles": {suite: str(path) for suite, path in native_timing_files.items()},
+        "runtimeFiles": runtime_files,
         "metadata": buildMetadata(repo_root, build_dir, tools),
         "results": [],
     }

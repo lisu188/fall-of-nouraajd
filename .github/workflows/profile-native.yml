@@ -29,6 +29,9 @@ jobs:
     env:
       GAME_CONFIGURE_SKIP_APT: "1"
       GAME_CONFIGURE_SKIP_SUBMODULES: "1"
+      CCACHE_DIR: ${{ github.workspace }}/.cache/native-profile-ccache
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPILERCHECK: content
       PROFILE_SUITE: ${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'both' }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -44,6 +47,14 @@ jobs:
           sudo apt-get install -y build-essential cmake ninja-build ccache python3-dev pybind11-dev \
             libboost-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev xvfb xauth valgrind
           python3 -m pip install -r requirements-dev.txt
+      - name: Restore bounded diagnostic compiler cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-native-profile-ccache-v1-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'native_plugins/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ runner.os }}-native-profile-ccache-v1-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'native_plugins/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-
+            ${{ runner.os }}-native-profile-ccache-v1-
       - name: Configure diagnostic build with optimization and symbols
         run: GAME_CONFIGURE_BUILD_TYPES=RelWithDebInfo ./configure.sh
       - name: Record selected build metadata before compiling
@@ -60,7 +71,7 @@ jobs:
             both) targets=(handler_unit_tests map_unit_tests) ;;
             *) exit 2 ;;
           esac
-          cmake --build cmake-build-relwithdebinfo --target "${targets[@]}" -j"$(nproc)"
+          cmake --build cmake-build-relwithdebinfo --target _game "${targets[@]}" -j"$(nproc)"
       - name: Profile complete workloads on virtual displays
         run: |
           python3 scripts/profile_native_tests.py \
@@ -76,3 +87,10 @@ jobs:
             test/native-callgrind/
             coverage/native-test-profiles/
           if-no-files-found: warn
+      - name: Save bounded diagnostic compiler cache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-native-profile-ccache-v1-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**', 'native_plugins/**', 'vstd/*.h', 'random-dungeon-generator/**') }}-${{ github.run_id }}-${{ github.run_attempt }}

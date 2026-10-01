@@ -16,10 +16,14 @@ software rendering and dummy audio. No native test cases, encounter trials,
 map dimensions or assertions are removed. The separate 1800-second diagnostic
 limit accommodates instrumentation overhead; it does not change CTest limits.
 An interrupted or failing run is recorded as partial evidence and cannot pass.
+The isolated diagnostic compiler cache is capped at 1 GiB, checks compiler
+content and keys restores by source inputs. It retains only reproducible ccache
+entries; build resources, saves and runtime evidence are kept out of that cache.
 
 For an existing Linux build and existing tools:
 
 ```sh
+cmake --build cmake-build-relwithdebinfo --target _game handler_unit_tests map_unit_tests -j"$(nproc)"
 python3 scripts/profile_native_tests.py \
     --build-dir cmake-build-relwithdebinfo \
     --output-dir test/native-callgrind/manual-unique-run \
@@ -27,6 +31,8 @@ python3 scripts/profile_native_tests.py \
 ```
 
 Existing nonempty output directories are rejected to preserve earlier evidence.
+The complete `_game` module and both configured native plugin libraries must be
+present; the driver rejects incomplete runtime builds before executing tests.
 Before executing a binary, the driver also rejects an existing selected
 `coverage/native-test-profiles/handler.tsv` or `map.tsv`, which the native
 timing recorder would otherwise overwrite. Retain those earlier records with

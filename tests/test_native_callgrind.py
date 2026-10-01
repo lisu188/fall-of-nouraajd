@@ -28,6 +28,14 @@ class NativeCallgrindToolTest(unittest.TestCase):
         self.build_dir.mkdir()
         self.binary = self.build_dir / "handler_unit_tests"
         self.binary.write_text("fixture", encoding="utf-8")
+        self.runtime_files = [
+            self.build_dir / "_game.fixture.so",
+            self.build_dir / "plugins/native/native_marker_plugin.so",
+            self.build_dir / "plugins/native/native_gameplay.so",
+        ]
+        for path in self.runtime_files:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("fixture", encoding="utf-8")
         self.tools = {name: "/tools/" + name for name in ("valgrind", "callgrind_annotate", "xvfb-run", "xauth")}
 
     def fakeProcess(self, return_code=0, readable=True):
@@ -203,6 +211,21 @@ class NativeCallgrindToolTest(unittest.TestCase):
         self.assertEqual("RelWithDebInfo", metadata["cmake"]["CMAKE_BUILD_TYPE"])
         self.assertEqual(set(profile.DISPLAY_ENVIRONMENT), set(metadata["display"]))
 
+    def testMergeParentsComeFromRawHeadersEvenInAShallowCheckout(self):
+        parents = ("a" * 40, "b" * 40)
+        commit = "tree " + "c" * 40 + "\n" + "".join("parent " + parent + "\n" for parent in parents)
+        commit += "author selected metadata\n\nprivate commit body must not be recorded\nparent " + "d" * 40 + "\n"
+
+        def runCommand(command, **_kwargs):
+            output = commit if command == ["git", "cat-file", "-p", "HEAD"] else "selected metadata\n"
+            return subprocess.CompletedProcess(command, 0, output, "")
+
+        with patch.object(profile.subprocess, "run", side_effect=runCommand):
+            metadata = profile.buildMetadata(self.root, self.build_dir, self.tools)
+        self.assertEqual(" ".join(parents), metadata["parents"]["firstLine"])
+        self.assertNotIn("private commit body", json.dumps(metadata))
+        self.assertNotIn("d" * 40, metadata["parents"]["firstLine"])
+
     def testPathsCannotEscapeTheRepositoryAndExistingEvidenceIsPreserved(self):
         with self.assertRaises(ValueError):
             profile.projectPath(self.root, "../outside")
@@ -228,6 +251,27 @@ class NativeCallgrindToolTest(unittest.TestCase):
         manifest = json.loads((output / "manifest.json").read_text())
         self.assertEqual("diagnostic-callgrind-setup", manifest["kind"])
         self.assertEqual([], manifest["results"])
+
+    def testIncompleteRuntimeBuildIsRejectedBeforeNativeExecution(self):
+        for index, path in enumerate(self.runtime_files):
+            with self.subTest(path=path.name):
+                path.unlink()
+                output = self.root / ("test/native-callgrind/missing-runtime-" + str(index))
+                with (
+                    patch.object(profile, "selectedTools", return_value=self.tools),
+                    patch.object(profile, "buildMetadata", return_value={}),
+                    patch.object(
+                        profile, "runProfile", return_value={"complete": True, "status": "completed"}
+                    ) as run_profile,
+                    redirect_stderr(io.StringIO()),
+                ):
+                    status = profile.main(
+                        ["--repo-root", str(self.root), "--output-dir", str(output), "--suite", "handler"]
+                    )
+                self.assertEqual(2, status)
+                run_profile.assert_not_called()
+                self.assertFalse(output.exists())
+                path.write_text("fixture", encoding="utf-8")
 
     def testEarlierNativeTimingEvidenceCannotBeOverwrittenByAFreshOutputDirectory(self):
         for suite in ("handler", "map"):
@@ -274,6 +318,20 @@ class NativeCallgrindToolTest(unittest.TestCase):
         self.assertNotIn("ctest ", workflow)
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
         self.assertRegex(cmake, r'LABELS "for_unit_tests;unit;\$\{target_name\}"\s+TIMEOUT 60')
+
+    def testWorkflowBuildsTheRuntimeModuleAndItsNativePluginsBeforeProfiling(self):
+        workflow = (ROOT / ".github/workflows/profile-native.yml").read_text(encoding="utf-8")
+        self.assertIn('--target _game "${targets[@]}"', workflow)
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("add_dependencies(_game ${NATIVE_PLUGIN_TARGETS})", cmake)
+
+    def testWorkflowCachesOnlyBoundedCompilerEntriesWithContentChecks(self):
+        workflow = (ROOT / ".github/workflows/profile-native.yml").read_text(encoding="utf-8")
+        self.assertIn("CCACHE_MAXSIZE: 1G", workflow)
+        self.assertIn("CCACHE_COMPILERCHECK: content", workflow)
+        self.assertIn("hashFiles('CMakeLists.txt', 'cmake/**', 'src/**', 'tests/unit/**'", workflow)
+        self.assertEqual(2, workflow.count("path: ${{ env.CCACHE_DIR }}"))
+        self.assertIn("Save bounded diagnostic compiler cache\n        if: always()", workflow)
 
 
 if __name__ == "__main__":
