@@ -2,6 +2,7 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import ast
 import importlib.util
 import json
 import re
@@ -33,12 +34,29 @@ class EnemyRolesTest(unittest.TestCase):
                 module.load(None, None)
         self.properties = {}
         self.object_properties = {}
-        self.actor = Mock()
+        self.actor = Mock(
+            spec_set=[
+                "getBoolProperty",
+                "setBoolProperty",
+                "getObjectProperty",
+                "setObjectProperty",
+                "getDmg",
+                "getWeapon",
+                "isAlive",
+                "getGame",
+                "getEffectiveInteractions",
+                "addEffect",
+                "getNumericProperty",
+                "setNumericProperty",
+                "getStringProperty",
+                "setStringProperty",
+            ]
+        )
+        self.actor.getBoolProperty.side_effect = lambda name: self.properties.get(name, False)
+        self.actor.setBoolProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
         self.actor.getStringProperty.side_effect = lambda name: self.properties.get(name, "")
         self.actor.setStringProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
         self.actor.setNumericProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
-        self.actor.getBoolProperty.side_effect = lambda name: self.properties.get(name, False)
-        self.actor.setBoolProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
         self.actor.getObjectProperty.side_effect = lambda name: self.object_properties[name]
         self.actor.setObjectProperty.side_effect = lambda name, value: self.object_properties.__setitem__(name, value)
         self.actor.getDmg.return_value = 11
@@ -48,7 +66,7 @@ class EnemyRolesTest(unittest.TestCase):
         self.target.isAlive.return_value = True
         self.attack = self.registered["Attack"]()
         self.attack.getTypeId = lambda: "Attack"
-        self.actor.getInteractions.return_value = [self.attack]
+        self.actor.getEffectiveInteractions.return_value = [self.attack]
 
     def makeSignature(self, class_name):
         action = self.registered[class_name]()
@@ -151,7 +169,7 @@ class EnemyRolesTest(unittest.TestCase):
                 self.actor.getGame.assert_not_called()
 
     def testMissingAttackAndRejectedExecutionCannotLeaveAnArmedHook(self):
-        self.actor.getInteractions.return_value = []
+        self.actor.getEffectiveInteractions.return_value = []
         action, effect, _ = self.makeSignature("EnemyArcaneBolt")
         action.performAction(self.actor, self.target)
         self.assertFalse(self.properties.get("enemyRoleUsed", False))
@@ -160,7 +178,7 @@ class EnemyRolesTest(unittest.TestCase):
         attack = Mock()
         attack.getTypeId.return_value = "Attack"
         attack.performAction.side_effect = RuntimeError("rejected attack")
-        self.actor.getInteractions.return_value = [attack]
+        self.actor.getEffectiveInteractions.return_value = [attack]
         with self.assertRaisesRegex(RuntimeError, "rejected attack"):
             action.performAction(self.actor, self.target)
         self.assertFalse(self.properties["enemyRoleArcaneAttack"])
@@ -168,6 +186,23 @@ class EnemyRolesTest(unittest.TestCase):
     def testRoleEffectsHaveNoTickDamage(self):
         self.registered["EnemyRoleEffect"]().onEffect()
         self.target.hurt.assert_not_called()
+
+    def testRolePluginCallsUseThePublishedNativeObjectApi(self):
+        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
+        source = (ROOT / "res/plugins/enemy_roles.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        local = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+        called = {
+            node.func.attr
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+        }
+        self.assertEqual(set(), called - published - local)
+        self.assertTrue({"getEffectiveInteractions", "setCaster", "setVictim", "addEffect"} <= published)
+        self.assertIn('"setCaster", &CEffect::setCaster', bindings)
+        self.assertIn('"setVictim", &CEffect::setVictim', bindings)
+        self.assertIn('"addEffect", &CCreature::addEffect', bindings)
 
     def testNativeWitnessScopeRetainsOriginalPairsAndOnlyMeasuredExceptions(self):
         source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")

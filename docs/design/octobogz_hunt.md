@@ -89,6 +89,16 @@ source-only worktree has no native binary and C: remains above the 90 percent di
 guard, so native/MCP/GUI local execution is blocked; authored tests are not passing
 runtime evidence.
 
+The hunt uses published `getEffectiveInteractions` and generic label/mana-cost
+property getters. Narrow native effect endpoint and `addEffect` bindings preserve
+the normal active-effect lifecycle. A plugin method audit fails against prior
+head `abbd1f7e`, while the actual embedded fixture checks these methods before
+combat. That head's
+[Linux job 110337723989](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36852377715/job/110337723989)
+failed Attack/proc, RNG and effect-application proofs, including zero observed
+Alpha/brood pulse applications. Its route medians do not validate the revised
+mechanics; fresh actual-bound evidence remains required after the API correction.
+
 ## Retained failed harder challenge
 
 Before the attack-preserving revision, head `ab269855` tested matched level-two

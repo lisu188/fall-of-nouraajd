@@ -288,7 +288,7 @@ def load(self, context):
     def ordinaryAttack(first, second):
         if second is None or not first.isAlive() or not second.isAlive():
             return None
-        return next((action for action in first.getInteractions() if action.getTypeId() == "Attack"), None)
+        return next((action for action in first.getEffectiveInteractions() if action.getTypeId() == "Attack"), None)
 
     @register(context)
     class OctobogzCharge(CInteraction):
@@ -301,7 +301,8 @@ def load(self, context):
                 return
             first.setStringProperty(PHASE_PROPERTY, "charged")
             first.getGame().getGuiHandler().notify(
-                first.getLabel() + " gathers shadow while striking. Its next attack may release a shadow pulse."
+                (first.getStringProperty("label") or first.getTypeId())
+                + " gathers shadow while striking. Its next attack may release a shadow pulse."
             )
             try:
                 attack.performAction(first, second)
@@ -342,7 +343,7 @@ def load(self, context):
                 second.addEffect(effect)
 
         def getCommittedManaRefund(self, caster):
-            return 0 if self.getBoolProperty("octobogzPulseCommitted") else self.getManaCost()
+            return 0 if self.getBoolProperty("octobogzPulseCommitted") else self.getNumericProperty("manaCost")
 
     @register(context)
     class OctobogzShadowPulseEffect(CEffect):

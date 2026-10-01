@@ -2,8 +2,10 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import ast
 import importlib.util
 import json
+import re
 from pathlib import Path
 import sys
 import types
@@ -106,16 +108,13 @@ class Actor(Properties):
     def setMana(self, value):
         self.properties["mana"] = value
 
-    def getLabel(self):
-        return self.getStringProperty("label") or "OctoBogz"
-
     def addAction(self, action):
         self.actions[action.getTypeId()] = action
 
     def getActions(self):
         return list(self.actions.values())
 
-    def getInteractions(self):
+    def getEffectiveInteractions(self):
         return self.getActions()
 
     def getWeapon(self):
@@ -262,7 +261,7 @@ class OctobogzHuntTest(unittest.TestCase):
         if type_id == "octobogzShadowPulse":
             result.setObjectProperty("roleDamage", Properties())
             result.setObjectProperty("roleEffect", self.createObject("OctobogzShadowPulseEffect"))
-            result.getManaCost = lambda: 5
+            result.setNumericProperty("manaCost", 5)
         if type_id == "cave2":
             result.setStringProperty("name", "cave2")
             result.relocateWithoutMoveHooks(types.SimpleNamespace(x=166, y=21, z=0))
@@ -480,6 +479,24 @@ class OctobogzHuntTest(unittest.TestCase):
         lair.onEnter(event)
         self.assertEqual("scout", self.state()["stage"])
         self.assertIsNotNone(self.game_map.getObjectByName("cave2"))
+
+    def testHuntCallsUseThePublishedNativeObjectApi(self):
+        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
+        source = (ROOT / "res/plugins/octobogz_hunt.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        local = {node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+        called = {
+            node.func.attr
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+        }
+        python_methods = {"append", "capitalize", "dumps", "get", "index", "loads", "sort", "values"}
+        self.assertEqual(set(), called - published - local - python_methods)
+        self.assertTrue({"getEffectiveInteractions", "setCaster", "setVictim", "addEffect", "addAction"} <= published)
+        self.assertNotIn("getInteractions", called)
+        self.assertNotIn("getManaCost", called)
+        self.assertNotIn("getLabel", called)
 
     def phaseActor(self, roll=11):
         actor = Actor("alpha")

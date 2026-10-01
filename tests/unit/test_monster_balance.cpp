@@ -291,6 +291,14 @@ void initializeBalancePythonContent() {
     const auto nativeModule = pybind11::module_::import("_game");
     expect_true(nativeModule.attr("CInteraction").attr("__module__").cast<std::string>() == "_game",
                 "embedded native classes must have the production module identity");
+    for (const auto &method : {"getEffectiveInteractions", "addEffect"}) {
+        expect_true(pybind11::hasattr(nativeModule.attr("CCreature"), method),
+                    "role plugins must use the actual bound creature API");
+    }
+    for (const auto &method : {"setCaster", "setVictim"}) {
+        expect_true(pybind11::hasattr(nativeModule.attr("CEffect"), method),
+                    "eager role effects require actual bound native actor endpoints");
+    }
     pybind11::module_::import("game");
     pybind11::module_::import("json");
     std::cerr << "monster balance: game and json initialized\n";
@@ -572,7 +580,7 @@ HuntBalanceSample runHuntBalanceRoute(const std::shared_ptr<CGame> &game, const 
         enemy->setFightController(std::make_shared<ObservedFightController>(enemy->getFightController(), observer));
     }
     // The original cave configured three OctoBogz. Compare that fixed footprint,
-    // without the old prop's unbounded onTurn flood, at the same Lv3/Lv2 challenge as the role matrix.
+    // without the old prop's unbounded onTurn flood, with ordinary Lv3 players and authored Lv1 enemies.
     vstd::rng().seed(seed);
     std::srand(seed);
     const auto fightStarted = std::chrono::steady_clock::now();
