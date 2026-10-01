@@ -76,6 +76,54 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                 self.assertEqual(cost - 1, driver.call(driver.player, "getMana"))
                 self.assertEqual(effect_count, len(driver.call(driver.player, "getEffects")))
 
+    def testExistingClueAndRouteDiscoveriesStillStrengthenPaidEffects(self):
+        driver = self.driver
+        cases = (
+            (
+                "Inquisitor",
+                "nouraajdChapel",
+                "berenDialog",
+                "inspect_stained_glass",
+                "inquisitor_clues",
+                "SanctifiedWard",
+                "SanctifiedWardEffect",
+                "normalResist",
+                5,
+            ),
+            (
+                "Wayfarer",
+                "nouraajdTownHall",
+                "townHallDialog",
+                "chart_wayfarer_route",
+                "wayfarer_routes",
+                "WayfarersStride",
+                "WayfarersStrideEffect",
+                "block",
+                6,
+            ),
+        )
+        for class_id, landmark, dialog_id, action, counter, ability_id, effect_id, stat, value in cases:
+            with self.subTest(class_id=class_id):
+                self.startIdentityMap(class_id)
+                driver.walkTo(landmark)
+                dialog = driver.dialog(dialog_id)
+                driver.action(dialog, action)
+                driver.action(dialog, action)
+                self.assertEqual(1, driver.call(driver.player, "getNumericProperty", counter))
+                ability = driver.dialog(ability_id)
+                driver.call(driver.player, "setMana", driver.call(ability, "getManaCost"))
+                driver.call(ability, "onAction", driver.player, driver.player)
+                driver.pump()
+                effect = next(
+                    effect
+                    for effect in driver.call(driver.player, "getEffects")
+                    if driver.call(effect, "getTypeId") == effect_id
+                )
+                self.assertEqual(1, driver.call(effect, "getNumericProperty", counter))
+                bonus = driver.call(effect, "getBonus")
+                self.assertEqual(value, driver.call(bonus, "getNumericProperty", stat))
+                self.assertEqual(0, driver.call(ability, "getCommittedManaRefund", driver.player))
+
     def testRaceAidRequiresTownHallMovementAndCannotBeReclaimed(self):
         driver = self.driver
         cases = (

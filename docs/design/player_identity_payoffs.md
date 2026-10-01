@@ -11,8 +11,8 @@ ordinary persistent player properties and do not gate the main campaign.
 | Warrior | Brace Nouraajd's gate | `warrior_barricades` | Each paid Barrier cast returns 3 mana. It still requires 17 mana before casting; net cost is 14. |
 | Assasin | Follow the robed men from the tavern | `assasin_trails` | Each paid Sneak Attack returns 3 mana. It still requires 15 mana before striking; net cost is 12. |
 | Sorcerer | Decode the chapel's stained glass | `sorcerer_sigils` | Each paid Frost Bolt returns 3 mana. It still requires 20 mana before casting; net cost is 17. |
-| Inquisitor | Inspect the stained glass | `inquisitor_clues` | Existing Expose Corruption and Armor of Faith scaling continues unchanged. |
-| Wayfarer | Study Irvin's courier routes | `wayfarer_routes` | Existing Trail Mark and Second Wind scaling continues unchanged. |
+| Inquisitor | Inspect the stained glass | `inquisitor_clues` | Existing Expose Corruption and Sanctified Ward scaling continues unchanged. |
+| Wayfarer | Study Irvin's courier routes | `wayfarer_routes` | Existing Smuggler's Mark and Wayfarer's Stride scaling continues unchanged. |
 
 The first three benefits require a positive matching counter and the matching
 class identity on the current map's actual player. NPCs and retained inactive
