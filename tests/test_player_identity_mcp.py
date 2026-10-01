@@ -143,6 +143,8 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                 driver.call(driver.player, "setNumericProperty", "gold", 30)
                 dialog = driver.dialog("townHallDialog")
                 self.assertTrue(driver.condition(dialog, "canOffer" + suffix))
+                driver.call(driver.player, "setStringProperty", "raceId", "legacyUnknownRace")
+                self.assertTrue(driver.condition(dialog, "canOffer" + suffix))
                 driver.action(dialog, "claim" + suffix)
                 expected = (30 + gold_delta, min(max_hp, hp + hp_bonus), min(max_mana, mana + mana_bonus))
                 observed = tuple(driver.call(driver.player, method) for method in ("getGold", "getHp", "getMana"))

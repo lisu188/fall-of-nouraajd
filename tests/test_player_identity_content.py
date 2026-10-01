@@ -52,8 +52,8 @@ class ContentPlayer:
     def getRaceId(self):
         return self.race_id
 
-    def getRace(self):
-        return self.race
+    def getArchetypeRaceId(self):
+        return self.race.getTypeId() if self.race else ""
 
     def getNumericProperty(self, key):
         return self.properties.get(key, 0)
