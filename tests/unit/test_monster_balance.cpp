@@ -398,6 +398,12 @@ weaponType.performAction = originalWeaponAction
                             "eager owned role objects must preserve both ordinary Attack random streams");
                 expect_true(weaponCalls == expectedWeaponCalls,
                             "the role hook must preserve the configured weapon proc on both hits and misses");
+                const auto signatureIt = std::ranges::find_if(interactions, [huntPulse](const auto &action) {
+                    return action->getTypeId() == (huntPulse ? "octobogzShadowPulse" : "enemyArcaneBolt");
+                });
+                expect_true(signatureIt != interactions.end() &&
+                                !(*signatureIt)->getObjectProperty<CGameObject>("roleEffect"),
+                            "consumed eager effects must transfer out of the actor-owned signature slot");
                 const int afterResist =
                     huntPulse ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
                 expect_true(afterResist == beforeResist - 1 && recipient->getEffects().size() == 1,
