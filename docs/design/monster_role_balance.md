@@ -61,6 +61,14 @@ failed 82 native assertions, including Attack/proc counts, random-stream equalit
 effect ownership and actual stat application. Those medians are invalid evidence
 for the revised signatures because the prior helper called an unbound method.
 
+After that binding correction, head `415cfc0c` still failed the native callback
+proof: the resource-plugin builtin allowlist excludes `next`. The Attack lookup
+now uses a plain bounded loop, preserving that sandbox. Focused plugin tests
+execute with the loader's actual builtin allowlist and reproduce `NameError` on
+the preceding helper before passing with the loop. That failed run is not
+signature balance evidence. Its coverage job also hit the unchanged 60-second
+monster/map native timeouts; no timer or coverage threshold has been relaxed.
+
 ## Corrected harness evidence, before signature revision
 
 [Linux job 110303082419](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36841791157/job/110303082419)

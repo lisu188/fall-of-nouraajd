@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import ast
+import builtins
 import importlib.util
 import json
 import re
@@ -19,6 +20,10 @@ SIGNATURES = ("EnemyBrace", "EnemyArcaneBolt", "EnemyOpeningStrike", "EnemyRitua
 class EnemyRolesTest(unittest.TestCase):
     def setUp(self):
         self.registered = {}
+        loader = (ROOT / "src/core/CLoader.cpp").read_text(encoding="utf-8")
+        allowed = loader.split("allowedNames =", 1)[1].split("};", 1)[0]
+        sandbox_builtins = {name: getattr(builtins, name) for name in re.findall(r'"([^"]+)"', allowed)}
+        sandbox_builtins["__import__"] = builtins.__import__
         game = types.ModuleType("game")
         game.CEffect = type("CEffect", (), {})
         game.CInteraction = type("CInteraction", (), {})
@@ -30,6 +35,7 @@ class EnemyRolesTest(unittest.TestCase):
                     filename + "_under_test", ROOT / f"res/plugins/{filename}.py"
                 )
                 module = importlib.util.module_from_spec(spec)
+                module.__dict__["__builtins__"] = sandbox_builtins
                 spec.loader.exec_module(module)
                 module.load(None, None)
         self.properties = {}
