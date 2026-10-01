@@ -460,6 +460,7 @@ endforeach ()
 
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
+configure_file(res/plugins/enemy_roles.py plugins/enemy_roles.py)
 configure_file(res/plugins/object.py plugins/object.py)
 configure_file(res/plugins/crafting.py plugins/crafting.py)
 configure_file(res/plugins/artifact_sets.py plugins/artifact_sets.py)
@@ -811,7 +812,13 @@ function(add_game_unit_test target_name)
     endif ()
 
     set(test_name "for_unit_tests.${target_name}")
-    add_test(NAME "${test_name}" COMMAND ${target_name})
+    if (target_name STREQUAL "monster_balance_unit_tests")
+        add_test(NAME "${test_name}"
+            COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monster_balance.py"
+                $<TARGET_FILE:${target_name}>)
+    else ()
+        add_test(NAME "${test_name}" COMMAND ${target_name})
+    endif ()
     set_tests_properties("${test_name}" PROPERTIES
         LABELS "for_unit_tests;unit;${target_name}"
         TIMEOUT 60
@@ -846,6 +853,13 @@ endfunction()
 
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
+add_game_unit_test(monster_balance_unit_tests tests/unit/test_monster_balance.cpp src/core/CModule.cpp)
+if (WIN32)
+    target_sources(monster_balance_unit_tests PRIVATE src/core/CModuleEntry.cpp)
+endif ()
+target_compile_definitions(monster_balance_unit_tests PRIVATE
+    GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
+)
 add_game_unit_test(navigation_search_unit_tests tests/unit/test_navigation_search.cpp)
 add_game_unit_test(navigation_flow_unit_tests tests/unit/test_navigation_flow.cpp)
 add_game_unit_test(navigation_preview_unit_tests tests/unit/test_navigation_preview.cpp)

@@ -1312,7 +1312,9 @@ void init_game_module(py::module_ &m) {
                        .def("getBonus", &CEffect::getBonus, "Return effect stat bonus object.")
                        .def("setBonus", &CEffect::setBonus, "Set effect stat bonus object.")
                        .def("getCaster", &CEffect::getCaster, "Return creature that applied the effect.")
+                       .def("setCaster", &CEffect::setCaster, "Set the creature that applied this effect.")
                        .def("getVictim", &CEffect::getVictim, "Return creature affected by the effect.")
+                       .def("setVictim", &CEffect::setVictim, "Set the creature affected by this effect.")
                        .def("getTimeLeft", &CEffect::getTimeLeft, "Return remaining effect duration in turns.")
                        .def("onEffect", &CEffect::onEffect, "Apply effect behavior for one tick.");
     m.attr("CEffectBase") = ceffect;
@@ -1386,6 +1388,7 @@ void init_game_module(py::module_ &m) {
         .def("addItems", &CCreature::addItems, "Add all items from a set to inventory.")
         .def("setItems", &CCreature::setItems, "Replace inventory items.")
         .def("getItems", &CCreature::getItems, "Return inventory items.")
+        .def("addEffect", &CCreature::addEffect, "Add one active effect while retaining existing effects and tracking.")
         .def("setEffects", &CCreature::setEffects, "Replace active effects.")
         .def("getEffects", &CCreature::getEffects, "Return active effects.")
         .def("getActions", &CCreature::getActions, "Return available actions.")

@@ -44,7 +44,8 @@ class CCreatureClass : public CGameObject {
            V_PROPERTY(CCreatureClass, std::shared_ptr<CStats>, levelStats, getLevelStats, setLevelStats),
            V_PROPERTY(CCreatureClass, std::set<std::shared_ptr<CInteraction>>, actions, getActions, setActions),
            V_PROPERTY(CCreatureClass, CInteractionMap, levelling, getLevelling, setLevelling),
-           V_PROPERTY(CCreatureClass, std::string, mainStat, getMainStat, setMainStat))
+           V_PROPERTY(CCreatureClass, std::string, mainStat, getMainStat, setMainStat),
+           V_PROPERTY(CCreatureClass, std::string, combatRole, getCombatRole, setCombatRole))
 
   public:
     CCreatureClass();
@@ -71,10 +72,15 @@ class CCreatureClass : public CGameObject {
 
     void setMainStat(std::string value);
 
+    std::string getCombatRole();
+
+    void setCombatRole(std::string value);
+
   private:
     std::shared_ptr<CStats> baseStats = std::make_shared<CStats>();
     std::shared_ptr<CStats> levelStats = std::make_shared<CStats>();
     std::set<std::shared_ptr<CInteraction>> actions;
     CInteractionMap levelling;
     std::string mainStat;
+    std::string combatRole;
 };

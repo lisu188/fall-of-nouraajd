@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CController.h"
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 
 #include "core/CGame.h"
@@ -26,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CNavigationFlow.h"
 #include "core/CNavigationSearch.h"
 #include "gui/panel/CGameFightPanel.h"
+#include "object/CCreatureClass.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
 
@@ -491,6 +493,42 @@ bool caster_already_has_effect(const std::shared_ptr<CCreature> &me, const std::
     }
     return false;
 }
+
+std::shared_ptr<CInteraction> monsterRoleAction(const std::shared_ptr<CCreature> &me,
+                                                const std::shared_ptr<CCreature> &opponent) {
+    if (me->isPlayer() || me->isNpc() || !me->isAlive() || !opponent->isAlive() || me->isAffiliatedWith(opponent) ||
+        me->getBoolProperty("enemyRoleUsed")) {
+        return {};
+    }
+    const auto creatureClass = me->getCreatureClass();
+    const auto role = creatureClass ? creatureClass->getStringProperty("combatRole") : std::string{};
+    if (role.empty()) {
+        return {};
+    }
+    std::shared_ptr<CInteraction> selected;
+    for (const auto &action : me->getInteractions()) {
+        if (!action->getBoolProperty("enemySignature") || action->getStringProperty("enemyRole") != role ||
+            action->getManaCost() > me->getMana() || action->getNumericProperty("minimumMana") > me->getMana()) {
+            continue;
+        }
+        const auto trigger = action->getStringProperty("enemyRoleTrigger");
+        const int criticalHpMax = trigger == "critical" ? me->getHpMax() : 0;
+        const bool criticalHealth = criticalHpMax > 0 && static_cast<std::int64_t>(me->getHp()) * 4 <= criticalHpMax;
+        const bool eligible =
+            trigger == "opening" || (trigger == "wounded" && me->getHpRatio() <= 50) ||
+            (trigger == "critical" && criticalHealth) ||
+            (trigger == "guarded" && (opponent->getStats()->getBlock() > 0 || me->getHpRatio() <= 50));
+        const auto effect = action->hasProperty("roleEffect")
+                                ? vstd::cast<CEffect>(action->getObjectProperty<CGameObject>("roleEffect"))
+                                : action->getEffect();
+        const auto recipient = action->getSelfTarget() ? me : opponent;
+        if (eligible && !caster_already_has_effect(recipient, effect) &&
+            (!selected || action->getName() < selected->getName())) {
+            selected = action;
+        }
+    }
+    return selected;
+}
 } // namespace
 
 bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
@@ -512,6 +550,13 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
         }
     }
     if (auto action = selectInteraction(me, opponent)) {
+        if (action->getTypeId() == "Attack") {
+            if (auto signature = monsterRoleAction(me, opponent)) {
+                me->useAction(signature, opponent);
+                me->setBoolProperty("enemyRoleUsed", true);
+                return true;
+            }
+        }
         me->useAction(action, opponent);
         return true;
     }
@@ -543,7 +588,7 @@ std::shared_ptr<CItem> CMonsterFightController::getLeastPowerfulItemWithTag(std:
 std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::shared_ptr<CCreature> me,
                                                                          std::shared_ptr<CCreature> opponent) {
     auto selfTargetUseful = [me](const std::shared_ptr<CInteraction> &it) {
-        if (it->getManaCost() > me->getMana()) {
+        if (it->getBoolProperty("enemySignature") || it->getManaCost() > me->getMana()) {
             return false;
         }
         const auto effect = it->getEffect();
@@ -580,7 +625,7 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     }
 
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction = [](const std::shared_ptr<CInteraction> &it) {
-        return !it->hasTag(CTag::Buff);
+        return !it->hasTag(CTag::Buff) && !it->getBoolProperty("enemySignature");
     };
     std::function<bool(std::shared_ptr<CInteraction>)> pFunction2 = [me](const std::shared_ptr<CInteraction> &it) {
         return it->getManaCost() <= me->getMana();

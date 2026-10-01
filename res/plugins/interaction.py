@@ -43,9 +43,24 @@ def load(self, context):
     @register(context)
     class Attack(CInteraction):
         def performAction(self, first, second):
+            arcane = first.getBoolProperty("enemyRoleArcaneAttack")
+            channel = first.getStringProperty("enemyRoleDamageChannel") if arcane else ""
+            minimum = first.getNumericProperty("enemyRoleDamageMinimum") if arcane else 0
+            if arcane:
+                first.setBoolProperty("enemyRoleArcaneAttack", False)
+                first.setStringProperty("enemyRoleDamageChannel", "")
+                first.setNumericProperty("enemyRoleDamageMinimum", 0)
             dmg = first.getDmg()
+            if arcane:
+                first.setNumericProperty("enemyRoleAttackBudget", dmg)
             if dmg:
-                second.hurt(dmg)
+                if arcane and channel in ("frost", "shadow") and dmg >= minimum:
+                    damage = first.getObjectProperty("enemyRoleDamagePacket")
+                    damage.setNumericProperty("normal", dmg - 1)
+                    damage.setNumericProperty(channel, 1)
+                    second.hurt(damage)
+                else:
+                    second.hurt(dmg)
                 weapon = first.getWeapon()
                 if weapon:
                     inter = weapon.getInteraction()

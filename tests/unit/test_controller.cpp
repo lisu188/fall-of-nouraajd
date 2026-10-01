@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CJson.h"
+#include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
@@ -28,7 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "handler/CObjectHandler.h"
+#include "handler/CFightHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
 #include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
@@ -41,6 +44,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/embed.h>
 
 #include <map>
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -1312,6 +1316,280 @@ void test_monster_fight_controller_heals_self_only_when_hurt() {
     }
 }
 
+class RoleActionProbe : public CInteraction {
+  public:
+    int calls = 0;
+    void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+};
+
+void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
+    for (const auto &trigger : {"opening", "wounded", "critical", "guarded"}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setStringProperty("combatRole", "testRole");
+        monster->setCreatureClass(creatureClass);
+        monster->setMana(0);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setName("roleSignature");
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "testRole");
+        signature->setStringProperty("enemyRoleTrigger", trigger);
+        monster->addAction(signature);
+        auto attack = std::make_shared<RoleActionProbe>();
+        attack->setGame(game);
+        attack->setName("attack");
+        attack->setTypeId("Attack");
+        monster->addAction(attack);
+        CMonsterFightController controller;
+        if (std::string(trigger) != "opening") {
+            expect_true(controller.control(monster, opponent), "healthy monster should retain its ordinary attack");
+            expect_true(signature->calls == 0 && attack->calls == 1, "signature condition must gate the action");
+            if (std::string(trigger) == "wounded") {
+                monster->setHp(monster->getHpMax() / 2);
+            } else if (std::string(trigger) == "critical") {
+                monster->setHp(std::max(1, monster->getHpMax() / 4));
+            } else {
+                opponent->getBaseStats()->setBlock(10);
+            }
+        }
+        expect_true(controller.control(monster, opponent), "eligible zero-mana signature should use one turn");
+        expect_true(signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "signature must persist its once-per-actor flag");
+        expect_true(controller.control(monster, opponent), "spent signature should fall back to the ordinary attack");
+        expect_true(signature->calls == 1, "offensive fallback must never select the spent signature");
+        expect_true(monster->getMana() == 0, "class signatures must remain affordable at zero mana");
+    }
+}
+
+void testMonsterRitualMinimumManaGatesEligibilityWithoutSpending() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, true);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setCombatRole("cultist");
+    monster->setCreatureClass(creatureClass);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "cultist");
+    signature->setStringProperty("enemyRoleTrigger", "critical");
+    signature->setNumericProperty("minimumMana", 5);
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    CMonsterFightController controller;
+    monster->setHp(std::max(1, monster->getHpMax() / 2));
+    monster->setMana(5);
+    expect_true(controller.control(monster, opponent), "a ritual must wait until critical health");
+    expect_true(attack->calls == 1 && signature->calls == 0 && monster->getMana() == 5 &&
+                    !monster->getBoolProperty("enemyRoleUsed"),
+                "a half-health cultist must retain ordinary Attack despite its eligible mana reserve");
+    monster->setHp(std::max(1, monster->getHpMax() / 4));
+    monster->setMana(4);
+    expect_true(controller.control(monster, opponent), "an exhausted cultist must retain ordinary Attack");
+    expect_true(attack->calls == 2 && signature->calls == 0 && monster->getMana() == 4 &&
+                    !monster->getBoolProperty("enemyRoleUsed"),
+                "ritual reserve eligibility must not consume the action or mana below five points");
+    monster->setMana(5);
+    expect_true(controller.control(monster, opponent), "a critical cultist with five mana may use its ritual");
+    expect_true(attack->calls == 2 && signature->calls == 1 && monster->getMana() == 5,
+                "the ritual threshold must gate eligibility without charging mana");
+}
+
+void testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage() {
+    for (int stamina : {5, 20}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        monster->getBaseStats()->setStamina(stamina);
+        monster->setMana(0);
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setCombatRole("boundaryRole");
+        monster->setCreatureClass(creatureClass);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "boundaryRole");
+        signature->setStringProperty("enemyRoleTrigger", "critical");
+        monster->addAction(signature);
+        auto attack = std::make_shared<RoleActionProbe>();
+        attack->setGame(game);
+        attack->setTypeId("Attack");
+        monster->addAction(attack);
+        const int maximumHp = monster->getHpMax();
+        expect_true(maximumHp == (stamina == 5 ? 35 : 140), "the actual boundary fixture must retain its authored HP");
+        monster->setHp(maximumHp / 4 + 1);
+        expect_true(monster->getHpRatio() == 25, "the rejected boundary must expose percentage truncation");
+        CMonsterFightController controller;
+        expect_true(controller.control(monster, opponent), "above exact quarter health must retain ordinary Attack");
+        expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                    "9/35 and36/140 HP must not prematurely consume the critical signature");
+        monster->setHp(maximumHp / 4);
+        expect_true(controller.control(monster, opponent), "at or below exact quarter health may use the signature");
+        expect_true(attack->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "8/35 and35/140 HP must admit the critical signature once");
+    }
+}
+
+void testMonsterRoleExclusionsAndMalformedActions() {
+    for (const auto &mode : {"npc", "dead", "ally", "missingClass", "missingRole", "wrongRole", "unknownTrigger",
+                             "expensive", "used", "duplicate", "guardedWounded"}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setStringProperty("combatRole", "testRole");
+        monster->setCreatureClass(creatureClass);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setName("roleSignature");
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "testRole");
+        signature->setStringProperty("enemyRoleTrigger", "opening");
+        if (std::string(mode) == "npc") {
+            monster->setNpc(true);
+        }
+        if (std::string(mode) == "dead") {
+            opponent->setHp(0);
+        }
+        if (std::string(mode) == "ally") {
+            monster->setAffiliation("allied");
+            opponent->setAffiliation("allied");
+        }
+        if (std::string(mode) == "missingClass") {
+            monster->setCreatureClass(nullptr);
+        }
+        if (std::string(mode) == "missingRole") {
+            creatureClass->setStringProperty("combatRole", "");
+        }
+        if (std::string(mode) == "wrongRole") {
+            signature->setStringProperty("enemyRole", "otherRole");
+        }
+        if (std::string(mode) == "unknownTrigger") {
+            signature->setStringProperty("enemyRoleTrigger", "unknown");
+        }
+        if (std::string(mode) == "expensive") {
+            signature->setManaCost(61);
+        }
+        if (std::string(mode) == "used") {
+            monster->setBoolProperty("enemyRoleUsed", true);
+        }
+        if (std::string(mode) == "duplicate") {
+            auto effect = named_self_effect(game, "roleEffect", CTag::Buff);
+            signature->setEffect(effect);
+            signature->setSelfTarget(true);
+            monster->addEffect(effect);
+        }
+        if (std::string(mode) == "guardedWounded") {
+            signature->setStringProperty("enemyRoleTrigger", "guarded");
+            monster->setHp(1);
+            auto attack = std::make_shared<RoleActionProbe>();
+            attack->setGame(game);
+            attack->setName("attack");
+            attack->setTypeId("Attack");
+            monster->addAction(attack);
+        }
+        monster->addAction(signature);
+        CMonsterFightController controller;
+        const bool expected = std::string(mode) == "guardedWounded";
+        const bool acted = controller.control(monster, opponent);
+        if (acted != expected || signature->calls != (expected ? 1 : 0)) {
+            std::cerr << "role exclusion fixture: " << mode << '\n';
+        }
+        expect_true(acted == expected, "role eligibility must honor actor and action gates");
+        expect_true(signature->calls == (expected ? 1 : 0),
+                    "excluded signatures must never leak into baseline selection");
+    }
+}
+
+void testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setCombatRole("testRole");
+    monster->setCreatureClass(creatureClass);
+    auto effect = named_self_effect(game, "existingOpponentRoleEffect", CTag::Buff);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "testRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    signature->setSelfTarget(false);
+    signature->setObjectProperty<CGameObject>("roleEffect", effect);
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    opponent->addEffect(effect);
+    CMonsterFightController controller;
+    expect_true(controller.control(monster, opponent), "duplicate opponent effect must retain ordinary Attack");
+    expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                "a recipient duplicate must not consume the role flag");
+    expect_true(signature->getObjectProperty<CGameObject>("roleEffect") == effect,
+                "a recipient duplicate must not consume its eager owned effect");
+    opponent->setEffects({});
+    expect_true(controller.control(monster, opponent) && signature->calls == 1,
+                "the signature must become eligible after the recipient effect expires");
+}
+
+void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    expect_true(monster->isAlive() && opponent->isAlive(), "both ordinary priority fixture actors must be alive");
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setStringProperty("combatRole", "testRole");
+    monster->setCreatureClass(creatureClass);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "testRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setName("attack");
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    auto spell = std::make_shared<RoleActionProbe>();
+    spell->setGame(game);
+    spell->setTypeId("Barrier");
+    spell->setSelfTarget(true);
+    auto ordinaryBarrier = named_self_effect(game, "ordinaryBarrier", CTag::Buff);
+    ordinaryBarrier->setTypeId("ordinaryBarrier");
+    spell->setEffect(ordinaryBarrier);
+    monster->addAction(spell);
+    CMonsterFightController controller;
+    expect_true(controller.control(monster, opponent), "ordinary defensive cast must retain its AI priority");
+    expect_true(spell->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                "class signature must not delay an ordinary selected spell");
+    const auto effects = monster->getEffects();
+    const auto clonedBonus = effects.empty() ? nullptr : (*effects.begin())->getBonus();
+    expect_true(clonedBonus != nullptr, "the cloned ordinary Barrier must retain its per-game stats factory");
+    if (clonedBonus) {
+        expect_true((*effects.begin())->getTypeId() == ordinaryBarrier->getTypeId(),
+                    "the ordinary Barrier clone must retain the configured effect identity");
+        expect_true(controller.control(monster, opponent), "a second control must safely inspect the cloned Barrier");
+        expect_true(spell->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "an active ordinary Barrier must be skipped before the eligible attack signature");
+        expect_true(monster->getEffects().size() == 1,
+                    "a second controller selection must not duplicate the ordinary configured Barrier");
+    }
+}
+
 } // namespace
 
 int main() {
@@ -1347,6 +1625,12 @@ int main() {
     test_monster_fight_controller_applies_missing_self_buff();
     test_monster_fight_controller_skips_duplicate_self_buff();
     test_monster_fight_controller_heals_self_only_when_hurt();
+    testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
+    testMonsterRitualMinimumManaGatesEligibilityWithoutSpending();
+    testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage();
+    testMonsterRoleExclusionsAndMalformedActions();
+    testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
+    testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack();
 
     return finish_tests();
 }
