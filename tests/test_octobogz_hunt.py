@@ -2477,7 +2477,8 @@ class OctobogzHuntTest(unittest.TestCase):
             (1, 419, False, 0),
             (1, 420, False, 1),
             (0, 800, False, 0),
-            (0, 820, False, 0),
+            (0, 819, False, 0),
+            (0, 820, False, 2),
             (0, 819, True, 0),
             (0, 820, True, 2),
         ):
@@ -2487,6 +2488,10 @@ class OctobogzHuntTest(unittest.TestCase):
                 )
                 gold[0] = available_gold
                 walker.retained_lesser_shop_name = "originalShopLesser2"
+                walker.original_lesser_shop_names = tuple(
+                    metadata[item["__handle__"]]["name"] for item in original_stock
+                )
+                walker.purchased_lesser_shop_names = set()
                 with patch("builtins.print"):
                     bought = walker.buyFiniteBasicIngredientsAtAuthoredMarket(initial)
                 self.assertEqual(expected_count, bought)
@@ -2497,6 +2502,63 @@ class OctobogzHuntTest(unittest.TestCase):
                 else:
                     self.assertEqual(20, gold[0], "A funded ingredient batch must retain its real brewing fee")
                     self.assertTrue(all(item in inventory and item not in stock for item in buys))
+
+    def testLaterHealingPreparationUsesAffordableUntouchedOriginalPairsAfterReloadWithoutBuyback(self):
+        walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = (
+            self.authoredBrewingFixture(1, 0, 10)
+        )
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket()
+        self.assertEqual(520, gold[0])
+        self.assertEqual([], buys)
+        self.assertTrue(all(item in stock for item in original_stock))
+        # The sold earned ingredient must not become eligible alongside the original stock.
+        self.assertEqual(4, len(walker.basicLesserIngredients(stock)))
+        for original in original_stock:
+            identity = original["__handle__"]
+            replacement = {"__handle__": "reloaded_" + identity}
+            metadata[replacement["__handle__"]] = dict(metadata[identity])
+            stock[stock.index(original)] = replacement
+        add_item("actualScoutDarkBeer", "DarkBeer", 1, inventory)
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual(1, len(crafts))
+        self.assertEqual(20, gold[0])
+        self.assertEqual(
+            ["originalShopLesser0", "originalShopLesser1"], [metadata[item["__handle__"]]["name"] for item in buys]
+        )
+        self.assertIn(sales[0], stock, "The sold earned Lesser must never be repurchased")
+        self.assertEqual(2, len(walker.basicLesserIngredients(stock)))
+        add_item("actualAlphaDarkBeer", "DarkBeer", 1, inventory)
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual(1, len(crafts), "A lone original ingredient must not be paired with a buyback item")
+        self.assertEqual(2, len(buys))
+        self.assertEqual(340, gold[0])
+
+    def testFiniteOriginalIngredientNamesNeverReenrollPurchasedOrSoldStock(self):
+        walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = (
+            self.authoredBrewingFixture(1, 1, 5)
+        )
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket()
+        self.assertEqual(original_stock[:1], buys)
+        self.assertEqual(1, len(crafts))
+        gold[0] = 820
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual(original_stock, buys, "Both untouched originals remain usable after an initial odd pair")
+        self.assertEqual(2, len(crafts))
+        self.assertEqual(0, gold[0])
+        # Simulate later stock containing an already purchased name and a new unrelated buyback identity.
+        add_item("unrelatedSoldLesser", "LesserLifePotion", 1, stock)
+        stock.extend(original_stock)
+        gold[0] = 2000
+        with patch("builtins.print"):
+            self.assertEqual(0, walker.buyFiniteBasicIngredientsAtAuthoredMarket(False))
+            self.assertEqual(0, walker.buyFiniteBasicIngredientsAtAuthoredMarket(True))
+        self.assertEqual(original_stock, buys)
+        self.assertEqual(2000, gold[0])
 
     def testBasicBrewingRejectsWrongInputsOutputPaymentResourcesAndNativePurchaseIdentity(self):
         for corruption in (

@@ -424,23 +424,38 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual(self.coords(market_actor), self.coords())
         market = self.call(market_actor, "getObjectProperty", "market")
         candidates = self.basicLesserIngredients(self.call(market, "getItems"))
-        if initial:
-            # Retain an original finite shop ingredient for genuinely looted odd stock after Scout.
+        if initial and not hasattr(self, "original_lesser_shop_names"):
+            self.original_lesser_shop_names = tuple(self.call(item, "getName") for item in candidates)
+            self.purchased_lesser_shop_names = set()
             self.retained_lesser_shop_name = self.call(candidates[-1], "getName") if candidates else None
-            candidates = candidates[:-1]
-            limit = 2
-        else:
-            retained = getattr(self, "retained_lesser_shop_name", None)
-            candidates = [item for item in candidates if self.call(item, "getName") == retained]
-            limit = 1
+        original_names = getattr(self, "original_lesser_shop_names", ())
+        purchased_names = getattr(self, "purchased_lesser_shop_names", set())
+        candidates = [
+            item
+            for item in candidates
+            if self.call(item, "getName") in original_names and self.call(item, "getName") not in purchased_names
+        ]
+        if initial:
+            candidates = [item for item in candidates if self.call(item, "getName") != self.retained_lesser_shop_name]
         needed = 1 if len(self.basicLesserIngredients(self.call(self.player, "getItems"))) % 2 else 2
+        receipt = {
+            "initial": initial,
+            "originalNames": list(original_names),
+            "purchasedNames": sorted(purchased_names),
+            "availableOriginalNames": [self.call(item, "getName") for item in candidates],
+            "needed": needed,
+            "gold": self.call(self.player, "getGold"),
+        }
         candidates = candidates[:needed]
-        if needed > limit or len(candidates) < needed:
+        if len(candidates) < needed:
+            print("MCP hunt finite original stock", {**receipt, "skip": "incomplete original pair"}, flush=True)
             return 0
         quotes = [self.call(market, "getSellCost", item) for item in candidates]
         self.assertTrue(all(price > 0 for price in quotes))
         if sum(quotes) + 20 > self.call(self.player, "getGold"):
+            print("MCP hunt finite original stock", {**receipt, "quotes": quotes, "skip": "unaffordable"}, flush=True)
             return 0
+        print("MCP hunt finite original stock", {**receipt, "quotes": quotes, "skip": ""}, flush=True)
         before = self.marketTransactionState()
         purchases = []
         for item, price in zip(candidates, quotes):
@@ -453,7 +468,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertNotIn(identity, [stocked["__handle__"] for stocked in self.call(market, "getItems")])
             self.assertIn(identity, [owned["__handle__"] for owned in self.call(self.player, "getItems")])
             self.assertEqual(before, self.marketTransactionState())
-            purchases.append({"name": self.call(item, "getName"), "price": price})
+            name = self.call(item, "getName")
+            self.purchased_lesser_shop_names.add(name)
+            purchases.append({"name": name, "price": price})
         print("MCP hunt finite authored ingredient purchase", {"initial": initial, "items": purchases}, flush=True)
         return len(purchases)
 

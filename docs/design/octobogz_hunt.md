@@ -725,3 +725,48 @@ and four beers can produce four Life Potions, leaving 600 gold and the third
 original shop ingredient; Scout's actual lesser can later complete one more pair
 for 420 gold. These are source-backed accounting examples, not a promised victory.
 Fresh native gameplay on both platforms and canonical coverage remain required.
+
+
+## Reusing all untouched original shop stock after the instrumented depletion
+
+Head `b77f89d4`, build 36935826230, passed Linux, Windows, their native and
+performance checks, and Android. Both normal automatic class routes and the
+linked-effect replay passed. Canonical coverage did not pass: its completed
+hunt case failed in 894.016 seconds when Sorcerer lost to Brood at 6250 XP,
+1 HP/148 MP and 1160 gold. The full Python shards finished rather than reaching
+the coverage phase timeout; the run produced no canonical percentage. Artifact
+`11199012927` (`linux-coverage-report`, 12,723,040 bytes) retains the diagnostics.
+The unchanged full partial-save fixture passed in 47.664 seconds under its scoped
+instrumented watchdog.
+
+The actual caster receipts show zero purchases throughout this failed route.
+Initial preparation had one Lesser Life Potion and 200 gold, insufficient for
+a quoted ingredient plus the brewing fee; it sold that owned ingredient for
+320 gold and left ten stronger heals. After Scout, an actual Dark Beer sale
+raised gold to 840 with three Life Potions and no Lesser ingredients. After
+Alpha, another actual sale raised gold to 1160 with one Life Potion. The source
+shop's three original ingredients remained untouched, as accounted for by the
+configured finite stock, zero purchase receipts, and exact gold changes. Their
+individual names were not logged by that head.
+
+The later-visit helper incorrectly restricted candidates to the one reserved
+third ingredient. With zero owned ingredients it needed two, so it skipped the
+otherwise affordable 800-gold pair plus the 20-gold brewing fee. The correction
+records all original shop names before the initial cleanup can add a sold earned
+ingredient. Later visits intersect those names with current actual stock and
+exclude every name previously purchased. They may buy one or two ingredients
+only to complete an owned pair and only with quoted prices plus the real fee
+available. The first visit still reserves the third original ingredient. A
+partial reload replaces handles without changing these original names; a sold,
+returned or newly created stock identity cannot enter the whitelist.
+
+Two regressions fail against the previous helper and pass after the correction:
+an initial unaffordable visit followed by the measured affordable late pair,
+and an initial odd pair followed by both untouched remaining originals. They
+also cover reload handles, sold earned stock, purchased-name re-enrollment and
+repeated visits. Exact 419/420 and 819/820 funding boundaries remain tested.
+New bounded receipts report original, purchased and available names, quotes,
+gold and the reason for a skipped purchase. This repairs a demonstrated unused
+stock gap; it does not promise that one extra Life Potion ensures survival.
+Fresh complete native routes and canonical coverage remain required. Enemy
+stats, ordinary AI, encounters, fixed comparisons and deadlines are unchanged.
