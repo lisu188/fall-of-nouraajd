@@ -468,8 +468,8 @@ void test_target_controller_concurrent_requests_extend_and_reuse_shared_flow() {
     map->removeTile(129, 0, 0);
     map->addTile(tile(false), 129, 0, 0);
     verify_batch(true);
-    expect_true(performance_guard::targetFlowCacheSize() == 2,
-                "concurrent requests after a topology change must share one replacement field");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "concurrent requests after a topology change must repair one retained field");
     performance_guard::clearTargetFlowCache();
 }
 

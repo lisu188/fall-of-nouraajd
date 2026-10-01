@@ -47,23 +47,65 @@ void CTile::onStep(std::shared_ptr<CCreature> creature) {
 
 bool CTile::canStep() const { return step; }
 
-void CTile::setCanStep(bool canStep) { this->step = canStep; }
+void CTile::setCanStep(bool canStep) {
+    auto map = getMap();
+    std::unique_lock<std::recursive_mutex> lock;
+    if (map)
+        lock = std::unique_lock(map->getNavigationMutex());
+    if (step == canStep)
+        return;
+    step = canStep;
+    if (map && map->hasRegisteredTile(this))
+        map->navigationCellChanged(getCoords());
+}
 
 int CTile::getPosx() const { return posx; }
 
-void CTile::setPosx(int value) { posx = value; }
+void CTile::setPosx(int value) {
+    auto map = getMap();
+    if (map && map->hasRegisteredTile(this)) {
+        map->moveTile(ptr<CTile>(), value, posy, posz);
+        return;
+    }
+    posx = value;
+}
 
 int CTile::getPosy() const { return posy; }
 
-void CTile::setPosy(int value) { posy = value; }
+void CTile::setPosy(int value) {
+    auto map = getMap();
+    if (map && map->hasRegisteredTile(this)) {
+        map->moveTile(ptr<CTile>(), posx, value, posz);
+        return;
+    }
+    posy = value;
+}
 
 int CTile::getPosz() const { return posz; }
 
-void CTile::setPosz(int value) { posz = value; }
+void CTile::setPosz(int value) {
+    auto map = getMap();
+    if (map && map->hasRegisteredTile(this)) {
+        map->moveTile(ptr<CTile>(), posx, posy, value);
+        return;
+    }
+    posz = value;
+}
 
 int CTile::getMovementCost() const { return std::max(1, movementCost); }
 
-void CTile::setMovementCost(int value) { movementCost = std::max(1, value); }
+void CTile::setMovementCost(int value) {
+    auto map = getMap();
+    std::unique_lock<std::recursive_mutex> lock;
+    if (map)
+        lock = std::unique_lock(map->getNavigationMutex());
+    value = std::max(1, value);
+    if (movementCost == value)
+        return;
+    movementCost = value;
+    if (map && map->hasRegisteredTile(this))
+        map->navigationCellChanged(getCoords());
+}
 
 void CTile::setXYZ(int x, int y, int z) {
     posx = x;

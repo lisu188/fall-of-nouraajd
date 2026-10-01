@@ -165,6 +165,8 @@ GAMEPLAY_TEST_PREFIXES = (
     "McpServerTest.",
     "DialogueMcpWalkthroughTest.",
     "ManagementMcpWalkthroughTest.",
+    "NavigationMcpWalkthroughTest.",
+    "NavigationCallbackTest.",
     "ArtifactPreviewTest.",
     "PythonCallbackLifecycleTest.",
     "ConsoleUiInteractionTest.",
@@ -18458,7 +18460,7 @@ class GameTest(unittest.TestCase):
         return issues_by_file == {}, json.dumps(log, indent=2, sort_keys=True)
 
     def test_map_json_tiled_compatibility_allows_default_entry_coordinates(self):
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         map_data = {
             "type": "map",
             "orientation": "orthogonal",
@@ -24779,6 +24781,22 @@ class QuestStateHelperTest(unittest.TestCase):
 
 class TestRunnerSuiteTest(unittest.TestCase):
 
+    def testMcpWalkthroughLogsCreateNestedWorkerDirectories(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-log-") as temporary:
+            output_dir = Path(temporary) / "test" / "workers" / "4"
+            self.assertFalse(output_dir.parent.exists())
+            log = [{"map": "sunderedmarch", "step": "load"}]
+            harness = McpServerTest()
+            with patch(__name__ + ".TEST_OUTPUT_DIR", output_dir):
+                harness._write_mcp_walkthrough_log("sunderedmarch", log)
+                harness._write_mcp_walkthrough_log("castleHomecoming", [{"step": "start"}])
+            self.assertEqual(log, json.loads((output_dir / "mcp_walkthrough_sunderedmarch.json").read_text()))
+            self.assertEqual(
+                [{"step": "start"}], json.loads((output_dir / "mcp_walkthrough_castleHomecoming.json").read_text())
+            )
+
     def testImportedHarnessUsesExecutingModule(self):
         import test as harness
 
@@ -24824,6 +24842,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
             PaidActionRuntimeTest,
             DialogueMcpWalkthroughTest,
             ManagementMcpWalkthroughTest,
+            NavigationMcpWalkthroughTest,
+            NavigationCallbackTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
             ConsoleUiInteractionTest,
@@ -24843,6 +24863,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
         self.assertNotIn("_PaidActionRuntimeTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationCallbackTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
@@ -25217,6 +25239,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
+    from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_paid_actions import PaidActionRuntimeTest as _PaidActionRuntimeTest
@@ -25236,6 +25260,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class ManagementMcpWalkthroughTest(_ManagementMcpWalkthroughTest):
+        pass
+
+    class NavigationMcpWalkthroughTest(_NavigationMcpWalkthroughTest):
+        pass
+
+    class NavigationCallbackTest(_NavigationCallbackTest):
         pass
 
     class ArtifactPreviewTest(_ArtifactPreviewTest):
@@ -25268,6 +25298,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _EnemyRoleRuntimeTest
     del _OctobogzMcpWalkthroughTest
     del _OctobogzRuntimeTest
+    del _NavigationMcpWalkthroughTest
+    del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 
@@ -26085,7 +26117,7 @@ class McpServerTest(unittest.TestCase):
             "discovered_maps": discovered_maps,
             "walkthroughs": self.MCP_WALKTHROUGHS,
         }
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         (TEST_OUTPUT_DIR / "mcp_walkthroughs.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
 
     def test_stdio_map_walkthrough_nouraajd(self):
@@ -26311,7 +26343,7 @@ class McpServerTest(unittest.TestCase):
         trace_path = None
         env = None
         if map_name == "nouraajd":
-            TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+            TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
             trace_path = TEST_OUTPUT_DIR / "mcp_walkthrough_nouraajd_trace.jsonl"
             trace_path.unlink(missing_ok=True)
             env = os.environ.copy()
@@ -26491,7 +26523,7 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(log_level_response.get("id"), 2)
 
     def _write_mcp_walkthrough_log(self, map_name, log):
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{map_name}.json"
         path.write_text(json.dumps(log, indent=2, sort_keys=True))
 

@@ -286,8 +286,8 @@ void test_relevant_object_move_invalidates_target_navigation() {
     expect_true(rerouted_step != actor->getCoords() && is_cardinal_step(fixture.map, actor->getCoords(), rerouted_step),
                 "rerouted object-invalidation step should still be one legal movement");
     expect_true(fixture.map->canStep(rerouted_step), "rerouted object-invalidation step should be passable");
-    expect_true(performance_guard::targetFlowCacheSize() == 2,
-                "object navigation revision change should create one replacement flow field");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "object navigation changes should repair the existing target field");
 }
 
 void test_relevant_tile_change_invalidates_target_navigation() {
@@ -317,8 +317,8 @@ void test_relevant_tile_change_invalidates_target_navigation() {
     expect_true(rerouted_step != actor->getCoords() && is_cardinal_step(fixture.map, actor->getCoords(), rerouted_step),
                 "rerouted tile-invalidation step should still be one legal movement");
     expect_true(fixture.map->canStep(rerouted_step), "rerouted tile-invalidation step should be passable");
-    expect_true(performance_guard::targetFlowCacheSize() == 2,
-                "tile navigation revision change should create one replacement flow field");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "tile navigation changes should repair the existing target field");
 }
 
 void test_navigation_edge_removal_invalidates_target_navigation() {
@@ -358,8 +358,8 @@ void test_navigation_edge_removal_invalidates_target_navigation() {
 
     const auto blocked_step = fixture.map->normalizeCoords(resolve_step(actor));
     expect_true(blocked_step == start_coords, "target navigation should stop after the only edge route is removed");
-    expect_true(performance_guard::targetFlowCacheSize() == 2,
-                "edge navigation revision change should create one replacement flow field");
+    expect_true(performance_guard::targetFlowCacheSize() == 1,
+                "edge topology rebuild should replace the contents of the existing target field");
 }
 
 void test_irrelevant_metadata_activity_does_not_invalidate_navigation() {
