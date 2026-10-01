@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <cstddef>
+#include <atomic>
+#include <mutex>
 
 #include "core/CGlobal.h"
 
@@ -43,6 +45,9 @@ class CMapObject;
 class CTrigger;
 
 class CGame;
+class CNavigationService;
+class CNavigationSnapshot;
+struct CNavigationCell;
 
 struct CNavigationEdge {
     Coords source;
@@ -63,6 +68,7 @@ class CMap : public CGameObject {
     friend class CMapLoader;
 
     friend class CRandomMapGenerator;
+    friend class CNavigationSnapshot;
 
     V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
            V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
@@ -169,7 +175,7 @@ class CMap : public CGameObject {
 
     int lookupMovementCost(Coords coords);
 
-    int lookupNavigationStepCost(Coords from, Coords to);
+    std::int64_t lookupNavigationStepCost(Coords from, Coords to);
 
     Coords normalizeCoords(Coords coords) const;
 
@@ -210,6 +216,12 @@ class CMap : public CGameObject {
     void setTurn(int turn);
 
     std::uint64_t getNavigationRevision() const;
+
+    std::uint64_t getRoutingEpoch() const;
+    std::recursive_mutex &getNavigationMutex() const;
+    std::shared_ptr<CNavigationService> getNavigationService();
+    void navigationCellChanged(Coords coords);
+    bool hasRegisteredTile(const CTile *tile) const;
 
     const std::vector<CNavigationEdge> &getNavigationEdges() const;
 
@@ -278,6 +290,22 @@ class CMap : public CGameObject {
     std::string mapName;
     std::string combatHistory;
     std::uint64_t navigationRevision = 0;
+    mutable std::recursive_mutex navigationMutex;
+    mutable std::uint64_t routingEpoch = 1;
+    mutable std::uint64_t routingConfigRevision = 0;
+    std::shared_ptr<CNavigationService> navigationService;
+    bool navigationDomainCanonical = true;
+    struct NavigationTileExtent {
+        int level = 0;
+        std::array<int, 4> extent{};
+    };
+    std::array<NavigationTileExtent, 64> navigationTileExtents{};
+    std::size_t navigationTileExtentCount = 0;
+    bool navigationTileExtentOverflow = false;
+    void includeNavigationTile(Coords coords);
+
+    void routingChanged(std::optional<Coords> coords = std::nullopt);
+    CNavigationCell lookupNavigationCell(Coords coords, std::optional<CNavigationCell> fallback);
 
     bool hasBounds(int z) const;
 

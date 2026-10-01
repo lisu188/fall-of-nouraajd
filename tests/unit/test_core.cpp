@@ -317,14 +317,16 @@ void test_pathfinder_rejects_overflowing_routes() {
         return std::vector<Coords>{};
     };
     auto distance = [](const Coords &, const Coords &) { return 0.0; };
-    auto cost = [=](const Coords &from, const Coords &to) {
-        return to == expensive ? std::numeric_limits<int>::max() - 1 : from == expensive ? 10 : 1;
+    auto cost = [=](const Coords &from, const Coords &to) -> std::int64_t {
+        return to == expensive     ? static_cast<std::int64_t>(std::numeric_limits<int>::max()) + 9
+               : from == expensive ? 10
+                                   : 1;
     };
     auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, cost);
     expect_true(path == std::vector<Coords>{cheap, goal},
-                "an overflowing route must not become cheaper than a valid detour");
+                "a 64-bit callback cost must not narrow into a cheap negative route");
     auto step = CPathFinder::findNextStep(start, goal, can_step, waypoint, neighbors, distance, cost);
-    expect_true(step->get() == cheap, "async next-step search should also reject overflowing route costs");
+    expect_true(step->get() == cheap, "async next-step search should also preserve 64-bit callback costs");
 }
 
 void test_pathfinder_waypoint_and_blocked_goal() {

@@ -1035,8 +1035,9 @@ void test_navigation_step_cost_preserves_terrain_and_prices_connectors() {
     expect_true(map->lookupNavigationStepCost(Coords(2, 0, 0), target) == 3,
                 "default connector should keep terrain pricing");
     map->registerNavigationEdge({Coords(3, 0, 0), target, true, false, std::numeric_limits<int>::max()});
-    expect_true(map->lookupNavigationStepCost(Coords(3, 0, 0), target) == std::numeric_limits<int>::max(),
-                "an excessive connector cost must saturate instead of wrapping or becoming a cheap default");
+    expect_true(map->lookupNavigationStepCost(Coords(3, 0, 0), target) ==
+                    static_cast<std::int64_t>(std::numeric_limits<int>::max()) + 2,
+                "a connector cost above the 32-bit limit must remain a positive exact price");
 }
 
 void test_map_navigation_edges_update_revision() {
