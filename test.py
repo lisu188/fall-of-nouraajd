@@ -226,9 +226,9 @@ SERIAL_TEST_NAMES = {
 # and size each shard's timeout to its own load.
 SERIAL_TEST_PREFIXES = ()
 DEFAULT_TEST_DURATIONS = {
-    # Windows 57e44f00 took 213.5s before failing on the approach. This rounded
-    # cold-cache hint is a lower bound until a completed route supplies timings.
-    "OctobogzMcpWalkthroughTest.testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce": 214.0,
+    # The 607s hint rounds instrumented Linux 57e44f00's 606.6s failed preparation.
+    # Completed-route timings remain pending; recorded samples take precedence.
+    "OctobogzMcpWalkthroughTest.testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce": 607.0,
     "McpServerTest.test_stdio_map_walkthrough_castleHomecoming": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_castleGriffinCliff": 90.0,
