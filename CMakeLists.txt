@@ -865,9 +865,23 @@ if (NOT WIN32)
     list(APPEND GAME_HANDLER_UNIT_TEST_SRC src/handler/CScriptHandler.cpp)
 endif ()
 add_game_unit_test(handler_unit_tests ${GAME_HANDLER_UNIT_TEST_SRC})
+target_compile_definitions(handler_unit_tests PRIVATE
+    GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
 add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
 add_game_unit_test(plugin_registrar_unit_tests tests/unit/test_plugin_registrar.cpp)
 add_game_unit_test(lua_unit_tests tests/unit/test_lua.cpp)
+
+add_executable(native_test_profile_fixture tests/unit/native_test_profile_fixture.cpp)
+configure_cpp_target(native_test_profile_fixture)
+list(APPEND GAME_UNIT_TEST_TARGETS native_test_profile_fixture)
+add_test(NAME "for_unit_tests.native_test_profile_contracts"
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_native_test_profile.py"
+        NativeTestProfileRuntimeTest -v)
+set_tests_properties("for_unit_tests.native_test_profile_contracts" PROPERTIES
+    LABELS "for_unit_tests;unit;native_test_profile_contracts"
+    TIMEOUT 60
+    ENVIRONMENT "GAME_NATIVE_TEST_PROFILE_FIXTURE=$<TARGET_FILE:native_test_profile_fixture>"
+)
 
 add_executable(performance_guard_tests
     tests/unit/test_performance.cpp
@@ -920,6 +934,8 @@ add_game_unit_test(vstd_unit_tests tests/unit/test_vstd.cpp)
 add_game_unit_test(random_dungeon_unit_tests tests/unit/test_random_dungeon.cpp)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_game_unit_test(map_unit_tests tests/unit/test_map.cpp)
+    target_compile_definitions(map_unit_tests PRIVATE
+        GAME_NATIVE_TEST_PROFILE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/coverage/native-test-profiles")
     add_game_unit_test(resource_unit_tests tests/unit/test_resource.cpp)
 endif ()
 
