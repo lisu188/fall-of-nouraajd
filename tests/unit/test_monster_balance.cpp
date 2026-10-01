@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/embed.h>
 #include <algorithm>
+#include <cstdlib>
 #include <memory>
 #include <vector>
 
@@ -87,6 +88,7 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     const int startingMana = player->getMana();
     const int startingItems = static_cast<int>(player->getItems().size());
     vstd::rng().seed(seed);
+    std::srand(seed);
     const auto result = CFightHandler::fightManyResult(player, {enemy});
     RoleBalanceSample sample{result.attackerSucceeded(), std::max(0, startingHp - player->getHp()),
                              std::max(0, startingMana - player->getMana()),
