@@ -47,6 +47,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -205,8 +206,12 @@ class CompletedQuest : public CQuest {
 };
 
 std::shared_ptr<CGame> load_empty_game() {
+    const auto started = std::chrono::steady_clock::now();
     auto game = CGameLoader::loadGame();
     CGameLoader::startGame(game, "empty");
+    const auto elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+    std::cout << "[handler-fixture] loadEmptyGame elapsedMs=" << elapsed << std::endl;
     return game;
 }
 
@@ -2052,9 +2057,12 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 int main() {
     pybind11::scoped_interpreter guard{};
     auto run = [](const char *name, auto test) {
+        const auto started = std::chrono::steady_clock::now();
         std::cout << "[handler-test] START " << name << std::endl;
         test();
-        std::cout << "[handler-test] DONE " << name << std::endl;
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+        std::cout << "[handler-test] DONE " << name << " elapsedMs=" << elapsed << std::endl;
     };
 #define RUN_HANDLER_TEST(test) run(#test, test)
     RUN_HANDLER_TEST(testGameplayMetadataIsAvailableBeforePluginLoading);
