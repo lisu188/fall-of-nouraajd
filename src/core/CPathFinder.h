@@ -72,7 +72,7 @@ class CPathFinder {
     using Waypoint = std::function<std::optional<Coords>(const Coords &)>;
     using Neighbors = std::function<std::vector<Coords>(const Coords &)>;
     using Distance = std::function<double(const Coords &, const Coords &)>;
-    using StepCost = std::function<int(const Coords &, const Coords &)>;
+    using StepCost = std::function<std::int64_t(const Coords &, const Coords &)>;
 
     // Geometric distance is admissible for ordinary map steps, but not for enabled portal edges.
     static Distance mapHeuristic(const std::shared_ptr<CMap> &map);

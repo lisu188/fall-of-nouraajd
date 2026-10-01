@@ -102,6 +102,8 @@ struct CNavigationSnapshot::Data {
     std::pmr::map<int, Level> levels;
     std::pmr::unordered_map<Coords, std::pmr::vector<Coords>, CNavigationCoordsHash> outgoing;
     std::pmr::unordered_map<Coords, std::pmr::vector<Coords>, CNavigationCoordsHash> incoming;
+    std::pmr::unordered_map<Coords, std::pmr::unordered_map<Coords, int, CNavigationCoordsHash>, CNavigationCoordsHash>
+        connectorCosts;
     std::pmr::vector<Coords> endpoints;
     std::pmr::vector<std::int64_t> relaxed;
     mutable std::mutex chunksMutex;
@@ -111,8 +113,8 @@ struct CNavigationSnapshot::Data {
     mutable std::array<std::int64_t, 64> goalDistances{};
     Data(std::shared_ptr<CNavigationBudget> budget)
         : budget(std::move(budget)), levels(this->budget.get()), outgoing(this->budget.get()),
-          incoming(this->budget.get()), endpoints(this->budget.get()), relaxed(this->budget.get()),
-          chunks(this->budget.get()) {}
+          incoming(this->budget.get()), connectorCosts(this->budget.get()), endpoints(this->budget.get()),
+          relaxed(this->budget.get()), chunks(this->budget.get()) {}
 };
 
 CNavigationSnapshot::CNavigationSnapshot(std::shared_ptr<CNavigationBudget> budget, std::shared_ptr<CMap> map,
@@ -179,6 +181,16 @@ CNavigationSnapshot::CNavigationSnapshot(std::shared_ptr<CNavigationBudget> budg
             if (std::ranges::find(destinations, to) == destinations.end())
                 destinations.push_back(to);
         };
+        auto recordCost = [&](Coords from, Coords to, int cost) {
+            const auto adjacent = neighbors(from);
+            if (std::find(adjacent.cardinal.begin(), adjacent.cardinal.begin() + adjacent.count, to) !=
+                adjacent.cardinal.begin() + adjacent.count)
+                return;
+            auto [source, inserted] = data->connectorCosts.try_emplace(from);
+            auto [destination, added] = source->second.try_emplace(to, std::max(1, cost));
+            if (!added)
+                destination->second = std::min(destination->second, std::max(1, cost));
+        };
         for (const auto &edge : map->navigationEdges) {
             if (!edge.enabled)
                 continue;
@@ -187,10 +199,12 @@ CNavigationSnapshot::CNavigationSnapshot(std::shared_ptr<CNavigationBudget> budg
             if (edge.source == source) {
                 add(data->outgoing, source, target);
                 add(data->incoming, target, source);
+                recordCost(source, target, edge.movementCost);
             }
             if (edge.bidirectional && edge.target == target) {
                 add(data->outgoing, target, source);
                 add(data->incoming, source, target);
+                recordCost(target, source, edge.movementCost);
             }
             if (edge.source != source || edge.target != target)
                 data->finite = false;
@@ -216,7 +230,8 @@ CNavigationSnapshot::CNavigationSnapshot(std::shared_ptr<CNavigationBudget> budg
                 if (edges != data->outgoing.end())
                     for (auto destination : edges->second) {
                         auto j = std::ranges::find(data->endpoints, destination) - data->endpoints.begin();
-                        data->relaxed[i * count + j] = std::min<std::int64_t>(data->relaxed[i * count + j], 1);
+                        const auto fee = data->connectorCosts.at(data->endpoints[i]).at(destination);
+                        data->relaxed[i * count + j] = std::min<std::int64_t>(data->relaxed[i * count + j], fee);
                     }
             }
             for (std::size_t k = 0; k < count; ++k)
@@ -293,6 +308,18 @@ CNavigationCell CNavigationSnapshot::cell(Coords coords) const {
 }
 bool CNavigationSnapshot::canStep(Coords coords) const { return cell(coords).walkable; }
 int CNavigationSnapshot::movementCost(Coords coords) const { return cell(coords).cost; }
+std::int64_t CNavigationSnapshot::stepCost(Coords from, Coords to) const {
+    from = normalize(from);
+    to = normalize(to);
+    const int terrainCost = movementCost(to);
+    const auto source = data->connectorCosts.find(from);
+    if (source == data->connectorCosts.end())
+        return terrainCost;
+    const auto destination = source->second.find(to);
+    if (destination == source->second.end())
+        return terrainCost;
+    return static_cast<std::int64_t>(terrainCost) + destination->second - 1;
+}
 CNavigationNeighbors CNavigationSnapshot::neighbors(Coords coords, bool reverse) const {
     coords = normalize(coords);
     CNavigationNeighbors result;

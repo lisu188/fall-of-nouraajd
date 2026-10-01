@@ -175,6 +175,8 @@ class CMap : public CGameObject {
 
     int lookupMovementCost(Coords coords);
 
+    std::int64_t lookupNavigationStepCost(Coords from, Coords to);
+
     Coords normalizeCoords(Coords coords) const;
 
     // Returns true when the coordinate falls inside the configured map extents for its level.

@@ -30,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <atomic>
 #include <chrono>
+#include <limits>
 
 namespace {
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
@@ -434,6 +435,7 @@ void CMap::registerNavigationEdge(CNavigationEdge edge) {
     std::lock_guard lock(navigationMutex);
     edge.source = normalizeCoords(edge.source);
     edge.target = normalizeCoords(edge.target);
+    edge.movementCost = std::max(1, edge.movementCost);
     navigationEdges.push_back(std::move(edge));
     bumpNavigationRevision();
     routingChanged();
@@ -601,6 +603,31 @@ int CMap::lookupMovementCost(int x, int y, int z) {
 }
 
 int CMap::lookupMovementCost(Coords coords) { return lookupMovementCost(coords.x, coords.y, coords.z); }
+
+std::int64_t CMap::lookupNavigationStepCost(Coords from, Coords to) {
+    int fee = std::numeric_limits<int>::max();
+    bool matched = false;
+    {
+        std::lock_guard lock(navigationMutex);
+        from = normalizeCoords(from);
+        to = normalizeCoords(to);
+        if (!navigationEdges.empty()) {
+            const auto adjacent = getAdjacentCoords(from);
+            if (std::ranges::find(adjacent, to) == adjacent.end()) {
+                for (const auto &edge : navigationEdges) {
+                    if (edge.enabled &&
+                        ((edge.source == from && normalizeCoords(edge.target) == to) ||
+                         (edge.bidirectional && edge.target == from && normalizeCoords(edge.source) == to))) {
+                        matched = true;
+                        fee = std::min(fee, std::max(1, edge.movementCost));
+                    }
+                }
+            }
+        }
+    }
+    const std::int64_t terrain_cost = lookupMovementCost(to);
+    return matched ? terrain_cost + fee - 1 : terrain_cost;
+}
 
 bool CMap::contains(int x, int y, int z) {
     Coords coords = normalizeCoords(Coords(x, y, z));
@@ -981,7 +1008,8 @@ void CMap::dumpPaths(std::string path) {
         currentPlayer->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
         [](auto) -> std::optional<Coords> { return std::nullopt; },
         [this](auto coords) { return this->getNavigationNeighbors(coords); },
-        CPathFinder::mapHeuristic(this->ptr<CMap>()), [this](auto, auto to) { return this->lookupMovementCost(to); });
+        CPathFinder::mapHeuristic(this->ptr<CMap>()),
+        [this](auto from, auto to) { return this->lookupNavigationStepCost(from, to); });
 }
 
 std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {

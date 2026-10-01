@@ -305,6 +305,30 @@ void test_pathfinder_find_path_without_obstacles() {
     expect_true(next_step->get() == Coords(1, 0, 0), "findNextStep should return the first optimal neighbor");
 }
 
+void test_pathfinder_rejects_overflowing_routes() {
+    const Coords start(0, 0, 0), expensive(1, 0, 0), cheap(0, 1, 0), goal(2, 0, 0);
+    auto can_step = [](const Coords &) { return true; };
+    auto waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
+    auto neighbors = [=](const Coords &coords) {
+        if (coords == start)
+            return std::vector<Coords>{expensive, cheap};
+        if (coords == expensive || coords == cheap)
+            return std::vector<Coords>{goal};
+        return std::vector<Coords>{};
+    };
+    auto distance = [](const Coords &, const Coords &) { return 0.0; };
+    auto cost = [=](const Coords &from, const Coords &to) -> std::int64_t {
+        return to == expensive     ? static_cast<std::int64_t>(std::numeric_limits<int>::max()) + 9
+               : from == expensive ? 10
+                                   : 1;
+    };
+    auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, cost);
+    expect_true(path == std::vector<Coords>{cheap, goal},
+                "a 64-bit callback cost must not narrow into a cheap negative route");
+    auto step = CPathFinder::findNextStep(start, goal, can_step, waypoint, neighbors, distance, cost);
+    expect_true(step->get() == cheap, "async next-step search should also preserve 64-bit callback costs");
+}
+
 void test_pathfinder_waypoint_and_blocked_goal() {
     auto can_step = [](const Coords &coords) { return coords == Coords(0, 0, 0); };
     auto no_waypoint = [](const Coords &) -> std::optional<Coords> { return std::nullopt; };
@@ -2892,6 +2916,7 @@ int main() {
     test_near_coords_helpers();
     test_pathfinder_find_path_without_obstacles();
     test_pathfinder_waypoint_and_blocked_goal();
+    test_pathfinder_rejects_overflowing_routes();
     test_pathfinder_returns_start_when_passable_goal_has_no_route();
     test_pathfinder_caches_passability_checks();
     test_pathfinder_waypoint_override();

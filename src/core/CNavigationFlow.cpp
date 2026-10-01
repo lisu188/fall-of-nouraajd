@@ -45,11 +45,11 @@ struct Distance {
 
     auto operator<=>(const Distance &) const = default;
 
-    Distance preceding(int movementCost) const {
-        if (cost == FLOW_INFINITE_COST || cost > FLOW_INFINITE_COST - std::max(1, movementCost)) {
+    Distance preceding(std::int64_t movementCost) const {
+        if (cost == FLOW_INFINITE_COST || cost > FLOW_INFINITE_COST - std::max<std::int64_t>(1, movementCost)) {
             return {};
         }
-        return {cost + std::max(1, movementCost), hops + 1};
+        return {cost + std::max<std::int64_t>(1, movementCost), hops + 1};
     }
 };
 
@@ -201,7 +201,7 @@ struct FlowField {
                 if (found == nodes.end() || !snapshot->canStep(successor)) {
                     return;
                 }
-                const auto candidate = found->second.g.preceding(snapshot->movementCost(successor));
+                const auto candidate = found->second.g.preceding(snapshot->stepCost(coords, successor));
                 if (candidate < node.rhs) {
                     node.rhs = candidate;
                     node.next = successor;

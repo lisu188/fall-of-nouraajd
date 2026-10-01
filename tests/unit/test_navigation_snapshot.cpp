@@ -322,6 +322,37 @@ void testNeighborsAndConnectorLowerBounds() {
                 "more than 64 connector endpoints retain exact safe search without unbounded heuristic preprocessing");
 }
 
+void testConnectorCostsRemainDirectedFrozenAndWide() {
+    Fixture fixture(8);
+    fixture.map->setXBounds({{0, 8}, {1, 8}});
+    fixture.map->setYBounds({{0, 2}, {1, 2}});
+    fixture.map->setWrapX({{0, 1}});
+    const Coords source(0, 0, 0), target(5, 0, 1), wideSource(7, 0, 0), wideTarget(7, 0, 1);
+    fixture.tile(target, 3);
+    fixture.tile(wideTarget, INT_MAX);
+    fixture.map->registerNavigationEdge({source, target, true, true, 8, "pricedPortal"});
+    fixture.map->registerNavigationEdge({source, target, true, false, 4, "cheapPortal"});
+    fixture.map->registerNavigationEdge({source, target, false, false, 1});
+    fixture.map->registerNavigationEdge({Coords(4, 0, 1), target, true, false, 20});
+    fixture.map->registerNavigationEdge({Coords(8, 0, 0), source, true, false, 20});
+    fixture.map->registerNavigationEdge({wideSource, wideTarget, true, false, INT_MAX});
+    auto snapshot = fixture.snapshot();
+    expect_true(snapshot->stepCost(source, target) == 6 && snapshot->stepCost(target, source) == 8,
+                "snapshot freezes minimum directed fees with forward and reverse destination terrain");
+    expect_true(snapshot->stepCost(Coords(4, 0, 1), target) == 3 && snapshot->stepCost(Coords(8, 0, 0), source) == 1,
+                "cardinal and wrapped cardinal steps ignore overlapping connector surcharges");
+    const auto wideCost = static_cast<std::int64_t>(INT_MAX) * 2 - 1;
+    expect_true(snapshot->stepCost(wideSource, wideTarget) == wideCost &&
+                    fixture.map->lookupNavigationStepCost(wideSource, wideTarget) == wideCost,
+                "snapshot and diagnostic costs preserve a sum larger than the 32-bit limit");
+    fixture.map->unregisterNavigationEdgesForObject("cheapPortal");
+    auto changed = fixture.snapshot();
+    expect_true(!snapshot->isCurrent() && changed->stepCost(source, target) == 10,
+                "removing the cheap parallel connector invalidates the frozen fee table");
+    expect_true(snapshot->budget()->peak() <= snapshot->budget()->limit(),
+                "frozen connector fee storage remains charged to the unchanged session cap");
+}
+
 void testWeightedWrappedMapOracle() {
     constexpr int side = 7;
     constexpr int count = side * side;
@@ -343,8 +374,22 @@ void testWeightedWrappedMapOracle() {
             edge.source = coords(random() % count);
             edge.target = coords(random() % count);
             edge.bidirectional = i % 2 == 0;
+            edge.movementCost = 1 + random() % 19;
             fixture.map->registerNavigationEdge(edge);
         }
+        const auto edges = fixture.map->getNavigationEdges();
+        const auto authoredCost = [&](Coords from, Coords to) {
+            const std::int64_t terrain = fixture.map->lookupMovementCost(to);
+            const auto adjacent = fixture.map->getAdjacentCoords(from);
+            if (std::ranges::find(adjacent, to) != adjacent.end())
+                return terrain;
+            auto best = infinity;
+            for (const auto &edge : edges)
+                if (edge.enabled && ((edge.source == from && edge.target == to) ||
+                                     (edge.bidirectional && edge.target == from && edge.source == to)))
+                    best = std::min(best, terrain + std::max(1, edge.movementCost) - 1);
+            return best;
+        };
         // Independent all-pairs relaxation uses authoritative map edges and destination costs,
         // without consulting the snapshot's heuristic, compact adjacency or indexed search.
         std::array<std::array<std::int64_t, count>, count> costs;
@@ -357,7 +402,7 @@ void testWeightedWrappedMapOracle() {
                 if (next.x < 0 || next.y < 0 || next.x >= side || next.y >= side || !fixture.map->canStep(next))
                     continue;
                 const int to = next.y * side + next.x;
-                costs[from][to] = std::min<std::int64_t>(costs[from][to], fixture.map->lookupMovementCost(next));
+                costs[from][to] = std::min(costs[from][to], authoredCost(coords(from), next));
             }
         }
         for (int via = 0; via < count; ++via)
@@ -392,7 +437,7 @@ void testWeightedWrappedMapOracle() {
                 const auto neighbors = fixture.map->getNavigationNeighbors(previous);
                 expect_true(std::ranges::find(neighbors, next) != neighbors.end() && fixture.map->canStep(next),
                             "every returned step follows an authoritative passable edge");
-                total += fixture.map->lookupMovementCost(next);
+                total += authoredCost(previous, next);
                 previous = next;
             }
             expect_true(previous == coords(to) && total == costs[from][to],
@@ -546,6 +591,7 @@ int main() {
     testConfigAndFactoryInvalidation();
     testChunkClearDoesNotWaitForCellConstruction();
     testNeighborsAndConnectorLowerBounds();
+    testConnectorCostsRemainDirectedFrozenAndWide();
     testWeightedWrappedMapOracle();
     testMaximumWrappedAxis();
     testAuthoredLevelProofOverflowFallsBackWithoutClipping();

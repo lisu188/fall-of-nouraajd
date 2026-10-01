@@ -4,8 +4,17 @@
 
 Navigation selects routes; it does not grant movement points or change turn costs. `CMap::move()` still commits at most
 one selected step per active creature and increments the map turn once after the simulation cycle. Tile movement costs
-affect route selection only, and are clamped to at least one. A navigation edge currently pays its destination tile's
-cost; the separately stored `CNavigationEdge::movementCost` property does not change that established behavior.
+affect route selection only, and are clamped to at least one. Ordinary cardinal steps pay destination terrain.
+An enabled connector pays `destinationTerrainCost + max(1, edge.movementCost) - 1`; cost 1 preserves existing terrain
+pricing. Duplicate connectors choose the cheapest eligible fee, bidirectional links use the return destination's
+terrain, and ordinary or wrapped cardinal adjacency takes precedence over an overlapping connector. Disabled links
+contribute neither routes nor fees. Cost queries do not grant passability or introduce unregistered connections.
+
+`CMap::lookupNavigationStepCost(from, to)` exposes this rule to Python and route diagnostics. Snapshots freeze the minimum
+directed connector fees in storage charged to the session budget; forward search and reverse pursuit use the same
+`CNavigationSnapshot::stepCost(from, to)`. Costs and callback return values use 64-bit integers so two large authored
+32-bit component costs remain exact. Registering or removing connectors invalidates snapshot and flow state; replace
+an edge through those APIs when changing its fee.
 
 The public `CPathFinder` callback API remains available for directed, sparse and negative-coordinate graphs. A successful
 path excludes the start and includes the goal. Failure and start-equals-goal preserve the legacy `{start}` sentinel;
@@ -33,7 +42,8 @@ change journal supports reuse of unaffected chunks and repair of affected flow c
 available, consumers rebuild instead of guessing. Dynamic fallback factories use conservative nonpersistent caching.
 
 The map heuristic uses a lower bound on walking distance, including wrapping and registered connector endpoints. A
-relaxed connector graph accounts for cheap long-distance and cross-level transitions. Unknown topology or too many
+relaxed connector graph uses each minimum connector fee as a terrain-independent lower bound, accounting for
+long-distance and cross-level transitions. Unknown topology or too many
 connector endpoints uses a zero heuristic. A raw geometric distance must not overestimate a route that uses a portal.
 
 ## Search and resource bounds
