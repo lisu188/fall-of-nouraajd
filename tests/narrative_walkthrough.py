@@ -49,12 +49,15 @@ class NarrativeWalkthrough:
         self.player = player_handle
         self.loop = self.engineCall("event_loop.instance", [])
         self.log = {"movementSteps": 0, "mapTurns": 0, "sealedGates": [], "fixturePotions": 6}
+        self.walkTarget = None
+        self.assertSurvival("fresh fixture")
 
     def call(self, handle, method, args=None):
         return self.handleCall(handle, method, args or [])
 
     def pump(self):
         self.call(self.loop, "run")
+        self.assertSurvival("after event_loop.run")
 
     def properties(self, handle):
         return json.loads(self.engineCall("jsonify", [handle]))["properties"]
@@ -75,25 +78,70 @@ class NarrativeWalkthrough:
             for quest in self.properties(self.player).get(key) or []
         ]
 
+    def failureState(self, reason, stage):
+        map_name = self.call(self.gameMap, "getStringProperty", ["mapName"])
+        target_names = {
+            name for name, coords in getattr(self, "objects", {}).items() if tuple(coords) == self.walkTarget
+        }
+        if map_name == "ritual":
+            target_names.add("ritualLeader")
+        target_objects = {}
+        for name in sorted(target_names):
+            handle = self.object(name)
+            target_objects[name] = self.properties(handle) if handle else None
+        return {
+            **self.log,
+            "reason": reason,
+            "stage": stage,
+            "map": map_name,
+            "nativeTurn": self.call(self.gameMap, "getTurn"),
+            "uiDefeatReceipt": self.call(self.player, "getStringProperty", ["uiDefeatReceipt"]),
+            "playerCoords": self.coords(),
+            "player": self.properties(self.player),
+            "resources": {
+                **{
+                    key: self.call(self.player, method)
+                    for key, method in (
+                        ("hp", "getHp"),
+                        ("hpMax", "getHpMax"),
+                        ("mana", "getMana"),
+                        ("manaMax", "getManaMax"),
+                    )
+                },
+                **{item: self.call(self.player, "countItems", [item]) for item in ("LifePotion", "ManaPotion")},
+            },
+            "target": {"coords": self.walkTarget, "objects": target_objects},
+        }
+
+    def assertSurvival(self, stage):
+        alive = self.call(self.player, "isAlive")
+        receipt = self.call(self.player, "getStringProperty", ["uiDefeatReceipt"])
+        if not alive or receipt:
+            raise AssertionError(self.failureState("Walkthrough player was defeated", stage))
+
     def tick(self):
+        self.assertSurvival("before map.move")
         self.call(self.gameMap, "move")
-        self.pump()
         self.log["mapTurns"] += 1
-        assert self.call(self.player, "isAlive"), {**self.log, "player": self.properties(self.player)}
+        self.pump()
 
     def walkTo(self, target, *, stop=None):
         target = tuple(target)
+        self.walkTarget = target
         for _ in range(256):
+            self.assertSurvival("before movement")
             if (stop and stop()) or self.coords() == target:
                 return
-            route = shortestRoute(self.walkable, TransitRoutes(), self.coords(), target)
-            assert route, (self.coords(), target)
+            try:
+                route = shortestRoute(self.walkable, TransitRoutes(), self.coords(), target)
+            except AssertionError as error:
+                raise AssertionError(self.failureState("No adjacent authored route", "before movement")) from error
             step, _ = route[0]
             self.call(self.player, "moveTo", list(step))
-            self.pump()
             self.log["movementSteps"] += 1
+            self.pump()
             self.tick()
-        raise AssertionError(("Movement did not reach the authored target", self.coords(), target, self.log))
+        raise AssertionError(self.failureState("Movement did not reach the authored target", "movement budget"))
 
     def automaticCombat(self):
         template = self.call(self.game, "createObject", [self.call(self.player, "getTypeId")])
@@ -175,6 +223,7 @@ class NarrativeWalkthrough:
         self.automaticCombat()
 
     def saveAndReload(self, name):
+        self.assertSurvival("before save")
         before = {
             "gold": self.call(self.player, "getGold"),
             "class": self.call(self.player, "getTypeId"),
