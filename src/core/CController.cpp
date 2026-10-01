@@ -560,7 +560,8 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
                 return false;
             };
             const auto phase = me->getStringProperty("octobogzCombatPhase");
-            if ((phase.empty() || phase == "predator") && me->getHpRatio() <= 25 && use("octobogzCharge")) {
+            if ((phase.empty() || phase == "predator") && (huntRole == "shadow" || me->getHpRatio() <= 50) &&
+                use("octobogzCharge")) {
                 me->setStringProperty("octobogzCombatPhase", "charged");
                 return true;
             }

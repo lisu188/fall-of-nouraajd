@@ -111,8 +111,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.fail(("Bounded adjacent hunt route did not reach its target", target, self.snapshot("route blocked")))
 
     def recoverOnAuthoredRoad(self):
+        actors = self.livingActors()
         self.walkCoords((118, 21, 0))
         self.snapshot("road arrival")
+        self.observeActors("road arrival", actors)
         previous_mana = None
         for index in range(128):
             destination = (118, 20 + index % 2, 0)
@@ -133,14 +135,42 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         template = self.call(self.game, "createObject", player_class)
         self.call(self.player, "setFightController", self.call(template, "getFightController"))
 
+    def livingActors(self):
+        return {
+            slot: self.call(self.game_map, "getObjectByName", record["name"])
+            for slot, record in self.state()["slots"].items()
+            if record["status"] == "living"
+        }
+
+    def observeActors(self, stage, actors):
+        for slot, actor in actors.items():
+            self.assertIsNotNone(actor, slot)
+            packet = self.call(actor, "getObjectProperty", "enemyRoleDamagePacket")
+            observation = {
+                "stage": stage,
+                "slot": slot,
+                "phase": self.call(actor, "getStringProperty", "octobogzCombatPhase"),
+                "pulse": self.call(actor, "getBoolProperty", "octobogzPulseUsed"),
+                "effect": self.call(actor, "getBoolProperty", "octobogzPulseEffectApplied"),
+                "damage_roll": self.call(actor, "getNumericProperty", "enemyRoleAttackBudget"),
+                "normal": self.call(packet, "getNumericProperty", "normal") if packet else 0,
+                "shadow": self.call(packet, "getNumericProperty", "shadow") if packet else 0,
+                "alive": self.call(actor, "isAlive"),
+                "mana": self.call(actor, "getMana"),
+            }
+            print("MCP hunt actor combat", observation, flush=True)
+            self.phase_observations.append(observation)
+
     def defeat(self, slot):
         record = self.state()["slots"][slot]
         if record["status"] == "dead":
             return
         self.assertEqual("living", record["status"])
+        actors = self.livingActors()
         self.snapshot("before " + slot)
         self.walkTo(record["name"], allow_removed=True)
         self.snapshot("after " + slot)
+        self.observeActors("after " + slot, actors)
         self.assertGreater(
             self.call(self.player, "getNumericProperty", "hp"), 0, "Ordinary player loadout failed against " + slot
         )
@@ -150,6 +180,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual("dead", self.state()["slots"][slot]["status"])
 
     def testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce(self):
+        self.phase_observations = []
         for player_class in ("Warrior", "Sorcerer"):
             with self.subTest(player_class=player_class):
                 self.game = self.engine("CGameLoader.loadGame")
@@ -232,6 +263,19 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 finally:
                     save_path.unlink(missing_ok=True)
                     save_path.with_suffix(".json.bak").unlink(missing_ok=True)
+        positive_packets = [
+            observed
+            for observed in self.phase_observations
+            if observed["pulse"] and observed["damage_roll"] > 0 and observed["shadow"] == 1
+        ]
+        self.assertTrue(
+            positive_packets,
+            "The real melee/caster routes must exercise a positive shadow packet, not only a phase flag",
+        )
+        for observed in positive_packets:
+            self.assertEqual(
+                observed["damage_roll"] - 1, observed["normal"], "The original damage budget must be preserved"
+            )
 
 
 if __name__ == "__main__":

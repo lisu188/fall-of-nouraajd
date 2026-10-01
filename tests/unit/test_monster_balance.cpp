@@ -615,7 +615,7 @@ class HexAttackProbe : public CMonsterFightController {
     std::vector<std::string> &order;
 };
 
-void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
+void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries(bool huntPulse = false) {
     const auto previousRng = vstd::rng();
     for (bool cultistFirst : {false, true}) {
         for (bool enabled : {false, true}) {
@@ -637,7 +637,7 @@ void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
             game->getMap()->attachPlayer(player, Coords(0, 0, 0));
             player->heal(0);
 
-            auto actor = game->createObject<CCreature>("Cultist");
+            auto actor = game->createObject<CCreature>(huntPulse ? "OctoBogz" : "Cultist");
             actor->setName("hexBoundaryActor");
             actor->setRace(nullptr);
             actor->setLevelStats(std::make_shared<CStats>());
@@ -657,6 +657,12 @@ void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
             actor->setHp(std::max(1, actor->getHpMax() / 2));
             actor->setMana(5);
             actor->setBoolProperty("enemyRoleUsed", !enabled);
+            if (huntPulse) {
+                auto director = game->createObject<CEvent>("OctobogzHuntDirector");
+                pybind11::cast(director).attr("configureActor")(actor, "brood");
+                actor->setStringProperty("octobogzCombatPhase", enabled ? "charged" : "spent");
+                actor->setBoolProperty("octobogzPulseUsed", !enabled);
+            }
             std::vector<std::string> order;
             auto targetController = std::make_shared<HexTurnProbe>(order, cultistFirst ? 2 : 3);
             auto cultistController = std::make_shared<HexAttackProbe>(order);
@@ -679,9 +685,20 @@ void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
                                                                   : std::vector<int>{-1, 0, -1};
             expect_true(targetController->shadowResists == expectedResists &&
                             targetController->timesLeft == expectedTimes,
-                        "the one-turn hex must affect one actual victim turn and expire at its next turn boundary");
+                        "the one-turn shadow effect must affect one victim turn and expire at its next turn boundary");
             expect_true(player->getEffects().empty() && player->getStats()->getShadowResist() == 0,
                         "actual fight expiry must restore target resistance and remove the linked effect");
+            if (huntPulse) {
+                expect_true(actor->getMana() == (enabled ? 0 : 5) &&
+                                actor->getStringProperty("octobogzCombatPhase") == "spent",
+                            "a real pulse must spend exactly five mana once across either initiative order");
+                if (enabled) {
+                    expect_true(actor->getBoolProperty("octobogzPulseUsed") &&
+                                    actor->getBoolProperty("octobogzPulseEffectApplied") &&
+                                    !actor->getBoolProperty("enemyRoleUsed"),
+                                "the actual shadow phase must apply its effect and remain exclusive of brute");
+                }
+            }
         }
     }
     vstd::rng() = previousRng;
@@ -991,6 +1008,8 @@ int main(int argc, char **argv) {
     if (huntRoute) {
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, false, true);
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true);
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true, false, false, true);
+        testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries(true);
         testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget();
     } else if (!contractsOnly) {
         testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget(selectedClass);

@@ -1497,15 +1497,16 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
         creatureClass->setCombatRole("brute");
         actor->setCreatureClass(creatureClass);
         CMonsterFightController controller;
-        expect_true(controller.control(actor, opponent), "healthy hunt actors must retain their ordinary attack");
-        expect_true(attack->calls == 1 && charge->calls == 0, "both warnings must wait for quarter health");
-        actor->setHp(std::max(1, actor->getHpMax() / 2));
-        expect_true(controller.control(actor, opponent), "half-health hunt actors must retain ordinary Attack");
-        expect_true(attack->calls == 2 && charge->calls == 0, "a warning must not begin above quarter health");
-        actor->setHp(1);
-        const int attacksBeforeWarning = attack->calls;
-        expect_true(controller.control(actor, opponent), "hunt warning should decorate the selected ordinary attack");
-        expect_true(charge->calls == 1 && attack->calls == attacksBeforeWarning && brace->calls == 0,
+        expect_true(controller.control(actor, opponent), "healthy hunt actors must execute their selected Attack");
+        if (role == std::string("alpha")) {
+            expect_true(attack->calls == 1 && charge->calls == 0, "the Alpha warning must wait for half health");
+            actor->setHp(std::max(1, actor->getHpMax() / 2));
+            expect_true(controller.control(actor, opponent), "the wounded Alpha should warn on its selected Attack");
+        } else {
+            expect_true(attack->calls == 0 && charge->calls == 1,
+                        "the shadow brood must warn on its first selected Attack");
+        }
+        expect_true(charge->calls == 1 && brace->calls == 0,
                     "warning must not also select the generic brace or another outer action");
         expect_true(actor->getStringProperty("octobogzCombatPhase") == "charged", "charged phase must persist");
         expect_true(controller.control(actor, opponent), "charged hunt actor should release one five-mana pulse");

@@ -635,7 +635,7 @@
       "label": "Gather Shadow",
       "manaCost": 0,
       "enemySignature": true,
-        "description": "At or below quarter health, warn of a coming shadow pulse while executing the full ordinary selected attack."
+      "description": "The brood warns on its first selected attack; the Alpha warns at half health, retaining the full ordinary attack."
     }
   },
   "octobogzShadowPulse": {
@@ -645,7 +645,7 @@
       "manaCost": 5,
       "animation": "images/interactions/abyssalshadows",
       "enemySignature": true,
-      "description": "Spend 5 mana once to convert one point of an ordinary attack to shadow and reduce shadow resistance by 1 for one turn.",
+      "description": "Spend 5 mana once: retain ordinary Attack, convert one point to shadow when wards differ, and weaken shadow defense for one turn.",
       "roleEffect": {
         "ref": "octobogzShadowPulseEffect"
       },

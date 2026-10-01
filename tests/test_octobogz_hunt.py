@@ -81,6 +81,8 @@ class Actor(Properties):
         self.effects = []
         self.checkQuests = Mock()
         self.damage_rolls = 0
+        self.stats = Properties()
+        self.stats.properties.update(normalResist=10, shadowResist=0)
 
     def isPlayer(self):
         return self.player
@@ -117,6 +119,9 @@ class Actor(Properties):
 
     def getEffectiveInteractions(self):
         return self.getActions()
+
+    def getStats(self):
+        return self.stats
 
     def getWeapon(self):
         return getattr(self, "weapon", None)
@@ -586,6 +591,36 @@ class OctobogzHuntTest(unittest.TestCase):
         scout.getController().setTarget.assert_called_once_with("cave2")
         scout.getController().setDistance.assert_called_once_with(10)
 
+    def testMcpActorObservationsKeepActualPacketAndStateAfterObjectRemovalWithoutMutations(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        actor, packet = Actor("retainedAlpha"), Properties()
+        actor.properties.update(
+            hp=0,
+            octobogzCombatPhase="spent",
+            octobogzPulseUsed=True,
+            octobogzPulseEffectApplied=True,
+            enemyRoleAttackBudget=11,
+            enemyRoleDamagePacket=packet,
+        )
+        packet.properties.update(normal=10, shadow=1)
+        before = actor.properties.copy()
+        walker.phase_observations = []
+        walker.call = lambda handle, method, *args: getattr(handle, method)(*args)
+        with patch("builtins.print"):
+            walker.observeActors("after combat", {"alpha": actor})
+        self.assertEqual(before, actor.properties)
+        self.assertEqual(1, len(walker.phase_observations))
+        observed = walker.phase_observations[0]
+        self.assertEqual(
+            ("spent", True, True, 11, 10, 1, False),
+            tuple(observed[key] for key in ("phase", "pulse", "effect", "damage_roll", "normal", "shadow", "alive")),
+        )
+        source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        self.assertIn('observed["pulse"] and observed["damage_roll"] > 0 and observed["shadow"] == 1', source)
+        self.assertNotRegex(source, r'"(?:setHp|setMana|setLevel|setNumericProperty|setBoolProperty)"')
+
     def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
         import textwrap
 
@@ -664,8 +699,8 @@ class OctobogzHuntTest(unittest.TestCase):
         actor.weapon = weapon
         actor.setStringProperty("octobogzCombatPhase", "charged")
         pulse = self.createObject("octobogzShadowPulse")
-        target = Mock()
-        target.isAlive.return_value = True
+        target = Actor("missTarget")
+        target.hurt = Mock()
         pulse.performAction(actor, target)
         target.hurt.assert_not_called()
         self.assertEqual({}, pulse.getObjectProperty("roleDamage").properties)
@@ -697,8 +732,43 @@ class OctobogzHuntTest(unittest.TestCase):
         phases = controller.split('const auto phase = me->getStringProperty("octobogzCombatPhase")', 1)[1].split(
             '} else if (action->getTypeId() == "Attack")', 1
         )[0]
-        self.assertIn('phase == "predator") && me->getHpRatio() <= 25', phases)
-        self.assertNotIn('huntRole == "shadow"', phases)
+        self.assertIn('(huntRole == "shadow" || me->getHpRatio() <= 50)', phases)
+        self.assertIn(
+            "testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true, false, false, true)", source
+        )
+        self.assertIn("testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries(true)", source)
+        boundary = source.split("void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries", 1)[
+            1
+        ].split("void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget", 1)[0]
+        self.assertIn("for (bool cultistFirst : {false, true})", boundary)
+        self.assertIn("CFightHandler::fightManyResult", boundary)
+        self.assertIn("damage.front() == (enabled ? 2 : 1)", boundary)
+        self.assertIn("actor->getMana() == (enabled ? 0 : 5)", boundary)
+
+    def testEqualWardsKeepOrdinaryAttackPathBeforeApplyingOwnedShadowDebuff(self):
+        actor, _ = self.phaseActor()
+        target = self.game_map.player
+        target.stats.properties.update(normalResist=10, shadowResist=10)
+        actor.setStringProperty("octobogzCombatPhase", "charged")
+        pulse = self.createObject("octobogzShadowPulse")
+        effect = pulse.getObjectProperty("roleEffect")
+        weapon, proc = Mock(), Mock()
+        weapon.getInteraction.return_value = proc
+        actor.weapon = weapon
+        before = target.getHp()
+        pulse.performAction(actor, target)
+        self.assertEqual(before - 11, target.getHp())
+        self.assertEqual(1, actor.damage_rolls)
+        self.assertEqual({}, pulse.getObjectProperty("roleDamage").properties)
+        self.assertNotIn("enemyRoleAttackBudget", actor.properties)
+        self.assertNotIn("enemyRoleDamagePacket", actor.properties)
+        proc.onAction.assert_called_once_with(actor, target)
+        self.assertEqual("spent", actor.getStringProperty("octobogzCombatPhase"))
+        self.assertTrue(actor.getBoolProperty("octobogzPulseUsed"))
+        self.assertEqual([effect], target.effects)
+        self.assertIsNone(pulse.getObjectProperty("roleEffect"))
+        self.assertEqual(0, pulse.getCommittedManaRefund(actor))
+        self.assertFalse(actor.getBoolProperty("enemyRoleArcaneAttack"))
 
     def testRejectedOrCancelledPulseClearsHookAndRefundsPaidManaWithoutConsumingPhase(self):
         actor, attack = self.phaseActor()

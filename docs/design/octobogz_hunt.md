@@ -36,10 +36,12 @@ introduce a second full creature serializer for absent transient effects.
 
 The ordinary AI chooses potions, useful spells, and Attack using the existing
 ranking and random streams. A phase may decorate only an already selected
-configured Attack. Both the shadow brood and Alpha warn only at or below quarter
-health. Warning still executes the full ordinary Attack.
-The next eligible affordable attack costs five mana once, converts one point of
-that same damage roll from normal to shadow, and applies shadow resistance -1
+configured Attack. The shadow brood warns on its first selected Attack; the Alpha
+warns at or below half health. Warning still executes the full ordinary Attack.
+The next eligible affordable attack costs five mana once. It converts one point of
+that same damage roll from normal to shadow only when the target's composed normal
+and shadow wards differ before the attack. Equal wards preserve the whole ordinary
+Attack mitigation, block and weapon path. The pulse applies shadow resistance -1
 for one turn. This post-hit debuff helps only a later shadow attack while it
 remains active; it is not a guaranteed benefit in a solo fight. With insufficient mana it executes ordinary Attack and ends the
 phase. Ordinary item and spell turns retain priority and preserve a pending
@@ -232,8 +234,24 @@ Head4024453d's Windows seed106 trace is retained: the staged Alpha left the
 Assasin at50HP versus51 for the original actor. Subsequent ordinary loot,
 potion and spell decisions diverged; the staged route spent140mana instead
 of120. The strict median gate rejected this even though that seed changed from
-a loss to a win. The next generic phase trial delays both warnings until quarter
+a loss to a win. The following generic phase trial delayed both warnings until quarter
 health, keeping actors, stats, loadouts, seeds, route carryover and every numeric
 and winning-seed gate unchanged. Real-bound warning contracts compare actual
 damage, configured Attack/Staff callbacks, random streams, no mana expenditure
 and exclusive phase state. Existing pulse-use and five-mana gates remain.
+
+That quarter-health head `ea9c8309` also failed actual Windows run36870026760:
+Assasin mana median remained120 to140. Linux kept every resource median but never
+executed a brood pulse, so its explicit phase-use witness failed. These are retained
+failed results, not balanced acceptance.
+
+The current trial restores the initial brood and half-health Alpha warning timing,
+and conditions the shadow conversion on unequal pre-attack wards. No class, seed,
+level, loadout, actor count or numeric/winning-seed gate changed. Actual embedded
+contracts compare equal wards with armor/block and full configured weapon procs,
+while a controlled95/0 fight must cause2 damage versus1 and show the effect for one
+victim turn in both initiative orders. The authored MCP route retains actor handles
+before movement and records their actual pulse, phase, raw packet and mana after
+combat or road retreat. At least one positive shadow packet across the real melee
+and caster routes is required; a phase flag alone cannot satisfy this witness.
+Fresh native, full-suite, coverage and authored-route outcomes remain pending.

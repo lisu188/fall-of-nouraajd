@@ -320,11 +320,14 @@ def load(self, context):
             attack = ordinaryAttack(first, second)
             if attack is None:
                 return
+            stats = second.getStats()
+            convert_shadow = stats.getNumericProperty("normalResist") != stats.getNumericProperty("shadowResist")
             first.setStringProperty(PHASE_PROPERTY, "spent")
             first.setBoolProperty("octobogzPulseUsed", True)
-            first.setObjectProperty("enemyRoleDamagePacket", self.getObjectProperty("roleDamage"))
-            first.setStringProperty("enemyRoleDamageChannel", "shadow")
-            first.setBoolProperty("enemyRoleArcaneAttack", True)
+            if convert_shadow:
+                first.setObjectProperty("enemyRoleDamagePacket", self.getObjectProperty("roleDamage"))
+                first.setStringProperty("enemyRoleDamageChannel", "shadow")
+                first.setBoolProperty("enemyRoleArcaneAttack", True)
             try:
                 attack.performAction(first, second)
                 self.setBoolProperty("octobogzPulseCommitted", True)
