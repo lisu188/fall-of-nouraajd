@@ -423,7 +423,12 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool cul
                 baseStats->setDmgMax(baseStats->getDmgMax() + resolvedHit - originalStats->getDamage() -
                                      originalStats->getDmgMax());
                 baseStats->setHit(100);
-                baseStats->setCrit(0);
+                baseStats->setCrit(baseStats->getCrit() - originalStats->getCrit());
+                const auto controlledStats = actor->getStats();
+                expect_true(controlledStats->getDmgMin() + controlledStats->getDamage() == resolvedHit &&
+                                controlledStats->getDmgMax() + controlledStats->getDamage() == resolvedHit &&
+                                controlledStats->getCrit() == 0 && controlledStats->getHit() >= 100,
+                            "the native boundary fixture must resolve the same exact noncritical hit for both modes");
             }
             if (cultistHex) {
                 actor->setHp(std::max(1, actor->getHpMax() / 4));
