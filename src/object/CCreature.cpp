@@ -978,6 +978,9 @@ void CCreature::useAction(std::shared_ptr<CInteraction> action, std::shared_ptr<
         !std::any_of(effective.begin(), effective.end(),
                      [action](const auto &candidate) { return CGameObject::sameInstance(candidate, action); }),
         "Tried to use action not in effective interaction set!");
+    if (action->getManaCost() < 0 || getMana() < action->getManaCost()) {
+        return;
+    }
     action->onAction(this->ptr<CCreature>(), creature);
     if (creature->getArmor()) {
         if (creature->getArmor()->getInteraction()) {

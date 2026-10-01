@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CInteraction.h"
 #include "core/CGame.h"
 #include "core/CPythonOverrides.h"
+#include <algorithm>
 
 CInteraction::CInteraction() {}
 
@@ -28,11 +29,15 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
         vstd::logger::warning("Skipping interaction without actor:", this->to_string());
         return;
     }
+    const int paid_cost = getManaCost();
+    if (paid_cost < 0 || first->getMana() < paid_cost) {
+        return;
+    }
 
     vstd::logger::debug(first->to_string(), "used", this->to_string(), "against",
                         second ? second->to_string() : "<no target>");
 
-    first->takeMana(this->getManaCost());
+    first->takeMana(paid_cost);
 
     this->performAction(first, second);
 
@@ -57,6 +62,20 @@ void CInteraction::onAction(std::shared_ptr<CCreature> first, std::shared_ptr<CC
             }
         }
     }
+    if (paid_cost > 0) {
+        const int refund = std::clamp(getCommittedManaRefund(first), 0, paid_cost);
+        if (refund > 0) {
+            first->addMana(refund);
+        }
+    }
+}
+
+int CInteraction::getCommittedManaRefund(std::shared_ptr<CCreature> caster) {
+    pybind11::gil_scoped_acquire gil;
+    if (auto override = CPythonOverrides::find_override(this, "getCommittedManaRefund"); !override.is_none()) {
+        PY_SAFE_RET_VAL(return override(caster).cast<int>();, 0)
+    }
+    return 0;
 }
 
 int CInteraction::getManaCost() const { return manaCost; }

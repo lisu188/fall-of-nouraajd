@@ -84,6 +84,16 @@ template <> class CWrapper<CInteraction> : public CInteraction {
   public:
     using CInteraction::CInteraction;
 
+    int getCommittedManaRefund(std::shared_ptr<CCreature> caster) override final {
+        try {
+            PYBIND11_OVERRIDE(int, CInteraction, getCommittedManaRefund, caster);
+        } catch (const py::error_already_set &) {
+            PYTHON_LOG;
+            PyErr_Clear();
+            return 0;
+        }
+    }
+
     void performAction(std::shared_ptr<CCreature> first, std::shared_ptr<CCreature> second) override final {
         try {
             PYBIND11_OVERRIDE(void, CInteraction, performAction, first, second);
