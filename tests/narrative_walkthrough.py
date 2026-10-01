@@ -221,6 +221,8 @@ class NarrativeWalkthrough:
                 break
             enabled = [name for name in remaining if self.call(self.object(name), "getBoolProperty", ["enabled"])]
             if not enabled or not self.call(self.player, "countItems", ["magicWand"]):
+                # Leave a sealed border breach so attackers can reach the ordinary interior target.
+                self.walkTo(self.objects["siegeStart"])
                 self.tick()
                 continue
             name = min(enabled, key=lambda name: sum(abs(a - b) for a, b in zip(self.coords(), self.objects[name])))
@@ -235,6 +237,18 @@ class NarrativeWalkthrough:
             self.walkable.discard(self.objects[name])
             if len(remaining) == 1:
                 assert self.call(self.player, "getGold") == before_gold + expected_bounty
+        self.log["siegeFinalState"] = {
+            "playerCoords": self.coords(),
+            "wandCount": self.call(self.player, "countItems", ["magicWand"]),
+            "turn": self.call(self.gameMap, "getTurn"),
+            "gates": {
+                name: {
+                    key: self.call(self.object(name), "getBoolProperty", [key])
+                    for key in ("enabled", "destroyed", "pendingSeal")
+                }
+                for name in gates
+            },
+        }
         assert len(self.log["sealedGates"]) == 4, self.log
         assert self.flag("campaign_completed")
         assert "defendSiegeQuest" in self.questNames("completedQuests")
