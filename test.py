@@ -156,6 +156,8 @@ FAST_TEST_NAMES = {
 }
 GAMEPLAY_TEST_PREFIXES = (
     "EnemyRoleRuntimeTest.",
+    "OctobogzMcpWalkthroughTest.",
+    "OctobogzRuntimeTest.",
     "ConsoleEventIsolationTest.",
     "ConsoleEventProcessTest.",
     "GameTest.",
@@ -3808,7 +3810,10 @@ class McpScenarioHarness:
         assert_mcp_handle_method("CGameObject", "getName")
         assert_mcp_handle_method("CMap", "removeObjectByName")
         runtime_name = obj.getName() or object_name
-        self.gameMap.removeObjectByName(runtime_name)
+        if runtime_name == "cave2":
+            completeOctobogzFixture(self.gameMap)
+        else:
+            self.gameMap.removeObjectByName(runtime_name)
         self.pump(pump_iterations)
         if check_quests:
             assert_mcp_handle_method("CPlayer", "checkQuests")
@@ -4782,6 +4787,22 @@ def walkthrough_ritual_map():
     }
 
 
+def completeOctobogzFixture(game_map):
+    """Resolve three actor deaths for quest boundary fixtures; this is not a combat walkthrough."""
+    game_map.getGame().createObject("OctobogzHuntDirector").start(game_map)
+    for slot in ("scout", "brood", "alpha"):
+        state = json.loads(game_map.getStringProperty("octobogzHuntRegistry"))
+        record = state["slots"][slot]
+        if record["status"] == "dead":
+            continue
+        actor = game_map.getObjectByName(record["name"])
+        assert actor is not None, record
+        actor.setHp(0)
+        game_map.removeObject(actor)
+        pump_event_loop(3)
+    assert game_map.getBoolProperty("octobogzHuntCleared")
+
+
 def walkthrough_nouraajd_map():
     g, game_map, player = load_game_map_with_player("nouraajd")
     for name in ("cave1", "gooby1", "catacombs", "cave2"):
@@ -4868,7 +4889,7 @@ def walkthrough_nouraajd_map():
 
     octobogz_gold = player.getGold()
     octobogz_shadow_blades = player.countItems("ShadowBlade")
-    game_map.removeObjectByName("cave2")
+    completeOctobogzFixture(game_map)
     player.checkQuests()
     assert quest_state("beren_chain") == "ready_to_report"
     assert quest_state("octobogz_contract") == "completed"
@@ -10412,7 +10433,7 @@ class GameTest(unittest.TestCase):
         # in full". The completed dialog option now carries the accept_quest action.
         g, game_map, player = load_game_map_with_player("nouraajd")
 
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         self.assertEqual("completed", game_map.getStringProperty("quest_state_octobogz_contract"))
         # Clearing the cave must NOT silently pay the bounty; it is claimed by talking to the
         # refugees (the intended late-claim design, per accept_quest).
@@ -12416,7 +12437,7 @@ class GameTest(unittest.TestCase):
             self.assertIsNone(game_map.getObjectByName("cave1"))
             self.assertIsNotNone(game_map.getObjectByName("gooby1"))
             game_map.removeObjectByName("catacombs")
-            game_map.removeObjectByName("cave2")
+            completeOctobogzFixture(game_map)
             player.checkQuests()
 
             saved_coords = coords_tuple(player.getCoords())
@@ -15436,7 +15457,7 @@ class GameTest(unittest.TestCase):
             game_map.removeObjectByName("catacombs")
             self.assertTrue(player.hasItem(lambda it: it.getName() == "holyRelic"))
 
-            game_map.removeObjectByName("cave2")
+            completeOctobogzFixture(game_map)
             self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_SLAIN"))
             self.assertFalse(
                 game_map.getBoolProperty("OCTOBOGZ_CLEARED"),
@@ -15445,7 +15466,7 @@ class GameTest(unittest.TestCase):
 
             g_with_relic, map_with_relic, player_with_relic = load_game_map_with_player("nouraajd")
             map_with_relic.setBoolProperty("RELIC_RETURNED", True)
-            map_with_relic.removeObjectByName("cave2")
+            completeOctobogzFixture(map_with_relic)
             self.assertTrue(map_with_relic.getBoolProperty("OCTOBOGZ_SLAIN"))
             self.assertTrue(
                 map_with_relic.getBoolProperty("OCTOBOGZ_CLEARED"),
@@ -15598,7 +15619,7 @@ class GameTest(unittest.TestCase):
         self.assertIn("cleanseCaveQuest", quest_names(player))
         self.assertFalse(beren.can_finish_cleanse())
 
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "ready_to_report")
         self.assertTrue(beren.can_finish_cleanse())
 
@@ -15625,7 +15646,7 @@ class GameTest(unittest.TestCase):
         beren.deliver_letter()
         game_map.removeObjectByName("catacombs")
         beren.return_relic()
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         self.assertIn("cleanseCaveQuest", quest_names(player))
         self.assertTrue(beren.can_finish_cleanse())
 
@@ -15722,7 +15743,7 @@ class GameTest(unittest.TestCase):
         town_hall = g.createObject("townHallDialog")
         beren = g.createObject("berenDialog")
 
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         self.assertEqual(game_map.getStringProperty("quest_state_beren_chain"), "octobogz_slain_pending_letter")
         self.assertTrue(game_map.getBoolProperty("OCTOBOGZ_SLAIN"))
         self.assertTrue(town_hall.can_offer_letter_work())
@@ -15799,7 +15820,7 @@ class GameTest(unittest.TestCase):
 
         def slay_octobogz(g, game_map, player):
             self.assertIsNotNone(game_map.getObjectByName("cave2"))
-            game_map.removeObjectByName("cave2")
+            completeOctobogzFixture(game_map)
             settle(player)
 
         actions = {
@@ -16373,7 +16394,7 @@ class GameTest(unittest.TestCase):
         beren.deliver_letter()
         game_map.removeObjectByName("catacombs")
         beren.return_relic()
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         beren.finish_cleanse()
         pump_event_loop()
 
@@ -16456,7 +16477,7 @@ class GameTest(unittest.TestCase):
         travelers.accept_quest()
         self.assertEqual(game_map.getStringProperty("quest_state_octobogz_contract"), "active")
         self.assertIn("octoBogzQuest", quest_names(player))
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         player.checkQuests()
 
         self.assertEqual(player.getGold() - start_gold, 1000)
@@ -16485,7 +16506,7 @@ class GameTest(unittest.TestCase):
         travelers = g.createObject("dialog")
         start_gold = player.getGold()
 
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         self.assertEqual(game_map.getStringProperty("quest_state_octobogz_contract"), "completed")
         self.assertNotIn("octoBogzQuest", quest_names(player))
         self.assertFalse(game_map.getBoolProperty("OCTOBOGZ_REWARD_CLAIMED"))
@@ -16522,9 +16543,9 @@ class GameTest(unittest.TestCase):
 
         # Config-level invariants (independent of the loaded class): the cave2 lair
         # spawns the "OctoBogz" creature template, and script.py grants "ShadowBlade".
-        cave2 = config["cave2"]["properties"]
-        self.assertEqual("OctoBogz", cave2["monster"]["ref"])
-        self.assertEqual("cave2", cave2["monster"]["properties"]["controller"]["properties"]["target"])
+        self.assertEqual("OctobogzLair", config["cave2"]["class"])
+        hunt_source = (REPO_ROOT / "res/plugins/octobogz_hunt.py").read_text()
+        self.assertIn('createObject("OctoBogz")', hunt_source)
         self.assertIn('player.addItem("ShadowBlade")', script)
         self.assertIn("player.addGold(1000)", script)
         self.assertIn('claim_once(game_map, "OCTOBOGZ_REWARD_CLAIMED")', script)
@@ -16538,10 +16559,10 @@ class GameTest(unittest.TestCase):
             self.assertEqual(player_type, player.getTypeId())
 
             # The cave monster template id is not mutated by loading any class.
-            self.assertEqual(
-                "OctoBogz",
-                find_map_object_definition("nouraajd", "cave2").get("name") and cave2["monster"]["ref"],
-            )
+            g.createObject("OctobogzHuntDirector").start(game_map)
+            hunt_state = json.loads(game_map.getStringProperty("octobogzHuntRegistry"))
+            scout = game_map.getObjectByName(hunt_state["slots"]["scout"]["name"])
+            self.assertEqual("OctoBogz", scout.getTypeId())
 
             travelers = g.createObject("dialog")
             start_gold = player.getGold()
@@ -16553,7 +16574,7 @@ class GameTest(unittest.TestCase):
 
             # Return the relic first so the OCTO cleared flag is also exercised.
             game_map.setBoolProperty("RELIC_RETURNED", True)
-            game_map.removeObjectByName("cave2")
+            completeOctobogzFixture(game_map)
             player.checkQuests()
 
             # OTO/OCTO flags are set exactly as before.
@@ -16575,7 +16596,7 @@ class GameTest(unittest.TestCase):
             self.assertEqual(start_shadow_blades + 1, player.countItems("ShadowBlade"))
 
             results[player_type] = {
-                "cave2_monster_ref": cave2["monster"]["ref"],
+                "cave2_monster_ref": scout.getTypeId(),
                 "gold_delta": player.getGold() - start_gold,
                 "shadow_blades_delta": player.countItems("ShadowBlade") - start_shadow_blades,
                 "octobogz_slain": game_map.getBoolProperty("OCTOBOGZ_SLAIN"),
@@ -17831,6 +17852,15 @@ class GameTest(unittest.TestCase):
     @game_test
     def test_game_simulation_nouraajd_quest_walkthrough(self):
         simulation = game_simulation.GameSimulation.startGame(load_game_module(), "nouraajd", DEFAULT_PLAYER)
+        original_interact = simulation.interactWithObject
+
+        def interactBoundaryFixture(object_name, **kwargs):
+            result = original_interact(object_name, **kwargs)
+            if object_name == "cave2":
+                completeOctobogzFixture(simulation.gameMap)
+            return result
+
+        simulation.interactWithObject = interactBoundaryFixture
         result = simulation.runSteps(
             [
                 {"action": "interact_object", "object": "cave1", "name": "recover Rolf skull"},
@@ -18583,7 +18613,7 @@ class GameTest(unittest.TestCase):
         game_map.removeObjectByName("cave1")
         gooby = find_runtime_object(game_map, "gooby1")
         game_map.removeObjectByName(gooby.getName())
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
 
         success = (
             game_map.getBoolProperty("completed_gooby")
@@ -18612,7 +18642,7 @@ class GameTest(unittest.TestCase):
         beren.deliver_letter()
         game_map.removeObjectByName("catacombs")
         beren.return_relic()
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         chapel = game_map.getObjectByName("nouraajdChapel")
         chapel_coords = chapel.getCoords()
         player.moveTo(chapel_coords.x, chapel_coords.y, chapel_coords.z)
@@ -18739,7 +18769,7 @@ class GameTest(unittest.TestCase):
         beren.deliver_letter()
         game_map.removeObjectByName("catacombs")
         beren.return_relic()
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         chapel = game_map.getObjectByName("nouraajdChapel")
         chapel_coords = chapel.getCoords()
         player.moveTo(chapel_coords.x, chapel_coords.y, chapel_coords.z)
@@ -19591,7 +19621,7 @@ class GameTest(unittest.TestCase):
             game_map.removeObjectByName("catacombs")
             beren.return_relic()
             travelers.accept_quest()
-            game_map.removeObjectByName("cave2")
+            completeOctobogzFixture(game_map)
             player.checkQuests()
             pump_event_loop(3)
 
@@ -19774,7 +19804,7 @@ class GameTest(unittest.TestCase):
         beren.deliver_letter()
         game_map.removeObjectByName("catacombs")
         beren.return_relic()
-        game_map.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map)
         player.checkQuests()
         pump_event_loop(3)
 
@@ -19925,7 +19955,7 @@ class GameTest(unittest.TestCase):
         # OctoBogz travelers quest and cave clear
         travelers.accept_quest()
         assert quest_state(game_map1, "octobogz_contract") == "active"
-        game_map1.removeObjectByName("cave2")
+        completeOctobogzFixture(game_map1)
         assert quest_state(game_map1, "beren_chain") == "ready_to_report"
         assert quest_state(game_map1, "octobogz_contract") == "completed"
         beren.finish_cleanse()
@@ -20477,7 +20507,7 @@ class GameTest(unittest.TestCase):
                 self.assertEqual("active", ctx["map"].getStringProperty("quest_state_octobogz_contract"))
 
             def octobogz_complete(ctx):
-                ctx["map"].removeObjectByName("cave2")
+                completeOctobogzFixture(ctx["map"])
                 ctx["player"].checkQuests()
 
             def octobogz_repeat(ctx):
@@ -24021,7 +24051,7 @@ class XvfbGameplayProcessTest(unittest.TestCase):
 
         octobogz_gold = player.getGold()
         octobogz_shadow_blades = player.countItems("ShadowBlade")
-        run_blocking_gui_action(game, lambda: game_map.removeObjectByName("cave2"))
+        run_blocking_gui_action(game, lambda: completeOctobogzFixture(game_map))
         run_blocking_gui_action(game, player.checkQuests)
         self.assertEqual("ready_to_report", quest_state("beren_chain"))
         self.assertEqual("completed", quest_state("octobogz_contract"))
@@ -24773,6 +24803,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
             PythonCallbackLifecycleTest,
             ConsoleUiInteractionTest,
             UiMinimapInteractionTest,
+            EnemyRoleRuntimeTest,
+            OctobogzRuntimeTest,
+            OctobogzMcpWalkthroughTest,
         ):
             names = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(names)
@@ -24788,6 +24821,9 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
         self.assertNotIn("_UiMinimapInteractionTest", globals())
+        self.assertNotIn("_EnemyRoleRuntimeTest", globals())
+        self.assertNotIn("_OctobogzRuntimeTest", globals())
+        self.assertNotIn("_OctobogzMcpWalkthroughTest", globals())
 
     def testPixelAnalysisIsDiscoveredOnceInSourceSuites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
@@ -25155,7 +25191,6 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
-    from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
@@ -25163,6 +25198,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
     from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
+    from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
+    from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
+    from tests.test_octobogz_runtime import OctobogzRuntimeTest as _OctobogzRuntimeTest
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
         pass
@@ -25179,6 +25217,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
         pass
 
+    class OctobogzMcpWalkthroughTest(_OctobogzMcpWalkthroughTest):
+        pass
+
+    class OctobogzRuntimeTest(_OctobogzRuntimeTest):
+        pass
+
     class UiPixelAnalysisTest(_UiPixelAnalysisTest):
         pass
 
@@ -25191,6 +25235,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest
+    del _OctobogzMcpWalkthroughTest
+    del _OctobogzRuntimeTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 
@@ -25416,7 +25462,7 @@ class McpServerTest(unittest.TestCase):
         }
         self.assertTrue({"getTransitionStateName", "requestMapChange"}.issubset(method_names))
 
-    def test_simulation_run_tool_executes_nouraajd_steps(self):
+    def test_simulation_run_tool_executes_nouraajd_steps_without_completing_hunt_from_prop_removal(self):
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
         server.import_modules()
 
@@ -25430,7 +25476,7 @@ class McpServerTest(unittest.TestCase):
                         {"action": "interact_object", "object": "cave1", "name": "recover Rolf skull"},
                         {"action": "interact_object", "object": "gooby1", "name": "defeat Gooby"},
                         {"action": "interact_object", "object": "catacombs", "name": "recover relic"},
-                        {"action": "interact_object", "object": "cave2", "name": "clear OctoBogz"},
+                        {"action": "interact_object", "object": "cave2", "name": "remove lair prop only"},
                         {
                             "action": "read_map_state",
                             "include_objects": False,
@@ -25461,7 +25507,7 @@ class McpServerTest(unittest.TestCase):
         flag_step = structured["steps"][4]["result"]["boolFlags"]
         self.assertTrue(flag_step["completed_rolf"])
         self.assertTrue(flag_step["completed_gooby"])
-        self.assertTrue(flag_step["OCTOBOGZ_SLAIN"])
+        self.assertFalse(flag_step["OCTOBOGZ_SLAIN"])
 
     def test_engine_call_resolves_handle_arguments_for_python_methods(self):
         server = self.make_stub_server()
@@ -26864,7 +26910,7 @@ class McpServerTest(unittest.TestCase):
         }
 
     def _mcp_walkthrough_nouraajd(self, session):
-        _, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "nouraajd")
+        game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "nouraajd")
         for name in ("cave1", "catacombs", "cave2"):
             find_map_object_definition("nouraajd", name)
 
@@ -26886,7 +26932,16 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual("gooby_slain", quest_state(map_handle, "main"))
 
         self._mcp_handle_call(session, map_handle, "removeObjectByName", ["catacombs"])
-        self._mcp_handle_call(session, map_handle, "removeObjectByName", ["cave2"])
+        director = self._mcp_handle_call(session, game_handle, "createObject", ["OctobogzHuntDirector"])
+        self._mcp_handle_call(session, director, "start", [map_handle])
+        for slot in ("scout", "brood", "alpha"):
+            state = json.loads(
+                self._mcp_handle_call(session, map_handle, "getStringProperty", ["octobogzHuntRegistry"])
+            )
+            actor = self._mcp_get_object_by_name(session, map_handle, state["slots"][slot]["name"])
+            self._mcp_handle_call(session, actor, "setHp", [0])
+            self._mcp_handle_call(session, map_handle, "removeObject", [actor])
+            self._mcp_pump_event_loop(session)
         self._mcp_handle_call(session, player_handle, "checkQuests")
         self.assertEqual("octobogz_slain_pending_letter", quest_state(map_handle, "beren_chain"))
         self.assertEqual("completed", quest_state(map_handle, "octobogz_contract"))

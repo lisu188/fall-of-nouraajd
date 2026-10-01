@@ -612,6 +612,42 @@ void testMonsterRoleCallbackAndStateGrowthAreBounded() {
     expect_true(fixture.map->getObjects().empty(), "combat role selection must not spawn map objects");
 }
 
+void testOctobogzPhaseCallbackAndStateGrowthAreBounded() {
+    auto fixture = make_open_map(2, 1);
+    auto actor = make_actor(fixture, "huntActor", Coords(0, 0, 0), "opponent");
+    auto opponent = make_actor(fixture, "opponent", Coords(1, 0, 0), "huntActor");
+    actor->setNpc(false);
+    opponent->setNpc(false);
+    actor->setStringProperty("octobogzCombatRole", "shadow");
+    actor->setStringProperty("octobogzCombatPhase", "predator");
+    actor->setMana(5);
+    auto addAction = [actor, &fixture](const std::string &id, int manaCost) {
+        auto action = std::make_shared<CombatActionCountProbe>();
+        action->setGame(fixture.game);
+        action->setName(id);
+        action->setTypeId(id);
+        action->setManaCost(manaCost);
+        actor->addAction(action);
+        return action;
+    };
+    const auto attack = addAction("Attack", 0);
+    const auto charge = addAction("octobogzCharge", 0);
+    const auto pulse = addAction("octobogzShadowPulse", 5);
+    const auto actionCount = actor->getInteractions().size();
+    CMonsterFightController controller;
+    constexpr int turns = 200;
+    for (int i = 0; i < turns; ++i) {
+        expect_true(controller.control(actor, opponent), "hunt phases must take one bounded action per turn");
+    }
+    expect_true(charge->calls == 1 && pulse->calls == 1 && attack->calls == turns - 2,
+                "200 hunt turns must produce one warning, one paid pulse, and 198 attacks");
+    expect_true(actor->getMana() == 0 && actor->getStringProperty("octobogzCombatPhase") == "spent",
+                "bounded hunt phase must consume five mana once");
+    expect_true(actor->getInteractions().size() == actionCount && actor->getEffects().empty() &&
+                    fixture.map->getObjects().empty(),
+                "hunt phase selection must not accumulate actions, effects, or map objects");
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -630,4 +666,5 @@ void run_engine_hotspot_performance_tests() {
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testMonsterRoleCallbackAndStateGrowthAreBounded();
+    testOctobogzPhaseCallbackAndStateGrowthAreBounded();
 }

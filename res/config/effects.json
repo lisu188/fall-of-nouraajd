@@ -244,5 +244,11 @@
         }
       }
     }
+  },
+  "octobogzShadowPulseEffect": {
+    "class": "OctobogzShadowPulseEffect",
+    "properties": {
+      "duration": 2
+    }
   }
 }

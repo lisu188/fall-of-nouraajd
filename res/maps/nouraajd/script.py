@@ -592,7 +592,8 @@ def load(self, context):
             return _quest_system_from(self).is_octobogz_contract_completed()
 
         def getObjective(self):
-            return "Destroy the OctoBogz in the cave east of Nouraajd."
+            game = self.getGame()
+            return game.createObject("OctobogzHuntDirector").objectiveText(game.getMap())
 
         def getReward(self):
             return "1000 gold and the Shadow Blade."
@@ -672,6 +673,8 @@ def load(self, context):
         def trigger(self, object, event):
             game = self.getGame()
             game_map = game.getMap()
+            if not game_map.getBoolProperty("octobogzHuntCleared"):
+                return
             relic_returned = game_map.getBoolProperty("RELIC_RETURNED")
             quest_system = _quest_system_from(self)
             quest_system.mark_octobogz_slain()
@@ -683,6 +686,11 @@ def load(self, context):
                 game.getGuiHandler().notify(object.getStringProperty("message"))
             else:
                 game.getGuiHandler().notify("The OctoBogz lie broken, yet their lair remains befouled.")
+
+    @trigger(context, "onTurn", "player")
+    class OctobogzHuntTurnTrigger(CTrigger):
+        def trigger(self, obj, event):
+            self.getGame().createObject("OctobogzHuntDirector").synchronize(obj.getMap())
 
     @trigger(context, "onEnter", "nouraajdDoor")
     class NouraajdDoorTrigger(CTrigger):
@@ -1144,5 +1152,9 @@ def load(self, context):
         player = game_map.getPlayer()
         if player is not None and not player.getStringProperty("nouraajdVictorState"):
             _get_quest_system(game_map).sync_legacy_flags()
+        if player is not None and player.getGame() is not None:
+            if not game_map.getStringProperty("octobogzHuntRegistry"):
+                game_map.setBoolProperty("octobogzHuntCleared", False)
+            player.getGame().createObject("OctobogzHuntDirector").synchronize(game_map)
 
     event_loop.instance().invoke(syncLoadedVictorState)

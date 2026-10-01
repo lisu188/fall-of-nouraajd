@@ -621,5 +621,27 @@
       },
       "description": "Once per enemy: spend a turn reducing enemy hit chance and shadow resistance by 5 points for 2 turns."
     }
+  },
+  "octobogzCharge": {
+    "class": "OctobogzCharge",
+    "properties": {
+      "label": "Gather Shadow",
+      "manaCost": 0,
+      "enemySignature": true,
+      "description": "Gather shadow for one turn before releasing a single bounded pulse."
+    }
+  },
+  "octobogzShadowPulse": {
+    "class": "OctobogzShadowPulse",
+    "properties": {
+      "label": "Shadow Pulse",
+      "manaCost": 5,
+      "animation": "images/interactions/abyssalshadows",
+      "enemySignature": true,
+      "effect": {
+        "ref": "octobogzShadowPulseEffect"
+      },
+      "description": "Spend 5 mana to release 80% of one attack roll as shadow damage over two turns."
+    }
   }
 }
