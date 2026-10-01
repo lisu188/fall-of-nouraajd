@@ -17,7 +17,7 @@ def load(self, context):
 
     # The plugin sandbox only allows importing the game and json modules;
     # game re-exports the campaign driver (res/campaign.py) as an attribute.
-    from game import campaign
+    from game import campaign, narrative
 
     # Scenario outcomes this map reports through campaign.complete_scenario;
     # campaign manifests route them (see docs/design/multilevel_campaign.md).
@@ -434,7 +434,10 @@ def load(self, context):
     @register(context)
     class ChangeMap(CEvent):
         def onEnter(self, event):
-            campaign.complete_scenario(self.getMap().getGame(), "completed", fallback_map="ritual")
+            game = self.getMap().getGame()
+            narrative.snapshotTown(game, _quest_system_from(self).get_state("victor"))
+            game.getMap().getPlayer().checkQuests()
+            campaign.complete_scenario(game, "completed", fallback_map="ritual")
 
     @register(context)
     class MainQuest(CQuest):
@@ -692,6 +695,9 @@ def load(self, context):
 
     @register(context)
     class DoorDialog(CDialog):
+        def threatenGate(self):
+            narrative.recordGateApproach(self.getGame(), "threatened")
+
         def can_brace_gate(self):
             player = self.getGame().getMap().getPlayer()
             return player.getPlayerClassId() == "Warrior" and not player.getBoolProperty("braced_nouraajd_gate")
@@ -713,6 +719,7 @@ def load(self, context):
             )
 
         def open_door(self):
+            narrative.recordGateApproach(self.getGame(), "cooperative")
             self.getGame().getMap().removeAll(lambda ob: ob.getName().startswith("nouraajdDoorTrigger"))
             self.getGame().getMap().getObjectByName("nouraajdDoor").setBoolProperty("opened", True)
 
@@ -734,7 +741,9 @@ def load(self, context):
     class TavernDialog1(CDialog):
         def sell_beer(self):
             game = self.getGame()
-            game.getGuiHandler().showTrade(game.createObject("tavernBeerMarket"))
+            market = game.createObject("tavernBeerMarket")
+            market.setNumericProperty("sell", narrative.beerSalePercent(game))
+            game.getGuiHandler().showTrade(market)
 
         def asked_about_girl(self):
             self.getGame().getMap().setBoolProperty("ASKED_ABOUT_GIRL", True)
@@ -763,6 +772,12 @@ def load(self, context):
     class TavernDialog2(CDialog):
         COURTYARD_SPAWNS = VICTOR_COURTYARD_SPAWNS
         COURTYARD_LEADER_SPAWN = VICTOR_COURTYARD_LEADER_SPAWN
+
+        def confrontVictorForcefully(self):
+            narrative.recordVictorConfrontation(self.getGame(), "forceful")
+
+        def calmVictor(self):
+            narrative.recordVictorConfrontation(self.getGame(), "deescalated")
 
         def _ensure_victor_quest(self):
             game_map = self.getGame().getMap()
@@ -994,6 +1009,7 @@ def load(self, context):
                     "The ritual chapel",
                     "For a breath, the town is spared. Beren points you toward the abandoned ritual chapel.",
                 )
+                narrative.snapshotTown(self.getGame(), quest_system.get_state("victor"))
                 self.getGame().getMap().getPlayer().checkQuests()
                 campaign.complete_scenario(self.getGame(), "completed", fallback_map="ritual")
             else:
@@ -1065,6 +1081,9 @@ def load(self, context):
                 if state.getStringProperty("stateId") == "ENTRY":
                     reward_text = state.getStringProperty("text")
                     break
+            response = narrative.victorResponse(game)
+            if response:
+                reward_text += "\n\n" + response
             showRewardReceipt(game, "Victor's daughter is safe", reward_before, reward_text)
             game.getGuiHandler().showTrade(game.createObject("victorMarket"))
             quest_system.mark_victor_good_end()
