@@ -37,6 +37,16 @@ if not "!PYTHON_VERSION!"=="3.12" (
     exit /b 1
 )
 
+set "PYTHON_INCLUDE_DIR="
+set "PYTHON_LIBRARY="
+set "PYTHON_LIBRARY_DEBUG="
+for /f "usebackq tokens=1,* delims==" %%a in (`python "%~dp0scripts\windows_python_artifacts.py"`) do set "%%a=%%b"
+if not defined PYTHON_INCLUDE_DIR (
+    echo Could not resolve the active Python 3.12 development SDK.
+    exit /b 1
+)
+if not defined PYTHON_LIBRARY exit /b 1
+
 if defined VCPKG_INSTALLATION_ROOT (
     if exist "!VCPKG_INSTALLATION_ROOT!\vcpkg.exe" (
         if not defined VCPKG_ROOT (
@@ -252,6 +262,7 @@ if exist "!BUILD_DIR!\CMakeCache.txt" (
     )
 )
 
+rem Keep vcpkg from retaining a debug import library from another Python minor version.
 cmake -B ./!BUILD_DIR! -S . ^
     -U "Python3_*" ^
     -U "_Python3_*" ^
@@ -266,5 +277,8 @@ cmake -B ./!BUILD_DIR! -S . ^
     -DVCPKG_TARGET_TRIPLET="!VCPKG_TARGET_TRIPLET!" ^
     -DVCPKG_OVERLAY_TRIPLETS="!VCPKG_OVERLAY_TRIPLETS!" ^
     -DVCPKG_MANIFEST_MODE="!VCPKG_MANIFEST_MODE!" ^
-    -DPython3_EXECUTABLE="!PYTHON_EXECUTABLE!"
+    -DPython3_EXECUTABLE="!PYTHON_EXECUTABLE!" ^
+    -DPython3_INCLUDE_DIR="!PYTHON_INCLUDE_DIR!" ^
+    -DPython3_LIBRARY="!PYTHON_LIBRARY!" ^
+    -D_Python3_LIBRARY_DEBUG:FILEPATH="!PYTHON_LIBRARY_DEBUG!"
 exit /b %ERRORLEVEL%

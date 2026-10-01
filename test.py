@@ -130,6 +130,7 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "WindowsPythonConfigurationTest.",
     "EnemyRoleContractTest.",
     "MonsterBalanceRunnerTest.",
     "NativeCallgrindToolTest.",
@@ -25162,7 +25163,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
     def test_source_contracts_are_discovered_once_in_fast_suites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only contracts are not installed with the game")
-        for test_class in (EnemyRoleContractTest, MonsterBalanceRunnerTest):
+        for test_class in (EnemyRoleContractTest, MonsterBalanceRunnerTest, WindowsPythonConfigurationTest):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
             for method in methods:
@@ -25600,6 +25601,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_native_callgrind import NativeCallgrindToolTest as _NativeCallgrindToolTest
     from tests.test_native_test_profile import NativeTestProfileSourceTest as _NativeTestProfileSourceTest
     from tests.test_native_test_profile import NativeTestProfileRuntimeTest as _NativeTestProfileRuntimeTest
+    from tests.test_windows_python_configuration import (
+        WindowsPythonConfigurationTest as _WindowsPythonConfigurationTest,
+    )
     from tests.test_player_identity_mcp import PlayerIdentityMcpTest as _PlayerIdentityMcpTest
     from tests.test_player_identity_content import PlayerIdentityContentTest as _PlayerIdentityContentTest
     from tests.test_effect_semantics import EffectContractTest as _EffectContractTest
@@ -25620,6 +25624,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class NativeTestProfileSourceTest(_NativeTestProfileSourceTest):
+        pass
+
+    class WindowsPythonConfigurationTest(_WindowsPythonConfigurationTest):
         pass
 
     class NativeCallgrindToolTest(_NativeCallgrindToolTest):
@@ -25685,6 +25692,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _PaidActionRuntimeTest
     del _NativeTestProfileSourceTest, _NativeTestProfileRuntimeTest
+    del _WindowsPythonConfigurationTest
     del _NativeCallgrindToolTest
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
