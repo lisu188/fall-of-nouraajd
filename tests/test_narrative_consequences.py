@@ -455,6 +455,8 @@ class NarrativeRouteTest(unittest.TestCase):
                         return True
                     if method == "getStringProperty" and args == ["uiDefeatReceipt"]:
                         return ""
+                    if method in ("getHp", "getHpMax"):
+                        return 10
                     if method == "moveTo":
                         destination = tuple(args)
                         assert destination in walkable

@@ -119,8 +119,35 @@ class NarrativeWalkthrough:
         if not alive or receipt:
             raise AssertionError(self.failureState("Walkthrough player was defeated", stage))
 
+    def recoverBeforeAction(self, stage):
+        hp_max = self.call(self.player, "getHpMax")
+        if self.call(self.player, "getHp") * 4 >= hp_max * 3:
+            return
+        candidates = []
+        for item in self.call(self.player, "getItems"):
+            if not self.call(item, "hasTag", ["heal"]):
+                continue
+            power = self.call(item, "getPower")
+            if power > 0:
+                candidates.append((power, self.call(item, "getTypeId"), self.call(item, "getName"), item))
+        # Match the combat controller's 75% recovery threshold and weakest-first supplies.
+        # Each carried candidate is used at most once; inventory use does not advance a map turn.
+        for _, type_id, _, item in sorted(candidates, key=lambda entry: entry[:3]):
+            hp_before = self.call(self.player, "getHp")
+            if hp_before * 4 >= hp_max * 3:
+                break
+            self.call(self.player, "useItem", [item])
+            self.assertSurvival("after inventory recovery")
+            hp_after = self.call(self.player, "getHp")
+            if hp_after <= hp_before:
+                raise AssertionError(self.failureState("Carried healing item did not restore health", stage))
+            self.log.setdefault("recoveryItems", []).append(
+                {"typeId": type_id, "hpBefore": hp_before, "hpAfter": hp_after, "stage": stage}
+            )
+
     def tick(self):
         self.assertSurvival("before map.move")
+        self.recoverBeforeAction("before map.move")
         self.call(self.gameMap, "move")
         self.log["mapTurns"] += 1
         self.pump()
@@ -137,6 +164,7 @@ class NarrativeWalkthrough:
             except AssertionError as error:
                 raise AssertionError(self.failureState("No adjacent authored route", "before movement")) from error
             step, _ = route[0]
+            self.recoverBeforeAction("before movement")
             self.call(self.player, "moveTo", list(step))
             self.log["movementSteps"] += 1
             self.pump()

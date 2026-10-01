@@ -201,5 +201,159 @@ class NarrativeWalkthroughSurvivalTest(unittest.TestCase):
         self.assertEqual(0, session.moves + session.turns)
 
 
+class HealingRouteSession(RouteSession):
+    def __init__(self, *, hp=10, movement_damage=0, turn_damage=0, ineffective=False):
+        super().__init__()
+        self.hp = hp
+        self.movementDamage = movement_damage
+        self.turnDamage = turn_damage
+        self.ineffective = ineffective
+        self.items = {f"life{index}": {"typeId": "LifePotion", "power": 2, "heal": True} for index in range(6)}
+        self.items.update({f"mana{index}": {"typeId": "ManaPotion", "power": 3, "heal": False} for index in range(6)})
+
+    def handleCall(self, handle, method, args):
+        if handle == "player" and method == "getItems":
+            self.calls.append((handle, method, args))
+            return list(self.items)
+        if handle == "player" and method == "countItems":
+            self.calls.append((handle, method, args))
+            return sum(item["typeId"] == args[0] for item in self.items.values())
+        if handle in self.items:
+            self.calls.append((handle, method, args))
+            item = self.items[handle]
+            if method == "hasTag" and args == ["heal"]:
+                return item["heal"]
+            if method == "getPower":
+                return item["power"]
+            if method == "getTypeId":
+                return item["typeId"]
+            if method == "getName":
+                return handle
+        if handle == "player" and method == "useItem":
+            self.calls.append((handle, method, args))
+            item = self.items.pop(args[0])
+            if not self.ineffective:
+                self.hp = min(10, self.hp + item["power"] * 2)
+            return None
+        pending = self.pending
+        result = super().handleCall(handle, method, args)
+        if handle == "loop" and method == "run":
+            damage = self.movementDamage if pending == "movement" else self.turnDamage if pending == "turn" else 0
+            self.hp -= damage
+            if self.hp <= 0:
+                self.receipt = json.dumps({"hp": 1, "lostItemCount": len(self.items)})
+                self.items.clear()
+                self.hp = 1
+                self.position = (0, 0, 0)
+                self.defeated = True
+        return result
+
+
+class NarrativeWalkthroughRecoveryTest(unittest.TestCase):
+    def usedItems(self, session):
+        return [args[0] for handle, method, args in session.calls if handle == "player" and method == "useItem"]
+
+    def testWoundedPlayerRecoversBeforeMovingIntoTheNextEncounter(self):
+        session = HealingRouteSession(hp=4, movement_damage=6)
+        driver = session.driver()
+        driver.walkTo((1, 0, 0))
+        methods = [method for _, method, _ in session.calls]
+        self.assertLess(methods.index("useItem"), methods.index("moveTo"))
+        self.assertFalse(session.defeated)
+        self.assertEqual("", session.receipt)
+        self.assertEqual(1, session.moves)
+        self.assertEqual(1, session.turns)
+        self.assertEqual(42, session.nativeTurn)
+        self.assertEqual(6 - len(self.usedItems(session)), driver.call("player", "countItems", ["LifePotion"]))
+        self.assertEqual(6, driver.call("player", "countItems", ["ManaPotion"]))
+
+    def testMovementWoundRecoversBeforePursuersActOnTheFollowingTurn(self):
+        session = HealingRouteSession(movement_damage=6, turn_damage=6)
+        driver = session.driver()
+        driver.walkTo((1, 0, 0))
+        methods = [method for _, method, _ in session.calls]
+        self.assertLess(methods.index("moveTo"), methods.index("useItem"))
+        self.assertLess(methods.index("useItem"), methods.index("move"))
+        self.assertEqual(["life0"], self.usedItems(session))
+        self.assertEqual(2, session.hp)
+        self.assertEqual("", session.receipt)
+        self.assertEqual(1, driver.log["movementSteps"])
+        self.assertEqual(1, driver.log["mapTurns"])
+
+    def testWaitingTurnRecoversWithOwnedItemsWithoutExtraTurns(self):
+        session = HealingRouteSession(hp=4, turn_damage=6)
+        driver = session.driver()
+        driver.tick()
+        self.assertEqual(["life0"], self.usedItems(session))
+        self.assertEqual(2, session.hp)
+        self.assertEqual(5, driver.call("player", "countItems", ["LifePotion"]))
+        self.assertEqual(6, driver.call("player", "countItems", ["ManaPotion"]))
+        self.assertEqual(0, session.moves)
+        self.assertEqual(1, session.turns)
+        self.assertEqual("", session.receipt)
+
+    def testRecoveryUsesWeakerTaggedSuppliesFirstAndCapsHealth(self):
+        session = HealingRouteSession(hp=4)
+        session.items = {
+            "life": {"typeId": "FullLifePotion", "power": 5, "heal": True},
+            "beer": {"typeId": "DarkBeer", "power": 1, "heal": True},
+            "mana": {"typeId": "ManaPotion", "power": 3, "heal": False},
+        }
+        driver = session.driver()
+        driver.tick()
+        self.assertEqual(["beer", "life"], self.usedItems(session))
+        self.assertEqual(10, session.hp)
+        self.assertEqual(["mana"], list(session.items))
+        self.assertEqual(1, session.turns)
+
+    def testHealthyArrivalAndSatisfiedStopDoNotConsumeItems(self):
+        for hp, target, stop in ((10, (1, 0, 0), None), (4, (0, 0, 0), None), (4, (1, 0, 0), lambda: True)):
+            with self.subTest(hp=hp, target=target, stop=stop is not None):
+                session = HealingRouteSession(hp=hp)
+                driver = session.driver()
+                driver.walkTo(target, stop=stop)
+                self.assertEqual([], self.usedItems(session))
+                self.assertEqual(12, len(session.items))
+
+    def testMissingOrNonHealingItemsNeverManufactureRecovery(self):
+        for items in (
+            {},
+            {"mana": {"typeId": "ManaPotion", "power": 3, "heal": False}},
+            {"empty": {"typeId": "EmptyPotion", "power": 0, "heal": True}},
+        ):
+            with self.subTest(items=items):
+                session = HealingRouteSession(hp=4)
+                session.items = items.copy()
+                driver = session.driver()
+                driver.tick()
+                self.assertEqual([], self.usedItems(session))
+                self.assertEqual(4, session.hp)
+                self.assertEqual(items, session.items)
+                self.assertEqual(1, session.turns)
+
+    def testDefeatReceiptRejectsBeforeAnyRecoveryOrProgress(self):
+        session = HealingRouteSession(hp=4)
+        driver = session.driver()
+        session.receipt = "recorded defeat"
+        with self.assertRaises(AssertionError):
+            driver.tick()
+        self.assertEqual([], self.usedItems(session))
+        self.assertEqual(12, len(session.items))
+        self.assertEqual(0, session.moves + session.turns)
+
+    def testIneffectiveNativeItemFailsAfterOneUseWithoutAdvancingTheMap(self):
+        session = HealingRouteSession(hp=4, ineffective=True)
+        driver = session.driver()
+        with self.assertRaises(AssertionError) as error:
+            driver.tick()
+        state = error.exception.args[0]
+        self.assertEqual("Carried healing item did not restore health", state["reason"])
+        self.assertEqual(41, state["nativeTurn"])
+        self.assertEqual(5, state["resources"]["LifePotion"])
+        self.assertEqual(6, state["resources"]["ManaPotion"])
+        self.assertEqual(["life0"], self.usedItems(session))
+        self.assertEqual(0, session.moves + session.turns)
+
+
 if __name__ == "__main__":
     unittest.main()
