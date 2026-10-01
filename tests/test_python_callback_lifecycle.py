@@ -26,7 +26,7 @@ loop = game.event_loop.instance()
 
 
 class PythonCallbackLifecycleTest(unittest.TestCase):
-    def runChild(self, code):
+    def runChild(self, code, *, timeout_seconds=30):
         environment = os.environ.copy()
         with tempfile.TemporaryDirectory(prefix="nouraajd-callback-lifecycle-") as temporary:
             environment.update(
@@ -42,7 +42,7 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
                 env=environment,
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=timeout_seconds,
             )
         if result.returncode == 77:
             self.skipTest("The compiled _game module is unavailable.")

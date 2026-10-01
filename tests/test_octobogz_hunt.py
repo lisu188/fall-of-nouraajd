@@ -1450,6 +1450,63 @@ class OctobogzHuntTest(unittest.TestCase):
             exec(compile(source, "hunt-runtime-diagnostic-fixture", "exec"), namespace)
         return namespace["OctobogzRuntimeTest"]("runTest")
 
+    def testNativePartialCoverageWatchdogIsScopedToTheExactFlagAndOtherChildrenKeepTheirDefault(self):
+        import os
+        from tests.test_octobogz_runtime import OctobogzRuntimeTest
+
+        for flag in ("", "0", "true", "01", "1"):
+            with self.subTest(flag=flag), patch.dict(os.environ, {"GAME_COVERAGE_RUN": flag}):
+                fixture = OctobogzRuntimeTest("runTest")
+                fixture.runChild = Mock()
+                fixture.testNativeActorDeathsPartialSaveAndLivingRecoveryPreserveIdentityAndRewardOnce()
+                self.assertEqual(
+                    60 if flag == "1" else 30, fixture.runChild.call_args.kwargs.get("timeout_seconds", 30)
+                )
+                fixture.runChild.reset_mock()
+                fixture.testNativeLegacyAdoptionAddsActionsWithoutChangingHealthOrExtraActors()
+                self.assertEqual({}, fixture.runChild.call_args.kwargs)
+
+    def testSharedCallbackAndRoleChildrenKeepThirtySecondsUnlessExplicitlyScoped(self):
+        import os
+        from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest
+        from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest
+
+        self.assertIs(PythonCallbackLifecycleTest.runChild, EnemyRoleRuntimeTest.runChild)
+        result = types.SimpleNamespace(returncode=0, stdout="verified", stderr="")
+        for fixture_type in (PythonCallbackLifecycleTest, EnemyRoleRuntimeTest):
+            with self.subTest(fixture=fixture_type.__name__), patch.dict(os.environ, {"GAME_COVERAGE_RUN": "1"}):
+                fixture = fixture_type("runTest")
+                with patch("tests.test_python_callback_lifecycle.subprocess.run", return_value=result) as run:
+                    self.assertEqual("verified", fixture.runChild("the original complete workload"))
+                    self.assertEqual(30, run.call_args.kwargs["timeout"])
+                if fixture_type is PythonCallbackLifecycleTest:
+                    with patch("tests.test_python_callback_lifecycle.subprocess.run", return_value=result) as run:
+                        self.assertEqual(
+                            "verified", fixture.runChild("the explicitly scoped workload", timeout_seconds=60)
+                        )
+                        self.assertEqual(60, run.call_args.kwargs["timeout"])
+
+    def testNativePartialExplicitCoverageTimeoutRetainsItsCapturedFailureAndBoundedStreams(self):
+        import io
+        import subprocess
+        from contextlib import redirect_stderr
+
+        failure = subprocess.TimeoutExpired(
+            ["python", "child"], 60, output=b"native hunt stage save2 begin", stderr=b"actual failure"
+        )
+        shared_runner = Mock(side_effect=failure)
+        fixture = self.runtimeDiagnosticFixture(shared_runner)
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(subprocess.TimeoutExpired) as caught:
+            fixture.runChild("the original complete native workload", timeout_seconds=60)
+        shared_runner.assert_called_once_with("the original complete native workload", timeout_seconds=60)
+        self.assertIs(failure, caught.exception)
+        self.assertEqual(60, caught.exception.timeout)
+        self.assertEqual(failure.output, caught.exception.output)
+        self.assertEqual(failure.stderr, caught.exception.stderr)
+        self.assertIn("native hunt stage save2 begin", stderr.getvalue())
+        self.assertIn("actual failure", stderr.getvalue())
+
     def testNativePartialTimeoutDiagnosticsRetainBoundedStreamsAndTheOriginalThirtySecondFailure(self):
         import io
         import subprocess

@@ -2,6 +2,7 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import os
 import subprocess
 import sys
 import unittest
@@ -12,9 +13,11 @@ from tests import test_python_callback_lifecycle as callback_lifecycle
 class OctobogzRuntimeTest(unittest.TestCase):
     runSharedChild = callback_lifecycle.PythonCallbackLifecycleTest.runChild
 
-    def runChild(self, code):
+    def runChild(self, code, *, timeout_seconds=30):
         try:
-            return self.runSharedChild(code)
+            if timeout_seconds == 30:
+                return self.runSharedChild(code)
+            return self.runSharedChild(code, timeout_seconds=timeout_seconds)
         except subprocess.TimeoutExpired as error:
 
             def streamTail(output):
@@ -34,7 +37,8 @@ class OctobogzRuntimeTest(unittest.TestCase):
             raise
 
     def testNativeActorDeathsPartialSaveAndLivingRecoveryPreserveIdentityAndRewardOnce(self):
-        self.runChild("""
+        self.runChild(
+            """
             import json
             from pathlib import Path
             from time import monotonic
@@ -181,7 +185,9 @@ class OctobogzRuntimeTest(unittest.TestCase):
                     save_path.unlink(missing_ok=True)
                     Path(str(save_path) + '.bak').unlink(missing_ok=True)
             print('native hunt partial save, recovery and late reward verified', flush=True)
-            """)
+            """,
+            timeout_seconds=60 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 30,
+        )
 
     def testNativeLegacyAdoptionAddsActionsWithoutChangingHealthOrExtraActors(self):
         self.runChild("""

@@ -434,8 +434,9 @@ The fixed no-rest comparator remains level3 with all original rows and seeds.
 
 Before optimizing, hunt-local diagnostics print bounded elapsed stages around
 loading, the existing full-map serialization, both complete saves/reloads,
-pulse and reward checks. The original48 assertions and30-second child limit
-remain. A timeout exposes bounded captured stdout/stderr tails and reraises
+pulse and reward checks. The original 48 assertions remain; ordinary children
+retain their 30-second watchdog, with the instrumented partial-save exception
+described below. A timeout exposes bounded captured stdout/stderr tails and reraises
 the same exception. MCP calls retain their exact delegate, arguments, results
 and errors while reporting aggregate counts/times at journey checkpoints and
 every128 actual movement steps. Current coordinates still use full actor JSON.
@@ -477,8 +478,37 @@ the regression requires22 JSON reads and63 scalar reads, so a future coordinate
 optimization cannot accidentally compare the same reader against itself.
 Current movement coordinates still use full JSON pending paired measurements.
 
-The cold-cache scheduler also records214 seconds as a transparent rounded lower
-bound from that failed213.500-second case. Recorded test timings still take
-precedence. This changes shard placement and the allowance calculated by the
-existing formula; the formula and fixed child, phase and native deadlines are
-unchanged. All tests, encounters, samples and assertions remain required.
+The cold-cache scheduler now records 607 seconds from the failed 606.600-second
+coverage case, with the earlier ordinary 213.500-second failure also retained.
+Both measured preparation failures are lower bounds pending a completed route.
+Recorded test timings still take precedence. This changes shard placement and
+the allowance calculated by the existing formula; the formula and fixed phase
+and native deadlines are unchanged. The callback watchdog exception is described
+below. All tests, encounters, samples and assertions remain required.
+
+## Scoped instrumented partial-save watchdog
+
+The unchanged `./scripts/run_coverage.sh` invocation for head `57e44f00`
+(job 110531958824) supplied the first exact native-child stages. Loading and map
+startup finished at 4.354 seconds. Full-map JSON ran from 4.411 to 10.719 seconds,
+the first save from 10.719 to 17.197 seconds, and its reload from 17.273 to 28.482
+seconds. The pulse finished at 28.578 seconds, then the inherited callback
+watchdog stopped the second save at 30.090 seconds. The second complete save and
+reload could not finish inside that callback-shutdown test's default 30 seconds.
+The ordinary Windows child passed the same work in 8.688 seconds. Projected
+instrumented work is approximately 46 seconds; this estimate is not a pass.
+
+Only the partial actor save/recovery test uses a 60-second child watchdog when
+`GAME_COVERAGE_RUN` is exactly `1`, as set by the existing coverage script.
+Every other flag value uses 30 seconds. Legacy adoption, monster-role runtime
+checks and all other callback children retain their 30-second defaults. The
+whole coverage phase remains 1800 seconds and native performance guards are
+unchanged. No production serialization, map size, assertion, full-map traversal
+or either of the two save/reload cycles is removed or optimized by this change.
+The timeout still reports bounded captured streams and reraises the same failure.
+
+Regression checks exercise the real shared subprocess wrapper with default 30
+and explicit 60, and prove that only the exact instrumented partial fixture opts
+in. The next CI run must supply the actual after-change elapsed stages and all
+required outcomes; canonical coverage and both completed authored routes remain
+pending rather than inferred from this watchdog correction.
