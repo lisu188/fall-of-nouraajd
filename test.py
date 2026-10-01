@@ -22860,27 +22860,24 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             self.assertEqual(target, coords_tuple(player.getCoords()))
 
         def captureJournal(name, active_ids, completed_ids):
-            observed = {"open": False, "text": "", "error": None}
-
-            def observeOpenPanel():
-                observed["open"] = gui_contains_class(g, "CGameQuestPanel")
-                if observed["open"]:
-                    try:
-                        panel = g.getGuiHandler().openPanel("questPanel")
-                        observed["text"] = panel.getText(g.getGui())
-                        assert_screenshot_has_rendered_pixels(self, g, name)
-                    except Exception as exc:
-                        observed["error"] = exc
-
-            push_quest_log_key()
-            game.event_loop.instance().invoke(observeOpenPanel)
-            push_quest_log_key()
-            pump_event_loop(10)
-            if observed["error"] is not None:
-                raise observed["error"]
-            self.assertTrue(observed["open"], "The j key should open the quest journal.")
+            initial_turn = g.getMap().getTurn()
             self.assertFalse(gui_contains_class(g, "CGameQuestPanel"))
-            text = observed["text"]
+            push_quest_log_key()
+            wait_for_panel_class(self, g, "CGameQuestPanel")
+            panel = find_top_level_panel(g, "CGameQuestPanel")
+            try:
+                text = readJournalTabs(panel, g.getGui(), active=active_ids, completed=completed_ids)
+                assert_screenshot_has_rendered_pixels(self, g, name)
+                if completed_ids:
+                    buttons = {
+                        button.getStringProperty("click"): button for button in find_descendants_by_type(panel, "CButton")
+                    }
+                    activate_widget(buttons["showCompleted"], g.getGui())
+                    assert_screenshot_has_rendered_pixels(self, g, name + "_completed")
+            finally:
+                push_quest_log_key()
+                wait_for_panel_closed(self, g, "CGameQuestPanel")
+            self.assertEqual(initial_turn, g.getMap().getTurn())
             for status, ids in (("Active", active_ids), ("Completed", completed_ids)):
                 for quest_id in ids:
                     quest = find_player_quest(player, quest_id)
