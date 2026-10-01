@@ -37,6 +37,9 @@ std::unordered_map<const CGameObject *, pybind11::object> &CPythonOverrides::ins
 
 namespace {
 
+thread_local bool numericIncrementProbeEnabled = false;
+thread_local std::size_t numericIncrementProbeCounter = 0;
+
 using ObjectPair = std::pair<const CGameObject *, const CGameObject *>;
 
 bool isEquivalentValueType(std::type_index type) {
@@ -268,8 +271,22 @@ int CGameObject::getNumericProperty(std::string name) {
 }
 
 void CGameObject::incProperty(std::string name, int value) {
+    if (numericIncrementProbeEnabled) {
+        ++numericIncrementProbeCounter;
+    }
     this->setNumericProperty(name, this->getNumericProperty(name) + value);
 }
+
+namespace performance_guard {
+void resetNumericIncrementProbe() {
+    numericIncrementProbeCounter = 0;
+    numericIncrementProbeEnabled = true;
+}
+
+std::size_t numericIncrementProbeCount() { return numericIncrementProbeCounter; }
+
+void disableNumericIncrementProbe() { numericIncrementProbeEnabled = false; }
+} // namespace performance_guard
 
 std::string CGameObject::to_string() { return vstd::join({getType(), getName()}, ":"); }
 

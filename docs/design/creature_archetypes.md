@@ -498,14 +498,51 @@ class-then-legacy main-stat rule.
 ## Where this is enforced and tested
 
 The single composition primitive is `CCreature::getStats`
-(`src/object/CCreature.cpp`): it seeds the main stat (legacy creature
-`baseStats` today, class-first once classes exist), then `addBonus`-accumulates
-`baseStats`, `levelStats` once per level, every equipped item's bonus, and every
-effect's bonus, in the documented order. This contract is pinned by the native
+(`src/object/CCreature.cpp`): with class tracks, it selects the first ordered
+track with a main stat, falling back to the concrete base stats if none names
+one. Without tracks, the single class's nonempty main stat wins over the concrete
+base stats. Its private composed and legacy paths add typed `StatsModifier`
+values in the documented source order, repeating each growth contribution once
+per level, then materialize the fresh, unpublished `CStats` with 17 typed setters.
+They neither multiply growth nor cache results across reads. Public
+`CStats::apply` and `addBonus` retain all 17 reflective writes, including zero
+increments, dynamic-property precedence and notification order. This contract is pinned by the native
 regression tests `test_no_archetype_creature_stats_keep_legacy_composition`
 (full per-property composition) and
 `test_creature_stat_precedence_orders_sources_and_main_stat` (override ordering
 and the class-then-legacy main-stat fallback) in `tests/unit/test_object.cpp`.
+
+`test_stat_composition_matches_reflective_reference_and_reads_current_inputs`
+compares all 17 fields and the selected main stat against the old reflective
+sequence for legacy, race, single-class, multiclass and template combinations.
+It also checks source immutability and fresh reads after changing levels,
+sources, track order, equipment and effects. The native performance guard
+`test_stat_composition_eliminates_repeated_reflective_increments` keeps a fixed
+224-read workload: the old reference must perform 47,872 reflective increments,
+and private composition must perform zero with identical stat values. The
+opt-in, thread-local work probe is disabled outside the test scope; it is not a
+Python API. Existing performance budgets remain unchanged.
+
+The motivating Linux RelWithDebInfo Callgrind runs are
+[36866218517](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36866218517)
+(head `a7243c21`, merge checkout `d3ed3b4f`, artifact `11166398195`) and
+[36870737479](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36870737479)
+(head `01d98505`, merge checkout `2d12ef24`, artifact `11167287018`). Both completed
+all 36 handler and 49 map cases with exit zero; `CStats::apply` accounted for
+55.07% and 55.39% of handler instruction reads respectively. These are baseline
+profiles, not a measured speedup for the private fold. The retained workflow
+configured with `GAME_CONFIGURE_BUILD_TYPES=RelWithDebInfo ./configure.sh`, built
+`_game`, `handler_unit_tests` and `map_unit_tests`, then ran:
+
+```sh
+python3 scripts/profile_native_tests.py --build-dir cmake-build-relwithdebinfo \
+  --output-dir "test/native-callgrind/<run-id>-1/runtime" --suite both --timeout-seconds 1800
+```
+
+The profiling tool runs the complete binaries on virtual displays. After-change
+native guard, full-suite and coverage results must come from the selected build
+workflow; a new complete profile is required before reporting timing or
+instruction-count improvement.
 
 ---
 

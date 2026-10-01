@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CMapObject.h"
 #include "object/CTile.h"
 #include "test_harness.h"
+#include "stat_composition_fixture.h"
 #include "veventloop.h"
 
 #include <pybind11/embed.h>
@@ -517,6 +518,54 @@ void test_bulk_inventory_property_notifications_are_count_bounded() {
                 "legacy inventoryChanged remains item-level until GUI refresh migrates to property notifications");
 }
 
+void test_stat_composition_eliminates_repeated_reflective_increments() {
+    using namespace stat_composition_fixture;
+    constexpr std::size_t reads_per_fixture = 32;
+    constexpr std::array<std::size_t, 7> contribution_counts{7, 10, 11, 9, 15, 20, 16};
+    std::vector<Fixture> fixtures;
+    std::vector<std::shared_ptr<CStats>> expected;
+    for (int mode = 0; mode < 7; ++mode) {
+        fixtures.push_back(make(mode));
+    }
+    std::size_t reflective_work = 0;
+    {
+        IncrementProbe probe;
+        for (std::size_t i = 0; i < fixtures.size(); ++i) {
+            for (std::size_t read = 0; read < reads_per_fixture; ++read) {
+                std::size_t contributions = 0;
+                auto result = reflectiveReference(fixtures[i].creature, contributions);
+                expect_true(contributions == contribution_counts[i], "reference contribution workload stays fixed");
+                if (read == 0) {
+                    expected.push_back(result);
+                }
+            }
+        }
+        reflective_work = probe.count();
+    }
+    expect_true(reflective_work == 47872,
+                "old public apply performs exactly 17 increments per contribution, even zeros");
+    std::size_t private_work = 0;
+    {
+        IncrementProbe probe;
+        expect_true(probe.count() == 0, "reset must start a new stat work sample at zero");
+        for (std::size_t i = 0; i < fixtures.size(); ++i) {
+            for (std::size_t read = 0; read < reads_per_fixture; ++read) {
+                auto result = fixtures[i].creature->getStats();
+                expect_true(result->modifier() == expected[i]->modifier() &&
+                                result->getMainStat() == expected[i]->getMainStat(),
+                            "fixed representative composed and legacy stat reads must retain the reference values");
+            }
+        }
+        private_work = probe.count();
+    }
+    expect_true(private_work == 0, "private stat composition must perform zero reflective numeric increments");
+    expected.front()->incProperty("strength", 0);
+    expect_true(performance_guard::numericIncrementProbeCount() == private_work,
+                "probe scope must disable observation without changing ordinary property writes");
+    std::cout << "stat composition work: 224 reads, reflective increments " << reflective_work << " -> " << private_work
+              << '\n';
+}
+
 void test_weighted_target_flow_field_is_single_build_and_materialization_bounded() {
     auto fixture = make_open_map(6, 3);
     // Make the row-0 band between the chasers and the goal expensive so the weighted flow field has
@@ -571,6 +620,7 @@ void run_engine_hotspot_performance_tests() {
         interpreter.emplace();
     }
 
+    test_stat_composition_eliminates_repeated_reflective_increments();
     test_many_target_controllers_share_one_goal_without_mutating_navigation();
     test_weighted_target_flow_field_is_single_build_and_materialization_bounded();
     test_relevant_object_move_invalidates_target_navigation();
