@@ -392,3 +392,54 @@ This avoids the dangerous first retreat step without skipping an encounter or
 counting respawn as survival. Its runtime outcome and both completed hunts
 remain pending; strict native comparisons, actual distinct deaths, positive
 packet budget, partial objectives and one-time rewards remain unchanged.
+
+## Retained prepared-route results and measured follow-up
+
+Head `6bfd3a63` passed the native comparisons and performance guards on Linux
+and Windows. Windows job110511955655 completed the role matrix in2.69seconds
+and the fixed hunt entry in1.74seconds; partial actor save/recovery passed in
+7.156seconds and legacy adoption in0.531seconds. Both actual classes defeated
+the scout, preserved exact partial objectives and used the owned source scroll
+without a defeat receipt. The authored outcomes still diverged:
+
+| Platform | Warrior | Sorcerer |
+|---|---|---|
+| Windows | All three actual deaths, reward once and MainQuest completed;4375XP,98HP/126mana,1200gold at the final snapshot | Lost to Alpha after the successful partial reload and portal;4000XP and a native defeat receipt |
+| Linux | Lost to brood at4250XP despite full98HP/126mana before that encounter | Lost to Alpha at4000XP after partial reload and portal |
+
+The Windows Warrior observed real Alpha damage17→16normal+1shadow and brood
+damage38→37normal+1shadow. Each pulse spent5mana once. Its completed route is
+partial platform evidence; the caster loss means the whole walkthrough failed.
+Linux also reported a separate existing narrative ritual-route failure, which
+is investigated independently rather than hidden by the hunt test.
+
+Coverage job110511222761 passed all25native entries, including the unchanged
+role matrix in11.07seconds and hunt entry in6.94seconds. The partial-save child
+again timed out at30.044seconds; adoption passed in6.475seconds. The coverage
+Warrior survived all three encounters and obtained the1000gold/ShadowBlade,
+but the Python phase reached its existing1800-second limit before a completed
+route and the caster result. No canonical percentage was produced. These
+timeouts remain failed evidence, distinct from ordinary combat losses.
+
+The next authored witness earns at least level4 and6000XP from existing Rolf
+Pritz and, when still needed, the existing catacombs at57,103. Rolf discovery
+retains its32-iteration bound. The catacombs can contain its ordinary timed
+Pritz plus its entry neighbors; an18-iteration discovery cap is an upper bound,
+not a promise of18 enemies or fixed experience. Each pursued living source
+Pritz must be removed and grant actual native XP. The source holyRelic pickup
+and cave removal are checked. Recovery uses only source RoadTiles57,115 and
+58,115. Group combat at the catacombs remains real and a defeat still fails.
+No turn-in experience, potion, gear, level, actor or stat is manufactured.
+The fixed no-rest comparator remains level3 with all original rows and seeds.
+
+Before optimizing, hunt-local diagnostics print bounded elapsed stages around
+loading, the existing full-map serialization, both complete saves/reloads,
+pulse and reward checks. The original48 assertions and30-second child limit
+remain. A timeout exposes bounded captured stdout/stderr tails and reraises
+the same exception. MCP calls retain their exact delegate, arguments, results
+and errors while reporting aggregate counts/times at journey checkpoints and
+every128 actual movement steps. Current coordinates still use full actor JSON.
+A read-only probe measures20 paired samples after one warm-up for that existing
+read versus three scalar position getters; it requires unchanged coordinates,
+turn, objective state, HP and mana. These measurements add no timing pass gate
+and cannot replace the required workload, performance or coverage evidence.

@@ -584,6 +584,161 @@ class OctobogzHuntTest(unittest.TestCase):
         success, log = namespace[checker.name](self)
         self.assertTrue(success, log)
 
+    def testMcpDiagnosticCallsForwardExactArgumentsResultsAndFailuresWithoutExtraRpc(self):
+        from tests import test_ui_mcp_dialogue as dialogue
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        result = {"actual": "native result"}
+        failure = RuntimeError("original RPC failure")
+        with (
+            patch.object(dialogue.DialogueMcpWalkthroughTest, "engine", return_value=result) as engine,
+            patch.object(dialogue.DialogueMcpWalkthroughTest, "call", side_effect=failure) as call,
+            patch("tests.test_octobogz_mcp.perf_counter", side_effect=(10.0, 12.0, 20.0, 23.0)),
+        ):
+            self.assertIs(result, walker.engine("jsonify", "actor"))
+            with self.assertRaises(RuntimeError) as caught:
+                walker.call("player", "getNumericProperty", "posx")
+        self.assertIs(failure, caught.exception)
+        engine.assert_called_once_with(walker, "jsonify", "actor")
+        call.assert_called_once_with(walker, "player", "getNumericProperty", "posx")
+        self.assertEqual(
+            {
+                "export:jsonify": {"count": 1, "seconds": 2.0, "max": 2.0, "failures": 0},
+                "handle:getNumericProperty": {"count": 1, "seconds": 3.0, "max": 3.0, "failures": 1},
+            },
+            walker.mcp_method_profile,
+        )
+
+    def testMcpDiagnosticReportIsBoundedReadonlyAndRetainsCompleteTotals(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.mcp_profile_class, walker.mcp_profile_started, walker.movement_steps = "Warrior", 10.0, 128
+        walker.mcp_method_profile = {
+            "method" + str(index): {"count": index + 1, "seconds": float(index), "max": float(index), "failures": 0}
+            for index in range(70)
+        }
+        before = json.loads(json.dumps(walker.mcp_method_profile))
+        walker.engine, walker.call = Mock(), Mock()
+        with patch("tests.test_octobogz_mcp.perf_counter", return_value=15.0), patch("builtins.print") as report:
+            walker.reportMcpProfile("adjacent movement checkpoint")
+        walker.engine.assert_not_called()
+        walker.call.assert_not_called()
+        self.assertEqual(before, walker.mcp_method_profile)
+        payload = report.call_args.args[1]
+        self.assertEqual("MCP hunt method profile", report.call_args.args[0])
+        self.assertTrue(report.call_args.kwargs["flush"])
+        self.assertEqual(64, len(payload["methods"]))
+        self.assertEqual(6, payload["omittedMethods"])
+        self.assertEqual(sum(range(1, 71)), payload["calls"])
+        self.assertEqual(sum(range(70)), payload["rpcSeconds"])
+        self.assertEqual(5.0, payload["elapsed"])
+        self.assertEqual("method69", payload["methods"][0]["method"])
+
+    def testMcpDiagnosticProfileResetsBetweenClassesAndReportsEvery128ActualSteps(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.mcp_method_profile = {"previous class": {"count": 99}}
+        with patch("tests.test_octobogz_mcp.perf_counter", return_value=42.0):
+            walker.resetMcpProfile("Sorcerer")
+        self.assertEqual({}, walker.mcp_method_profile)
+        self.assertEqual("Sorcerer", walker.mcp_profile_class)
+        self.assertEqual(42.0, walker.mcp_profile_started)
+        walker.player, walker.game_map, walker.movement_steps = "player", "map", 126
+        state = {"coords": (0, 0, 0), "turn": 0}
+        walker.coords = lambda handle=None: state["coords"]
+        walker.pump = Mock()
+        walker.reportMcpProfile = Mock()
+
+        def call(handle, method, *args):
+            if method == "getStringProperty":
+                return ""
+            if method == "getTile":
+                return "actual tile"
+            if method in ("getBoolProperty", "isAlive"):
+                return True
+            if method == "moveTo":
+                state["coords"] = tuple(args)
+            if method == "getTurn":
+                return state["turn"]
+            if method == "move":
+                state["turn"] += 1
+
+        walker.call = Mock(side_effect=call)
+        self.assertEqual((1, 0, 0), walker.step((1, 0, 0)))
+        walker.reportMcpProfile.assert_not_called()
+        self.assertEqual((2, 0, 0), walker.step((2, 0, 0)))
+        walker.reportMcpProfile.assert_called_once_with("adjacent movement checkpoint")
+        self.assertEqual(128, walker.movement_steps)
+        self.assertEqual(2, state["turn"])
+        self.assertEqual(4, walker.pump.call_count)
+        self.assertEqual(2, sum(call.args[1] == "moveTo" for call in walker.call.call_args_list))
+        self.assertEqual(2, sum(call.args[1] == "move" for call in walker.call.call_args_list))
+
+    def testMcpPairedCoordinateProbeMeasuresTwentyReadonlyPairsAfterWarmup(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        walker.coords = Mock(return_value=(57, 115, 0))
+        walker.state = Mock(return_value={"stage": "dormant"})
+        walker.pump = Mock()
+
+        def call(handle, method, *args):
+            if handle == "map":
+                self.assertEqual("getTurn", method)
+                return 250
+            self.assertEqual("player", handle)
+            if method == "getNumericProperty":
+                return {"posx": 57, "posy": 115, "posz": 0}[args[0]]
+            return {"getHp": 98, "getMana": 126}[method]
+
+        walker.call = Mock(side_effect=call)
+        with patch("tests.test_octobogz_mcp.perf_counter", side_effect=range(84)), patch("builtins.print") as report:
+            walker.probeCoordinateReadCosts()
+        walker.pump.assert_not_called()
+        self.assertEqual(22, walker.coords.call_count)
+        self.assertEqual(22, walker.state.call_count)
+        self.assertEqual(63, sum(call.args[1] == "getNumericProperty" for call in walker.call.call_args_list))
+        self.assertEqual(
+            {"getTurn", "getNumericProperty", "getHp", "getMana"}, {call.args[1] for call in walker.call.call_args_list}
+        )
+        payload = report.call_args.args[1]
+        self.assertEqual("MCP hunt paired coordinate read probe", report.call_args.args[0])
+        self.assertTrue(report.call_args.kwargs["flush"])
+        self.assertEqual((20, 1), (payload["samples"], payload["warmup"]))
+        self.assertEqual((1, 3), (payload["fullJsonRpcPerSample"], payload["scalarRpcPerSample"]))
+        self.assertEqual((1, 1), (payload["fullJsonMedianSeconds"], payload["scalarMedianSeconds"]))
+        self.assertEqual((20, 20), (payload["fullJsonTotalSeconds"], payload["scalarTotalSeconds"]))
+
+    def testMcpPairedReadonlyProbeRejectsDifferentCoordinatesTurnsOrObjectiveState(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for failure in ("coordinates", "turn", "state"):
+            with self.subTest(failure=failure):
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map = "player", "map"
+                walker.coords = lambda: (57, 115, 0)
+                walker.state = (
+                    Mock(side_effect=({"stage": "dormant"}, {"stage": "cleared"})) if failure == "state" else lambda: {}
+                )
+                reads = []
+
+                def call(handle, method, *args):
+                    reads.append(method)
+                    if method == "getTurn":
+                        return 1 if failure == "turn" and reads.count(method) > 1 else 0
+                    if method == "getNumericProperty":
+                        return {"posx": 58 if failure == "coordinates" else 57, "posy": 115, "posz": 0}[args[0]]
+                    return {"getHp": 98, "getMana": 126}[method]
+
+                walker.call = call
+                with self.assertRaises(AssertionError), patch("builtins.print"):
+                    walker.probeCoordinateReadCosts()
+                self.assertFalse(set(reads) & {"moveTo", "move", "heal", "setHp", "setMana"})
+
     def testMcpRouteUsesOnlyAdjacentNativeMovementAndActualMapTurnsAfterBlockersOrRollback(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
@@ -765,6 +920,8 @@ class OctobogzHuntTest(unittest.TestCase):
             (118, 20),
             (110, 111),
             (109, 111),
+            (57, 115),
+            (58, 115),
         ):
             tile = layer["data"][x + y * source["width"]]
             self.assertEqual("RoadTile", tile_types[str(tile - 1)]["type"], (x, y))
@@ -810,6 +967,90 @@ class OctobogzHuntTest(unittest.TestCase):
             [near, far, dead, wrong_type, wrong_affiliation] if handle == "map" else getattr(handle, method)(*args)
         )
         self.assertEqual([(1, "near")], walker.nearbyRolfEnemies())
+
+    def testCatacombsPreparationEarnsLiveLevelFourFromExistingFoesWithoutAssumingEighteenKills(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        state = {"exp": 5750, "relics": 0, "catacombs": True, "living": ["catOne", "catTwo"]}
+        walker.snapshot = lambda stage: {"exp": state["exp"], "stage": stage}
+        walker.recoverOnRoadPair = Mock()
+        walker.nearbyAuthoredPritz = Mock(
+            side_effect=lambda anchor: [(index, name) for index, name in enumerate(state["living"])]
+        )
+
+        def call(handle, method, *args):
+            if method == "getLevel":
+                return 4 if state["exp"] >= 6000 else 3
+            if method == "getNumericProperty":
+                self.assertEqual(("exp",), args)
+                return state["exp"]
+            if method == "getHpRatio":
+                return 100
+            if method == "countItems":
+                self.assertEqual(("holyRelic",), args)
+                return state["relics"]
+            if method == "getObjectByName":
+                return args[0] if args[0] in state["living"] or args[0] == "catacombs" and state["catacombs"] else None
+            self.fail(method)
+
+        def walk(name, **kwargs):
+            if name == "catacombs":
+                state["catacombs"] = False
+                state["relics"] += 1
+            else:
+                state["living"].remove(name)
+                state["exp"] += 125
+
+        walker.call = call
+        walker.walkTo = Mock(side_effect=walk)
+        walker.prepareThroughCatacombs()
+        self.assertEqual(6000, state["exp"])
+        self.assertEqual([], state["living"])
+        self.assertEqual(3, walker.walkTo.call_count)
+        self.assertEqual(2, walker.nearbyAuthoredPritz.call_count)
+        self.assertTrue(all(call.args == ((57, 103, 0),) for call in walker.nearbyAuthoredPritz.call_args_list))
+        self.assertEqual(2, walker.recoverOnRoadPair.call_count)
+        for call in walker.recoverOnRoadPair.call_args_list:
+            self.assertEqual(((57, 115, 0), (58, 115, 0)), call.args[:2])
+        source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        self.assertIn("for _ in range(18):", source)
+        self.assertIn("for _ in range(32):", source)
+        self.assertTrue(
+            any(
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "assertGreater"
+                and isinstance(node.args[-1], ast.Constant)
+                and str(node.args[-1].value).startswith("Catacombs preparation must earn real combat")
+                for node in ast.walk(ast.parse(source))
+            )
+        )
+        self.assertIn('self.assertGreaterEqual(self.call(self.player, "getLevel"), 4', source)
+        self.assertIn('self.assertGreaterEqual(self.call(self.player, "getNumericProperty", "exp"), 6000)', source)
+
+    def testCatacombsDiscoveryUsesOnlyLivingAuthoredNearbyPritzOnTheSameFloor(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.game_map = "map"
+        near, far, underground, dead, wrong_type, wrong_side = [Actor(str(index)) for index in range(6)]
+        for actor in (near, far, underground, dead, wrong_type, wrong_side):
+            actor.properties.update(typeId="Pritz", affiliation="gooby")
+            actor.coords = types.SimpleNamespace(x=57, y=103, z=0)
+        far.coords.x = 113
+        underground.coords.z = 1
+        dead.setHp(0)
+        wrong_type.properties["typeId"] = "Cultist"
+        wrong_side.properties["affiliation"] = "bogz"
+        walker.coords = lambda handle=None: (57, 115, 0) if handle is None else tuple(vars(handle.coords).values())
+        walker.call = lambda handle, method, *args: (
+            [near, far, underground, dead, wrong_type, wrong_side]
+            if handle == "map"
+            else getattr(handle, method)(*args)
+        )
+        self.assertEqual([(12, "0")], walker.nearbyAuthoredPritz((57, 103, 0)))
 
     def testEachHuntSlotPreservesTheOriginalCaveAnchorAndTenCellRange(self):
         self.director.start(self.game_map)
@@ -1125,6 +1366,7 @@ class OctobogzHuntTest(unittest.TestCase):
         names = (
             "collectAuthoredRetreatScroll",
             "prepareThroughRolf",
+            "prepareThroughCatacombs",
             "enterHunt",
             "retreatWithOwnedAuthoredScroll",
             "finishOriginalMainQuest",
@@ -1135,6 +1377,133 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIn('"MCP hunt actual earned healing stock"', source)
         objects, _ = __import__("tests.narrative_walkthrough", fromlist=["authoredRegion"]).authoredRegion("nouraajd")
         self.assertEqual((108, 110, 0), objects["townPortalScroll"])
+
+    def runtimeDiagnosticFixture(self, shared_runner):
+        from tests import test_python_callback_lifecycle as lifecycle
+
+        source = (ROOT / "tests/test_octobogz_runtime.py").read_text(encoding="utf-8")
+        namespace = {"__name__": "huntRuntimeDiagnosticFixture"}
+        with patch.object(lifecycle.PythonCallbackLifecycleTest, "runChild", shared_runner):
+            exec(compile(source, "hunt-runtime-diagnostic-fixture", "exec"), namespace)
+        return namespace["OctobogzRuntimeTest"]("runTest")
+
+    def testNativePartialTimeoutDiagnosticsRetainBoundedStreamsAndTheOriginalThirtySecondFailure(self):
+        import io
+        import subprocess
+        from contextlib import redirect_stderr
+
+        failure = subprocess.TimeoutExpired(
+            ["python", "child"],
+            30,
+            output=b"discarded stdout prefix" + b"x" * 9000 + b"\nnative hunt stage save1 begin",
+            stderr=b"discarded stderr prefix" + b"y" * 9000 + b"\nFAULT\xff",
+        )
+        shared_runner = Mock(side_effect=failure)
+        fixture = self.runtimeDiagnosticFixture(shared_runner)
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(subprocess.TimeoutExpired) as caught:
+            fixture.runChild("the original complete native workload")
+        shared_runner.assert_called_once_with("the original complete native workload")
+        self.assertIs(failure, caught.exception)
+        self.assertEqual(30, caught.exception.timeout)
+        self.assertEqual(["python", "child"], caught.exception.cmd)
+        self.assertEqual(failure.output, caught.exception.output)
+        self.assertEqual(failure.stderr, caught.exception.stderr)
+        output = stderr.getvalue()
+        self.assertIn("stdout:", output)
+        self.assertIn("stderr:", output)
+        self.assertIn("native hunt stage save1 begin", output)
+        self.assertIn("FAULT\ufffd", output)
+        self.assertEqual(2, output.count("[omitted "))
+        self.assertNotIn("discarded stdout prefix", output)
+        self.assertNotIn("discarded stderr prefix", output)
+        self.assertLess(len(output), 16600)
+
+    def testNativePartialDiagnosticsPreserveSuccessAndEmptyOrTextTimeoutStreams(self):
+        import io
+        import subprocess
+        from contextlib import redirect_stderr
+
+        result = object()
+        shared_runner = Mock(return_value=result)
+        fixture = self.runtimeDiagnosticFixture(shared_runner)
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            self.assertIs(result, fixture.runChild("unchanged workload"))
+        shared_runner.assert_called_once_with("unchanged workload")
+        self.assertEqual("", stderr.getvalue())
+        for stdout, error_output in ((None, None), ("stage save2", "actual failure")):
+            with self.subTest(stdout=stdout):
+                failure = subprocess.TimeoutExpired(["python"], 30, output=stdout, stderr=error_output)
+                fixture = self.runtimeDiagnosticFixture(Mock(side_effect=failure))
+                stderr = io.StringIO()
+                with redirect_stderr(stderr), self.assertRaises(subprocess.TimeoutExpired) as caught:
+                    fixture.runChild("unchanged workload")
+                self.assertIs(failure, caught.exception)
+                self.assertNotIn("[omitted ", stderr.getvalue())
+                self.assertIn("stage save2" if stdout else "stdout:\n\nstderr:", stderr.getvalue())
+                if error_output:
+                    self.assertIn(error_output, stderr.getvalue())
+
+    def testNativePartialStageDiagnosticsRetainCompleteMapTraversalAndBothFullSaveLoads(self):
+        import textwrap
+
+        tree = ast.parse((ROOT / "tests/test_octobogz_runtime.py").read_text(encoding="utf-8"))
+        fixture = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef)
+            and node.name == "testNativeActorDeathsPartialSaveAndLivingRecoveryPreserveIdentityAndRewardOnce"
+        )
+        code = next(
+            node.args[0].value
+            for node in ast.walk(fixture)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "runChild"
+        )
+        child = ast.parse(textwrap.dedent(code))
+        calls = [node for node in ast.walk(child) if isinstance(node, ast.Call)]
+        self.assertEqual(48, sum(isinstance(node, ast.Assert) for node in ast.walk(child)))
+        self.assertEqual(
+            2, sum(isinstance(node.func, ast.Attribute) and node.func.attr == "saveWithResult" for node in calls)
+        )
+        self.assertEqual(
+            2, sum(isinstance(node.func, ast.Attribute) and node.func.attr == "loadSavedGame" for node in calls)
+        )
+        self.assertEqual(
+            1,
+            sum(
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "jsonify"
+                and len(node.args) == 1
+                and isinstance(node.args[0], ast.Name)
+                and node.args[0].id == "game_map"
+                for node in calls
+            ),
+        )
+        stages = {
+            node.args[0].value
+            for node in calls
+            if isinstance(node.func, ast.Name)
+            and node.func.id == "markStage"
+            and isinstance(node.args[0], ast.Constant)
+        }
+        for operation in (
+            "load",
+            "map start",
+            "map jsonify",
+            "save1",
+            "reload1",
+            "save2",
+            "reload2",
+            "pulse",
+            "reward",
+        ):
+            self.assertTrue({operation + " begin", operation + " end"} <= stages, operation)
+        marker = next(
+            node for node in ast.walk(child) if isinstance(node, ast.FunctionDef) and node.name == "markStage"
+        )
+        print_call = next(node for node in ast.walk(marker) if isinstance(node, ast.Call) and node.func.id == "print")
+        self.assertTrue(next(keyword.value.value for keyword in print_call.keywords if keyword.arg == "flush"))
 
     def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
         import textwrap

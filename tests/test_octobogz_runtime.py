@@ -2,24 +2,57 @@
 # Copyright (C) 2026 Andrzej Lis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+import subprocess
+import sys
 import unittest
 
 from tests import test_python_callback_lifecycle as callback_lifecycle
 
 
 class OctobogzRuntimeTest(unittest.TestCase):
-    runChild = callback_lifecycle.PythonCallbackLifecycleTest.runChild
+    runSharedChild = callback_lifecycle.PythonCallbackLifecycleTest.runChild
+
+    def runChild(self, code):
+        try:
+            return self.runSharedChild(code)
+        except subprocess.TimeoutExpired as error:
+
+            def streamTail(output):
+                text = output.decode("utf-8", errors="replace") if isinstance(output, bytes) else output or ""
+                omitted = max(0, len(text) - 8192)
+                prefix = f"[omitted {omitted} characters]\n" if omitted else ""
+                return prefix + text[-8192:]
+
+            print(
+                "Native hunt child timed out.\nstdout:\n"
+                + streamTail(error.output)
+                + "\nstderr:\n"
+                + streamTail(error.stderr),
+                file=sys.stderr,
+                flush=True,
+            )
+            raise
 
     def testNativeActorDeathsPartialSaveAndLivingRecoveryPreserveIdentityAndRewardOnce(self):
         self.runChild("""
             import json
             from pathlib import Path
+            from time import monotonic
             import uuid
+
+            started_at = monotonic()
+            def markStage(stage):
+                print('native hunt stage', stage, 'elapsed', round(monotonic() - started_at, 3), flush=True)
+
+            markStage('load begin')
             instance = game.CGameLoader.loadGame()
+            markStage('load end')
+            markStage('map start begin')
             game.CGameLoader.startGameWithPlayer(instance, 'nouraajd', 'Warrior')
             game_map = instance.getMap()
             player = game_map.getPlayer()
             for _ in range(3): loop.run()
+            markStage('map start end')
             director = instance.createObject('OctobogzHuntDirector')
             state = lambda: json.loads(game_map.getStringProperty('octobogzHuntRegistry').removeprefix('octobogzHunt.v1:'))
             game_map.removeObjectByName('cave2')
@@ -40,25 +73,36 @@ class OctobogzRuntimeTest(unittest.TestCase):
             assert alpha.getController().getTarget() == 'cave2' and alpha.getController().getDistance() == 10
             alpha.setHp(9)
             alpha.setMana(6)
+            markStage('charge begin')
             assert alpha.getFightController().control(alpha, player)
             assert alpha.getStringProperty('octobogzCombatPhase') == 'charged'
             assert not alpha.getBoolProperty('enemyRoleUsed')
+            markStage('charge end')
             save_slot = 'unit-octobogz-' + uuid.uuid4().hex
             save_path = None
             try:
                 director.synchronize(game_map)
                 registry_text = game_map.getStringProperty('octobogzHuntRegistry')
                 assert registry_text.startswith('octobogzHunt.v1:')
+                markStage('map jsonify begin')
                 assert json.loads(game.jsonify(game_map))['properties']['octobogzHuntRegistry'] == registry_text
+                markStage('map jsonify end')
                 expected_state = state()
+                markStage('save1 begin')
                 assert game.CMapLoader.saveWithResult(game_map, save_slot)
+                markStage('save1 end')
                 save_path = Path(instance.getResourcesProvider().getPath('save/' + save_slot + '.json'))
+                markStage('save1 snapshot read begin')
                 saved_snapshot = json.loads(save_path.read_text(encoding='utf-8'))['snapshot']
                 assert saved_snapshot['properties']['octobogzHuntRegistry'] == registry_text
+                markStage('save1 snapshot read end')
+                markStage('reload1 begin')
                 game.CGameLoader.loadSavedGame(instance, save_slot)
+                markStage('reload1 returned')
                 game_map = instance.getMap()
                 player = game_map.getPlayer()
                 for _ in range(3): loop.run()
+                markStage('reload1 end')
                 assert state() == expected_state, (expected_state, state())
                 alpha = game_map.getObjectByName(alpha_name)
                 assert alpha.getHp() == 9 and alpha.getMana() == 6
@@ -79,6 +123,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 pulse = next(action for action in restored.getActions() if action.getTypeId() == 'octobogzShadowPulse')
                 effect = pulse.getObjectProperty('roleEffect')
                 before_shadow = player.getStats().getNumericProperty('shadowResist')
+                markStage('pulse begin')
                 assert restored.getFightController().control(restored, player)
                 assert restored.getMana() == 1 and restored.getBoolProperty('octobogzPulseUsed')
                 assert restored.getBoolProperty('octobogzPulseEffectApplied')
@@ -90,11 +135,17 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 assert restored.getStringProperty('enemyRoleDamageChannel') == ''
                 pulse.onAction(restored, player)
                 assert restored.getMana() == 1 and len([active for active in player.getEffects() if active == effect]) == 1
+                markStage('pulse end')
+                markStage('save2 begin')
                 assert game.CMapLoader.saveWithResult(game_map, save_slot)
+                markStage('save2 end')
+                markStage('reload2 begin')
                 game.CGameLoader.loadSavedGame(instance, save_slot)
+                markStage('reload2 returned')
                 game_map = instance.getMap()
                 player = game_map.getPlayer()
                 for _ in range(3): loop.run()
+                markStage('reload2 end')
                 restored = game_map.getObjectByName(alpha_name)
                 assert restored.getBoolProperty('octobogzPulseUsed') and restored.getMana() == 1
                 pulse = next(action for action in restored.getActions() if action.getTypeId() == 'octobogzShadowPulse')
@@ -113,6 +164,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 assert state()['stage'] == 'cleared'
                 assert game_map.getBoolProperty('OCTOBOGZ_SLAIN')
                 assert game_map.getObjectByName('cave2') is None
+                markStage('reward begin')
                 before_gold, before_blades = player.getGold(), player.countItems('ShadowBlade')
                 dialog = instance.createObject('dialog')
                 dialog.accept_quest()
@@ -123,6 +175,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 director.start(game_map)
                 assert player.getGold() == before_gold + 1000
                 assert player.countItems('ShadowBlade') == before_blades + 1
+                markStage('reward end')
             finally:
                 if save_path is not None:
                     save_path.unlink(missing_ok=True)

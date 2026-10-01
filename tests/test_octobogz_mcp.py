@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import json
+from statistics import median
+from time import perf_counter
 import unittest
 import uuid
 
@@ -13,13 +15,107 @@ from tests.narrative_walkthrough import authoredRegion
 
 class OctobogzMcpWalkthroughTest(unittest.TestCase):
     setUp = dialogue_mcp.DialogueMcpWalkthroughTest.setUp
-    engine = dialogue_mcp.DialogueMcpWalkthroughTest.engine
-    call = dialogue_mcp.DialogueMcpWalkthroughTest.call
     pump = dialogue_mcp.DialogueMcpWalkthroughTest.pump
     object = dialogue_mcp.DialogueMcpWalkthroughTest.object
     dialog = dialogue_mcp.DialogueMcpWalkthroughTest.dialog
     action = dialogue_mcp.DialogueMcpWalkthroughTest.action
     questNames = dialogue_mcp.DialogueMcpWalkthroughTest.questNames
+
+    def resetMcpProfile(self, player_class):
+        self.mcp_profile_class = player_class
+        self.mcp_profile_started = perf_counter()
+        self.mcp_method_profile = {}
+
+    def profiledMcpCall(self, key, callback, *args):
+        started = perf_counter()
+        failed = False
+        try:
+            return callback(self, *args)
+        except BaseException:
+            failed = True
+            raise
+        finally:
+            elapsed = perf_counter() - started
+            if not hasattr(self, "mcp_method_profile"):
+                self.mcp_method_profile = {}
+                self.mcp_profile_started = started
+            entry = self.mcp_method_profile.setdefault(key, {"count": 0, "seconds": 0.0, "max": 0.0, "failures": 0})
+            entry["count"] += 1
+            entry["seconds"] += elapsed
+            entry["max"] = max(entry["max"], elapsed)
+            entry["failures"] += int(failed)
+
+    def engine(self, name, *args):
+        return self.profiledMcpCall("export:" + name, dialogue_mcp.DialogueMcpWalkthroughTest.engine, name, *args)
+
+    def call(self, handle, method, *args):
+        return self.profiledMcpCall(
+            "handle:" + method, dialogue_mcp.DialogueMcpWalkthroughTest.call, handle, method, *args
+        )
+
+    def reportMcpProfile(self, stage):
+        profile = getattr(self, "mcp_method_profile", {})
+        now = perf_counter()
+        methods = [
+            {
+                "method": name,
+                **{key: round(value, 6) if isinstance(value, float) else value for key, value in values.items()},
+            }
+            for name, values in sorted(profile.items(), key=lambda entry: (-entry[1]["seconds"], entry[0]))[:64]
+        ]
+        print(
+            "MCP hunt method profile",
+            {
+                "class": getattr(self, "mcp_profile_class", "unassigned"),
+                "stage": stage,
+                "steps": getattr(self, "movement_steps", 0),
+                "elapsed": round(now - getattr(self, "mcp_profile_started", now), 6),
+                "calls": sum(entry["count"] for entry in profile.values()),
+                "rpcSeconds": round(sum(entry["seconds"] for entry in profile.values()), 6),
+                "methods": methods,
+                "omittedMethods": max(0, len(profile) - len(methods)),
+            },
+            flush=True,
+        )
+
+    def probeCoordinateReadCosts(self):
+        expected = self.coords()
+        turn_before = self.call(self.game_map, "getTurn")
+        state_before = self.state()
+        resources_before = (self.call(self.player, "getHp"), self.call(self.player, "getMana"))
+        full_samples, scalar_samples = [], []
+        for index in range(21):
+            started = perf_counter()
+            full_coords = self.coords()
+            full_elapsed = perf_counter() - started
+            started = perf_counter()
+            scalar_coords = tuple(self.call(self.player, "getNumericProperty", "pos" + axis) for axis in "xyz")
+            scalar_elapsed = perf_counter() - started
+            self.assertEqual(expected, full_coords)
+            self.assertEqual(full_coords, scalar_coords)
+            self.assertEqual(turn_before, self.call(self.game_map, "getTurn"))
+            self.assertEqual(state_before, self.state())
+            if index:
+                full_samples.append(full_elapsed)
+                scalar_samples.append(scalar_elapsed)
+        self.assertEqual(resources_before, (self.call(self.player, "getHp"), self.call(self.player, "getMana")))
+        print(
+            "MCP hunt paired coordinate read probe",
+            {
+                "class": getattr(self, "mcp_profile_class", "unassigned"),
+                "samples": 20,
+                "warmup": 1,
+                "coords": expected,
+                "turn": turn_before,
+                "fullJsonRpcPerSample": 1,
+                "scalarRpcPerSample": 3,
+                "fullJsonMedianSeconds": round(median(full_samples), 6),
+                "scalarMedianSeconds": round(median(scalar_samples), 6),
+                "fullJsonTotalSeconds": round(sum(full_samples), 6),
+                "scalarTotalSeconds": round(sum(scalar_samples), 6),
+            },
+            flush=True,
+        )
 
     def state(self):
         return json.loads(
@@ -51,6 +147,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "defeat": self.call(self.player, "getStringProperty", "uiDefeatReceipt"),
         }
         print("MCP hunt journey", result, flush=True)
+        self.reportMcpProfile(stage)
         return result
 
     def step(self, destination):
@@ -82,6 +179,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 ("Unexpected movement without an authored transit", origin, destination, self.snapshot("arrival"))
             )
         self.movement_steps += 1
+        if self.movement_steps % 128 == 0:
+            self.reportMcpProfile("adjacent movement checkpoint")
         return arrival
 
     def walkTo(self, name, *, allow_removed=False):
@@ -188,7 +287,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             ("Authored road steps did not restore the ordinary player", self.snapshot("road recovery incomplete"))
         )
 
-    def nearbyRolfEnemies(self):
+    def nearbyAuthoredPritz(self, anchor):
         current = self.coords()
         candidates = []
         for actor in self.call(self.game_map, "getObjects"):
@@ -197,9 +296,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             if self.call(actor, "getStringProperty", "affiliation") != "gooby":
                 continue
             coords = self.coords(actor)
-            if coords[2] == 0 and abs(coords[0] - 19) + abs(coords[1] - 10) <= 55:
+            if coords[2] == anchor[2] and abs(coords[0] - anchor[0]) + abs(coords[1] - anchor[1]) <= 55:
                 candidates.append((sum(abs(a - b) for a, b in zip(current, coords)), self.call(actor, "getName")))
         return sorted(candidates)
+
+    def nearbyRolfEnemies(self):
+        return self.nearbyAuthoredPritz((19, 10, 0))
 
     def prepareThroughRolf(self):
         self.recoverOnRoadPair((44, 106, 0), (44, 107, 0), "opened gate road recovery")
@@ -209,7 +311,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertGreater(self.call(self.player, "countItems", "skullOfRolf"), 0)
         self.snapshot("after original Rolf cave")
         for _ in range(32):
-            if self.call(self.player, "getLevel") >= 3:
+            if self.call(self.player, "getLevel") >= 4:
                 break
             candidates = self.nearbyRolfEnemies()
             if not candidates:
@@ -227,6 +329,38 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             self.assertGreater(after["exp"], before["exp"], "Preparation must earn experience through real combat")
         self.assertGreaterEqual(self.call(self.player, "getLevel"), 3, self.snapshot("Rolf preparation complete"))
         self.recoverOnRoadPair((9, 36, 0), (9, 37, 0), "before hunt Rolf road recovery")
+
+    def prepareThroughCatacombs(self):
+        if self.call(self.player, "getLevel") < 4:
+            self.recoverOnRoadPair((57, 115, 0), (58, 115, 0), "before original catacombs road recovery")
+            relics_before = self.call(self.player, "countItems", "holyRelic")
+            self.snapshot("before original catacombs")
+            self.walkTo("catacombs", allow_removed=True)
+            self.assertIsNone(self.call(self.game_map, "getObjectByName", "catacombs"))
+            self.assertEqual(relics_before + 1, self.call(self.player, "countItems", "holyRelic"))
+            self.snapshot("after original catacombs arrival")
+            for _ in range(18):
+                if self.call(self.player, "getLevel") >= 4:
+                    break
+                candidates = self.nearbyAuthoredPritz((57, 103, 0))
+                if not candidates:
+                    break
+                if self.call(self.player, "getHpRatio") < 75:
+                    self.recoverOnRoadPair((57, 115, 0), (58, 115, 0), "catacombs road recovery")
+                    candidates = self.nearbyAuthoredPritz((57, 103, 0))
+                    if not candidates:
+                        break
+                name = candidates[0][1]
+                before = self.snapshot("before authored catacombs Pritz " + name)
+                self.walkTo(name, allow_removed=True)
+                after = self.snapshot("after authored catacombs Pritz " + name)
+                self.assertIsNone(self.call(self.game_map, "getObjectByName", name))
+                self.assertGreater(
+                    after["exp"], before["exp"], "Catacombs preparation must earn real combat experience"
+                )
+            self.recoverOnRoadPair((57, 115, 0), (58, 115, 0), "after catacombs road recovery")
+        self.assertGreaterEqual(self.call(self.player, "getLevel"), 4, self.snapshot("earned hunt preparation"))
+        self.assertGreaterEqual(self.call(self.player, "getNumericProperty", "exp"), 6000)
 
     def finishOriginalMainQuest(self):
         self.snapshot("before original Gooby approach after hunt")
@@ -350,6 +484,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.phase_observations = []
         for player_class in ("Warrior", "Sorcerer"):
             with self.subTest(player_class=player_class):
+                self.resetMcpProfile(player_class)
                 self.hunt_actors, self.confirmed_dead = {}, set()
                 self.capture_before_move = None
                 self.game = self.engine("CGameLoader.loadGame")
@@ -375,12 +510,14 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.walkTo("nouraajdChapel")
                     self.action(self.dialog("berenDialog"), "decode_stained_glass_ward")
                 self.prepareThroughRolf()
+                self.prepareThroughCatacombs()
                 self.walkTo("questGiver")
                 if player_class == "Warrior":
                     self.action(self.dialog("dialog"), "accept_quest")
                     self.assertIn("octoBogzQuest", self.questNames())
                 self.walkTo("ambientOctobogzNet")
                 self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "before hunt road recovery")
+                self.probeCoordinateReadCosts()
                 self.enterHunt()
 
                 slot = "mcp-octobogz-" + uuid.uuid4().hex
