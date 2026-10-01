@@ -268,6 +268,19 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertIn("clonedBonus != nullptr", priority)
         self.assertIn("if (clonedBonus)", priority)
         self.assertEqual(2, priority.count("controller.control(monster, opponent)"))
+        self.assertIn('ordinaryBarrier->setTypeId("ordinaryBarrier")', priority)
+        self.assertIn("(*effects.begin())->getTypeId() == ordinaryBarrier->getTypeId()", priority)
+        self.assertIn("monster->getEffects().size() == 1", priority)
+
+    def testRitualTraceObservesUnchangedNativeControllerAndReportsEligibleTurn(self):
+        source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        snapshot = source.split("RitualTurnState observeRitualTurn", 1)[1].split("\n}", 1)[0]
+        self.assertNotRegex(snapshot, r"\b(?:set\w+|useAction|hurt|randint|seed)\s*\(")
+        controller = source.split("class ObservedFightController", 1)[1].split("\n};", 1)[0]
+        self.assertEqual(1, controller.count("delegate->control(me, opponent)"))
+        self.assertIn("observeRitualTurn(me, opponent)", controller)
+        self.assertIn('printRitualTrace(roles, "roles", playerType, monsterType, seed, false)', source)
+        self.assertIn('printRitualTrace(baseline, "baseline", playerType, monsterType, seed, true)', source)
 
     def testRuntimeRitualReserveMatchesZeroCostEligibility(self):
         source = (ROOT / "tests/test_enemy_role_runtime.py").read_text(encoding="utf-8")

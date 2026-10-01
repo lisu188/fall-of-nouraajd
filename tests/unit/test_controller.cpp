@@ -1521,7 +1521,9 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
     spell->setGame(game);
     spell->setTypeId("Barrier");
     spell->setSelfTarget(true);
-    spell->setEffect(named_self_effect(game, "ordinaryBarrier", CTag::Buff));
+    auto ordinaryBarrier = named_self_effect(game, "ordinaryBarrier", CTag::Buff);
+    ordinaryBarrier->setTypeId("ordinaryBarrier");
+    spell->setEffect(ordinaryBarrier);
     monster->addAction(spell);
     CMonsterFightController controller;
     expect_true(controller.control(monster, opponent), "ordinary defensive cast must retain its AI priority");
@@ -1531,9 +1533,13 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
     const auto clonedBonus = effects.empty() ? nullptr : (*effects.begin())->getBonus();
     expect_true(clonedBonus != nullptr, "the cloned ordinary Barrier must retain its per-game stats factory");
     if (clonedBonus) {
+        expect_true((*effects.begin())->getTypeId() == ordinaryBarrier->getTypeId(),
+                    "the ordinary Barrier clone must retain the configured effect identity");
         expect_true(controller.control(monster, opponent), "a second control must safely inspect the cloned Barrier");
         expect_true(spell->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
                     "an active ordinary Barrier must be skipped before the eligible attack signature");
+        expect_true(monster->getEffects().size() == 1,
+                    "a second controller selection must not duplicate the ordinary configured Barrier");
     }
 }
 

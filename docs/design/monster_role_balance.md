@@ -214,12 +214,38 @@ Wayfarer/CultLeader seed104 victory (baseline HP/mana/items80/100/0;
 roles81/80/0), so the unchanged per-seed victory gate failed. Coverage again hit
 the existing60-second limit. These results remain failed evidence.
 
+Windows `afd35336` failed two strict health medians: Warrior/Cultist4 to3
+(-25 percent) and Wayfarer/Cultist3 to4 (+33.3 percent). The minimum-mana trial
+`25ee2867`, run `36867514443`, retained those same Windows failures and the
+Linux Wayfarer/CultLeader seed104 loss (80/100/0 versus81/80/0). Its Linux
+release comparison completed all35 rows in about9.25 seconds and Windows in
+10.40 seconds. Those complete matrices still fail the balance contract.
+
+Coverage job110387935927 completed only22 of35 rows before the shared55-second
+deadline. Only the Assasin partition reported completion; the other four were
+incomplete. The handler entry also timed out at60.01 seconds, while map tests
+completed in54.75 seconds. No canonical coverage percentage was reached.
+
 The separate controller fixture now registers `CStats` with its per-game object
 factory as well as effects and interactions. Its ordinary Barrier priority test
 requires a nonnull cloned stats bonus before a second controller selection;
 that second selection must retain the existing buff and select the eligible
 ordinary Attack signature safely. This fixes the fixture's incomplete clone
 setup without changing production combat or its priority assertions.
+
+The second-control identity assertion exposed another fixture omission: the
+prototype had only a name, while its factory clone received a native type id.
+The fixture now assigns a stable configured `ordinaryBarrier` type id and
+requires the clone to retain it and the active effect count to stay at one.
+Production duplicate-effect identity rules are unchanged. Native CI must verify
+this fixture correction.
+
+The native forwarding observer also records the ritual actor's health, mana,
+role-use flag and target channel resistances immediately before and after the
+unchanged configured controller. It reports the first actual signature use and
+all actor turns for a lost baseline-winning seed. These reads and diagnostic
+output do not change actions, damage, random streams, loadouts or eligibility;
+the evidence is needed before selecting another generic timing condition.
 
 The next ritual trial requires5 mana remaining without spending it. An exhausted
 CultLeader keeps its ordinary Attack; a wounded Cultist with reserve mana can
