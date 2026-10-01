@@ -223,6 +223,15 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
     def values(self, actor):
         return {name: actor.getStats().getNumericProperty(name) for name in STAT_NAMES}
 
+    def attachTagEffect(self, caster, victim, effect_id):
+        # Actor links are native-only fields; the cast pipeline supplies them.
+        probe = self.engine.CInteraction()
+        probe.effect = self.game.createObject(effect_id)
+        probe.onAction(caster, victim)
+        effect = next(effect for effect in victim.getEffects() if effect.getTypeId() == effect_id)
+        self.assertIs(caster, effect.getCaster())
+        self.assertIs(victim, effect.getVictim())
+
     def testPassiveEffectsHaveObservableBonusesOrTagsAndExpireWithoutRepeatedDamage(self):
         for action_id, effect_id, cost, duration, self_target in CONTRACTS[:-1]:
             with self.subTest(action=action_id):
@@ -278,13 +287,12 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
         player = self.gameMap.getPlayer()
         self.addCleanup(player.setEffects, set())
         baseline = self.values(player)
-        for action_id, effect_id, _, _, _ in CONTRACTS:
-            effect = self.game.createObject(effect_id)
-            effect.setObjectProperty("caster", player)
-            effect.setObjectProperty("victim", player)
-            if action_id not in ("Stunner", "HoldPerson"):
-                self.assertTrue(self.game.createObject(action_id).configureEffect(effect))
-            player.setEffects(set(player.getEffects()) | {effect})
+        for action_id, effect_id, cost, _, _ in CONTRACTS:
+            player.setMana(cost)
+            if action_id == "HoldPerson":
+                self.attachTagEffect(player, player, effect_id)
+            else:
+                self.game.createObject(action_id).onAction(player, player)
         self.engine.CFightHandler.applyEffects(player)
 
         def snapshot(actor):
@@ -348,10 +356,7 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                     archetype.setActions({action})
                     actor.setObjectProperty("creatureClass", archetype)
                     actor.setFightController(self.game.createObject("CMonsterFightController"))
-                effect = self.game.createObject(effect_id)
-                effect.setObjectProperty("caster", caster)
-                effect.setObjectProperty("victim", victim)
-                victim.setEffects({effect})
+                self.attachTagEffect(caster, victim, effect_id)
                 engine.CFightHandler.fight(caster, victim)
                 self.assertEqual({"attacker": 3, "defender": 1}, turns)
                 self.assertEqual([], list(victim.getEffects()))
