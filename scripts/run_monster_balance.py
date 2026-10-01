@@ -38,20 +38,34 @@ def runWorker(command, name, deadline, emit, output_lock, cancelled):
     process = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace"
     )
+    stream_eof = [False, False]
+    reader_errors = []
 
-    def drain(stream, captured):
+    def readerError(index, error):
+        message = f"stream {index}: {type(error).__name__}: {error}"
+        reader_errors.append(message)
+        with output_lock:
+            emit(f"[{name}] FAILED: cannot drain native output: {message}")
+
+    def drain(stream, captured, index):
         try:
             for line in stream:
                 if captured is not None:
                     captured.append(line.rstrip("\r\n"))
                 with output_lock:
                     emit(f"[{name}] {line.rstrip()}")
+            stream_eof[index] = True
+        except Exception as error:
+            readerError(index, error)
         finally:
-            stream.close()
+            try:
+                stream.close()
+            except Exception as error:
+                readerError(index, error)
 
     readers = [
-        threading.Thread(target=drain, args=(process.stdout, stdout), daemon=True),
-        threading.Thread(target=drain, args=(process.stderr, None), daemon=True),
+        threading.Thread(target=drain, args=(process.stdout, stdout, 0), daemon=True),
+        threading.Thread(target=drain, args=(process.stderr, None, 1), daemon=True),
     ]
     for reader in readers:
         reader.start()
@@ -72,7 +86,8 @@ def runWorker(command, name, deadline, emit, output_lock, cancelled):
         process.wait(timeout=2)
         for reader in readers:
             reader.join(timeout=0.5)
-    return WorkerResult(name, return_code, stdout, all(not reader.is_alive() for reader in readers))
+    complete_streams = all(not reader.is_alive() for reader in readers) and all(stream_eof) and not reader_errors
+    return WorkerResult(name, return_code, stdout, complete_streams)
 
 
 def validateWorker(result):
