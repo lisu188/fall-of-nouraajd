@@ -60,6 +60,9 @@ class EnemyRolesTest(unittest.TestCase):
         )
         self.actor.getBoolProperty.side_effect = lambda name: self.properties.get(name, False)
         self.actor.setBoolProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
+        self.actor.getStringProperty.side_effect = lambda name: self.properties.get(name, "")
+        self.actor.setStringProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
+        self.actor.setNumericProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
         self.actor.getObjectProperty.side_effect = lambda name: self.object_properties[name]
         self.actor.setObjectProperty.side_effect = lambda name, value: self.object_properties.__setitem__(name, value)
         self.actor.getDmg.return_value = 11
@@ -105,20 +108,25 @@ class EnemyRolesTest(unittest.TestCase):
                 self.actor.getGame.assert_not_called()
 
     def testArcaneHookConvertsOnePointFromTheExistingRollWithoutFactoryCalls(self):
-        for roll in (1, 11, 12):
-            with self.subTest(roll=roll):
+        for class_name, channel, roll in (
+            (class_name, channel, roll)
+            for class_name, channel in (("EnemyArcaneBolt", "frost"), ("EnemyRitualHex", "shadow"))
+            for roll in (1, 11, 12)
+        ):
+            with self.subTest(class_name=class_name, roll=roll):
                 self.properties.clear()
                 self.actor.getDmg.return_value = roll
                 self.actor.getDmg.reset_mock()
                 self.target.hurt.reset_mock()
-                action, _, packet = self.makeSignature("EnemyArcaneBolt")
+                action, _, packet = self.makeSignature(class_name)
                 action.performAction(self.actor, self.target)
                 channels = dict(call.args for call in packet.setNumericProperty.call_args_list)
-                self.assertEqual({"normal": roll - 1, "frost": 1}, channels)
+                self.assertEqual({"normal": roll - 1, channel: 1}, channels)
                 self.assertEqual(roll, sum(channels.values()))
                 self.target.hurt.assert_called_once_with(packet)
                 self.actor.getDmg.assert_called_once_with()
                 self.assertFalse(self.properties["enemyRoleArcaneAttack"])
+                self.assertEqual("", self.properties["enemyRoleDamageChannel"])
                 self.actor.getGame.assert_not_called()
 
     def testDefaultAttackRetainsItsDamageAndConfiguredWeaponProcSequence(self):
@@ -155,6 +163,15 @@ class EnemyRolesTest(unittest.TestCase):
         self.attack.performAction(other, self.target)
         self.target.hurt.assert_called_with(7)
         other.getObjectProperty.assert_not_called()
+
+    def testDamagePacketHookRejectsChannelsOutsideFrostAndShadow(self):
+        self.properties["enemyRoleArcaneAttack"] = True
+        self.properties["enemyRoleDamageChannel"] = "fire"
+        self.attack.performAction(self.actor, self.target)
+        self.target.hurt.assert_called_once_with(11)
+        self.actor.getObjectProperty.assert_not_called()
+        self.assertFalse(self.properties["enemyRoleArcaneAttack"])
+        self.assertEqual("", self.properties["enemyRoleDamageChannel"])
 
     def testMissesDoNotConsumeBlockDiceOrWeaponProcAndAlwaysClearHook(self):
         self.actor.getDmg.return_value = 0
@@ -221,6 +238,25 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertRegex(scope, r"if \(!originalAllLosingPair\)\s*\{\s*expect_true\(baselineWins > 0")
         self.assertEqual(3, source.count("std::abs(median(role"))
 
+    def testRuntimeChildCallsUseThePublishedNativeObjectApi(self):
+        bindings = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        published = set(re.findall(r'\.def(?:_static)?\s*\(\s*"([^"]+)"', bindings))
+        source = (ROOT / "tests/test_enemy_role_runtime.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        child = next(
+            node.args[0].value
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "runChild"
+        )
+        import textwrap
+
+        calls = {
+            node.func.attr
+            for node in ast.walk(ast.parse(textwrap.dedent(child)))
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+        }
+        self.assertEqual(set(), calls - published - {"loads", "items", "values", "get", "uuid4", "unlink"})
+
     def testRoleConfigKeepsRosterNumericStatsAndBoundedOwnedEffects(self):
         classes = json.loads((ROOT / "res/config/creature_classes.json").read_text(encoding="utf-8"))
         interactions = json.loads((ROOT / "res/config/interactions.json").read_text(encoding="utf-8"))
@@ -251,6 +287,7 @@ class EnemyRolesTest(unittest.TestCase):
             self.assertEqual(1, effect["duration"])
             self.assertEqual(bonuses[action_id], effect["bonus"]["properties"])
         self.assertEqual("CDamage", interactions["enemyArcaneBolt"]["properties"]["roleDamage"]["class"])
+        self.assertEqual("CDamage", interactions["enemyRitualHex"]["properties"]["roleDamage"]["class"])
         self.assertEqual(
             set(expected), {key for key, value in classes.items() if value["properties"].get("combatRole")}
         )

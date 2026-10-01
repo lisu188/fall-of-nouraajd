@@ -35,14 +35,18 @@ def load(self, context):
     class Attack(CInteraction):
         def performAction(self, first, second):
             arcane = first.getBoolProperty("enemyRoleArcaneAttack")
+            channel = first.getStringProperty("enemyRoleDamageChannel") if arcane else ""
             if arcane:
                 first.setBoolProperty("enemyRoleArcaneAttack", False)
+                first.setStringProperty("enemyRoleDamageChannel", "")
             dmg = first.getDmg()
+            if arcane:
+                first.setNumericProperty("enemyRoleAttackBudget", dmg)
             if dmg:
-                if arcane:
+                if arcane and channel in ("frost", "shadow"):
                     damage = first.getObjectProperty("enemyRoleDamagePacket")
                     damage.setNumericProperty("normal", dmg - 1)
-                    damage.setNumericProperty("frost", 1)
+                    damage.setNumericProperty(channel, 1)
                     second.hurt(damage)
                 else:
                     second.hurt(dmg)

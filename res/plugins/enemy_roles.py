@@ -40,20 +40,25 @@ def load(self, context):
     class EnemyBrace(EnemySignature):
         pass
 
-    @register(context)
-    class EnemyArcaneBolt(EnemySignature):
+    class EnemyPacketSignature(EnemySignature):
         def performSignature(self, first, second, attack):
             first.setObjectProperty("enemyRoleDamagePacket", self.getObjectProperty("roleDamage"))
+            first.setStringProperty("enemyRoleDamageChannel", self.damageChannel)
             first.setBoolProperty("enemyRoleArcaneAttack", True)
             try:
                 attack.performAction(first, second)
             finally:
                 first.setBoolProperty("enemyRoleArcaneAttack", False)
+                first.setStringProperty("enemyRoleDamageChannel", "")
+
+    @register(context)
+    class EnemyArcaneBolt(EnemyPacketSignature):
+        damageChannel = "frost"
 
     @register(context)
     class EnemyOpeningStrike(EnemySignature):
         pass
 
     @register(context)
-    class EnemyRitualHex(EnemySignature):
-        pass
+    class EnemyRitualHex(EnemyPacketSignature):
+        damageChannel = "shadow"

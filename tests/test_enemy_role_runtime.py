@@ -22,9 +22,11 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
             player.baseStats.stamina = 1000
             player.baseStats.block = 10
             player.setHp(player.getHpMax())
-            cases = {'Gooby': 'enemyBrace', 'Pritz': 'enemyBrace', 'OctoBogz': 'enemyBrace',
-                     'PritzMage': 'enemyArcaneBolt', 'GoblinThief': 'enemyOpeningStrike',
-                     'Cultist': 'enemyRitualHex', 'CultLeader': 'enemyRitualHex'}
+            cases = {
+                'Gooby': 'enemyBrace', 'Pritz': 'enemyBrace', 'OctoBogz': 'enemyBrace',
+                'PritzMage': 'enemyArcaneBolt', 'GoblinThief': 'enemyOpeningStrike',
+                'Cultist': 'enemyRitualHex', 'CultLeader': 'enemyRitualHex',
+            }
             for index, (template, signature_id) in enumerate(cases.items()):
                 if template == 'CultLeader':
                     game.CFightHandler.applyEffects(player)
@@ -75,7 +77,7 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                     assert actor.getBoolProperty('enemyRoleEffectApplied'), index
                     assert not actor.getBoolProperty('enemyRoleArcaneAttack'), index
                     signature = next(action for action in actor.getEffectiveInteractions() if action.getBoolProperty('enemySignature'))
-                    assert not signature.hasProperty('roleEffect') or signature.getObjectProperty('roleEffect') is None, index
+                    assert json.loads(game.jsonify(signature))['properties'].get('roleEffect') is None, index
                     recipient = actor if signature.getBoolProperty('selfTarget') else loaded_player
                     linked = [effect for effect in recipient.getEffects() if effect.getCaster() == actor]
                     assert {effect.name for effect in linked} == expected_effects[index], index

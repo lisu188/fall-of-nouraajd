@@ -34,10 +34,12 @@ The current one-turn effects are:
 | Brute | At or below half health | Physical resistance +1, frost resistance -1 |
 | Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
 | Thief | Guarded opponent or at/below half health | Opponent block -1 |
-| Cultist | First selected ordinary Attack | Opponent shadow resistance -1 |
+| Cultist | First selected ordinary Attack | Convert one damage point to shadow, opponent shadow resistance -1 |
 
-Each action owns its effect from configuration; the mage also owns a damage
-packet. Both are decoded before combat instead of created or cloned in the
+Each action owns its effect from configuration; the mage and cultist also own
+damage packets. The packet hook accepts only frost or shadow. The cultist packet
+provides a real channel-specific attack; its post-hit resistance debuff helps only
+a later shadow attack while the one-turn effect remains active. Both are decoded before combat instead of created or cloned in the
 signature. Before applying, the signature clears its owned effect slot, then links the effect
 to its caster and victim. The active creature effect set uses the ordinary effect
 lifecycle and save serialization without retaining a signature-to-effect-to-actor
@@ -149,3 +151,32 @@ revision accidentally broadened the health predicate; this restores its original
 scope. All 35 strict resource medians and every seeded baseline victory remain
 required, alongside the same-pair representative witness for each player class.
 No workload or difficulty value changes.
+
+
+## First valid packet trial and substantive Cultist follow-up
+
+At head `a4144587`, Linux build run `36856244235` completed and passed all
+35 paired role comparisons and the actual configured Attack, weapon-proc,
+random-stream and effect assertions. The command remained the CTest command above.
+The subsequent Python phase failed an unbound `hasProperty` call in the new
+runtime test and child-fixture indentation; both are corrected in the follow-up.
+The separate coverage job timed out the monster-balance and handler fixtures
+at their unchanged 60-second budgets, so this run supplies no coverage acceptance.
+Windows also passed the role native and performance suites before the known
+Python fixture failures.
+
+That trial's Cultist debuff had no solo shadow-damage consumer. The follow-up
+converts exactly one point of the already selected ordinary Attack from normal
+to shadow, using its eager packet and existing weapon proc. It requires fresh
+full-matrix evidence; the earlier passing matrix does not establish balance for
+this revision. A separate controlled native fight uses unequal normal/shadow
+resistance to prove that the point changes actual health damage, and observes
+the debuff and expiry in both initiative orders. Controlled stats belong only
+to that mechanism proof; all ordinary comparison templates, levels, seeds,
+loadouts, resource limits and winning-seed assertions remain unchanged.
+
+The native callback contract now records and reports the exact exception from
+configured Attack, weapon or signature callbacks before asserting success.
+Runtime child source checks also verify that their native calls use published
+bindings. No production override handling, sandbox allowlist, RNG API or global
+combat statistics change.
