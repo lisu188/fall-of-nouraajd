@@ -12,10 +12,10 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-# Ordered native cases on main 5fb7cca, before adding diagnostic wrappers.
+# Ordered native cases on main f80edd27, before adding diagnostic wrappers.
 BASELINE_CASES = {
     "handler": (30, "b52fed9d5b269e53ba035c51fa6085bd85ee02527c0bb457a7a58e37054ca525"),
-    "map": (48, "09c71483efdc90cc749fccdd21ae546fb74319ac8a3f7a20df17fc49008f5bd1"),
+    "map": (49, "17f592c7f09a057f9c3249babde697470899143ffda78688662f61ab5cfbdf9e"),
 }
 
 FIXTURE = r"""

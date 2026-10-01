@@ -43,12 +43,13 @@ class GAME_CORE_EXPORT CPluginRegistrar {
 
     template <fn::MetaRegisteredGameObject T, fn::GameObjectDerived... Bases> bool registerType() const {
         CTypes::register_type<T, Bases...>();
-        return registerFactory(T::static_meta()->name(), []() { return std::make_shared<T>(); });
+        return registerNativeFactory(T::static_meta()->name(), []() { return std::make_shared<T>(); });
     }
 
     // Trusted escape hatch for in-tree plugins that need engine services beyond registration.
     const std::shared_ptr<CGame> &game() const { return _game; }
 
   private:
+    bool registerNativeFactory(const std::string &name, std::function<std::shared_ptr<CGameObject>()> factory) const;
     std::shared_ptr<CGame> _game;
 };
