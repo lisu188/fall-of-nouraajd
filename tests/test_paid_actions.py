@@ -64,6 +64,10 @@ class PaidActionRuntimeTest(unittest.TestCase):
         refund_amount[0] = -1
         action.onAction(actor, actor)
         self.assertEqual(0, actor.getMana())
+        action.setNumericProperty("manaCost", 0)
+        refund_amount[0] = 100
+        action.onAction(actor, actor)
+        self.assertEqual(0, actor.getMana())
 
     def test_failed_refund_callback_keeps_the_paid_cost(self):
         try:
@@ -80,10 +84,6 @@ class PaidActionRuntimeTest(unittest.TestCase):
         action = BrokenRefund()
         action.setNumericProperty("manaCost", 17)
         actor.setMana(17)
-        action.onAction(actor, actor)
-        self.assertEqual(0, actor.getMana())
-        action.setNumericProperty("manaCost", 0)
-        refund_amount[0] = 100
         action.onAction(actor, actor)
         self.assertEqual(0, actor.getMana())
 
