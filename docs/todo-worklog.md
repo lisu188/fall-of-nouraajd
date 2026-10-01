@@ -4,6 +4,28 @@
 > the coverage gate as 80% or 95%; those were the gates at the time each batch
 > ran. The current gate is **90%** (`MIN_COVERAGE` in `scripts/run_coverage.sh`).
 
+## October 2026 TODO review
+
+The active backlog is the repository's GitHub issue list. PR #1491 retired the
+workbook queue, its tooling and its cleanup-plan controller documents. `todo.txt`
+now points to the active issues instead of those removed paths.
+
+The review checked the current creature archetype composition, interaction
+`selfTarget` metadata, inventory drag/drop, property-change signals, siege gate
+occupancy handling, cave-loss regression, and object-comparison audit. These
+behaviors already have source implementations and focused regression cases;
+their old generic reminders no longer describe missing features. This entry does
+not rerun or replace the historical validation evidence recorded below.
+
+Issues #1506-#1515 track the focused gameplay work and its remaining delivery
+evidence. Broader provider, rendering, map cache, asset loading, serialization,
+text/layout and generalized multilevel refactors remain explicitly deferred.
+Their acceptance criteria must be established separately before changing behavior.
+
+Validation for this index-only correction: verified referenced source, tests and
+retirement PR #1491; `git diff --check`. Runtime behavior and dependencies are
+unchanged.
+
 ## Batch 1
 - Location: `res/maps/nouraajd/script.py`, `res/maps/nouraajd/config.json`, `res/config/potions.json`, `test.py`
 - Original TODO or summary: `TavernDialog1.sell_beer()` was a player-visible stub that only printed `sell_beer` even though the tavern dialog exposed a beer-purchase option.

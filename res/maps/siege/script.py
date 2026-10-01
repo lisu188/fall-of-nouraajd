@@ -14,7 +14,7 @@ def load(self, context):
 
     # The plugin sandbox only allows importing the game and json modules;
     # game re-exports the campaign driver (res/campaign.py) as an attribute.
-    from game import campaign
+    from game import campaign, narrative
 
     # Scenario outcomes this map reports through campaign.complete_scenario;
     # campaign manifests route them (see docs/design/multilevel_campaign.md).
@@ -50,11 +50,12 @@ def load(self, context):
             player = game_map.getPlayer()
             ensure_siege_quest(player)
             player.addItem("magicWand")
+            summary = narrative.siegeSummary(game_map.getGame())
             showReader(
                 game_map.getGame(),
                 "The siege",
                 "The road ends at a besieged gatehouse. Seal each breach with mage-wands before the attackers "
-                "overrun it.",
+                "overrun it." + ("\n\n" + summary if summary else ""),
             )
 
     @register(context)
@@ -68,7 +69,7 @@ def load(self, context):
             return f"Seal every siege gate with charged wands ({sealed}/{len(SPAWN_POINTS)} sealed)."
 
         def getReward(self):
-            return "500 gold and final campaign completion."
+            return f"{narrative.siegeRewardGold(self.getGame())} gold and final campaign completion."
 
         def getHint(self):
             return "Pritz mages carry extra wands; defeat them if you run out."
@@ -77,17 +78,17 @@ def load(self, context):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
             # Claim-first: claim the campaign reward before granting gold or marking completion so a
-            # repeated completion cannot pay the 500 gold twice.
+            # repeated completion cannot pay the bounty twice.
             if not claim_once(game_map, "siege_reward_claimed"):
                 return
             reward_before = rewardSnapshot(player)
-            player.addGold(500)
+            player.addGold(narrative.siegeRewardGold(self.getGame()))
             game_map.setBoolProperty("campaign_completed", True)
             showRewardReceipt(
                 self.getGame(),
                 "The last breach",
                 reward_before,
-                "The last breach is sealed. Nouraajd survives the night.",
+                "The last breach is sealed. Nouraajd survives the night.\n\n" + narrative.siegeSummary(self.getGame()),
             )
             campaign.complete_scenario(self.getGame(), "completed")
 
@@ -116,6 +117,31 @@ def load(self, context):
                 return
             self.setBoolProperty("canStep", False)
             self.setBoolProperty("pendingSeal", False)
+
+        def sealBreach(self):
+            game_map = self.getMap()
+            player = game_map.getPlayer()
+            if (
+                not player
+                or game_map.getGame().getMap() != game_map
+                or not self.getBoolProperty("enabled")
+                or self.getBoolProperty("destroyed")
+                or self.getBoolProperty("pendingSeal")
+            ):
+                return False
+            here, destination = player.getCoords(), self.getCoords()
+            if (here.x, here.y, here.z) != (destination.x, destination.y, destination.z):
+                return False
+            if not player.hasItem(lambda item: item.hasTag(CTag.WAND)):
+                return False
+            player.removeQuestItem(lambda item: item.hasTag(CTag.WAND))
+            self.setBoolProperty("enabled", False)
+            self.setBoolProperty("destroyed", True)
+            self.setBoolProperty("pendingSeal", True)
+            self.setStringProperty("animation", "images/misc/closed_door")
+            self.completePendingSeal()
+            player.checkQuests()
+            return True
 
         def onTurn(self, event):
             if self.getBoolProperty("destroyed") and self.getBoolProperty("pendingSeal"):
@@ -149,12 +175,7 @@ def load(self, context):
                     else handler.showQuestion(question)
                 )
                 if accepted:
-                    self.getMap().getPlayer().removeQuestItem(lambda it: it.hasTag(CTag.WAND))
-                    self.setBoolProperty("enabled", False)
-                    self.setBoolProperty("destroyed", True)
-                    self.setBoolProperty("pendingSeal", True)
-                    self.setStringProperty("animation", "images/misc/closed_door")
-                    self.completePendingSeal()
+                    self.sealBreach()
             else:
                 requirementMessage(
                     self.getMap().getGame(),
