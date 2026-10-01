@@ -236,6 +236,9 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
         for action_id, effect_id, cost, duration, self_target in CONTRACTS[:-1]:
             with self.subTest(action=action_id):
                 caster, victim = self.actor(action_id + "Caster"), self.actor(action_id + "Victim")
+                if action_id == "ChillTouch":
+                    for name in ("armor", "block"):
+                        victim.getObjectProperty("baseStats").setNumericProperty(name, 0)
                 target = caster if self_target else victim
                 baseline = self.values(target)
                 bonus = expectedBonus(action_id, caster.getLevel(), caster.getStats().getNumericProperty("armor"))
