@@ -65,6 +65,30 @@ end-to-end `validate_repo()` run, including
 which pins that the quest validator runs inside the standard
 `ContentValidator.validate()` path rather than only via a direct helper call.
 
+### Quest journal integrity
+
+Map-local quest classes use `@mapQuest("mapId")` from `game`. A shared class may instead provide a source-map
+resolver, as the Castle mission class does with its existing scenario id. The decorator keeps live source-map
+gameplay authoritative and stores journal text on the quest object that travels with the player. Completed
+history is fixed; active off-map quests use their last captured text and cannot complete from destination flags.
+
+`CQuest.captureJournal(completed)` records text without granting rewards. `CPlayer.captureQuestJournal()` passes
+active/completed collection membership to each callback. The engine captures after completion, before loading a
+destination, and before serialization. The additive `questJournal*` properties use version 1 without changing
+the save envelope. Older saves retain completion status and use neutral unavailable-detail text when the source
+outcome cannot be recovered; existing Victor and Castle player outcome properties remain usable.
+
+The no-extension regression matrix covers all 27 configured quests and checks empty captured text, source reloads,
+failed captures, destination-state isolation, and property round trips:
+
+```bash
+python3 -m unittest tests.test_quest_journal tests.test_nouraajd_quest_journal
+```
+
+Native completion regressions and the bounded journal-capture guard run in the normal native/coverage workflow.
+The gameplay suite includes real save/load and movement-based stdio MCP journal checks, and the UI suite checks
+the `j` shortcut and rendered active/completed journal history under Xvfb.
+
 For Windows Visual Studio Release builds, use the same target and CTest label with the active configuration:
 
 ```bat

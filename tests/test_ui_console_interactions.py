@@ -19,7 +19,13 @@ BOOTSTRAP = """
 import ctypes
 import os
 from pathlib import Path
+import sys
 import unittest
+
+def consoleStage(name):
+    print('console-ui stage: ' + name, file=sys.stderr, flush=True)
+
+consoleStage('imports:begin')
 import test as harness
 try:
     import play
@@ -28,10 +34,14 @@ except ModuleNotFoundError as error:
         raise SystemExit(77)
     raise
 import _game as game
+consoleStage('imports:done')
 game.set_logger_sink('disabled')
 check = unittest.TestCase()
+consoleStage('loadGame:begin')
 g = game.CGameLoader.loadGame()
+consoleStage('loadGui:begin')
 game.CGameLoader.loadGui(g)
+consoleStage('startGame:begin')
 game.CGameLoader.startGameWithPlayer(g, 'test', 'Warrior')
 harness.pump_event_loop(5)
 harness.drain_sdl_events()
@@ -39,6 +49,7 @@ gui = g.getGui()
 world = g.getMap()
 player = world.getPlayer()
 console = harness.collect_gui_children(gui, 'CConsoleGraphicsObject')[0]
+consoleStage('session:ready')
 
 def press(key):
     harness.push_sdl_key_event(key, 0)
@@ -81,7 +92,7 @@ def snapshot():
 
 class ConsoleUiInteractionTest(unittest.TestCase):
     def runChild(self, code, enabled=True):
-        command = [sys.executable, "-c"]
+        command = [sys.executable, "-u", "-X", "faulthandler", "-c"]
         if os.name == "posix":
             for tool in ("xvfb-run", "xauth"):
                 if shutil.which(tool) is None:
@@ -100,8 +111,10 @@ class ConsoleUiInteractionTest(unittest.TestCase):
                 GAME_UI_PREFERENCES_PATH=str(Path(temporary) / "preferences.json"),
                 GAME_TEST_OUTPUT_DIR=str(Path(temporary) / "test-output"),
             )
-            source = BOOTSTRAP + "\ntry:\n" + textwrap.indent(textwrap.dedent(code), "    ")
-            source += "\nfinally:\n    g.getContext().shutdown()\n"
+            source = BOOTSTRAP + "\ntry:\n    consoleStage('test:begin')\n"
+            source += textwrap.indent(textwrap.dedent(code), "    ")
+            source += "\n    consoleStage('test:done')\nfinally:\n    consoleStage('shutdown:begin')\n"
+            source += "    g.getContext().shutdown()\n    consoleStage('shutdown:done')\n"
             process = subprocess.Popen(
                 [*command, source],
                 cwd=ROOT,
@@ -125,7 +138,13 @@ class ConsoleUiInteractionTest(unittest.TestCase):
                 self.fail("Console UI child timed out.\n" + stdout + stderr)
         if process.returncode == 77:
             self.skipTest("The compiled _game module is unavailable.")
-        self.assertEqual(0, process.returncode, stdout + stderr)
+        self.assertEqual(
+            0,
+            process.returncode,
+            f"Console UI child exited with {process.returncode} (0x{process.returncode & 0xFFFFFFFF:08X}).\n"
+            + stdout
+            + stderr,
+        )
 
     def testTimeoutTerminatesTheIsolatedProcessAndRetainsDiagnostics(self):
         for platform in ("posix", "nt"):
@@ -174,6 +193,28 @@ class ConsoleUiInteractionTest(unittest.TestCase):
                 self.assertEqual(
                     build_dir, environment["GAME_BUILD_DIR"], "The parent environment must remain unchanged."
                 )
+
+    def testNativeCrashIncludesFlushedStageAndFaultHandlerDiagnostics(self):
+        process = Mock(returncode=0xC0000005)
+        process.communicate.return_value = (
+            "",
+            "console-ui stage: history:fill 40\nWindows fatal exception: access violation\n",
+        )
+        with (
+            patch(__name__ + ".os", SimpleNamespace(name="nt", environ={})),
+            patch(__name__ + ".subprocess.Popen", return_value=process) as launch,
+        ):
+            with self.assertRaises(AssertionError) as failure:
+                self.runChild("consoleStage('history:fill 40')")
+        command = launch.call_args.args[0]
+        self.assertIn("-u", command)
+        fault_index = command.index("-X")
+        self.assertEqual("faulthandler", command[fault_index + 1])
+        self.assertIn("console-ui stage: history:fill 40", str(failure.exception))
+        self.assertIn("Windows fatal exception: access violation", str(failure.exception))
+        self.assertIn("0xC0000005", str(failure.exception))
+        self.assertIn("consoleStage('shutdown:begin')", command[-1])
+        process.communicate.assert_called_once_with(timeout=30)
 
     def testDisabledConsoleDoesNotOpenOrConsumeWorldMovement(self):
         self.runChild(
@@ -240,14 +281,17 @@ class ConsoleUiInteractionTest(unittest.TestCase):
     def testHistoryNavigationInputBoundsAndCancellationPreserveState(self):
         self.runChild("""
             before = snapshot()
+            consoleStage('history:remove-other-widgets')
             # The history boundary needs many inputs, but no repeated world-map rasterization.
             for child in list(gui.getChildren()):
                 if not harness.same_gui_object(child, console):
                     gui.removeChild(child)
             for entry in ('first', 'second', 'third'):
+                consoleStage('history:seed ' + entry)
                 press(harness.SDLK_F12)
                 console.consoleState = entry
                 press(27)
+            consoleStage('history:navigation')
             press(harness.SDLK_F12)
             press(harness.SDLK_UP)
             check.assertEqual('third', console.consoleState)
@@ -257,6 +301,7 @@ class ConsoleUiInteractionTest(unittest.TestCase):
             check.assertEqual('third', console.consoleState)
             press(harness.SDLK_DOWN)
             check.assertEqual('', console.consoleState)
+            consoleStage('history:text-bounds')
             press(harness.SDLK_BACKSPACE)
             check.assertEqual('', console.consoleState)
             console.consoleState = 'x' * 1010
@@ -268,15 +313,20 @@ class ConsoleUiInteractionTest(unittest.TestCase):
             check.assertEqual('z' * 1024, console.consoleState)
             press(27)
             for index in range(70):
+                if index % 10 == 0:
+                    consoleStage(f'history:fill {index}')
                 press(harness.SDLK_F12)
                 console.consoleState = f'command-{index}'
                 press(27)
             press(harness.SDLK_F12)
             for index in reversed(range(6, 70)):
+                if index % 16 == 0:
+                    consoleStage(f'history:read {index}')
                 press(harness.SDLK_UP)
                 check.assertEqual(f'command-{index}', console.consoleState)
             press(harness.SDLK_UP)
             check.assertEqual('command-69', console.consoleState, 'history must retain exactly the latest 64 entries')
+            consoleStage('history:cancellation')
             command = "game.getMap().getPlayer().setNumericProperty('cancelledProbe', 1)"
             console.consoleState = command
             press(27)

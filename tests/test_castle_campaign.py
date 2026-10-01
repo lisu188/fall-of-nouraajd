@@ -237,6 +237,7 @@ class CastleCampaignGateTest(unittest.TestCase):
         self.game_stub = types.SimpleNamespace(
             campaign=types.SimpleNamespace(complete_scenario=completeScenario, state=lambda game: None),
             claim_once=claimOnce,
+            mapQuest=lambda _source: lambda cls: cls,
             **presentationApi(),
         )
         self.patch = mock.patch.dict(sys.modules, {"game": self.game_stub})

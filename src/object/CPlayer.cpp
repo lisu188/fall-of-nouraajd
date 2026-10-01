@@ -25,6 +25,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 namespace {
 constexpr const char *DEFAULT_PLAYER_RACE_ID = "human";
 
+class QuestCheckGuard {
+  public:
+    explicit QuestCheckGuard(bool &checking) : checking(checking) { checking = true; }
+
+    ~QuestCheckGuard() { checking = false; }
+
+  private:
+    bool &checking;
+};
+
 std::string questId(const std::shared_ptr<CQuest> &quest) {
     if (!quest) {
         return "";
@@ -43,13 +53,20 @@ std::string CPlayer::getUiDefeatReceipt() { return uiDefeatReceipt; }
 void CPlayer::setUiDefeatReceipt(std::string receipt) { uiDefeatReceipt = std::move(receipt); }
 
 void CPlayer::checkQuests() {
+    if (checkingQuests) {
+        return;
+    }
+    QuestCheckGuard checkGuard(checkingQuests);
     auto set = quests;
     for (const auto &quest : set) {
         if (!quest) {
             quests.erase(quest);
             continue;
         }
-        if (quest->isCompleted()) {
+        if (!quests.contains(quest)) {
+            continue;
+        }
+        if (quest->isCompleted() && quests.contains(quest)) {
             if (CPlaytestTrace::enabled()) {
                 json fields = {
                     {"player", CPlaytestTrace::objectRef(this->ptr<CPlayer>())},
@@ -59,10 +76,26 @@ void CPlayer::checkQuests() {
                 CPlaytestTrace::record("quest_completed", fields);
             }
             quest->onComplete();
-            quests.erase(quests.find(quest));
+            quest->captureJournal(true);
+            quests.erase(quest);
             completedQuests.insert(quest);
             recordDirectPropertyChanged("quests");
             recordDirectPropertyChanged("completedQuests");
+        }
+    }
+}
+
+void CPlayer::captureQuestJournal() {
+    const auto active = quests;
+    const auto completed = completedQuests;
+    for (const auto &quest : active) {
+        if (quest && quests.contains(quest)) {
+            quest->captureJournal(false);
+        }
+    }
+    for (const auto &quest : completed) {
+        if (quest && completedQuests.contains(quest)) {
+            quest->captureJournal(true);
         }
     }
 }

@@ -753,6 +753,7 @@ class ShippedJudgmentRetryTest(unittest.TestCase):
         fake_game_module.register = register
         fake_game_module.trigger = lambda *args: register(None)
         fake_game_module.claim_once = claim_once
+        fake_game_module.mapQuest = lambda _source: lambda cls: cls
         fake_game_module.showReader = lambda *args: None
         fake_game_module.rewardSnapshot = lambda player: player.getGold()
         receipts = []

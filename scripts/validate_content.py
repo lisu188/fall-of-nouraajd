@@ -45,7 +45,7 @@ PLAYER_RACE_PROFILE_KEYS = {"profileKind", "label", "baseStatContribution", "tra
 STARTING_EQUIPMENT_POLICIES = {"fixed", "none"}
 SCRIPT_REF_CALLS = {"createObject", "addObjectByName"}
 SCRIPT_ITEM_CALLS = {"addItem"}
-SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_grant_quest", "grant_quest"}
+SCRIPT_QUEST_CALLS = {"addQuest", "ensure_quest", "_ensure_quest", "_grant_quest", "grant_quest"}
 SCRIPT_MAP_CALLS = {"changeMap"}
 # Campaign scenario completion reporting (res/campaign.py). Map scripts declare
 # the outcomes they can report in a literal CAMPAIGN_OUTCOMES tuple/list and
@@ -760,8 +760,10 @@ class ScriptInfo:
     path: Path
     classes: set[str] = field(default_factory=set)
     registered_classes: set[str] = field(default_factory=set)
-    class_bases: dict[str, set[str]] = field(default_factory=dict)
+    class_bases: dict[str, tuple[str, ...]] = field(default_factory=dict)
     methods_by_class: dict[str, set[str]] = field(default_factory=dict)
+    class_quest_constants: dict[str, ast.AST] = field(default_factory=dict)
+    class_quest_grant_methods: dict[str, set[str]] = field(default_factory=dict)
     calls: list[ScriptCall] = field(default_factory=list)
     quest_grants: list[ScriptCall] = field(default_factory=list)
     quest_states: dict[str, ScriptQuestStateUsage] = field(default_factory=dict)
@@ -815,14 +817,17 @@ class ScriptAnalyzer(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> Any:
         self.info.classes.add(node.name)
-        base_names = {base_name for base in node.bases if (base_name := python_base_class_name(base))}
+        base_names = tuple(base_name for base in node.bases if (base_name := python_base_class_name(base)))
         if base_names:
-            self.info.class_bases.setdefault(node.name, set()).update(base_names)
+            self.info.class_bases[node.name] = base_names
         if any(is_python_registration_decorator(decorator) for decorator in node.decorator_list):
             self.info.registered_classes.add(node.name)
         self.info.methods_by_class.setdefault(node.name, set())
         self._class_stack.append(node.name)
         for child in node.body:
+            if isinstance(child, (ast.Assign, ast.AnnAssign)) and child.value is not None:
+                if any(isinstance(target, ast.Name) and target.id == "QUEST" for target in assignment_targets(child)):
+                    self.info.class_quest_constants[node.name] = child.value
             self.visit(child)
         self._class_stack.pop()
 
@@ -862,6 +867,7 @@ class ScriptAnalyzer(ast.NodeVisitor):
         name = call_name(node.func)
         if name:
             self._record_script_call(name, node)
+            self._recordClassQuestGrant(name, node)
             self._record_named_object(name, node)
             self._record_anonymous_spawn(name, node)
             self._record_runtime_spawn_name(name, node)
@@ -893,6 +899,18 @@ class ScriptAnalyzer(ast.NodeVisitor):
             self.info.calls.append(call)
             if name in SCRIPT_QUEST_CALLS:
                 self.info.quest_grants.append(call)
+
+    def _recordClassQuestGrant(self, name: str, node: ast.Call) -> None:
+        if name not in SCRIPT_QUEST_CALLS or not self._class_stack or not self._function_stack:
+            return
+        if any(
+            isinstance(arg, ast.Attribute)
+            and isinstance(arg.value, ast.Name)
+            and arg.value.id == "self"
+            and arg.attr == "QUEST"
+            for arg in node.args
+        ):
+            self.info.class_quest_grant_methods.setdefault(self._class_stack[-1], set()).add(self._function_stack[-1])
 
     def _record_named_object(self, name: str, node: ast.Call) -> None:
         if name == "setStringProperty" and len(node.args) >= 2:
@@ -2128,6 +2146,7 @@ class ContentValidator:
         self._validate_map_assets(context)
         self._validate_dialogs(context, visible)
         self._validate_script_refs(context, visible, known_classes, archetype_ids)
+        self._validateClassQuestGrants(context, visible)
         self._validate_gooby_runtime_names(context)
         self._validate_class_id_references(context, visible)
         self._validate_script_property_hygiene(context)
@@ -2455,6 +2474,10 @@ class ContentValidator:
         self._validate_creature_class_property(entry.path, entry.key, entry.data, visible)
         self._validate_creature_race_definition(entry.path, entry.key, entry.data, visible)
         self._validate_interaction_self_target(entry.path, entry.key, entry.data, visible)
+        if self._entry_is_quest(entry, visible):
+            description = self._effective_property_value(entry.data, "description", visible)
+            if not isinstance(description, str) or not description.strip():
+                self._issue(entry.path, f"{entry.key}.properties.description", "expected non-empty quest description")
 
     def _validate_object_shape(self, path: Path, location: str, value: Any) -> None:
         if isinstance(value, dict):
@@ -3361,6 +3384,43 @@ class ContentValidator:
                 numeric_value = obj.get(numeric_key)
                 if numeric_value is not None and not isinstance(numeric_value, (int, float)):
                     self._issue(context.map_path, f"{object_location}.{numeric_key}", "expected number")
+            if name == "castleMission":
+                self._validateCastleMission(context, obj, object_location, visible)
+
+    def _validateCastleMission(
+        self, context: MapContext, obj: dict[str, Any], location: str, visible: dict[str, ConfigEntry]
+    ) -> None:
+        marker = {"ref": obj.get("type"), "properties": obj.get("properties", {})}
+        text = self._effective_property_value(marker, "campaign_mission", visible)
+        mission_location = f"{location}.properties.campaign_mission"
+        if not isinstance(text, str) or not text.strip():
+            self._issue(context.map_path, mission_location, "expected non-empty castle mission JSON string")
+            return
+        try:
+            mission = json.loads(text.removeprefix("castleMission:"))
+        except json.JSONDecodeError as exc:
+            self._issue(context.map_path, mission_location, f"invalid castle mission JSON: {exc.msg}")
+            return
+        if not isinstance(mission, dict):
+            self._issue(context.map_path, mission_location, "expected castle mission JSON object")
+            return
+        quest_id = mission.get("questId")
+        if not isinstance(quest_id, str) or not quest_id.strip():
+            self._issue(context.map_path, f"{mission_location}.questId", "expected non-empty questId")
+            return
+        if not self._validateQuestTarget(context.map_path, f"{mission_location}.questId", quest_id, visible):
+            return
+        scenario_id = mission.get("scenarioId")
+        if not isinstance(scenario_id, str) or not scenario_id.strip():
+            self._issue(context.map_path, f"{mission_location}.scenarioId", "expected non-empty scenarioId")
+            return
+        quest_scenario = self._effective_property_value(visible[quest_id].data, "campaign_scenarioId", visible)
+        if scenario_id != quest_scenario:
+            self._issue(
+                context.map_path,
+                f"{mission_location}.scenarioId",
+                f'"{scenario_id}" does not match quest campaign_scenarioId {quest_scenario!r} for "{quest_id}"',
+            )
 
     def _validate_dialogs(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
         if not context.script_info:
@@ -3573,10 +3633,7 @@ class ContentValidator:
                         self._unresolvable_config_message("item ref", call.value),
                     )
             elif call.name in SCRIPT_QUEST_CALLS:
-                if call.value not in visible:
-                    self._issue(context.script_info.path, call.location, f'unknown quest id "{call.value}"')
-                elif not self._entry_is_quest(visible[call.value], visible):
-                    self._issue(context.script_info.path, call.location, f'"{call.value}" does not resolve to a quest')
+                self._validateQuestTarget(context.script_info.path, call.location, call.value, visible)
             elif call.name in SCRIPT_MAP_CALLS:
                 if call.value not in map_names:
                     expected = f"res/maps/{call.value}/map.json"
@@ -3938,12 +3995,74 @@ class ContentValidator:
                 return allowance.reason
         return None
 
-    def _entry_is_quest(self, entry: ConfigEntry, visible: dict[str, ConfigEntry]) -> bool:
-        resolved = self._resolve_entry(entry, visible)
-        if not isinstance(resolved.data, dict):
+    def _validateClassQuestGrants(self, context: MapContext, visible: dict[str, ConfigEntry]) -> None:
+        infos = [*self.plugin_info, *([context.script_info] if context.script_info else [])]
+        sources = {class_name: info for info in infos for class_name in info.classes}
+        concrete_classes = set(context.script_info.registered_classes if context.script_info else ())
+        for entry in visible.values():
+            if isinstance(entry.data, dict):
+                class_name = self._effective_object_class(entry.data, visible)
+                if class_name in self.python_registered_classes:
+                    concrete_classes.add(class_name)
+
+        def lineage(class_name: str, seen: set[str] | None = None) -> list[tuple[str, ScriptInfo]]:
+            visited = set(seen or ())
+            if class_name in visited or class_name not in sources:
+                return []
+            visited.add(class_name)
+            info = sources[class_name]
+            classes = [(class_name, info)]
+            for base in info.class_bases.get(class_name, ()):
+                classes.extend(lineage(base, visited))
+            return classes
+
+        for class_name in sorted(concrete_classes):
+            classes = lineage(class_name)
+            resolved_methods: set[str] = set()
+            uses_constant = False
+            for ancestor, info in classes:
+                methods = info.methods_by_class.get(ancestor, set()) - resolved_methods
+                if methods & info.class_quest_grant_methods.get(ancestor, set()):
+                    uses_constant = True
+                resolved_methods.update(methods)
+            if not uses_constant:
+                continue
+            constant_source = next(
+                (
+                    (info, info.class_quest_constants[ancestor])
+                    for ancestor, info in classes
+                    if ancestor in info.class_quest_constants
+                ),
+                None,
+            )
+            location = f"{class_name}.QUEST"
+            if constant_source is None:
+                self._issue(
+                    sources[class_name].path, location, "expected non-empty quest id for inherited self.QUEST grant"
+                )
+                continue
+            info, value = constant_source
+            location += f":{value.lineno}"
+            quest_id = string_literal(value)
+            if quest_id is None or not quest_id.strip():
+                self._issue(info.path, location, "expected non-empty quest id for inherited self.QUEST grant")
+                continue
+            self._validateQuestTarget(info.path, location, quest_id, visible)
+
+    def _validateQuestTarget(self, path: Path, location: str, quest_id: str, visible: dict[str, ConfigEntry]) -> bool:
+        if quest_id not in visible:
+            self._issue(path, location, f'unknown quest id "{quest_id}"')
             return False
-        class_name = resolved.data.get("class")
-        return isinstance(class_name, str) and (class_name == "CQuest" or class_name.endswith("Quest"))
+        if not self._entry_is_quest(visible[quest_id], visible):
+            self._issue(path, location, f'"{quest_id}" does not resolve to a quest')
+            return False
+        return True
+
+    def _entry_is_quest(self, entry: ConfigEntry, visible: dict[str, ConfigEntry]) -> bool:
+        if not isinstance(entry.data, dict):
+            return False
+        class_name = self._effective_object_class(entry.data, visible)
+        return isinstance(class_name, str) and self._class_inherits_from(class_name, "CQuest")
 
     def _resolve_entry(self, entry: ConfigEntry, visible: dict[str, ConfigEntry]) -> ConfigEntry:
         current = entry

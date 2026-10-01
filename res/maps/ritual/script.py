@@ -3,6 +3,7 @@ def load(self, context):
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import register
     from game import trigger
@@ -121,6 +122,7 @@ def load(self, context):
             ensure_quest(player, "finalResolutionQuest")
 
     @register(context)
+    @mapQuest("ritual")
     class RitualQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()
@@ -144,6 +146,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("ritual")
     class DestroyAnchorsQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("anchors_destroyed")
@@ -162,6 +165,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("ritual")
     class RescueCaptiveQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()
@@ -184,6 +188,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("ritual")
     class FinalResolutionQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()

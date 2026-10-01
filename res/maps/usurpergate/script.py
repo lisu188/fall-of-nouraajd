@@ -3,6 +3,7 @@ def load(self, context):
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import claim_once
     from game import register
@@ -125,6 +126,7 @@ def load(self, context):
             campaign.complete_scenario(self.getGame(), "completed")
 
     @register(context)
+    @mapQuest("usurpergate")
     class UsurpergateQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("throne_taken")

@@ -200,6 +200,9 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const C
     try {
         transitionState = TransitionState::Transitioning;
         json traceFields = json::object();
+        if (player) {
+            player->captureQuestJournal();
+        }
         if (CPlaytestTrace::enabled()) {
             traceFields["fromMap"] = oldMap ? oldMap->getMapName() : "";
             traceFields["oldTurn"] = oldMap ? oldMap->getTurn() : 0;
