@@ -1,0 +1,331 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+
+#include <cstddef>
+#include <atomic>
+#include <mutex>
+
+#include "core/CGlobal.h"
+
+#include "CPlugin.h"
+#include "core/CProvider.h"
+#include "core/CUtil.h"
+#include "handler/CHandler.h"
+
+class CTile;
+
+class CPlayer;
+
+class CInteraction;
+
+class CObjectHandler;
+
+class CScriptHandler;
+
+class CEventHandler;
+
+class CMapObject;
+
+class CTrigger;
+
+class CGame;
+class CNavigationService;
+class CNavigationSnapshot;
+struct CNavigationCell;
+
+struct CNavigationEdge {
+    Coords source;
+    Coords target;
+    bool enabled = true;
+    bool bidirectional = false;
+    int movementCost = 1;
+    std::optional<std::string> sourceObjectName;
+
+    bool operator==(const CNavigationEdge &other) const = default;
+};
+
+class CMap : public CGameObject {
+    using StringMap = std::map<int, std::string>;
+    using IntMap = std::map<int, int>;
+    using BoundsMap = std::map<int, std::pair<int, int>>;
+
+    friend class CMapLoader;
+
+    friend class CRandomMapGenerator;
+    friend class CNavigationSnapshot;
+
+    V_META(CMap, CGameObject, V_PROPERTY(CMap, int, turn, getTurn, setTurn),
+           V_PROPERTY(CMap, std::string, mapName, getMapName, setMapName),
+           V_PROPERTY(CMap, std::string, combatHistory, getCombatHistory, setCombatHistory),
+           V_PROPERTY(CMap, std::set<std::shared_ptr<CMapObject>>, objects, getObjects, setObjects),
+           V_PROPERTY(CMap, std::set<std::shared_ptr<CTile>>, tiles, getTiles, setTiles),
+           V_PROPERTY(CMap, std::set<std::shared_ptr<CTrigger>>, triggers, getTriggers, setTriggers))
+  public:
+    CMap() = default;
+
+    ~CMap() override;
+
+    bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
+
+    void removeTile(int x, int y, int z);
+
+    void move();
+
+    std::shared_ptr<CTile> getTile(int x, int y, int z);
+
+    std::shared_ptr<CTile> getTile(Coords coords);
+
+    bool contains(int x, int y, int z);
+
+    void addObject(const std::shared_ptr<CMapObject> &mapObject);
+
+    void addObject(const std::shared_ptr<CMapObject> &mapObject, Coords coords);
+
+    void removeObject(const std::shared_ptr<CMapObject> &mapObject);
+
+    int getEntryX();
+
+    int getEntryY();
+
+    int getEntryZ();
+
+    void setEntryX(int x);
+
+    void setEntryY(int y);
+
+    void setEntryZ(int z);
+
+    Coords getEntry();
+
+    BoundsMap getBounds();
+
+    IntMap getXBounds();
+
+    void setXBounds(IntMap bounds);
+
+    IntMap getYBounds();
+
+    void setYBounds(IntMap bounds);
+
+    StringMap getDefaultTiles();
+
+    void setDefaultTiles(StringMap tiles);
+
+    StringMap getOutOfBoundsTiles();
+
+    void setOutOfBoundsTiles(StringMap tiles);
+
+    IntMap getWrapX();
+
+    void setWrapX(IntMap values);
+
+    IntMap getWrapY();
+
+    void setWrapY(IntMap values);
+
+    void removeObjectByName(std::string name);
+
+    std::string addObjectByName(std::string name, Coords coords);
+
+    void replaceTile(std::string name, Coords coords);
+
+    Coords getLocationByName(std::string name);
+
+    std::shared_ptr<CPlayer> getPlayer();
+
+    void setPlayer(std::shared_ptr<CPlayer> player);
+
+    std::shared_ptr<CPlayer> detachPlayer();
+
+    void attachPlayer(std::shared_ptr<CPlayer> player);
+
+    void attachPlayer(std::shared_ptr<CPlayer> player, Coords coords);
+
+    bool restorePlayerAfterLoad(std::string &error);
+
+    void moveTile(std::shared_ptr<CTile> tile, int x, int y, int z);
+
+    std::shared_ptr<CEventHandler> getEventHandler();
+
+    bool canStep(int x, int y, int z);
+
+    bool canStep(Coords coords);
+
+    int getMovementCost(int x, int y, int z);
+
+    int getMovementCost(Coords coords);
+
+    int lookupMovementCost(int x, int y, int z);
+
+    int lookupMovementCost(Coords coords);
+
+    std::int64_t lookupNavigationStepCost(Coords from, Coords to);
+
+    Coords normalizeCoords(Coords coords) const;
+
+    // Returns true when the coordinate falls inside the configured map extents for its level.
+    // Levels without explicit bounds are treated as in-bounds (unbounded sandbox maps).
+    bool isWithinBounds(Coords coords) const;
+
+    std::vector<Coords> getAdjacentCoords(Coords coords, bool includeSelf = false) const;
+
+    Coords getShortestDelta(Coords from, Coords to) const;
+
+    double getDistance(Coords from, Coords to) const;
+
+    bool wrapsX(int z) const;
+
+    bool wrapsY(int z) const;
+
+    std::shared_ptr<CMapObject> getObjectByName(const std::string &name);
+
+    bool isMoving();
+
+    void forObjects(
+        std::function<void(std::shared_ptr<CMapObject>)> func,
+        std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](std::shared_ptr<CMapObject>) { return true; });
+
+    void forObjectsAtCoords(
+        Coords coords, std::function<void(std::shared_ptr<CMapObject>)> func,
+        std::function<bool(std::shared_ptr<CMapObject>)> predicate = [](std::shared_ptr<CMapObject>) { return true; });
+
+    void forTiles(
+        std::function<void(std::shared_ptr<CTile>)> func,
+        std::function<bool(std::shared_ptr<CTile>)> predicate = [](std::shared_ptr<CTile>) { return true; });
+
+    void removeObjects(std::function<bool(std::shared_ptr<CMapObject>)> func);
+
+    int getTurn();
+
+    void setTurn(int turn);
+
+    std::uint64_t getNavigationRevision() const;
+
+    std::uint64_t getRoutingEpoch() const;
+    std::recursive_mutex &getNavigationMutex() const;
+    std::shared_ptr<CNavigationService> getNavigationService();
+    void navigationCellChanged(Coords coords);
+    bool hasRegisteredTile(const CTile *tile) const;
+
+    const std::vector<CNavigationEdge> &getNavigationEdges() const;
+
+    std::vector<Coords> getNavigationNeighbors(Coords coords, bool includeSelf = false) const;
+
+    void registerNavigationEdge(CNavigationEdge edge);
+
+    void addNavigationEdge(CNavigationEdge edge);
+
+    bool removeNavigationEdge(Coords source, Coords target, std::optional<std::string> sourceObjectName = std::nullopt);
+
+    std::size_t unregisterNavigationEdgesForObject(const std::string &sourceObjectName);
+
+    std::size_t getObjectCacheEntryCountForTesting() const;
+
+    // TODO: accept predicate, can be used in siege map
+    std::set<std::shared_ptr<CMapObject>> getObjects();
+
+    std::set<std::shared_ptr<CMapObject>> getObjectsAtCoords(Coords coords);
+
+    void setObjects(std::set<std::shared_ptr<CMapObject>> objects);
+
+    std::set<std::shared_ptr<CTile>> getTiles();
+
+    void setTiles(std::set<std::shared_ptr<CTile>> objects);
+
+    void dumpPaths(std::string path);
+
+    std::set<std::shared_ptr<CTrigger>> getTriggers();
+
+    void setTriggers(std::set<std::shared_ptr<CTrigger>> triggers);
+
+    void setMapName(std::string mapName);
+
+    std::string getMapName();
+
+    std::string getCombatHistory();
+
+    void setCombatHistory(std::string history);
+
+    void objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new);
+
+  private:
+    std::unordered_map<std::string, std::shared_ptr<CMapObject>> mapObjects;
+    // TODO: cleanup and after load initialization
+    std::unordered_multimap<Coords, std::string> mapObjectsCache;
+
+    std::unordered_map<Coords, std::shared_ptr<CTile>> tiles;
+    std::vector<CNavigationEdge> navigationEdges;
+
+    std::shared_ptr<CPlayer> player;
+    StringMap defaultTiles;
+    StringMap outOfBoundsTiles;
+    IntMap xBounds;
+    IntMap yBounds;
+    IntMap wrapX;
+    IntMap wrapY;
+    int entryx = 0;
+    int entryz = 0;
+    int entryy = 0;
+
+    vstd::lazy<CEventHandler> eventHandler;
+    int turn = 0;
+    bool moving = false;
+    bool playerTriggersRegistered = false;
+    std::string mapName;
+    std::string combatHistory;
+    std::uint64_t navigationRevision = 0;
+    mutable std::recursive_mutex navigationMutex;
+    mutable std::uint64_t routingEpoch = 1;
+    mutable std::uint64_t routingConfigRevision = 0;
+    std::shared_ptr<CNavigationService> navigationService;
+    bool navigationDomainCanonical = true;
+    struct NavigationTileExtent {
+        int level = 0;
+        std::array<int, 4> extent{};
+    };
+    std::array<NavigationTileExtent, 64> navigationTileExtents{};
+    std::size_t navigationTileExtentCount = 0;
+    bool navigationTileExtentOverflow = false;
+    void includeNavigationTile(Coords coords);
+
+    void routingChanged(std::optional<Coords> coords = std::nullopt);
+    CNavigationCell lookupNavigationCell(Coords coords, std::optional<CNavigationCell> fallback);
+
+    bool hasBounds(int z) const;
+
+    bool isOutOfBounds(Coords coords) const;
+
+    std::string fallbackTileType(Coords coords) const;
+
+    std::shared_ptr<CTile> resolveTileForLookup(Coords coords);
+
+    bool removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject);
+
+    int normalizeAxis(int value, int z, bool wrapAxis, const IntMap &bounds) const;
+
+    void bumpNavigationRevision();
+
+    void registerPlayerTriggers();
+};
+
+namespace performance_guard {
+void resetMapCoordinateLookupProbe();
+std::size_t mapCoordinateLookupProbeCount();
+void disableMapCoordinateLookupProbe();
+} // namespace performance_guard

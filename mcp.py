@@ -1,0 +1,2905 @@
+#!/usr/bin/env python3
+
+import argparse
+import ast
+import importlib
+import inspect
+import json
+import logging
+import os
+import queue
+import secrets
+import subprocess
+import sys
+import threading
+import time
+import traceback
+from dataclasses import dataclass, field
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
+
+import game_simulation
+
+JSONRPC_VERSION = "2.0"
+SERVER_NAME = "fall-of-nouraajd-engine-mcp"
+SERVER_TITLE = "Fall of Nouraajd Engine MCP"
+SERVER_VERSION = "0.3.0"
+LATEST_PROTOCOL_VERSION = "2025-11-25"
+SUPPORTED_PROTOCOL_VERSIONS = {
+    "2025-11-25",
+    "2025-06-18",
+    "2025-03-26",
+    "2024-11-05",
+}
+DEFAULT_HTTP_FALLBACK_PROTOCOL_VERSION = "2025-03-26"
+LOG_LEVELS = {
+    "debug": 7,
+    "info": 6,
+    "notice": 5,
+    "warning": 4,
+    "error": 3,
+    "critical": 2,
+    "alert": 1,
+    "emergency": 0,
+}
+MAX_MCP_MESSAGE_BYTES = 1024 * 1024
+MAX_HTTP_SESSIONS = 32
+MAX_HTTP_STREAMS_PER_SESSION = 4
+MAX_MCP_HANDLES_PER_SESSION = 10_000
+MAX_TRACE_STRING_BYTES = 512
+# Handle methods that trigger engine pathfinding from arbitrary, client-supplied coordinates.
+# These are validated against the loaded map extents before invocation so an MCP client cannot
+# steer the pathfinder over sparse or effectively unbounded coordinate space.
+MCP_PATHFINDING_METHODS = frozenset({"setTarget"})
+# Hard ceiling on any single target coordinate magnitude accepted from MCP, applied even when a map
+# advertises no explicit bounds. Keeps the pathfinder envelope finite for sandbox/unbounded maps.
+MCP_MAX_TARGET_MAGNITUDE = 1_000_000
+MCP_EXCLUDED_EXPORTS = {
+    "load",
+    "register",
+    "set_logger_sink",
+    "trigger",
+}
+MCP_ALLOWED_EXPORTS = {
+    "craftRecipe",
+    "CGameLoader.loadGame",
+    "CGameLoader.loadGui",
+    "CGameLoader.startGame",
+    "CGameLoader.startGameWithPlayer",
+    "CGameLoader.startRandomGameWithPlayer",
+    "CGameLoader.loadSavedGame",
+    "CMapLoader.saveWithResult",
+    "event_loop.instance",
+    "jsonify",
+    "logger",
+    "randint",
+}
+MCP_ALLOWED_HANDLE_METHODS = {
+    "CGameObject": {
+        "addTag",
+        "getBoolProperty",
+        "getDescription",
+        "getLabel",
+        "getName",
+        "getNumericProperty",
+        "getObjectProperty",
+        "getStringProperty",
+        "getType",
+        "getTypeId",
+        "hasTag",
+        "incProperty",
+        "removeTag",
+        "setBoolProperty",
+        "setDescription",
+        "setLabel",
+        "setName",
+        "setNumericProperty",
+        "setStringProperty",
+    },
+    "CGame": {
+        "changeMap",
+        "createObject",
+        "getGui",
+        "getGuiHandler",
+        "getMap",
+        "getObjectHandler",
+        "getRngHandler",
+        "getSceneManager",
+    },
+    "CSceneManager": {
+        "getPendingMapName",
+        "getTransitionStateName",
+        "isTransitionPending",
+        "requestMapChange",
+    },
+    "CMap": {
+        "addObjectByName",
+        "canStep",
+        "getEntryX",
+        "getEntryY",
+        "getEntryZ",
+        "getLocationByName",
+        "getObjectByName",
+        "getObjects",
+        "getObjectsAtCoords",
+        "getPlayer",
+        "getTile",
+        "getTurn",
+        "lookupNavigationStepCost",
+        "move",
+        "removeObjectByName",
+        "replaceTile",
+    },
+    "CMapObject": {
+        "getCoords",
+        "getMap",
+        "move",
+        "moveTo",
+        "setCoords",
+    },
+    "CCreature": {
+        "addGold",
+        "addItem",
+        "addItems",
+        "countItems",
+        "getActions",
+        "getEffectiveInteractions",
+        "getArchetypeClassId",
+        "getArchetypeClassLabel",
+        "getArchetypeRaceId",
+        "getArchetypeRaceLabel",
+        "getEffects",
+        "getGold",
+        "getHp",
+        "getHpMax",
+        "getHpRatio",
+        "getItems",
+        "getLevel",
+        "getMana",
+        "getManaMax",
+        "heal",
+        "healProc",
+        "isAlive",
+        "isNpc",
+        "isPlayer",
+        "takeGold",
+        "takeMana",
+        "useAction",
+        "useItem",
+    },
+    "CPlayer": {
+        "addQuest",
+        "checkQuests",
+        "getCompletedQuests",
+        "getController",
+        "getFightController",
+        "getQuests",
+        "setFightController",
+    },
+    "CQuest": {
+        "getHint",
+        "getObjective",
+        "getReward",
+        "isCompleted",
+    },
+    "CPlayerController": {
+        "isCompleted",
+        "setTarget",
+    },
+    "CInteraction": {
+        "getCommittedManaRefund",
+        "onAction",
+    },
+    "CObjectHandler": {
+        "createObject",
+        "getAllSubTypes",
+        "getAllTypes",
+    },
+    "CGuiHandler": {
+        "openPanel",
+        "showDialog",
+        "showInfo",
+        "showLoot",
+        "showMessage",
+        "showQuestion",
+        "showSelection",
+        "showTrade",
+        "showTooltip",
+    },
+    "CListString": {
+        "addValue",
+        "getValues",
+        "setValues",
+    },
+    "CDialog": {
+        "invokeAction",
+        "invokeCondition",
+    },
+    "CDialogState": {
+        "getOptions",
+        "getStateId",
+        "getText",
+    },
+    "CDialogOption": {
+        "getAction",
+        "getCondition",
+        "getNextStateId",
+        "getNumber",
+        "getText",
+    },
+    "CMarket": {
+        "add",
+        "buyItem",
+        "getBuyCost",
+        "getItems",
+        "getSellCost",
+        "remove",
+        "sellItem",
+    },
+    "SpawnPoint": {
+        "sealBreach",
+    },
+    "event_loop": {
+        "run",
+    },
+}
+
+logger = logging.getLogger(SERVER_NAME)
+
+
+@dataclass
+class ExportedCallable:
+    name: str
+    source: str
+    target_name: str
+    callable_obj: Any
+    signature: str
+
+
+@dataclass
+class ClientStream:
+    stream_id: str
+    queue: queue.Queue[dict[str, Any] | None]
+    created_at: float = field(default_factory=time.time)
+
+
+@dataclass
+class HandleRegistry:
+    handles: dict[str, Any] = field(default_factory=dict)
+    object_handles: dict[int, str] = field(default_factory=dict)
+    closed: bool = False
+
+
+@dataclass
+class ConnectionState:
+    transport: str
+    protocol_version: str
+    initialized: bool = False
+    log_level: str = "info"
+    client_capabilities: dict[str, Any] = field(default_factory=dict)
+    client_info: dict[str, Any] = field(default_factory=dict)
+    streams: dict[str, ClientStream] = field(default_factory=dict)
+    handle_registry: HandleRegistry = field(default_factory=HandleRegistry)
+
+
+@dataclass
+class HandleResult:
+    response: dict[str, Any] | None
+    session_id: str | None = None
+    protocol_version: str | None = None
+
+
+class ProtocolError(Exception):
+    def __init__(self, code: int, message: str, data: Any = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.data = data
+
+
+MCP_ALLOWED_BUILTIN_CLASS_METHODS = frozenset({"event_loop.instance"})
+
+
+class EngineMcpServer:
+    def __init__(
+        self,
+        repo_root: Path,
+        build_dir: Path,
+        allow_origins: list[str] | None = None,
+        trace_messages: bool = False,
+        native_log_sink: str = "stdout",
+        native_log_path: Path | None = None,
+        build_config: str | None = None,
+    ) -> None:
+        self.repo_root = repo_root
+        self.build_dir = build_dir
+        self.build_config = build_config
+        self.allow_origins = allow_origins or []
+        self.trace_messages = trace_messages
+        self.native_log_sink = native_log_sink
+        self.native_log_path = native_log_path
+        self._stdio_handles = HandleRegistry()
+        self.handles = self._stdio_handles.handles
+        self.next_handle = 1
+        self.exports: dict[str, ExportedCallable] = {}
+        self.game_module: Any | None = None
+        self._game_module: Any | None = None
+        self.http_sessions: dict[str, ConnectionState] = {}
+        self.stdio_state: ConnectionState | None = None
+        self._lock = threading.RLock()
+        self._next_stream_seq = 1
+
+    def build_extension(self) -> None:
+        logger.info("building extension target _game in %s", self.build_dir)
+        command = ["cmake", "--build", str(self.build_dir), "--target", "_game"]
+        if self.build_config:
+            command.extend(["--config", self.build_config])
+        else:
+            command.append(f"-j{os.cpu_count() or 1}")
+        subprocess.run(
+            command,
+            cwd=self.repo_root,
+            check=True,
+        )
+
+    def import_modules(self) -> None:
+        os.chdir(self.build_dir)
+        self._insert_import_path(self.repo_root / "res")
+        self._insert_import_path(self.repo_root)
+        self._insert_import_path(self.build_dir)
+        for extension_dir in reversed(self._extension_search_dirs()):
+            if extension_dir.exists():
+                self._insert_import_path(extension_dir)
+        try:
+            self._game_module = importlib.import_module("_game")
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "Unable to import compiled `_game` module. Build it with `cmake --build "
+                f"{self.build_dir} --target _game` or run mcp.py with `--build`."
+            ) from exc
+        self._configure_native_logging()
+        self.game_module = importlib.import_module("game")
+        logger.info("modules imported successfully")
+
+    def _extension_search_dirs(self) -> list[Path]:
+        if self.build_config:
+            return [self.build_dir / self.build_config]
+        return [self.build_dir / config for config in ("Release", "Debug", "RelWithDebInfo", "MinSizeRel")]
+
+    @staticmethod
+    def _insert_import_path(path: Path) -> None:
+        if not path.exists():
+            return
+        path_text = str(path)
+        if path_text not in sys.path:
+            sys.path.insert(0, path_text)
+
+    @staticmethod
+    def _is_resource_root(path: Path) -> bool:
+        return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
+
+    def _resource_root(self) -> Path | None:
+        for candidate in (self.build_dir, self.repo_root, self.repo_root / "res"):
+            if self._is_resource_root(candidate):
+                return candidate
+        return None
+
+    def inspect_and_export(self) -> None:
+        if self._game_module is None or self.game_module is None:
+            raise RuntimeError("Modules are not imported")
+        self._export_module_callables(self._game_module, source="_game")
+        self._export_module_callables(self.game_module, source="game")
+        logger.info("exported %d callables", len(self.exports))
+
+    def _configure_native_logging(self) -> None:
+        if self._game_module is None:
+            return
+        setter = getattr(self._game_module, "set_logger_sink", None)
+        if setter is None:
+            logger.warning("native module does not expose set_logger_sink; cannot redirect native logs")
+            return
+        sink = self.native_log_sink or "stdout"
+        call_args: list[Any] = [sink]
+        call_args.append(str(self.native_log_path) if self.native_log_path is not None else None)
+        try:
+            setter(*call_args)
+        except Exception:
+            logger.exception("failed to configure native logger sink")
+            return
+        target_desc = sink
+        if self.native_log_path:
+            target_desc = f"{sink}:{self.native_log_path}"
+        logger.info("configured native logger sink to %s", target_desc)
+
+    def _export_module_callables(self, module: Any, source: str) -> None:
+        for name, value in inspect.getmembers(module):
+            if name.startswith("_"):
+                continue
+            if inspect.isclass(value):
+                self._export_class_python_methods(value, source=source)
+                continue
+            if not callable(value):
+                continue
+            if name in MCP_EXCLUDED_EXPORTS:
+                continue
+            if name not in MCP_ALLOWED_EXPORTS:
+                continue
+            if name not in self.exports:
+                self.exports[name] = ExportedCallable(
+                    name=name,
+                    source=source,
+                    target_name=name,
+                    callable_obj=value,
+                    signature=self._safe_signature(value),
+                )
+
+    def _export_class_python_methods(self, cls: Any, source: str) -> None:
+        class_name = getattr(cls, "__name__", None)
+        if not isinstance(class_name, str) or not class_name or class_name.startswith("_"):
+            return
+        for name, value in inspect.getmembers(cls):
+            if name.startswith("_"):
+                continue
+            export_name = f"{class_name}.{name}"
+            if export_name not in MCP_ALLOWED_EXPORTS:
+                continue
+            if self._python_callable(value, qualified_name=export_name) is None:
+                continue
+            if export_name in self.exports:
+                continue
+            self.exports[export_name] = ExportedCallable(
+                name=export_name,
+                source=f"{source}.{class_name}",
+                target_name=name,
+                callable_obj=value,
+                signature=self._safe_signature(value),
+            )
+
+    @staticmethod
+    def _safe_signature(fn: Any) -> str:
+        try:
+            return str(inspect.signature(fn))
+        except (TypeError, ValueError):
+            return "(signature unavailable)"
+
+    @staticmethod
+    def _python_callable(value: Any, qualified_name: str | None = None) -> Any | None:
+        if inspect.isfunction(value):
+            return value
+        function = getattr(value, "__func__", None)
+        if function is not None and inspect.isfunction(function):
+            return function
+        if (
+            callable(value)
+            and inspect.ismethoddescriptor(value)
+            and type(value).__name__ == "instancemethod"
+            and getattr(value, "__self__", None) is not None
+        ):
+            return value
+        if (
+            callable(value)
+            and inspect.isbuiltin(value)
+            and getattr(value, "__self__", None) is not None
+            and qualified_name in MCP_ALLOWED_BUILTIN_CLASS_METHODS
+        ):
+            return value
+        return None
+
+    def serve_stdio(self) -> None:
+        try:
+            self._serveStdioMessages()
+        finally:
+            self._closeHandleRegistry(self._stdio_handles)
+
+    def _serveStdioMessages(self) -> None:
+        logger.info("starting stdio MCP server")
+        while True:
+            try:
+                request = self._read_stdio_message()
+            except ProtocolError as exc:
+                self._write_stdio_message(self._error_response(None, exc.code, exc.message, exc.data))
+                continue
+            except json.JSONDecodeError:
+                self._write_stdio_message(self._error_response(None, -32700, "Parse error"))
+                continue
+            if request is None:
+                logger.info("stdio closed")
+                return
+            self._trace_message(
+                transport="stdio",
+                direction="recv",
+                payload=request,
+                extra={"jsonrpcResponse": self._is_jsonrpc_response(request)},
+            )
+            response = self._handle_stdio_payload(request)
+            if response is None:
+                continue
+            self._trace_message(
+                transport="stdio",
+                direction="send",
+                payload=response,
+                session_id=None,
+            )
+            self._write_stdio_message(response)
+
+    def _handle_stdio_payload(self, payload: Any) -> dict[str, Any] | list[dict[str, Any]] | None:
+        if isinstance(payload, list):
+            if not payload:
+                return self._error_response(None, -32600, "Invalid Request")
+
+            responses: list[dict[str, Any]] = []
+            for item in payload:
+                if not isinstance(item, dict):
+                    responses.append(self._error_response(None, -32600, "Invalid Request"))
+                    continue
+                if self._is_jsonrpc_response(item):
+                    logger.debug("ignoring stdio client response payload in batch")
+                    continue
+                try:
+                    result = self.handle_message(item, transport="stdio", session_id=None)
+                except ProtocolError as exc:
+                    responses.append(self._error_response(item.get("id"), exc.code, exc.message, exc.data))
+                    continue
+                except Exception:
+                    logger.exception("unhandled stdio batch item failure")
+                    responses.append(self._error_response(item.get("id"), -32603, "Internal error"))
+                    continue
+
+                if result.response is not None and not self._is_notification(item):
+                    responses.append(result.response)
+
+            return responses or None
+
+        if isinstance(payload, dict) and self._is_jsonrpc_response(payload):
+            logger.debug("ignoring stdio client response payload")
+            return None
+
+        try:
+            result = self.handle_message(payload, transport="stdio", session_id=None)
+            if result.response is not None:
+                return result.response
+            return None
+        except ProtocolError as exc:
+            req_id = payload.get("id") if isinstance(payload, dict) else None
+            return self._error_response(req_id, exc.code, exc.message, exc.data)
+        except Exception:
+            logger.exception("unhandled stdio request failure")
+            req_id = payload.get("id") if isinstance(payload, dict) else None
+            return self._error_response(req_id, -32603, "Internal error")
+
+    def handle_http_post(
+        self,
+        payload: Any,
+        session_id: str | None,
+        protocol_version_header: str | None,
+    ) -> tuple[HTTPStatus, dict[str, Any] | list[dict[str, Any]] | None, str | None, str | None]:
+        if isinstance(payload, list):
+            return self._handle_http_batch(
+                payload, session_id=session_id, protocol_version_header=protocol_version_header
+            )
+
+        if not isinstance(payload, dict):
+            return HTTPStatus.BAD_REQUEST, self._error_response(None, -32600, "Invalid Request"), None, None
+
+        if self._is_jsonrpc_response(payload):
+            logger.debug("accepted client JSON-RPC response over HTTP")
+            return HTTPStatus.ACCEPTED, None, None, None
+
+        try:
+            result = self.handle_message(
+                payload, transport="http", session_id=session_id, protocol_version_header=protocol_version_header
+            )
+        except ProtocolError as exc:
+            req_id = payload.get("id") if isinstance(payload, dict) else None
+            return (
+                HTTPStatus.BAD_REQUEST if exc.code in {-32600, -32602} else HTTPStatus.OK,
+                self._error_response(req_id, exc.code, exc.message, exc.data),
+                None,
+                None,
+            )
+        except Exception:
+            logger.exception("unhandled HTTP request failure")
+            req_id = payload.get("id") if isinstance(payload, dict) else None
+            return HTTPStatus.OK, self._error_response(req_id, -32603, "Internal error"), None, None
+
+        if self._is_notification(payload):
+            return HTTPStatus.ACCEPTED, None, result.session_id, result.protocol_version
+
+        return HTTPStatus.OK, result.response, result.session_id, result.protocol_version
+
+    def _handle_http_batch(
+        self,
+        payload: list[Any],
+        session_id: str | None,
+        protocol_version_header: str | None,
+    ) -> tuple[HTTPStatus, dict[str, Any] | list[dict[str, Any]] | None, str | None, str | None]:
+        if not payload:
+            return HTTPStatus.BAD_REQUEST, self._error_response(None, -32600, "Invalid Request"), None, None
+
+        responses: list[dict[str, Any]] = []
+        new_session_id: str | None = None
+        negotiated_protocol_version: str | None = None
+
+        for item in payload:
+            if not isinstance(item, dict):
+                responses.append(self._error_response(None, -32600, "Invalid Request"))
+                continue
+            if self._is_jsonrpc_response(item):
+                continue
+            try:
+                result = self.handle_message(
+                    item,
+                    transport="http",
+                    session_id=session_id,
+                    protocol_version_header=protocol_version_header,
+                )
+                if result.session_id and new_session_id is None:
+                    new_session_id = result.session_id
+                if result.protocol_version and negotiated_protocol_version is None:
+                    negotiated_protocol_version = result.protocol_version
+                if result.response is not None and not self._is_notification(item):
+                    responses.append(result.response)
+            except ProtocolError as exc:
+                responses.append(self._error_response(item.get("id"), exc.code, exc.message, exc.data))
+            except Exception:
+                logger.exception("unhandled HTTP batch item failure")
+                responses.append(self._error_response(item.get("id"), -32603, "Internal error"))
+
+        if not responses:
+            return HTTPStatus.ACCEPTED, None, new_session_id, negotiated_protocol_version
+
+        return HTTPStatus.OK, responses, new_session_id, negotiated_protocol_version
+
+    def handle_message(
+        self,
+        request: dict[str, Any],
+        transport: str,
+        session_id: str | None,
+        protocol_version_header: str | None = None,
+    ) -> HandleResult:
+        if not isinstance(request, dict):
+            raise ProtocolError(-32600, "Invalid Request")
+        if request.get("jsonrpc") != JSONRPC_VERSION:
+            raise ProtocolError(-32600, "Invalid Request")
+
+        req_id = request.get("id")
+        method = request.get("method")
+        params = request.get("params", {})
+
+        if method is None:
+            raise ProtocolError(-32600, "Invalid Request")
+
+        if not isinstance(method, str) or not method:
+            raise ProtocolError(-32600, "Invalid Request")
+
+        if "id" in request and req_id is None:
+            raise ProtocolError(-32600, "Invalid Request")
+
+        if self._is_notification(request):
+            if method == "initialize":
+                raise ProtocolError(-32600, "Invalid Request")
+            if transport == "http" and session_id is None and method != "notifications/initialized":
+                raise ProtocolError(-32600, "Invalid Request")
+
+        if method == "initialize":
+            if not isinstance(params, dict):
+                raise ProtocolError(-32602, "Invalid params")
+            if transport == "http" and session_id is not None:
+                raise ProtocolError(-32600, "Initialize must not include an MCP-Session-Id header")
+            return self._handle_initialize(req_id=req_id, params=params, transport=transport)
+
+        state = self._require_connection_state(transport=transport, session_id=session_id)
+
+        if transport == "http":
+            effective_protocol_version = self._resolve_http_protocol_version(
+                state=state,
+                header_value=protocol_version_header,
+            )
+            if state.protocol_version != effective_protocol_version:
+                logger.debug(
+                    "session %s protocol header override from %s to %s",
+                    session_id,
+                    state.protocol_version,
+                    effective_protocol_version,
+                )
+                state.protocol_version = effective_protocol_version
+        else:
+            effective_protocol_version = state.protocol_version
+
+        if method == "notifications/initialized":
+            state.initialized = True
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="lifecycle",
+                data={"message": "client initialized", "protocolVersion": effective_protocol_version},
+            )
+            return HandleResult(response=None, session_id=session_id, protocol_version=effective_protocol_version)
+
+        if method == "notifications/cancelled":
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="notice",
+                logger_name="lifecycle",
+                data={"message": "request cancellation received", "params": self._jsonable(params)},
+            )
+            return HandleResult(response=None, session_id=session_id, protocol_version=effective_protocol_version)
+
+        if method == "ping":
+            return HandleResult(
+                response=self._result_response(req_id, {}),
+                session_id=session_id,
+                protocol_version=effective_protocol_version,
+            )
+
+        if not state.initialized:
+            raise ProtocolError(-32002, "Server not initialized")
+
+        if method == "logging/setLevel":
+            if not isinstance(params, dict):
+                raise ProtocolError(-32602, "Invalid params")
+            level = params.get("level")
+            if not isinstance(level, str) or level not in LOG_LEVELS:
+                raise ProtocolError(-32602, "Invalid log level")
+            previous = state.log_level
+            state.log_level = level
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="notice",
+                logger_name="logging",
+                data={"message": "log level updated", "previous": previous, "current": level},
+            )
+            return HandleResult(
+                response=self._result_response(req_id, {}),
+                session_id=session_id,
+                protocol_version=effective_protocol_version,
+            )
+
+        if method == "tools/list":
+            if params is not None and not isinstance(params, dict):
+                raise ProtocolError(-32602, "Invalid params")
+            cursor = params.get("cursor") if isinstance(params, dict) else None
+            if cursor not in {None, ""}:
+                raise ProtocolError(-32602, "Unsupported cursor")
+            return HandleResult(
+                response=self._result_response(req_id, {"tools": self._list_tools()}),
+                session_id=session_id,
+                protocol_version=effective_protocol_version,
+            )
+
+        if method == "tools/call":
+            if not isinstance(params, dict):
+                raise ProtocolError(-32602, "Invalid params")
+            result = self._call_tool(params, transport=transport, session_id=session_id)
+            return HandleResult(
+                response=self._result_response(req_id, result),
+                session_id=session_id,
+                protocol_version=effective_protocol_version,
+            )
+
+        raise ProtocolError(-32601, f"Method not found: {method}")
+
+    def _handle_initialize(self, req_id: Any, params: dict[str, Any], transport: str) -> HandleResult:
+        requested_protocol_version = params.get("protocolVersion")
+        client_capabilities = params.get("capabilities", {})
+        client_info = params.get("clientInfo", {})
+
+        if not isinstance(requested_protocol_version, str):
+            raise ProtocolError(-32602, "Invalid params")
+        if requested_protocol_version in SUPPORTED_PROTOCOL_VERSIONS:
+            negotiated_protocol_version = requested_protocol_version
+        else:
+            negotiated_protocol_version = LATEST_PROTOCOL_VERSION
+
+        if not isinstance(client_capabilities, dict):
+            raise ProtocolError(-32602, "Invalid params")
+        if not isinstance(client_info, dict):
+            raise ProtocolError(-32602, "Invalid params")
+
+        state = ConnectionState(
+            transport=transport,
+            protocol_version=negotiated_protocol_version,
+            initialized=False,
+            client_capabilities=client_capabilities,
+            client_info=client_info,
+        )
+
+        new_session_id: str | None = None
+        if transport == "stdio":
+            if self.stdio_state is not None:
+                self._closeHandleRegistry(self._stdio_handles)
+                self._stdio_handles = HandleRegistry()
+                self.handles = self._stdio_handles.handles
+            state.handle_registry = self._stdio_handles
+            self.stdio_state = state
+        else:
+            with self._lock:
+                if len(self.http_sessions) >= MAX_HTTP_SESSIONS:
+                    raise ProtocolError(-32003, "Too many active HTTP sessions")
+                new_session_id = self._create_session_id()
+                self.http_sessions[new_session_id] = state
+
+        self._emit_log(
+            transport=transport,
+            session_id=new_session_id,
+            level="info",
+            logger_name="lifecycle",
+            data={
+                "message": "session initialized",
+                "transport": transport,
+                "protocolVersion": negotiated_protocol_version,
+                "clientInfo": self._jsonable(client_info),
+            },
+        )
+
+        return HandleResult(
+            response=self._result_response(
+                req_id,
+                {
+                    "protocolVersion": negotiated_protocol_version,
+                    "serverInfo": {
+                        "name": SERVER_NAME,
+                        "title": SERVER_TITLE,
+                        "version": SERVER_VERSION,
+                    },
+                    "capabilities": {
+                        "logging": {},
+                        "tools": {
+                            "listChanged": False,
+                        },
+                    },
+                },
+            ),
+            session_id=new_session_id,
+            protocol_version=negotiated_protocol_version,
+        )
+
+    def _require_connection_state(self, transport: str, session_id: str | None) -> ConnectionState:
+        if transport == "stdio":
+            if self.stdio_state is None:
+                raise ProtocolError(-32002, "Server not initialized")
+            return self.stdio_state
+        if session_id is None:
+            raise ProtocolError(-32600, "Missing MCP-Session-Id")
+        with self._lock:
+            state = self.http_sessions.get(session_id)
+        if state is None:
+            raise ProtocolError(-32001, "Unknown session")
+        return state
+
+    def _resolve_http_protocol_version(self, state: ConnectionState, header_value: str | None) -> str:
+        if header_value is None or header_value == "":
+            return state.protocol_version or DEFAULT_HTTP_FALLBACK_PROTOCOL_VERSION
+        if header_value not in SUPPORTED_PROTOCOL_VERSIONS:
+            raise ProtocolError(-32600, "Unsupported MCP-Protocol-Version")
+        return header_value
+
+    def _create_session_id(self) -> str:
+        while True:
+            session_id = secrets.token_urlsafe(24)
+            if all(0x21 <= ord(ch) <= 0x7E for ch in session_id):
+                with self._lock:
+                    if session_id not in self.http_sessions:
+                        return session_id
+
+    def _create_stream(self, session_id: str) -> ClientStream:
+        with self._lock:
+            state = self.http_sessions.get(session_id)
+            if state is None:
+                raise KeyError(session_id)
+            if len(state.streams) >= MAX_HTTP_STREAMS_PER_SESSION:
+                raise ProtocolError(-32003, "Too many active streams for session")
+            stream_id = f"s_{self._next_stream_seq}"
+            self._next_stream_seq += 1
+            stream = ClientStream(stream_id=stream_id, queue=queue.Queue(maxsize=256))
+            state.streams[stream_id] = stream
+            return stream
+
+    def _remove_stream(self, session_id: str, stream_id: str) -> None:
+        with self._lock:
+            state = self.http_sessions.get(session_id)
+            if state is None:
+                return
+            state.streams.pop(stream_id, None)
+
+    def terminate_session(self, session_id: str) -> bool:
+        with self._lock:
+            state = self.http_sessions.pop(session_id, None)
+            if state is not None:
+                self._closeHandleRegistry(state.handle_registry)
+        if state is None:
+            return False
+        for stream in list(state.streams.values()):
+            try:
+                stream.queue.put_nowait(None)
+            except Exception:
+                pass
+        logger.info("terminated HTTP MCP session")
+        return True
+
+    def serve_http(self, host: str, port: int) -> None:
+        httpd = EngineHttpServer((host, port), EngineHttpRequestHandler, self)
+        try:
+            logger.info("HTTP MCP server listening on http://%s:%d/mcp", host, port)
+            httpd.serve_forever()
+        finally:
+            httpd.server_close()
+
+    def validate_origin(self, origin: str | None) -> bool:
+        if not origin:
+            return True
+        if origin in self.allow_origins:
+            return True
+        parsed = urlparse(origin)
+        if parsed.scheme not in {"http", "https"}:
+            return False
+        hostname = parsed.hostname
+        return hostname in {"127.0.0.1", "localhost"}
+
+    def _list_tools(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "name": "engine_list",
+                "title": "List engine exports",
+                "description": "List unified exported callables from _game and game modules.",
+                "inputSchema": {
+                    "type": "object",
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "exports": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "signature": {"type": "string"},
+                                    "source": {"type": "string"},
+                                },
+                                "required": ["name", "signature", "source"],
+                                "additionalProperties": False,
+                            },
+                        }
+                    },
+                    "required": ["exports"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "engine_call",
+                "title": "Call engine function",
+                "description": "Call an exported engine callable by name.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "args": {"type": "array", "default": []},
+                        "kwargs": {"type": "object", "default": {}},
+                    },
+                    "required": ["name"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "source": {"type": "string"},
+                        "result": {},
+                    },
+                    "required": ["name", "source", "result"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "engine_handle_call",
+                "title": "Call method on engine handle",
+                "description": "Call a method on a previously returned engine handle.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "handle": {"type": "string"},
+                        "method": {"type": "string"},
+                        "args": {"type": "array", "default": []},
+                        "kwargs": {"type": "object", "default": {}},
+                    },
+                    "required": ["handle", "method"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "result": {},
+                    },
+                    "required": ["result"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "engine_release_handles",
+                "title": "Release engine handles",
+                "description": "Release handles no longer needed by this session. Released handles become invalid.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "handles": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "maxItems": MAX_MCP_HANDLES_PER_SESSION,
+                        }
+                    },
+                    "required": ["handles"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {"released": {"type": "integer"}},
+                    "required": ["released"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "simulation_run",
+                "title": "Run deterministic game simulation",
+                "description": (
+                    "Start a game and execute bounded high-level simulation steps for Codex/MCP walkthroughs."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "map": {"type": "string"},
+                        "player_class": {"type": "string", "default": "Warrior"},
+                        "load_gui": {"type": "boolean", "default": False},
+                        "steps": {
+                            "type": "array",
+                            "default": [],
+                            "items": {"type": "object"},
+                            "maxItems": 100,
+                        },
+                    },
+                    "required": ["map"],
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "map": {"type": "string"},
+                                "playerClass": {"type": "string"},
+                                "steps": {"type": "array"},
+                                "state": {"type": "object"},
+                                "questLog": {"type": "object"},
+                                "inventory": {"type": "array"},
+                            },
+                            "required": ["map", "playerClass", "steps", "state", "questLog", "inventory"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "step": {"type": "string"},
+                                "error": {"type": "string"},
+                                "state": {"type": "object"},
+                                "traceback": {"type": "string"},
+                            },
+                            "required": ["step", "error"],
+                            "additionalProperties": False,
+                        },
+                    ],
+                },
+            },
+            {
+                "name": "map_design_brief",
+                "title": "Build map design brief",
+                "description": (
+                    "Summarize maps, map config entries, script hooks, and optional resource catalogs for "
+                    "planning AI-assisted content edits."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "map_name": {
+                            "type": "string",
+                            "description": "Optional map directory name under res/maps.",
+                        },
+                        "include_objects": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Include Tiled object-layer object summaries for the selected map.",
+                        },
+                        "include_resource_catalog": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Include global resource ids from res/config/*.json.",
+                        },
+                        "max_objects": {
+                            "type": "integer",
+                            "default": 80,
+                            "minimum": 1,
+                            "maximum": 500,
+                        },
+                        "max_entries": {
+                            "type": "integer",
+                            "default": 160,
+                            "minimum": 1,
+                            "maximum": 500,
+                        },
+                        "max_ids_per_catalog": {
+                            "type": "integer",
+                            "default": 80,
+                            "minimum": 1,
+                            "maximum": 500,
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+                "outputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "maps": {"type": "array"},
+                        "selectedMap": {"type": "object"},
+                        "resourceCatalog": {"type": "array"},
+                        "warnings": {"type": "array"},
+                    },
+                    "required": ["maps", "warnings"],
+                    "additionalProperties": False,
+                },
+            },
+        ]
+
+    def _call_tool(self, params: dict[str, Any], transport: str, session_id: str | None) -> dict[str, Any]:
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+
+        if not isinstance(tool_name, str) or not tool_name:
+            raise ProtocolError(-32602, "Invalid params")
+        if not isinstance(arguments, dict):
+            raise ProtocolError(-32602, "Invalid params")
+
+        self._emit_log(
+            transport=transport,
+            session_id=session_id,
+            level="info",
+            logger_name="tools",
+            data={"message": "tool call started", "tool": tool_name},
+        )
+
+        if tool_name == "engine_list":
+            exports = [
+                {
+                    "name": exported.name,
+                    "signature": exported.signature,
+                    "source": exported.source,
+                }
+                for exported in sorted(self.exports.values(), key=lambda item: item.name)
+            ]
+            result = {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps({"exports": exports}, ensure_ascii=False),
+                    }
+                ],
+                "structuredContent": {
+                    "exports": exports,
+                },
+                "isError": False,
+            }
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name, "count": len(exports)},
+            )
+            return result
+
+        if tool_name == "engine_call":
+            result = self._engine_call(arguments, self._handleRegistry(transport, session_id))
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name},
+            )
+            return result
+
+        if tool_name == "engine_handle_call":
+            result = self._engine_handle_call(arguments, self._handleRegistry(transport, session_id))
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name},
+            )
+            return result
+
+        if tool_name == "engine_release_handles":
+            handles = arguments.get("handles")
+            if (
+                not isinstance(handles, list)
+                or len(handles) > MAX_MCP_HANDLES_PER_SESSION
+                or any(not isinstance(handle, str) or not handle for handle in handles)
+            ):
+                raise ProtocolError(-32602, "engine_release_handles requires a bounded array of handle strings")
+            registry = self._handleRegistry(transport, session_id)
+            with self._lock:
+                released = sum(self._releaseHandle(registry, handle) for handle in dict.fromkeys(handles))
+            structured = {"released": released}
+            return {
+                "content": [{"type": "text", "text": json.dumps(structured)}],
+                "structuredContent": structured,
+                "isError": False,
+            }
+
+        if tool_name == "simulation_run":
+            result = self._simulation_run(arguments)
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name, "isError": result.get("isError", False)},
+            )
+            return result
+
+        if tool_name == "map_design_brief":
+            result = self._map_design_brief(arguments)
+            self._emit_log(
+                transport=transport,
+                session_id=session_id,
+                level="info",
+                logger_name="tools",
+                data={"message": "tool call completed", "tool": tool_name},
+            )
+            return result
+
+        raise ProtocolError(-32602, f"Unknown tool: {tool_name}")
+
+    def _engine_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
+        name = arguments.get("name")
+        call_args = arguments.get("args", [])
+        call_kwargs = arguments.get("kwargs", {})
+
+        if not isinstance(name, str) or not name:
+            raise ProtocolError(-32602, "engine_call requires non-empty string `name`")
+        if not isinstance(call_args, list):
+            raise ProtocolError(-32602, "engine_call `args` must be an array")
+        if not isinstance(call_kwargs, dict):
+            raise ProtocolError(-32602, "engine_call `kwargs` must be an object")
+
+        exported = self.exports.get(name)
+        if exported is None:
+            raise ProtocolError(-32602, f"Callable not exported: {name}")
+
+        try:
+            resolved_args = self._resolve_handle_references(call_args, registry)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs, registry)
+            result = exported.callable_obj(*resolved_args, **resolved_kwargs)
+            serialized = self._serialize_result(result, registry)
+            structured = {
+                "name": name,
+                "source": exported.source,
+                "result": serialized,
+            }
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(structured, ensure_ascii=False),
+                    }
+                ],
+                "structuredContent": structured,
+                "isError": False,
+            }
+        except ProtocolError:
+            raise
+        except Exception as exc:
+            error_payload = {
+                "error": str(exc),
+                "traceback": traceback.format_exc(limit=10),
+            }
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(error_payload, ensure_ascii=False),
+                    }
+                ],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+    def _engine_handle_call(self, arguments: dict[str, Any], registry: HandleRegistry | None = None) -> dict[str, Any]:
+        registry = registry if registry is not None else self._stdio_handles
+        handle = arguments.get("handle")
+        method = arguments.get("method")
+        call_args = arguments.get("args", [])
+        call_kwargs = arguments.get("kwargs", {})
+
+        if not isinstance(handle, str) or not handle:
+            raise ProtocolError(-32602, "engine_handle_call requires non-empty string `handle`")
+        if not isinstance(method, str) or not method:
+            raise ProtocolError(-32602, "engine_handle_call requires non-empty string `method`")
+        if not isinstance(call_args, list):
+            raise ProtocolError(-32602, "engine_handle_call `args` must be an array")
+        if not isinstance(call_kwargs, dict):
+            raise ProtocolError(-32602, "engine_handle_call `kwargs` must be an object")
+        if method.startswith("_"):
+            result = {"error": f"Method `{method}` is not exported for handle calls"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
+        with self._lock:
+            target = registry.handles.get(handle)
+        if target is None:
+            result = {"error": f"Unknown handle: {handle}"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
+
+        # Authorize against the allowlist BEFORE dereferencing the client-supplied
+        # method name. Doing getattr(target, method) first would fire the getter of
+        # any non-allowlisted property/descriptor, and the ordering also leaked a
+        # method-existence oracle (missing -> "Unknown method", present-but-denied
+        # -> "not exported"). Fail closed: anything not allowlisted is uniformly
+        # rejected as not exported before the object is touched.
+        if method not in self._allowed_handle_methods_for(target):
+            result = {"error": f"Method `{method}` is not exported for handle calls"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
+        try:
+            method_callable = getattr(target, method)
+        except AttributeError:
+            result = {"error": f"Unknown method `{method}` for handle `{handle}`"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
+
+        if not callable(method_callable):
+            result = {"error": f"Attribute `{method}` on handle `{handle}` is not callable"}
+            return {
+                "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}],
+                "structuredContent": result,
+                "isError": True,
+            }
+
+        try:
+            resolved_args = self._resolve_handle_references(call_args, registry)
+            resolved_kwargs = self._resolve_handle_references(call_kwargs, registry)
+        except Exception as exc:
+            error_payload = {"error": str(exc)}
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+        guard_error = self._validate_pathfinding_call(target, method, resolved_args, resolved_kwargs)
+        if guard_error is not None:
+            return {
+                "content": [{"type": "text", "text": json.dumps(guard_error, ensure_ascii=False)}],
+                "structuredContent": guard_error,
+                "isError": True,
+            }
+
+        try:
+            result = method_callable(*resolved_args, **resolved_kwargs)
+            if method in {"getQuests", "getCompletedQuests"} and isinstance(result, (set, frozenset)):
+                result = list(result)
+            serialized = self._serialize_result(result, registry)
+            structured = {"result": serialized}
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(structured, ensure_ascii=False),
+                    }
+                ],
+                "structuredContent": structured,
+                "isError": False,
+            }
+        except Exception as exc:
+            error_payload = {
+                "error": str(exc),
+                "traceback": traceback.format_exc(limit=10),
+            }
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(error_payload, ensure_ascii=False),
+                    }
+                ],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+    def _simulation_run(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        map_name = arguments.get("map")
+        player_class = arguments.get("player_class", "Warrior")
+        load_gui = arguments.get("load_gui", False)
+        steps = arguments.get("steps", [])
+
+        if self.game_module is None:
+            raise ProtocolError(-32603, "simulation_run requires imported game modules")
+        if not isinstance(map_name, str) or not map_name:
+            raise ProtocolError(-32602, "simulation_run requires non-empty string `map`")
+        if not isinstance(player_class, str) or not player_class:
+            raise ProtocolError(-32602, "simulation_run `player_class` must be a non-empty string")
+        if not isinstance(load_gui, bool):
+            raise ProtocolError(-32602, "simulation_run `load_gui` must be a boolean")
+        if not isinstance(steps, list):
+            raise ProtocolError(-32602, "simulation_run `steps` must be an array")
+        if len(steps) > 100:
+            raise ProtocolError(-32602, "simulation_run accepts at most 100 steps")
+        for step in steps:
+            if isinstance(step, dict) and step.get("action") == "capture_gui_screenshot" and step.get("path"):
+                raise ProtocolError(
+                    -32602,
+                    "simulation_run capture_gui_screenshot returns screenshot data inline; file paths are not allowed",
+                )
+
+        # Reject extreme per-action iteration counts before starting the game or
+        # executing any loop. runSimulation/runSteps re-validate as a safety net,
+        # but enforcing it here surfaces a structured error and guarantees no
+        # engine work happens for an over-budget payload.
+        try:
+            game_simulation.validateSteps(steps)
+        except game_simulation.SimulationError as exc:
+            error_payload = exc.asDict()
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+        try:
+            structured = game_simulation.runSimulation(
+                self.game_module,
+                map_name,
+                player_class=player_class,
+                load_gui=load_gui,
+                steps=steps,
+            )
+            return {
+                "content": [{"type": "text", "text": json.dumps(structured, ensure_ascii=False)}],
+                "structuredContent": structured,
+                "isError": False,
+            }
+        except game_simulation.SimulationError as exc:
+            error_payload = exc.asDict()
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+        except Exception as exc:
+            error_payload = {
+                "step": "simulation_run",
+                "error": str(exc),
+                "traceback": traceback.format_exc(limit=10),
+            }
+            return {
+                "content": [{"type": "text", "text": json.dumps(error_payload, ensure_ascii=False)}],
+                "structuredContent": error_payload,
+                "isError": True,
+            }
+
+    def _map_design_brief(self, arguments: dict[str, Any]) -> dict[str, Any]:
+        map_name = arguments.get("map_name")
+        include_objects = self._optional_bool(arguments, "include_objects", True)
+        include_resource_catalog = self._optional_bool(arguments, "include_resource_catalog", False)
+        max_objects = self._bounded_int(arguments.get("max_objects"), "max_objects", 80, 1, 500)
+        max_entries = self._bounded_int(arguments.get("max_entries"), "max_entries", 160, 1, 500)
+        max_ids_per_catalog = self._bounded_int(
+            arguments.get("max_ids_per_catalog"),
+            "max_ids_per_catalog",
+            80,
+            1,
+            500,
+        )
+
+        if map_name is not None and (not isinstance(map_name, str) or not map_name):
+            raise ProtocolError(-32602, "map_design_brief `map_name` must be a non-empty string")
+
+        resource_root = self._resource_root()
+        maps_root = (resource_root / "maps").resolve() if resource_root else (self.repo_root / "res" / "maps").resolve()
+        if not maps_root.is_dir():
+            raise ProtocolError(-32603, f"Maps directory not found: {self._relative_path(maps_root)}")
+
+        resource_index, resource_catalog = self._resource_catalog(max_ids_per_catalog)
+        map_dirs = self._map_directories(maps_root)
+        structured: dict[str, Any] = {
+            "maps": [self._map_overview(map_dir) for map_dir in map_dirs],
+            "warnings": [],
+        }
+
+        if include_resource_catalog:
+            structured["resourceCatalog"] = resource_catalog
+
+        if map_name:
+            selected_dir = self._resolve_map_dir(maps_root, map_name)
+            selected_map = self._selected_map_brief(
+                selected_dir,
+                resource_index=resource_index,
+                include_objects=include_objects,
+                max_objects=max_objects,
+                max_entries=max_entries,
+            )
+            structured["selectedMap"] = selected_map
+            structured["warnings"] = selected_map.get("warnings", [])
+
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(structured, ensure_ascii=False),
+                }
+            ],
+            "structuredContent": structured,
+            "isError": False,
+        }
+
+    def _map_directories(self, maps_root: Path) -> list[Path]:
+        return sorted((item for item in maps_root.iterdir() if item.is_dir()), key=lambda item: item.name)
+
+    def _resolve_map_dir(self, maps_root: Path, map_name: str) -> Path:
+        if "/" in map_name or "\\" in map_name or map_name in {".", ".."}:
+            raise ProtocolError(-32602, "map_design_brief `map_name` must name a direct child of maps")
+        map_dir = (maps_root / map_name).resolve()
+        try:
+            map_dir.relative_to(maps_root)
+        except ValueError as exc:
+            raise ProtocolError(-32602, "map_design_brief `map_name` must stay under maps") from exc
+        if not map_dir.is_dir():
+            raise ProtocolError(-32602, f"Unknown map: {map_name}")
+        return map_dir
+
+    def _map_overview(self, map_dir: Path) -> dict[str, Any]:
+        map_data = self._load_optional_json(map_dir / "map.json")
+        config_data = self._load_optional_json(map_dir / "config.json")
+        script_summary = self._script_summary(map_dir / "script.py", include_classes=False)
+        object_summary = self._map_object_summary(map_data, include_objects=False, max_objects=0)
+
+        return {
+            "name": map_dir.name,
+            "path": self._relative_path(map_dir),
+            "dimensions": self._map_dimensions(map_data),
+            "spawn": self._map_spawn(map_data),
+            "configEntryCount": len(config_data) if isinstance(config_data, dict) else 0,
+            "objectCount": object_summary["objectCount"],
+            "objectTypes": object_summary["objectTypes"],
+            "script": {
+                "classCount": script_summary["classCount"],
+                "triggerCount": len(script_summary["triggers"]),
+                "questCount": len(script_summary["quests"]),
+                "dialogCount": len(script_summary["dialogs"]),
+            },
+        }
+
+    def _selected_map_brief(
+        self,
+        map_dir: Path,
+        resource_index: dict[str, list[str]],
+        include_objects: bool,
+        max_objects: int,
+        max_entries: int,
+    ) -> dict[str, Any]:
+        map_data = self._load_optional_json(map_dir / "map.json")
+        config_data = self._load_optional_json(map_dir / "config.json")
+        if config_data is None:
+            config_data = {}
+        if not isinstance(config_data, dict):
+            raise ProtocolError(
+                -32603, f"Map config must be a JSON object: {self._relative_path(map_dir / 'config.json')}"
+            )
+
+        object_summary = self._map_object_summary(map_data, include_objects=include_objects, max_objects=max_objects)
+        config_summary = self._config_summary(config_data, max_entries=max_entries)
+        script_summary = self._script_summary(map_dir / "script.py", include_classes=True)
+        dialog_files = self._dialog_file_summaries(map_dir, max_entries=max_entries)
+        warnings = self._map_authoring_warnings(
+            config_data=config_data,
+            object_summary=object_summary,
+            script_summary=script_summary,
+            resource_index=resource_index,
+        )
+
+        return {
+            "name": map_dir.name,
+            "files": {
+                "map": self._relative_path(map_dir / "map.json"),
+                "config": self._relative_path(map_dir / "config.json"),
+                "script": self._relative_path(map_dir / "script.py"),
+            },
+            "dimensions": self._map_dimensions(map_data),
+            "spawn": self._map_spawn(map_data),
+            "objects": object_summary,
+            "config": config_summary,
+            "script": script_summary,
+            "dialogFiles": dialog_files,
+            "warnings": warnings,
+            "designNotes": [
+                "Use config entry ids as stable createObject/addObjectByName refs.",
+                "Use named map objects or config ids as trigger targets.",
+                "Keep dialog action and condition strings matched to methods on the dialog class.",
+            ],
+        }
+
+    def _resource_catalog(self, max_ids_per_catalog: int) -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
+        resource_root = self._resource_root()
+        config_root = (resource_root / "config") if resource_root else self.repo_root / "res" / "config"
+        resource_index: dict[str, list[str]] = {}
+        catalog: list[dict[str, Any]] = []
+        if not config_root.is_dir():
+            return resource_index, catalog
+
+        for config_path in sorted(config_root.glob("*.json"), key=lambda item: item.name):
+            data = self._load_json(config_path)
+            ids = sorted(str(key) for key in data) if isinstance(data, dict) else []
+            for resource_id in ids:
+                resource_index.setdefault(resource_id, []).append(config_path.stem)
+            catalog.append(
+                {
+                    "name": config_path.stem,
+                    "path": self._relative_path(config_path),
+                    "count": len(ids),
+                    "ids": ids[:max_ids_per_catalog],
+                    "truncated": len(ids) > max_ids_per_catalog,
+                }
+            )
+        return resource_index, catalog
+
+    def _config_summary(self, config_data: dict[str, Any], max_entries: int) -> dict[str, Any]:
+        categories: dict[str, list[str]] = {}
+        entries: list[dict[str, Any]] = []
+
+        for entry_id in sorted(str(key) for key in config_data):
+            entry_value = config_data.get(entry_id)
+            if not isinstance(entry_value, dict):
+                entry = {"id": entry_id, "kind": "literal", "category": "other"}
+            else:
+                target_kind = "class" if "class" in entry_value else "ref" if "ref" in entry_value else "inline"
+                target = entry_value.get("class") if target_kind == "class" else entry_value.get("ref")
+                category = self._classify_config_entry(entry_id, entry_value)
+                entry = {
+                    "id": entry_id,
+                    "kind": target_kind,
+                    "target": target,
+                    "category": category,
+                }
+                properties = entry_value.get("properties")
+                if isinstance(properties, dict):
+                    description = properties.get("description")
+                    if isinstance(description, str) and description:
+                        entry["description"] = self._trim_text(description)
+                    tags = properties.get("tags")
+                    if isinstance(tags, list):
+                        entry["tags"] = [str(tag) for tag in tags]
+            categories.setdefault(str(entry["category"]), []).append(entry_id)
+            entries.append(entry)
+
+        return {
+            "entryCount": len(entries),
+            "categories": {name: ids for name, ids in sorted(categories.items())},
+            "entries": entries[:max_entries],
+            "truncated": len(entries) > max_entries,
+        }
+
+    def _classify_config_entry(self, entry_id: str, entry_value: dict[str, Any]) -> str:
+        target = entry_value.get("class") or entry_value.get("ref") or ""
+        properties = entry_value.get("properties")
+        properties = properties if isinstance(properties, dict) else {}
+        lowered = f"{entry_id} {target}".lower()
+
+        if "quest" in lowered:
+            return "quest"
+        if "dialog" in lowered or isinstance(properties.get("states"), list):
+            return "dialog"
+        if target == "CMarket" or "market" in lowered or isinstance(properties.get("items"), list):
+            return "market"
+        if properties.get("npc") is True or "npc" in lowered:
+            return "npc"
+        if "controller" in properties or "monster" in lowered or "cultist" in lowered or "pritz" in lowered:
+            return "creature"
+        if target == "CItem" or isinstance(properties.get("tags"), list):
+            return "item"
+        if target in {"Cave", "Market", "Teleporter"} or any(word in lowered for word in ("cave", "tavern", "chapel")):
+            return "location"
+        return "other"
+
+    def _map_object_summary(self, map_data: Any, include_objects: bool, max_objects: int) -> dict[str, Any]:
+        layers: list[dict[str, Any]] = []
+        objects: list[dict[str, Any]] = []
+        object_types: dict[str, int] = {}
+        object_names: list[str] = []
+        total_objects = 0
+
+        if not isinstance(map_data, dict):
+            return {
+                "objectCount": 0,
+                "objectTypes": {},
+                "layers": [],
+                "objects": [],
+                "objectsTruncated": False,
+                "namedObjects": [],
+            }
+
+        for layer in map_data.get("layers", []):
+            if not isinstance(layer, dict):
+                continue
+            layer_objects = layer.get("objects")
+            if not isinstance(layer_objects, list):
+                continue
+            layers.append(
+                {
+                    "name": layer.get("name"),
+                    "type": layer.get("type", "objectgroup"),
+                    "objectCount": len(layer_objects),
+                }
+            )
+            for obj in layer_objects:
+                if not isinstance(obj, dict):
+                    continue
+                total_objects += 1
+                object_type = str(obj.get("type") or "")
+                if object_type:
+                    object_types[object_type] = object_types.get(object_type, 0) + 1
+                object_name = obj.get("name")
+                if isinstance(object_name, str) and object_name:
+                    object_names.append(object_name)
+                if include_objects and len(objects) < max_objects:
+                    summary = {
+                        "id": obj.get("id"),
+                        "name": object_name,
+                        "type": object_type,
+                        "x": obj.get("x"),
+                        "y": obj.get("y"),
+                    }
+                    properties = obj.get("properties")
+                    if isinstance(properties, dict) and properties:
+                        summary["properties"] = self._compact_json(properties)
+                    objects.append(summary)
+
+        return {
+            "objectCount": total_objects,
+            "objectTypes": {name: object_types[name] for name in sorted(object_types)},
+            "layers": layers,
+            "objects": objects,
+            "objectsTruncated": include_objects and total_objects > len(objects),
+            "namedObjects": sorted(object_names),
+        }
+
+    def _map_dimensions(self, map_data: Any) -> dict[str, Any]:
+        if not isinstance(map_data, dict):
+            return {}
+        return {
+            "width": map_data.get("width"),
+            "height": map_data.get("height"),
+            "tilewidth": map_data.get("tilewidth"),
+            "tileheight": map_data.get("tileheight"),
+        }
+
+    def _map_spawn(self, map_data: Any) -> dict[str, Any]:
+        if not isinstance(map_data, dict):
+            return {}
+        spawn: dict[str, Any] = {}
+        properties = map_data.get("properties")
+        if isinstance(properties, dict):
+            for key in ("x", "y", "z"):
+                if key in properties:
+                    spawn[key] = properties[key]
+        for key in ("x", "y", "z"):
+            if key in map_data:
+                spawn[key] = map_data[key]
+        return spawn
+
+    def _script_summary(self, script_path: Path, include_classes: bool) -> dict[str, Any]:
+        summary: dict[str, Any] = {
+            "path": self._relative_path(script_path),
+            "classCount": 0,
+            "registeredClasses": [],
+            "triggers": [],
+            "quests": [],
+            "dialogs": [],
+            "events": [],
+            "dialogActions": [],
+            "warnings": [],
+        }
+        if include_classes:
+            summary["classes"] = []
+        if not script_path.exists():
+            return summary
+
+        try:
+            tree = ast.parse(script_path.read_text(encoding="utf-8"), filename=str(script_path))
+        except (OSError, SyntaxError) as exc:
+            summary["warnings"].append(
+                {
+                    "level": "warning",
+                    "code": "script_parse_failed",
+                    "message": f"Unable to parse {self._relative_path(script_path)}: {exc}",
+                }
+            )
+            return summary
+
+        classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and not node.name.startswith("_")]
+        summary["classCount"] = len(classes)
+        for class_node in classes:
+            bases = [self._ast_name(base) for base in class_node.bases]
+            bases = [base for base in bases if base]
+            methods = [
+                item.name
+                for item in class_node.body
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and not item.name.startswith("_")
+            ]
+            decorators = [self._decorator_summary(decorator) for decorator in class_node.decorator_list]
+            decorators = [decorator for decorator in decorators if decorator]
+
+            class_summary = {
+                "name": class_node.name,
+                "bases": bases,
+                "methods": methods,
+                "decorators": decorators,
+            }
+            if include_classes:
+                summary["classes"].append(class_summary)
+
+            decorator_names = {decorator["name"] for decorator in decorators}
+            if "register" in decorator_names:
+                summary["registeredClasses"].append(class_node.name)
+            if "CQuest" in bases or class_node.name.endswith("Quest"):
+                summary["quests"].append(class_node.name)
+            if "CDialog" in bases or class_node.name.endswith("Dialog"):
+                summary["dialogs"].append(class_node.name)
+                actions = [
+                    method
+                    for method in methods
+                    if method
+                    not in {
+                        "onEnter",
+                        "onCreate",
+                        "onTurn",
+                        "onDestroy",
+                        "isCompleted",
+                        "getObjective",
+                        "getReward",
+                        "getHint",
+                        "onComplete",
+                    }
+                ]
+                summary["dialogActions"].append({"dialog": class_node.name, "methods": actions})
+            if "CEvent" in bases or class_node.name.endswith("Event"):
+                summary["events"].append(class_node.name)
+
+            for decorator in decorators:
+                if decorator["name"] != "trigger":
+                    continue
+                args = decorator.get("args", [])
+                trigger_summary = {"class": class_node.name}
+                if len(args) > 1 and isinstance(args[1], str):
+                    trigger_summary["event"] = args[1]
+                if len(args) > 2 and isinstance(args[2], str):
+                    trigger_summary["target"] = args[2]
+                summary["triggers"].append(trigger_summary)
+
+        for key in ("registeredClasses", "quests", "dialogs", "events"):
+            summary[key] = sorted(summary[key])
+        summary["dialogActions"] = sorted(summary["dialogActions"], key=lambda item: item["dialog"])
+        summary["triggers"] = sorted(
+            summary["triggers"],
+            key=lambda item: (str(item.get("target", "")), str(item.get("event", "")), item["class"]),
+        )
+        if include_classes:
+            summary["classes"] = sorted(summary["classes"], key=lambda item: item["name"])
+        return summary
+
+    def _decorator_summary(self, decorator: ast.expr) -> dict[str, Any] | None:
+        args: list[Any] = []
+        keywords: dict[str, Any] = {}
+        target = decorator
+        if isinstance(decorator, ast.Call):
+            target = decorator.func
+            args = [self._ast_literal(arg) for arg in decorator.args]
+            keywords = {keyword.arg: self._ast_literal(keyword.value) for keyword in decorator.keywords if keyword.arg}
+        name = self._ast_name(target)
+        if not name:
+            return None
+        result: dict[str, Any] = {"name": name}
+        if args:
+            result["args"] = args
+        if keywords:
+            result["keywords"] = keywords
+        return result
+
+    def _dialog_file_summaries(self, map_dir: Path, max_entries: int) -> list[dict[str, Any]]:
+        summaries: list[dict[str, Any]] = []
+        for dialog_path in sorted(map_dir.glob("dialog*.json"), key=lambda item: item.name):
+            data = self._load_optional_json(dialog_path)
+            entry_count = len(data) if isinstance(data, (dict, list)) else 0
+            summaries.append(
+                {
+                    "name": dialog_path.name,
+                    "path": self._relative_path(dialog_path),
+                    "topLevelType": type(data).__name__ if data is not None else "missing",
+                    "entryCount": entry_count,
+                    "truncated": entry_count > max_entries,
+                }
+            )
+        return summaries
+
+    def _map_authoring_warnings(
+        self,
+        config_data: dict[str, Any],
+        object_summary: dict[str, Any],
+        script_summary: dict[str, Any],
+        resource_index: dict[str, list[str]],
+    ) -> list[dict[str, Any]]:
+        warnings: list[dict[str, Any]] = []
+        config_ids = {str(key) for key in config_data}
+        known_ids = set(resource_index) | config_ids
+        refs = sorted(set(self._collect_refs(config_data)))
+        unresolved_refs = [ref for ref in refs if ref not in known_ids]
+        if unresolved_refs:
+            warnings.append(
+                {
+                    "level": "warning",
+                    "code": "unresolved_refs",
+                    "message": "Some config ref values do not match map or global resource ids.",
+                    "refs": unresolved_refs,
+                }
+            )
+
+        player_refs = sorted(ref for ref in refs if ref in {"Sorcerer", "Warrior", "Assasin"})
+        if player_refs:
+            warnings.append(
+                {
+                    "level": "warning",
+                    "code": "player_template_refs",
+                    "message": "Player-class refs should not be placed as normal map actors.",
+                    "refs": player_refs,
+                }
+            )
+
+        target_ids = config_ids | set(object_summary.get("namedObjects", []))
+        missing_trigger_targets = [
+            trigger
+            for trigger in script_summary.get("triggers", [])
+            if isinstance(trigger, dict)
+            and isinstance(trigger.get("target"), str)
+            and trigger["target"] not in target_ids
+        ]
+        if missing_trigger_targets:
+            warnings.append(
+                {
+                    "level": "warning",
+                    "code": "missing_trigger_targets",
+                    "message": "Some script trigger targets are not named map objects or config ids.",
+                    "triggers": missing_trigger_targets,
+                }
+            )
+
+        for script_warning in script_summary.get("warnings", []):
+            if isinstance(script_warning, dict):
+                warnings.append(script_warning)
+        return warnings
+
+    def _collect_refs(self, value: Any) -> list[str]:
+        refs: list[str] = []
+        if isinstance(value, dict):
+            ref = value.get("ref")
+            if isinstance(ref, str) and ref:
+                refs.append(ref)
+            for item in value.values():
+                refs.extend(self._collect_refs(item))
+        elif isinstance(value, list):
+            for item in value:
+                refs.extend(self._collect_refs(item))
+        return refs
+
+    def _load_optional_json(self, path: Path) -> Any:
+        if not path.exists():
+            return None
+        return self._load_json(path)
+
+    def _load_json(self, path: Path) -> Any:
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ProtocolError(-32603, f"Invalid JSON in {self._relative_path(path)}: {exc}") from exc
+        except OSError as exc:
+            raise ProtocolError(-32603, f"Unable to read {self._relative_path(path)}: {exc}") from exc
+
+    def _compact_json(self, value: Any, depth: int = 0) -> Any:
+        if depth > 4:
+            return "..."
+        if value is None or isinstance(value, (int, float, bool)):
+            return value
+        if isinstance(value, str):
+            return self._trim_text(value)
+        if isinstance(value, list):
+            compacted = [self._compact_json(item, depth + 1) for item in value[:20]]
+            if len(value) > 20:
+                compacted.append("...")
+            return compacted
+        if isinstance(value, dict):
+            items = list(value.items())
+            compacted_dict = {str(key): self._compact_json(item, depth + 1) for key, item in items[:30]}
+            if len(items) > 30:
+                compacted_dict["..."] = f"{len(items) - 30} more"
+            return compacted_dict
+        return repr(value)
+
+    @staticmethod
+    def _bounded_int(value: Any, name: str, default: int, minimum: int, maximum: int) -> int:
+        if value is None:
+            return default
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ProtocolError(-32602, f"map_design_brief `{name}` must be an integer")
+        if value < minimum or value > maximum:
+            raise ProtocolError(-32602, f"map_design_brief `{name}` must be between {minimum} and {maximum}")
+        return value
+
+    @staticmethod
+    def _optional_bool(arguments: dict[str, Any], name: str, default: bool) -> bool:
+        value = arguments.get(name, default)
+        if not isinstance(value, bool):
+            raise ProtocolError(-32602, f"map_design_brief `{name}` must be a boolean")
+        return value
+
+    @staticmethod
+    def _ast_name(node: ast.AST) -> str | None:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            parent = EngineMcpServer._ast_name(node.value)
+            return f"{parent}.{node.attr}" if parent else node.attr
+        return None
+
+    @staticmethod
+    def _ast_literal(node: ast.AST) -> Any:
+        try:
+            return ast.literal_eval(node)
+        except (ValueError, SyntaxError):
+            name = EngineMcpServer._ast_name(node)
+            return name if name is not None else ast.dump(node)
+
+    @staticmethod
+    def _trim_text(value: str, limit: int = 240) -> str:
+        collapsed = " ".join(value.split())
+        if len(collapsed) <= limit:
+            return collapsed
+        return f"{collapsed[: limit - 3]}..."
+
+    def _relative_path(self, path: Path) -> str:
+        try:
+            return path.resolve().relative_to(self.repo_root.resolve()).as_posix()
+        except ValueError:
+            return str(path)
+
+    @staticmethod
+    def _coord_components(coords: Any) -> tuple[int, int, int] | None:
+        try:
+            return int(coords.x), int(coords.y), int(coords.z)
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _bounds_for_level(bounds: Any, z: int) -> int | None:
+        if bounds is None:
+            return None
+        try:
+            items = bounds.items()
+        except AttributeError:
+            try:
+                items = dict(bounds).items()
+            except (TypeError, ValueError):
+                return None
+        for level, bound in items:
+            try:
+                if int(level) == z:
+                    return int(bound)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    def _validate_pathfinding_call(
+        self, target: Any, method: str, resolved_args: list[Any], resolved_kwargs: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Reject MCP-triggered pathfinding over out-of-bounds or impassable coordinates.
+
+        Returns an error payload (to be surfaced as an isError tool result) when the call would
+        steer the engine pathfinder toward an invalid target, or None when the call is allowed.
+        Validation is intentionally conservative: when engine objects do not expose the expected
+        accessors it defers to normal handling rather than blocking legitimate calls.
+        """
+        if method not in MCP_PATHFINDING_METHODS:
+            return None
+
+        # CPlayerController.setTarget(player, coords)
+        player = resolved_args[0] if len(resolved_args) > 0 else resolved_kwargs.get("player")
+        coords = resolved_args[1] if len(resolved_args) > 1 else resolved_kwargs.get("target")
+        if coords is None:
+            return None
+
+        components = self._coord_components(coords)
+        if components is None:
+            return None
+        x, y, z = components
+
+        if abs(x) > MCP_MAX_TARGET_MAGNITUDE or abs(y) > MCP_MAX_TARGET_MAGNITUDE:
+            return {
+                "error": (
+                    f"setTarget rejected: coordinate ({x}, {y}, {z}) exceeds the maximum allowed "
+                    f"magnitude {MCP_MAX_TARGET_MAGNITUDE}"
+                )
+            }
+
+        game_map = None
+        get_map = getattr(player, "getMap", None)
+        if callable(get_map):
+            try:
+                game_map = get_map()
+            except Exception:
+                game_map = None
+        if game_map is None:
+            return None
+
+        x_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getXBounds"), z)
+        y_bounds = self._bounds_for_level(self._safe_engine_call(game_map, "getYBounds"), z)
+        if x_bounds is not None and (x < 0 or x > x_bounds):
+            return {"error": (f"setTarget rejected: x={x} is outside map extents [0, {x_bounds}] for level z={z}")}
+        if y_bounds is not None and (y < 0 or y > y_bounds):
+            return {"error": (f"setTarget rejected: y={y} is outside map extents [0, {y_bounds}] for level z={z}")}
+
+        can_step = getattr(game_map, "canStep", None)
+        if callable(can_step):
+            try:
+                passable = can_step(coords)
+            except Exception:
+                passable = None
+            if passable is False:
+                return {"error": (f"setTarget rejected: target ({x}, {y}, {z}) is not a passable tile")}
+
+        return None
+
+    @staticmethod
+    def _safe_engine_call(obj: Any, method: str) -> Any:
+        accessor = getattr(obj, method, None)
+        if not callable(accessor):
+            return None
+        try:
+            return accessor()
+        except Exception:
+            return None
+
+    def _handleRegistry(self, transport: str, session_id: str | None) -> HandleRegistry:
+        if transport == "http":
+            return self._require_connection_state(transport, session_id).handle_registry
+        return self._stdio_handles
+
+    @staticmethod
+    def _releaseHandle(registry: HandleRegistry, handle: str) -> int:
+        value = registry.handles.pop(handle, None)
+        if value is None:
+            return 0
+        registry.object_handles.pop(id(value), None)
+        return 1
+
+    def _closeHandleRegistry(self, registry: HandleRegistry) -> None:
+        with self._lock:
+            registry.closed = True
+            registry.handles.clear()
+            registry.object_handles.clear()
+
+    def _resolve_handle_references(self, value: Any, registry: HandleRegistry | None = None) -> Any:
+        registry = registry if registry is not None else self._stdio_handles
+        if isinstance(value, list):
+            return [self._resolve_handle_references(item, registry) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self._resolve_handle_references(item, registry) for item in value)
+        if isinstance(value, dict):
+            handle = value.get("__handle__")
+            if isinstance(handle, str):
+                with self._lock:
+                    if handle not in registry.handles:
+                        raise ProtocolError(-32602, f"Unknown handle: {handle}")
+                    return registry.handles[handle]
+            return {str(key): self._resolve_handle_references(item, registry) for key, item in value.items()}
+        return value
+
+    def _python_methods_for(self, value: Any) -> list[dict[str, str]]:
+        methods: list[dict[str, str]] = []
+        allowed_methods = self._allowed_handle_methods_for(value)
+        for name, member in inspect.getmembers(type(value)):
+            if name.startswith("_"):
+                continue
+            if name not in allowed_methods:
+                continue
+            if self._python_callable(member) is None:
+                continue
+            methods.append({"name": name, "signature": self._safe_signature(member)})
+        methods.sort(key=lambda item: item["name"])
+        return methods
+
+    @staticmethod
+    def _allowed_handle_methods_for(value: Any) -> set[str]:
+        methods: set[str] = set()
+        for cls in getattr(type(value), "__mro__", (type(value),)):
+            class_name = getattr(cls, "__name__", "")
+            methods.update(MCP_ALLOWED_HANDLE_METHODS.get(class_name, set()))
+        return methods
+
+    def _serialize_result(self, value: Any, registry: HandleRegistry | None = None) -> Any:
+        registry = registry if registry is not None else self._stdio_handles
+        added = []
+        with self._lock:
+            if registry.closed:
+                raise ProtocolError(-32001, "Session has been terminated")
+            try:
+                return self._serializeValue(value, registry, added)
+            except Exception:
+                for handle in added:
+                    self._releaseHandle(registry, handle)
+                raise
+
+    def _serializeValue(self, value: Any, registry: HandleRegistry, added: list[str]) -> Any:
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, (list, tuple, set, frozenset)):
+            return [self._serializeValue(item, registry, added) for item in value]
+        if isinstance(value, dict):
+            return {str(key): self._serializeValue(item, registry, added) for key, item in value.items()}
+        handle = registry.object_handles.get(id(value))
+        if handle is None or registry.handles.get(handle) is not value:
+            if len(registry.handles) >= MAX_MCP_HANDLES_PER_SESSION:
+                raise ProtocolError(
+                    -32003, "Session handle limit reached; release unused handles with engine_release_handles"
+                )
+            handle = f"h_{self.next_handle}"
+            self.next_handle += 1
+            registry.handles[handle] = value
+            registry.object_handles[id(value)] = handle
+            added.append(handle)
+        result = {"__handle__": handle, "__type__": value.__class__.__name__, "repr": repr(value)}
+        python_methods = self._python_methods_for(value)
+        if python_methods:
+            result["pythonMethods"] = python_methods
+        return result
+
+    def _trace_message(
+        self,
+        *,
+        transport: str,
+        direction: str,
+        payload: Any,
+        session_id: str | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        if not self.trace_messages:
+            return
+        record: dict[str, Any] = {
+            "transport": transport,
+            "direction": direction,
+            "sessionId": self._redact_trace_value(session_id),
+            "payload": self._redact_trace_value(payload),
+        }
+        if extra:
+            record["meta"] = self._redact_trace_value(extra)
+        logger.debug("trace %s", json.dumps(record, ensure_ascii=False))
+
+    def _emit_log(
+        self,
+        transport: str,
+        session_id: str | None,
+        level: str,
+        logger_name: str,
+        data: Any,
+    ) -> None:
+        payload = {
+            "jsonrpc": JSONRPC_VERSION,
+            "method": "notifications/message",
+            "params": {
+                "level": level,
+                "logger": logger_name,
+                "data": self._jsonable(data),
+            },
+        }
+
+        message = f"[{logger_name}] {json.dumps(self._jsonable(data), ensure_ascii=False)}"
+        python_level = {
+            "debug": logging.DEBUG,
+            "info": logging.INFO,
+            "notice": logging.INFO,
+            "warning": logging.WARNING,
+            "error": logging.ERROR,
+            "critical": logging.CRITICAL,
+            "alert": logging.CRITICAL,
+            "emergency": logging.CRITICAL,
+        }.get(level, logging.INFO)
+        logger.log(python_level, message)
+
+        if transport == "stdio":
+            state = self.stdio_state
+            if state and state.initialized and self._should_emit_client_log(state.log_level, level):
+                self._trace_message(
+                    transport="stdio",
+                    direction="send",
+                    payload=payload,
+                    session_id=None,
+                    extra={"logger": logger_name},
+                )
+                self._write_stdio_message(payload)
+            return
+
+        if session_id is None:
+            return
+        with self._lock:
+            state = self.http_sessions.get(session_id)
+            if state is None or not state.initialized or not self._should_emit_client_log(state.log_level, level):
+                return
+            streams = list(state.streams.values())
+        if not streams:
+            return
+        for stream in streams:
+            try:
+                stream.queue.put_nowait(payload)
+            except Exception:
+                pass
+
+    @staticmethod
+    def _should_emit_client_log(min_level: str, candidate_level: str) -> bool:
+        return LOG_LEVELS[candidate_level] <= LOG_LEVELS[min_level]
+
+    @staticmethod
+    def _result_response(req_id: Any, result: dict[str, Any]) -> dict[str, Any]:
+        return {"jsonrpc": JSONRPC_VERSION, "id": req_id, "result": result}
+
+    @staticmethod
+    def _error_response(req_id: Any, code: int, message: str, data: Any = None) -> dict[str, Any]:
+        error: dict[str, Any] = {"code": code, "message": message}
+        if data is not None:
+            error["data"] = data
+        response: dict[str, Any] = {"jsonrpc": JSONRPC_VERSION, "error": error}
+        if req_id is not None:
+            response["id"] = req_id
+        return response
+
+    @staticmethod
+    def _is_notification(payload: dict[str, Any]) -> bool:
+        return isinstance(payload, dict) and "method" in payload and "id" not in payload
+
+    @staticmethod
+    def _is_jsonrpc_response(payload: Any) -> bool:
+        return isinstance(payload, dict) and "method" not in payload and ("result" in payload or "error" in payload)
+
+    @staticmethod
+    def _read_stdio_message() -> Any | None:
+        while True:
+            raw = sys.stdin.buffer.readline(MAX_MCP_MESSAGE_BYTES + 1)
+            if not raw:
+                return None
+            if len(raw) > MAX_MCP_MESSAGE_BYTES:
+                while raw and not raw.endswith(b"\n"):
+                    raw = sys.stdin.buffer.readline(8192)
+                raise ProtocolError(-32600, "MCP stdio message exceeds 1 MiB limit")
+            try:
+                line = raw.decode("utf-8").strip()
+            except UnicodeDecodeError as exc:
+                raise ProtocolError(-32700, "Parse error: invalid UTF-8") from exc
+            if not line:
+                continue
+            return json.loads(line)
+
+    @staticmethod
+    def _write_stdio_message(payload: Any) -> None:
+        # ASCII JSON remains valid UTF-8 even when redirected Windows stdout uses a legacy code page.
+        body = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+        sys.stdout.write(body)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+    @staticmethod
+    def _jsonable(value: Any) -> Any:
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, (list, tuple)):
+            return [EngineMcpServer._jsonable(item) for item in value]
+        if isinstance(value, dict):
+            return {str(key): EngineMcpServer._jsonable(item) for key, item in value.items()}
+        return repr(value)
+
+    @staticmethod
+    def _redact_trace_value(value: Any, key: str | None = None) -> Any:
+        if key and key.lower() in {"authorization", "mcp-session-id", "sessionid", "session_id", "token"}:
+            return "<redacted>"
+        if value is None or isinstance(value, (int, float, bool)):
+            return value
+        if isinstance(value, str):
+            if len(value) > MAX_TRACE_STRING_BYTES:
+                return f"{value[:MAX_TRACE_STRING_BYTES]}...<truncated>"
+            return value
+        if isinstance(value, (list, tuple)):
+            return [EngineMcpServer._redact_trace_value(item) for item in value[:50]]
+        if isinstance(value, dict):
+            redacted = {}
+            for index, (item_key, item_value) in enumerate(value.items()):
+                if index >= 50:
+                    redacted["..."] = f"{len(value) - index} more"
+                    break
+                string_key = str(item_key)
+                redacted[string_key] = EngineMcpServer._redact_trace_value(item_value, string_key)
+            return redacted
+        return repr(value)
+
+
+class EngineHttpServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def __init__(self, server_address, request_handler_class, mcp_server: EngineMcpServer) -> None:
+        super().__init__(server_address, request_handler_class)
+        self.mcp_server = mcp_server
+
+
+class EngineHttpRequestHandler(BaseHTTPRequestHandler):
+    server_version = f"{SERVER_NAME}/{SERVER_VERSION}"
+    protocol_version = "HTTP/1.1"
+
+    def do_OPTIONS(self) -> None:
+        path = self.path.split("?", 1)[0]
+        if path == "/mcp" and not self.server.mcp_server.validate_origin(self.headers.get("Origin")):
+            self._write_mcp_error(HTTPStatus.FORBIDDEN, None, -32600, "Forbidden origin")
+            return
+        self._write_empty(HTTPStatus.NO_CONTENT, allow="GET, POST, DELETE, OPTIONS")
+
+    def do_GET(self) -> None:
+        path = self.path.split("?", 1)[0]
+
+        if path in {"/healthz", "/status"}:
+            payload = {
+                "name": SERVER_NAME,
+                "title": SERVER_TITLE,
+                "version": SERVER_VERSION,
+                "status": "ok",
+                "tools": len(self.server.mcp_server.exports),
+            }
+            self._write_json(payload)
+            return
+
+        if path == "/manifest.json":
+            payload = {
+                "name": SERVER_NAME,
+                "title": SERVER_TITLE,
+                "version": SERVER_VERSION,
+                "protocolVersion": LATEST_PROTOCOL_VERSION,
+                "capabilities": {
+                    "logging": {},
+                    "tools": {"listChanged": False},
+                },
+                "mcpEndpoint": "/mcp",
+            }
+            self._write_json(payload)
+            return
+
+        if path == "/":
+            payload = {
+                "name": SERVER_NAME,
+                "title": SERVER_TITLE,
+                "version": SERVER_VERSION,
+                "status": "ok",
+                "mcpEndpoint": "/mcp",
+            }
+            self._write_json(payload)
+            return
+
+        if path != "/mcp":
+            self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+            return
+
+        if not self.server.mcp_server.validate_origin(self.headers.get("Origin")):
+            self._write_mcp_error(HTTPStatus.FORBIDDEN, None, -32600, "Forbidden origin")
+            return
+
+        accept = self.headers.get("Accept", "")
+        if "text/event-stream" not in accept:
+            self._write_empty(HTTPStatus.METHOD_NOT_ALLOWED, allow="POST, DELETE, OPTIONS, GET")
+            return
+
+        session_id = self.headers.get("MCP-Session-Id")
+        if not session_id:
+            self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32600, "Missing MCP-Session-Id")
+            return
+
+        state = self.server.mcp_server.http_sessions.get(session_id)
+        if state is None:
+            self._write_mcp_error(HTTPStatus.NOT_FOUND, None, -32001, "Unknown session")
+            return
+
+        protocol_version_header = self.headers.get("MCP-Protocol-Version")
+        try:
+            protocol_version = self.server.mcp_server._resolve_http_protocol_version(state, protocol_version_header)
+        except ProtocolError as exc:
+            self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, exc.code, exc.message, exc.data)
+            return
+
+        try:
+            stream = self.server.mcp_server._create_stream(session_id)
+        except KeyError:
+            self._write_mcp_error(HTTPStatus.NOT_FOUND, None, -32001, "Unknown session")
+            return
+        except ProtocolError as exc:
+            self._write_mcp_error(HTTPStatus.TOO_MANY_REQUESTS, None, exc.code, exc.message, exc.data)
+            return
+
+        self.send_response(HTTPStatus.OK)
+        self._add_default_headers()
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("MCP-Session-Id", session_id)
+        self.send_header("MCP-Protocol-Version", protocol_version)
+        self.end_headers()
+
+        try:
+            self._write_sse_event(stream.stream_id, "")
+            while True:
+                try:
+                    item = stream.queue.get(timeout=30.0)
+                except queue.Empty:
+                    self.wfile.write(b": keep-alive\n\n")
+                    self.wfile.flush()
+                    continue
+                if item is None:
+                    break
+                self.server.mcp_server._trace_message(
+                    transport="http",
+                    direction="send",
+                    session_id=session_id,
+                    payload=item,
+                    extra={"stream": stream.stream_id},
+                )
+                self._write_sse_event(stream.stream_id, json.dumps(item, ensure_ascii=False, separators=(",", ":")))
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass
+        finally:
+            self.server.mcp_server._remove_stream(session_id, stream.stream_id)
+
+    def do_DELETE(self) -> None:
+        path = self.path.split("?", 1)[0]
+        if path != "/mcp":
+            self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+            return
+
+        if not self.server.mcp_server.validate_origin(self.headers.get("Origin")):
+            self._write_mcp_error(HTTPStatus.FORBIDDEN, None, -32600, "Forbidden origin")
+            return
+
+        session_id = self.headers.get("MCP-Session-Id")
+        if not session_id:
+            self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32600, "Missing MCP-Session-Id")
+            return
+
+        if not self.server.mcp_server.terminate_session(session_id):
+            self._write_mcp_error(HTTPStatus.NOT_FOUND, None, -32001, "Unknown session")
+            return
+
+        self._write_empty(HTTPStatus.NO_CONTENT)
+
+    def do_POST(self) -> None:
+        path = self.path.split("?", 1)[0]
+        if path != "/mcp":
+            self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+            return
+
+        if not self.server.mcp_server.validate_origin(self.headers.get("Origin")):
+            self._write_mcp_error(HTTPStatus.FORBIDDEN, None, -32600, "Forbidden origin")
+            return
+
+        accept = self.headers.get("Accept", "")
+        if "application/json" not in accept or "text/event-stream" not in accept:
+            self._write_mcp_error(
+                HTTPStatus.BAD_REQUEST,
+                None,
+                -32600,
+                "Accept header must include application/json and text/event-stream",
+            )
+            return
+
+        length_header = self.headers.get("Content-Length")
+        if length_header is None:
+            self._write_mcp_error(HTTPStatus.LENGTH_REQUIRED, None, -32600, "Missing Content-Length header")
+            return
+
+        try:
+            length = int(length_header)
+        except ValueError:
+            self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32600, "Invalid Content-Length header")
+            return
+        if length < 0:
+            self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32600, "Invalid Content-Length header")
+            return
+        if length > MAX_MCP_MESSAGE_BYTES:
+            self._write_mcp_error(
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                None,
+                -32600,
+                "MCP HTTP message exceeds 1 MiB limit",
+            )
+            return
+
+        try:
+            raw_body = self.rfile.read(length)
+            payload = json.loads(raw_body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._write_mcp_error(HTTPStatus.BAD_REQUEST, None, -32700, "Parse error")
+            return
+
+        session_id = self.headers.get("MCP-Session-Id")
+        protocol_version_header = self.headers.get("MCP-Protocol-Version")
+
+        self.server.mcp_server._trace_message(
+            transport="http",
+            direction="recv",
+            session_id=session_id,
+            payload=payload,
+            extra={"path": path, "protocolVersion": protocol_version_header},
+        )
+
+        if isinstance(payload, dict) and payload.get("method") != "initialize":
+            if not session_id:
+                self._write_mcp_error(HTTPStatus.BAD_REQUEST, payload.get("id"), -32600, "Missing MCP-Session-Id")
+                return
+            if session_id not in self.server.mcp_server.http_sessions:
+                self._write_mcp_error(HTTPStatus.NOT_FOUND, payload.get("id"), -32001, "Unknown session")
+                return
+
+        status, response, new_session_id, negotiated_protocol_version = self.server.mcp_server.handle_http_post(
+            payload=payload,
+            session_id=session_id,
+            protocol_version_header=protocol_version_header,
+        )
+
+        response_session_id = new_session_id or session_id
+        response_protocol_version = negotiated_protocol_version
+        if response_protocol_version is None and response_session_id:
+            state = self.server.mcp_server.http_sessions.get(response_session_id)
+            if state is not None:
+                response_protocol_version = state.protocol_version
+
+        if response is None:
+            self._write_empty(
+                status,
+                session_id=response_session_id,
+                protocol_version=response_protocol_version,
+            )
+            self.server.mcp_server._trace_message(
+                transport="http",
+                direction="send",
+                session_id=response_session_id,
+                payload={"status": int(status), "body": None},
+                extra={"path": path, "protocolVersion": response_protocol_version, "status": int(status)},
+            )
+            return
+
+        self.server.mcp_server._trace_message(
+            transport="http",
+            direction="send",
+            session_id=response_session_id,
+            payload=response,
+            extra={"path": path, "protocolVersion": response_protocol_version, "status": int(status)},
+        )
+        self._write_json(
+            response,
+            status=status,
+            session_id=response_session_id,
+            protocol_version=response_protocol_version,
+        )
+
+    def _write_empty(
+        self,
+        status: HTTPStatus,
+        *,
+        session_id: str | None = None,
+        protocol_version: str | None = None,
+        allow: str | None = None,
+    ) -> None:
+        self.send_response(status)
+        self._add_default_headers()
+        if allow:
+            self.send_header("Allow", allow)
+        if session_id:
+            self.send_header("MCP-Session-Id", session_id)
+        if protocol_version:
+            self.send_header("MCP-Protocol-Version", protocol_version)
+        if status not in {HTTPStatus.NO_CONTENT, HTTPStatus.NOT_MODIFIED}:
+            self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, format: str, *args: Any) -> None:
+        logger.info('%s - "%s"', self.address_string(), format % args)
+
+    def _write_json(
+        self,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        status: HTTPStatus = HTTPStatus.OK,
+        session_id: str | None = None,
+        protocol_version: str | None = None,
+    ) -> None:
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        self.send_response(status)
+        self._add_default_headers()
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        if session_id:
+            self.send_header("MCP-Session-Id", session_id)
+        if protocol_version:
+            self.send_header("MCP-Protocol-Version", protocol_version)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _write_mcp_error(
+        self,
+        status: HTTPStatus,
+        req_id: Any,
+        code: int,
+        message: str,
+        data: Any = None,
+    ) -> None:
+        payload = {"jsonrpc": JSONRPC_VERSION, "error": {"code": code, "message": message}}
+        if req_id is not None:
+            payload["id"] = req_id
+        if data is not None:
+            payload["error"]["data"] = data
+        self.server.mcp_server._trace_message(
+            transport="http",
+            direction="send",
+            session_id=self.headers.get("MCP-Session-Id"),
+            payload=payload,
+            extra={
+                "path": self.path.split("?", 1)[0],
+                "status": int(status),
+                "error": True,
+            },
+        )
+        self._write_json(payload, status=status)
+
+    def _write_sse_event(self, event_id: str, data: str) -> None:
+        lines = []
+        lines.append(f"id: {event_id}")
+        if data:
+            for line in data.splitlines() or [""]:
+                lines.append(f"data: {line}")
+        else:
+            lines.append("data:")
+        lines.append("")
+        lines.append("")
+        self.wfile.write("\n".join(lines).encode("utf-8"))
+        self.wfile.flush()
+
+    def _add_default_headers(self) -> None:
+        self.send_header(
+            "Access-Control-Allow-Origin", self.headers.get("Origin", "*") if self.headers.get("Origin") else "*"
+        )
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "content-type, accept, origin, mcp-session-id, mcp-protocol-version, last-event-id",
+        )
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+        self.send_header("Vary", "Accept, Origin, MCP-Protocol-Version, MCP-Session-Id")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="MCP server exposing unified game/_game functions")
+    parser.add_argument("--repo-root", default=None, help="Repository root path")
+    parser.add_argument("--build-dir", default="cmake-build-release", help="Build directory containing _game")
+    parser.add_argument(
+        "--build-config",
+        default=os.environ.get("GAME_BUILD_CONFIG"),
+        help="CMake build configuration for multi-config generators such as Visual Studio",
+    )
+    parser.add_argument("--build", action="store_true", help="Build the extension before starting the server")
+    parser.add_argument("--stdio", action="store_true", help="Run as a stdio MCP server instead of HTTP")
+    parser.add_argument("--host", default="127.0.0.1", help="HTTP host to bind when running in HTTP mode")
+    parser.add_argument("--port", type=int, default=8765, help="HTTP port to bind when running in HTTP mode")
+    parser.add_argument("--log-level", default="INFO", help="Python log level")
+    parser.add_argument(
+        "--trace-messages",
+        action="store_true",
+        help="Log full MCP request/response payloads for debugging",
+    )
+    parser.add_argument("--allow-origin", action="append", default=[], help="Additional allowed Origin value")
+    parser.add_argument(
+        "--native-log-sink",
+        choices=["stdout", "stderr", "file", "disabled"],
+        default=None,
+        help="Configure native engine logging target (default stdout, file when --stdio).",
+    )
+    parser.add_argument(
+        "--native-log-file",
+        default=None,
+        help="File path for native logs when using --native-log-sink file (relative to repo root by default).",
+    )
+    return parser.parse_args()
+
+
+def configure_logging(level_name: str, log_sink: str = "stderr", trace_messages: bool = False) -> None:
+    level = getattr(logging, level_name.upper(), logging.INFO)
+    if trace_messages and level > logging.DEBUG:
+        level = logging.DEBUG
+    stream = sys.stdout if log_sink == "stdout" else sys.stderr
+    logging.basicConfig(
+        level=level,
+        stream=stream,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+
+def is_resource_root(path: Path) -> bool:
+    return (path / "config").is_dir() and (path / "maps").is_dir() and (path / "plugins").is_dir()
+
+
+def main() -> int:
+    args = parse_args()
+    python_log_sink = "stderr" if args.stdio else "stdout"
+    configure_logging(args.log_level, log_sink=python_log_sink, trace_messages=args.trace_messages)
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parent
+    build_dir_arg = Path(args.build_dir)
+    build_dir = build_dir_arg.resolve() if build_dir_arg.is_absolute() else (repo_root / build_dir_arg).resolve()
+    if not build_dir.exists() and is_resource_root(repo_root):
+        build_dir = repo_root
+    native_log_sink = args.native_log_sink or ("file" if args.stdio else "stdout")
+    native_log_path: Path | None = None
+    if native_log_sink == "file":
+        log_path = Path(args.native_log_file) if args.native_log_file else build_dir / "logs" / "mcp-stdio.log"
+        if not log_path.is_absolute():
+            log_path = repo_root / log_path
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        native_log_path = log_path
+    elif args.native_log_file:
+        logger.warning(
+            "Ignoring --native-log-file because native log sink %s does not use a file",
+            native_log_sink,
+        )
+
+    server = EngineMcpServer(
+        repo_root=repo_root,
+        build_dir=build_dir,
+        allow_origins=args.allow_origin,
+        trace_messages=args.trace_messages,
+        native_log_sink=native_log_sink,
+        native_log_path=native_log_path,
+        build_config=args.build_config,
+    )
+    if args.build:
+        server.build_extension()
+    server.import_modules()
+    server.inspect_and_export()
+    if args.stdio:
+        server.serve_stdio()
+    else:
+        server.serve_http(host=args.host, port=args.port)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

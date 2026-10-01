@@ -1,0 +1,316 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+
+#include "core/CConcepts.h"
+#include "core/CTags.h"
+#include "core/CGlobal.h"
+#include "core/CUtil.h"
+
+#include <exception>
+#include <set>
+#include <vector>
+
+class CGameEvent;
+
+class CMap;
+
+class CGame;
+
+class CAnimation;
+
+class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
+    friend class CMap;
+    friend class CSceneManager;
+
+    V_META(CGameObject, vstd::meta::empty, V_PROPERTY(CGameObject, std::string, name, getName, setName),
+           V_PROPERTY(CGameObject, std::string, type, getType, setType),
+           V_PROPERTY(CGameObject, std::string, typeId, getTypeId, setTypeId),
+           V_PROPERTY(CGameObject, std::string, animation, getAnimation, setAnimation),
+           V_PROPERTY(CGameObject, std::string, label, getLabel, setLabel),
+           V_PROPERTY(CGameObject, std::string, description, getDescription, setDescription),
+           V_PROPERTY(CGameObject, CTags, tags, getTags, setTags))
+
+  public:
+    static std::function<bool(std::shared_ptr<CGameObject>, std::shared_ptr<CGameObject>)> name_comparator;
+
+    // Typed engine signals share the same flat string channel as the dynamic
+    // per-property "<name>Changed" notifications emitted from setProperty. To stop
+    // an arbitrary (config/runtime) property from spoofing a typed engine event,
+    // a dynamic property notification whose derived signal name lands in this
+    // reserved set is dropped fail-closed (the generic propertyChanged channel
+    // still fires). The set lists every name emitted directly via signal(...) with
+    // a hardcoded engine name across the codebase.
+    static bool isReservedTypedSignalName(const std::string &signalName);
+
+    static bool sameInstance(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
+    static bool sameRuntimeIdentity(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
+    static bool sameConfiguredType(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
+    static bool equivalentValue(const std::shared_ptr<CGameObject> &a, const std::shared_ptr<CGameObject> &b);
+
+    class PropertyNotificationBatch {
+      public:
+        explicit PropertyNotificationBatch(CGameObject &object);
+
+        ~PropertyNotificationBatch();
+
+        PropertyNotificationBatch(const PropertyNotificationBatch &) = delete;
+
+        PropertyNotificationBatch &operator=(const PropertyNotificationBatch &) = delete;
+
+      private:
+        CGameObject &object;
+    };
+
+    CGameObject();
+
+    virtual ~CGameObject();
+
+    std::shared_ptr<CMap> getMap();
+
+    // TODO: get rid of game as a property!
+    std::shared_ptr<CGame> getGame();
+
+    void setGame(std::shared_ptr<CGame> game);
+
+    template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> ptr() {
+        //_cast purposedly
+        return vstd::cast<T>(const_cast<CGameObject *>(this)->shared_from_this());
+    }
+
+    template <typename T> void setProperty(std::string name, T property) {
+        auto object = this->ptr();
+        directPropertyNotificationSuppressedNames.push_back(name);
+        try {
+            if (this->meta()->has_property(name, object)) {
+                this->meta()->set_property<CGameObject, T>(name, object, property);
+            } else {
+                this->meta()->set_dynamic_property<CGameObject, T>(name, object, property);
+            }
+        } catch (...) {
+            directPropertyNotificationSuppressedNames.pop_back();
+            throw;
+        }
+        directPropertyNotificationSuppressedNames.pop_back();
+        recordPropertyChanged(name);
+    }
+
+    template <typename T> T getProperty(std::string name) {
+        return this->meta()->get_property<CGameObject, T>(name, this->ptr());
+    }
+
+    bool hasProperty(std::string name);
+
+    void setStringProperty(std::string name, std::string value);
+
+    void setBoolProperty(std::string name, bool value);
+
+    void setNumericProperty(std::string name, int value);
+
+    std::string getStringProperty(std::string name);
+
+    bool getBoolProperty(std::string name);
+
+    int getNumericProperty(std::string name);
+
+    template <fn::GameObjectDerived T = CGameObject>
+    void setObjectProperty(std::string name, std::shared_ptr<T> object) {
+        setProperty(name, object);
+    }
+
+    template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> getObjectProperty(std::string name) {
+        return getProperty<std::shared_ptr<T>>(name);
+    }
+
+    template <fn::GameObjectDerived T = CGameObject> std::shared_ptr<T> clone() { return vstd::cast<T>(_clone()); }
+
+    void incProperty(std::string name, int value);
+
+    bool hasTag(CTag tag);
+
+    bool hasTag(const std::string &tag);
+
+    void addTag(CTag tag);
+
+    void addTag(const std::string &tag);
+
+    void removeTag(CTag tag);
+
+    void removeTag(const std::string &tag);
+
+  public:
+    std::string getType();
+
+    void setType(std::string type);
+
+    std::string getTypeId();
+
+    void setTypeId(std::string _typeId);
+
+    std::string getName();
+
+    void setName(std::string name);
+
+    virtual std::string to_string() override;
+
+    CTags getTags();
+
+    void setTags(CTags tags);
+
+    std::string getAnimation();
+
+    void setAnimation(std::string animation);
+
+    std::string getLabel();
+
+    void setLabel(std::string _label);
+
+    std::string getDescription();
+
+    void setDescription(std::string _description);
+
+    std::shared_ptr<CAnimation> getGraphicsObject();
+
+    void connect(std::string signal, std::shared_ptr<CGameObject> object, std::string slot);
+
+    void disconnect(const std::string &signal, const std::shared_ptr<CGameObject> &object, const std::string &slot);
+
+    void notifyPropertyChanged(const std::string &name);
+
+    void notifyPropertiesChanged(const std::set<std::string> &names);
+
+    template <bool now = false, typename... Args> void signal(std::string signal, Args... args) {
+        // vstd::logger::debug(signal, args...);
+        auto it = connections.begin();
+        while (it != connections.end()) {
+            auto [_signal, object, slot] = *it;
+            auto ob = object.lock();
+            if (ob) {
+                if (signal == _signal) {
+                    auto _slot = slot;
+                    auto task = [=]() {
+                        if (_slot.empty()) {
+                            return;
+                        }
+                        // Config-driven reflective slot dispatch: fail closed so a
+                        // missing / invalid signal handler name cannot crash the
+                        // event loop. Actions no-op and are logged.
+                        try {
+                            ob->meta()->invoke_method<void, CGameObject, Args...>(_slot, ob, args...);
+                        } catch (const std::exception &exception) {
+                            vstd::logger::warning("Ignoring signal slot callback failure:", _slot, exception.what());
+                        }
+                    };
+                    if constexpr (now) {
+                        vstd::call_now(task);
+                    } else {
+                        vstd::call_later(task);
+                    }
+                }
+                ++it;
+            } else {
+                it = connections.erase(it);
+            }
+        }
+    }
+
+  protected:
+    void recordDirectPropertyChanged(const std::string &name);
+
+  private:
+    std::list<std::tuple<std::string, std::weak_ptr<CGameObject>, std::string>> connections;
+
+    std::shared_ptr<CGameObject> _clone();
+
+    void setOwningMap(std::shared_ptr<CMap> map);
+
+    void clearOwningMap(const std::shared_ptr<CMap> &expectedMap);
+
+    void beginPropertyNotificationBatch();
+
+    void endPropertyNotificationBatch();
+
+    void recordPropertyChanged(const std::string &name);
+
+    void notifyPropertyChangedWithoutInvalidation(const std::string &name);
+
+    void notifyPropertiesChangedWithoutInvalidation(const std::set<std::string> &names);
+
+    void invalidateCachedPropertyState(const std::string &name);
+
+    void invalidateCachedPropertyState(const std::set<std::string> &names);
+
+    vstd::lazy<CAnimation> graphicsObject;
+
+    std::string type;
+    std::string typeId;
+    std::string name;
+    std::string animation;
+    std::string label;
+    std::string description;
+
+    CTags tags;
+
+    std::weak_ptr<CGame> game;
+    std::weak_ptr<CMap> owningMap;
+
+    int propertyNotificationBatchDepth = 0;
+    std::vector<std::string> directPropertyNotificationSuppressedNames;
+    std::set<std::string> batchedPropertyNotifications;
+};
+
+class CVisitable {
+  public:
+    virtual void onEnter(std::shared_ptr<CGameEvent>) = 0;
+
+    virtual void onLeave(std::shared_ptr<CGameEvent>) = 0;
+};
+
+class CMoveable {
+  public:
+    virtual void beforeMove() = 0;
+
+    virtual void afterMove() = 0;
+};
+
+class CWearable {
+  public:
+    virtual void onEquip(std::shared_ptr<CGameEvent>) = 0;
+
+    virtual void onUnequip(std::shared_ptr<CGameEvent>) = 0;
+};
+
+class CUsable {
+  public:
+    virtual void onUse(std::shared_ptr<CGameEvent>) = 0;
+};
+
+class CTurnable {
+  public:
+    virtual void onTurn(std::shared_ptr<CGameEvent>) = 0;
+};
+
+class CCreatable {
+  public:
+    virtual void onCreate(std::shared_ptr<CGameEvent>) = 0;
+
+    virtual void onDestroy(std::shared_ptr<CGameEvent>) = 0;
+};

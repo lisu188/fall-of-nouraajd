@@ -1,0 +1,502 @@
+{
+  "CrownOfNightmares": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 7,
+          "armor": 280,
+          "crit": 5,
+          "intelligence": 12,
+          "stamina": 14,
+          "strength": 4
+        }
+      },
+      "label": "Crown of Nightmares",
+      "description": "Jagged circlet of OctoBogz shell and chapel bone, still pulsing with the clergy-breaking plague.",
+      "power": 18
+    }
+  },
+  "EradicatorsBoots": {
+    "class": "CBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 0,
+          "armor": 170,
+          "intelligence": 7,
+          "stamina": 8,
+          "strength": 10
+        }
+      },
+      "label": "Eradicators Boots",
+      "description": "Steel-shanked boots for Eradicator squads; the soles still reek of burned Pritscher warrens.",
+      "power": 14
+    }
+  },
+  "GlovesOfTheAssasin": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 15,
+          "armor": 295,
+          "crit": 2,
+          "intelligence": 9,
+          "stamina": 13,
+          "strength": 8
+        }
+      },
+      "label": "Gloves of the Assasin",
+      "description": "Fingerless gloves soaked in lamp oil and soot so assassins can climb chimneys unseen.",
+      "power": 11
+    }
+  },
+  "Scroll": {
+    "class": "CScroll",
+    "properties": {
+      "animation": "images/items/scroll",
+      "label": "Scroll",
+      "description": "Cheap parchment from the chapel scriptorium passed among mayors, mercenaries, and villagers.",
+      "power": 0,
+      "singleUse": false
+    }
+  },
+  "TownPortalScroll": {
+    "class": "TownPortalScroll",
+    "properties": {
+      "animation": "images/items/scroll",
+      "label": "Scroll of Town Portal",
+      "description": "Sigils painted with powdered teleporter stone bind the reader to Nouraajd's lonely obelisks.",
+      "power": 0,
+      "singleUse": true
+    }
+  },
+  "UndestructibleBelt": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 14,
+          "armor": 300,
+          "block": 6,
+          "intelligence": 14,
+          "stamina": 14,
+          "strength": 14
+        }
+      },
+      "label": "Undestructible Belt",
+      "description": "Ballista cabling braided after the siege, now used to drag barricades through Victor's streets.",
+      "power": 20
+    }
+  },
+  "BigFistedBelt": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "strength": 18,
+          "stamina": 8,
+          "intelligence": -14,
+          "crit": -6
+        }
+      },
+      "label": "Big-Fisted Belt",
+      "description": "A giant's girdle of ballista cable and knuckle-bone. It swells the arms with brute siege-strength while dimming every clever thought to a dull growl, and locks about the waist until the curse is undone.",
+      "power": 13,
+      "tags": [
+        "cursed"
+      ]
+    }
+  },
+  "GlovesOfMisplacement": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "intelligence": 6,
+          "armor": 60,
+          "attack": -14,
+          "agility": -12
+        }
+      },
+      "label": "Gloves of Misplacement",
+      "description": "Supple assassin's gloves stitched with a mischief-rune that never sits still. They promise a scholar's poise but send every strike wide of its mark, and cannot be peeled away until a priest lifts the curse.",
+      "power": 11,
+      "tags": [
+        "cursed"
+      ]
+    }
+  },
+  "CrownOfOppositeAlignment": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "intelligence": 12,
+          "armor": 150,
+          "strength": -12,
+          "block": -10,
+          "shadowResist": -20
+        }
+      },
+      "label": "Crown of Opposite Alignment",
+      "description": "A chapel-bone circlet that whispers borrowed brilliance while turning the wearer's will against itself. Wisdom floods in as courage drains away, and the crown clamps to the skull until the curse is broken.",
+      "power": 15,
+      "tags": [
+        "cursed"
+      ]
+    }
+  },
+  "SkullHelmet": {
+    "class": "SetHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 45,
+          "intelligence": 4,
+          "stamina": 2
+        }
+      },
+      "label": "Skull Helmet",
+      "description": "Varnished troll skull worn as a cap by hedge-wizards; grim, but the dead brain-case keeps thoughts orderly. Part of the Armor of the Damned set (4 pieces).",
+      "power": 4
+    }
+  },
+  "HelmOfTheAlabasterUnicorn": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 70,
+          "intelligence": 6,
+          "stamina": 3
+        }
+      },
+      "label": "Helm of the Alabaster Unicorn",
+      "description": "White-lacquered helm crowned with a spiral horn; a relic of gentler heraldry that still steadies the mind.",
+      "power": 6
+    }
+  },
+  "CrownOfTheSupremeMagi": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 90,
+          "crit": 2,
+          "intelligence": 9,
+          "stamina": 3
+        }
+      },
+      "label": "Crown of the Supreme Magi",
+      "description": "Three interlocking circlets once worn by a magi triumvirate; under them spells come quicker and colder.",
+      "power": 9
+    }
+  },
+  "ThunderHelmet": {
+    "class": "CHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 170,
+          "intelligence": 12,
+          "stamina": 6,
+          "strength": 4,
+          "thunderResist": 25
+        }
+      },
+      "label": "Thunder Helmet",
+      "description": "Giant-forged warhelm that mutters with distant storms; hair stands on end beneath it.",
+      "power": 14
+    }
+  },
+  "CrownOfDragontooth": {
+    "class": "SetHelmet",
+    "properties": {
+      "animation": "images/items/helmets/crownofnightmares",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 260,
+          "crit": 4,
+          "fireResist": 20,
+          "intelligence": 14,
+          "stamina": 10
+        }
+      },
+      "label": "Crown of Dragontooth",
+      "description": "Jagged diadem of dragon fangs set in red gold; whoever bears it speaks with a wyrm's authority over flame. Part of the Wrath of the Dragon Father set (4 pieces).",
+      "power": 21
+    }
+  },
+  "DragonboneGreaves": {
+    "class": "SetBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 50,
+          "intelligence": 3,
+          "stamina": 2
+        }
+      },
+      "label": "Dragonbone Greaves",
+      "description": "Shin guards of split wyrm bone, light as ash wood and stubborn as old scars. Part of the Wrath of the Dragon Father set (4 pieces).",
+      "power": 4
+    }
+  },
+  "BootsOfSpeed": {
+    "class": "CBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 12,
+          "armor": 60,
+          "stamina": 4
+        }
+      },
+      "label": "Boots of Speed",
+      "description": "Courier boots stitched with wind-runes; roads seem to shorten beneath them.",
+      "power": 8
+    }
+  },
+  "SandalsOfTheSaint": {
+    "class": "CBoots",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 8,
+          "armor": 230,
+          "block": 4,
+          "intelligence": 10,
+          "stamina": 10,
+          "strength": 8
+        }
+      },
+      "label": "Sandals of the Saint",
+      "description": "Rope sandals a nameless saint wore into martyrdom; grace clings to whoever walks in them.",
+      "power": 20
+    }
+  },
+  "EquestriansGloves": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 9,
+          "armor": 55,
+          "stamina": 3
+        }
+      },
+      "label": "Equestrian's Gloves",
+      "description": "Supple riding gloves from the old horse-fairs; hands move at a canter in them.",
+      "power": 6
+    }
+  },
+  "GauntletsOfTheStillEye": {
+    "class": "CGloves",
+    "properties": {
+      "animation": "images/items/gloves/glovesoftheassasin",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "armor": 30,
+          "block": 2,
+          "crit": 2
+        }
+      },
+      "label": "Gauntlets of the Still Eye",
+      "description": "Thin gauntlets set with a dragon's dead eye at each cuff; the steady gaze quiets trembling hands.",
+      "power": 3
+    }
+  },
+  "GirdleOfVitality": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 40,
+          "stamina": 9
+        }
+      },
+      "label": "Girdle of Vitality",
+      "description": "Physician's broad belt lined with tonic herbs; the heart beats surer beneath it.",
+      "power": 5
+    }
+  },
+  "SashOfCourage": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 55,
+          "block": 5,
+          "stamina": 6,
+          "strength": 4
+        }
+      },
+      "label": "Sash of Courage",
+      "description": "Campaign sash awarded for holding the gates; fear finds no purchase on the one who wears it.",
+      "power": 7
+    }
+  },
+  "ShacklesOfWar": {
+    "class": "CBelt",
+    "properties": {
+      "animation": "images/items/belts/undestructiblebelt",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": -8,
+          "block": -6,
+          "stamina": 10,
+          "strength": 12
+        }
+      },
+      "label": "Shackles of War",
+      "description": "Iron war-fetters that lock about the waist and choose the field for you: no retreat and no surrender until the curse is struck off.",
+      "power": 13,
+      "tags": [
+        "cursed"
+      ]
+    }
+  },
+  "ShieldOfTheYawningDead": {
+    "class": "SetShield",
+    "properties": {
+      "animation": "images/items/armors/chestplateofnorth",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "armor": 70,
+          "block": 6,
+          "shadowResist": 10,
+          "stamina": 3,
+          "strength": 3
+        }
+      },
+      "label": "Shield of the Yawning Dead",
+      "description": "A barrow-door hammered into a shield; the grave-cold face of it makes the dead hesitate to strike. Part of the Armor of the Damned set (4 pieces).",
+      "power": 9
+    }
+  },
+  "DragonscaleGuards": {
+    "class": "SetPants",
+    "properties": {
+      "animation": "images/items/boots/eradicatorsboots",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "armor": 90,
+          "fireResist": 15,
+          "stamina": 4
+        }
+      },
+      "label": "Dragonscale Guards",
+      "description": "Thigh guards of overlapping wyrm scale, shrugging off both furnace heat and the claws of the deep. Part of the Wrath of the Dragon Father set (4 pieces).",
+      "power": 7
+    }
+  },
+  "ArmorOfTheDamned": {
+    "class": "CompoundArmor",
+    "properties": {
+      "animation": "images/items/armors/leatherarmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "armor": 250,
+          "crit": 4,
+          "dmgMax": 30,
+          "dmgMin": 23,
+          "intelligence": 12,
+          "shadowResist": 30,
+          "stamina": 16,
+          "strength": 10
+        }
+      },
+      "interaction": {
+        "ref": "Doom"
+      },
+      "coveredSlots": [
+        "0",
+        "1",
+        "2"
+      ],
+      "label": "Armor of the Damned",
+      "description": "Blackshard, barrow-shield, troll-skull and rib harness fused into one damned panoply; the grave answers to whoever wears it. Assembled from the Armor of the Damned set.",
+      "power": 24,
+      "tags": [
+        "compound"
+      ]
+    }
+  },
+  "DragonFatherWrath": {
+    "class": "CompoundArmor",
+    "properties": {
+      "animation": "images/items/armors/platearmor",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 10,
+          "armor": 820,
+          "crit": 6,
+          "fireResist": 75,
+          "intelligence": 20,
+          "stamina": 32,
+          "strength": 12
+        }
+      },
+      "interaction": {
+        "ref": "Fireball"
+      },
+      "coveredSlots": [
+        "2",
+        "5",
+        "6"
+      ],
+      "label": "Wrath of the Dragon Father",
+      "description": "Crown, scale, greaves and guards welded into a single wyrm-panoply; the wearer speaks to fire as a father to a wayward child. Assembled from the Wrath of the Dragon Father set.",
+      "power": 30,
+      "tags": [
+        "compound"
+      ]
+    }
+  }
+}

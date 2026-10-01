@@ -1,0 +1,102 @@
+{
+  "BeachTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/beach",
+      "canStep": true,
+      "label": "Beach",
+      "tileType": "beach"
+    }
+  },
+  "DesertTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/desert",
+      "canStep": true,
+      "label": "Desert",
+      "tileType": "desert"
+    }
+  },
+  "GrassTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/grass",
+      "canStep": true,
+      "label": "Grass",
+      "tileType": "grass"
+    }
+  },
+  "GroundTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/ground",
+      "canStep": true,
+      "label": "Ground",
+      "tileType": "ground"
+    }
+  },
+  "LavaTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/lava",
+      "canStep": true,
+      "label": "Lava",
+      "tileType": "lava"
+    }
+  },
+  "MountainTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/mountain",
+      "canStep": false,
+      "label": "Mountain",
+      "tileType": "mountain"
+    }
+  },
+  "RoadTile": {
+    "class": "RoadTile",
+    "properties": {
+      "animation": "images/tiles/road",
+      "canStep": true,
+      "label": "Road",
+      "tileType": "road",
+      "description": "Heals 1 hp per step"
+    }
+  },
+  "SnowTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/snow",
+      "canStep": true,
+      "label": "Snow",
+      "tileType": "snow"
+    }
+  },
+  "SwampTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/swamp",
+      "canStep": true,
+      "label": "Swamp",
+      "tileType": "swamp"
+    }
+  },
+  "WastelandTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/wasteland",
+      "canStep": true,
+      "label": "Wasteland",
+      "tileType": "wasteland"
+    }
+  },
+  "WaterTile": {
+    "class": "CTile",
+    "properties": {
+      "animation": "images/tiles/water",
+      "canStep": false,
+      "label": "Water",
+      "tileType": "water"
+    }
+  }
+}

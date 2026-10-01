@@ -1,0 +1,283 @@
+{
+  "townHallDialog": {
+    "class": "TownHallDialog",
+    "properties": {
+      "questIds": "victorQuest",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Welcome to the town hall, traveler. I am Mayor Irvin, steward of what's left. What business do you carry?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "can_discuss_victor_records",
+                  "nextStateId": "VICTOR_CLUE",
+                  "text": "Do your ledgers mention Victor's missing daughter?"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "condition": "victor_encounter_active",
+                  "nextStateId": "VICTOR_ACTIVE_REMINDER",
+                  "text": "About Victor's daughter..."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "victor_good_end",
+                  "nextStateId": "VICTOR_GOOD_REPORT",
+                  "text": "Victor's daughter is safe."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "condition": "victor_bad_end",
+                  "nextStateId": "VICTOR_BAD_REPORT",
+                  "text": "Victor's daughter is gone."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "condition": "has_letter_quest",
+                  "nextStateId": "ASK_HELP_REPEAT",
+                  "text": "About the sealed letter..."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 5,
+                  "condition": "can_chart_wayfarer_route",
+                  "action": "chart_wayfarer_route",
+                  "nextStateId": "WAYFARER_ROUTE",
+                  "text": "Study the old courier routes hidden in your ledgers.",
+                  "actionLabel": "Wayfarer"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 6,
+                  "condition": "can_offer_letter_work",
+                  "nextStateId": "ASK_HELP",
+                  "text": "I'm looking for work."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 7,
+                  "condition": "canOfferHumanRation",
+                  "action": "claimHumanRation",
+                  "nextStateId": "EXIT",
+                  "text": "Ask Irvin to check your people's ration ledger: claim 20 gold once.",
+                  "actionLabel": "Human aid"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 8,
+                  "condition": "canOfferOutlanderRations",
+                  "action": "claimOutlanderRations",
+                  "nextStateId": "EXIT",
+                  "text": "Share an outlander's trail rations: 5 gold for up to 5 health and 5 mana, once.",
+                  "actionLabel": "Outlander aid"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 9,
+                  "condition": "canOfferHighlanderAid",
+                  "action": "claimHighlanderAid",
+                  "nextStateId": "EXIT",
+                  "text": "Ask after the highland shield bearers' medical chest: 5 gold for up to 10 health, once.",
+                  "actionLabel": "Highlander aid"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 10,
+                  "condition": "canOfferWandererFocus",
+                  "action": "claimWandererFocus",
+                  "nextStateId": "EXIT",
+                  "text": "Study the wanderers' star charts at a quiet desk: 5 gold for up to 10 mana, once.",
+                  "actionLabel": "Wanderer aid"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 11
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ASK_HELP",
+            "text": "We require a courier to bear this sealed letter to Father Beren at the chapel. Will you take it?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "action": "give_letter",
+                  "nextStateId": "THANKS",
+                  "text": "I'll deliver it.",
+                  "actionLabel": "Accept delivery"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ASK_HELP_REPEAT",
+            "condition": "has_letter_quest",
+            "text": "You already agreed to bear our letter. Hurry to Father Beren before the ink dries useless.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "THANKS",
+            "text": "Thank you. Waste no time—the town frays by the hour.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_CLUE",
+            "text": "Among dusty ledgers you find a note on the Cult of Marumi Baso. A decade ago they concealed their chapel behind a wooden door in the courtyard between the tavern, town hall, and chapel. The author swears they sacrifice girls who resemble their dead prophet's daughter to preserve a stained glass and stretch the prophet's unnatural life. If Victor's child is there, the rite has already begun.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Run to the courtyard now.",
+                  "number": 0,
+                  "action": "spawn_cultists",
+                  "nextStateId": "EXIT",
+                  "actionLabel": "Begin rescue"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_ACTIVE_REMINDER",
+            "text": "Mayor Irvin shuts the ledger with shaking hands. If the courtyard door is open, there is no time left for ink or argument.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_GOOD_REPORT",
+            "text": "Word reaches the hall that Victor carried his daughter from the cult door alive. Irvin marks the ledger with a rare clean line: rescued.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_BAD_REPORT",
+            "text": "Irvin has only an ash-stained ribbon and a cleaned courtyard to record. The Cult of Marumi Baso left no debtor, no corpse, and no road to follow.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "WAYFARER_ROUTE",
+            "text": "The ledgers reveal smugglers' alleys and service lanes snaking behind the market and courtyard.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "EXIT",
+            "text": ""
+          }
+        }
+      ],
+      "speaker": "Mayor Irvin"
+    }
+  }
+}

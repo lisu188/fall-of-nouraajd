@@ -1,0 +1,850 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+  workflow_dispatch:
+    inputs:
+      run-campaign-scenarios:
+        description: Run full-route campaign scenarios
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "17 4 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  linux-fast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      coverage-needed: ${{ steps.change-classification.outputs.coverage-needed }}
+      native-needed: ${{ steps.change-classification.outputs.native-needed }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install Python deps
+        run: python3 -m pip install --upgrade -r requirements-dev.txt
+      - name: Smoke test Python deps
+        run: python3 -c "from PIL import Image; import black; print('python deps ok')"
+      - name: Validate content JSON
+        run: python3 scripts/validate_content.py --repo-root .
+      - name: Run tests/ suite (full discovery)
+        run: python3 -m unittest discover -s tests -t .
+      - name: test (python fast)
+        run: python3 test.py --suite fast
+      - name: classify changed paths
+        id: change-classification
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+            if [[ -z "${base}" || "${base}" == "0000000000000000000000000000000000000000" ]]; then
+              default_branch="origin/${{ github.event.repository.default_branch }}"
+              if git rev-parse --verify "${default_branch}" >/dev/null 2>&1 &&
+                merge_base="$(git merge-base "${default_branch}" "${head}")"; then
+                base="${merge_base}"
+              else
+                base="$(git rev-list --max-parents=0 "${head}")"
+              fi
+            fi
+          fi
+
+          force_native=()
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            force_native=(--force-native)
+          fi
+
+          python3 scripts/ci_change_classifier.py \
+            --base "${base}" \
+            --head "${head}" \
+            "${force_native[@]}" \
+            --github-output "${GITHUB_OUTPUT}"
+
+  linux:
+    needs: linux-fast
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GAME_CONFIGURE_SKIP_APT: "1"
+      GAME_CONFIGURE_SKIP_SUBMODULES: "1"
+      GAME_TEST_TIMINGS_FILE: test/test-timings-linux.json
+      GAME_XVFB_JOBS: "4"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install Python deps
+        run: python3 -m pip install --upgrade -r requirements-dev.txt
+      - name: Smoke test Python deps
+        run: python3 -c "from PIL import Image; import black; print('python deps ok')"
+      - name: Skip native validation
+        if: needs.linux-fast.outputs.native-needed != 'true'
+        run: echo "Native validation is not required for these changed paths."
+      - name: Install native deps
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
+            python3 python3-dev python3-pip python3-venv pybind11-dev python3-pil \
+            libboost-dev \
+            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
+            xvfb xauth
+      - name: Detect ccache metadata
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        id: ccache
+        shell: bash
+        run: |
+          compiler_id="$(c++ -dumpmachine)-$(c++ -dumpfullversion -dumpversion)"
+          compiler_id="${compiler_id//[^A-Za-z0-9_.-]/-}"
+          echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
+          echo "prefix=${{ runner.os }}-ccache-release-${compiler_id}-" >> "${GITHUB_OUTPUT}"
+      - name: Restore ccache
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ steps.ccache.outputs.dir }}
+          key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ steps.ccache.outputs.prefix }}
+            ${{ runner.os }}-ccache-
+      - name: Cache Python test timings
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.GAME_TEST_TIMINGS_FILE }}
+          key: ${{ runner.os }}-test-timings-linux-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-test-timings-linux-
+      - name: configure
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: GAME_CONFIGURE_BUILD_TYPES=Release ./configure.sh
+      - name: build test targets
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j"$(nproc)"
+      - name: Smoke test game imports
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: PYTHONPATH=cmake-build-release:res python3 -c "import _game; import game; print('game imports ok')"
+      - name: campaign gate (nouraajd smoke)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        timeout-minutes: 10
+        run: python3 test.py GameTest.test_mcp_scenario_harness_drives_nouraajd_rolf_gooby
+      - name: campaign gate (quest state and rewards)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        timeout-minutes: 20
+        run: |
+          python3 test.py \
+            GameTest.test_nouraajd_quest_state_machine \
+            GameTest.test_nouraajd_victor_timeout_cleanup_regression \
+            GameTest.test_nouraajd_octobogz_unique_reward_is_not_duplicated \
+            GameTest.test_nouraajd_octobogz_late_contract_claims_existing_clear_reward
+      - name: ccache stats after build
+        if: always() && needs.linux-fast.outputs.native-needed == 'true'
+        shell: bash
+        run: |
+          if command -v ccache >/dev/null 2>&1; then
+            ccache --show-stats
+          fi
+      - name: test (c++)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+      - name: performance guard (native)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        run: ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+      - name: test (python gameplay)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        timeout-minutes: 45
+        run: python3 test.py --suite gameplay --jobs "$(nproc)"
+      - name: test (python ui)
+        if: needs.linux-fast.outputs.native-needed == 'true'
+        timeout-minutes: 45
+        run: python3 test.py --suite ui --jobs "$(nproc)"
+      - name: campaign gate (full-route skip reason)
+        if: >-
+          ${{
+            always() &&
+            (
+              needs.linux-fast.outputs.native-needed != 'true' ||
+              !(
+                github.event_name == 'schedule' ||
+                (github.event_name == 'workflow_dispatch' && (inputs['run-campaign-scenarios'] == true || inputs['run-campaign-scenarios'] == 'true')) ||
+                (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'campaign-scenarios'))
+              )
+            )
+          }}
+        run: |
+          echo "Full-route campaign scenarios skipped."
+          echo "Run them on the Monday schedule, with workflow_dispatch input run-campaign-scenarios=true, or by adding the campaign-scenarios PR label."
+          echo "Skipped full-route campaign scenarios are not counted as passed."
+      - name: campaign gate (full-route scenarios)
+        if: >-
+          ${{
+            needs.linux-fast.outputs.native-needed == 'true' &&
+            (
+              github.event_name == 'schedule' ||
+              (github.event_name == 'workflow_dispatch' && (inputs['run-campaign-scenarios'] == true || inputs['run-campaign-scenarios'] == 'true')) ||
+              (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'campaign-scenarios'))
+            )
+          }}
+        timeout-minutes: 30
+        run: |
+          python3 test.py \
+            GameTest.test_map_walkthrough_nouraajd \
+            McpServerTest.test_stdio_map_walkthrough_nouraajd \
+            GameTest.test_campaign_transitions_preserve_player_and_start_siege \
+            GameTest.test_campaign_driver_routes_full_campaign_with_carryover
+      - name: package
+        if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
+        run: cmake --build cmake-build-release --target package -j"$(nproc)"
+      - name: publish
+        if: github.event_name != 'pull_request' && needs.linux-fast.outputs.native-needed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: fall-of-nouraajd-linux
+          path: cmake-build-release/fall-of-nouraajd-*.tar.gz
+      - name: Save ccache
+        if: always() && needs.linux-fast.outputs.native-needed == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ steps.ccache.outputs.dir }}
+          key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
+  linux-coverage:
+    needs: linux-fast
+    if: needs.linux-fast.outputs.coverage-needed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      COVERAGE_INCLUDE_PREFIXES: src native_plugins
+      COVERAGE_REPORTER: python
+      GAME_TEST_TIMINGS_FILE: test/test-timings-linux-coverage.json
+      GAME_XVFB_JOBS: "4"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install Python deps
+        run: python3 -m pip install --upgrade -r requirements-dev.txt
+      - name: Smoke test Python deps
+        run: python3 -c "from PIL import Image; import black; print('python deps ok')"
+      - name: Install native deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache clang-format black \
+            python3 python3-dev python3-pip python3-venv pybind11-dev python3-pil \
+            libboost-dev \
+            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev \
+            xvfb xauth
+      - name: Detect ccache metadata
+        id: ccache
+        shell: bash
+        run: |
+          compiler_id="$(c++ -dumpmachine)-$(c++ -dumpfullversion -dumpversion)"
+          compiler_id="${compiler_id//[^A-Za-z0-9_.-]/-}"
+          echo "dir=$(ccache --get-config cache_dir)" >> "${GITHUB_OUTPUT}"
+          echo "prefix=${{ runner.os }}-ccache-coverage-${compiler_id}-" >> "${GITHUB_OUTPUT}"
+      - name: Restore ccache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ steps.ccache.outputs.dir }}
+          key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ steps.ccache.outputs.prefix }}
+            ${{ runner.os }}-ccache-
+      - name: Cache Python test timings
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.GAME_TEST_TIMINGS_FILE }}
+          key: ${{ runner.os }}-test-timings-linux-coverage-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-test-timings-linux-coverage-
+      - name: coverage
+        timeout-minutes: 60
+        run: ./scripts/run_coverage.sh
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: linux-coverage-report
+          path: |
+            coverage/
+            test/test-timings-linux-coverage.json
+          if-no-files-found: warn
+      - name: ccache stats after coverage
+        if: always()
+        shell: bash
+        run: |
+          if command -v ccache >/dev/null 2>&1; then
+            ccache --show-stats
+          fi
+      - name: Save ccache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ steps.ccache.outputs.dir }}
+          key: ${{ steps.ccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
+  windows-deps:
+    needs: linux-fast
+    if: needs.linux-fast.outputs.native-needed == 'true'
+    runs-on: windows-2022
+    timeout-minutes: 120
+    outputs:
+      vcpkg-installed-cache-key: ${{ steps.select-vcpkg-installed-cache.outputs.key }}
+    env: &windows-env
+      CONFIGURE_BUILD_DIRS: cmake-build-release
+      GAME_TEST_TIMINGS_FILE: test/test-timings-windows.json
+      GAME_WINDOWS_FAST_BUILD: "1"
+      GAME_WINDOWS_INSTALL_FAST_TOOLS: "0"
+      GAME_WINDOWS_REQUIRE_FAST_TOOLS: "1"
+      SCCACHE_DIR: ${{ github.workspace }}\.sccache
+      SCCACHE_SHA256: dcf489090aa5ef4c7d145e8b29f759124c803d636c3107f397bd50d425b5f341
+      SCCACHE_VERSION: "0.15.0"
+      VCPKG_BINARY_SOURCES: clear;x-gha,readwrite
+      VCPKG_ALLOW_MODIFIED_INSTALLED_CACHE: "1"
+      VCPKG_INSTALLED_DIR: ${{ github.workspace }}\vcpkg_installed\fast
+      VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\cmake\triplets
+      VCPKG_TARGET_TRIPLET: x64-windows-release
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install Python deps
+        run: python -m pip install --upgrade -r requirements-dev.txt
+      - name: Smoke test Python deps
+        run: python -c "from PIL import Image; import black; print('python deps ok')"
+      - name: Validate content JSON
+        run: |
+          python scripts/validate_content.py --repo-root .
+          python -m unittest tests.test_content_validator
+          python -m unittest tests.test_campaign_driver
+          python -m unittest tests.test_creature_stat_scale_baseline
+          python -m unittest tests.test_creature_equipment_inventory_baseline
+      - name: test (python fast)
+        run: python test.py --suite fast
+      - &setup-msvc
+        name: Set up MSVC command prompt
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+        with:
+          arch: x64
+      - &setup-vcpkg
+        name: Set up vcpkg
+        shell: pwsh
+        run: |
+          $candidateRoots = @()
+          if ($env:VCPKG_INSTALLATION_ROOT) {
+            $candidateRoots += $env:VCPKG_INSTALLATION_ROOT
+          }
+          $candidateRoots += "C:\vcpkg"
+          if ($env:VCPKG_ROOT) {
+            $candidateRoots += $env:VCPKG_ROOT
+          }
+
+          $vcpkgRoot = $candidateRoots |
+            Where-Object { $_ -and (Test-Path (Join-Path $_ "vcpkg.exe")) } |
+            Select-Object -First 1
+          if (-not $vcpkgRoot) {
+            throw "No usable vcpkg.exe was found in VCPKG_INSTALLATION_ROOT, C:\vcpkg, or VCPKG_ROOT"
+          }
+
+          "Using vcpkg at $vcpkgRoot"
+          "VCPKG_ROOT=$vcpkgRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - &enable-vcpkg-x-gha
+        name: Enable vcpkg x-gha binary cache
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      - &setup-windows-fast-tools
+        name: Set up Windows fast tools
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          # Trusted tools must live OUTSIDE the (possibly attacker-controlled) PR
+          # workspace so a committed tool shim can never be picked up. The runner
+          # temp dir is outside the workspace; refuse to proceed if the resolved
+          # tools directory is ever inside the workspace anyway.
+          $toolsDir = Join-Path $env:RUNNER_TEMP "windows-fast-tools\bin"
+          $workspaceFull = [System.IO.Path]::GetFullPath($env:GITHUB_WORKSPACE)
+          $toolsDirFull = [System.IO.Path]::GetFullPath($toolsDir)
+          if ($toolsDirFull.StartsWith($workspaceFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to use a fast-tools directory inside the workspace: $toolsDirFull"
+          }
+          New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
+
+          if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+            python -m pip install --user ninja
+            $pythonScripts = Join-Path $env:APPDATA "Python\Python312\Scripts"
+            if (Test-Path $pythonScripts) {
+              $env:PATH = "$pythonScripts;$env:PATH"
+              $pythonScripts | Out-File -FilePath $env:GITHUB_PATH -Append
+            }
+          }
+          if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+            throw "ninja was not found after setup."
+          }
+
+          # Always (re)download and hash-verify the archive, then derive sccache.exe
+          # from the verified archive. Never trust a pre-existing sccache.exe on disk:
+          # a stale or workspace-seeded binary could otherwise be used unverified.
+          $sccacheExe = Join-Path $toolsDir "sccache.exe"
+          $assetName = "sccache-v{0}-x86_64-pc-windows-msvc.zip" -f $env:SCCACHE_VERSION
+          $archivePath = Join-Path $env:RUNNER_TEMP $assetName
+          $extractDir = Join-Path $env:RUNNER_TEMP "sccache"
+          $url = "https://github.com/mozilla/sccache/releases/download/v{0}/{1}" -f $env:SCCACHE_VERSION, $assetName
+
+          Invoke-WebRequest -Uri $url -OutFile $archivePath
+          $actualHash = (Get-FileHash -Algorithm SHA256 $archivePath).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:SCCACHE_SHA256) {
+            throw "Unexpected sccache archive hash '$actualHash'."
+          }
+
+          Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
+          Expand-Archive -Path $archivePath -DestinationPath $extractDir -Force
+          $downloadedSccache = Get-ChildItem -Path $extractDir -Recurse -Filter sccache.exe | Select-Object -First 1
+          if (-not $downloadedSccache) {
+            throw "sccache.exe was not found in the downloaded archive."
+          }
+          Remove-Item -Force $sccacheExe -ErrorAction SilentlyContinue
+          Copy-Item -Path $downloadedSccache.FullName -Destination $sccacheExe -Force
+
+          # Pin the launcher to the verified absolute path outside the workspace.
+          # configure.bat prefers SCCACHE_EXECUTABLE over any `where sccache` lookup,
+          # so a workspace-provided sccache on PATH cannot be selected as the launcher.
+          $toolsDir | Out-File -FilePath $env:GITHUB_PATH -Append
+          "SCCACHE_EXECUTABLE=$sccacheExe" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $env:PATH = "$toolsDir;$env:PATH"
+
+          ninja --version
+          & $sccacheExe --version
+      - name: Restore vcpkg installed tree
+        id: restore-vcpkg-installed
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v3-${{ hashFiles('vcpkg.json', 'cmake/triplets/*.cmake', 'configure.bat') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.VCPKG_TARGET_TRIPLET }}-vcpkg-installed-v3-
+      - &validate-vcpkg-installed
+        name: Validate vcpkg installed cache
+        id: validate-vcpkg-installed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          function Write-ValidationResult {
+            param(
+              [string]$Valid,
+              [string]$Reason
+            )
+
+            "valid=$Valid" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "reason=$Reason" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            $Reason
+          }
+
+          $tripletRoot = Join-Path $env:VCPKG_INSTALLED_DIR $env:VCPKG_TARGET_TRIPLET
+          $expectedPaths = @(
+            "include\SDL2\SDL.h",
+            "include\SDL2\SDL_image.h",
+            "include\SDL2\SDL_ttf.h",
+            "lib\SDL2.lib",
+            "lib\SDL2_image.lib",
+            "lib\SDL2_ttf.lib",
+            "bin\SDL2.dll",
+            "bin\SDL2_image.dll",
+            "bin\SDL2_ttf.dll"
+          )
+          $missing = @()
+          foreach ($relativePath in $expectedPaths) {
+            $candidate = Join-Path $tripletRoot $relativePath
+            if (-not (Test-Path $candidate)) {
+              $missing += $relativePath
+            }
+          }
+
+          $dryRunOutput = & "$env:VCPKG_ROOT\vcpkg.exe" install --dry-run `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
+            "--x-install-root=$env:VCPKG_INSTALLED_DIR" 2>&1
+          $dryRunExit = $LASTEXITCODE
+          $dryRunText = $dryRunOutput -join "`n"
+          $needsInstallPattern = @(
+            "The following packages will be built and installed",
+            "The following packages will be installed",
+            "The following packages will be rebuilt"
+          ) -join "|"
+          $packageActionLines = @($dryRunOutput | Where-Object { $_ -match "^\s{2}(\* )?[A-Za-z0-9_.-]+:" })
+          $hasOnlyModifiedPackageActions = $packageActionLines.Count -gt 0 -and -not (
+            $packageActionLines | Where-Object { $_ -notmatch "^\s{2}\* " }
+          )
+          $allowModifiedOnly = $env:VCPKG_ALLOW_MODIFIED_INSTALLED_CACHE -eq "1"
+
+          if ($missing.Count -gt 0) {
+            Write-ValidationResult "false" "vcpkg installed cache is missing expected files: $($missing -join ', ')"
+          } elseif ($dryRunExit -ne 0) {
+            Write-ValidationResult "false" "vcpkg dry-run validation failed with exit code $dryRunExit."
+            $dryRunText
+          } elseif ($dryRunText -match $needsInstallPattern) {
+            if ($allowModifiedOnly -and $hasOnlyModifiedPackageActions) {
+              Write-ValidationResult "true" "vcpkg installed cache has runner-local ABI metadata drift; required files are present."
+              $dryRunText
+            } else {
+              Write-ValidationResult "false" "vcpkg installed cache is incomplete; dry-run would install additional packages."
+              $dryRunText
+            }
+          } elseif ($dryRunText -notmatch "The following packages are already installed") {
+            Write-ValidationResult "false" "vcpkg dry-run did not confirm that all requested packages are already installed."
+            $dryRunText
+          } else {
+            Write-ValidationResult "true" "vcpkg installed cache is valid."
+          }
+      - name: Install native deps
+        if: steps.validate-vcpkg-installed.outputs.valid != 'true'
+        shell: pwsh
+        run: |
+          & "$env:VCPKG_ROOT\vcpkg.exe" install `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
+            "--x-install-root=$env:VCPKG_INSTALLED_DIR"
+      - name: Save vcpkg installed tree
+        if: steps.validate-vcpkg-installed.outputs.valid != 'true'
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ steps.restore-vcpkg-installed.outputs.cache-primary-key }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Select vcpkg installed cache key
+        id: select-vcpkg-installed-cache
+        shell: pwsh
+        run: |
+          $key = "${{ steps.restore-vcpkg-installed.outputs.cache-matched-key }}"
+          if ("${{ steps.validate-vcpkg-installed.outputs.valid }}" -ne "true") {
+            $key = "${{ steps.restore-vcpkg-installed.outputs.cache-primary-key }}-${{ github.run_id }}-${{ github.run_attempt }}"
+          }
+          if (-not $key) {
+            throw "No vcpkg installed cache key was produced."
+          }
+          "key=$key" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Summarize vcpkg installed cache
+        if: always()
+        shell: pwsh
+        run: |
+          function Format-Value {
+            param([string]$Value)
+            if ([string]::IsNullOrWhiteSpace($Value)) {
+              return "<none>"
+            }
+            return $Value
+          }
+
+          $primary = Format-Value "${{ steps.restore-vcpkg-installed.outputs.cache-primary-key }}"
+          $matched = Format-Value "${{ steps.restore-vcpkg-installed.outputs.cache-matched-key }}"
+          $selected = Format-Value "${{ steps.select-vcpkg-installed-cache.outputs.key }}"
+          $valid = Format-Value "${{ steps.validate-vcpkg-installed.outputs.valid }}"
+          $reason = Format-Value "${{ steps.validate-vcpkg-installed.outputs.reason }}"
+
+          if ($valid -eq "true") {
+            $cacheAction = "install skipped"
+          } elseif ($matched -ne "<none>") {
+            $cacheAction = "restored cache rejected and fully reseeded"
+          } else {
+            $cacheAction = "no usable cache restored; fully reseeded"
+          }
+
+          "vcpkg cache action: $cacheAction"
+          "vcpkg primary cache key: $primary"
+          "vcpkg matched cache key: $matched"
+          "vcpkg selected cache key: $selected"
+          "vcpkg validation reason: $reason"
+
+          @(
+            "### windows-deps vcpkg installed cache",
+            "",
+            "- Action: $cacheAction",
+            "- Primary key: ``$primary``",
+            "- Matched key: ``$matched``",
+            "- Selected key: ``$selected``",
+            "- Validation: $valid",
+            "- Reason: $reason"
+          ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+  windows:
+    needs:
+      - linux-fast
+      - windows-deps
+    if: needs.linux-fast.outputs.native-needed == 'true'
+    runs-on: windows-2022
+    timeout-minutes: 120
+    env: *windows-env
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install Python deps
+        run: python -m pip install --upgrade -r requirements-dev.txt
+      - name: Smoke test Python deps
+        run: python -c "from PIL import Image; import black; print('python deps ok')"
+      - name: Validate content JSON
+        run: |
+          python scripts/validate_content.py --repo-root .
+          python -m unittest tests.test_content_validator
+          python -m unittest tests.test_campaign_driver
+          python -m unittest tests.test_creature_stat_scale_baseline
+          python -m unittest tests.test_creature_equipment_inventory_baseline
+      - name: test (python fast)
+        run: python test.py --suite fast
+      - *setup-msvc
+      - *setup-vcpkg
+      - *enable-vcpkg-x-gha
+      - *setup-windows-fast-tools
+      - name: Restore vcpkg installed tree
+        id: restore-vcpkg-installed
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
+      - *validate-vcpkg-installed
+      - name: Install vcpkg deps when installed cache is missing
+        id: install-missing-vcpkg-installed
+        if: steps.restore-vcpkg-installed.outputs.cache-hit != 'true'
+        shell: pwsh
+        timeout-minutes: 20
+        run: |
+          "Cache key '${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}' was not restored; running vcpkg install with x-gha binary cache."
+          & "$env:VCPKG_ROOT\vcpkg.exe" install `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
+            "--x-install-root=$env:VCPKG_INSTALLED_DIR"
+          "installed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Repair vcpkg installed tree
+        id: repair-vcpkg-installed
+        if: steps.restore-vcpkg-installed.outputs.cache-hit == 'true' && steps.validate-vcpkg-installed.outputs.valid != 'true'
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          "Restored vcpkg installed tree needs runner-local repair; running vcpkg install with x-gha binary cache."
+          & "$env:VCPKG_ROOT\vcpkg.exe" install `
+            --triplet "$env:VCPKG_TARGET_TRIPLET" `
+            --overlay-triplets "$env:VCPKG_OVERLAY_TRIPLETS" `
+            "--x-install-root=$env:VCPKG_INSTALLED_DIR"
+          "repaired=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Save missing vcpkg installed tree
+        if: steps.install-missing-vcpkg-installed.outputs.installed == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}
+      - name: Save repaired vcpkg installed tree
+        if: steps.repair-vcpkg-installed.outputs.repaired == 'true'
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.VCPKG_INSTALLED_DIR }}
+          key: ${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}-windows
+      - name: Summarize restored vcpkg installed cache
+        if: always()
+        shell: pwsh
+        run: |
+          function Format-Value {
+            param([string]$Value)
+            if ([string]::IsNullOrWhiteSpace($Value)) {
+              return "<none>"
+            }
+            return $Value
+          }
+
+          $selected = Format-Value "${{ needs.windows-deps.outputs.vcpkg-installed-cache-key }}"
+          $cacheHit = Format-Value "${{ steps.restore-vcpkg-installed.outputs.cache-hit }}"
+          $valid = Format-Value "${{ steps.validate-vcpkg-installed.outputs.valid }}"
+          $reason = Format-Value "${{ steps.validate-vcpkg-installed.outputs.reason }}"
+          $installed = Format-Value "${{ steps.install-missing-vcpkg-installed.outputs.installed }}"
+          $repaired = Format-Value "${{ steps.repair-vcpkg-installed.outputs.repaired }}"
+
+          if ($cacheHit -ne "true" -and $installed -eq "true") {
+            $cacheAction = "cache missing; installed with x-gha"
+          } elseif ($cacheHit -ne "true") {
+            $cacheAction = "cache missing and install not completed"
+          } elseif ($repaired -eq "true") {
+            $cacheAction = "repaired"
+          } elseif ($valid -eq "true") {
+            $cacheAction = "install skipped"
+          } else {
+            $cacheAction = "repair required but not completed"
+          }
+
+          "vcpkg cache action: $cacheAction"
+          "vcpkg selected cache key: $selected"
+          "vcpkg restore cache hit: $cacheHit"
+          "vcpkg validation reason: $reason"
+
+          @(
+            "### windows vcpkg installed cache",
+            "",
+            "- Action: $cacheAction",
+            "- Selected key: ``$selected``",
+            "- Cache hit: $cacheHit",
+            "- Validation: $valid",
+            "- Reason: $reason",
+            "- Installed on miss: $installed",
+            "- Repaired: $repaired"
+          ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+      - name: Detect sccache metadata
+        id: windows-sccache
+        shell: pwsh
+        run: |
+          $toolset = $env:VCToolsVersion
+          if (-not $toolset) {
+            $toolset = "unknown"
+          }
+          $toolset = $toolset -replace "[^A-Za-z0-9_.-]", "-"
+          $sccacheVersion = $env:SCCACHE_VERSION -replace "[^A-Za-z0-9_.-]", "-"
+          "prefix=${{ runner.os }}-sccache-$sccacheVersion-msvc-$toolset-" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Restore sccache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ steps.windows-sccache.outputs.prefix }}
+            ${{ runner.os }}-sccache-${{ env.SCCACHE_VERSION }}-
+            ${{ runner.os }}-sccache-
+      - name: Cache Python test timings
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.GAME_TEST_TIMINGS_FILE }}
+          key: ${{ runner.os }}-test-timings-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-test-timings-
+      - name: Configure Windows parallelism
+        shell: pwsh
+        run: |
+          $buildJobs = [Math]::Max(1, [Environment]::ProcessorCount)
+          $testJobs = [Math]::Min(4, [Math]::Max(1, [Environment]::ProcessorCount))
+          "CMAKE_BUILD_PARALLEL_LEVEL=$buildJobs" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GAME_TEST_JOBS=$testJobs" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "Windows build jobs: $buildJobs"
+          "Windows Python test jobs: $testJobs"
+      - name: Configure
+        timeout-minutes: 10
+        shell: cmd
+        run: |
+          set VCPKG_MANIFEST_MODE=OFF
+          call configure.bat
+          if errorlevel 1 exit /b 1
+      - name: Build test targets
+        shell: cmd
+        run: |
+          cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
+          if errorlevel 1 exit /b 1
+      - name: Smoke test game imports
+        shell: cmd
+        run: |
+          set GAME_BUILD_DIR=cmake-build-release
+          set GAME_BUILD_CONFIG=Release
+          set PYTHONPATH=%CD%\cmake-build-release\Release;%CD%\cmake-build-release;%CD%\res;%PYTHONPATH%
+          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
+          python -c "import _game; import game; print('game imports ok')"
+          if errorlevel 1 exit /b 1
+      - name: sccache stats after build
+        if: always()
+        shell: cmd
+        run: |
+          where sccache >nul 2>nul
+          if errorlevel 1 exit /b 0
+          if not errorlevel 1 sccache --show-stats
+      - name: test (c++)
+        shell: cmd
+        run: |
+          ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+          if errorlevel 1 exit /b 1
+      - name: performance guard (native)
+        shell: cmd
+        run: |
+          ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+          if errorlevel 1 exit /b 1
+      - name: test (python gameplay)
+        timeout-minutes: 45
+        shell: cmd
+        run: |
+          set GAME_BUILD_DIR=cmake-build-release
+          set GAME_BUILD_CONFIG=Release
+          set PATH=%CD%\cmake-build-release;%CD%\cmake-build-release\Release;%VCPKG_INSTALLED_DIR%\%VCPKG_TARGET_TRIPLET%\bin;%PATH%
+          python test.py --suite gameplay
+          if errorlevel 1 exit /b 1
+      - name: package
+        if: github.event_name != 'pull_request'
+        shell: cmd
+        run: |
+          cmake --build cmake-build-release --target package --parallel %CMAKE_BUILD_PARALLEL_LEVEL%
+          if errorlevel 1 exit /b 1
+      - name: sccache stats after package
+        if: github.event_name != 'pull_request' && always()
+        shell: cmd
+        run: |
+          where sccache >nul 2>nul
+          if errorlevel 1 exit /b 0
+          if not errorlevel 1 sccache --show-stats
+      - name: publish
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: fall-of-nouraajd-windows
+          path: cmake-build-release/fall-of-nouraajd-*.zip
+      - name: Save sccache
+        if: always() && steps.windows-sccache.outputs.prefix != ''
+        continue-on-error: true
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.windows-sccache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}

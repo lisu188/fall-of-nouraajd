@@ -1,0 +1,95 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+
+#include <unordered_map>
+#include <vector>
+
+#include "core/CList.h"
+#include "gui/object/CProxyTargetGraphicsObject.h"
+
+class CProxyGraphicsObject;
+class CMap;
+class CPlayer;
+class CPlayerController;
+class CGameContext;
+
+class CMapGraphicsObject : public CProxyTargetGraphicsObject {
+    V_META(CMapGraphicsObject, CProxyTargetGraphicsObject, V_METHOD(CMapGraphicsObject, initialize),
+           V_METHOD(CMapGraphicsObject, commitDestination, void, std::shared_ptr<CGui>),
+           V_METHOD(CMapGraphicsObject, refreshObject, void, Coords))
+
+  public:
+    CMapGraphicsObject();
+
+    void initialize();
+
+    std::list<std::shared_ptr<CGameGraphicsObject>> getProxiedObjects(std::shared_ptr<CGui> gui, int x, int y) override;
+
+    int getSizeX(std::shared_ptr<CGui> gui) override;
+
+    int getSizeY(std::shared_ptr<CGui> gui) override;
+
+    bool keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode i) override;
+
+    void refreshObject(Coords coords);
+    void previewDestination(std::shared_ptr<CGui> gui, Coords destination);
+    void commitDestination(std::shared_ptr<CGui> gui);
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+  private:
+    struct ProxyAnimationSlot {
+        std::shared_ptr<CAnimation> tile;
+        std::vector<std::shared_ptr<CAnimation>> objects;
+    };
+
+    std::unordered_map<Coords, ProxyAnimationSlot> proxyAnimations;
+    std::weak_ptr<CMap> cachedMap;
+    int cachedProxyZ = 0;
+    bool hasCachedProxyZ = false;
+    std::optional<Coords> previewTarget;
+    std::weak_ptr<CMap> previewMap;
+    std::weak_ptr<CPlayer> previewPlayer;
+    std::weak_ptr<CPlayerController> previewController;
+    std::weak_ptr<CGameContext> previewContext;
+    Coords previewOrigin = ZERO;
+    std::uint64_t previewEpoch = 0;
+    std::uint64_t previewGeneration = 0;
+    std::uint64_t previewRequest = 0;
+    std::shared_ptr<CGameGraphicsObject> destinationButton;
+    void clearDestinationPreview();
+    void validateDestinationPreview(const std::shared_ptr<CGui> &gui);
+
+    Coords guiToMap(std::shared_ptr<CGui> gui, Coords coords);
+
+    Coords mapToGui(std::shared_ptr<CGui> gui, Coords coords);
+
+    std::shared_ptr<CAnimation> syncProxyAnimation(std::shared_ptr<CGui> gui,
+                                                   const std::shared_ptr<CGameObject> &object,
+                                                   std::shared_ptr<CAnimation> &animation);
+
+    void showCoordinates(std::shared_ptr<CGui> &gui, std::list<std::shared_ptr<CGameGraphicsObject>> &return_val,
+                         const Coords &actualCoords) const;
+
+    void showFootprint(std::shared_ptr<CGui> &gui, Coords::Direction dir,
+                       std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const;
+
+    void onProxyGridResized(int sizeX, int sizeY) override;
+
+    void pruneProxyAnimationCache(int sizeX, int sizeY, int z);
+};

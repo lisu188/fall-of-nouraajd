@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "plugins": [
+    {
+      "id": "nativeContent",
+      "kind": "cpp",
+      "type": "CNativeContentPlugin"
+    },
+    {
+      "id": "nativeMarker",
+      "kind": "native",
+      "library": "plugins/native/native_marker_plugin"
+    },
+    {
+      "id": "nativeGameplay",
+      "kind": "native",
+      "library": "plugins/native/native_gameplay"
+    }
+  ]
+}

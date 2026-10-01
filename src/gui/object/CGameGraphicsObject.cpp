@@ -1,0 +1,317 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "gui/object/CGameGraphicsObject.h"
+#include "core/CScript.h"
+#include "gui/CGui.h"
+#include "gui/CLayout.h"
+#include "gui/CTextureCache.h"
+#include "gui/object/CProxyGraphicsObject.h"
+#include "gui/panel/CGamePanel.h"
+
+#include <utility>
+
+namespace {
+std::pair<int, int> getMouseWheelPosition(const SDL_MouseWheelEvent &wheel) {
+#if SDL_VERSION_ATLEAST(2, 26, 0)
+    return {wheel.mouseX, wheel.mouseY};
+#else
+    int x = 0;
+    int y = 0;
+    SDL_GetMouseState(&x, &y);
+    return {x, y};
+#endif
+}
+} // namespace
+
+void CGameGraphicsObject::renderObject(std::shared_ptr<CGui> reneder, std::shared_ptr<SDL_Rect> rect, int frameTime) {}
+
+void CGameGraphicsObject::render(std::shared_ptr<CGui> renderer, int frameTime) {
+    if (hasRenderableGui(renderer) && isVisible()) {
+        renderBackground(renderer, getRect(), frameTime);
+        if (auto panel = vstd::cast<CGamePanel>(this->ptr<CGameGraphicsObject>())) {
+            panel->renderShell(renderer, getRect());
+        }
+        renderObject(renderer, getRect(), frameTime);
+        if (!isAttachedToGui(renderer)) {
+            return;
+        }
+        auto snapshot = children;
+        for (const auto &child : snapshot) {
+            if (child && children.contains(child)) {
+                child->render(renderer, frameTime);
+                if (!isAttachedToGui(renderer)) {
+                    return;
+                }
+            }
+        }
+    }
+}
+
+bool CGameGraphicsObject::event(std::shared_ptr<CGui> gui, SDL_Event *event) {
+    if (isAttachedToGui(gui) && isVisible()) {
+        auto snapshot = children;
+        for (auto it = snapshot.rbegin(); it != snapshot.rend(); ++it) {
+            const auto &child = *it;
+            if (child && children.contains(child) && child->event(gui, event)) {
+                return true;
+            }
+            if (!isAttachedToGui(gui)) {
+                return false;
+            }
+        }
+        auto callbacks = eventCallbackList;
+        for (const auto &callback : callbacks) { // TODO:remove, replace with other event
+            if (callback.first(gui, this->ptr<CGameGraphicsObject>(), event) &&
+                callback.second(gui, this->ptr<CGameGraphicsObject>(), event)) {
+                return true;
+            }
+            if (!isAttachedToGui(gui)) {
+                return false;
+            }
+        }
+        if (event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) {
+            return this->keyboardEvent(gui, (SDL_EventType)event->type, event->key.keysym.sym);
+        } else if (event->type == SDL_MOUSEBUTTONDOWN || event->type == SDL_MOUSEBUTTONUP) {
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, event->button.x, event->button.y) || modal) {
+                return this->mouseEvent(gui, (SDL_EventType)event->type, event->button.button,
+                                        event->button.x - transPos->x, event->button.y - transPos->y);
+            }
+        } else if (event->type == SDL_MOUSEMOTION) {
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, event->motion.x, event->motion.y) || modal) {
+                return this->mouseMotionEvent(gui, (SDL_EventType)event->type, event->motion.x - transPos->x,
+                                              event->motion.y - transPos->y, event->motion.xrel, event->motion.yrel);
+            }
+        } else if (event->type == SDL_MOUSEWHEEL) {
+            auto [x, y] = getMouseWheelPosition(event->wheel);
+            std::shared_ptr<SDL_Rect> transPos = getRect();
+            if (CUtil::isIn(transPos, x, y) || modal) {
+                return this->mouseWheelEvent(gui, (SDL_EventType)event->type, x - transPos->x, y - transPos->y,
+                                             event->wheel.x, event->wheel.y);
+            }
+        } else if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_LEAVE) {
+            return this->mouseCancelEvent(gui, (SDL_EventType)event->type);
+        }
+        // TODO: check if we are not consuming too many events
+        return modal;
+    }
+    return false;
+}
+
+bool CGameGraphicsObject::keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseMotionEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int xrel,
+                                           int yrel) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseWheelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int x, int y, int wheelX,
+                                          int wheelY) {
+    return false;
+}
+
+bool CGameGraphicsObject::mouseCancelEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type) { return false; }
+
+void CGameGraphicsObject::registerEventCallback(
+    std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> pred,
+    std::function<bool(std::shared_ptr<CGui>, std::shared_ptr<CGameGraphicsObject>, SDL_Event *)> func) {
+    eventCallbackList.emplace_back(pred, func);
+}
+
+std::shared_ptr<CLayout> CGameGraphicsObject::getLayout() { return layout; }
+
+void CGameGraphicsObject::setLayout(std::shared_ptr<CLayout> layout) { CGameGraphicsObject::layout = layout; }
+
+std::shared_ptr<SDL_Rect> CGameGraphicsObject::getRect() {
+    return layout ? layout->getRect(this->ptr<CGameGraphicsObject>()) : CUtil::rect(0, 0, 0, 0);
+}
+
+void CGameGraphicsObject::setParent(std::shared_ptr<CGameGraphicsObject> _parent) {
+    if (!_parent) {
+        parent.reset();
+        return;
+    }
+    if (parent.lock() != _parent) {
+        this->parent = _parent;
+        _parent->addChild(this->ptr<CGameGraphicsObject>());
+    }
+}
+
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getParent() { return parent.lock(); }
+
+void CGameGraphicsObject::addChild(const std::shared_ptr<CGameGraphicsObject> &child) {
+    if (!child) {
+        return;
+    }
+    if (children.insert(child).second) {
+        child->setParent(this->ptr<CGameGraphicsObject>());
+    }
+}
+
+void CGameGraphicsObject::removeChild(const std::shared_ptr<CGameGraphicsObject> &child) {
+    auto gui = getGui();
+    if (children.erase(child)) {
+        child->removeParent();
+        if (gui) {
+            gui->releasePointerCaptureFor(child);
+            gui->releaseFocusFor(child);
+            gui->cancelDragSessionFor(child);
+        }
+    }
+}
+
+void CGameGraphicsObject::removeParent() {
+    if (parent.lock()) {
+        parent.lock()->removeChild(this->ptr<CGameGraphicsObject>());
+        parent.reset();
+    }
+}
+
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::getTopParent() {
+    if (auto _parent = getParent()) {
+        return _parent->getTopParent();
+    }
+    return this->ptr<CGameGraphicsObject>();
+}
+
+std::set<std::shared_ptr<CGameGraphicsObject>> CGameGraphicsObject::getChildren() {
+    return vstd::cast<std::set<std::shared_ptr<CGameGraphicsObject>>>(children);
+}
+
+void CGameGraphicsObject::setChildren(std::set<std::shared_ptr<CGameGraphicsObject>> _children) {
+    std::erase_if(_children, [](const auto &child) { return child == nullptr; });
+    auto [to_add, to_remove] = vstd::set_difference(children, _children);
+    for (const auto &child : to_remove) {
+        removeChild(child);
+    }
+    for (const auto &child : to_add) {
+        addChild(child);
+    }
+}
+
+int CGameGraphicsObject::getPriority() { return priority; }
+
+void CGameGraphicsObject::setPriority(int _priority) { this->priority = _priority; }
+
+int CGameGraphicsObject::getTopPriority() {
+    // children is ordered by priority_comparator (priority ascending, pointer tie-break), so the
+    // last element carries the highest priority. std::max_element without a comparator would instead
+    // compare the shared_ptrs by address and return an arbitrary child's priority, which made
+    // pushChild assign non-strictly-increasing priorities and produced platform-dependent z-order
+    // (equal-priority ties resolved by heap address).
+    if (children.empty()) {
+        return -1;
+    }
+    return (*children.rbegin())->getPriority();
+}
+
+void CGameGraphicsObject::pushChild(const std::shared_ptr<CGameGraphicsObject> &child) {
+    child->setPriority(getTopPriority() + 1);
+    addChild(child);
+}
+
+std::shared_ptr<CGui> CGameGraphicsObject::getGui() { return vstd::cast<CGui>(getTopParent()); }
+
+bool CGameGraphicsObject::isAttachedToGui(const std::shared_ptr<CGui> &gui) { return gui && getTopParent() == gui; }
+
+bool CGameGraphicsObject::hasRenderableGui(const std::shared_ptr<CGui> &gui) {
+    return isAttachedToGui(gui) && gui->getRenderer();
+}
+
+bool CGameGraphicsObject::getModal() { return modal; }
+
+void CGameGraphicsObject::setModal(bool _modal) { modal = _modal; }
+
+std::shared_ptr<CGameGraphicsObject> CGameGraphicsObject::findChild(const std::string &type) {
+    for (auto child : getChildren()) {
+        if (!child) {
+            continue;
+        }
+        if (auto found = child->findChild(type)) {
+            return found;
+        }
+        if (child->getType() == type) {
+            return child;
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<CGameGraphicsObject>
+CGameGraphicsObject::findChild(const std::shared_ptr<CGameGraphicsObject> &toFind) {
+    for (auto child : getChildren()) {
+        if (!child) {
+            continue;
+        }
+        if (auto found = child->findChild(toFind)) {
+            return found;
+        }
+        if (child == toFind) {
+            return child;
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<CScript> CGameGraphicsObject::getVisible() { return visible; }
+
+void CGameGraphicsObject::setVisible(std::shared_ptr<CScript> _visible) { CGameGraphicsObject::visible = _visible; }
+
+bool CGameGraphicsObject::isVisible() {
+    return !runtimeHidden && (!visible || visible->invoke<CGameObject>(getGame(), this->ptr<CGameObject>()) != nullptr);
+}
+
+void CGameGraphicsObject::renderBackground(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int time) {
+    if (hasRenderableGui(gui) && !background.empty()) {
+        auto texture = gui->getTextureCache()->getTexture(background);
+        if (!texture) {
+            vstd::logger::error("CGameGraphicsObject: missing background", background);
+            return;
+        }
+        gui->getRenderContext().copy(texture, nullptr, rect.get());
+    }
+}
+
+std::string CGameGraphicsObject::getBackground() { return background; }
+
+void CGameGraphicsObject::setBackground(std::string _background) { background = std::move(_background); }
+
+bool priority_comparator::operator()(const std::shared_ptr<CGameGraphicsObject> &a,
+                                     const std::shared_ptr<CGameGraphicsObject> &b) const {
+    if (a->getPriority() == b->getPriority()) {
+        return a < b;
+    }
+    return a->getPriority() < b->getPriority();
+}
+
+int CGameGraphicsObject::getTileSize(const std::shared_ptr<CGameGraphicsObject> &object) {
+    if (!object) {
+        return 50;
+    }
+    if (object->hasProperty("tileSize")) {
+        return std::clamp(object->getNumericProperty("tileSize"), 1, 512);
+    }
+    return getTileSize(object->getParent());
+}

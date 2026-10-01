@@ -1,0 +1,82 @@
+{
+  "slotConfiguration": {
+    "class": "CSlotConfig",
+    "properties": {
+      "configuration": {
+        "0": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "RightHand",
+            "types": [
+              "CWeapon"
+            ]
+          }
+        },
+        "1": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "LeftHand",
+            "types": [
+              "CSmallWeapon",
+              "CShield"
+            ]
+          }
+        },
+        "2": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "Head",
+            "types": [
+              "CHelmet"
+            ]
+          }
+        },
+        "3": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "Chest",
+            "types": [
+              "CArmor"
+            ]
+          }
+        },
+        "4": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "Waist",
+            "types": [
+              "CBelt"
+            ]
+          }
+        },
+        "5": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "Feet",
+            "types": [
+              "CBoots"
+            ]
+          }
+        },
+        "6": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "Legs",
+            "types": [
+              "CPants"
+            ]
+          }
+        },
+        "7": {
+          "class": "CSlot",
+          "properties": {
+            "slotName": "Hands",
+            "types": [
+              "CGloves"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

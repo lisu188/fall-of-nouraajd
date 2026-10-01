@@ -1,0 +1,124 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+
+#include "core/CConcepts.h"
+#include "core/CGlobal.h"
+#include "core/CPlugin.h"
+#include "core/CUtil.h"
+#include "handler/CHandler.h"
+
+class CGameView;
+
+class CPlayer;
+
+class CMap;
+
+class CGameObject;
+
+class CGameContext;
+
+class CGui;
+
+class CConfigurationProvider;
+
+class CSceneManager;
+
+class CResourcesProvider;
+
+class CRngHandler;
+
+class CGuiHandler;
+
+class CScriptHandler;
+
+class CLuaHandler;
+
+class CSlotConfig;
+class CNavigationService;
+
+struct CMapTransitionRequest;
+
+class CGame : public CGameObject {
+    V_META(CGame, CGameObject, vstd::meta::empty())
+    friend class CGameContext;
+    friend class CScopedGameMap;
+    friend class CSceneManager;
+
+  public:
+    CGame();
+
+    ~CGame();
+
+    void changeMap(std::string file);
+
+    // Opt-in explicit transition API: unlike changeMap (which always reloads the destination from
+    // content), the request can reuse and retain persistent map sessions. Returns whether the
+    // request was accepted by the scene manager.
+    bool requestMapTransition(CMapTransitionRequest request);
+
+    std::shared_ptr<CMap> getMap() const;
+
+    void setMap(std::shared_ptr<CMap> map);
+
+    std::shared_ptr<CGameContext> getContext();
+
+    std::shared_ptr<CGuiHandler> getGuiHandler();
+
+    std::shared_ptr<CScriptHandler> getScriptHandler();
+
+    std::shared_ptr<CLuaHandler> getLuaHandler();
+
+    std::shared_ptr<CObjectHandler> getObjectHandler();
+
+    std::shared_ptr<CSceneManager> getSceneManager();
+    std::shared_ptr<CNavigationService> getNavigationService();
+
+    void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
+
+    std::shared_ptr<CRngHandler> getRngHandler();
+
+    template <fn::GameObjectDerived T> std::shared_ptr<T> createObject(std::string name) {
+        return getObjectHandler()->createObject<T>(this->ptr<CGame>(), name);
+    }
+
+    template <fn::MetaRegisteredGameObject T> std::shared_ptr<T> createObject() {
+        return getObjectHandler()->createObject<T>(this->ptr<CGame>());
+    }
+
+    std::shared_ptr<CSlotConfig> getSlotConfiguration();
+
+    std::shared_ptr<CResourcesProvider> getResourcesProvider();
+
+    std::shared_ptr<CConfigurationProvider> getConfigurationProvider();
+
+  private:
+    void setMapForResourceLoad(std::shared_ptr<CMap> map);
+
+    std::shared_ptr<CGameContext> context;
+    std::shared_ptr<CSceneManager> sceneManager;
+    std::shared_ptr<CMap> map;
+    std::shared_ptr<CGui> _gui;
+    std::shared_ptr<CNavigationService> navigationService;
+    std::mutex navigationServiceMutex;
+
+  public:
+    std::shared_ptr<CGui> getGui() const;
+
+    void setGui(std::shared_ptr<CGui> _gui);
+};

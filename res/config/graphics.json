@@ -1,0 +1,200 @@
+{
+  "consoleGraphics": {
+    "class": "CConsoleGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "30",
+          "horizontal": "PARENT",
+          "vertical": "DOWN"
+        }
+      },
+      "priority": 10
+    }
+  },
+  "gui": {
+    "class": "CGui",
+    "properties": {
+      "children": [
+        {
+          "ref": "mapGraphics"
+        },
+        {
+          "properties": {
+            "priority": 1
+          },
+          "ref": "statsGraphics"
+        },
+        {
+          "ref": "consoleGraphics"
+        },
+        {
+          "properties": {
+            "priority": 1
+          },
+          "ref": "sideBar"
+        },
+        {
+          "properties": {
+            "priority": 1
+          },
+          "ref": "minimapGraphics"
+        }
+      ],
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "1080",
+          "w": "1920",
+          "x": "0",
+          "y": "0"
+        }
+      },
+      "tileSize": 50
+    }
+  },
+  "mapGraphics": {
+    "class": "CMapGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CParentLayout"
+      }
+    }
+  },
+  "minimapGraphics": {
+    "class": "CMinimapGraphicsObject",
+    "properties": {
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "220",
+          "horizontal": "RIGHT",
+          "vertical": "DOWN",
+          "w": "220"
+        }
+      },
+      "visible": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
+        }
+      }
+    }
+  },
+  "sideBar": {
+    "class": "CSideBar",
+    "properties": {
+      "children": [
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickInventory",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "25%",
+                "w": "100%",
+                "x": "0%",
+                "y": "0%"
+              }
+            },
+            "text": "Inventory  I"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickJournal",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "25%",
+                "w": "100%",
+                "x": "0%",
+                "y": "25%"
+              }
+            },
+            "text": "Journal  J"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickCharacter",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "h": "25%",
+                "w": "100%",
+                "x": "0%",
+                "y": "50%"
+              }
+            },
+            "text": "Character  C"
+          }
+        },
+        {
+          "class": "CButton",
+          "properties": {
+            "click": "clickPause",
+            "text": "Pause  Esc",
+            "layout": {
+              "class": "CLayout",
+              "properties": {
+                "x": "0",
+                "y": "75%",
+                "w": "100%",
+                "h": "25%"
+              }
+            }
+          }
+        }
+      ],
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "240",
+          "horizontal": "RIGHT",
+          "vertical": "UP",
+          "w": "240"
+        }
+      },
+      "panelKeys": {
+        "ref": "panelKeys"
+      },
+      "visible": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
+        }
+      }
+    }
+  },
+  "statsGraphics": {
+    "class": "CStatsGraphicsObject",
+    "properties": {
+      "creature": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
+        }
+      },
+      "layout": {
+        "class": "CLayout",
+        "properties": {
+          "h": "132",
+          "horizontal": "LEFT",
+          "vertical": "UP",
+          "w": "312"
+        }
+      },
+      "visible": {
+        "class": "CScript",
+        "properties": {
+          "script": "self.getGui().getGame().getMap().getPlayer()"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,119 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+
+#include "CGamePanel.h"
+#include "gui/CDetailViewport.h"
+#include "object/CPlayer.h"
+
+#include <vector>
+
+class CGameTradePanel : public CGamePanel {
+    V_META(CGameTradePanel, CGamePanel,
+           // TODO: unify this with CGameInventoryPanel
+           V_PROPERTY(CGameTradePanel, std::shared_ptr<CMarket>, market, getMarket, setMarket),
+           V_METHOD(CGameTradePanel, inventoryCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, inventoryCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(CGameTradePanel, inventorySelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(CGameTradePanel, marketCollection, CListView::collection_pointer, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, marketCallback, void, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(CGameTradePanel, marketSelect, bool, std::shared_ptr<CGui>, int, std::shared_ptr<CGameObject>),
+           V_METHOD(CGameTradePanel, renderSellCost, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(CGameTradePanel, renderBuyCost, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(CGameTradePanel, renderTradeSummary, void, std::shared_ptr<CGui>, std::shared_ptr<SDL_Rect>, int),
+           V_METHOD(CGameTradePanel, addSelectedForSale, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, addSelectedForPurchase, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, clearSelection, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, finalizeSell, void, std::shared_ptr<CGui>),
+           V_METHOD(CGameTradePanel, finalizeBuy, void, std::shared_ptr<CGui>))
+
+  public:
+    CGameTradePanel();
+
+    void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+
+    std::shared_ptr<CMarket> getMarket();
+
+    void setMarket(std::shared_ptr<CMarket> _market);
+
+    CListView::collection_pointer inventoryCollection(std::shared_ptr<CGui> gui);
+
+    void inventoryCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
+
+    bool inventorySelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
+    CListView::collection_pointer marketCollection(std::shared_ptr<CGui> gui);
+
+    void marketCallback(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> _newSelection);
+
+    bool marketSelect(std::shared_ptr<CGui> gui, int index, std::shared_ptr<CGameObject> object);
+
+    void renderSellCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+
+    void renderBuyCost(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> pRect, int i);
+
+    void finalizeSell(std::shared_ptr<CGui> shared_ptr);
+
+    void finalizeBuy(std::shared_ptr<CGui> shared_ptr);
+
+    int getTotalSellCost();
+
+    int getTotalBuyCost();
+
+    std::string getTradeSummary(std::shared_ptr<CGui> gui);
+
+    void renderTradeSummary(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime);
+
+    void addSelectedForSale(std::shared_ptr<CGui> gui);
+
+    void addSelectedForPurchase(std::shared_ptr<CGui> gui);
+
+    void clearSelection(std::shared_ptr<CGui> gui);
+
+    bool mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) override;
+
+  private:
+    void updateActionAvailability(const std::shared_ptr<CGui> &gui);
+    DetailViewport::Layout detailLayout;
+    int detailsOffset = 0;
+    int detailsMaximum = 0;
+    SDL_Rect detailsViewport{};
+    std::shared_ptr<CMarket> market;
+    std::list<std::weak_ptr<CItem>> selectedInventory;
+    std::list<std::weak_ptr<CItem>> selectedMarket;
+    std::weak_ptr<CItem> inspectedItem;
+    bool inspectedFromMarket = false;
+    std::string actionMessage;
+
+    bool mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) override;
+
+    bool keyboardEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, SDL_Keycode i) override;
+
+    void selectMarket(std::weak_ptr<CItem> selection);
+
+    void selectInventory(std::shared_ptr<CGui> gui, std::weak_ptr<CItem> selection);
+
+    std::vector<std::shared_ptr<CItem>> getSellableInventoryStack(std::shared_ptr<CGui> gui,
+                                                                  std::shared_ptr<CItem> selection);
+
+    bool isInventorySelected(std::shared_ptr<CItem> item);
+
+    std::vector<std::string> getItemNames(std::list<std::weak_ptr<CItem>> items);
+
+    bool validatePendingTrade(std::shared_ptr<CGui> gui, bool sale, int expectedTotal);
+};

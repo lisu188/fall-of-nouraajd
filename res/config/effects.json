@@ -1,0 +1,246 @@
+{
+  "AbyssalShadowsEffect": {
+    "class": "AbyssalShadowsEffect",
+    "properties": {
+      "duration": 4
+    }
+  },
+  "ArmorOfEndlessWinterEffect": {
+    "class": "ArmorOfEndlessWinterEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "BarrierEffect": {
+    "class": "BarrierEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "BloodlashEffect": {
+    "class": "BloodlashEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "ChloroformEffect": {
+    "class": "ChloroformEffect",
+    "properties": {
+      "duration": 4
+    }
+  },
+  "EndlessPainEffect": {
+    "class": "EndlessPainEffect",
+    "properties": {
+      "duration": 2,
+      "tags": [
+        "stun"
+      ]
+    }
+  },
+  "LethalPoisonEffect": {
+    "class": "LethalPoisonEffect",
+    "properties": {
+      "duration": 6
+    }
+  },
+  "MutilationEffect": {
+    "class": "MutilationEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "Stun": {
+    "class": "Stun",
+    "properties": {
+      "duration": 2,
+      "tags": [
+        "stun"
+      ]
+    }
+  },
+  "ExposeCorruptionEffect": {
+    "class": "ExposeCorruptionEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "SanctifiedWardEffect": {
+    "class": "SanctifiedWardEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "WayfarersStrideEffect": {
+    "class": "WayfarersStrideEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "SmugglersMarkEffect": {
+    "class": "SmugglersMarkEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "ArmorOfFaithEffect": {
+    "class": "ArmorOfFaithEffect",
+    "properties": {
+      "duration": 4,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "BlessEffect": {
+    "class": "BlessEffect",
+    "properties": {
+      "duration": 4,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "ChillTouchEffect": {
+    "class": "ChillTouchEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "CloudkillEffect": {
+    "class": "CloudkillEffect",
+    "properties": {
+      "duration": 4
+    }
+  },
+  "DoomEffect": {
+    "class": "DoomEffect",
+    "properties": {
+      "duration": 4
+    }
+  },
+  "DrawUponHolyMightEffect": {
+    "class": "DrawUponHolyMightEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "HasteEffect": {
+    "class": "HasteEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "HoldPersonEffect": {
+    "class": "HoldPersonEffect",
+    "properties": {
+      "duration": 2,
+      "tags": [
+        "stun"
+      ]
+    }
+  },
+  "MelfsAcidArrowEffect": {
+    "class": "MelfsAcidArrowEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "MirrorImageEffect": {
+    "class": "MirrorImageEffect",
+    "properties": {
+      "duration": 3,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "SlowEffect": {
+    "class": "SlowEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "StoneskinEffect": {
+    "class": "StoneskinEffect",
+    "properties": {
+      "duration": 4,
+      "tags": [
+        "buff"
+      ]
+    }
+  },
+  "WebEffect": {
+    "class": "WebEffect",
+    "properties": {
+      "duration": 3
+    }
+  },
+  "enemyBraceEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 1,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "normalResist": 1,
+          "frostResist": -1
+        }
+      }
+    }
+  },
+  "enemyArcaneBoltEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 1,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "normalResist": -1
+        }
+      }
+    }
+  },
+  "enemyOpeningStrikeEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 1,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "block": -1
+        }
+      }
+    }
+  },
+  "enemyRitualHexEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 1,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "shadowResist": -1
+        }
+      }
+    }
+  }
+}

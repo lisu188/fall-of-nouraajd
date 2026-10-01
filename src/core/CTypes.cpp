@@ -1,0 +1,91 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "core/CTypes.h"
+#include "core/CTypeRegistration.h"
+#include "plugin/NativePlugin.h"
+
+std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> *CTypes::builders() {
+    static std::unordered_map<std::string, std::function<std::shared_ptr<CGameObject>()>> reg;
+    return &reg;
+}
+
+std::unordered_map<std::type_index, std::function<void(std::shared_ptr<CGameObject>, std::string, std::any)>> *
+CTypes::setters() {
+    static std::unordered_map<std::type_index, std::function<void(std::shared_ptr<CGameObject>, std::string, std::any)>>
+        reg;
+    return &reg;
+}
+
+std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>, vstd::pair_hash> *
+CTypes::serializers() {
+    static std::unordered_map<std::pair<std::type_index, std::type_index>, std::shared_ptr<CSerializerBase>,
+                              vstd::pair_hash>
+        reg;
+    return &reg;
+}
+
+std::unordered_map<std::type_index, std::type_index> *CTypes::primitiveTypes() {
+    static std::unordered_map<std::type_index, std::type_index> _primitive_types;
+    return &_primitive_types;
+}
+
+bool CTypes::is_map_type(std::type_index index) { return vstd::ctn(*map_types(), index); }
+
+bool CTypes::is_pointer_type(std::type_index index) { return vstd::ctn(*pointer_types(), index); }
+
+bool CTypes::is_array_type(std::type_index index) { return vstd::ctn(*array_types(), index); }
+
+bool CTypes::isPrimitiveType(std::type_index index) { return vstd::ctn(*primitiveTypes(), index); }
+
+std::optional<std::type_index> CTypes::primitiveValueType(std::type_index index) {
+    auto found = primitiveTypes()->find(index);
+    if (found == primitiveTypes()->end()) {
+        return std::nullopt;
+    }
+    return found->second;
+}
+
+std::unordered_set<std::type_index> *CTypes::map_types() {
+    static std::unordered_set<std::type_index> _map_types;
+    return &_map_types;
+}
+
+std::unordered_set<std::type_index> *CTypes::array_types() {
+    static std::unordered_set<std::type_index> _array_types;
+    return &_array_types;
+}
+
+std::unordered_set<std::type_index> *CTypes::pointer_types() {
+    static std::unordered_set<std::type_index> _pointer_types;
+    return &_pointer_types;
+}
+
+namespace {
+struct register_all_types {
+    register_all_types() {
+        type_registration::registerObjectTypes();
+        type_registration::registerCoreTypes();
+        native_plugin::registerGameplayTypeMetadata();
+        type_registration::registerHandlerTypes();
+        type_registration::registerGuiTypes();
+        type_registration::registerGuiPanelTypes();
+        type_registration::registerGuiWidgetTypes();
+        type_registration::registerGuiAnimationTypes();
+    }
+} _register_all_types;
+} // namespace

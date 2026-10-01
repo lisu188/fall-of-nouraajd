@@ -1,0 +1,232 @@
+{
+  "beAMan": {
+    "class": "CDialogOption",
+    "properties": {
+      "text": "Steel yourself and stop sobbing.",
+      "nextStateId": "VICTOR_SPEECH",
+      "action": "talked_to_victor"
+    }
+  },
+  "whatsWrong": {
+    "class": "CDialogOption",
+    "properties": {
+      "text": "What gnaws at you so hard?",
+      "nextStateId": "VICTOR_SPEECH",
+      "action": "talked_to_victor"
+    }
+  },
+  "tavernDialog2": {
+    "class": "TavernDialog2",
+    "properties": {
+      "questIds": "victorQuest",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "You step into the inn and find a lone man snarling at the innkeeper over liquor. You draw closer.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Continue.",
+                  "nextStateId": "INKEEPER_RANT",
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_RANT",
+            "text": "(innkeeper shouting) I TOLD YOU, I'M OUT OF YOUR PRECIOUS VODKA! ONLY BITTER BEER REMAINS.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "(punch the annoying man)",
+                  "action": "confrontVictorForcefully",
+                  "nextStateId": "PUNCHED_VICTOR",
+                  "number": 0
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Hey, step away!",
+                  "action": "calmVictor",
+                  "nextStateId": "YELLED_AT_VICTOR",
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "PUNCHED_VICTOR",
+            "text": "He crashes to the floor, nose bloodied, and begins to sob.",
+            "options": [
+              {
+                "ref": "beAMan",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "whatsWrong",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "YELLED_AT_VICTOR",
+            "text": "The man collapses into a chair and sobs.",
+            "options": [
+              {
+                "ref": "beAMan",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "whatsWrong",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_SPEECH",
+            "text": "I'm Victor. It's my daughter... She's been gone three days. My ex-wife lost her in the market crowd, and neither I nor the guards can find a trace. Every hour makes the town quieter about her. I'm terrified she's gone forever. (sobs)",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "Is there any clue at all where she went?",
+                  "number": 0,
+                  "nextStateId": "VICTOR_CLUE"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "text": "I crossed paths with Marumi Baso priests hunting a girl. Could they have taken her?",
+                  "number": 1,
+                  "nextStateId": "SUGGEST_TOWN_HALL",
+                  "condition": "asked_about_girl"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "VICTOR_CLUE",
+            "text": "A washerwoman swore she saw a girl like her near the old courtyard between the tavern, town hall, and chapel. When I rushed there I found nothing. No tracks, no ribbon, nothing.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "COURTYARD_PATH",
+                  "text": "I'll search that courtyard before the trail dies."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "nextStateId": "SUGGEST_TOWN_HALL",
+                  "text": "Maybe the town hall keeps older records about that courtyard."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "SUGGEST_TOWN_HALL",
+            "text": "What?! I've heard of them but never knew where their chapel hides. If they took her, they will not wait for grieving men. The town hall ledgers may name the door they use.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "EXIT",
+                  "text": "Then I'll check the town hall records."
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "nextStateId": "COURTYARD_PATH",
+                  "text": "I'll run to the courtyard now."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "COURTYARD_PATH",
+            "text": "You reach the courtyard between the tavern, town hall, and chapel. Behind a wooden door branded with the Cult of Marumi Baso sigil, voices count down a rite; press on now or Victor's child will vanish into stained glass and knives.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "text": "Break into the courtyard rite.",
+                  "action": "spawn_cultists",
+                  "nextStateId": "EXIT",
+                  "actionLabel": "Begin rescue"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "speaker": "Victor and the Innkeeper"
+    }
+  },
+  "victorRewardDialog": {
+    "class": "CDialog",
+    "properties": {
+      "questIds": "victorQuest",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "You smash through the stained glass and drag Victor's trembling daughter into the light before the last verse is spoken. Overwhelmed, Victor presses 500 gold into your palm and offers to sell whatever potions he still has left.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "speaker": "Victor"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "test",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable primitive wrapper flattened fixture",
+      "mapName": "test",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "posx": 4,
+            "posy": 6,
+            "posz": 0,
+            "quests": [],
+            "typeId": "Warrior"
+          }
+        }
+      ],
+      "primitiveCounts": {
+        "gold": 7,
+        "silver": 3
+      },
+      "primitiveTags": [
+        "alpha",
+        "beta"
+      ],
+      "tiles": [],
+      "triggers": [],
+      "turn": 25
+    }
+  }
+}

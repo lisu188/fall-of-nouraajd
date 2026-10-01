@@ -1,0 +1,270 @@
+# Interface and dialogue design
+
+The interface uses opaque charcoal surfaces, warm ivory text and restrained gold selection accents. Existing
+world artwork, gameplay rules, resource identifiers, character eligibility and quest outcomes remain authoritative.
+Source Sans 3 supplies controls and prose; Source Serif 4 supplies headings. Both font assets and their SIL Open
+Font License notices ship through the existing CMake resource handling.
+
+## Interaction
+
+Inventory, abilities, trade and combat lists select on left-click. Repeated selection never executes an action.
+Hover previews details; right-click pins inspection. Use, Equip, Unequip, trade quantity controls and combat
+execution buttons perform the named operation and revalidate its availability. Drag-to-equip remains a shortcut.
+
+Tab/Shift+Tab moves focus, arrows navigate lists, and Enter/Space activates the focused control. Search starts with
+`/` on a searchable list. Escape dismisses the top cancellable surface and restores its owner's focus. It never
+chooses an authored dialogue response merely because that response leads to `EXIT`. Combat Escape opens Pause.
+Opening, closing and scene transitions consume the triggering input. Inspection and navigation do not advance turns.
+Held keys remain suppressed across panel changes until release, so acknowledging a reader cannot also wait a world
+turn or acknowledge the following reader. A fresh world press retains the existing movement/wait repeat behavior.
+
+Frontend choosers include their details and footer actions in Tab/Shift+Tab navigation. The active region has a
+visible border; Enter/Space activates its control, while Space remains ordinary text in a save-name field.
+Arrow-selected dialogue replies accept Enter, keypad Enter and Space only after an explicit selection. Transcript
+and objective readers keep all reply activation keys inert.
+
+I/J/C retain Inventory, Journal and Character navigation. M opens the expanded map; F12 opens the existing gated
+developer console. World clicks preview a destination; Travel or Enter commits it. Manual movement or waiting
+invalidates the previous preview. Settings remap gameplay bindings while reserving interface navigation keys.
+
+## Layout and presentation
+
+`CUiTheme`, `CTextManager`, `CGui` and `CGamePanel` own shared colors, font roles, scaling, focus and management shells.
+User interface and text scales range from 100 to 200 percent in 25-percent steps; automatic scaling applies above
+the 1080p reference display. The two user scale settings do not multiply text enlargement twice. Preferences live
+outside game saves and are validated before application.
+
+Management screens preserve selection and scroll state. When columns no longer fit, labelled regions become
+separate pages, available with mouse arrows or `[` / `]`. Text remains at the chosen scale. Lists provide search,
+scrolling and keyboard-accessible paging; footers reserve the space needed by the actual rendered button labels.
+Compact trade regions expose the action for the inventory currently being viewed.
+
+The frontend provides Continue, New adventure, Load, Settings, Help and Quit; adventure/scenario/campaign browsers;
+a combined character preview; chapter briefings/outcomes; named saves and overwrite review; and operation-specific
+loading and failure feedback. Character previews initialize a detached character using the same level-one resource
+initialization as the started player. Save failure leaves the active session available.
+
+Campaign and scenario previews accept optional `artwork` paths to existing bundled PNGs under `images/`.
+The native browser and chapter reader preserve artwork proportions and move it above text at compact sizes;
+missing artwork returns its space to the text. `showCampaignArtworkScreen` adds this presentation while the
+existing three-argument `showCampaignScreen` remains compatible.
+
+Combat records the latest 64 authoritative encounter events. The Combat log button or `L` opens a scrollable,
+read-only reader without changing the selected action, target, round, or world turn. Closing the encounter or
+changing scenes also closes its reader. The search field retains ordinary `L` text entry.
+
+Conversation choices retain authored order and conditional visibility. Consequential action labels precede authored
+response prose. Transcript/history views are read-only. Dialogue callbacks validate the owning scene, including
+queued scene changes, and cannot continue acting through a detached panel.
+The 31 authored conversations contain 121 states and 222 options, including the six Castle campaign conversations.
+Added states/options make commitments and in-progress reminders explicit. Related quest context is shown only for
+the player's active matching quests.
+Map scripts route substantial lore to titled readers, observed reward gains to consolidated receipts, and routine
+discoveries/progress to History. Blocked world actions can anchor their resolved requirement beside the actual object.
+The Castle campaign uses the same presentation helpers: rest and progress go to History, garrison and landing
+requirements stay beside their object, and mission supplies/captures show observed reward gains. Victory gold is
+reported in the existing chapter outcome acknowledgment using the actual balance change; no presentation helper
+grants rewards or adds another victory dialog.
+
+## Verification and accessibility
+
+All automated GUI runs, screenshots and game-session subprocesses use an isolated virtual/offscreen display. Linux
+uses Xvfb; supported Windows runs use SDL dummy/offscreen video and software rendering. Missing isolation blocks the
+specific display check rather than opening a window on the user's desktop. Screenshot generation checks nonempty,
+loadable PNGs and dimensions, and includes every registered panel, every authored map, a random map, frontend states
+and enlarged-scale variants. The capture generator refreshes the README image aliases from the same run.
+
+The shared text colors meet the 4.5:1 body-text target on the background, panel and selected surfaces. The lowest
+ratio among ordinary text roles on the selected surface is 5.11:1 for the gold accent; primary text is 10.00:1 and
+secondary text 5.69:1. The smallest bundled font's measured `Agpq` glyph body is 19 pixels at reference scale and
+39 pixels at 4K scale. These asset checks are separate from rendered screen/overflow inspection. The reference
+criteria are [XAG 101 text display](https://learn.microsoft.com/en-us/xbox/accessibility/xbox-accessibility-guidelines/101),
+[XAG 112 navigation](https://learn.microsoft.com/en-us/xbox/accessibility/xbox-accessibility-guidelines/112), and
+[WCAG contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html).
+
+Focused native suites are `ui_foundations_unit_tests`, `ui_navigation_unit_tests`, `ui_management_unit_tests`,
+`ui_frontend_unit_tests` and `ui_dialogue_unit_tests`. They also belong to `for_unit_tests` for repository CI.
+Python source/asset suites include `tests.test_ui_frontend`, `tests.test_ui_dialogue`, `tests.test_ui_accessibility`,
+`tests.test_generate_screenshots` and `tests.test_mcp_stdio_encoding`. `tests.test_ui_mcp_dialogue` drives the actual
+player through amulet, companion, captive/Voss and ritual scene routes with observable reward/quest assertions.
+The Sundered March route checks its gate, banner reminder and guarded late reward. `tests.test_ui_mcp_management`
+visits authored crafting and trade stations, revalidates costs/ownership, and approaches an authored enemy before
+executing an owned ability. These deterministic routes use explicit setup for resources and combat statistics;
+they complement the natural Nouraajd GUI quest walkthrough rather than establishing a complete campaign playthrough.
+Existing crafting, save, inventory, trade and Nouraajd walkthrough tests retain their gameplay assertions while
+using the new explicit interface actions.
+
+The initial Windows offscreen GUI sweep covered 47 cases: 44 passed across the initial run and focused regression reruns;
+three window-focus resize checks require isolated Linux/Xvfb and are not claimed as Windows passes. The sweep
+found and fixed Home/End scrolling in the journal's visible History pane and truncation of reward receipts beyond
+4096 bytes. Native and rendered regressions cover both. Named-save tests enter a name through SDL text input,
+explicitly confirm replacement, reload the result, and verify the recovery copy without touching existing saves.
+
+After integration with main on September 24, 2026, the engine was rebuilt with the approved `vstd` revision
+`15c7f0b32d19ada5f22de1ea2b8d61a3232dfee3`, which supplies the event-loop APIs used by main. `CListView` now names
+the dependency's explicit pair hash, matching the other coordinate caches. The fresh Windows offscreen run passed
+three receipt, inventory and journal GUI checks and regenerated 111 verified screenshots: every registered panel,
+all 15 authored maps, a random map and the frontend/overflow variants. The Castle Homecoming MCP route moved the
+real player through 167 steps, two authored combats and two portal traversals before confirming chapter completion.
+These focused results complement the full native, Linux/Xvfb, Windows and coverage checks required from CI.
+
+The September 26 follow-up adds 18 captures through `scripts/generate_screenshots.py --acceptance-only`: populated
+save/load lists, selected abilities and modifier sources, expanded map and landmarks, crafting previews/results,
+artifact assembly/disassembly including their scrolled endings, resolved defeat, chapter outcome and campaign
+completion. These are disposable visual fixtures with explicit equipment, statistics and campaign-position setup,
+separate from the real-player MCP routes above. Save metadata comes from an isolated native save that is removed
+after capture. Crafting costs, consumed ingredients and outputs are checked against resolved operations; the failed
+roll is deterministic. Defeat text comes from a real encounter's one-HP recovery and actual losses. Cancelling
+browsers and artifact previews preserves turn, resources and inventory; acknowledgements do not repeat committed
+losses or campaign outcomes. The added screenshots passed PNG decoding/dimension checks at 1920x1080 through SDL
+dummy/software rendering. The historical 111-image baseline and five Castle landmark captures remain separate.
+
+The final keyboard and console pass regenerated the complete 136-image set, including six new focus/disabled
+captures, the active diagnostic drawer and the chapter outcome's observed 400-gold reward. Independent visual review
+covers normal and 720p/200% focus,
+footer actions and hints. Chooser regressions reproduced eight failing assertions, and dialogue activation
+regressions reproduced four; both focused native suites pass after correction. The rebuilt Castle MCP campaign
+route and paid-rest check also pass (two tests, 19.17 seconds). These runtime checks retain the authored objective,
+reward and transition assertions rather than only changing flags.
+
+The console retains its configured priority above the navigation dock; the old child override let I/J/C open
+management panels above it depending on sibling order, consuming subsequent typed text. A deterministic regression
+reproduced the priority collision, and five repeated full-GUI command/focus checks pass after removing that override.
+The capture tool enables the existing development setting only in its isolated process and restores it afterward.
+Console and expanded-map interaction/runner checks pass locally (25 tests, no skips). These paths are included in
+the canonical coverage suite; the earlier run recorded 15,709/17,551 lines (89.50%). Final CI results are recorded
+on the delivery PR, separately from these focused local checks.
+
+The same follow-up fixes shutdown of pending Python callbacks before interpreter finalization. Five fresh-process
+regressions pass; three reproduced shutdown failures before the fix, and the completed-work check releases all 200
+captured objects. Three Windows dummy/software GUI regressions now use the current sidebar geometry and separate
+input pumps. Real window-focus/resize checks still require Linux/Xvfb; these local results do not establish full CI
+or coverage completion.
+
+Combat history, dialogue history and defeat receipts have explicit string properties, preserving their existing JSON
+text through serialization. The native save regression checks each field separately, all three together and absent
+fields in both versioned and legacy saves. All ten cases pass; the eight nonempty-history cases rejected loading
+before the property declarations were added. The Castle partial-progress reload also passes after the change.
+Victor's quest journal keeps its player-carried outcome through travel and reload; real MCP routes cover active,
+rescued and timed-out outcomes, including the guarded 500-gold rescue reward. Those reload checks use native
+serialized snapshots and are separate evidence from the named-save UI tests.
+
+Pre-snapshot saves also migrate before an unread departure: Nouraajd queues its journal synchronization after
+script registration, because the native loader attaches the restored map and player afterward. The callback
+checks the active map, migrates only missing snapshots and skips dependency-only registration for other maps.
+Both rescued and timed-out MCP fixtures failed before this correction and pass after loading an old-format snapshot
+and immediately requesting travel, without reading or serializing the restored player's journal first. Returning
+to a fresh Nouraajd, rereading the completed journal and accepting an unrelated quest retain the recorded ending;
+meaningful authored Victor states still take precedence over the snapshot. Reward balances and guards remain
+unchanged. The extended two-outcome route passes in 19.42 seconds on Windows offscreen, and 239 focused source
+checks pass, including regressions that failed before the return-trip safeguards.
+
+## Rendering and cache evidence
+
+The opt-in [profile harness and complete samples](../../scripts/ui_text_profile/README.md) retain the exact workload
+and reproduction commands for the diagnostic comparison below.
+
+Text cache keys include text, wrapping width, role, effective pixel size and color. Texture entries are bounded at
+512 and font entries at 24. Readers and persistent management details split long text into cached, UTF-8-safe
+paragraph chunks and draw only visible chunks, so the individual texture limit cannot discard the end of a letter,
+item comparison, transaction, or journal entry. Changing scale invalidates obsolete text metrics and font/text caches.
+
+The deterministic performance guard warms 200 distinct strings and draws 2,000 cached copies. It requires zero new
+texture loads for the warm draws, successful render copies, bounded entries and correct invalidation. Run it with:
+
+```sh
+cmake --build cmake-build-release --target performance_guard_tests -j4
+ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+```
+
+On Windows add `--config Release` to the build and `-C Release` to CTest, use the configured Python 3.12 home, and
+set `SDL_VIDEODRIVER=dummy`, `SDL_AUDIODRIVER=dummy`, `SDL_RENDER_DRIVER=software` before native execution.
+
+Supplemental local profiling compared original commit `065b5d6010bffa6044b422e0ff6292557bfcf313` with the redesigned
+text path using MSVC 19.44, x64 Release, SDL dummy/software, the same harness and dependency installation. The workload
+was 200 strings of width 600, 200 cached lookups, and 200 redraw passes of ten strings, after one warm-up and across
+seven measured samples. Recorded median milliseconds were:
+
+| Version | Cold text | Cached lookup | 2,000 redraws |
+| --- | ---: | ---: | ---: |
+| Original | 17.3044 | 0.0880 | 117.4568 |
+| Redesigned text path | 15.6275 | 0.0789 | 41.8992 |
+
+Every sample recorded 2,000 successful copies and zero failed/skipped copies. These timings are diagnostic: font
+assets changed, the original build did not use the current unity/PCH configuration, and later layout changes are
+not represented by that timing snapshot. They do not establish a whole-frame speedup. Deterministic cache/render
+counts remain the acceptance gate. The original full performance run also exposed three sparse-map path failures
+caused by Windows configuration-directory resource lookup; the current provider resolves the verified parent
+build resource directory, and the unchanged path assertions pass in the current focused run.
+
+The current Windows Release guard also verifies 700 choice rows with zero new textures across four warm redraws,
+and 700 detail paragraphs with six visible texture loads (budget 16) followed by zero new textures across 25 warm
+redraws. The detail guard checks that copies correspond only to visible paragraphs and that unchanged text is not
+remeasured. These counts were obtained with the CTest performance command above using SDL dummy/software rendering;
+the [retained chooser profile](../../scripts/ui_text_profile/README.md#choice-list-cache-profile) records the earlier
+723-texture-per-redraw development result and its fixture limitations.
+
+The 700-row reward receipt guard adds seven visible texture loads and zero additional loads across 25 warm frames
+(150 successful copies, budget 400). Its final-row regression failed with the earlier truncated renderer and passes
+with the shared paragraph layout. Exact before/after commands and counts are retained in the
+[receipt profile](../../scripts/ui_text_profile/README.md#long-reward-receipt-rendering).
+
+Required Linux, Windows, full-suite and coverage evidence comes from the PR's path-selected `build` workflow. A
+successful focused local run or screenshot set alone is not a claim that those release checks have completed.
+
+## Shared item and ability inspection
+
+The September 30 acceptance audit found two remaining presentation gaps: item bonuses and equipment comparisons
+still exposed abbreviated stat names, and Character ability details lacked targeting, current availability and
+authored effect descriptions. Item tooltips, comparisons and Character modifier sources now share the existing
+readable stat vocabulary. Resource IDs, signed numeric bonuses and comparison calculations are unchanged.
+
+All 51 configured interactions have effect descriptions reviewed against their current action and effect rules.
+The shared tooltip shows the authoritative mana cost and distinguishes caster targeting from one-enemy targeting,
+including the legacy Buff routing rule. Character and Combat reuse the same current availability explanation.
+Reading these views does not simulate damage, invoke an action, consume resources or advance turns. Combat retains
+its actual selected target and explicit execution control; caster-targeted abilities still require the existing
+living-enemy encounter context.
+
+Native regressions reproduced 48 failed assertions before the presentation fixes: 18 stat-label checks and 30
+ability targeting/availability checks. They cover changing mana and ownership without reselection, defeat, signed
+bonuses, preserved target selection and unchanged player/world state. A source-only check rejects missing ability
+names or descriptions; its original-resource run produced 52 failing subtests. The MCP inspection regression moves
+the real Warrior to Nouraajd's authored merchant, reads the owned Attack and the merchant's Dagger of Vile Heart,
+and checks native metadata and unchanged state. These focused results are separate from the required PR checks.
+
+The screenshot generator selects an owned ability with a mana requirement and captures both its available and
+unavailable states at 1080p and at 720p with 200% UI/text scaling, restoring the original mana afterward. The
+complete offscreen run regenerated and verified 139 images, including all 15 registered panels, all 15 authored
+maps and a random map. Both compact ability states fit their full metadata; the bounded PageDown check found no
+overflow in this fixture. Native fixtures cover scrolling independently of these screenshots.
+
+The Character rendering performance guard measures
+bounded texture refresh when availability changes and requires zero new textures across 25 unchanged redraws in
+each state. Exact commands and measurements are retained in the [profile notes](../../scripts/ui_text_profile/README.md).
+
+The initial MCP fixture tried the unbound `getDescription` accessor and a tooltip helper outside the MCP export
+surface; it now reads supported native properties. The initial screenshot attempt similarly tried an unbound
+Character selection accessor; the final capture uses normal search/keyboard routing and rendered review instead.
+Corrected focused tests and the complete screenshot command pass. These setup failures do not establish engine
+regressions or expand the public MCP surface.
+
+Final image review caught a capture-sequence defect: redundant search-cleanup keys after the compact ability view
+closed Character before the modifier-reader capture, leaving a valid PNG of the world. The search helper already
+ends and clears its filter, so those extra keys are removed. Capture now requires the current visible Character
+panel, a visible nonempty reader titled Stat modifiers, and retained Character after reader dismissal. Eight
+invalid-state regression subcases failed before the guards and pass afterward. All 19 screenshot-tooling tests
+pass, and the 22 affected acceptance screenshots are regenerated offscreen and decoded. This correction changes
+capture tooling and evidence; gameplay and rendering rules are unchanged.
+
+The final visual audit reviewed all 116 frontend, management and registered-panel images. It also found that
+Loading displayed an active Continue button and accepted dismissal despite being marked non-closeable, and that
+error feedback used the generic Discovery title. Non-closeable text readers now show muted Please wait feedback,
+consume dismissal keys and clicks, retain scrolling, and still close when the engine calls hideLoading. A pressed
+Continue cannot survive disabling and re-enabling dismissal. Native regressions reproduced nine failed assertions
+before the fix and pass afterward while preserving player resources and world input isolation. Errors now use the
+shared titled reader; save and load failures name their operation, preserve the current session, and acknowledge
+without reporting success. Three frontend regressions fail before the title change and pass afterward. The combined
+focused Python check runs 72 tests successfully. Updated screenshots use the freshly rebuilt native module and
+normally configured resources. Loading texture counts remain six initial loads and zero across 25 warm redraws;
+the [profile notes](../../scripts/ui_text_profile/README.md) retain the exact before/after commands.

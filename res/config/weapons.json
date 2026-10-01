@@ -1,0 +1,471 @@
+{
+  "BladeOfDarkDreams": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/bladeofdarkdreams",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 7,
+          "crit": 3,
+          "dmgMax": 42,
+          "dmgMin": 35,
+          "intelligence": 5,
+          "stamina": 12,
+          "strength": 13
+        }
+      },
+      "label": "Blade of Dark Dreams",
+      "description": "Curved OctoBogz spine blade that murmurs nightmare hymns to sleepless Victor veterans.",
+      "power": 9
+    }
+  },
+  "BroadSword": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/broadsword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "dmgMax": 18,
+          "dmgMin": 15,
+          "intelligence": 1,
+          "stamina": 4,
+          "strength": 5
+        }
+      },
+      "label": "Broad Sword",
+      "description": "Frontier broadsword issued to caravan guards for cleaving Pritscher shields on the eastern road.",
+      "power": 5
+    }
+  },
+  "ChaosSword": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/chaossword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "attack": 15,
+          "damage": 25
+        }
+      },
+      "interaction": {
+        "ref": "ChaosBlast"
+      },
+      "label": "Chaos Sword",
+      "description": "Abyssal altar blade taken beneath Nouraajd, its edge still sizzling with violet rifts.",
+      "power": 18
+    }
+  },
+  "Dagger": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/dagger",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 4,
+          "dmgMax": 11,
+          "dmgMin": 8,
+          "stamina": 2
+        }
+      },
+      "label": "Dagger",
+      "description": "Common tavern dagger from the town smithy, chipped by years of alley disputes.",
+      "power": 3
+    }
+  },
+  "DaggerOfVileHeart": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/daggerofvileheart",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 15,
+          "crit": 6,
+          "dmgMax": 37,
+          "dmgMin": 33,
+          "intelligence": 8,
+          "stamina": 11,
+          "strength": 5
+        }
+      },
+      "label": "Dagger of Vile Heart",
+      "description": "Bogz venom bakes into this hollow knife's edge, favored by assassins stalking cult sympathizers.",
+      "power": 9
+    }
+  },
+  "Knife": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/knife",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 1,
+          "dmgMax": 7,
+          "dmgMin": 5,
+          "stamina": 1
+        }
+      },
+      "label": "Knife",
+      "description": "Utility knife every scout carries for rope, rations, and a last defense when the barricades fall."
+    }
+  },
+  "LongSword": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/longsword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 14,
+          "dmgMin": 12,
+          "stamina": 2,
+          "strength": 1
+        }
+      },
+      "label": "Long Sword",
+      "description": "Tall guard sword from Victor's armory, balanced for sweeping cultists clear of the courtyard.",
+      "power": 3
+    }
+  },
+  "ShadowBlade": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/shadowblade",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 18,
+          "crit": 6,
+          "dmgMax": 60,
+          "dmgMin": 54,
+          "intelligence": 17,
+          "stamina": 12,
+          "strength": 10
+        }
+      },
+      "label": "Shadow Blade",
+      "description": "Matt-black steel quenched in soot and pitch so even chapel braziers cannot catch its shine.",
+      "power": 25
+    }
+  },
+  "ShortStaff": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/shortstaff",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 7,
+          "dmgMin": 5,
+          "intelligence": 1,
+          "stamina": 1
+        }
+      },
+      "label": "Short Staff",
+      "description": "Knotty ash staff issued to Beren's novices before they master true rites."
+    }
+  },
+  "ShortSword": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/shortsword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 7,
+          "dmgMin": 5,
+          "stamina": 1,
+          "strength": 1
+        }
+      },
+      "label": "Short Sword",
+      "description": "Compact sword prized by tunnel fighters defending the catacomb stairwells against ratmen."
+    }
+  },
+  "Staff": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/staff",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 10,
+          "dmgMin": 7,
+          "intelligence": 5,
+          "stamina": 2
+        }
+      },
+      "interaction": {
+        "ref": "ElemStaff"
+      },
+      "label": "Staff",
+      "description": "Pilgrim's staff etched with travel prayers for those who still dare the road into Nouraajd.",
+      "power": 3
+    }
+  },
+  "StaffOfTheAbyss": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/staffoftheabyss",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 10,
+          "dmgMax": 41,
+          "dmgMin": 34,
+          "intelligence": 12,
+          "stamina": 8,
+          "strength": 4
+        }
+      },
+      "label": "Staff of the Abyss",
+      "description": "Warped stave that drank from the catacomb breach; frost creeps along every grip.",
+      "power": 9
+    }
+  },
+  "Stiletto": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/stiletto",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 4,
+          "dmgMax": 17,
+          "dmgMin": 14,
+          "intelligence": 0,
+          "stamina": 5,
+          "strength": 3
+        }
+      },
+      "label": "Stiletto",
+      "description": "Needle-fine stiletto hidden under Victor's courtesans' sleeves for quiet silencing.",
+      "power": 5
+    }
+  },
+  "Sword": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/sword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "attack": 5,
+          "damage": 10
+        }
+      },
+      "label": "Sword",
+      "description": "Plain sword hammered by the town's last smith, serviceable despite damp barracks."
+    }
+  },
+  "Valkyrie": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/valkyrie",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 17,
+          "crit": 1,
+          "dmgMax": 59,
+          "dmgMin": 52,
+          "intelligence": 20,
+          "stamina": 14,
+          "strength": 8
+        }
+      },
+      "label": "Valkyrie",
+      "description": "Ornate blade seized from a northern crusader whose bones now rest in Nouraajd's frozen crypts.",
+      "power": 25
+    }
+  },
+  "Void": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/void",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 12,
+          "block": 4,
+          "crit": 3,
+          "dmgMax": 65,
+          "dmgMin": 62,
+          "intelligence": 8,
+          "stamina": 17,
+          "strength": 15
+        }
+      },
+      "label": "Void",
+      "description": "Gloss-black greatblade dredged from a void scar near the chapel; its edges swallow lamplight.",
+      "power": 25
+    }
+  },
+  "Wand": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/wand",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "dmgMax": 17,
+          "dmgMin": 13,
+          "intelligence": 7,
+          "stamina": 2,
+          "strength": 1
+        }
+      },
+      "label": "Wand",
+      "description": "Simple witchwood wand the chapel scribes use to kindle braziers and scorch Pritschers at need.",
+      "power": 5
+    }
+  },
+  "TheIronThorn": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/void",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "strength": 10,
+          "dmgMin": 28,
+          "dmgMax": 44,
+          "intelligence": -16,
+          "stamina": -12,
+          "agility": -8
+        }
+      },
+      "label": "The Iron Thorn",
+      "description": "A black barbed spike unearthed beneath Nouraajd's chapel. It sinks into the hand and will not come loose; the grip rots the mind to grave-cold silence until the curse is lifted.",
+      "power": 16,
+      "tags": [
+        "cursed"
+      ]
+    }
+  },
+  "CentaursAxe": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/broadsword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 13,
+          "dmgMin": 9,
+          "stamina": 1,
+          "strength": 3
+        }
+      },
+      "label": "Centaur's Axe",
+      "description": "Plainswrought axe traded up from centaur herds long since scattered; its balance still favors a charging swing.",
+      "power": 3
+    }
+  },
+  "BlackshardOfTheDeadKnight": {
+    "class": "SetWeapon",
+    "properties": {
+      "animation": "images/items/weapons/shadowblade",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "dmgMax": 25,
+          "dmgMin": 19,
+          "shadowResist": 5,
+          "stamina": 4,
+          "strength": 5
+        }
+      },
+      "label": "Blackshard of the Dead Knight",
+      "description": "Night-black shard pried from a dead knight's barrow beneath the catacombs; it drinks lamplight like the grave. Part of the Armor of the Damned set (4 pieces).",
+      "power": 7
+    }
+  },
+  "OgresClubOfHavoc": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/shortstaff",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "dmgMax": 39,
+          "dmgMin": 28,
+          "stamina": 7,
+          "strength": 13
+        }
+      },
+      "label": "Ogre's Club of Havoc",
+      "description": "Knotted ogre cudgel banded in siege iron; every blow lands with the weight of a falling gate.",
+      "power": 12
+    }
+  },
+  "SwordOfHellfire": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/chaossword",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "crit": 4,
+          "dmgMax": 45,
+          "dmgMin": 36,
+          "fireResist": 15,
+          "stamina": 6,
+          "strength": 10
+        }
+      },
+      "label": "Sword of Hellfire",
+      "description": "Forged in a furnace stoked with cult pyres, its edge sheds sparks that scar stone.",
+      "power": 16
+    }
+  },
+  "TitansGladius": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/valkyrie",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 10,
+          "block": -4,
+          "crit": 5,
+          "dmgMax": 63,
+          "dmgMin": 56,
+          "stamina": 12,
+          "strength": 16
+        }
+      },
+      "label": "Titan's Gladius",
+      "description": "Storm-forged giant's blade sized down for mortal hands; it demands attack over guard and punishes hesitation.",
+      "power": 24
+    }
+  },
+  "SwordOfJudgement": {
+    "class": "CWeapon",
+    "properties": {
+      "animation": "images/items/weapons/void",
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "agility": 12,
+          "crit": 3,
+          "dmgMax": 66,
+          "dmgMin": 58,
+          "intelligence": 12,
+          "stamina": 12,
+          "strength": 12
+        }
+      },
+      "label": "Sword of Judgement",
+      "description": "The old kings' arbiter blade, said to weigh a soul with every stroke; none it finds wanting rise again.",
+      "power": 26
+    }
+  }
+}

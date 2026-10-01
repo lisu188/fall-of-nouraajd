@@ -1,0 +1,596 @@
+{
+  "Assasin": {
+    "class": "CPlayer",
+    "properties": {
+      "creatureClass": {
+        "ref": "AssasinClass"
+      },
+      "animation": "images/players/assasin",
+      "equipped": {
+        "0": {
+          "ref": "Dagger"
+        },
+        "3": {
+          "ref": "LeatherArmor"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "items": [],
+      "label": "Assasin",
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 12,
+          "dmgMin": 10,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "agility",
+          "stamina": 5,
+          "strength": 5
+        }
+      }
+    }
+  },
+  "Gooby": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/gooby",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Gooby",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 3,
+          "intelligence": 1,
+          "normalResist": 5,
+          "stamina": 2,
+          "strength": 3
+        }
+      },
+      "levelling": {
+        "4": {
+          "ref": "DoubleAttack"
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 12,
+          "dmgMin": 10,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 5,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "goobyRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
+      },
+      "sw": 1
+    }
+  },
+  "OctoBogz": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/octobogz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Octobogz",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 5,
+          "dmgMin": 4,
+          "hit": 4,
+          "intelligence": 2,
+          "normalResist": 7,
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "levelling": {
+        "2": {
+          "ref": "AbyssalShadows"
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 10,
+          "crit": 20,
+          "dmgMax": 16,
+          "dmgMin": 12,
+          "hit": 80,
+          "intelligence": 10,
+          "mainStat": "strength",
+          "stamina": 7,
+          "strength": 10
+        }
+      },
+      "race": {
+        "ref": "octoBogzRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
+      },
+      "sw": 2
+    }
+  },
+  "Pritz": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/pritz",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Pritz",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "normalResist": 5,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "levelling": {
+        "4": {
+          "ref": "DoubleAttack"
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "pritzRace"
+      },
+      "creatureClass": {
+        "ref": "bruteClass"
+      },
+      "sw": 1
+    }
+  },
+  "PritzMage": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/pritzmage",
+      "class": "CStats",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Pritz Mage",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 3,
+          "intelligence": 3,
+          "normalResist": 5,
+          "stamina": 2,
+          "strength": 3
+        }
+      },
+      "levelling": {
+        "2": {
+          "ref": "MagicMissile"
+        },
+        "3": {
+          "ref": "FrostBolt"
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 12,
+          "dmgMin": 10,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "intelligence",
+          "stamina": 5,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "pritzRace"
+      },
+      "creatureClass": {
+        "ref": "mageClass"
+      },
+      "sw": 2
+    }
+  },
+  "Sorcerer": {
+    "class": "CPlayer",
+    "properties": {
+      "creatureClass": {
+        "ref": "SorcererClass"
+      },
+      "animation": "images/players/sorcerer",
+      "equipped": {
+        "0": {
+          "ref": "Staff"
+        },
+        "3": {
+          "ref": "Robe"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "items": [],
+      "label": "Sorcerer",
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 12,
+          "dmgMin": 10,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "intelligence",
+          "stamina": 5,
+          "strength": 5
+        }
+      }
+    }
+  },
+  "Warrior": {
+    "class": "CPlayer",
+    "properties": {
+      "creatureClass": {
+        "ref": "WarriorClass"
+      },
+      "animation": "images/players/warrior",
+      "equipped": {
+        "0": {
+          "ref": "Sword"
+        },
+        "3": {
+          "ref": "PlateArmor"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "items": [],
+      "label": "Warrior",
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 12,
+          "dmgMin": 10,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 5,
+          "strength": 5
+        }
+      }
+    }
+  },
+  "Cultist": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cultist",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Cultist",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "humanRace"
+      },
+      "creatureClass": {
+        "ref": "cultistClass"
+      },
+      "sw": 1
+    }
+  },
+  "NeutralHumanNpc": {
+    "class": "CCreature",
+    "properties": {
+      "animation": "images/npc/questGiver",
+      "label": "Human",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "humanRace"
+      }
+    }
+  },
+  "CultLeader": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/cult_leader",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Cult Leader",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 3,
+          "crit": 2,
+          "dmgMax": 4,
+          "dmgMin": 3,
+          "hit": 4,
+          "intelligence": 3,
+          "stamina": 4,
+          "strength": 4
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 8,
+          "crit": 15,
+          "dmgMax": 8,
+          "dmgMin": 6,
+          "hit": 80,
+          "intelligence": 8,
+          "mainStat": "strength",
+          "stamina": 7,
+          "strength": 7
+        }
+      },
+      "race": {
+        "ref": "humanRace"
+      },
+      "creatureClass": {
+        "ref": "cultistClass"
+      },
+      "sw": 2
+    }
+  },
+  "GoblinThief": {
+    "class": "CCreature",
+    "properties": {
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "animation": "images/monsters/goblin_thief",
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "label": "Goblin Thief",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 2,
+          "crit": 1,
+          "dmgMax": 1,
+          "dmgMin": 1,
+          "hit": 3,
+          "intelligence": 1,
+          "normalResist": 5,
+          "stamina": 1,
+          "strength": 2
+        }
+      },
+      "levelling": {
+        "4": {
+          "ref": "DoubleAttack"
+        }
+      },
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 10,
+          "dmgMax": 3,
+          "dmgMin": 2,
+          "hit": 75,
+          "intelligence": 5,
+          "mainStat": "strength",
+          "stamina": 3,
+          "strength": 5
+        }
+      },
+      "race": {
+        "ref": "goblinRace"
+      },
+      "creatureClass": {
+        "ref": "thiefClass"
+      },
+      "sw": 1
+    }
+  },
+  "Inquisitor": {
+    "class": "CPlayer",
+    "properties": {
+      "creatureClass": {
+        "ref": "InquisitorClass"
+      },
+      "animation": "images/players/inquisitor",
+      "equipped": {
+        "0": {
+          "ref": "Sword"
+        },
+        "3": {
+          "ref": "Robe"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "items": [],
+      "label": "Inquisitor",
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 5,
+          "crit": 8,
+          "dmgMax": 11,
+          "dmgMin": 9,
+          "hit": 78,
+          "intelligence": 7,
+          "mainStat": "intelligence",
+          "stamina": 6,
+          "strength": 6
+        }
+      }
+    }
+  },
+  "Wayfarer": {
+    "class": "CPlayer",
+    "properties": {
+      "creatureClass": {
+        "ref": "WayfarerClass"
+      },
+      "animation": "images/players/wayfarer",
+      "equipped": {
+        "0": {
+          "ref": "ShortSword"
+        },
+        "3": {
+          "ref": "LeatherArmor"
+        }
+      },
+      "fightController": {
+        "class": "CMonsterFightController"
+      },
+      "items": [],
+      "label": "Wayfarer",
+      "baseStats": {
+        "class": "CStats",
+        "properties": {
+          "agility": 8,
+          "crit": 12,
+          "dmgMax": 11,
+          "dmgMin": 9,
+          "hit": 82,
+          "intelligence": 5,
+          "mainStat": "agility",
+          "stamina": 5,
+          "strength": 6
+        }
+      }
+    }
+  }
+}

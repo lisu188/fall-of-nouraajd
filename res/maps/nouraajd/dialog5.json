@@ -1,0 +1,156 @@
+{
+  "berenDialog": {
+    "class": "BerenDialog",
+    "properties": {
+      "questIds": "deliverLetterQuest,retrieveRelicQuest,cleanseCaveQuest",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "Welcome to the chapel, traveler. Do you carry the mayor's news?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "action": "deliver_letter",
+                  "nextStateId": "LETTER_DELIVERED",
+                  "text": "I carry a letter for you.",
+                  "condition": "can_deliver_letter",
+                  "actionLabel": "Deliver letter"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "action": "return_relic",
+                  "nextStateId": "RELIC_RETURNED",
+                  "text": "I recovered the relic.",
+                  "condition": "can_return_relic",
+                  "actionLabel": "Return relic"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "action": "finish_cleanse",
+                  "nextStateId": "CAVE_PURGED",
+                  "text": "The cave has been cleansed.",
+                  "condition": "can_finish_cleanse",
+                  "actionLabel": "Complete quest"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 3,
+                  "action": "inspect_stained_glass",
+                  "nextStateId": "STAINED_GLASS",
+                  "text": "Let me inspect the chapel's stained glass.",
+                  "condition": "can_inspect_stained_glass",
+                  "actionLabel": "Inquisitor"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 4,
+                  "action": "decode_stained_glass_ward",
+                  "nextStateId": "SORCERER_WARD",
+                  "text": "Decode the warding sigils in the stained glass.",
+                  "condition": "can_decode_stained_glass_ward",
+                  "actionLabel": "Sorcerer"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 5
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "LETTER_DELIVERED",
+            "text": "Thank you for bearing the mayor's plea. Now descend into the catacombs and retrieve the holy relic our town clings to.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "SORCERER_WARD",
+            "text": "The glass hides a cold ward written in patient circles. You copy one safe arc before the rest bites back.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "RELIC_RETURNED",
+            "text": "Excellent. With this relic you can scour the OctoBogz from their eastern cave. Return when that blight is ended.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "STAINED_GLASS",
+            "text": "You trace a hidden seal in the glass—a cult cipher burned into the lead with endless patience.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "CAVE_PURGED",
+            "text": "You have freed us from the OctoBogz. The town breathes easier because of you.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "speaker": "Father Beren"
+    }
+  }
+}

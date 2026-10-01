@@ -1,0 +1,341 @@
+{
+  "doorDialog": {
+    "class": "DoorDialog",
+    "properties": {
+      "questIds": "rolfQuest",
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "By Sergeant Rolf's order these gates stay barred; a rat-plague gnaws through every street.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "action": "open_door",
+                  "nextStateId": "WELCOME",
+                  "text": "Present Rolf's letter and swear your aid.",
+                  "actionLabel": "Enter town"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 1,
+                  "condition": "can_brace_gate",
+                  "action": "brace_gate",
+                  "nextStateId": "WARRIOR_GATE",
+                  "text": "Brace the gate before the town swallows itself.",
+                  "actionLabel": "Warrior"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "action": "threatenGate",
+                  "nextStateId": "NOT_WELCOME",
+                  "text": "Open up, or these gates become splinters beneath my boot."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "WARRIOR_GATE",
+            "text": "The old braces hold after your shoulder drives them home. A chalk mark beside the hinge names Rolf's patrol road.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ABOUT_ROLF",
+                  "text": "Follow the chalk mark toward Rolf's trail."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "WELCOME",
+            "text": "Enter if you must, stranger. The inn still pours something warm and the chapel still murmurs solace. Little else in Nouraajd is worth the risk.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "ABOUT_ROLF",
+                  "text": "Where can I find Sergeant Rolf?"
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ABOUT_ROLF",
+            "text": "He marched out with his men days past. None have returned, nor has word.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "NOT_WELCOME",
+            "text": "Bold words. The watch will remember them. The inn charges troublemakers five percent more for beer, and the gatehouse keeps 25 gold of their final bounty for repairs. Present Rolf's letter when you are ready to help.",
+            "options": [
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "number": 0
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "speaker": "Nouraajd Gatekeeper"
+    }
+  },
+  "askAboutGirl": {
+    "class": "CDialogOption",
+    "properties": {
+      "nextStateId": "INKEEPER_ABOUT_GIRL",
+      "text": "What quarry were those robed men stalking?",
+      "action": "asked_about_girl"
+    }
+  },
+  "askAboutMarumi": {
+    "class": "CDialogOption",
+    "properties": {
+      "nextStateId": "INKEEPER_ABOUT_MARUMI",
+      "text": "Who in the abyss is Marumi Baso?"
+    }
+  },
+  "askForBeer": {
+    "ref": "exitOption",
+    "properties": {
+      "text": "Enough talk. Bring me a tankard of something strong.",
+      "action": "sell_beer",
+      "actionLabel": "Browse drinks"
+    }
+  },
+  "shouldGo": {
+    "ref": "exitOption",
+    "properties": {
+      "text": "I should be moving on."
+    }
+  },
+  "tavernDialog1": {
+    "class": "TavernDialog1",
+    "properties": {
+      "states": [
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ENTRY",
+            "text": "You push into the gloom of the inn just as five brown-robed men hurry out. The eldest clutches a staff and round hat; his gaze snags yours, leaving a chill like grave-water.",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "INNKEEPER_WELCOME",
+                  "text": "Approach the innkeeper."
+                }
+              },
+              {
+                "ref": "exitOption",
+                "properties": {
+                  "text": "Turn away from this wretched hall.",
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INNKEEPER_WELCOME",
+            "text": "Greetings, stranger. What drags you into this forsaken room?",
+            "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "nextStateId": "INKEEPER_ABOUT_CULTISTS",
+                  "text": "I spotted robed men fleeing your door. Priests, perhaps, but nothing like Matulog’s lot."
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_ABOUT_CULTISTS",
+            "text": "Aye, those cloaked carrion have haunted Nouraajd as long as drinkers remember. They call themselves the Cult of Marumi Baso, and folk whisper they're as dangerous as any zealot can be.",
+            "options": [
+              {
+                "ref": "askAboutMarumi",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askAboutGirl",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 2,
+                  "condition": "can_shadow_robed_men",
+                  "action": "shadow_robed_men",
+                  "nextStateId": "ASSASIN_TRAIL",
+                  "text": "Shadow the robed men before their trail goes cold.",
+                  "actionLabel": "Assasin"
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 3
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 4
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "ASSASIN_TRAIL",
+            "text": "You trail the robes through smoke and alley shadow. Their old-court turn is deliberate, and one carries a ribbon cut from a child's sleeve.",
+            "options": [
+              {
+                "ref": "askAboutMarumi",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 2
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_ABOUT_MARUMI",
+            "text": "Hmph… some prophet or deity, I suppose. I spill ale, not sermons. Anything else you need?",
+            "options": [
+              {
+                "ref": "askAboutGirl",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 2
+                }
+              }
+            ]
+          }
+        },
+        {
+          "class": "CDialogState",
+          "properties": {
+            "stateId": "INKEEPER_ABOUT_GIRL",
+            "text": "They prowled after a young lass, then drifted toward the old civic court. I cursed them out and sent them hunting elsewhere. If Victor's girl is their quarry, the town hall ledgers may know the door they seek.",
+            "options": [
+              {
+                "ref": "askAboutMarumi",
+                "properties": {
+                  "number": 0
+                }
+              },
+              {
+                "ref": "askForBeer",
+                "properties": {
+                  "number": 1
+                }
+              },
+              {
+                "ref": "shouldGo",
+                "properties": {
+                  "number": 2
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "speaker": "Nouraajd Innkeeper"
+    }
+  }
+}

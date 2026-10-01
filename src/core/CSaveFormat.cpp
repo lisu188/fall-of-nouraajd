@@ -1,0 +1,272 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#include "core/CSaveFormat.h"
+#include "core/CJsonUtil.h"
+
+#include <algorithm>
+#include <cctype>
+#include <map>
+#include <vector>
+
+namespace CSaveFormat {
+
+bool isValidMapName(const std::string &mapName) {
+    if (mapName.empty()) {
+        return true;
+    }
+
+    return std::all_of(mapName.begin(), mapName.end(), [](unsigned char ch) {
+        if (std::isalnum(ch)) {
+            return true;
+        }
+        return ch == '_' || ch == '-';
+    });
+}
+
+bool isValidSlotName(const std::string &slotName) {
+    if (slotName.empty() || slotName.front() == '.' || slotName.find("..") != std::string::npos) {
+        return false;
+    }
+
+    return std::all_of(slotName.begin(), slotName.end(), [](unsigned char ch) {
+        if (std::isalnum(ch)) {
+            return true;
+        }
+        return ch == '.' || ch == '_' || ch == '-';
+    });
+}
+
+std::string savedMapConfigKey(const std::string &slotName) { return "__save_slot__/" + slotName; }
+
+std::string primaryPath(const std::string &slotName) { return "save/" + slotName + ".json"; }
+
+std::string backupPath(const std::string &slotName) { return primaryPath(slotName) + BACKUP_SUFFIX; }
+
+std::optional<std::string> primarySlotFromFilename(const std::filesystem::path &filename) {
+    if (filename.extension() != ".json") {
+        return std::nullopt;
+    }
+    const auto slotName = filename.stem().string();
+    if (!isValidSlotName(slotName)) {
+        return std::nullopt;
+    }
+    return slotName;
+}
+
+std::optional<std::string> backupSlotFromFilename(const std::filesystem::path &filename) {
+    if (filename.extension() != BACKUP_SUFFIX) {
+        return std::nullopt;
+    }
+    auto primaryName = filename.stem();
+    if (primaryName.extension() != ".json") {
+        return std::nullopt;
+    }
+    const auto slotName = primaryName.stem().string();
+    if (!isValidSlotName(slotName)) {
+        return std::nullopt;
+    }
+    return slotName;
+}
+
+std::optional<std::string> readSnapshotMapName(const std::shared_ptr<json> &snapshot) {
+    if (!snapshot || !snapshot->is_object() || !snapshot->contains("class") || !(*snapshot)["class"].is_string() ||
+        (*snapshot)["class"].get<std::string>() != "CMap" || !snapshot->contains("properties") ||
+        !(*snapshot)["properties"].is_object() || !(*snapshot)["properties"].contains("mapName") ||
+        !(*snapshot)["properties"]["mapName"].is_string()) {
+        return std::nullopt;
+    }
+    return (*snapshot)["properties"]["mapName"].get<std::string>();
+}
+
+namespace {
+
+constexpr int LEGACY_SCHEMA_VERSION = 0;
+
+struct SourceDocument {
+    int schemaVersion = SCHEMA_VERSION;
+    std::shared_ptr<json> snapshot;
+    std::string mapName;
+    Encoding encoding = Encoding::Versioned;
+};
+
+using Migration = std::expected<std::shared_ptr<json>, std::string> (*)(const SourceDocument &source);
+
+std::expected<std::shared_ptr<json>, std::string> migrateCurrentSchema(const SourceDocument &source) {
+    if (!source.snapshot || !source.snapshot->is_object()) {
+        return std::unexpected("save migration source snapshot is not an object");
+    }
+    return source.snapshot;
+}
+
+std::expected<std::shared_ptr<json>, std::string> migrateLegacySchema(const SourceDocument &source) {
+    if (!source.snapshot || !source.snapshot->is_object()) {
+        return std::unexpected("save migration source snapshot is not an object");
+    }
+    return std::make_shared<json>(*source.snapshot);
+}
+
+const std::map<int, Migration> &migrationRegistry() {
+    static const std::map<int, Migration> registry = {
+        {LEGACY_SCHEMA_VERSION, migrateLegacySchema},
+        {1, migrateCurrentSchema},
+        {SCHEMA_VERSION, migrateCurrentSchema},
+    };
+    return registry;
+}
+
+std::expected<DecodedDocument, std::string> migrateToCurrentSnapshot(const SourceDocument &source) {
+    if (source.schemaVersion > SCHEMA_VERSION) {
+        return std::unexpected("save schema version is newer than this game build");
+    }
+
+    auto migration = migrationRegistry().find(source.schemaVersion);
+    if (migration == migrationRegistry().end()) {
+        return std::unexpected("unsupported save schema version");
+    }
+
+    auto snapshot = migration->second(source);
+    if (!snapshot) {
+        return std::unexpected(snapshot.error());
+    }
+
+    auto snapshotMapName = readSnapshotMapName(*snapshot);
+    if (!snapshotMapName) {
+        return std::unexpected("save snapshot is missing a valid CMap mapName");
+    }
+    if (*snapshotMapName != source.mapName) {
+        return std::unexpected("save envelope mapName does not match snapshot mapName");
+    }
+    return DecodedDocument{*snapshot, source.mapName, source.encoding};
+}
+
+} // namespace
+
+std::optional<std::string> validateDocumentStructure(const json &document) {
+    // Explicit work stack instead of recursion so adversarial nesting cannot exhaust the C++ call
+    // stack. Each frame carries the node and its depth; bounds are checked before any descent.
+    struct Frame {
+        const json *node;
+        std::size_t depth;
+    };
+
+    std::vector<Frame> pending;
+    pending.push_back({&document, 1});
+    std::size_t visited = 0;
+
+    while (!pending.empty()) {
+        const Frame frame = pending.back();
+        pending.pop_back();
+
+        if (++visited > MAX_DOCUMENT_NODES) {
+            return "save document exceeds maximum node count";
+        }
+        if (frame.depth > MAX_DOCUMENT_DEPTH) {
+            return "save document exceeds maximum nesting depth";
+        }
+
+        const json &node = *frame.node;
+        if (node.is_object()) {
+            const auto &entries = node.items();
+            if (entries.size() > MAX_CONTAINER_ENTRIES) {
+                return "save document object exceeds maximum entry count";
+            }
+            for (const auto &entry : entries) {
+                pending.push_back({&entry.second, frame.depth + 1});
+            }
+        } else if (node.is_array()) {
+            if (node.size() > MAX_CONTAINER_ENTRIES) {
+                return "save document array exceeds maximum entry count";
+            }
+            for (const auto &child : node) {
+                pending.push_back({&child, frame.depth + 1});
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::expected<DecodedDocument, std::string> decodeDocument(const std::shared_ptr<json> &document) {
+    if (!document || !document->is_object()) {
+        return std::unexpected("save root is not a JSON object");
+    }
+
+    // Bound the gross structure (depth / node count / container fan-out) before validating the
+    // schema, following any quest references, or running strict deserialization, so a crafted save
+    // cannot exhaust the stack or burn CPU walking pathological nesting.
+    if (auto structureError = validateDocumentStructure(*document)) {
+        return std::unexpected(*structureError);
+    }
+
+    if (document->contains("format")) {
+        if (!(*document)["format"].is_string() || (*document)["format"].get<std::string>() != FORMAT) {
+            return std::unexpected("unsupported save format");
+        }
+        if (!document->contains("schemaVersion") || !(*document)["schemaVersion"].is_number_integer()) {
+            return std::unexpected("save envelope is missing integer schemaVersion");
+        }
+        const int schemaVersion = (*document)["schemaVersion"].get<int>();
+        if (schemaVersion > SCHEMA_VERSION) {
+            return std::unexpected("save schema version is newer than this game build");
+        }
+        if (!document->contains("mapName") || !(*document)["mapName"].is_string()) {
+            return std::unexpected("save envelope is missing string mapName");
+        }
+        const auto mapName = (*document)["mapName"].get<std::string>();
+        if (!isValidMapName(mapName)) {
+            return std::unexpected("save envelope contains invalid mapName");
+        }
+        if (!document->contains("snapshot") || !(*document)["snapshot"].is_object()) {
+            return std::unexpected("save envelope is missing object snapshot");
+        }
+        auto snapshot = CJsonUtil::alias(document, (*document)["snapshot"]);
+        return migrateToCurrentSnapshot(SourceDocument{schemaVersion, snapshot, mapName, Encoding::Versioned});
+    }
+
+    auto legacyMapName = readSnapshotMapName(document);
+    if (!legacyMapName) {
+        return std::unexpected("legacy save is missing a valid CMap mapName");
+    }
+    if (!isValidMapName(*legacyMapName)) {
+        return std::unexpected("legacy save contains invalid mapName");
+    }
+    return migrateToCurrentSnapshot(SourceDocument{LEGACY_SCHEMA_VERSION, document, *legacyMapName, Encoding::Legacy});
+}
+
+std::expected<std::shared_ptr<json>, std::string> buildEnvelope(const std::shared_ptr<json> &snapshot,
+                                                                const std::string &expectedMapName) {
+    auto snapshotMapName = readSnapshotMapName(snapshot);
+    if (!snapshotMapName) {
+        return std::unexpected("snapshot is missing a valid CMap mapName");
+    }
+    if (*snapshotMapName != expectedMapName) {
+        return std::unexpected("snapshot mapName does not match active mapName");
+    }
+    if (!isValidMapName(*snapshotMapName)) {
+        return std::unexpected("snapshot contains invalid mapName");
+    }
+
+    auto envelope = std::make_shared<json>();
+    (*envelope)["format"] = FORMAT;
+    (*envelope)["schemaVersion"] = SCHEMA_VERSION;
+    (*envelope)["mapName"] = *snapshotMapName;
+    (*envelope)["snapshot"] = *snapshot;
+    return envelope;
+}
+
+} // namespace CSaveFormat

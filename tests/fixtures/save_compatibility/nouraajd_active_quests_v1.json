@@ -1,0 +1,51 @@
+{
+  "format": "fall-of-nouraajd-save",
+  "mapName": "nouraajd",
+  "schemaVersion": 1,
+  "snapshot": {
+    "class": "CMap",
+    "properties": {
+      "description": "immutable Nouraajd active quest fixture",
+      "mapName": "nouraajd",
+      "objects": [
+        {
+          "class": "CPlayer",
+          "properties": {
+            "completedQuests": [],
+            "items": [],
+            "name": "player",
+            "posx": 43,
+            "posy": 99,
+            "posz": 0,
+            "quests": [
+              {
+                "class": "RolfQuest",
+                "properties": {
+                  "name": "rolfQuest",
+                  "typeId": "rolfQuest"
+                }
+              },
+              {
+                "class": "VictorQuest",
+                "properties": {
+                  "name": "victorQuest",
+                  "typeId": "victorQuest"
+                }
+              }
+            ],
+            "typeId": "Warrior"
+          }
+        }
+      ],
+      "quest_state_amulet": "not_started",
+      "quest_state_beren_chain": "letter_pending",
+      "quest_state_main": "locked",
+      "quest_state_octobogz_contract": "not_started",
+      "quest_state_rolf": "awaiting_skull",
+      "quest_state_victor": "met_victor",
+      "tiles": [],
+      "triggers": [],
+      "turn": 77
+    }
+  }
+}

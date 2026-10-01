@@ -1,0 +1,330 @@
+# Testing
+
+## Repository prep
+Run from the repository root after a fresh checkout:
+
+```bash
+git submodule update --init --recursive
+./configure.sh
+```
+
+`requirements-dev.txt` is the source of truth for pip-managed developer and test Python packages used by CI, such as
+Pillow and Black. Native build dependencies, including pybind11 headers and CMake config files, still come from
+`pybind11-dev` on Linux and vcpkg on Windows. Run the pip command in the same Python environment that will run
+`test.py`.
+
+```bash
+python -m pip install --upgrade -r requirements-dev.txt
+```
+
+## Normal test workflow
+Run from the repository root:
+
+```bash
+python3 scripts/validate_content.py --repo-root .
+python3 -m unittest tests.test_content_validator
+cmake --build cmake-build-release --target _game for_unit_tests performance_guard_tests -j$(nproc)
+ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests
+ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+python3 test.py
+```
+
+The content JSON validator and its focused fixture tests use only the Python
+standard library and do not require the compiled `_game` module. They are run
+early in CI before the native build so broken map/config/dialog refs fail before
+expensive gameplay tests.
+
+### Quest-state-transition validation
+Content validation also checks each map's quest state machine. The check is wired
+into the standard `scripts/validate_content.py` path: it lives in
+`ContentValidator._validate_quest_state_transitions(context)`, which
+`ContentValidator._validate_map_context(context)` invokes after that map's config
+JSON, dialog JSON, `map.json`, and `script.py` are loaded and after the other
+per-map checks run. Because `_validate_map_context` is called from
+`ContentValidator.validate()` (the entry point behind `validate_repo()` and the
+`scripts/validate_content.py` CLI), the quest check runs on every normal
+validation, not as a later runtime-only test, and its findings are reported as
+ordinary `ValidationIssue` errors that fail the run.
+
+For each quest key a map script declares (via `QUEST_KEYS`, `QUEST_DEFAULTS`, and
+`set_state`/`state_in`/`get_state` usage parsed by `ScriptAnalyzer` — the legacy
+`_set_state` spelling is still recognized), the check
+reports: defaults, transition writes, or state reads that reference an undeclared
+quest key (missing from `QUEST_KEYS`), and terminal completion states that are
+unreachable because they are neither the quest default nor any transition target.
+Run it the same way as the rest of content validation:
+
+```bash
+python3 scripts/validate_content.py --repo-root .
+python3 -m unittest tests.test_content_validator
+```
+
+`tests/test_content_validator.py` covers the quest-transition rules through the
+end-to-end `validate_repo()` run, including
+`test_given_bad_quest_transition_when_running_standard_validation_path_then_reported_as_error`,
+which pins that the quest validator runs inside the standard
+`ContentValidator.validate()` path rather than only via a direct helper call.
+
+### Quest journal integrity
+
+Map-local quest classes use `@mapQuest("mapId")` from `game`. A shared class may instead provide a source-map
+resolver, as the Castle mission class does with its existing scenario id. The decorator keeps live source-map
+gameplay authoritative and stores journal text on the quest object that travels with the player. Completed
+history is fixed; active off-map quests use their last captured text and cannot complete from destination flags.
+
+`CQuest.captureJournal(completed)` records text without granting rewards. `CPlayer.captureQuestJournal()` passes
+active/completed collection membership to each callback. The engine captures after completion, before loading a
+destination, and before serialization. The additive `questJournal*` properties use version 1 without changing
+the save envelope. Older saves retain completion status and use neutral unavailable-detail text when the source
+outcome cannot be recovered; existing Victor and Castle player outcome properties remain usable.
+
+The no-extension regression matrix covers all 27 configured quests and checks empty captured text, source reloads,
+failed captures, destination-state isolation, and property round trips:
+
+```bash
+python3 -m unittest tests.test_quest_journal tests.test_nouraajd_quest_journal
+```
+
+Native completion regressions and the bounded journal-capture guard run in the normal native/coverage workflow.
+The gameplay suite includes real save/load and movement-based stdio MCP journal checks, and the UI suite checks
+the `j` shortcut and rendered active/completed journal history under Xvfb.
+
+For Windows Visual Studio Release builds, use the same target and CTest label with the active configuration:
+
+```bat
+python scripts/validate_content.py --repo-root .
+python -m unittest tests.test_content_validator
+cmake --build cmake-build-release --config Release --target _game for_unit_tests performance_guard_tests
+ctest --test-dir cmake-build-release -C Release --output-on-failure -R for_unit_tests
+ctest --test-dir cmake-build-release -C Release --output-on-failure --verbose -L performance
+set GAME_BUILD_DIR=cmake-build-release
+set GAME_BUILD_CONFIG=Release
+python test.py
+```
+
+The CI Windows job uses a single-config Ninja Release build, so its `ctest` commands omit `-C Release`.
+
+## Python test suites
+`python3 test.py` remains the full Python regression suite. For faster feedback, the runner also accepts named suites:
+
+```bash
+python3 test.py --suite fast
+python3 test.py --suite gameplay
+GAME_XVFB_JOBS=4 python3 test.py --suite ui
+python3 test.py --suite coverage-safe
+python3 test.py --suite full
+```
+
+- `fast` runs runner, bootstrap, manifest, coverage-report, and lightweight MCP protocol checks that do not require the
+  compiled `_game` module.
+- `gameplay` runs deterministic engine, map, save/load, quest, combat, and MCP gameplay checks after `_game` is built.
+- `ui` runs the Xvfb parent test and GUI layout manifest checks; it is intended for Linux/Unix environments with
+  `xvfb-run` and `xauth`.
+- `coverage-safe` is the Python suite used by `./scripts/run_coverage.sh`; it keeps deterministic coverage drivers and
+  GUI coverage, but omits duplicate subprocess walkthrough checks that are already covered by the normal gameplay CI
+  suite.
+- `full` is the default full-suite behavior and is equivalent to omitting `--suite`.
+
+Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
+`python3 test.py --suite gameplay --jobs "$(nproc)"`.
+
+The console and expanded-map interaction checks run once in `gameplay`, `full`, and `coverage-safe`. To run only
+these checks, use `python3 test.py ConsoleUiInteractionTest UiMinimapInteractionTest`. Their children use guarded
+Xvfb on Linux and SDL dummy/software rendering on Windows, with separate preferences and silent audio. They verify
+console editing, history bounds, cancellation and focus restoration, plus landmark inspection, explicit travel,
+empty lists and stale scene transitions. Missing `_game` or Linux display tooling is reported as a skip; other
+import errors and child failures remain failures.
+
+## Campaign scenario gates
+Campaign, quest, dialog, trigger, and content-routing changes should report which scenario subset ran. A skipped
+scenario is not a pass; include the skip reason in the issue or PR final report.
+
+Fast content validation catches resource ids, dialog actions, quest grants, and script/config wiring before native
+builds:
+
+```bash
+python3 scripts/validate_content.py --repo-root .
+python3 -m unittest tests.test_content_validator
+```
+
+The fast Nouraajd smoke scenario checks the MCP-style scenario harness, the Rolf-to-Gooby quest path, door wiring,
+spawned objects, inventory, and quest-state snapshots after `_game` is built:
+
+```bash
+python3 test.py GameTest.test_mcp_scenario_harness_drives_nouraajd_rolf_gooby
+```
+
+The targeted quest-state and reward cleanup subset covers high-value Nouraajd state-machine, timeout cleanup, and
+single-claim reward regressions without running the full route:
+
+```bash
+python3 test.py \
+  GameTest.test_nouraajd_quest_state_machine \
+  GameTest.test_nouraajd_victor_timeout_cleanup_regression \
+  GameTest.test_nouraajd_octobogz_unique_reward_is_not_duplicated \
+  GameTest.test_nouraajd_octobogz_late_contract_claims_existing_clear_reward
+```
+
+The slower full-route campaign subset drives the authored Nouraajd route through direct game tests and MCP stdio, then
+checks campaign transition into the later maps:
+
+```bash
+python3 test.py \
+  GameTest.test_map_walkthrough_nouraajd \
+  McpServerTest.test_stdio_map_walkthrough_nouraajd \
+  GameTest.test_campaign_transitions_preserve_player_and_start_siege \
+  GameTest.test_campaign_driver_routes_full_campaign_with_carryover
+```
+
+Normal pull request CI runs content validation plus the fast Nouraajd smoke and targeted quest/reward gates whenever
+native validation is required. The existing `gameplay` and `ui` suites still run after those gates; the campaign gates
+are early, named checks, not a replacement for required gameplay validation.
+
+The dedicated full-route campaign gate runs in the Linux job on the weekly schedule, when manually dispatched with
+`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. These four tests also belong
+to the normal `gameplay` suite. A skip message for the dedicated gate does not mean they were excluded from that
+suite; inspect the individual test results before reporting whether a route ran. A skipped gate itself is never
+counted as passed.
+
+For any quest, campaign, dialog-trigger, or content-routing issue final report, include:
+- which of the fast content validation, fast smoke, targeted quest/reward, and full-route subsets ran;
+- the exact command or CI job name for each subset;
+- why any full-route gate was skipped, for example "PR label not set and this was not a scheduled or manual campaign
+  run";
+- any blocked command and its blocker.
+
+## Deterministic simulation helpers
+Use `game_simulation.py` for new Python gameplay walkthroughs that need stable setup, bounded movement, object
+interaction, map/inventory/quest inspection, GUI tree assertions, or screenshot capture callbacks. The helper raises
+`SimulationError` with the failed step and a compact current-state snapshot when a step cannot complete.
+
+Codex and MCP workflows can use the `simulation_run` MCP tool for the same high-level step model without raw handle
+or method calls. `capture_gui_screenshot` returns PNG metadata and inline base64 data for MCP callers instead of
+writing arbitrary server-side paths. Prefer this layer for new walkthrough coverage, then drop to `engine_call` or
+`engine_handle_call` only when the helper does not expose the needed engine operation.
+
+MCP stdio subprocess tests must drain `stderr` while the server is running. The server and native layer can write enough
+diagnostic output to block a long walkthrough if the pipe is not consumed. Keep fast smoke requests on the normal
+10-second tool timeout, use the documented 60-second timeout only for full map serialization or other known long-route
+operations, and include request id, method, map name when known, elapsed time, plus bounded stdout/stderr tails in
+timeout failures.
+
+## Native performance guards
+The deterministic native performance guard suite is built with the `performance_guard_tests` target and run through
+CTest label `performance`:
+
+```bash
+cmake --build cmake-build-release --target performance_guard_tests -j$(nproc)
+ctest --test-dir cmake-build-release --output-on-failure --verbose -L performance
+```
+
+These guards are CI gates, not profiling tools. They should use fixed workloads, fixed seeds where randomness is
+involved, local repo data, and explicit pass/fail budgets. The CTest wrapper also applies a finite timeout to each
+native guard executable and the verbose command keeps timing and test output visible in logs.
+
+Diagnostic performance checks are separate. Use tools such as callgrind, platform profilers, or ad hoc repeated timing
+runs to investigate a regression or choose a threshold, but do not use diagnostic-only output as a substitute for the
+deterministic `performance` CTest label.
+
+Thresholds should be derived from repeated Release-build measurements on CI-like hardware or the closest available
+local equivalent. Choose a budget that leaves headroom for ordinary CI variance while still failing material regressions,
+and document the measured baseline, candidate result, platform, build type, command, sample count, and chosen budget.
+
+Budget changes are reviewable behavior changes. Tightening a budget is acceptable when before/after evidence supports
+it. Loosening a budget requires a clear reason, updated evidence, and the matching test or documentation update in the
+same change; do not raise a threshold only to make a failing run pass.
+
+When submitting performance-sensitive work, include before/after evidence from the exact guard command whenever
+possible. If evidence cannot be collected, state which command was blocked and why.
+
+## Branch protection checks
+Use `.github/workflows/build.yml` as the required pull request workflow for `main`.
+
+Recommended required status checks:
+- `linux` (shown in some GitHub branch-protection UI as `build / linux`)
+- `windows-deps` (shown in some GitHub branch-protection UI as `build / windows-deps`)
+- `windows` (shown in some GitHub branch-protection UI as `build / windows`)
+
+These jobs cover the current PR build, native C++ tests, native performance guards, Python regression suite, dependency
+cache validation, and packaging on Linux and Windows when `scripts/ci_change_classifier.py` marks native validation
+necessary. Workflow-only docs/tooling PRs still produce terminal `linux` check evidence, but native-heavy Linux
+steps and Windows jobs are skipped after focused workflow validation. The workflow also has a conditional
+`linux-coverage` job that runs `./scripts/run_coverage.sh` when changed paths match the coverage rule; because it is
+path-gated, do not configure it as an always-present branch-protection check.
+
+Alongside the `native-needed` / `coverage-needed` gate outputs, `scripts/ci_change_classifier.py` also emits an
+additive change-**kind** taxonomy: `coverage-relevant`, `native-gui`,
+`native-engine`, `content-json-python`, `workflow-python`, and `prompts-docs`. Each changed path is
+assigned exactly one primary kind (GUI C++ before generic engine code, `res/` content before tooling), and **every
+`src/gui/**` descendant is coverage-relevant** so GUI C++ never skips coverage. These booleans do not change native/coverage need (still taken from the
+`NATIVE`/`COVERAGE` pattern sets); they let the workflow route jobs by kind and are covered by a path-matrix test in
+`tests/test_ci_change_classifier.py`.
+
+The campaign-specific PR gates run inside `linux` when native validation is required. Full-route campaign scenarios are
+scheduled, manual, or label-selected gates inside the same job, so they do not add a separate always-present branch
+protection check.
+
+## CI Validation Delivery
+Prefer the PR build workflow as the default delivery path for heavy validation. Run focused local checks first, open
+the pull request, and wait for the path-selected required checks to reach a successful conclusion instead of
+duplicating local compilation, native tests, full Python tests, or coverage. `scripts/ci_change_classifier.py`
+selects the validation class from PR paths: lightweight workflow/docs/tooling PRs require `linux`, while
+native/source/content PRs require `linux`, `windows-deps`, and `windows`. For coverage-relevant changes the
+conditional `coverage` step runs inside the path-gated `linux-coverage` job.
+
+Run heavy local validation only when CI cannot cover the required evidence, a focused local reproduction is
+necessary before opening the PR, or GitHub Actions is unavailable or blocked. Record the observed job names,
+conclusions, and URLs separately from local commands. Do not report skipped local commands as passed, and do not
+enable auto-merge until the selected CI validation has passed when it is the only full-validation evidence.
+
+Manual repository settings for `main`:
+- require a pull request before merging
+- require status checks to pass before merging
+- require branches to be up to date before merging
+- select the `linux`, `windows-deps`, and `windows` checks from the `build` workflow
+
+
+Do not use `Release / build` as a required PR check; `.github/workflows/release.yml` runs only for version tags.
+If future work splits fast, gameplay, UI/Xvfb, or coverage runs into separate PR jobs, add those jobs to branch
+protection only after they finish deterministically in CI.
+
+## Coverage Workflow
+For PR delivery, satisfy coverage by polling the selected build workflow run; the `coverage` step currently runs in the
+conditional `linux-coverage` job. Run local coverage only when CI cannot cover the required evidence, polling is
+unavailable, or a focused local coverage reproduction is necessary. Coverage is required when a change touches tests,
+for example
+`test.py` or `tests/unit/**`), `src/core/**`, `src/handler/**`,
+`src/object/**`, `native_plugins/**`, or the coverage tooling:
+
+```bash
+./scripts/run_coverage.sh
+```
+
+The script:
+- configures a dedicated coverage build (`cmake-build-coverage`)
+- reuses the existing coverage configure by default; set `COVERAGE_FRESH_CONFIGURE=1` to force a fresh configure
+- builds `_game`, `for_unit_tests`, and `performance_guard_tests` with GCC/Clang coverage flags
+- runs native CTest, including the deterministic `performance` label guard
+- runs `python3 test.py --suite coverage-safe` against the coverage build with a finite outer timeout
+- generates reports in `coverage/coverage.txt` and `coverage/coverage.html`
+- uses the repo-local Python reporter by default; set `COVERAGE_REPORTER=gcovr` only for diagnostic comparison
+- rejects line-exclusion controls; every instrumented line in scope is part of the gate
+- fails if eligible line coverage is below the default `MIN_COVERAGE=90` gate
+
+Optional coverage speed controls:
+- `COVERAGE_CXX_COMPILER_LAUNCHER=<launcher>` overrides the compiler launcher for the coverage build
+- `COVERAGE_CXX_COMPILER_LAUNCHER=` disables the compiler launcher
+- when `COVERAGE_CXX_COMPILER_LAUNCHER` is unset, the script uses `ccache` automatically if it is available
+- `COVERAGE_JOBS=<n>` controls parallel coverage build and report collection jobs
+- `COVERAGE_PYTHON_TIMEOUT_SECONDS=<seconds>` bounds the coverage Python phase; the default is 1800 seconds
+- `COVERAGE_GCOV_TIMEOUT_SECONDS=<seconds>` bounds each `gcov` JSON extraction; the default is 120 seconds
+
+## Coverage scope
+The canonical coverage report is scoped to production/native plugin code by default:
+
+```bash
+COVERAGE_INCLUDE_PREFIXES="src native_plugins" ./scripts/run_coverage.sh
+```
+
+`scripts/run_coverage.sh` uses that scope unless `COVERAGE_INCLUDE_PREFIXES` is overridden. Coverage line exclusions are
+not supported; every instrumented line under the active scope is part of the line gate.

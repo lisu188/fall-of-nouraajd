@@ -1,0 +1,276 @@
+{
+  "bruteClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "strength",
+      "combatRole": "brute",
+      "actions": [
+        {
+          "ref": "enemyBrace"
+        }
+      ]
+    }
+  },
+  "mageClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "intelligence",
+      "combatRole": "mage",
+      "actions": [
+        {
+          "ref": "enemyArcaneBolt"
+        }
+      ]
+    }
+  },
+  "WarriorClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "strength",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 3,
+          "stamina": 2,
+          "agility": 2,
+          "intelligence": 1,
+          "hit": 3,
+          "crit": 1,
+          "dmgMin": 2,
+          "dmgMax": 3
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "Strike"
+        },
+        "2": {
+          "ref": "Barrier"
+        },
+        "3": {
+          "ref": "BloodThirst"
+        },
+        "4": {
+          "ref": "Bloodlash"
+        },
+        "5": {
+          "ref": "DeathStrike"
+        },
+        "6": {
+          "ref": "DoubleAttack"
+        }
+      }
+    }
+  },
+  "SorcererClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "intelligence",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 2,
+          "intelligence": 3,
+          "hit": 1,
+          "crit": 1,
+          "dmgMin": 1,
+          "dmgMax": 1
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "MagicMissile"
+        },
+        "2": {
+          "ref": "AbyssalShadows"
+        },
+        "3": {
+          "ref": "FrostBolt"
+        },
+        "4": {
+          "ref": "EndlessPain"
+        },
+        "5": {
+          "ref": "ArmorOfEndlessWinter"
+        },
+        "7": {
+          "ref": "ShadowBolt"
+        },
+        "8": {
+          "ref": "Devour"
+        },
+        "10": {
+          "ref": "ChaosBlast"
+        }
+      }
+    }
+  },
+  "thiefClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "agility",
+      "combatRole": "thief",
+      "actions": [
+        {
+          "ref": "enemyOpeningStrike"
+        }
+      ]
+    }
+  },
+  "cultistClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "strength",
+      "combatRole": "cultist",
+      "actions": [
+        {
+          "ref": "enemyRitualHex"
+        }
+      ]
+    }
+  },
+  "AssasinClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "agility",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 1,
+          "stamina": 1,
+          "agility": 3,
+          "intelligence": 2,
+          "hit": 3,
+          "crit": 2,
+          "dmgMin": 1,
+          "dmgMax": 2
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "SneakAttack"
+        },
+        "2": {
+          "ref": "Mutilation"
+        },
+        "3": {
+          "ref": "LethalPoison"
+        },
+        "4": {
+          "ref": "Chloroform"
+        },
+        "5": {
+          "ref": "Stunner"
+        },
+        "6": {
+          "ref": "Backstab"
+        }
+      }
+    }
+  },
+  "InquisitorClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "intelligence",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 2,
+          "stamina": 2,
+          "agility": 1,
+          "intelligence": 2,
+          "hit": 2,
+          "crit": 1,
+          "dmgMin": 1,
+          "dmgMax": 2
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "ExposeCorruption"
+        },
+        "2": {
+          "ref": "Strike"
+        },
+        "3": {
+          "ref": "SanctifiedWard"
+        },
+        "4": {
+          "ref": "FrostBolt"
+        },
+        "5": {
+          "ref": "Barrier"
+        },
+        "6": {
+          "ref": "EndlessPain"
+        }
+      }
+    }
+  },
+  "WayfarerClass": {
+    "class": "CCreatureClass",
+    "properties": {
+      "mainStat": "agility",
+      "levelStats": {
+        "class": "CStats",
+        "properties": {
+          "strength": 2,
+          "stamina": 1,
+          "agility": 3,
+          "intelligence": 1,
+          "hit": 3,
+          "crit": 1,
+          "dmgMin": 1,
+          "dmgMax": 2
+        }
+      },
+      "actions": [
+        {
+          "ref": "Attack"
+        }
+      ],
+      "levelling": {
+        "1": {
+          "ref": "WayfarersStride"
+        },
+        "2": {
+          "ref": "SneakAttack"
+        },
+        "3": {
+          "ref": "SmugglersMark"
+        },
+        "4": {
+          "ref": "DoubleAttack"
+        },
+        "5": {
+          "ref": "Backstab"
+        },
+        "6": {
+          "ref": "BloodThirst"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,205 @@
+/*
+fall-of-nouraajd c++ dark fantasy game
+Copyright (C) 2025-2026  Andrzej Lis
+
+This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#pragma once
+
+#include "core/CGlobal.h"
+#include "gui/CAnimation.h"
+
+struct CResType {
+    const static std::string CONFIG;
+    const static std::string MAP;
+    const static std::string PLUGIN;
+    const static std::string PLUGIN_LUA;
+    const static std::string SAVE;
+};
+
+class CResource : public CGameObject {
+    V_META(CResource, CGameObject, vstd::meta::empty())
+  public:
+    virtual std::string type() = 0;
+
+    const std::string &getPath() const;
+
+    void setPath(const std::string &path);
+
+    const std::string &getPathPrefix() const;
+
+    void setPathPrefix(const std::string &pathPrefix);
+
+    const std::string &getPathSuffix() const;
+
+    void setPathSuffix(const std::string &pathSuffix);
+
+    std::string getFilePath() const;
+
+  private:
+    std::string path;
+    std::string pathPrefix;
+    std::string pathSuffix;
+};
+
+class CTextResource : public CResource {
+    V_META(CTextResource, CResource, vstd::meta::empty())
+  public:
+    std::string getText();
+};
+
+class CConfigResource : public CResource {
+    V_META(CConfigResource, CTextResource, vstd::meta::empty())
+  public:
+    std::string type() override { return CResType::CONFIG; }
+};
+
+class CResourceLoader : public CGameObject {
+    V_META(CResourceLoader, CGameObject, vstd::meta::empty())
+  public:
+    virtual std::shared_ptr<CResource> load(std::string path) = 0;
+};
+
+class CConfigResourceLoader : public CResourceLoader {
+    V_META(CConfigResourceLoader, CResourceLoader, vstd::meta::empty())
+  public:
+    std::shared_ptr<CResource> load(std::string path) override {
+        auto config = std::make_shared<CConfigResource>();
+        config->setPathPrefix("config");
+        config->setPath(normalizePath(std::move(path)));
+        config->setPathSuffix("json");
+        return config;
+    }
+
+  private:
+    static std::string normalizePath(std::string path) {
+        std::filesystem::path normalized(std::move(path));
+        if (normalized.extension() == ".json") {
+            normalized.replace_extension();
+        }
+        auto normalizedString = normalized.generic_string();
+        constexpr auto prefix = "config/";
+        if (normalizedString.rfind(prefix, 0) == 0) {
+            normalizedString.erase(0, sizeof(prefix) - 1);
+        }
+        return normalizedString;
+    }
+};
+
+class CAnimation;
+
+class CGame;
+
+class CGameObject;
+
+class CResourcesProvider {
+  public:
+    // Compatibility-only process-wide provider for callers without a game context (Python scripts,
+    // plugin code, detached resources). Game-attached code must use CGame::getResourcesProvider().
+    static std::shared_ptr<CResourcesProvider> getInstance();
+
+    // Configure process-wide resource roots for packaged/mobile hosts before the first game is loaded.
+    // The writable root is searched first so saves written there resolve immediately; the packaged
+    // content root is searched next; the native-module-derived desktop roots remain as fallbacks.
+    // Both roots must be directories (the writable root is created when missing). Desktop behavior
+    // is unchanged unless this method is called explicitly.
+    static bool configurePlatformRoots(const std::string &packagedRoot, const std::string &writableRoot);
+
+    // Restore the module-derived desktop search roots. Intended for host teardown and focused tests.
+    static void clearPlatformRoots();
+
+    std::string load(std::string path);
+
+    std::shared_ptr<json> loadJson(std::string path);
+
+    std::string getPath(std::string path);
+
+    std::vector<std::string> getFiles(const std::string &type);
+
+    bool save(std::string file, const std::string &data);
+
+    bool save(std::string file, std::shared_ptr<json> data);
+
+    // Register (or ref-count up) a map-scoped search root. `root` must be an existing directory that
+    // canonicalizes successfully; empty/nonexistent roots are ignored with a warning. Adding the same
+    // scope again increments its reference count so a retained map keeps its root alive.
+    void addScopedRoot(const std::string &scope, const std::string &root);
+
+    // Ref-count down a scope; the root is dropped only when the count reaches zero (i.e. no retained
+    // map still owns objects from that scope).
+    void releaseScopedRoot(const std::string &scope);
+
+    // Select which registered scope resolution should consult. Empty string = no active scope.
+    void setActiveScope(const std::string &scope);
+
+    std::string getActiveScope() const;
+
+    // Inspection helper for tests: canonical roots of all currently-registered scopes, sorted.
+    std::vector<std::string> getScopedRoots() const;
+
+    CResourcesProvider() = default;
+
+  private:
+    struct LoadFailure {
+        std::string requestedPath;
+        std::string resolvedPath;
+        std::string message;
+        std::source_location location;
+    };
+
+    struct ScopedRoot {
+        std::string canonicalRoot;
+        int refCount;
+    };
+
+    std::expected<std::string, LoadFailure>
+    loadExpected(std::string path, std::source_location location = std::source_location::current());
+
+    static void logLoadFailure(const LoadFailure &failure);
+
+    static std::list<std::string> searchPath;
+
+    std::map<std::string, ScopedRoot> scopedRoots;
+    std::string activeScope;
+};
+
+class CConfigurationProvider {
+  public:
+    // The singleton default keeps provider-less construction working; pass the owning game's
+    // provider (CGame::getResourcesProvider()) to keep configs isolated per game session.
+    explicit CConfigurationProvider(
+        std::shared_ptr<CResourcesProvider> resourcesProvider = CResourcesProvider::getInstance());
+
+    ~CConfigurationProvider();
+
+    // Compatibility-only process-wide config cache for callers without a game context.
+    // Game-attached code must use CGame::getConfigurationProvider()->getConfiguration().
+    static std::shared_ptr<json> getConfig(const std::string &path);
+
+    std::shared_ptr<json> getConfiguration(const std::string &path);
+
+  private:
+    void loadConfig(const std::string &path);
+
+    std::shared_ptr<CResourcesProvider> resourcesProvider;
+    std::map<std::string, std::shared_ptr<json>> configurations;
+};
+
+class CAnimationProvider {
+  public:
+    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game,
+                                                    const std::shared_ptr<CGameObject> &object);
+
+    static std::shared_ptr<CAnimation> getAnimation(const std::shared_ptr<CGame> &game, std::string path);
+};

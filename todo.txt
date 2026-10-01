@@ -1,0 +1,35 @@
+Engine TODO index
+
+GitHub issues are the active feature backlog:
+https://github.com/lisu188/fall-of-nouraajd/issues
+Historical fix and validation records are in docs/todo-worklog.md.
+The workbook queue and scripts/issue_queue.py were retired in PR #1491;
+do not restore their workflows or treat removed EPIC rows as an active queue.
+
+Current gameplay delivery is tracked by issues #1506-#1515:
+unified character creation, class and race payoffs, persistent narrative choices,
+enemy combat roles, the OctoBogz hunt, campaign outcomes, RNG and effect auditing.
+Implementation and validation status belong on those issues and their pull requests.
+
+Completed reminders verified against current source and regression coverage:
+- Race and class are separate creature archetypes; see docs/design/creature_archetypes.md.
+- Interactions use selfTarget; the old buff migration reminder is obsolete.
+- Inventory drag/drop is implemented, including invalid drops and modal cancellation.
+- Property change notifications and reactive views exist; broad AOP was never required
+  to enable the current notifications.
+- Siege gates defer blocking until living occupants have left, and ignore dead occupants.
+- Cave-loss and post-combat position handling have dedicated gameplay/GUI regressions.
+- Object comparison semantics are documented and audited in
+  docs/object-comparison-semantics.md and tests/test_object_comparison_audit.py.
+
+Deferred broader work (requires its own measured scope and acceptance criteria):
+- Migrate remaining global/static providers and UI/session services into CGameContext.
+- Encapsulate the remaining SDL rendering calls.
+- Generalize revisiting cached maps after a scene switch.
+- Add map-owned asset loading.
+- Rework primitive object serialization (CList, CMapString and CScript).
+- Extend authored navigation connectors to generalized multilevel navigation.
+- Rework text/layout internals beyond the existing preference-aware behavior.
+
+These deferred items are design/refactor work, not unresolved acceptance requirements
+for the focused gameplay fixes above.

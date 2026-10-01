@@ -1,0 +1,54 @@
+{
+  "Event": {
+    "class": "CEvent",
+    "properties": {}
+  },
+  "mapObjectPriorities": {
+    "class": "CMapStringInt",
+    "properties": {
+      "values": {
+        "CCreature": 2,
+        "CMapObject": 1,
+        "CPlayer": 3
+      }
+    }
+  },
+  "panelKeys": {
+    "class": "CMapStringString",
+    "properties": {
+      "values": {
+        "c": "characterPanel",
+        "i": "inventoryPanel",
+        "j": "questPanel"
+      }
+    }
+  },
+  "signPost": {
+    "class": "SignPost",
+    "properties": {
+      "animation": "images/misc/signpost"
+    }
+  },
+  "chest": {
+    "class": "Chest",
+    "properties": {
+      "animation": "images/misc/chest",
+      "value": 10
+    }
+  },
+  "brickWall": {
+    "class": "CMapObject",
+    "properties": {
+      "animation": "images/misc/wall",
+      "canStep": false
+    }
+  },
+  "exitOption": {
+    "class": "CDialogOption",
+    "properties": {
+      "number": 0,
+      "nextStateId": "EXIT",
+      "text": "Leave"
+    }
+  }
+}

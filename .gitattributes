@@ -1,0 +1,7 @@
+* text eol=lf
+*.xlsx binary
+*.png binary
+*.jpg binary
+*.ttf binary
+*.mp4 binary
+cmake/* linguist-vendored
