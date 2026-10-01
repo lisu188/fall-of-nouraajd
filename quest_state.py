@@ -86,7 +86,8 @@ def mapQuest(source_map):
                 if membership(quest) is not True or originals["isCompleted"](quest):
                     return originals[name](quest)
             elif hasLegacy(quest):
-                return originals[name](quest)
+                if membership(quest) is not True or originals["isCompleted"](quest):
+                    return originals[name](quest)
             return neutralText(quest, name)
 
         @wraps(originals["isCompleted"])

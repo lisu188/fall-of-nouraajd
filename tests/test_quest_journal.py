@@ -237,6 +237,76 @@ class MapQuestJournalTest(unittest.TestCase):
         self.assertIn("unavailable", quest.getObjective())
         self.assertNotIn("99", quest.getObjective())
 
+    def test_legacy_completed_victor_with_nonterminal_player_state_uses_neutral_history(self):
+        classes = loadQuestClasses(REPO_ROOT / "res/maps/nouraajd/script.py")
+        for state in ("not_started", "encounter_active", "unknown"):
+            with self.subTest(state=state):
+                game, _source, destination, player = self.createSession("nouraajd")
+                destination.mapName = "ritual"
+                destination.setStringProperty("quest_state_victor", "good_end")
+                quest = classes["VictorQuest"](game)
+                quest.properties.update(
+                    name="victorQuest", typeId="victorQuest", description="Find Victor's missing daughter."
+                )
+                player.completed.append(quest)
+                player.properties.update(nouraajdVictorState=state, gold=937)
+                player.items.append(JournalObject())
+                before_player = player.properties.copy()
+                before_items = player.items.copy()
+                before_destination = destination.properties.copy()
+                game.map = destination
+                expected = (
+                    "Find Victor's missing daughter. Completed; outcome details are unavailable.",
+                    "Reward details are unavailable in this older save.",
+                    quest_state.QUEST_JOURNAL_UNAVAILABLE_HINT,
+                )
+
+                self.assertTrue(quest.isCompleted())
+                self.assertEqual(0, quest.getNumericProperty("questJournalVersion"))
+                self.assertEqual(expected, self.journalText(quest))
+                quest.captureJournal(True)
+                self.assertEqual(1, quest.getNumericProperty("questJournalVersion"))
+                self.assertEqual(expected, self.journalText(quest))
+                self.assertEqual([], player.quests)
+                self.assertEqual([quest], player.completed)
+                self.assertEqual(before_player, player.properties)
+                self.assertEqual(before_items, player.items)
+                self.assertEqual(before_destination, destination.properties)
+                self.assertEqual([], game.messages)
+                player.setStringProperty("nouraajdVictorState", "good_end")
+                self.assertEqual(expected, self.journalText(quest))
+                self.assertTrue(quest.isCompleted())
+
+    def test_legacy_active_victor_recovers_authored_progress_before_capture(self):
+        classes = loadQuestClasses(REPO_ROOT / "res/maps/nouraajd/script.py")
+        game, source, destination, player = self.createSession("nouraajd")
+        source.setStringProperty("quest_state_victor", "encounter_active")
+        destination.mapName = "ritual"
+        destination.setStringProperty("quest_state_victor", "good_end")
+        quest = classes["VictorQuest"](game)
+        quest.properties.update(name="victorQuest", typeId="victorQuest")
+        player.quests.append(quest)
+        player.properties.update(nouraajdVictorState="encounter_active", gold=937)
+        expected = self.journalText(quest)
+        self.assertIn("Defeat the cult leader", expected[0])
+        self.assertIn("500 gold", expected[1])
+        self.assertIn("75 turns", expected[2])
+        before_player = player.properties.copy()
+        before_destination = destination.properties.copy()
+        game.map = destination
+
+        self.assertEqual(0, quest.getNumericProperty("questJournalVersion"))
+        self.assertFalse(quest.isCompleted())
+        self.assertEqual(expected, self.journalText(quest))
+        quest.captureJournal(False)
+        self.assertEqual(1, quest.getNumericProperty("questJournalVersion"))
+        self.assertEqual(expected, self.journalText(quest))
+        self.assertEqual([quest], player.quests)
+        self.assertEqual([], player.completed)
+        self.assertEqual(before_player, player.properties)
+        self.assertEqual(before_destination, destination.properties)
+        self.assertEqual([], game.messages)
+
     def test_authored_quest_matrix_keeps_all_27_journals_and_destination_state(self):
         count = 0
         plugin_classes = loadQuestClasses(REPO_ROOT / "res/plugins/castle_campaign.py")
