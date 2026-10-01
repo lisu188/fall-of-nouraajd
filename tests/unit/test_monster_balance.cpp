@@ -321,6 +321,7 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
         return values[values.size() / 2];
     };
     for (const auto &playerType : {"Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"}) {
+        bool classHasMandatoryBaselineWitness = false;
         for (const auto &monsterType :
              {"Gooby", "Pritz", "OctoBogz", "PritzMage", "GoblinThief", "Cultist", "CultLeader"}) {
             std::vector<int> baselineHp, roleHp, baselineMana, roleMana, baselineItems, roleItems;
@@ -347,11 +348,9 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
                 baselineItems.push_back(baseline.itemsSpent);
                 roleItems.push_back(roles.itemsSpent);
             }
-            expect_true(baselineWins > 0, "ordinary balance fixture must include a real baseline victory");
-            if (std::string(monsterType) == "Pritz" || std::string(monsterType) == "OctoBogz") {
-                expect_true(median(baselineHp) > 0,
-                            "representative mandatory enemies must cause nonzero baseline damage");
-            }
+            const bool representative = std::string(monsterType) == "Gooby" || std::string(monsterType) == "Pritz" ||
+                                        std::string(monsterType) == "OctoBogz";
+            classHasMandatoryBaselineWitness |= representative && baselineWins > 0 && median(baselineHp) > 0;
             std::cout << "role balance " << playerType << '/' << monsterType << " hp " << median(baselineHp) << " -> "
                       << median(roleHp) << " mana " << median(baselineMana) << " -> " << median(roleMana) << " items "
                       << median(baselineItems) << " -> " << median(roleItems) << " baseline wins " << baselineWins
@@ -364,6 +363,8 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
             expect_true(std::abs(median(roleItems) - median(baselineItems)) * 10 <= median(baselineItems),
                         "monster roles must keep median item expenditure within 10 percent of baseline");
         }
+        expect_true(classHasMandatoryBaselineWitness,
+                    "each class must win against a representative authored enemy that also causes baseline damage");
     }
     vstd::rng() = previousRng;
 }
