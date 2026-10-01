@@ -419,15 +419,15 @@ void test_controller_connector_costs_agree_and_invalidate_flow() {
     auto player_controller = std::make_shared<CPlayerController>();
     map->registerNavigationEdge({start, goal, true, false, 20, "costPortal"});
     performance_guard::clearTargetFlowCache();
-    player_controller->setTarget(goal);
+    player_controller->setTarget(player, goal);
     expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
                 "player should reject an expensive connector in favor of five ordinary steps");
     expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
                 "reverse flow field should price the forward connector and agree with player A*");
     map->unregisterNavigationEdgesForObject("costPortal");
     map->registerNavigationEdge({start, goal, true, false, 1, "costPortal"});
-    player_controller->clearPath();
-    player_controller->setTarget(goal);
+    player_controller->interrupt(player);
+    player_controller->setTarget(player, goal);
     expect_true(resolve_coords(player_controller->control(player)) == goal,
                 "player should use the now-cheap connector");
     expect_true(resolve_coords(npc_controller->control(chaser)) == goal,
