@@ -290,6 +290,14 @@ void initializeBalancePythonContent() {
     const auto nativeModule = pybind11::module_::import("_game");
     expect_true(nativeModule.attr("CInteraction").attr("__module__").cast<std::string>() == "_game",
                 "embedded native classes must have the production module identity");
+    for (const auto &method : {"getEffectiveInteractions", "addEffect"}) {
+        expect_true(pybind11::hasattr(nativeModule.attr("CCreature"), method),
+                    "role plugins must use the actual bound creature API");
+    }
+    for (const auto &method : {"setCaster", "setVictim"}) {
+        expect_true(pybind11::hasattr(nativeModule.attr("CEffect"), method),
+                    "eager role effects require actual bound native actor endpoints");
+    }
     pybind11::module_::import("game");
     pybind11::module_::import("json");
     std::cerr << "monster balance: game and json initialized\n";

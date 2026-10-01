@@ -11,7 +11,7 @@ of 10 percent, including a zero baseline. Every seed that wins without signature
 must also win with them. Each player class must have at least one representative
 Gooby, Pritz or OctoBogz pair that both wins and causes positive median incoming
 damage. Requiring every pair to win or to cause damage would reject existing
-baseline behavior: Sorcerer/CultLeader wins zero seeds and Assasin/Pritz receives
+baseline behavior: the measured Linux Sorcerer/CultLeader baseline wins zero seeds and Assasin/Pritz receives
 zero median damage. All those pairs still retain their metric and victory gates.
 
 Resource observation forwards the configured controllers unchanged and records
@@ -47,8 +47,19 @@ expiration. The temporary mage packet hook clears before the weapon proc, on a
 miss, and in a `finally` block after rejected execution. Its default path preserves
 ordinary Attack behavior. Matching setup is present with roles disabled too.
 
-These are measured revisions, not acceptance claims. The unchanged matrix and
+These revisions respond to failed measurements; they are not acceptance claims. The unchanged matrix and
 strict budgets must pass on Linux and Windows before the trial is complete.
+
+The plugin calls the published `getEffectiveInteractions` API. Eager effects use
+narrow bindings for the existing native `setCaster`, `setVictim`, and `addEffect`
+methods so normal active-effect tracking remains intact. Strict mock surfaces and
+a plugin method audit prevent invented Python aliases; the embedded fixture also
+checks the actual bound methods before combat. The source API regression fails on
+head `c8a69091` and passes after this correction. Its
+[Linux job 110337375235](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36852298559/job/110337375235)
+failed 82 native assertions, including Attack/proc counts, random-stream equality,
+effect ownership and actual stat application. Those medians are invalid evidence
+for the revised signatures because the prior helper called an unbound method.
 
 ## Corrected harness evidence, before signature revision
 
