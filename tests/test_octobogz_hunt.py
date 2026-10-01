@@ -682,7 +682,8 @@ class OctobogzHuntTest(unittest.TestCase):
 
         walker = OctobogzMcpWalkthroughTest("runTest")
         walker.player, walker.game_map = "player", "map"
-        walker.coords = Mock(return_value=(57, 115, 0))
+        walker.coords = Mock(side_effect=AssertionError("The measured baseline must remain explicit full JSON"))
+        walker.engine = Mock(return_value=json.dumps({"properties": {"posx": 57, "posy": 115, "posz": 0}}))
         walker.state = Mock(return_value={"stage": "dormant"})
         walker.pump = Mock()
 
@@ -699,7 +700,9 @@ class OctobogzHuntTest(unittest.TestCase):
         with patch("tests.test_octobogz_mcp.perf_counter", side_effect=range(84)), patch("builtins.print") as report:
             walker.probeCoordinateReadCosts()
         walker.pump.assert_not_called()
-        self.assertEqual(22, walker.coords.call_count)
+        walker.coords.assert_not_called()
+        self.assertEqual(22, walker.engine.call_count)
+        self.assertTrue(all(call.args == ("jsonify", "player") for call in walker.engine.call_args_list))
         self.assertEqual(22, walker.state.call_count)
         self.assertEqual(63, sum(call.args[1] == "getNumericProperty" for call in walker.call.call_args_list))
         self.assertEqual(
@@ -720,7 +723,7 @@ class OctobogzHuntTest(unittest.TestCase):
             with self.subTest(failure=failure):
                 walker = OctobogzMcpWalkthroughTest("runTest")
                 walker.player, walker.game_map = "player", "map"
-                walker.coords = lambda: (57, 115, 0)
+                walker.fullJsonCoords = lambda: (57, 115, 0)
                 walker.state = (
                     Mock(side_effect=({"stage": "dormant"}, {"stage": "cleared"})) if failure == "state" else lambda: {}
                 )
@@ -922,6 +925,7 @@ class OctobogzHuntTest(unittest.TestCase):
             (109, 111),
             (57, 115),
             (58, 115),
+            (30, 115),
         ):
             tile = layer["data"][x + y * source["width"]]
             self.assertEqual("RoadTile", tile_types[str(tile - 1)]["type"], (x, y))
@@ -976,6 +980,7 @@ class OctobogzHuntTest(unittest.TestCase):
         state = {"exp": 5750, "relics": 0, "catacombs": True, "living": ["catOne", "catTwo"]}
         walker.snapshot = lambda stage: {"exp": state["exp"], "stage": stage}
         walker.recoverOnRoadPair = Mock()
+        walker.walkCoords = Mock()
         walker.nearbyAuthoredPritz = Mock(
             side_effect=lambda anchor: [(index, name) for index, name in enumerate(state["living"])]
         )
@@ -1006,6 +1011,10 @@ class OctobogzHuntTest(unittest.TestCase):
         walker.call = call
         walker.walkTo = Mock(side_effect=walk)
         walker.prepareThroughCatacombs()
+        self.assertEqual(
+            [(9, 39, 0), (8, 39, 0), (8, 49, 0), (9, 49, 0), (9, 81, 0), (30, 81, 0), (30, 115, 0)],
+            [call.args[0] for call in walker.walkCoords.call_args_list],
+        )
         self.assertEqual(6000, state["exp"])
         self.assertEqual([], state["living"])
         self.assertEqual(3, walker.walkTo.call_count)
@@ -1029,6 +1038,60 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertIn('self.assertGreaterEqual(self.call(self.player, "getLevel"), 4', source)
         self.assertIn('self.assertGreaterEqual(self.call(self.player, "getNumericProperty", "exp"), 6000)', source)
+
+    def testCatacombsRecoveryDetourStaysOnAuthoredRoadsAndAvoidsTheStackedCaveBeforeRealEntry(self):
+        from tests.castle_walkthrough import TransitRoutes, shortestRoute
+        from tests.narrative_walkthrough import authoredRegion
+
+        objects, walkable = authoredRegion("nouraajd")
+        cave, road = objects["catacombs"], (57, 115, 0)
+        waypoints = ((9, 39, 0), (8, 39, 0), (8, 49, 0), (9, 49, 0), (9, 81, 0), (30, 81, 0), (30, 115, 0), road)
+        document = json.loads((ROOT / "res/maps/nouraajd/map.json").read_text(encoding="utf-8"))
+        tiles = document["tilesets"][0]["tileproperties"]
+        layer = next(layer for layer in document["layers"] if layer["type"] == "tilelayer")
+        self.assertEqual((57, 103, 0), cave)
+        for origin in ((9, 36, 0), (9, 37, 0)):
+            with self.subTest(origin=origin):
+                direct = shortestRoute(walkable, TransitRoutes(), origin, road)
+                detour, current = [], origin
+                for waypoint in waypoints:
+                    detour += shortestRoute(walkable, TransitRoutes(), current, waypoint)
+                    current = waypoint
+                self.assertIn(cave, [step for step, arrival in direct])
+                self.assertNotIn(cave, [step for step, arrival in detour])
+                self.assertLessEqual(len(detour), 512)
+                self.assertEqual(2, len(detour) - len(direct))
+                for step, arrival in detour:
+                    x, y, z = step
+                    self.assertEqual(0, z)
+                    tile = layer["data"][x + y * document["width"]]
+                    self.assertEqual("RoadTile", tiles[str(tile - 1)]["type"], step)
+        source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        methods = {node.name: node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef)}
+        preparation = ast.get_source_segment(source, methods["prepareThroughCatacombs"])
+        self.assertLess(preparation.index("self.walkCoords(waypoint)"), preparation.index("self.recoverOnRoadPair("))
+        self.assertLess(preparation.index("self.recoverOnRoadPair("), preparation.index("self.assertIsNotNone("))
+        self.assertLess(preparation.index("self.assertIsNotNone("), preparation.index('self.walkTo("catacombs"'))
+        route = ast.get_source_segment(
+            source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
+        )
+        self.assertLess(route.index("self.prepareThroughRolf("), route.index("self.probeCoordinateReadCosts("))
+        self.assertLess(route.index("self.probeCoordinateReadCosts("), route.index("self.prepareThroughCatacombs("))
+
+    def testCatacombsRecoveryMustLeaveTheCaveUntouchedBeforeItsActualEntry(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        walker.walkCoords, walker.recoverOnRoadPair, walker.walkTo = Mock(), Mock(), Mock()
+        walker.snapshot = Mock(return_value={})
+        walker.call = Mock(side_effect=lambda handle, method, *args: {"getLevel": 3, "countItems": 0}.get(method))
+        with self.assertRaises(AssertionError):
+            walker.prepareThroughCatacombs()
+        walker.recoverOnRoadPair.assert_called_once_with(
+            (57, 115, 0), (58, 115, 0), "before original catacombs road recovery"
+        )
+        walker.walkTo.assert_not_called()
 
     def testCatacombsDiscoveryUsesOnlyLivingAuthoredNearbyPritzOnTheSameFloor(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest

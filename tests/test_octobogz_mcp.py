@@ -79,14 +79,14 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         )
 
     def probeCoordinateReadCosts(self):
-        expected = self.coords()
+        expected = self.fullJsonCoords()
         turn_before = self.call(self.game_map, "getTurn")
         state_before = self.state()
         resources_before = (self.call(self.player, "getHp"), self.call(self.player, "getMana"))
         full_samples, scalar_samples = [], []
         for index in range(21):
             started = perf_counter()
-            full_coords = self.coords()
+            full_coords = self.fullJsonCoords()
             full_elapsed = perf_counter() - started
             started = perf_counter()
             scalar_coords = tuple(self.call(self.player, "getNumericProperty", "pos" + axis) for axis in "xyz")
@@ -128,9 +128,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         registered = self.call(self.game_map, "getObjectByName", self.call(self.player, "getName"))
         self.assertEqual(self.player["__handle__"], registered["__handle__"])
 
-    def coords(self, handle=None):
+    def fullJsonCoords(self, handle=None):
         data = json.loads(self.engine("jsonify", handle or self.player))["properties"]
         return tuple(data["pos" + axis] for axis in "xyz")
+
+    def coords(self, handle=None):
+        return self.fullJsonCoords(handle)
 
     def snapshot(self, stage):
         data = json.loads(self.engine("jsonify", self.player))["properties"]
@@ -332,7 +335,11 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
     def prepareThroughCatacombs(self):
         if self.call(self.player, "getLevel") < 4:
+            # Follow authored roads; the grass shortcut crosses the occupied cave before recovery.
+            for waypoint in ((9, 39, 0), (8, 39, 0), (8, 49, 0), (9, 49, 0), (9, 81, 0), (30, 81, 0), (30, 115, 0)):
+                self.walkCoords(waypoint)
             self.recoverOnRoadPair((57, 115, 0), (58, 115, 0), "before original catacombs road recovery")
+            self.assertIsNotNone(self.call(self.game_map, "getObjectByName", "catacombs"))
             relics_before = self.call(self.player, "countItems", "holyRelic")
             self.snapshot("before original catacombs")
             self.walkTo("catacombs", allow_removed=True)
@@ -510,6 +517,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.walkTo("nouraajdChapel")
                     self.action(self.dialog("berenDialog"), "decode_stained_glass_ward")
                 self.prepareThroughRolf()
+                self.probeCoordinateReadCosts()
                 self.prepareThroughCatacombs()
                 self.walkTo("questGiver")
                 if player_class == "Warrior":
@@ -517,7 +525,6 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.assertIn("octoBogzQuest", self.questNames())
                 self.walkTo("ambientOctobogzNet")
                 self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "before hunt road recovery")
-                self.probeCoordinateReadCosts()
                 self.enterHunt()
 
                 slot = "mcp-octobogz-" + uuid.uuid4().hex

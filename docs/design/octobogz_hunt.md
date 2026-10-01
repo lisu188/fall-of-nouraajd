@@ -443,3 +443,42 @@ A read-only probe measures20 paired samples after one warm-up for that existing
 read versus three scalar position getters; it requires unchanged coordinates,
 turn, objective state, HP and mana. These measurements add no timing pass gate
 and cannot replace the required workload, performance or coverage evidence.
+
+## Recovery approach regression and retained diagnostic head
+
+Head `57e44f00` passed native tests and performance guards on Linux and Windows.
+Windows job110532628636 completed the role matrix in 3.41 seconds, the fixed
+hunt comparison in 2.14 seconds and partial actor save/recovery in 8.688 seconds.
+Both authored classes still lost during preparation, before reaching the hunt
+or the paired coordinate probe. The individual failed hunt case took 213.500
+seconds; its whole 128-test worker took 405.183 seconds. Those are different
+measurements and neither establishes a completed route.
+
+The shortest path from the recovered Rolf road to `(57,115)` crosses the occupied
+catacombs at `(57,103)`. The Windows Warrior's recovered turn442 plus115 movement
+steps matches its defeat at turn557. The Sorcerer's recovered turn450 plus114
+steps matches its defeat at turn564. Their native defeat receipts and failed
+outcomes are retained; the intended road recovery had not happened yet.
+
+The corrected approach uses the existing connected road through `(9,39)`,
+`(8,39)`, `(8,49)`, `(9,49)`, `(9,81)`, `(30,81)` and `(30,115)` before the
+catacombs road pair. Every intervening source cell is a RoadTile. This takes129
+or128 steps from the two Rolf road cells, only two more than their respective
+grass shortcuts, within the unchanged512-step bound. Native movement, map turns,
+encounters and defeat checks remain active. The cave must still exist after
+full road recovery before its actual entry; its stacked battle is preserved.
+
+The Sorcerer's failed Windows approach measured2557 full JSON calls taking
+49.323 seconds out of95.274 elapsed seconds, and3393 event-loop runs taking
+28.495 seconds. This identifies real work but does not measure the three-scalar
+alternative. The paired probe therefore moves to the recovered Rolf checkpoint
+before the risky approach. Its full JSON baseline now has an explicit reader;
+the regression requires22 JSON reads and63 scalar reads, so a future coordinate
+optimization cannot accidentally compare the same reader against itself.
+Current movement coordinates still use full JSON pending paired measurements.
+
+The cold-cache scheduler also records214 seconds as a transparent rounded lower
+bound from that failed213.500-second case. Recorded test timings still take
+precedence. This changes shard placement and the allowance calculated by the
+existing formula; the formula and fixed child, phase and native deadlines are
+unchanged. All tests, encounters, samples and assertions remain required.
