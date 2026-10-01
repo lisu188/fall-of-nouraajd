@@ -27,6 +27,11 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.game_map = self.call(self.game, "getMap")
         self.player = self.call(self.game_map, "getPlayer")
 
+    def useOrdinaryCombatController(self, player_class):
+        # Attachment and save restoration install the interactive controller.
+        template = self.call(self.game, "createObject", player_class)
+        self.call(self.player, "setFightController", self.call(template, "getFightController"))
+
     def defeat(self, slot):
         record = self.state()["slots"][slot]
         self.assertEqual("living", record["status"])
@@ -48,8 +53,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 self.pump()
                 starting_blades = self.call(self.player, "countItems", "ShadowBlade")
                 # The template's existing AI uses ordinary spells, equipment and carried potions.
-                template = self.call(self.game, "createObject", player_class)
-                self.call(self.player, "setFightController", self.call(template, "getFightController"))
+                self.useOrdinaryCombatController(player_class)
                 # Earn the authored class discovery reward through its NPC action.
                 if player_class == "Warrior":
                     self.walkTo("nouraajdDoor")
@@ -80,6 +84,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.refresh()
                     self.pump()
                     self.assertEqual(old_state, self.state())
+                    self.useOrdinaryCombatController(player_class)
                     self.defeat("alpha")
                     self.assertIsNotNone(self.call(self.game_map, "getObjectByName", "cave2"))
                     self.assertFalse(self.call(self.game_map, "getBoolProperty", "OCTOBOGZ_SLAIN"))
