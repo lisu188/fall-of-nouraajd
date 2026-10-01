@@ -322,13 +322,14 @@ void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
     expect_true(!player->getEffects().empty(), "inherited native performAction must return and apply the real barrier");
 }
 
-void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool huntPulse = false,
-                                                                        bool cultistHex = false) {
+void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool huntPulse = false, bool cultistHex = false,
+                                                                        bool huntCharge = false) {
     auto game = CGameLoader::loadGame();
     createOpenBalanceMap(game);
     auto expectedNativeRng = vstd::rng();
     int expectedNextBlockRoll = 0;
     int expectedWeaponCalls = 0;
+    int expectedPlayerHp = 0;
     bool observedWeaponProc = false;
     for (unsigned seed = 100; seed < 111; ++seed) {
         for (bool enabled : {false, true}) {
@@ -336,17 +337,20 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
             player->setLevel(3);
             game->getMap()->attachPlayer(player, Coords(0, 0, 0));
             player->heal(0);
-            auto actor = game->createObject<CCreature>(huntPulse ? "OctoBogz" : cultistHex ? "Cultist" : "PritzMage");
+            auto actor = game->createObject<CCreature>((huntPulse || huntCharge) ? "OctoBogz"
+                                                       : cultistHex              ? "Cultist"
+                                                                                 : "PritzMage");
             actor->setName("roleContractActor");
-            actor->setLevel(huntPulse ? 1 : 2);
+            actor->setLevel((huntPulse || huntCharge) ? 1 : 2);
             actor->setPosX(1);
             game->getMap()->addObject(actor);
             actor->setMana(cultistHex ? 5 : 0);
             actor->setBoolProperty("enemyRoleUsed", !enabled);
-            if (huntPulse) {
+            if (huntPulse || huntCharge) {
                 auto director = game->createObject<CEvent>("OctobogzHuntDirector");
                 pybind11::cast(director).attr("configureActor")(actor, "brood");
-                actor->setStringProperty("octobogzCombatPhase", enabled ? "charged" : "spent");
+                actor->setStringProperty("octobogzCombatPhase",
+                                         enabled ? (huntCharge ? "predator" : "charged") : "spent");
                 actor->setBoolProperty("octobogzPulseUsed", !enabled);
                 actor->setMana(5);
             }
@@ -356,6 +360,9 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
             if (cultistHex) {
                 actor->setHp(std::max(1, actor->getHpMax() / 2));
             }
+            if (huntCharge) {
+                actor->setHp(std::max(1, actor->getHpMax() / 4));
+            }
             const auto interactions = actor->getInteractions();
             const auto attackIt =
                 std::ranges::find_if(interactions, [](const auto &action) { return action->getTypeId() == "Attack"; });
@@ -364,11 +371,13 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
                 return;
             }
             const auto attack = *attackIt;
-            const auto signatureIt = std::ranges::find_if(interactions, [huntPulse, cultistHex](const auto &action) {
-                return action->getTypeId() == (huntPulse    ? "octobogzShadowPulse"
-                                               : cultistHex ? "enemyRitualHex"
-                                                            : "enemyArcaneBolt");
-            });
+            const auto signatureIt =
+                std::ranges::find_if(interactions, [huntPulse, cultistHex, huntCharge](const auto &action) {
+                    return action->getTypeId() == (huntCharge   ? "octobogzCharge"
+                                                   : huntPulse  ? "octobogzShadowPulse"
+                                                   : cultistHex ? "enemyRitualHex"
+                                                                : "enemyArcaneBolt");
+                });
             if (signatureIt == interactions.end()) {
                 expect_true(false, "paired contract must load its actual configured signature");
                 return;
@@ -438,37 +447,48 @@ signatureType.performAction = originalSignature
                             "eager owned role objects must preserve both ordinary Attack random streams");
                 expect_true(weaponCalls == expectedWeaponCalls,
                             "the role hook must preserve the configured weapon proc on both hits and misses");
-                expect_true(signatureIt != interactions.end() &&
-                                !(*signatureIt)->getObjectProperty<CGameObject>("roleEffect"),
-                            "consumed eager effects must transfer out of the actor-owned signature slot");
-                const int afterResist = (huntPulse || cultistHex) ? recipient->getStats()->getShadowResist()
-                                                                  : recipient->getStats()->getNormalResist();
-                expect_true(afterResist == beforeResist - 1 && recipient->getEffects().size() == 1,
-                            "the one-turn signature tradeoff must actually affect combat stats");
-                if (huntPulse) {
-                    expect_true(actor->getMana() == 0 && actor->getBoolProperty("octobogzPulseUsed") &&
-                                    actor->getBoolProperty("octobogzPulseEffectApplied"),
-                                "an actual pulse must spend exactly five mana and apply its owned effect once");
-                    expect_true(!actor->getBoolProperty("enemyRoleUsed"),
-                                "a hunt pulse must remain exclusive of the composed brute class signature");
-                }
-                if (!recipient->getEffects().empty()) {
-                    const auto effect = *recipient->getEffects().begin();
-                    expect_true(effect->getTimeLeft() == 1 && effect->getCaster() == actor &&
-                                    effect->getVictim() == recipient,
-                                "the eagerly owned effect must have a real duration and actor endpoints");
-                    effect->apply(recipient);
-                    expect_true(effect->getTimeLeft() == 0, "the role effect must expire after one application");
+                if (huntCharge) {
+                    expect_true(player->getHp() == expectedPlayerHp,
+                                "the actual warning Attack must retain exactly the ordinary damage and weapon proc");
+                    expect_true(actor->getMana() == 5 && actor->getEffects().empty() && player->getEffects().empty() &&
+                                    actor->getStringProperty("octobogzCombatPhase") == "charged" &&
+                                    !actor->getBoolProperty("octobogzPulseUsed") &&
+                                    !actor->getBoolProperty("enemyRoleUsed"),
+                                "a real warning must retain ordinary Attack without mana, effects or brute signature");
+                } else {
+                    expect_true(signatureIt != interactions.end() &&
+                                    !(*signatureIt)->getObjectProperty<CGameObject>("roleEffect"),
+                                "consumed eager effects must transfer out of the actor-owned signature slot");
+                    const int afterResist = (huntPulse || cultistHex) ? recipient->getStats()->getShadowResist()
+                                                                      : recipient->getStats()->getNormalResist();
+                    expect_true(afterResist == beforeResist - 1 && recipient->getEffects().size() == 1,
+                                "the one-turn signature tradeoff must actually affect combat stats");
+                    if (huntPulse) {
+                        expect_true(actor->getMana() == 0 && actor->getBoolProperty("octobogzPulseUsed") &&
+                                        actor->getBoolProperty("octobogzPulseEffectApplied"),
+                                    "an actual pulse must spend exactly five mana and apply its owned effect once");
+                        expect_true(!actor->getBoolProperty("enemyRoleUsed"),
+                                    "a hunt pulse must remain exclusive of the composed brute class signature");
+                    }
+                    if (!recipient->getEffects().empty()) {
+                        const auto effect = *recipient->getEffects().begin();
+                        expect_true(effect->getTimeLeft() == 1 && effect->getCaster() == actor &&
+                                        effect->getVictim() == recipient,
+                                    "the eagerly owned effect must have a real duration and actor endpoints");
+                        effect->apply(recipient);
+                        expect_true(effect->getTimeLeft() == 0, "the role effect must expire after one application");
+                    }
                 }
             } else {
                 expectedNativeRng = afterNativeRng;
                 expectedNextBlockRoll = nextBlockRoll;
                 expectedWeaponCalls = weaponCalls;
+                expectedPlayerHp = player->getHp();
                 const int afterResist = (huntPulse || cultistHex) ? recipient->getStats()->getShadowResist()
                                                                   : recipient->getStats()->getNormalResist();
                 expect_true(recipient->getEffects().empty() && afterResist == beforeResist,
                             "disabled roles must leave ordinary Attack stats unchanged");
-                if (huntPulse) {
+                if (huntPulse || huntCharge) {
                     expect_true(actor->getMana() == 5,
                                 "disabled hunt phases must preserve all five ordinary baseline mana points");
                 }
@@ -891,6 +911,7 @@ int main(int argc, char **argv) {
         testActivePlayerNeverUsesMonsterSignature();
     }
     if (huntRoute) {
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, false, true);
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true);
         testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget();
     } else if (!contractsOnly) {

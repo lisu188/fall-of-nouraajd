@@ -27,6 +27,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def refresh(self):
         self.game_map = self.call(self.game, "getMap")
         self.player = self.call(self.game_map, "getPlayer")
+        registered = self.call(self.game_map, "getObjectByName", self.call(self.player, "getName"))
+        self.assertEqual(self.player["__handle__"], registered["__handle__"])
 
     def coords(self, handle=None):
         data = json.loads(self.engine("jsonify", handle or self.player))["properties"]
@@ -38,9 +40,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "stage": stage,
             "coords": self.coords(),
             "level": self.call(self.player, "getLevel"),
-            "exp": data.get("exp"),
+            "exp": self.call(self.player, "getNumericProperty", "exp"),
             "hp": data.get("hp"),
             "mana": self.call(self.player, "getMana"),
+            "gold": self.call(self.player, "getGold"),
             "items": [item["properties"].get("typeId") for item in data.get("items") or []],
             "turn": self.call(self.game_map, "getTurn"),
         }
@@ -52,10 +55,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual(1, sum(abs(a - b) for a, b in zip(origin, destination)))
         tile = self.call(self.game_map, "getTile", *destination)
         self.assertIsNotNone(tile, destination)
-        native_coords = self.call(tile, "getCoords")
-        self.assertTrue(self.call(self.game_map, "canStep", native_coords), destination)
-        controller = self.call(self.player, "getController")
-        self.call(controller, "setTarget", self.player, native_coords)
+        self.assertTrue(self.call(tile, "getBoolProperty", "canStep"), destination)
+        # Native adjacent moveTo checks CMap.canStep before committing, including object footprints.
+        self.call(self.player, "moveTo", *destination)
+        self.pump()
         turn = self.call(self.game_map, "getTurn")
         self.call(self.game_map, "move")
         self.pump()
@@ -76,6 +79,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def walkRoute(self, target, *, allow_removed=False):
         route = []
         planned_target = None
+        stalled_steps = {}
         for _ in range(512):
             actor = self.call(self.game_map, "getObjectByName", target) if isinstance(target, str) else None
             if isinstance(target, str):
@@ -94,11 +98,15 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             step, expected = route.pop(0)
             tile = self.call(self.game_map, "getTile", *step)
             self.assertIsNotNone(tile, step)
-            if not self.call(self.game_map, "canStep", self.call(tile, "getCoords")):
+            if not self.call(tile, "getBoolProperty", "canStep"):
                 self.walkable.discard(step)
                 route = []
                 continue
             if self.step(step) != expected:
+                stalled = (current, step)
+                stalled_steps[stalled] = stalled_steps.get(stalled, 0) + 1
+                if stalled_steps[stalled] > 1:
+                    self.walkable.discard(step)
                 route = []
         self.fail(("Bounded adjacent hunt route did not reach its target", target, self.snapshot("route blocked")))
 

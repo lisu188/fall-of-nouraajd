@@ -635,7 +635,7 @@
       "label": "Gather Shadow",
       "manaCost": 0,
       "enemySignature": true,
-      "description": "Warn of a coming shadow pulse while executing the ordinary selected attack."
+        "description": "At or below quarter health, warn of a coming shadow pulse while executing the full ordinary selected attack."
     }
   },
   "octobogzShadowPulse": {

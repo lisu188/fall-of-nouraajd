@@ -621,6 +621,7 @@ void testOctobogzPhaseCallbackAndStateGrowthAreBounded() {
     opponent->setNpc(false);
     actor->setStringProperty("octobogzCombatRole", "shadow");
     actor->setStringProperty("octobogzCombatPhase", "predator");
+    actor->setHp(1);
     actor->setMana(5);
     auto addAction = [actor, &fixture](const std::string &id, int manaCost) {
         auto action = std::make_shared<CombatActionCountProbe>();

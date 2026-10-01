@@ -36,8 +36,8 @@ introduce a second full creature serializer for absent transient effects.
 
 The ordinary AI chooses potions, useful spells, and Attack using the existing
 ranking and random streams. A phase may decorate only an already selected
-configured Attack. The shadow brood warns on its first eligible attack; the
-Alpha warns only at or below half health. Warning still executes that Attack.
+configured Attack. Both the shadow brood and Alpha warn only at or below quarter
+health. Warning still executes the full ordinary Attack.
 The next eligible affordable attack costs five mana once, converts one point of
 that same damage roll from normal to shadow, and applies shadow resistance -1
 for one turn. This post-hit debuff helps only a later shadow attack while it
@@ -185,8 +185,11 @@ placements, death gates, phase values and fixed no-rest combat comparator are
 unchanged. Native save/recovery tests assert the anchor and range.
 
 The required stdio MCP route now obtains each authored cardinal destination from
-source terrain, checks native walkability, queues that single step in the real
-player controller, calls `CMap.move`, pumps its event loop, and verifies one
+source terrain, checks the native tile's walkability flag, and calls the existing
+integer-coordinate `CMapObject.moveTo` for exactly one cell. The registered
+player's adjacent native movement checks `CMap.canStep` before committing,
+including object footprints and normal movement hooks. The route then calls
+`CMap.move`, pumps its event loop, and verifies one
 actual map turn and at most one cell of movement. It replans after combat rollback,
 blocked objects or wandering target movement. It records real level, experience,
 HP/mana, inventory and turns before encounters and after a partial reload.
@@ -210,6 +213,12 @@ Native runtime/MCP cases retain gameplay/full/coverage-safe discovery. A new
 export check rejects the previous unexported `CMapLoader.save` call; the route
 uses the published `saveWithResult` and requires successful persistence.
 
+The earlier controller-queued fixture incorrectly called the unbound
+`CTile.getCoords`. The replacement uses the already proven adjacent movement
+and map-turn APIs. Its method-ownership check rejects that tile call and excluded
+Coords constructors; its movement mock commits on `moveTo`, with a real map-turn
+advance and rollback/replanning afterward. No production binding was added.
+
 The user approved this distinction after the fixed original route proved
 all-losing for three Linux classes. Only that universal no-rest victory witness
 was corrected; all five classes,11 paired seeds,positive-HP witnesses,absolute
@@ -218,3 +227,13 @@ The prior Windows Assasin mana120 to140 failure is still a strict mechanic
 failure requiring resolution, not covered by the witness correction. The
 disabled hunt callback fixture also explicitly retains all five baseline mana
 points, alongside the used-pulse assertion that exactly five are spent.
+
+Head4024453d's Windows seed106 trace is retained: the staged Alpha left the
+Assasin at50HP versus51 for the original actor. Subsequent ordinary loot,
+potion and spell decisions diverged; the staged route spent140mana instead
+of120. The strict median gate rejected this even though that seed changed from
+a loss to a win. The next generic phase trial delays both warnings until quarter
+health, keeping actors, stats, loadouts, seeds, route carryover and every numeric
+and winning-seed gate unchanged. Real-bound warning contracts compare actual
+damage, configured Attack/Staff callbacks, random streams, no mana expenditure
+and exclusive phase state. Existing pulse-use and five-mana gates remain.

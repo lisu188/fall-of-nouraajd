@@ -523,8 +523,10 @@ class OctobogzHuntTest(unittest.TestCase):
             index = 0 if node.func.attr == "engine" else 1 if node.func.attr == "call" else None
             if index is not None and len(node.args) > index and isinstance(node.args[index], ast.Constant):
                 self.assertIn(node.args[index].value, published if index == 0 else methods)
+                if index == 1 and isinstance(node.args[0], ast.Name) and node.args[0].id == "tile":
+                    self.assertIn(node.args[index].value, assignments["MCP_ALLOWED_HANDLE_METHODS"]["CGameObject"])
 
-    def testMcpRouteQueuesOnlyAdjacentControllerStepsAndReplansAfterBlockersOrRollback(self):
+    def testMcpRouteUsesOnlyAdjacentNativeMovementAndActualMapTurnsAfterBlockersOrRollback(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
         walker = OctobogzMcpWalkthroughTest("runTest")
@@ -540,24 +542,21 @@ class OctobogzHuntTest(unittest.TestCase):
             calls.append((handle, method, args))
             if method == "getTile":
                 return tuple(args)
-            if method == "getCoords":
-                return handle
-            if method == "canStep":
-                return args[0] != (1, 0, 0)
-            if method == "getController":
-                return "controller"
-            if method == "setTarget":
-                self.assertEqual("player", args[0])
-                self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["coords"], args[1])))
-                state["target"] = args[1]
+            if method == "getBoolProperty":
+                self.assertEqual("canStep", args[0])
+                return handle != (1, 0, 0)
+            if method == "moveTo":
+                self.assertEqual("player", handle)
+                self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["coords"], args)))
+                state["target"] = args
+                if state["turn"]:
+                    state["coords"] = state["target"]
             if method == "getTurn":
                 return state["turn"]
             if method == "isAlive":
                 return True
             if method == "move":
                 # A first-turn combat rollback must cause replanning from the live position.
-                if state["turn"]:
-                    state["coords"] = state["target"]
                 state["turn"] += 1
 
         walker.call = call
@@ -565,8 +564,13 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertEqual((2, 0, 0), state["coords"])
         self.assertEqual(5, state["turn"])
         self.assertEqual(state["turn"], walker.movement_steps)
-        self.assertNotIn("moveTo", [method for _, method, _ in calls])
-        self.assertNotIn((1, 0, 0), [args[1] for _, method, args in calls if method == "setTarget"])
+        self.assertEqual(5, sum(method == "moveTo" for _, method, _ in calls))
+        self.assertNotIn("getCoords", [method for _, method, _ in calls])
+        self.assertNotIn("setTarget", [method for _, method, _ in calls])
+        self.assertNotIn((1, 0, 0), [args for _, method, args in calls if method == "moveTo"])
+        native = (ROOT / "src/object/CMapObject.cpp").read_text(encoding="utf-8")
+        self.assertIn("if (is_registered && is_step_move)", native)
+        self.assertIn("const bool can_step = map->canStep(target)", native)
 
     def testEachHuntSlotPreservesTheOriginalCaveAnchorAndTenCellRange(self):
         self.director.start(self.game_map)
@@ -687,7 +691,14 @@ class OctobogzHuntTest(unittest.TestCase):
                 f"std::abs(median(hunt{resource}) - median(baseline{resource})) * 10 <= median(baseline{resource})",
                 route,
             )
-        self.assertIn("if (huntPulse) {\n                    expect_true(actor->getMana() == 5", source)
+        self.assertIn("if (huntPulse || huntCharge) {\n                    expect_true(actor->getMana() == 5", source)
+        self.assertIn("testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, false, true)", source)
+        controller = (ROOT / "src/core/CController.cpp").read_text(encoding="utf-8")
+        phases = controller.split('const auto phase = me->getStringProperty("octobogzCombatPhase")', 1)[1].split(
+            '} else if (action->getTypeId() == "Attack")', 1
+        )[0]
+        self.assertIn('phase == "predator") && me->getHpRatio() <= 25', phases)
+        self.assertNotIn('huntRole == "shadow"', phases)
 
     def testRejectedOrCancelledPulseClearsHookAndRefundsPaidManaWithoutConsumingPhase(self):
         actor, attack = self.phaseActor()

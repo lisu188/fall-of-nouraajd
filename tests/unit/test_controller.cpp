@@ -1497,11 +1497,12 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
         creatureClass->setCombatRole("brute");
         actor->setCreatureClass(creatureClass);
         CMonsterFightController controller;
-        if (std::string(role) == "alpha") {
-            expect_true(controller.control(actor, opponent), "healthy Alpha should retain its ordinary attack");
-            expect_true(attack->calls == 1 && charge->calls == 0, "Alpha charge must wait for half health");
-            actor->setHp(1);
-        }
+        expect_true(controller.control(actor, opponent), "healthy hunt actors must retain their ordinary attack");
+        expect_true(attack->calls == 1 && charge->calls == 0, "both warnings must wait for quarter health");
+        actor->setHp(std::max(1, actor->getHpMax() / 2));
+        expect_true(controller.control(actor, opponent), "half-health hunt actors must retain ordinary Attack");
+        expect_true(attack->calls == 2 && charge->calls == 0, "a warning must not begin above quarter health");
+        actor->setHp(1);
         const int attacksBeforeWarning = attack->calls;
         expect_true(controller.control(actor, opponent), "hunt warning should decorate the selected ordinary attack");
         expect_true(charge->calls == 1 && attack->calls == attacksBeforeWarning && brace->calls == 0,
