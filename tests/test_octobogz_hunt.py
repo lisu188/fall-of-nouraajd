@@ -670,6 +670,25 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertFalse(actor.getBoolProperty("enemyRoleArcaneAttack"))
         self.assertEqual("", actor.getStringProperty("enemyRoleDamageChannel"))
 
+    def testFixedNoRestComparisonRetainsKnownVictoriesAndEveryClassResourceGate(self):
+        source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        route = source.split("void testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget", 1)[1].split(
+            "\n} // namespace", 1
+        )[0]
+        self.assertIn('std::string(playerType) == "Assasin"', route)
+        self.assertIn('std::string(playerType) == "Inquisitor"', route)
+        self.assertIn("if (originallyWinningClass)", route)
+        self.assertIn("expect_true(baselineWins > 0", route)
+        self.assertIn("expect_true(median(baselineHp) > 0", route)
+        self.assertIn("!baseline.won || hunt.resources.won", route)
+        self.assertIn("seed < 111", route)
+        for resource in ("Hp", "Mana", "Items"):
+            self.assertIn(
+                f"std::abs(median(hunt{resource}) - median(baseline{resource})) * 10 <= median(baseline{resource})",
+                route,
+            )
+        self.assertIn("if (huntPulse) {\n                    expect_true(actor->getMana() == 5", source)
+
     def testRejectedOrCancelledPulseClearsHookAndRefundsPaidManaWithoutConsumingPhase(self):
         actor, attack = self.phaseActor()
         actor.setStringProperty("octobogzCombatPhase", "charged")

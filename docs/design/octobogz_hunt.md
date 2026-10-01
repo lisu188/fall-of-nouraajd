@@ -63,8 +63,12 @@ source-authored level-one enemies, and paired seeds 100 through 110. Both random
 streams reset once after route setup. Player HP, mana, items, experience, and loot
 carry naturally between the three combats. Every original winning seed must
 still win. Absolute median HP, mana, and inventory expenditures must stay within
-10 percent, including zero baselines. Every class must have baseline victories
-and meaningful incoming damage; real Alpha and brood pulse/effect use must occur.
+10 percent, including zero baselines. All five classes must retain meaningful
+incoming baseline damage. Assasin and Inquisitor must retain positive no-rest
+victory witnesses, as both recorded platforms demonstrate. Warrior, Sorcerer and
+Wayfarer remain in every numeric and per-seed victory comparison; their original
+fixed no-rest setup does not establish universal victories. Real Alpha and brood
+pulse/effect use must occur.
 No stat, loadout, seed-count, threshold, or timer change is used to satisfy gates.
 
 The same native executable tests ordinary Attack callbacks, a real Staff weapon
@@ -75,7 +79,8 @@ one charge, one pulse, and 198 ordinary Attack selections. Focused Python tests
 exercise migration, partial saves, live removal, pending placement, late rewards,
 misses, cancellation, and default hook behavior. The separate stdio MCP walkthrough
 uses actual player movement and combat for Warrior and Sorcerer, with ordinary
-progression and a partial save, rather than flag-only objective manipulation.
+progression, authored preparation/recovery and a partial save. These authored
+victories are required independently of the deliberately fixed no-rest comparator.
 
 The CI commands are:
 
@@ -204,3 +209,12 @@ movement, registry and sandbox regressions run in fast/full/coverage-safe suites
 Native runtime/MCP cases retain gameplay/full/coverage-safe discovery. A new
 export check rejects the previous unexported `CMapLoader.save` call; the route
 uses the published `saveWithResult` and requires successful persistence.
+
+The user approved this distinction after the fixed original route proved
+all-losing for three Linux classes. Only that universal no-rest victory witness
+was corrected; all five classes,11 paired seeds,positive-HP witnesses,absolute
+10-percent resource gates and every original winning seed remain unchanged.
+The prior Windows Assasin mana120 to140 failure is still a strict mechanic
+failure requiring resolution, not covered by the witness correction. The
+disabled hunt callback fixture also explicitly retains all five baseline mana
+points, alongside the used-pulse assertion that exactly five are spent.
