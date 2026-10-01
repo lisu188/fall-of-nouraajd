@@ -184,10 +184,10 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
                     references.append(weakref.ref(self))
                 def __call__(self, *args):
                     events.append((self.label, *args))
-            assert instance.changeMapWithPreparation('missingPreparedMap', Callback('prepareMissing'),
-                                                     Callback('missing'))
-            assert not instance.changeMapWithPreparation('ritual', Callback('prepareRejected'),
-                                                         Callback('rejected'))
+            assert instance.changeMapWithPreparation(
+                'missingPreparedMap', Callback('prepareMissing'), Callback('missing'))
+            assert not instance.changeMapWithPreparation(
+                'ritual', Callback('prepareRejected'), Callback('rejected'))
             for index in range(10):
                 loop.run()
             gc.collect()
@@ -210,8 +210,9 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
             instance = game.CGameLoader.loadGame()
             game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
             events = []
-            assert instance.changeMapWithPreparation('ritual', lambda: events.append('unexpected preparation'),
-                                                     lambda success: events.append(('completed', success)))
+            assert instance.changeMapWithPreparation(
+                'ritual', lambda: events.append('unexpected preparation'),
+                lambda success: events.append(('completed', success)))
             instance.getContext().shutdown()
             for index in range(10):
                 loop.run()
@@ -271,8 +272,8 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
                 assert instance.getMap() == source
                 events.append('prepared')
                 instance.getContext().shutdown()
-            assert instance.changeMapWithPreparation('ritual', prepare,
-                                                     lambda success: events.append(('completed', success)))
+            assert instance.changeMapWithPreparation(
+                'ritual', prepare, lambda success: events.append(('completed', success)))
             for index in range(10):
                 loop.run()
             assert events == ['prepared', ('completed', False)], events
