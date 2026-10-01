@@ -1516,6 +1516,97 @@ void test_minimap_bounds_normal_map_renders() {
     expect_true(elapsed < MINIMAP_RENDER_BUDGET_MS, "minimap should render a normal bounded map (regression)");
 }
 
+void testRetainedMinimapTextureDoesNotOutliveItsRenderer() {
+    auto harness = make_minimap_harness();
+    harness.map->setXBounds({{0, 3}});
+    harness.map->setYBounds({{0, 3}});
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    harness.gui->addChild(minimap);
+    minimap->renderObject(harness.gui, CUtil::rect(0, 0, 128, 128), 0);
+    expect_true(harness.gui->getRenderContext().getStats().successfulCopies == 1,
+                "retained minimap regression must populate a real renderer texture");
+
+    harness.gui->removeChild(minimap);
+    const std::weak_ptr<CGui> owner = harness.gui;
+    harness.game->getContext()->shutdown();
+    harness.gui.reset();
+    expect_true(owner.expired(), "retaining the minimap must not retain its GUI or renderer");
+
+    // SDL destroys renderer-owned textures here; a later widget release must not destroy them again.
+    SDL_ClearError();
+    minimap.reset();
+    expect_true(std::string(SDL_GetError()).empty(),
+                "releasing a detached minimap after its renderer must not touch an invalid SDL texture");
+}
+
+void testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners() {
+    for (const bool expire_first : {false, true}) {
+        auto first = make_minimap_harness();
+        auto second = make_minimap_harness();
+        first.map->setXBounds({{0, 3}});
+        first.map->setYBounds({{0, 3}});
+        second.map->setXBounds({{0, 3}});
+        second.map->setYBounds({{0, 3}});
+        auto minimap = std::make_shared<CMinimapGraphicsObject>();
+        first.gui->addChild(minimap);
+        const auto rect = CUtil::rect(0, 0, 128, 128);
+        minimap->renderObject(first.gui, rect, 0);
+        expect_true(first.gui->getRenderContext().getStats().successfulCopies == 1,
+                    "reparent regression must populate the original renderer texture");
+        first.gui->removeChild(minimap);
+        const std::weak_ptr<CGui> original_owner = first.gui;
+        if (expire_first) {
+            first.game->getContext()->shutdown();
+            first.gui.reset();
+            expect_true(original_owner.expired(), "the original GUI must expire before its retained texture");
+        }
+
+        second.gui->addChild(minimap);
+        SDL_ClearError();
+        minimap->renderObject(second.gui, rect, 0);
+        minimap->renderObject(second.gui, rect, 0);
+        expect_true(minimap->getTerrainTextureBuildCount() == 2,
+                    "changing GUI owners must rebuild once even when terrain and dimensions match");
+        expect_true(second.gui->getRenderContext().getStats().successfulCopies == 2,
+                    "a reparented minimap must render and reuse its new owner's texture");
+        expect_true(std::string(SDL_GetError()).empty(),
+                    "replacing a texture from a live or expired owner must not produce SDL errors");
+        second.gui->removeChild(minimap);
+        minimap.reset();
+        expect_true(std::string(SDL_GetError()).empty(),
+                    "releasing the texture while its new GUI is alive must remain valid");
+    }
+}
+
+void testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry() {
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto gui = std::make_shared<CGui>();
+    auto cache = std::make_shared<CTextureCache>(gui);
+    auto manager = std::make_shared<CTextManager>(gui);
+    auto retained_manager = std::make_shared<CTextManager>(gui);
+    expect_true(cache->getTexture("images/panel") != nullptr,
+                "retained image-cache regression must populate a real texture");
+    expect_true(manager->getTextureSize("cached before GUI expiry").first > 0,
+                "retained text-cache regression must populate a real texture");
+    expect_true(retained_manager->getTextureSize("destroyed after GUI expiry").first > 0,
+                "retained manager destruction regression must populate a real texture");
+    const std::weak_ptr<CGui> owner = gui;
+    gui.reset();
+    expect_true(owner.expired(), "retaining populated caches must not retain their GUI or renderer");
+
+    SDL_ClearError();
+    expect_true(cache->getTexture("images/panel") == nullptr,
+                "an expired image cache must not return a previously cached renderer texture");
+    expect_true(manager->getTextureSize("cached before GUI expiry") == std::make_pair(0, 0),
+                "an expired text cache must not query a previously cached renderer texture");
+    cache.reset();
+    manager.reset();
+    retained_manager.reset();
+    expect_true(std::string(SDL_GetError()).empty(),
+                "clearing or destroying retained populated caches must not touch freed SDL textures");
+}
+
 // Builds a GUI where a map-layer recorder and an overlapping minimap overlay share the same parent. The
 // minimap is pushed last so it has the higher priority and is visited first by CGameGraphicsObject::event(),
 // exactly like the live layer ordering. Synthetic SDL events dispatched through gui->event() then let us
@@ -3759,6 +3850,9 @@ int main() {
     test_minimap_bounds_sparse_coordinates_fail_closed();
     test_minimap_bounds_negative_sparse_coordinates_render();
     test_minimap_bounds_normal_map_renders();
+    testRetainedMinimapTextureDoesNotOutliveItsRenderer();
+    testMinimapTextureReparentsAcrossLiveAndExpiredGuiOwners();
+    testRetainedPopulatedTextureCachesFailClosedAfterGuiExpiry();
     test_minimap_consumes_inside_pointer_events_and_preserves_outside_and_wheel();
 
     return finish_tests();
