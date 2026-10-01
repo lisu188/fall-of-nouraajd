@@ -194,6 +194,9 @@ class WindowsPythonConfigurationTest(unittest.TestCase):
                 '    message(FATAL_ERROR "Wrong release import library for ${target}: ${library}")\n'
                 "  endif()\n"
                 "  get_target_property(debug_library ${target} IMPORTED_IMPLIB_DEBUG)\n"
+                "  if(EXPECTED_DEBUG_LIBRARY AND NOT debug_library)\n"
+                '    message(FATAL_ERROR "Missing matching debug import library for ${target}")\n'
+                "  endif()\n"
                 "  if(debug_library)\n"
                 '    file(TO_CMAKE_PATH "${debug_library}" debug_library)\n'
                 "    if(NOT debug_library STREQUAL EXPECTED_DEBUG_LIBRARY)\n"
@@ -226,6 +229,7 @@ class WindowsPythonConfigurationTest(unittest.TestCase):
             self.assertEqual(str(include_dir), artifacts.get("Python3_INCLUDE_DIR"))
             self.assertEqual(str(library_path), artifacts.get("Python3_LIBRARY"))
             self.assertEqual(str(debug_library) if debug_library else "", artifacts.get("_Python3_LIBRARY_DEBUG"))
+            self.assertEqual(Path(sys.executable).resolve(), Path(artifacts.get("Python3_EXECUTABLE", "")).resolve())
 
             helper_path = root / "scripts" / "windows_python_artifacts.py"
             helper_text = helper_path.read_text(encoding="utf-8").replace(
