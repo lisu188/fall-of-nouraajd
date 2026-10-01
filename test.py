@@ -1107,6 +1107,15 @@ class SaveFixtureTest(unittest.TestCase):
 
 
 class ProgressTextTestResult(unittest.TextTestResult):
+    _OUTCOME_PRIORITIES = {
+        "ok": 0,
+        "skip": 1,
+        "expected-failure": 2,
+        "UNEXPECTED-SUCCESS": 3,
+        "FAIL": 4,
+        "ERROR": 5,
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.showAll = False
@@ -1114,49 +1123,89 @@ class ProgressTextTestResult(unittest.TextTestResult):
         self.total_tests = 0
         self.test_index = 0
         self._test_start_times = {}
+        self._testOutcomes = {}
         self.test_durations = {}
 
     def startTest(self, test):
         self.test_index += 1
         self._test_start_times[id(test)] = time.monotonic()
+        self._testOutcomes[id(test)] = None
         self._write_progress(test, "start")
         super().startTest(test)
 
+    def stopTest(self, test):
+        try:
+            outcome = self._testOutcomes.pop(id(test), None)
+            if outcome is not None and not self._isInterrupted(test):
+                duration = self._duration(test)
+                self._record_duration(test, duration)
+                self._write_progress(test, outcome[0], duration, outcome[1])
+            else:
+                self._test_start_times.pop(id(test), None)
+        finally:
+            super().stopTest(test)
+
     def addSuccess(self, test):
         unittest.TestResult.addSuccess(self, test)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "ok", duration)
+        self._recordOutcome(test, "ok")
 
     def addFailure(self, test, err):
         unittest.TestResult.addFailure(self, test, err)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "FAIL", duration)
+        self._recordOutcome(test, "FAIL")
 
     def addError(self, test, err):
         unittest.TestResult.addError(self, test, err)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "ERROR", duration)
+        self._recordOutcome(test, "ERROR")
+
+    def addSubTest(self, test, subtest, err):
+        unittest.TestResult.addSubTest(self, test, subtest, err)
+        if err is not None:
+            status = "FAIL" if issubclass(err[0], test.failureException) else "ERROR"
+            self._recordOutcome(test, status)
 
     def addSkip(self, test, reason):
         unittest.TestResult.addSkip(self, test, reason)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "skip", duration, reason)
+        parent = getattr(test, "test_case", None) if id(test) not in self._testOutcomes else None
+        if parent is not None and id(parent) in self._testOutcomes:
+            # unittest may omit the parent's addSuccess after a skipped subtest.
+            self._recordOutcome(parent, "ok")
+        else:
+            self._recordOutcome(test, "skip", reason)
 
     def addExpectedFailure(self, test, err):
         unittest.TestResult.addExpectedFailure(self, test, err)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "expected-failure", duration)
+        self._recordOutcome(test, "expected-failure")
 
     def addUnexpectedSuccess(self, test):
         unittest.TestResult.addUnexpectedSuccess(self, test)
-        duration = self._duration(test)
-        self._record_duration(test, duration)
-        self._write_progress(test, "UNEXPECTED-SUCCESS", duration)
+        self._recordOutcome(test, "UNEXPECTED-SUCCESS")
+
+    def _recordOutcome(self, test, status, detail=None):
+        previous = self._testOutcomes.get(id(test))
+        if id(test) not in self._testOutcomes:
+            self._write_progress(test, status, detail=detail)
+        elif previous is None or self._OUTCOME_PRIORITIES[status] > self._OUTCOME_PRIORITIES[previous[0]]:
+            self._testOutcomes[id(test)] = (status, detail)
+
+    def _isInterrupted(self, test):
+        exception_type, _, traceback = sys.exc_info()
+        if exception_type is None or not issubclass(exception_type, KeyboardInterrupt):
+            return False
+        frame = sys._getframe(1)
+        try:
+            run_code = unittest.TestCase.run.__code__
+            while frame is not None:
+                if frame.f_code is run_code and frame.f_locals.get("self") is test:
+                    break
+                frame = frame.f_back
+            # A caught interrupt may contain a previous run of this same case.
+            while frame is not None and traceback is not None:
+                if traceback.tb_frame is frame:
+                    return True
+                traceback = traceback.tb_next
+            return False
+        finally:
+            del frame
 
     def _duration(self, test):
         started_at = self._test_start_times.pop(id(test), None)
@@ -25143,6 +25192,478 @@ class QuestStateHelperTest(unittest.TestCase):
 
 
 class TestRunnerSuiteTest(unittest.TestCase):
+
+    def testProgressRecordsSubtestFailuresAndErrorsAfterCleanup(self):
+        from unittest.mock import patch
+
+        for worker in (False, True):
+            with self.subTest(worker=worker):
+                clock = [10.0]
+                stream = io.StringIO()
+
+                def cleanup():
+                    self.assertEqual(1, len(stream.getvalue().splitlines()))
+                    clock[0] = 25.0
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(cleanup)
+                        clock[0] = 13.0
+                        with case.subTest(kind="error"):
+                            raise ValueError("subtest error")
+                        with case.subTest(kind="failure"):
+                            case.fail("subtest failure")
+                        case.assertTrue(True)
+
+                    def tearDown(case):
+                        clock[0] = 17.0
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", worker),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    case.run(result)
+                    expected = {result._subprocess_name(case): 15.0}
+                    self.assertEqual(expected, result.test_durations)
+                    if worker:
+                        writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                    else:
+                        writer.assert_not_called()
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(1, len(result.failures))
+                self.assertEqual(1, len(result.errors))
+                self.assertFalse(result.wasSuccessful())
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 ERROR 15.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+                self.assertEqual({}, result._test_start_times)
+
+    def testProgressRecordsSkippedSubtestsOnce(self):
+        from unittest.mock import patch
+
+        clock = [5.0]
+        stream = io.StringIO()
+
+        class Case(unittest.TestCase):
+            def runTest(case):
+                with case.subTest(kind="success"):
+                    case.assertTrue(True)
+                for number in range(2):
+                    with case.subTest(number=number):
+                        case.skipTest("subtest unavailable")
+                case.assertTrue(True)
+
+            def tearDown(case):
+                clock[0] = 12.0
+
+        case = Case()
+        result = ProgressTextTestResult(stream, True, 2)
+        result.total_tests = 1
+        with (
+            patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+            patch(__name__ + ".GAME_TEST_WORKER", True),
+            patch(__name__ + ".write_test_timings") as writer,
+        ):
+            case.run(result)
+            expected = {result._subprocess_name(case): 7.0}
+            self.assertEqual(expected, result.test_durations)
+            writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+        self.assertEqual(1, result.testsRun)
+        self.assertEqual(2, len(result.skipped))
+        self.assertTrue(result.wasSuccessful())
+        self.assertEqual(
+            [
+                f"[test 1/1 start] {result._test_name(case)}",
+                f"[test 1/1 ok 7.000s] {result._test_name(case)}",
+            ],
+            stream.getvalue().splitlines(),
+        )
+        self.assertEqual({}, result._test_start_times)
+
+    def testProgressRecordsSubtestAndOuterErrorsOnce(self):
+        from unittest.mock import patch
+
+        clock = [4.0]
+        stream = io.StringIO()
+
+        class Case(unittest.TestCase):
+            def runTest(case):
+                with case.subTest(kind="failure"):
+                    case.fail("subtest failure")
+                clock[0] = 6.0
+                raise RuntimeError("outer error")
+
+            def tearDown(case):
+                clock[0] = 14.0
+                raise ValueError("teardown error")
+
+        case = Case()
+        result = ProgressTextTestResult(stream, True, 2)
+        result.total_tests = 1
+        with (
+            patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+            patch(__name__ + ".GAME_TEST_WORKER", True),
+            patch(__name__ + ".write_test_timings") as writer,
+        ):
+            case.run(result)
+            expected = {result._subprocess_name(case): 10.0}
+            self.assertEqual(expected, result.test_durations)
+            writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+        self.assertEqual(1, result.testsRun)
+        self.assertEqual(1, len(result.failures))
+        self.assertEqual(2, len(result.errors))
+        self.assertFalse(result.wasSuccessful())
+        self.assertEqual(
+            [
+                f"[test 1/1 start] {result._test_name(case)}",
+                f"[test 1/1 ERROR 10.000s] {result._test_name(case)}",
+            ],
+            stream.getvalue().splitlines(),
+        )
+
+    def testProgressPreservesSubtestFailfastAndIncrementalWorkerTimings(self):
+        from unittest.mock import patch
+
+        clock = [2.0]
+        stream = io.StringIO()
+        executed = []
+        persisted = []
+
+        class FirstCase(unittest.TestCase):
+            def runTest(case):
+                clock[0] = 5.0
+
+        class Case(unittest.TestCase):
+            def runTest(case):
+                case.addCleanup(lambda: clock.__setitem__(0, 11.0))
+                with case.subTest(kind="failure"):
+                    case.fail("stop here")
+                executed.append("after failed subtest")
+
+        class NextCase(unittest.TestCase):
+            def runTest(case):
+                executed.append("next case")
+
+        case = Case()
+        first_case = FirstCase()
+        result = ProgressTextTestResult(stream, True, 2)
+        result.total_tests = 3
+        result.failfast = True
+        with (
+            patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+            patch(__name__ + ".GAME_TEST_WORKER", True),
+            patch(__name__ + ".write_test_timings", side_effect=lambda path, values: persisted.append(dict(values))),
+        ):
+            unittest.TestSuite([first_case, case, NextCase()]).run(result)
+        first_expected = {result._subprocess_name(first_case): 3.0}
+        expected = {**first_expected, result._subprocess_name(case): 6.0}
+        self.assertEqual(expected, result.test_durations)
+        self.assertEqual([first_expected, expected], persisted)
+        self.assertEqual([], executed)
+        self.assertEqual(2, result.testsRun)
+        self.assertEqual(1, len(result.failures))
+        self.assertEqual(0, len(result.errors))
+        self.assertTrue(result.shouldStop)
+        self.assertEqual(
+            [
+                f"[test 1/3 start] {result._test_name(first_case)}",
+                f"[test 1/3 ok 3.000s] {result._test_name(first_case)}",
+                f"[test 2/3 start] {result._test_name(case)}",
+                f"[test 2/3 FAIL 6.000s] {result._test_name(case)}",
+            ],
+            stream.getvalue().splitlines(),
+        )
+
+    def testProgressPreservesOuterOutcomeMarkersAndCounts(self):
+        from unittest.mock import patch
+
+        outcomes = (
+            ("ok", 0, 0, 0, 0, 0),
+            ("FAIL", 1, 0, 0, 0, 0),
+            ("ERROR", 0, 1, 0, 0, 0),
+            ("skip", 0, 0, 1, 0, 0),
+            ("expected-failure", 0, 0, 0, 1, 0),
+            ("UNEXPECTED-SUCCESS", 0, 0, 0, 0, 1),
+        )
+        for status, failures, errors, skips, expected_failures, unexpected_successes in outcomes:
+            with self.subTest(status=status):
+                clock = [0.0]
+                stream = io.StringIO()
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(lambda: clock.__setitem__(0, 8.0))
+                        clock[0] = 3.0
+                        if status in ("FAIL", "expected-failure"):
+                            case.fail("case failure")
+                        if status == "ERROR":
+                            raise ValueError("case error")
+                        if status == "skip":
+                            case.skipTest("case unavailable")
+
+                if status in ("expected-failure", "UNEXPECTED-SUCCESS"):
+                    Case.runTest = unittest.expectedFailure(Case.runTest)
+                case = Case()
+                case.test_case = self
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", False),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    case.run(result)
+                    writer.assert_not_called()
+                self.assertEqual({result._subprocess_name(case): 8.0}, result.test_durations)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(failures, len(result.failures))
+                self.assertEqual(errors, len(result.errors))
+                self.assertEqual(skips, len(result.skipped))
+                self.assertEqual(expected_failures, len(result.expectedFailures))
+                self.assertEqual(unexpected_successes, len(result.unexpectedSuccesses))
+                self.assertEqual(not (failures or errors or unexpected_successes), result.wasSuccessful())
+                detail = " case unavailable" if skips else ""
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 {status} 8.000s] {result._test_name(case)}{detail}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+
+    def testProgressDoesNotReportInterruptedCaseAsSuccess(self):
+        from itertools import product
+        from unittest.mock import patch
+
+        for prior, stage, caught_interrupt in product(
+            (None, "skip", "FAIL", "ERROR"), ("body", "cleanup"), (False, True)
+        ):
+            with self.subTest(prior=prior, stage=stage, caught_interrupt=caught_interrupt):
+                stream = io.StringIO()
+                interruption = KeyboardInterrupt("case interrupted")
+
+                def interrupt():
+                    raise interruption
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        if stage == "cleanup":
+                            case.addCleanup(interrupt)
+                        with case.subTest(prior=prior):
+                            if prior == "skip":
+                                case.skipTest("child unavailable")
+                            if prior == "FAIL":
+                                case.fail("child failure")
+                            if prior == "ERROR":
+                                raise ValueError("child error")
+                        if stage == "body":
+                            interrupt()
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", return_value=3.0),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    if caught_interrupt:
+                        try:
+                            raise interruption
+                        except KeyboardInterrupt:
+                            with self.assertRaises(KeyboardInterrupt) as raised:
+                                case.run(result)
+                    else:
+                        with self.assertRaises(KeyboardInterrupt) as raised:
+                            case.run(result)
+                    self.assertIs(interruption, raised.exception)
+                    writer.assert_not_called()
+                self.assertEqual({}, result.test_durations)
+                self.assertEqual({}, result._test_start_times)
+                self.assertEqual({}, result._testOutcomes)
+                self.assertEqual([f"[test 1/1 start] {result._test_name(case)}"], stream.getvalue().splitlines())
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(int(prior == "FAIL"), len(result.failures))
+                self.assertEqual(int(prior == "ERROR"), len(result.errors))
+                self.assertEqual(int(prior == "skip"), len(result.skipped))
+
+    def testProgressCompletesCasesInsideCaughtInterruptHandlers(self):
+        from unittest.mock import patch
+
+        for prior in (None, "skip", "FAIL", "ERROR"):
+            with self.subTest(prior=prior):
+                clock = [2.0]
+                stream = io.StringIO()
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(lambda: clock.__setitem__(0, 11.0))
+                        clock[0] = 5.0
+                        with case.subTest(prior=prior):
+                            if prior == "skip":
+                                case.skipTest("child unavailable")
+                            if prior == "FAIL":
+                                case.fail("child failure")
+                            if prior == "ERROR":
+                                raise ValueError("child error")
+                        case.assertTrue(True)
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    try:
+                        raise KeyboardInterrupt("caller caught interruption")
+                    except KeyboardInterrupt:
+                        case.run(result)
+                    expected = {result._subprocess_name(case): 9.0}
+                    self.assertEqual(expected, result.test_durations)
+                    writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual(int(prior == "FAIL"), len(result.failures))
+                self.assertEqual(int(prior == "ERROR"), len(result.errors))
+                self.assertEqual(int(prior == "skip"), len(result.skipped))
+                status = prior if prior in ("FAIL", "ERROR") else "ok"
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 {status} 9.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+
+    def testProgressCompletesCasesThatHandleInheritedInterrupts(self):
+        from itertools import product
+        from unittest.mock import patch
+
+        for skipped, stage in product((False, True), ("body", "cleanup")):
+            with self.subTest(skipped=skipped, stage=stage):
+                clock = [2.0]
+                stream = io.StringIO()
+                inherited_interrupt = KeyboardInterrupt("caller caught interruption")
+
+                def handleInterrupt():
+                    try:
+                        raise inherited_interrupt
+                    except KeyboardInterrupt:
+                        pass
+
+                def cleanup():
+                    if stage == "cleanup":
+                        handleInterrupt()
+                    clock[0] = 11.0
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        case.addCleanup(cleanup)
+                        clock[0] = 5.0
+                        if skipped:
+                            with case.subTest(kind="skip"):
+                                case.skipTest("child unavailable")
+                        if stage == "body":
+                            handleInterrupt()
+                        case.assertTrue(True)
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 1
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    try:
+                        raise inherited_interrupt
+                    except KeyboardInterrupt:
+                        case.run(result)
+                    expected = {result._subprocess_name(case): 9.0}
+                    self.assertEqual(expected, result.test_durations)
+                    writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                self.assertEqual(1, result.testsRun)
+                self.assertEqual([], result.failures)
+                self.assertEqual([], result.errors)
+                self.assertEqual(int(skipped), len(result.skipped))
+                self.assertTrue(result.wasSuccessful())
+                self.assertEqual(
+                    [
+                        f"[test 1/1 start] {result._test_name(case)}",
+                        f"[test 1/1 ok 9.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
+
+    def testProgressCompletesRepeatedCaseInsidePriorInterruptHandler(self):
+        from unittest.mock import patch
+
+        for skipped in (False, True):
+            with self.subTest(skipped=skipped):
+                clock = [1.0]
+                stream = io.StringIO()
+                run_count = [0]
+                interruption = KeyboardInterrupt("first run interrupted")
+
+                class Case(unittest.TestCase):
+                    def runTest(case):
+                        run_count[0] += 1
+                        if run_count[0] == 1:
+                            clock[0] = 4.0
+                            raise interruption
+                        clock[0] = 8.0
+                        if skipped:
+                            with case.subTest(kind="skip"):
+                                case.skipTest("child unavailable")
+                        case.assertTrue(True)
+
+                    def tearDown(case):
+                        clock[0] = 10.0
+
+                case = Case()
+                result = ProgressTextTestResult(stream, True, 2)
+                result.total_tests = 2
+                with (
+                    patch(__name__ + ".time.monotonic", side_effect=lambda: clock[0]),
+                    patch(__name__ + ".GAME_TEST_WORKER", True),
+                    patch(__name__ + ".write_test_timings") as writer,
+                ):
+                    try:
+                        case.run(result)
+                    except KeyboardInterrupt as caught:
+                        self.assertIs(interruption, caught)
+                        self.assertEqual({}, result.test_durations)
+                        writer.assert_not_called()
+                        case.run(result)
+                    else:
+                        self.fail("the first run must propagate its interruption")
+                    expected = {result._subprocess_name(case): 6.0}
+                    self.assertEqual(expected, result.test_durations)
+                    writer.assert_called_once_with(TEST_TIMINGS_FILE, expected)
+                self.assertEqual(2, result.testsRun)
+                self.assertEqual([], result.failures)
+                self.assertEqual([], result.errors)
+                self.assertEqual(int(skipped), len(result.skipped))
+                self.assertTrue(result.wasSuccessful())
+                self.assertEqual({}, result._test_start_times)
+                self.assertEqual({}, result._testOutcomes)
+                self.assertEqual(
+                    [
+                        f"[test 1/2 start] {result._test_name(case)}",
+                        f"[test 2/2 start] {result._test_name(case)}",
+                        f"[test 2/2 ok 6.000s] {result._test_name(case)}",
+                    ],
+                    stream.getvalue().splitlines(),
+                )
 
     def testMcpWalkthroughLogsCreateNestedWorkerDirectories(self):
         from unittest.mock import patch
