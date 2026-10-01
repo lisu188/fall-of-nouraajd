@@ -1264,7 +1264,7 @@ void CGameLoader::initConfigurations(const std::shared_ptr<CGame> &game) {
 
 void CGameLoader::initObjectHandler(const std::shared_ptr<CObjectHandler> &handler) {
     for (const auto &it : *CTypes::builders()) {
-        handler->registerType(it.first, it.second);
+        handler->registerNativeType(it.first, it.second);
     }
 }
 
