@@ -70,6 +70,8 @@ class EnemyRolesTest(unittest.TestCase):
         self.actor.isAlive.return_value = True
         self.target = Mock()
         self.target.isAlive.return_value = True
+        self.wards = {"normalResist": 10, "shadowResist": 0}
+        self.target.getStats.return_value.getNumericProperty.side_effect = self.wards.__getitem__
         self.attack = self.registered["Attack"]()
         self.attack.getTypeId = lambda: "Attack"
         self.actor.getEffectiveInteractions.return_value = [self.attack]
@@ -173,6 +175,29 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertFalse(self.properties["enemyRoleArcaneAttack"])
         self.assertEqual("", self.properties["enemyRoleDamageChannel"])
 
+    def testRitualEqualWardsRetainOrdinaryDamageAndProcWithoutArmingPacket(self):
+        for ward in (0, 15):
+            with self.subTest(ward=ward):
+                self.properties.clear()
+                self.object_properties.clear()
+                self.wards.update(normalResist=ward, shadowResist=ward)
+                self.actor.getDmg.reset_mock()
+                self.target.hurt.reset_mock()
+                weapon, proc = Mock(), Mock()
+                weapon.getInteraction.return_value = proc
+                self.actor.getWeapon.return_value = weapon
+                action, effect, packet = self.makeSignature("EnemyRitualHex")
+                action.performAction(self.actor, self.target)
+                self.actor.getDmg.assert_called_once_with()
+                self.target.hurt.assert_called_once_with(11)
+                proc.onAction.assert_called_once_with(self.actor, self.target)
+                packet.setNumericProperty.assert_not_called()
+                self.assertNotIn("enemyRoleDamagePacket", self.object_properties)
+                self.assertNotIn("enemyRoleArcaneAttack", self.properties)
+                self.assertTrue(self.properties["enemyRoleUsed"])
+                self.assertIsNone(action.getObjectProperty("roleEffect"))
+                effect.setVictim.assert_called_once_with(self.target)
+
     def testMissesDoNotConsumeBlockDiceOrWeaponProcAndAlwaysClearHook(self):
         self.actor.getDmg.return_value = 0
         for class_name in SIGNATURES:
@@ -268,6 +293,21 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertIn("clonedBonus != nullptr", priority)
         self.assertIn("if (clonedBonus)", priority)
         self.assertEqual(2, priority.count("controller.control(monster, opponent)"))
+        self.assertIn('ordinaryBarrier->setTypeId("ordinaryBarrier")', priority)
+        self.assertIn("(*effects.begin())->getTypeId() == ordinaryBarrier->getTypeId()", priority)
+        self.assertIn("monster->getEffects().size() == 1", priority)
+        self.assertIn("opponent->setHp(opponent->getHpMax())", priority)
+        self.assertIn("monster->isAlive() && opponent->isAlive()", priority)
+
+    def testRitualTraceObservesUnchangedNativeControllerAndReportsEligibleTurn(self):
+        source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        snapshot = source.split("RitualTurnState observeRitualTurn", 1)[1].split("\n}", 1)[0]
+        self.assertNotRegex(snapshot, r"\b(?:set\w+|useAction|hurt|randint|seed)\s*\(")
+        controller = source.split("class ObservedFightController", 1)[1].split("\n};", 1)[0]
+        self.assertEqual(1, controller.count("delegate->control(me, opponent)"))
+        self.assertIn("observeRitualTurn(me, opponent)", controller)
+        self.assertIn('printRitualTrace(roles, "roles", playerType, monsterType, seed, false)', source)
+        self.assertIn('printRitualTrace(baseline, "baseline", playerType, monsterType, seed, true)', source)
 
     def testRuntimeRitualReserveMatchesZeroCostEligibility(self):
         source = (ROOT / "tests/test_enemy_role_runtime.py").read_text(encoding="utf-8")

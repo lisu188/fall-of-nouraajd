@@ -57,6 +57,29 @@ void createOpenBalanceMap(const std::shared_ptr<CGame> &game) {
     }
 }
 
+struct RitualTurnState {
+    bool used;
+    int hp, hpMax, mana, targetHp, targetMana, targetNormalResist, targetShadowResist, targetArmor, targetBlock;
+};
+
+struct RitualControlRecord {
+    RitualTurnState before, after;
+};
+
+RitualTurnState observeRitualTurn(const std::shared_ptr<CCreature> &actor, const std::shared_ptr<CCreature> &target) {
+    const auto targetStats = target->getStats();
+    return {actor->getBoolProperty("enemyRoleUsed"),
+            actor->getHp(),
+            actor->getHpMax(),
+            actor->getMana(),
+            target->getHp(),
+            target->getMana(),
+            targetStats->getNormalResist(),
+            targetStats->getShadowResist(),
+            targetStats->getArmor(),
+            targetStats->getBlock()};
+}
+
 struct RoleBalanceSample {
     bool won;
     int healthSpent;
@@ -65,6 +88,7 @@ struct RoleBalanceSample {
     double setupMilliseconds;
     double fightMilliseconds;
     double cleanupMilliseconds;
+    std::vector<RitualControlRecord> ritualTurns;
 };
 
 class PlayerResourceObserver {
@@ -106,12 +130,17 @@ class PlayerResourceObserver {
 class ObservedFightController : public CFightController {
   public:
     ObservedFightController(std::shared_ptr<CFightController> delegate,
-                            std::shared_ptr<PlayerResourceObserver> observer)
-        : delegate(std::move(delegate)), observer(std::move(observer)) {}
+                            std::shared_ptr<PlayerResourceObserver> observer,
+                            std::shared_ptr<std::vector<RitualControlRecord>> ritualTurns = {})
+        : delegate(std::move(delegate)), observer(std::move(observer)), ritualTurns(std::move(ritualTurns)) {}
 
     bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
         observer->observe();
+        const auto before = ritualTurns ? observeRitualTurn(me, opponent) : RitualTurnState{};
         const bool result = delegate->control(me, opponent);
+        if (ritualTurns) {
+            ritualTurns->push_back({before, observeRitualTurn(me, opponent)});
+        }
         observer->observe();
         return result;
     }
@@ -154,6 +183,7 @@ class ObservedFightController : public CFightController {
   private:
     std::shared_ptr<CFightController> delegate;
     std::shared_ptr<PlayerResourceObserver> observer;
+    std::shared_ptr<std::vector<RitualControlRecord>> ritualTurns;
 };
 
 class ObserverDelegateProbe : public CFightController {
@@ -263,8 +293,12 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
         std::ranges::any_of(actions, [](const auto &action) { return action->getBoolProperty("enemySignature"); }),
         "balance fixture must load its configured Python role signature");
     auto observer = std::make_shared<PlayerResourceObserver>(player);
+    auto ritualTurns = (monsterType == "Cultist" || monsterType == "CultLeader")
+                           ? std::make_shared<std::vector<RitualControlRecord>>()
+                           : nullptr;
     player->setFightController(std::make_shared<ObservedFightController>(ordinaryController, observer));
-    enemy->setFightController(std::make_shared<ObservedFightController>(enemy->getFightController(), observer));
+    enemy->setFightController(
+        std::make_shared<ObservedFightController>(enemy->getFightController(), observer, ritualTurns));
     vstd::rng().seed(seed);
     std::srand(seed);
     const auto fightStarted = std::chrono::steady_clock::now();
@@ -272,7 +306,10 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     observer->observe();
     const auto cleanupStarted = std::chrono::steady_clock::now();
     RoleBalanceSample sample{
-        result.attackerSucceeded(), observer->healthSpent, observer->manaSpent, observer->itemsSpent, 0, 0, 0};
+        result.attackerSucceeded(), observer->healthSpent, observer->manaSpent, observer->itemsSpent, 0, 0, 0, {}};
+    if (ritualTurns) {
+        sample.ritualTurns = std::move(*ritualTurns);
+    }
     map->detachPlayer();
     if (map->getObjectByName(enemy->getName()) == enemy) {
         map->removeObject(enemy);
@@ -283,6 +320,26 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     sample.fightMilliseconds = milliseconds(cleanupStarted - fightStarted);
     sample.cleanupMilliseconds = milliseconds(finished - cleanupStarted);
     return sample;
+}
+
+void printRitualTrace(const RoleBalanceSample &sample, const std::string &mode, const std::string &playerType,
+                      const std::string &monsterType, unsigned seed, bool allTurns) {
+    for (std::size_t i = 0; i < sample.ritualTurns.size(); ++i) {
+        const auto &record = sample.ritualTurns[i];
+        if (!allTurns && (record.before.used || !record.after.used)) {
+            continue;
+        }
+        const auto &before = record.before;
+        const auto &after = record.after;
+        std::cerr << "ritual turn " << playerType << '/' << monsterType << " seed " << seed << ' ' << mode
+                  << " control " << i + 1 << " used " << before.used << " -> " << after.used << " actor hp "
+                  << before.hp << '/' << before.hpMax << " -> " << after.hp << '/' << after.hpMax << " mana "
+                  << before.mana << " -> " << after.mana << " target hp " << before.targetHp << " -> " << after.targetHp
+                  << " mana " << before.targetMana << " -> " << after.targetMana << " normal/shadow resist "
+                  << before.targetNormalResist << '/' << before.targetShadowResist << " -> " << after.targetNormalResist
+                  << '/' << after.targetShadowResist << " armor/block " << before.targetArmor << '/'
+                  << before.targetBlock << " -> " << after.targetArmor << '/' << after.targetBlock << '\n';
+    }
 }
 
 void initializeBalancePythonContent() {
@@ -323,7 +380,8 @@ void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
 }
 
 void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool huntPulse = false, bool cultistHex = false,
-                                                                        bool huntCharge = false) {
+                                                                        bool huntCharge = false,
+                                                                        bool equalWards = false) {
     auto game = CGameLoader::loadGame();
     createOpenBalanceMap(game);
     auto expectedNativeRng = vstd::rng();
@@ -335,6 +393,18 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
         for (bool enabled : {false, true}) {
             auto player = game->createObject<CPlayer>("Warrior");
             player->setLevel(3);
+            if (equalWards) {
+                const auto originalStats = player->getStats();
+                auto baseStats = player->getBaseStats();
+                baseStats->setShadowResist(baseStats->getShadowResist() + originalStats->getNormalResist() -
+                                           originalStats->getShadowResist());
+                baseStats->setArmor(17);
+                baseStats->setBlock(25);
+                const auto stats = player->getStats();
+                expect_true(stats->getNormalResist() == stats->getShadowResist() && stats->getArmor() > 0 &&
+                                stats->getBlock() > 0,
+                            "equal-ward packet contract must exercise existing armor and blocking");
+            }
             game->getMap()->attachPlayer(player, Coords(0, 0, 0));
             player->heal(0);
             auto actor = game->createObject<CCreature>((huntPulse || huntCharge) ? "OctoBogz"
@@ -443,6 +513,10 @@ signatureType.performAction = originalSignature
                             actor->getStringProperty("enemyRoleDamageChannel").empty(),
                         "the temporary damage hook must be disarmed before a save or subsequent action");
             if (enabled) {
+                if (equalWards) {
+                    expect_true(player->getHp() == expectedPlayerHp && !actor->hasProperty("enemyRoleAttackBudget"),
+                                "equal wards must preserve the whole ordinary Attack mitigation and block path");
+                }
                 expect_true(afterNativeRng == expectedNativeRng && nextBlockRoll == expectedNextBlockRoll,
                             "eager owned role objects must preserve both ordinary Attack random streams");
                 expect_true(weaponCalls == expectedWeaponCalls,
@@ -635,12 +709,15 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget(const std::str
             for (unsigned seed = 100; seed < 111; ++seed) {
                 const auto baseline = runRoleBalanceFight(game, playerType, monsterType, seed, false);
                 const auto roles = runRoleBalanceFight(game, playerType, monsterType, seed, true);
+                printRitualTrace(roles, "roles", playerType, monsterType, seed, false);
                 ++completedPairedSeeds;
                 baselineWins += baseline.won ? 1 : 0;
                 setupMilliseconds += baseline.setupMilliseconds + roles.setupMilliseconds;
                 fightMilliseconds += baseline.fightMilliseconds + roles.fightMilliseconds;
                 cleanupMilliseconds += baseline.cleanupMilliseconds + roles.cleanupMilliseconds;
                 if (baseline.won && !roles.won) {
+                    printRitualTrace(baseline, "baseline", playerType, monsterType, seed, true);
+                    printRitualTrace(roles, "roles", playerType, monsterType, seed, true);
                     std::cerr << "role victory regression " << playerType << '/' << monsterType << " seed " << seed
                               << " baseline hp/mana/items " << baseline.healthSpent << '/' << baseline.manaSpent << '/'
                               << baseline.itemsSpent << " roles " << roles.healthSpent << '/' << roles.manaSpent << '/'
@@ -906,6 +983,7 @@ int main(int argc, char **argv) {
         testInheritedNativeMethodsDoNotBecomePythonOverrides();
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, true);
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, true, false, true);
         testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries();
         testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
         testActivePlayerNeverUsesMonsterSignature();

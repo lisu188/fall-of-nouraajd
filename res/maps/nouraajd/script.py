@@ -429,6 +429,7 @@ def load(self, context):
                 _set_bool_property_default(player, "inspected_stained_glass", False)
                 _set_bool_property_default(player, "decoded_stained_glass_ward", False)
                 _set_bool_property_default(player, "charted_smuggler_route", False)
+                _set_bool_property_default(player, "nouraajdRaceServiceClaimed", False)
                 _grant_quest(player, "rolfQuest")
                 player.addItem("letterFromRolf")
 
@@ -737,7 +738,8 @@ def load(self, context):
                 self.getGame(),
                 "Rolf's last marks",
                 reward_before,
-                "You shoulder the warped gate back onto its braces; Rolf's last chalk marks point east.",
+                "You shoulder the warped gate back onto its braces; Rolf's last chalk marks point east. "
+                "You now recover 3 mana after every Barrier cast, while still needing its full 17 mana to cast.",
             )
 
         def open_door(self):
@@ -787,7 +789,8 @@ def load(self, context):
                 self.getGame(),
                 "The courtyard trail",
                 reward_before,
-                "You ghost after the robed men long enough to mark their courtyard turn and the child's yellow ribbon.",
+                "You ghost after the robed men long enough to mark their courtyard turn and the child's yellow ribbon. "
+                "You now recover 3 mana after every Sneak Attack, while still needing its full 15 mana to strike.",
             )
 
     @register(context)
@@ -829,6 +832,99 @@ def load(self, context):
         COURTYARD_SPAWNS = VICTOR_COURTYARD_SPAWNS
         COURTYARD_LEADER_SPAWN = VICTOR_COURTYARD_LEADER_SPAWN
         COURTYARD_TIMEOUT_TURNS = VICTOR_COURTYARD_TIMEOUT_TURNS
+
+        def _canOfferRaceService(self, race_id):
+            player = self.getGame().getMap().getPlayer()
+            identity = player.getRaceId()
+            if identity in ("human", "outlander", "highlander", "wanderer"):
+                identity += "Race"
+            if identity not in ("humanRace", "outlanderRace", "highlanderRace", "wandererRace"):
+                race = player.getObjectProperty("race")
+                identity = race.getTypeId() if race else ""
+            return identity == race_id and not player.getBoolProperty("nouraajdRaceServiceClaimed")
+
+        def canOfferHumanRation(self):
+            return self._canOfferRaceService("humanRace")
+
+        def canOfferOutlanderRations(self):
+            return self._canOfferRaceService("outlanderRace")
+
+        def canOfferHighlanderAid(self):
+            return self._canOfferRaceService("highlanderRace")
+
+        def canOfferWandererFocus(self):
+            return self._canOfferRaceService("wandererRace")
+
+        def _applyRaceService(self, race_id, cost, hp, mana, text):
+            if not self._canOfferRaceService(race_id):
+                return False
+            player = self.getGame().getMap().getPlayer()
+            if player.getGold() < cost:
+                showReader(
+                    self.getGame(), "Irvin's aid", "The hall needs 5 gold for these supplies. Return when you can pay."
+                )
+                return False
+            hp_gain = min(hp, max(0, player.getHpMax() - player.getHp()))
+            mana_gain = min(mana, max(0, player.getManaMax() - player.getMana()))
+            if cost and hp_gain == 0 and mana_gain == 0:
+                showReader(
+                    self.getGame(), "Irvin's aid", "You need no recovery now. The hall will hold your one-time aid."
+                )
+                return False
+            player.setBoolProperty("nouraajdRaceServiceClaimed", True)
+            player.setStringProperty("nouraajdRaceServiceKind", race_id)
+            player.addGold(20 if race_id == "humanRace" else -cost)
+            if hp_gain:
+                player.heal(hp_gain)
+            if mana_gain:
+                player.addMana(mana_gain)
+            rows = ["Gold: +20" if race_id == "humanRace" else "Gold: -5"]
+            if hp_gain:
+                rows.append(f"Health: +{hp_gain}")
+            if mana_gain:
+                rows.append(f"Mana: +{mana_gain}")
+            showReader(self.getGame(), "Irvin's aid", text + "\n\n" + "\n".join(rows))
+            return True
+
+        def claimHumanRation(self):
+            return self._applyRaceService(
+                "humanRace",
+                0,
+                0,
+                0,
+                "Irvin finds your people's ration ledger and releases 20 gold from its emergency allowance. "
+                "The entry is marked paid; the hall can grant this aid only once.",
+            )
+
+        def claimOutlanderRations(self):
+            return self._applyRaceService(
+                "outlanderRace",
+                5,
+                5,
+                5,
+                "Irvin recognizes an outlander's travel marks and shares the hall's trail rations. "
+                "For 5 gold you recover up to 5 health and 5 mana; this aid can be claimed only once.",
+            )
+
+        def claimHighlanderAid(self):
+            return self._applyRaceService(
+                "highlanderRace",
+                5,
+                10,
+                0,
+                "Irvin remembers the highland shield bearers who held Nouraajd's walls and opens their medical chest. "
+                "For 5 gold you recover up to 10 health; this aid can be claimed only once.",
+            )
+
+        def claimWandererFocus(self):
+            return self._applyRaceService(
+                "wandererRace",
+                5,
+                0,
+                10,
+                "Irvin recognizes a wanderer's route signs and offers a quiet desk beside the old star charts. "
+                "For 5 gold you recover up to 10 mana; this aid can be claimed only once.",
+            )
 
         def _is_letter_to_beren(self, item):
             return item.getName() == "letterToBeren" or (
@@ -975,7 +1071,8 @@ def load(self, context):
                 self.getGame(),
                 "The copied ward",
                 reward_before,
-                "You unwind a cold ward from the stained glass and copy its safest stroke onto a blank scroll.",
+                "You unwind a cold ward from the stained glass and copy its safest stroke onto a blank scroll. "
+                "You now recover 3 mana after every Frost Bolt, while still needing its full 20 mana to cast.",
             )
 
         def can_deliver_letter(self):

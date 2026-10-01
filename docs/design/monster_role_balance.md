@@ -34,7 +34,7 @@ The current one-turn effects are:
 | Brute | At or below half health | Physical resistance +1, frost resistance -1 |
 | Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
 | Thief | Guarded opponent or at/below half health | Opponent block -1 |
-| Cultist | At or below half health, at least5 mana remaining | Convert one damage point to shadow, opponent shadow resistance -1; no mana spent |
+| Cultist | At or below half health, at least5 mana remaining | Convert one damage point to shadow when the target's physical and shadow wards differ; opponent shadow resistance -1; no mana spent |
 
 Each action owns its effect from configuration; the mage and cultist also own
 damage packets. The packet hook accepts only frost or shadow. The cultist packet
@@ -51,6 +51,15 @@ ordinary Attack behavior. Matching setup is present with roles disabled too.
 
 These revisions respond to failed measurements; they are not acceptance claims. The unchanged matrix and
 strict budgets must pass on Linux and Windows before the trial is complete.
+
+The conditional ward trial reads the target's composed physical/shadow resistance
+before Attack or its post-hit effect. Equal wards execute the original configured
+Attack without arming a packet, preserving its blocking, armor rounding, roll and
+weapon proc. Unequal wards retain the one-point shadow conversion. The one-turn
+shadow debuff remains bounded and benefits only a later shadow consumer. The
+controlled95/0 resistance fixture still proves real damage and both initiative
+windows; an additional paired equal-ward contract includes positive armor and
+blocking and requires exactly the same damage, random streams and weapon callbacks.
 
 The plugin calls the published `getEffectiveInteractions` API. Eager effects use
 narrow bindings for the existing native `setCaster`, `setVictim`, and `addEffect`
@@ -214,12 +223,56 @@ Wayfarer/CultLeader seed104 victory (baseline HP/mana/items80/100/0;
 roles81/80/0), so the unchanged per-seed victory gate failed. Coverage again hit
 the existing60-second limit. These results remain failed evidence.
 
+Windows `afd35336` failed two strict health medians: Warrior/Cultist4 to3
+(-25 percent) and Wayfarer/Cultist3 to4 (+33.3 percent). The minimum-mana trial
+`25ee2867`, run `36867514443`, retained those same Windows failures and the
+Linux Wayfarer/CultLeader seed104 loss (80/100/0 versus81/80/0). Its Linux
+release comparison completed all35 rows in about9.25 seconds and Windows in
+10.40 seconds. Those complete matrices still fail the balance contract.
+
+Coverage job110387935927 completed only22 of35 rows before the shared55-second
+deadline. Only the Assasin partition reported completion; the other four were
+incomplete. The handler entry also timed out at60.01 seconds, while map tests
+completed in54.75 seconds. No canonical coverage percentage was reached.
+
 The separate controller fixture now registers `CStats` with its per-game object
 factory as well as effects and interactions. Its ordinary Barrier priority test
 requires a nonnull cloned stats bonus before a second controller selection;
 that second selection must retain the existing buff and select the eligible
 ordinary Attack signature safely. This fixes the fixture's incomplete clone
 setup without changing production combat or its priority assertions.
+
+The second-control identity assertion exposed another fixture omission: the
+prototype had only a name, while its factory clone received a native type id.
+The fixture now assigns a stable configured `ordinaryBarrier` type id and
+requires the clone to retain it and the active effect count to stay at one.
+Production duplicate-effect identity rules are unchanged. Native CI must verify
+this fixture correction.
+
+The native forwarding observer also records the ritual actor's health, mana,
+role-use flag and target channel resistances immediately before and after the
+unchanged configured controller. It reports the first actual signature use and
+all actor turns for a lost baseline-winning seed. These reads and diagnostic
+output do not change actions, damage, random streams, loadouts or eligibility;
+the evidence is needed before selecting another generic timing condition.
+
+Head74719597's actual Linux first-use trace showed why reserve mana did not fix
+Wayfarer/CultLeader seed104: the signature used at42/105HP and105mana on enemy
+control4, against a target with equal0/0 wards. The ordinary Attack caused zero
+HP damage there; the split packet caused one. Later the baseline retained1HP
+while the role encounter reached0HP. Both modes retained the same random draw
+counts; per-channel blocking/mitigation changed the result. Windows again failed
+Warrior/Cultist4 to3 and Wayfarer/Cultist3 to4. The unchanged release matrix
+completed all35 rows; coverage reached the shared55-second deadline with
+incomplete partitions. These remain failed evidence. Target armor/block are
+now included in the read-only trace.
+
+The stable Barrier clone identity assertion passed, but the priority fixture's
+opponent was still at its default zero HP. The role guard correctly excluded
+that dead target. The fixture now initializes it to its own unchanged maximum
+HP and asserts both actors are alive before exercising ordinary cast priority.
+It retains the stable clone identity, one active effect, and both controller
+callback assertions; no production duplicate or eligibility rule changes.
 
 The next ritual trial requires5 mana remaining without spending it. An exhausted
 CultLeader keeps its ordinary Attack; a wounded Cultist with reserve mana can
