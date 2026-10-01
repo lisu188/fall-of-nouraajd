@@ -690,6 +690,7 @@ configure_file(res/fonts/SourceSerif-LICENSE.md fonts/SourceSerif-LICENSE.md COP
 configure_file(res/game.py game.py)
 configure_file(res/ui.py ui.py)
 configure_file(res/campaign.py campaign.py)
+configure_file(res/narrative.py narrative.py)
 
 configure_file(res/campaigns/fallOfNouraajd/campaign.json campaigns/fallOfNouraajd/campaign.json)
 configure_file(res/campaigns/wardensRoad/campaign.json campaigns/wardensRoad/campaign.json)
@@ -730,7 +731,7 @@ install(DIRECTORY res/images DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/maps DESTINATION fall-of-nouraajd)
 install(DIRECTORY res/plugins DESTINATION fall-of-nouraajd)
 
-install(FILES res/game.py res/ui.py res/campaign.py play.py mcp.py test.py game_simulation.py quest_state.py DESTINATION fall-of-nouraajd)
+install(FILES res/game.py res/ui.py res/campaign.py res/narrative.py play.py mcp.py test.py game_simulation.py quest_state.py DESTINATION fall-of-nouraajd)
 
 if (WIN32)
     install(FILES play.bat DESTINATION fall-of-nouraajd)
@@ -842,6 +843,9 @@ endfunction()
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
 add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
 add_game_unit_test(monster_balance_unit_tests tests/unit/test_monster_balance.cpp src/core/CModule.cpp)
+if (WIN32)
+    target_sources(monster_balance_unit_tests PRIVATE src/core/CModuleEntry.cpp)
+endif ()
 target_compile_definitions(monster_balance_unit_tests PRIVATE
     GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
 )

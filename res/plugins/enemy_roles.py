@@ -36,6 +36,8 @@ def load(self, context):
     class EnemyArcaneBolt(EnemySignature):
         def performSignature(self, first, second):
             budget = max(0, first.getDmg())
+            if not budget:
+                return
             damage = first.getGame().createObject("CDamage")
             damage.setNumericProperty("normal", budget // 2)
             damage.setNumericProperty("frost", budget - budget // 2)
@@ -44,7 +46,9 @@ def load(self, context):
     @register(context)
     class EnemyOpeningStrike(EnemySignature):
         def performSignature(self, first, second):
-            second.hurt(max(0, first.getDmg()) * 80 // 100)
+            budget = max(0, first.getDmg()) * 80 // 100
+            if budget:
+                second.hurt(budget)
 
     @register(context)
     class EnemyRitualHex(EnemySignature):
