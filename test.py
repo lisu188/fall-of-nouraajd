@@ -22802,28 +22802,40 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             self.assertEqual(target, coords_tuple(player.getCoords()))
 
         def captureJournal(name, active_ids, completed_ids):
+            observed = {"open": False, "text": "", "error": None}
+
+            def observeOpenPanel():
+                observed["open"] = gui_contains_class(g, "CGameQuestPanel")
+                if observed["open"]:
+                    try:
+                        panel = g.getGuiHandler().openPanel("questPanel")
+                        observed["text"] = panel.getText(g.getGui())
+                        assert_screenshot_has_rendered_pixels(self, g, name)
+                    except Exception as exc:
+                        observed["error"] = exc
+
             push_quest_log_key()
-            pump_event_loop(5)
-            self.assertTrue(gui_contains_class(g, "CGameQuestPanel"), "The j key should open the quest journal.")
-            panel = g.getGuiHandler().openPanel("questPanel")
-            text = panel.getText(g.getGui())
+            game.event_loop.instance().invoke(observeOpenPanel)
+            push_quest_log_key()
+            pump_event_loop(10)
+            if observed["error"] is not None:
+                raise observed["error"]
+            self.assertTrue(observed["open"], "The j key should open the quest journal.")
+            self.assertFalse(gui_contains_class(g, "CGameQuestPanel"))
+            text = observed["text"]
             for status, ids in (("Active", active_ids), ("Completed", completed_ids)):
                 for quest_id in ids:
                     quest = find_player_quest(player, quest_id)
                     self.assertIsNotNone(quest)
                     self.assertIn(f"[{status}] {quest.getDescription()}", text)
                     self.assertIn(quest.getObjective(), text)
-            assert_screenshot_has_rendered_pixels(self, g, name)
-            push_quest_log_key()
-            pump_event_loop(3)
-            self.assertFalse(gui_contains_class(g, "CGameQuestPanel"))
             return text
 
         moveToObject("hearthfall", "hearthfallStart", push_space_key)
         self.assertIn("hearthfallQuest", quest_names(player))
         captureJournal("xvfb_quest_journal_hearthfall_active", ("hearthfallQuest",), ())
         run_blocking_gui_action(game, lambda: source_map.removeObjectByName("watchCaptain"), push_space_key)
-        moveToObject("hearthfall", "elderMaren", lambda: push_digit_key(3))
+        moveToObject("hearthfall", "elderMaren", lambda: push_digit_key(2))
         run_blocking_gui_action(game, g.createObject("elderDialog").report_victory, push_space_key)
         self.assertEqual("gravemoor", g.getMap().mapName)
         moveToObject("gravemoor", "gravemoorStart", push_space_key)
@@ -26006,7 +26018,7 @@ class McpServerTest(unittest.TestCase):
             self._shutdown_process(proc)
 
     def test_stdio_active_amulet_journal_ignores_ritual_destination_state(self):
-        proc = self._start_stdio_mcp_process("nouraajd")
+        proc = self._start_stdio_mcp_process("nouraajd", trace_name="quest_journal_active_amulet")
         log = {"route": ["nouraajd", "ritual"]}
         try:
             self._initialize_stdio_mcp(proc)
@@ -26271,14 +26283,14 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None):
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
         env = None
         if map_name == "nouraajd":
             TEST_OUTPUT_DIR.mkdir(exist_ok=True)
-            trace_path = TEST_OUTPUT_DIR / "mcp_walkthrough_nouraajd_trace.jsonl"
+            trace_path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{trace_name or 'nouraajd'}_trace.jsonl"
             trace_path.unlink(missing_ok=True)
             env = os.environ.copy()
             env["GAME_PLAYTEST_TRACE"] = "1"
