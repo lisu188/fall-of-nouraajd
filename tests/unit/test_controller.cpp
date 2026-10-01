@@ -1308,6 +1308,7 @@ void testMonsterRoleExclusionsAndMalformedActions() {
         if (std::string(mode) == "duplicate") {
             auto effect = named_self_effect(game, "roleEffect", CTag::Buff);
             signature->setEffect(effect);
+            signature->setSelfTarget(true);
             monster->addEffect(effect);
         }
         if (std::string(mode) == "guardedWounded") {
@@ -1330,6 +1331,39 @@ void testMonsterRoleExclusionsAndMalformedActions() {
         expect_true(signature->calls == (expected ? 1 : 0),
                     "excluded signatures must never leak into baseline selection");
     }
+}
+
+void testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setCombatRole("testRole");
+    monster->setCreatureClass(creatureClass);
+    auto effect = named_self_effect(game, "existingOpponentRoleEffect", CTag::Buff);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "testRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    signature->setSelfTarget(false);
+    signature->setObjectProperty<CGameObject>("roleEffect", effect);
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    opponent->addEffect(effect);
+    CMonsterFightController controller;
+    expect_true(controller.control(monster, opponent), "duplicate opponent effect must retain ordinary Attack");
+    expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                "a recipient duplicate must not consume the role flag");
+    expect_true(signature->getObjectProperty<CGameObject>("roleEffect") == effect,
+                "a recipient duplicate must not consume its eager owned effect");
+    opponent->setEffects({});
+    expect_true(controller.control(monster, opponent) && signature->calls == 1,
+                "the signature must become eligible after the recipient effect expires");
 }
 
 void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
@@ -1398,6 +1432,7 @@ int main() {
     testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
     testMonsterRoleExclusionsAndMalformedActions();
     testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
+    testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack();
 
     return finish_tests();
 }
