@@ -1362,6 +1362,8 @@ void init_game_module(py::module_ &m) {
         .def("getLevel", &CCreature::getLevel, "Return level.")
         .def("getStats", &CCreature::getStats, "Return aggregated combat stats.")
         .def("addManaProc", &CCreature::addManaProc, "Restore mana by percentage of max mana.")
+        .def("addMana", &CCreature::addMana, py::arg("amount"),
+             "Restore an absolute amount of mana, clamped to maximum; zero restores mana fully.")
         .def("isPlayer", &CCreature::isPlayer, "Return whether this creature is the active player.")
         .def("isNpc", &CCreature::isNpc, "Return whether this creature is marked as NPC.")
         .def("getController", &CCreature::getController, "Return the movement controller.")

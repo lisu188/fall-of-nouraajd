@@ -26,14 +26,15 @@ class CMinimapGraphicsObject : public CGameGraphicsObject {
     V_META(CMinimapGraphicsObject, CGameGraphicsObject,
            V_METHOD(CMinimapGraphicsObject, browseLandmarks, void, std::shared_ptr<CGui>))
 
-    fn::sdl::TexturePtr terrainTexture;
-    SDL_Renderer *terrainRenderer = nullptr;
+    fn::sdl::GuiTexturePtr terrainTexture;
     std::size_t terrainSignature = 0;
+    std::size_t terrainTextureBuildCount = 0;
     bool expanded = false;
     bool expandPressed = false;
 
   public:
     void renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) override;
+    std::size_t getTerrainTextureBuildCount() const { return terrainTextureBuildCount; }
 
     // The minimap is an opaque overlay rendered above the map layer. CGameGraphicsObject::event() only
     // invokes these hooks once the event is already inside the minimap rectangle (or the object is modal)
