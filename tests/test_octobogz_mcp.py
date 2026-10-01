@@ -60,9 +60,14 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         tile = self.call(self.game_map, "getTile", *destination)
         self.assertIsNotNone(tile, destination)
         self.assertTrue(self.call(tile, "getBoolProperty", "canStep"), destination)
+        capture = getattr(self, "capture_before_move", None)
+        if capture:
+            capture(origin, destination)
         # Native adjacent moveTo checks CMap.canStep before committing, including object footprints.
         self.call(self.player, "moveTo", *destination)
         self.pump()
+        if capture:
+            capture(origin, destination)
         turn = self.call(self.game_map, "getTurn")
         self.call(self.game_map, "move")
         self.pump()
@@ -210,6 +215,56 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             if record["status"] == "living"
         }
 
+    def trackLivingHuntActors(self):
+        for slot, actor in self.livingActors().items():
+            self.assertIsNotNone(actor, slot)
+            self.assertTrue(self.call(actor, "isAlive"), slot)
+            if self.hunt_actors.get(slot) != actor:
+                self.hunt_actors[slot] = actor
+                resources = {
+                    "slot": slot,
+                    "name": self.call(actor, "getName"),
+                    "hp": self.call(actor, "getHp"),
+                    "mana": self.call(actor, "getMana"),
+                }
+                self.assertGreater(resources["hp"], 0, resources)
+                print("MCP hunt tracked living actor", resources, flush=True)
+
+    def captureHuntActors(self, origin, destination):
+        distance = min(
+            sum(abs(a - b) for a, b in zip(coords, self.hunt_lair_coords)) for coords in (origin, destination)
+        )
+        if distance <= 12:
+            self.trackLivingHuntActors()
+
+    def assertSlotDefeated(self, slot):
+        record = self.state()["slots"][slot]
+        actor = self.hunt_actors.get(slot)
+        self.assertIsNotNone(actor, "The actual living actor must be captured before its fight: " + slot)
+        self.assertEqual(record["name"], self.call(actor, "getName"))
+        self.assertFalse(self.call(actor, "isAlive"), slot)
+        self.assertIsNone(self.call(self.game_map, "getObjectByName", record["name"]), slot)
+        self.assertEqual("dead", record["status"])
+        if slot not in self.confirmed_dead:
+            self.observeActors("confirmed actual " + slot + " defeat", {slot: actor})
+            self.confirmed_dead.add(slot)
+
+    def enterHunt(self):
+        lair = self.object("cave2")
+        self.hunt_lair_coords = self.coords(lair)
+        self.capture_before_move = self.captureHuntActors
+        before = self.snapshot("before entering the hunt lair")
+        self.walkTo("cave2")
+        self.assertIn(self.state()["stage"], ("scout", "brood"))
+        if self.state()["slots"]["scout"]["status"] == "dead":
+            self.assertSlotDefeated("scout")
+            self.assertGreater(self.call(self.player, "getNumericProperty", "exp"), before["exp"])
+        else:
+            self.defeat("scout")
+        self.assertEqual("brood", self.state()["stage"])
+        self.assertFalse(self.call(self.game_map, "getBoolProperty", "octobogzHuntCleared"))
+        self.trackLivingHuntActors()
+
     def observeActors(self, stage, actors):
         for slot, actor in actors.items():
             self.assertIsNotNone(actor, slot)
@@ -229,6 +284,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 "normal": self.call(packet, "getNumericProperty", "normal") if packet else 0,
                 "shadow": self.call(packet, "getNumericProperty", "shadow") if packet else 0,
                 "alive": self.call(actor, "isAlive"),
+                "hp": self.call(actor, "getHp"),
                 "mana": self.call(actor, "getMana"),
             }
             print("MCP hunt actor combat", observation, flush=True)
@@ -237,8 +293,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def defeat(self, slot):
         record = self.state()["slots"][slot]
         if record["status"] == "dead":
+            self.assertSlotDefeated(slot)
             return
         self.assertEqual("living", record["status"])
+        self.trackLivingHuntActors()
         actors = self.livingActors()
         self.snapshot("before " + slot)
         self.walkTo(record["name"], allow_removed=True)
@@ -247,15 +305,14 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertGreater(
             self.call(self.player, "getNumericProperty", "hp"), 0, "Ordinary player loadout failed against " + slot
         )
-        self.assertIsNone(
-            self.call(self.game_map, "getObjectByName", record["name"]), "Real movement and combat must defeat " + slot
-        )
-        self.assertEqual("dead", self.state()["slots"][slot]["status"])
+        self.assertSlotDefeated(slot)
 
     def testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce(self):
         self.phase_observations = []
         for player_class in ("Warrior", "Sorcerer"):
             with self.subTest(player_class=player_class):
+                self.hunt_actors, self.confirmed_dead = {}, set()
+                self.capture_before_move = None
                 self.game = self.engine("CGameLoader.loadGame")
                 self.engine("CGameLoader.startGameWithPlayer", self.game, "nouraajd", player_class)
                 self.refresh()
@@ -284,11 +341,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.assertIn("octoBogzQuest", self.questNames())
                 self.walkTo("ambientOctobogzNet")
                 self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "before hunt road recovery")
-                self.walkTo("cave2")
-                self.assertEqual("scout", self.state()["stage"])
-                self.defeat("scout")
-                self.assertEqual("brood", self.state()["stage"])
-                self.assertFalse(self.call(self.game_map, "getBoolProperty", "octobogzHuntCleared"))
+                self.enterHunt()
 
                 slot = "mcp-octobogz-" + uuid.uuid4().hex
                 save_path = self.build_dir / "save" / (slot + ".json")
@@ -303,6 +356,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.pump()
                     self.assertEqual(old_state, self.state())
                     self.useOrdinaryCombatController(player_class)
+                    self.trackLivingHuntActors()
                     self.snapshot("partial reload")
                     gold_before_final = self.call(self.player, "getGold")
                     self.recoverOnAuthoredRoad()
@@ -312,6 +366,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                         self.assertFalse(self.call(self.game_map, "getBoolProperty", "OCTOBOGZ_SLAIN"))
                         self.recoverOnAuthoredRoad()
                     self.defeat("brood")
+                    self.assertEqual({"scout", "brood", "alpha"}, self.confirmed_dead)
                     self.assertEqual("cleared", self.state()["stage"])
                     self.assertTrue(self.call(self.game_map, "getBoolProperty", "OCTOBOGZ_SLAIN"))
                     self.assertIsNone(self.call(self.game_map, "getObjectByName", "cave2"))

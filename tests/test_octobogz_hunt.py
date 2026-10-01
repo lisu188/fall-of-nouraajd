@@ -847,6 +847,176 @@ class OctobogzHuntTest(unittest.TestCase):
         observed = walker.phase_observations[0]
         self.assertEqual((0, 0), (observed["normal"], observed["shadow"]))
 
+    def testMcpLairEntryCapturesTheSpawnedScoutBeforeItsFirstNaturalCombatTurn(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = Actor("player", player=True), "map"
+        walker.player.setNumericProperty("exp", 3000)
+        walker.walkable, walker.movement_steps = {(0, 0, 0), (1, 0, 0)}, 0
+        walker.hunt_actors, walker.confirmed_dead, walker.phase_observations = {}, set(), []
+        walker.pump = lambda: None
+        lair = Properties()
+        lair.coords = (1, 0, 0)
+        objects = {"cave2": lair}
+        registry = {
+            "stage": "dormant",
+            "slots": {slot: {"name": slot, "status": "pending"} for slot in ("scout", "brood", "alpha")},
+        }
+        position, turn = [(0, 0, 0)], [0]
+        walker.state = lambda: registry
+        walker.snapshot = lambda stage: {"exp": walker.player.getNumericProperty("exp")}
+        walker.coords = lambda handle=None: position[0] if handle is None else handle.coords
+        walker.engine = lambda export, handle: json.dumps({"properties": {}})
+
+        def call(handle, method, *args):
+            if handle == "map":
+                if method == "getObjectByName":
+                    return objects.get(args[0])
+                if method == "getTile":
+                    return "tile"
+                if method == "getBoolProperty":
+                    return False
+                if method == "getTurn":
+                    return turn[0]
+                if method == "move":
+                    self.assertIs(objects["scout"], walker.hunt_actors["scout"])
+                    self.assertTrue(walker.hunt_actors["scout"].isAlive())
+                    objects.pop("scout").setHp(0)
+                    registry["stage"], registry["slots"]["scout"]["status"] = "brood", "dead"
+                    for slot in ("brood", "alpha"):
+                        objects[slot] = Actor(slot)
+                        registry["slots"][slot]["status"] = "living"
+                    walker.player.setNumericProperty("exp", 3250)
+                    turn[0] += 1
+                    return
+            if handle == "tile":
+                self.assertEqual("getBoolProperty", method)
+                return True
+            if handle is walker.player and method == "moveTo":
+                self.assertEqual((1, 0, 0), args)
+                position[0] = args
+                objects["scout"] = Actor("scout")
+                registry["stage"], registry["slots"]["scout"]["status"] = "scout", "living"
+                return
+            return getattr(handle, method)(*args)
+
+        walker.call = call
+        with patch("builtins.print"):
+            walker.enterHunt()
+        self.assertEqual({"scout"}, walker.confirmed_dead)
+        self.assertEqual("brood", registry["stage"])
+        self.assertTrue(walker.hunt_actors["alpha"].isAlive())
+        self.assertTrue(walker.hunt_actors["brood"].isAlive())
+        self.assertEqual(1, turn[0])
+        self.assertEqual(1, walker.movement_steps)
+
+    def testMcpCaptureKeepsTheLivingActorBeforeDirectMovementCombat(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = Actor("player", player=True), "map"
+        walker.hunt_actors, walker.confirmed_dead = {}, set()
+        walker.observeActors = Mock()
+        walker.hunt_lair_coords, walker.movement_steps = (1, 0, 0), 0
+        walker.capture_before_move = walker.captureHuntActors
+        walker.pump = lambda: None
+        alpha = Actor("alpha")
+        registry = {"slots": {"alpha": {"name": "alpha", "status": "living"}}}
+        present, turn = [True], [0]
+        walker.state = lambda: registry
+        walker.coords = lambda handle=None: (0, 0, 0)
+
+        def call(handle, method, *args):
+            if handle == "map":
+                if method == "getObjectByName":
+                    return alpha if present[0] else None
+                if method == "getTile":
+                    return "tile"
+                if method == "getTurn":
+                    return turn[0]
+                if method == "move":
+                    turn[0] += 1
+                    return
+            if handle == "tile":
+                self.assertEqual("getBoolProperty", method)
+                return True
+            if handle is walker.player and method == "moveTo":
+                self.assertIs(alpha, walker.hunt_actors["alpha"])
+                alpha.setHp(0)
+                registry["slots"]["alpha"]["status"], present[0] = "dead", False
+                return
+            return getattr(handle, method)(*args)
+
+        walker.call = call
+        with patch("builtins.print"):
+            self.assertEqual((0, 0, 0), walker.step((1, 0, 0)))
+        walker.assertSlotDefeated("alpha")
+        self.assertEqual({"alpha"}, walker.confirmed_dead)
+
+    def testMcpPartialReloadRebindsLivingIdentityAndCannotConfirmAFlagOnlyDeath(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.game_map = "map"
+        old, restored = Actor("alpha"), Actor("alpha")
+        walker.hunt_actors, walker.confirmed_dead = {"alpha": old}, set()
+        walker.observeActors = Mock()
+        registry = {"slots": {"alpha": {"name": "alpha", "status": "living"}}}
+        walker.state = lambda: registry
+        present = [restored]
+
+        def call(handle, method, *args):
+            if handle == "map":
+                self.assertEqual("getObjectByName", method)
+                return present[0]
+            return getattr(handle, method)(*args)
+
+        walker.call = call
+        with patch("builtins.print"):
+            walker.trackLivingHuntActors()
+        self.assertIs(restored, walker.hunt_actors["alpha"])
+        registry["slots"]["alpha"]["status"], present[0] = "dead", None
+        with self.assertRaises(AssertionError):
+            walker.assertSlotDefeated("alpha")
+        self.assertEqual(set(), walker.confirmed_dead)
+        restored.setHp(0)
+        walker.assertSlotDefeated("alpha")
+        self.assertEqual({"alpha"}, walker.confirmed_dead)
+        self.assertTrue(old.isAlive(), "The retained pre-save actor must never stand in for the loaded actor")
+
+    def testMcpAlreadyDeadSlotRetainsTheActualPulsePacketExactlyOnce(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.game_map, walker.phase_observations = "map", []
+        actor, packet = Actor("alpha"), Properties()
+        actor.setHp(0)
+        actor.setBoolProperty("octobogzPulseUsed", True)
+        actor.setNumericProperty("enemyRoleAttackBudget", 11)
+        packet.properties.update(normal=10, shadow=1)
+        actor.setObjectProperty("enemyRoleDamagePacket", packet)
+        walker.hunt_actors, walker.confirmed_dead = {"alpha": actor}, set()
+        walker.state = lambda: {"slots": {"alpha": {"name": "alpha", "status": "dead"}}}
+        walker.engine = lambda export, handle: json.dumps({"properties": {"enemyRoleDamagePacket": {}}})
+
+        def call(handle, method, *args):
+            if handle == "map":
+                self.assertEqual("getObjectByName", method)
+                return None
+            return getattr(handle, method)(*args)
+
+        walker.call = call
+        with patch("builtins.print"):
+            walker.defeat("alpha")
+            walker.defeat("alpha")
+        self.assertEqual({"alpha"}, walker.confirmed_dead)
+        self.assertEqual(1, len(walker.phase_observations))
+        observation = walker.phase_observations[0]
+        self.assertEqual((11, 10, 1), tuple(observation[key] for key in ("damage_roll", "normal", "shadow")))
+        self.assertTrue(observation["pulse"])
+        self.assertFalse(observation["alive"])
+
     def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
         import textwrap
 

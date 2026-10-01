@@ -325,3 +325,35 @@ level3 with3125XP at Rolf's cave and later defeat the scout alive, but its
 observer failed afterward; this is partial real preparation/combat evidence,
 not completion of either required authored route. Fresh full-suite, MCP and
 canonical coverage acceptance remain required.
+
+Head `dd36ccc7` passed Linux's unchanged770-fight role entry in2.10seconds and
+110-fight hunt entry in1.53seconds, plus all native performance guards. Its
+real-bound partial actor save/recovery test passed in4.325seconds, and legacy
+adoption/addAction passed in0.451seconds. Both actual MCP classes completed
+ordinary Rolf preparation and MainQuest without a defeat: Warrior reached
+level3 with3625XP and98HP/126mana, and Sorcerer reached level3 with3875XP and
+84HP/154mana. Both recovered naturally to those full resources before the hunt.
+This establishes real preparation, not completed hunt acceptance.
+Windows job110486406774 failed during CMake configuration because Python3
+Development, Development.Module and Development.Embed were unavailable despite
+finding interpreter3.12.10. It supplied no new native or MCP combat evidence.
+
+The same Linux job110475369559 failed both walkthroughs because their late
+observation expected a living scout after the entire lair-entry step. The
+player's arrival spawns the scout, then the following ordinary map turn can
+bring that scout into real combat and advance the registry to brood. The test
+now captures actual living handles before movement and after arrival, before
+that map turn. Capture is enabled only for the hunt and bounded to its lair
+region. A confirmed defeat requires the retained actor to be dead, its named
+map object to be absent, and its own registry slot to be dead. All three distinct
+slots must satisfy that proof; flags alone cannot substitute for a fight.
+
+After partial reload, living handles are rebound to the actual restored actors.
+The pre-save living actor cannot stand in for a loaded actor's death. On the
+first confirmed death, the observer also reads the retained actor's actual
+phase, mana and packet, covering combat during road retreat before an explicit
+defeat call. Spawn-then-first-turn death, direct movement death, reload identity
+and already-dead pulse observation have focused regressions. Cardinal movement,
+map turns, defeat receipts, incomplete partial objectives, once-only rewards
+and positive shadow-packet budget assertions remain required. Fresh completed
+melee/caster routes, full-suite and canonical coverage evidence are still pending.
