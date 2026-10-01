@@ -2352,7 +2352,12 @@ class OctobogzHuntTest(unittest.TestCase):
 
         def call(handle, method, *args):
             if handle == station:
-                return {"getType": "CraftingStation", "getTypeId": "AlchemyTable", "getBoolProperty": True}[method]
+                return {
+                    "getType": "CBuilding" if corruption == "stationClass" else "CraftingStation",
+                    "getTypeId": "AlchemyTable" if corruption == "stationType" else "alchemyTable1",
+                    "getStringProperty": "scribeDesk" if corruption == "stationId" else "alchemyTable",
+                    "getBoolProperty": True,
+                }[method]
             if handle == market and method == "getSellCost":
                 return 400
             if handle == market and method == "sellItem":
@@ -2388,6 +2393,37 @@ class OctobogzHuntTest(unittest.TestCase):
 
         walker.engine, walker.call = engine, call
         return walker, metadata, inventory, stock, sales, purchases, crafts, gold, original_stock, add_item
+
+    def testBasicBrewingUsesTheAuthoredOuterStationAliasAndRejectsOtherStationIdentities(self):
+        map_data = json.loads((ROOT / "res/maps/nouraajd/map.json").read_text(encoding="utf-8"))
+        authored_station = next(
+            obj
+            for layer in map_data["layers"]
+            for obj in layer.get("objects", [])
+            if obj.get("name") == "alchemyTable1"
+        )
+        self.assertEqual("alchemyTable1", authored_station["type"])
+        self.assertEqual(
+            (105, 110),
+            (authored_station["x"] // authored_station["width"], authored_station["y"] // authored_station["height"]),
+        )
+        config = json.loads((ROOT / "res/maps/nouraajd/config.json").read_text(encoding="utf-8"))
+        buildings = json.loads((ROOT / "res/config/buildings.json").read_text(encoding="utf-8"))
+        prototype = buildings[config[authored_station["type"]]["ref"]]
+        self.assertEqual("CraftingStation", prototype["class"])
+        self.assertEqual("alchemyTable", prototype["properties"]["craftingStationId"])
+        walker, _, _, _, _, _, crafts, *_ = self.authoredBrewingFixture(2, 0, 5)
+        station = walker.object(authored_station["name"])
+        self.assertEqual(authored_station["type"], walker.call(station, "getTypeId"))
+        with patch("builtins.print"):
+            self.assertEqual(1, walker.brewOwnedBasicLifePotions())
+        self.assertEqual(1, len(crafts))
+        for corruption in ("stationClass", "stationType", "stationId"):
+            with self.subTest(corruption=corruption):
+                walker, _, _, _, _, _, crafts, *_ = self.authoredBrewingFixture(2, 0, 5, corruption)
+                with self.assertRaises(AssertionError):
+                    walker.brewOwnedBasicLifePotions()
+                self.assertEqual([], crafts)
 
     def testBasicPreparationConvertsActualIngredientsAndRetainsTheFiniteThirdForScoutLoot(self):
         walker, metadata, inventory, stock, sales, purchases, crafts, gold, original_stock, add_item = (

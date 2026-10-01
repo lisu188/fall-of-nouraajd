@@ -382,7 +382,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.assertEqual((105, 110, 0), self.coords(station))
         self.assertEqual(self.coords(station), self.coords())
         self.assertEqual("CraftingStation", self.call(station, "getType"))
-        self.assertEqual("AlchemyTable", self.call(station, "getTypeId"))
+        self.assertEqual("alchemyTable1", self.call(station, "getTypeId"))
+        self.assertEqual("alchemyTable", self.call(station, "getStringProperty", "craftingStationId"))
         self.assertTrue(self.call(station, "getBoolProperty", "enabled"))
         crafted = 0
         while len(self.basicLesserIngredients(self.call(self.player, "getItems"))) >= 2:
