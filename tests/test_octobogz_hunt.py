@@ -465,6 +465,12 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertEqual(1, actor.damage_rolls)
         self.assertEqual("spent", actor.getStringProperty("octobogzCombatPhase"))
         self.assertTrue(actor.getBoolProperty("octobogzPulseUsed"))
+        pulse.performAction(actor, self.game_map.player)
+        duplicate = self.createObject("OctobogzShadowPulseEffect")
+        duplicate.getCaster = lambda: actor
+        self.assertFalse(pulse.configureEffect(duplicate))
+        self.assertEqual(1, actor.damage_rolls)
+        self.assertEqual(0, duplicate.getNumericProperty("octobogzDamageBudget"))
 
 
 if __name__ == "__main__":

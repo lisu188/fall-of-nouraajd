@@ -9,7 +9,7 @@ SLOT_NAMES = ("scout", "brood", "alpha")
 ACTOR_NAMES = ("octobogzScout", "octobogzShadowBrood", "octobogzAlpha")
 SPAWN_CELLS = ((165, 21, 0), (165, 20, 0), (166, 20, 0))
 PHASE_PROPERTY = "octobogzCombatPhase"
-RECOVERY_FLAGS = ("octobogzPulseUsed", "enemyRoleUsed", "enemyRoleEffectApplied")
+RECOVERY_FLAGS = ("octobogzPulseUsed", "octobogzPulseEffectApplied", "enemyRoleUsed", "enemyRoleEffectApplied")
 
 
 def huntState(game_map):
@@ -288,6 +288,8 @@ def load(self, context):
     @register(context)
     class OctobogzCharge(CInteraction):
         def performAction(self, first, second):
+            if first.getStringProperty(PHASE_PROPERTY) in ("charged", "spent"):
+                return
             first.setStringProperty(PHASE_PROPERTY, "charged")
             first.getGame().getGuiHandler().notify(
                 first.getLabel() + " gathers shadow. Its next pulse can be outlasted or interrupted by defeating it."
@@ -296,11 +298,17 @@ def load(self, context):
     @register(context)
     class OctobogzShadowPulse(CInteraction):
         def performAction(self, first, second):
+            if first.getBoolProperty("octobogzPulseUsed"):
+                return
             first.setStringProperty(PHASE_PROPERTY, "spent")
             first.setBoolProperty("octobogzPulseUsed", True)
 
         def configureEffect(self, effect):
-            budget = max(0, effect.getCaster().getDmg()) * 80 // 100
+            caster = effect.getCaster()
+            if caster.getBoolProperty("octobogzPulseEffectApplied"):
+                return False
+            caster.setBoolProperty("octobogzPulseEffectApplied", True)
+            budget = max(0, caster.getDmg()) * 80 // 100
             effect.setNumericProperty("octobogzDamageBudget", budget)
             return True
 
