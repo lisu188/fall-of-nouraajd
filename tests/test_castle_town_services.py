@@ -74,6 +74,7 @@ class CastleTownServicesTest(unittest.TestCase):
             CDialog=DialogObject,
             CEvent=DialogObject,
             CQuest=DialogObject,
+            mapQuest=lambda _source: lambda cls: cls,
             CTrigger=DialogObject,
             Coords=lambda x, y, z: types.SimpleNamespace(x=x, y=y, z=z),
             claim_once=claimOnce,

@@ -48,10 +48,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -161,6 +163,38 @@ class CompletedQuest : public CQuest {
     bool isCompleted() override { return true; }
 
     void onComplete() override { complete_count++; }
+};
+
+class QuestLifecycleProbe : public CQuest {
+  public:
+    int check_count = 0;
+    int complete_count = 0;
+    std::vector<bool> captures;
+    std::function<void()> check_callback;
+    std::function<void()> complete_callback;
+    std::function<void()> capture_callback;
+
+    bool isCompleted() override {
+        check_count++;
+        if (check_callback) {
+            check_callback();
+        }
+        return true;
+    }
+
+    void onComplete() override {
+        complete_count++;
+        if (complete_callback) {
+            complete_callback();
+        }
+    }
+
+    void captureJournal(bool completed) override {
+        captures.push_back(completed);
+        if (capture_callback) {
+            capture_callback();
+        }
+    }
 };
 
 std::shared_ptr<CGame> load_empty_game() {
@@ -891,6 +925,159 @@ void test_fight_handler_counts_effect_duration_as_progress() {
     expect_true(game->getMap()->getObjectByName(attacker->getName()) == attacker &&
                     game->getMap()->getObjectByName(defender->getName()) == defender,
                 "timed-effect stale handling should not remove living participants");
+}
+
+void test_player_quest_completion_ignores_reentry_and_captures_final_callback_state() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    quest->setTypeId("reentrantQuest");
+    player->setQuests({quest});
+    std::string journal_state = "active";
+    quest->complete_callback = [&]() {
+        expect_true(player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "completion callbacks should retain the existing active-quest timing");
+        player->checkQuests();
+        journal_state = "completed";
+    };
+    quest->capture_callback = [&]() {
+        expect_true(journal_state == "completed" && player->getCompletedQuests().empty(),
+                    "completion capture should observe callback changes before completed insertion");
+    };
+
+    CPlaytestTrace::configure(true, "", 100);
+    player->checkQuests();
+    player->checkQuests();
+    int completion_records = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "quest_completed") {
+            completion_records++;
+        }
+    }
+    CPlaytestTrace::configure(false, "", 100);
+
+    expect_true(quest->check_count == 1 && quest->complete_count == 1 && completion_records == 1,
+                "nested and repeated completion checks should run and trace one completion");
+    expect_true(quest->captures == std::vector<bool>{true}, "completed quest journals should capture exactly once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "reentrant completion should move the quest into the completed journal");
+}
+
+void test_player_quest_completion_accepts_cleared_active_set() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() { player->setQuests({}); };
+
+    player->checkQuests();
+    player->checkQuests();
+
+    expect_true(quest->complete_count == 1 && quest->captures == std::vector<bool>{true},
+                "a callback clearing active quests should complete and capture safely once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "clearing active quests during completion should preserve the current completed quest");
+}
+
+void test_player_quest_completion_skips_removed_snapshot_entries() {
+    auto player = std::make_shared<CPlayer>();
+    auto first = std::make_shared<QuestLifecycleProbe>();
+    auto second = std::make_shared<QuestLifecycleProbe>();
+    auto replacement = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({first, second});
+    if (*player->getQuests().begin() != first) {
+        std::swap(first, second);
+    }
+    first->complete_callback = [&]() { player->setQuests({replacement}); };
+
+    player->checkQuests();
+
+    expect_true(first->complete_count == 1 && second->check_count == 0 && second->complete_count == 0,
+                "quests removed by an earlier callback should be skipped in the original snapshot");
+    expect_true(replacement->check_count == 0 && player->getQuests() == std::set<std::shared_ptr<CQuest>>{replacement},
+                "replacement quests should wait for the next completion pass");
+    player->checkQuests();
+    expect_true(replacement->complete_count == 1 && player->getCompletedQuests().size() == 2,
+                "the next pass should complete the replacement without restoring removed quests");
+
+    auto removed_during_check = std::make_shared<QuestLifecycleProbe>();
+    removed_during_check->check_callback = [&]() { player->setQuests({}); };
+    player->setQuests({removed_during_check});
+    player->checkQuests();
+    expect_true(removed_during_check->complete_count == 0 && removed_during_check->captures.empty(),
+                "a quest removed by its completion predicate should not receive completion callbacks");
+}
+
+void test_player_quest_completion_defers_new_quests_until_next_pass() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    auto next_quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() {
+        auto active = player->getQuests();
+        active.insert(next_quest);
+        player->setQuests(active);
+        player->checkQuests();
+    };
+
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->check_count == 0,
+                "quests added by a completion callback should wait even when the callback reenters checks");
+    expect_true(player->getQuests() == std::set<std::shared_ptr<CQuest>>{next_quest},
+                "new quest membership should survive completion of the original quest");
+    player->checkQuests();
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->complete_count == 1 && player->getQuests().empty(),
+                "each original and newly added quest should complete exactly once across later passes");
+}
+
+void test_player_quest_completion_restores_guard_after_native_exceptions() {
+    for (bool throw_in_predicate : {true, false}) {
+        auto player = std::make_shared<CPlayer>();
+        auto quest = std::make_shared<QuestLifecycleProbe>();
+        player->setQuests({quest});
+        bool first_attempt = true;
+        auto fail_once = [&]() {
+            if (std::exchange(first_attempt, false)) {
+                throw std::runtime_error("quest lifecycle failure");
+            }
+        };
+        if (throw_in_predicate) {
+            quest->check_callback = fail_once;
+        } else {
+            quest->complete_callback = fail_once;
+        }
+        bool threw = false;
+        try {
+            player->checkQuests();
+        } catch (const std::runtime_error &) {
+            threw = true;
+        }
+        expect_true(threw && player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "failed native callbacks should retain the existing incomplete membership");
+
+        player->checkQuests();
+        player->checkQuests();
+        expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                    "the RAII guard should permit retry after predicate and completion exceptions");
+        expect_true(quest->complete_count == (throw_in_predicate ? 1 : 2) && quest->captures == std::vector<bool>{true},
+                    "only the successful completion attempt should capture the completed journal");
+    }
+}
+
+void test_player_capture_quest_journal_passes_membership_without_completing() {
+    auto player = std::make_shared<CPlayer>();
+    auto active = std::make_shared<QuestLifecycleProbe>();
+    auto completed = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({active});
+    player->setCompletedQuests({completed});
+
+    player->captureQuestJournal();
+
+    expect_true(active->captures == std::vector<bool>{false} && completed->captures == std::vector<bool>{true},
+                "journal capture should pass active and completed set membership to each quest");
+    expect_true(active->check_count == 0 && completed->check_count == 0 && active->complete_count == 0 &&
+                    completed->complete_count == 0,
+                "saving or leaving a map should capture journals without driving completion predicates or rewards");
 }
 
 void test_playtest_trace_records_native_limits_and_quest_completion() {
@@ -1913,6 +2100,12 @@ int main() {
     test_fight_handler_returns_cancelled_when_player_control_cancels();
     test_fight_panel_resets_status_between_sequential_encounters();
     test_fight_handler_counts_effect_duration_as_progress();
+    test_player_quest_completion_ignores_reentry_and_captures_final_callback_state();
+    test_player_quest_completion_accepts_cleared_active_set();
+    test_player_quest_completion_skips_removed_snapshot_entries();
+    test_player_quest_completion_defers_new_quests_until_next_pass();
+    test_player_quest_completion_restores_guard_after_native_exceptions();
+    test_player_capture_quest_journal_passes_membership_without_completing();
     test_playtest_trace_records_native_limits_and_quest_completion();
     test_playtest_trace_environment_targets_and_fallback_ids();
     test_fight_handler_records_outcome_trace_metadata();

@@ -355,6 +355,9 @@ std::expected<std::shared_ptr<json>, std::string> build_save_envelope(const std:
         return std::unexpected("map is null");
     }
 
+    if (auto player = map->getPlayer()) {
+        player->captureQuestJournal();
+    }
     auto snapshot = CSerialization::serialize<std::shared_ptr<json>>(map);
     return CSaveFormat::buildEnvelope(snapshot, map->getMapName());
 }

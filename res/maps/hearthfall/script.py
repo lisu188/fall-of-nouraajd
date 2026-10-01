@@ -2,6 +2,7 @@ def load(self, context):
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import claim_once
     from game import register
@@ -43,6 +44,7 @@ def load(self, context):
             ensure_quest(event.getCause(), "hearthfallQuest")
 
     @register(context)
+    @mapQuest("hearthfall")
     class HearthfallQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("victory_reported")

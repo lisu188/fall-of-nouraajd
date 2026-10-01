@@ -219,6 +219,15 @@ template <> class CWrapper<CQuest> : public CQuest {
         }
     }
 
+    void captureJournal(bool completed) override final {
+        try {
+            PYBIND11_OVERRIDE(void, CQuest, captureJournal, completed);
+        } catch (const py::error_already_set &) {
+            PYTHON_LOG;
+            PyErr_Clear();
+        }
+    }
+
     std::string getObjective() override final {
         try {
             PYBIND11_OVERRIDE(std::string, CQuest, getObjective);
