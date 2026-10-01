@@ -19,93 +19,39 @@ BASELINE_CASES = {
     "map": (49, "17f592c7f09a057f9c3249babde697470899143ffda78688662f61ab5cfbdf9e"),
 }
 
-FIXTURE = r"""
-#include "native_test_profile.h"
-#include <cstdlib>
-#include <stdexcept>
-
-int main(int argc, char **argv) {
-    const std::string mode = argc > 1 ? argv[1] : "success";
-    CNativeTestProfile profile("fixture");
-    if (mode == "interrupt") {
-        profile.run("interrupted", [] { std::_Exit(23); });
-    }
-    if (mode == "return-code") {
-        return profile.run("return-code", [] { return 17; });
-    }
-    if (mode == "sampling-batches") {
-        int samples = 0;
-        profile.run("unchanged-sampling", [&] {
-            for (const char *batch : {"full-budget", "tight-budget", "player-exclusion"}) {
-                profile.run(batch, [&] {
-                    for (int attempt = 0; attempt < 256; ++attempt) {
-                        ++samples;
-                    }
-                });
-            }
-        });
-        return samples == 768 ? 0 : 5;
-    }
-    int calls = 0;
-    const int result = profile.run("outer", [&] {
-        return profile.run("setup", [&] { ++calls; return 42; });
-    });
-    if (result != 42 || calls != 1) {
-        return 1;
-    }
-    int value = 4;
-    int &reference = profile.run("reference", [&]() -> int & { return value; });
-    reference += 2;
-    if (value != 6) {
-        return 2;
-    }
-    try {
-        profile.run("throws", [] { throw std::runtime_error("original exception"); });
-        return 3;
-    } catch (const std::runtime_error &error) {
-        if (std::string(error.what()) != "original exception") {
-            return 4;
-        }
-    }
-    if (mode == "success") {
-        profile.run("flush", [&] {
-            std::ifstream input(std::filesystem::path(GAME_NATIVE_TEST_PROFILE_DIR) / "fixture.tsv");
-            std::string line;
-            std::string last;
-            while (std::getline(input, line)) {
-                last = line;
-            }
-            if (last.find("\tSTART\tflush\t") == std::string::npos) {
-                throw std::runtime_error("START was not flushed before its action");
-            }
-        });
-    }
-    return 0;
-}
-"""
-
 
 class NativeTestProfileSourceTest(unittest.TestCase):
-    def testCompilationFixtureRunsOnceForEveryMethodAcrossParallelShards(self):
+    def testConfiguredFixtureIsRequiredByNativeAndGameplayValidation(self):
         import test as runner
 
         names = runner.discover_unittest_test_names(["test.py", "NativeTestProfileRuntimeTest"])
         self.assertEqual(5, len(names))
-        self.assertEqual(names, runner.filter_test_names_by_suite(names, "fast"))
-        with (
-            tempfile.TemporaryDirectory(prefix="nouraajd-profile-sharding-") as directory,
-            mock.patch.object(runner, "TEST_OUTPUT_DIR", Path(directory)),
-            mock.patch.object(runner, "load_test_timings", return_value={}),
-            mock.patch.object(runner, "run_test_subprocess") as launch,
-            mock.patch.object(runner, "wait_test_subprocess", return_value=0),
-        ):
-            self.assertEqual(0, runner.run_sharded_tests([*names, "SourceTest.first", "SourceTest.second"], jobs=4))
-        fixture_workers = [
-            (call.args[0], call.args[1])
-            for call in launch.call_args_list
-            if any(name in names for name in call.args[0])
-        ]
-        self.assertEqual([(names, "serial")], fixture_workers)
+        self.assertEqual([], runner.filter_test_names_by_suite(names, "fast"))
+        for suite in ("gameplay", "coverage-safe", "full"):
+            self.assertEqual(names, runner.filter_test_names_by_suite(names, suite))
+        cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("add_executable(native_test_profile_fixture tests/unit/native_test_profile_fixture.cpp)", cmake)
+        self.assertIn("configure_cpp_target(native_test_profile_fixture)", cmake)
+        self.assertIn("list(APPEND GAME_UNIT_TEST_TARGETS native_test_profile_fixture)", cmake)
+        self.assertIn('add_test(NAME "for_unit_tests.native_test_profile_contracts"', cmake)
+        self.assertIn("NativeTestProfileRuntimeTest -v", cmake)
+        self.assertIn(
+            'ENVIRONMENT "GAME_NATIVE_TEST_PROFILE_FIXTURE=$<TARGET_FILE:native_test_profile_fixture>"', cmake
+        )
+        self.assertRegex(cmake, r'LABELS "for_unit_tests;unit;native_test_profile_contracts"\s+TIMEOUT 60')
+        fixture = (ROOT / "tests/unit/native_test_profile_fixture.cpp").read_text(encoding="utf-8")
+        self.assertIn("for (int attempt = 0; attempt < 256; ++attempt)", fixture)
+        self.assertIn("return samples == 768 ? 0 : 5", fixture)
+
+    def testExplicitMissingCompiledFixtureCannotSkipMandatoryContracts(self):
+        class MissingFixture(NativeTestProfileRuntimeTest):
+            pass
+
+        with tempfile.TemporaryDirectory(prefix="nouraajd-profile-preflight-") as directory:
+            missing = Path(directory) / "missing-fixture"
+            with mock.patch.dict(os.environ, {"GAME_NATIVE_TEST_PROFILE_FIXTURE": str(missing)}):
+                with self.assertRaisesRegex(AssertionError, "Configured native profiling fixture is unavailable"):
+                    MissingFixture.setUpClass()
 
     def testEveryExistingCaseKeepsItsOrderAndMetadataComesFirst(self):
         for suite, (count, digest) in BASELINE_CASES.items():
@@ -174,45 +120,34 @@ class NativeTestProfileSourceTest(unittest.TestCase):
 class NativeTestProfileRuntimeTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        compiler = shutil.which("g++") or shutil.which("clang++")
-        if not compiler:
-            raise unittest.SkipTest("A standalone existing C++ compiler is unavailable")
+        explicit_fixture = os.environ.get("GAME_NATIVE_TEST_PROFILE_FIXTURE")
+        if explicit_fixture:
+            binary = Path(explicit_fixture)
+            if not binary.is_file():
+                raise AssertionError("Configured native profiling fixture is unavailable: " + str(binary))
+        else:
+            build_root = Path(os.environ.get("GAME_BUILD_DIR", ROOT / "cmake-build-release"))
+            if not build_root.is_absolute():
+                build_root = ROOT / build_root
+            executable_name = "native_test_profile_fixture.exe" if os.name == "nt" else "native_test_profile_fixture"
+            build_config = os.environ.get("GAME_BUILD_CONFIG")
+            candidates = [build_root / build_config / executable_name] if build_config else []
+            if os.name == "nt" and not build_config:
+                candidates.append(build_root / "Release" / executable_name)
+            candidates.append(build_root / executable_name)
+            binary = next((path for path in candidates if path.is_file()), None)
+            if binary is None:
+                raise unittest.SkipTest("Build native_test_profile_fixture through the for_unit_tests target")
         scratch_root = ROOT / "build"
         scratch_root.mkdir(exist_ok=True)
         cls.temporary = tempfile.TemporaryDirectory(prefix="native-profile-check-", dir=scratch_root)
         cls.addClassCleanup(cls.temporary.cleanup)
         cls.scratch = Path(cls.temporary.name)
         cls.output = cls.scratch / "source coverage" / "profiles"
-        source = cls.scratch / "fixture.cpp"
-        source.write_text(FIXTURE, encoding="utf-8")
-        cls.binary = cls.scratch / "fixture"
-        definition = f'-DGAME_NATIVE_TEST_PROFILE_DIR="{cls.output.as_posix()}"'
-        result = subprocess.run(
-            [
-                compiler,
-                "-std=c++20",
-                "-Wall",
-                "-Wextra",
-                "-Werror",
-                definition,
-                "-I",
-                str(ROOT / "tests/unit"),
-                str(source),
-                "-o",
-                str(cls.binary),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=20,
-        )
-        if result.returncode:
-            (scratch_root / "native-profile-compile-failure.log").write_text(
-                result.stdout + result.stderr, encoding="utf-8"
-            )
-            raise AssertionError(result.stdout + result.stderr)
+        cls.binary = binary.resolve()
 
     def runFixture(self, mode):
-        return subprocess.run([str(self.binary), mode], capture_output=True, text=True, timeout=5)
+        return subprocess.run([str(self.binary), mode, str(self.output)], capture_output=True, text=True, timeout=5)
 
     def records(self):
         with (self.output / "fixture.tsv").open(encoding="utf-8", newline="") as stream:
@@ -283,3 +218,7 @@ class NativeTestProfileRuntimeTest(unittest.TestCase):
             self.assertIn("profiling file is unavailable", result.stderr)
         finally:
             self.output.unlink()
+
+
+if __name__ == "__main__":
+    unittest.main()

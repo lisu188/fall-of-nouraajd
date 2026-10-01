@@ -4,6 +4,13 @@ The normal `build` workflow runs the required native tests, performance guards,
 Python suites and coverage. Native CTest entries retain their 60-second limits.
 Case and setup timing records are retained under `coverage/native-test-profiles/`.
 
+Recorder contracts use the standalone `native_test_profile_fixture` CMake target
+and the configured project compiler. Building `for_unit_tests` includes that
+target, and the native CTest entry runs all five contracts against its explicit
+binary path. The post-build Python gameplay/full/coverage suites also select
+those contracts; fast source checks do not invoke an incidental compiler from
+`PATH`. A missing explicit CTest binary fails rather than skipping the contracts.
+
 The separate **Native routine profiling** workflow runs the complete handler or
 map native executable under Callgrind to identify instruction costs and call
 chains. It does not replace normal validation. Run it manually with the desired

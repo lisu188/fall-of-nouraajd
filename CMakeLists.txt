@@ -871,6 +871,18 @@ add_game_unit_test(object_unit_tests tests/unit/test_object.cpp)
 add_game_unit_test(plugin_registrar_unit_tests tests/unit/test_plugin_registrar.cpp)
 add_game_unit_test(lua_unit_tests tests/unit/test_lua.cpp)
 
+add_executable(native_test_profile_fixture tests/unit/native_test_profile_fixture.cpp)
+configure_cpp_target(native_test_profile_fixture)
+list(APPEND GAME_UNIT_TEST_TARGETS native_test_profile_fixture)
+add_test(NAME "for_unit_tests.native_test_profile_contracts"
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_native_test_profile.py"
+        NativeTestProfileRuntimeTest -v)
+set_tests_properties("for_unit_tests.native_test_profile_contracts" PROPERTIES
+    LABELS "for_unit_tests;unit;native_test_profile_contracts"
+    TIMEOUT 60
+    ENVIRONMENT "GAME_NATIVE_TEST_PROFILE_FIXTURE=$<TARGET_FILE:native_test_profile_fixture>"
+)
+
 add_executable(performance_guard_tests
     tests/unit/test_performance.cpp
     tests/unit/test_pathfinder_performance.cpp

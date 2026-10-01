@@ -132,7 +132,6 @@ VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
     "NativeCallgrindToolTest.",
     "NativeTestProfileSourceTest.",
-    "NativeTestProfileRuntimeTest.",
     "EffectContractTest.",
     "CharacterCreationFlowTest.",
     "CoverageReportTest.",
@@ -162,6 +161,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "NativeTestProfileRuntimeTest.",
     "EffectSemanticRuntimeTest.",
     "CharacterPreviewRuntimeTest.",
     "PaidActionRuntimeTest.",
@@ -215,8 +215,7 @@ SERIAL_TEST_NAMES = {
 # blew past its timeout and turned the whole gameplay gate red. Balancing them like
 # any other test lets the weight-aware packer spread the heavy maps across shards
 # and size each shard's timeout to its own load.
-# One compilation-backed class shares its setUpClass fixture across every method.
-SERIAL_TEST_PREFIXES = ("NativeTestProfileRuntimeTest.",)
+SERIAL_TEST_PREFIXES = ()
 DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_castleHomecoming": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels": 70.0,
@@ -22928,7 +22927,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 if completed_ids:
                     active_pixels, width, height = g.getGui().read_pixels()
                     buttons = {
-                        button.getStringProperty("click"): button for button in find_descendants_by_type(panel, "CButton")
+                        button.getStringProperty("click"): button
+                        for button in find_descendants_by_type(panel, "CButton")
                     }
                     activate_widget(buttons["showCompleted"], g.getGui())
                     self.assertIn("[Completed]", panel.getText(g.getGui()))
