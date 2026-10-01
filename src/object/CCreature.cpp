@@ -27,6 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
 #include "core/CJsonUtil.h"
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
@@ -72,7 +73,11 @@ void CCreature::setExp(int exp) {
 
 CCreature::CCreature() {}
 
-CCreature::~CCreature() {}
+CCreature::~CCreature() {
+    if (auto context = effectOwnerContext.lock()) {
+        context->untrackEffectOwner(this);
+    }
+}
 
 void CCreature::addExpScaled(int scale) {
     int rank = level - scale;
@@ -378,10 +383,11 @@ void CCreature::takeDamage(int rawDamage) {
     if (rawDamage < 0) {
         rawDamage = 0;
     }
-    int damageAfterArmor = rawDamage * ((100 - stats->getArmor()) / 100.0);
-    if (damageAfterArmor < 0) {
-        damageAfterArmor = 0;
-    }
+    // Armor remains a percentage, capped at 95% mitigation. Positive damage that reaches
+    // armor retains at least one point after integer rounding; blocking can still negate it.
+    const int effectiveArmor = std::min(95, stats->getArmor());
+    int damageAfterArmor = rawDamage * ((100 - effectiveArmor) / 100.0);
+    damageAfterArmor = rawDamage > 0 ? std::max(1, damageAfterArmor) : 0;
     int blockDice = rand() % 100;
     if (blockDice >= stats->getBlock()) {
         vstd::logger::debug(to_string(), "armor saved from", rawDamage - damageAfterArmor, "damage");
@@ -497,9 +503,25 @@ void CCreature::addEffect(std::shared_ptr<CEffect> effect) {
     } else {
         vstd::logger::debug(effect->to_string(), "starts for", this->to_string());
         effects.insert(effect);
+        if (auto game = getGame()) {
+            auto context = game->getContext();
+            if (auto previous = effectOwnerContext.lock(); previous && previous != context) {
+                previous->untrackEffectOwner(this);
+            }
+            effectOwnerContext = context;
+            context->trackEffectOwner(this->ptr<CCreature>());
+        }
         recordDirectPropertyChanged("effects");
         signal("effectsChanged");
     }
+}
+
+void CCreature::releaseEffectReferences() {
+    if (auto context = effectOwnerContext.lock()) {
+        context->untrackEffectOwner(this);
+    }
+    effectOwnerContext.reset();
+    effects.clear();
 }
 
 int CCreature::getMana() { return mana; }
@@ -910,14 +932,14 @@ void CCreature::onLeave(std::shared_ptr<CGameEvent>) {}
 
 void CCreature::onDestroy(std::shared_ptr<CGameEvent>) {
     if (!effects.empty()) {
-        effects.clear();
+        releaseEffectReferences();
         recordDirectPropertyChanged("effects");
     }
 }
 
 void CCreature::setEffects(const std::set<std::shared_ptr<CEffect>> &value) {
     CGameObject::PropertyNotificationBatch notificationBatch(*this);
-    effects.clear();
+    releaseEffectReferences();
     recordDirectPropertyChanged("effects");
     for (const auto &effect : value) {
         addEffect(effect);
@@ -970,6 +992,9 @@ void CCreature::removeEffect(std::shared_ptr<CEffect> effect) {
     });
     if (effectIt != effects.end()) {
         effects.erase(effectIt);
+        if (effects.empty()) {
+            releaseEffectReferences();
+        }
         recordDirectPropertyChanged("effects");
     }
     signal("effectsChanged");

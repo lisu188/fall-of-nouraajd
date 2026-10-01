@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -112,12 +112,14 @@ CRngHandler::CRngHandler(const std::shared_ptr<CGame> &game) : game(game) {
             continue;
         }
         std::shared_ptr<CCreature> creature = game->createObject<CCreature>(type);
-        if (creature) {
+        if (creature && !creature->isNpc() && creature->getFightController()) {
             // The associated-class hook is neutral today (multipliers pinned to 1), so
             // this key equals the raw getSw() for every candidate; it only becomes a
             // real CR weight once the associated-class balance design is approved.
             int power = scaleEncounterPower(creature->getSw(), classifyClassAssociation(creature));
-            creaturePowerTable.insert(std::make_pair(power, type));
+            if (power > 0) {
+                creaturePowerTable.insert(std::make_pair(power, type));
+            }
         }
     }
 }
@@ -185,7 +187,9 @@ std::set<std::shared_ptr<CCreature>> CRngHandler::calculateRandomEncounter(int v
             if (!creature) {
                 continue;
             }
-            creature->addExp(creature->getExpForLevel(pow - sw));
+            // Fresh templates have zero hp, so their experience path is inactive until initialized.
+            creature->heal(0);
+            creature->addExp(creature->getExpForLevel(std::max(1, pow - sw)));
             encounter.insert(creature);
         }
         value -= pow;

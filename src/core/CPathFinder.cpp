@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CPathFinder.h"
+#include "core/CMap.h"
 #include "gui/CSdlResources.h"
 
 #include <algorithm>
@@ -315,6 +316,14 @@ Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, cons
     return start;
 }
 } // namespace
+
+CPathFinder::Distance CPathFinder::mapHeuristic(const std::shared_ptr<CMap> &map) {
+    if (!map || std::any_of(map->getNavigationEdges().begin(), map->getNavigationEdges().end(),
+                            [](const CNavigationEdge &edge) { return edge.enabled; })) {
+        return [](const Coords &, const Coords &) { return 0.0; };
+    }
+    return [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); };
+}
 
 std::shared_ptr<vstd::future<Coords, void>>
 CPathFinder::findNextStep(Coords start, Coords goal, const CanStep &canStep, const Waypoint waypoint,
