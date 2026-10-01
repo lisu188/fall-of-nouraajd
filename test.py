@@ -24839,6 +24839,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only UI tests are not installed with the game")
         for test_class in (
+            PaidActionRuntimeTest,
             DialogueMcpWalkthroughTest,
             PlayerIdentityMcpTest,
             ManagementMcpWalkthroughTest,
@@ -24857,6 +24858,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertFalse(test_name_matches_suite(test_name, "fast"))
         self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
         self.assertNotIn("_PlayerIdentityMcpTest", globals())
+        self.assertNotIn("_PaidActionRuntimeTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
@@ -25233,12 +25235,15 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_player_identity_mcp import PlayerIdentityMcpTest as _PlayerIdentityMcpTest
     from tests.test_player_identity_content import PlayerIdentityContentTest as _PlayerIdentityContentTest
-    from tests.test_paid_actions import PaidActionRuntimeTest
+    from tests.test_paid_actions import PaidActionRuntimeTest as _PaidActionRuntimeTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
     from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
     from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
+
+    class PaidActionRuntimeTest(_PaidActionRuntimeTest):
+        pass
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
         pass
@@ -25268,6 +25273,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
+    del _PaidActionRuntimeTest
     del _UiPixelAnalysisTest
     del _PlayerIdentityContentTest
     del _PlayerIdentityMcpTest
