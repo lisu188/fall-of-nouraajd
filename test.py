@@ -166,6 +166,8 @@ GAMEPLAY_TEST_PREFIXES = (
     "McpServerTest.",
     "DialogueMcpWalkthroughTest.",
     "ManagementMcpWalkthroughTest.",
+    "NavigationMcpWalkthroughTest.",
+    "NavigationCallbackTest.",
     "ArtifactPreviewTest.",
     "PythonCallbackLifecycleTest.",
     "ConsoleUiInteractionTest.",
@@ -24837,6 +24839,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
             PaidActionRuntimeTest,
             DialogueMcpWalkthroughTest,
             ManagementMcpWalkthroughTest,
+            NavigationMcpWalkthroughTest,
+            NavigationCallbackTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
             ConsoleUiInteractionTest,
@@ -24855,6 +24859,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_EffectSemanticRuntimeTest", globals())
         self.assertNotIn("_CharacterPreviewRuntimeTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationCallbackTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
@@ -25241,6 +25247,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
+    from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_effect_semantics import EffectContractTest as _EffectContractTest
@@ -25275,6 +25283,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class ManagementMcpWalkthroughTest(_ManagementMcpWalkthroughTest):
         pass
 
+    class NavigationMcpWalkthroughTest(_NavigationMcpWalkthroughTest):
+        pass
+
+    class NavigationCallbackTest(_NavigationCallbackTest):
+        pass
+
     class ArtifactPreviewTest(_ArtifactPreviewTest):
         pass
 
@@ -25294,6 +25308,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _PaidActionRuntimeTest
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
+    del _NavigationMcpWalkthroughTest
+    del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 

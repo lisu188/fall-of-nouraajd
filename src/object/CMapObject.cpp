@@ -9,8 +9,14 @@ CMapObject::CMapObject() {}
 CMapObject::~CMapObject() {}
 
 void CMapObject::move(int x, int y, int z) {
-    Coords target(posx + x, posy + y, posz + z);
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
     auto map = getMap();
+    std::unique_lock<std::recursive_mutex> navigationLock;
+    if (map)
+        navigationLock = std::unique_lock(map->getNavigationMutex());
+    Coords target(posx + x, posy + y, posz + z);
     if (map) {
         target = map->normalizeCoords(target);
     }
@@ -20,11 +26,18 @@ void CMapObject::move(int x, int y, int z) {
         auto delta = map->getShortestDelta(current, target);
         bool is_registered = map->getObjectByName(getName()) == this->ptr<CMapObject>();
         bool is_step_move = delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1;
-        if (is_registered && is_step_move && !map->canStep(target)) {
-            vstd::logger::debug(getName(), "cannot step on:", target.x, target.y, target.z);
-            return;
+        if (is_registered && is_step_move) {
+            navigationLock.unlock();
+            const bool can_step = map->canStep(target);
+            navigationLock.lock();
+            if (!can_step) {
+                vstd::logger::debug(getName(), "cannot step on:", target.x, target.y, target.z);
+                return;
+            }
         }
+        navigationLock.unlock();
         dynamic_cast<CMoveable *>(this)->beforeMove();
+        navigationLock.lock();
     }
 
     Coords oldCoords(posx, posy, posz);
@@ -38,6 +51,7 @@ void CMapObject::move(int x, int y, int z) {
     }
 
     if (dynamic_cast<CMoveable *>(this) && map) {
+        navigationLock.unlock();
         dynamic_cast<CMoveable *>(this)->afterMove();
     }
 }
@@ -50,6 +64,9 @@ void CMapObject::moveTo(Coords coords) { this->moveTo(coords.x, coords.y, coords
 
 void CMapObject::relocateWithoutMoveHooks(Coords coords) {
     auto map = getMap();
+    std::unique_lock<std::recursive_mutex> navigationLock;
+    if (map)
+        navigationLock = std::unique_lock(map->getNavigationMutex());
     if (map) {
         coords = map->normalizeCoords(coords);
     }
@@ -100,16 +117,47 @@ bool CMapObject::isAffiliatedWith(std::shared_ptr<CMapObject> object) {
            this->getAffiliation() == object->getAffiliation();
 }
 
-void CMapObject::setPosX(int posx) { this->posx = posx; }
+void CMapObject::setPosX(int posx) {
+    auto map = getMap();
+    if (map && map->getObjectByName(getName()).get() == this) {
+        relocateWithoutMoveHooks(Coords(posx, posy, posz));
+        return;
+    }
+    this->posx = posx;
+}
 
 std::string CMapObject::getAffiliation() { return affiliation; }
 
 void CMapObject::setAffiliation(const std::string &affiliation) { CMapObject::affiliation = affiliation; }
 
-void CMapObject::setPosY(int posy) { this->posy = posy; }
+void CMapObject::setPosY(int posy) {
+    auto map = getMap();
+    if (map && map->getObjectByName(getName()).get() == this) {
+        relocateWithoutMoveHooks(Coords(posx, posy, posz));
+        return;
+    }
+    this->posy = posy;
+}
 
-void CMapObject::setPosZ(int posz) { this->posz = posz; }
+void CMapObject::setPosZ(int posz) {
+    auto map = getMap();
+    if (map && map->getObjectByName(getName()).get() == this) {
+        relocateWithoutMoveHooks(Coords(posx, posy, posz));
+        return;
+    }
+    this->posz = posz;
+}
 
 bool CMapObject::getCanStep() { return canStep; }
 
-void CMapObject::setCanStep(bool step) { canStep = step; }
+void CMapObject::setCanStep(bool step) {
+    auto map = getMap();
+    std::unique_lock<std::recursive_mutex> lock;
+    if (map)
+        lock = std::unique_lock(map->getNavigationMutex());
+    if (canStep == step)
+        return;
+    canStep = step;
+    if (map && map->getObjectByName(getName()).get() == this)
+        map->navigationCellChanged(getCoords());
+}
