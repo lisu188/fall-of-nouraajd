@@ -16775,14 +16775,15 @@ class GameTest(unittest.TestCase):
             with self.subTest(class_id=class_id):
                 g, _game_map, player = load_game_map_with_player("nouraajd", class_id)
                 self.addCleanup(g.getContext().shutdown)
-                player.getBaseStats().setNumericProperty("intelligence", 30)
+                for stat in ("intelligence", "strength", "agility"):
+                    player.baseStats.setNumericProperty(stat, 30)
                 player.setMana(80)
                 player.setNumericProperty(counter, 1)
                 ability = g.createObject(ability_id)
                 target = g.createObject("CCreature")
-                target.getBaseStats().setNumericProperty("stamina", 1000)
+                target.baseStats.setNumericProperty("stamina", 1000)
                 target.setHp(target.getHpMax())
-                self.assertEqual(cost, ability.getManaCost())
+                self.assertEqual(cost, ability.getNumericProperty("manaCost"))
                 for _ in range(2):
                     before_mana = player.getMana()
                     self.assertEqual(3, ability.getCommittedManaRefund(player))
@@ -16824,7 +16825,7 @@ class GameTest(unittest.TestCase):
         self.assertFalse(loaded_town_hall.claimHumanRation())
         self.assertEqual(starting_gold + 20, loaded_player.getGold())
         self.assertEqual(3, loaded_game.createObject("Barrier").getCommittedManaRefund(loaded_player))
-        loaded_game.getMap().changeMap("ritual")
+        loaded_game.changeMap("ritual")
         game.event_loop.instance().run()
         carried_player = loaded_game.getMap().getPlayer()
         self.assertEqual(loaded_player, carried_player)

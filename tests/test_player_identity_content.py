@@ -128,6 +128,54 @@ class PlayerIdentityContentTest(unittest.TestCase):
         dialog.getGame = lambda: game
         return player, dialog
 
+    def test_mcp_exposes_paid_commit_and_resource_reads_but_rejects_raw_callbacks(self):
+        import mcp
+
+        calls = []
+        interaction = type(
+            "CInteraction",
+            (),
+            {
+                "getCommittedManaRefund": lambda _self, _caster: 3,
+                "onAction": lambda _self, *_args: calls.append("committed"),
+                "performAction": lambda _self, *_args: calls.append("raw"),
+                "configureEffect": lambda _self, *_args: calls.append("configured"),
+            },
+        )()
+        creature = type(
+            "CCreature",
+            (),
+            {
+                "getHp": lambda _self: 30,
+                "getHpMax": lambda _self: 100,
+                "getManaMax": lambda _self: 70,
+                "getEffects": lambda _self: [],
+            },
+        )()
+        server = mcp.EngineMcpServer(repo_root=ROOT, build_dir=ROOT / "build")
+        registry = mcp.HandleRegistry(handles={"ability": interaction, "caster": creature})
+        caster = {"__handle__": "caster"}
+        result = server._engine_handle_call(
+            {"handle": "ability", "method": "getCommittedManaRefund", "args": [caster]}, registry
+        )
+        self.assertFalse(result["isError"], result)
+        self.assertEqual(3, result["structuredContent"]["result"])
+        self.assertEqual([], calls)
+        result = server._engine_handle_call(
+            {"handle": "ability", "method": "onAction", "args": [caster, caster]}, registry
+        )
+        self.assertFalse(result["isError"], result)
+        for callback in ("performAction", "configureEffect"):
+            result = server._engine_handle_call(
+                {"handle": "ability", "method": callback, "args": [caster, caster]}, registry
+            )
+            self.assertTrue(result["isError"], result)
+        self.assertEqual(["committed"], calls)
+        for method, expected in (("getHp", 30), ("getHpMax", 100), ("getManaMax", 70), ("getEffects", [])):
+            result = server._engine_handle_call({"handle": "caster", "method": method}, registry)
+            self.assertFalse(result["isError"], result)
+            self.assertEqual(expected, result["structuredContent"]["result"])
+
     def test_class_perks_are_pure_bounded_and_require_the_active_matching_player(self):
         for class_id, ability_id, counter in CLASS_PERKS:
             with self.subTest(class_id=class_id):

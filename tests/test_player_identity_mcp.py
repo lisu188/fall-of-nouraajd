@@ -3,7 +3,6 @@
 
 """Real stdio MCP movement, authored discoveries, combat and race services."""
 
-import json
 import unittest
 
 from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest
@@ -17,9 +16,6 @@ class PlayerIdentityMcpTest(unittest.TestCase):
 
     def startIdentityMap(self, class_id, race_id="humanRace"):
         driver = self.driver
-        if hasattr(driver, "game"):
-            context = driver.call(driver.game, "getContext")
-            driver.call(context, "shutdown")
         driver.game = driver.engine("CGameLoader.loadGame")
         driver.engine("CGameLoader.startGameWithPlayer", driver.game, "nouraajd", class_id, race_id)
         driver.game_map = driver.call(driver.game, "getMap")
@@ -51,16 +47,16 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                 driver.action(dialog, action)
                 self.assertEqual(1, driver.call(driver.player, "getNumericProperty", counter))
                 ability = driver.dialog(ability_id)
-                self.assertEqual(cost, driver.call(ability, "getManaCost"))
-                player_data = json.loads(driver.engine("jsonify", driver.player))["properties"]
-                enemy = driver.dialog("Cultist")
-                driver.call(enemy, "setName", "identityPerkTarget")
-                driver.call(driver.game_map, "addObject", enemy)
-                driver.call(enemy, "moveTo", player_data["posx"] + 1, player_data["posy"], player_data["posz"])
+                self.assertEqual(cost, driver.call(ability, "getNumericProperty", "manaCost"))
+                driver.walkTo("ambientMarketRationLedger")
+                coords = driver.call(driver.player, "getCoords")
+                enemy_name = driver.call(driver.game_map, "addObjectByName", "Cultist", coords)
+                self.assertTrue(enemy_name, "the combat fixture needs an authored walkable market cell")
+                enemy = driver.object(enemy_name)
                 driver.call(enemy, "healProc", 100)
                 hp_before = driver.call(enemy, "getHp")
                 for _ in range(2):
-                    driver.call(driver.player, "setMana", cost)
+                    driver.call(driver.player, "setNumericProperty", "mana", cost)
                     self.assertEqual(3, driver.call(ability, "getCommittedManaRefund", driver.player))
                     self.assertEqual(cost, driver.call(driver.player, "getMana"))
                     driver.call(ability, "onAction", driver.player, driver.player if class_id == "Warrior" else enemy)
@@ -70,7 +66,7 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                     self.assertLess(
                         driver.call(enemy, "getHp"), hp_before, "the real frost cast must damage its opponent"
                     )
-                driver.call(driver.player, "setMana", cost - 1)
+                driver.call(driver.player, "setNumericProperty", "mana", cost - 1)
                 effect_count = len(driver.call(driver.player, "getEffects"))
                 driver.call(ability, "onAction", driver.player, driver.player if class_id == "Warrior" else enemy)
                 self.assertEqual(cost - 1, driver.call(driver.player, "getMana"))
@@ -111,7 +107,9 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                 driver.action(dialog, action)
                 self.assertEqual(1, driver.call(driver.player, "getNumericProperty", counter))
                 ability = driver.dialog(ability_id)
-                driver.call(driver.player, "setMana", driver.call(ability, "getManaCost"))
+                driver.call(
+                    driver.player, "setNumericProperty", "mana", driver.call(ability, "getNumericProperty", "manaCost")
+                )
                 driver.call(ability, "onAction", driver.player, driver.player)
                 driver.pump()
                 effect = next(
@@ -120,7 +118,7 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                     if driver.call(effect, "getTypeId") == effect_id
                 )
                 self.assertEqual(1, driver.call(effect, "getNumericProperty", counter))
-                bonus = driver.call(effect, "getBonus")
+                bonus = driver.call(effect, "getObjectProperty", "bonus")
                 self.assertEqual(value, driver.call(bonus, "getNumericProperty", stat))
                 self.assertEqual(0, driver.call(ability, "getCommittedManaRefund", driver.player))
 
@@ -140,9 +138,9 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                 max_mana = driver.call(driver.player, "getManaMax")
                 hp = max(1, max_hp - 12)
                 mana = max(0, max_mana - 12)
-                driver.call(driver.player, "setHp", hp)
-                driver.call(driver.player, "setMana", mana)
-                driver.call(driver.player, "setGold", 30)
+                driver.call(driver.player, "setNumericProperty", "hp", hp)
+                driver.call(driver.player, "setNumericProperty", "mana", mana)
+                driver.call(driver.player, "setNumericProperty", "gold", 30)
                 dialog = driver.dialog("townHallDialog")
                 self.assertTrue(driver.condition(dialog, "canOffer" + suffix))
                 driver.action(dialog, "claim" + suffix)
