@@ -754,7 +754,18 @@ class OctobogzHuntTest(unittest.TestCase):
         source = json.loads((ROOT / "res/maps/nouraajd/map.json").read_text(encoding="utf-8"))
         tile_types = source["tilesets"][0]["tileproperties"]
         layer = next(layer for layer in source["layers"] if layer["type"] == "tilelayer")
-        for x, y in ((44, 106), (44, 107), (9, 36), (9, 37), (109, 100), (109, 101), (118, 21), (118, 20)):
+        for x, y in (
+            (44, 106),
+            (44, 107),
+            (9, 36),
+            (9, 37),
+            (109, 100),
+            (109, 101),
+            (118, 21),
+            (118, 20),
+            (110, 111),
+            (109, 111),
+        ):
             tile = layer["data"][x + y * source["width"]]
             self.assertEqual("RoadTile", tile_types[str(tile - 1)]["type"], (x, y))
         route = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
@@ -764,7 +775,20 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIn('self.assertIn("mainQuest", self.questNames("getCompletedQuests"))', route)
         self.assertIn('self.call(self.player, "getHp") == self.call(self.player, "getHpMax")', route)
         self.assertIn('self.call(self.player, "getManaMax")', route)
-        self.assertNotRegex(route, r'"(?:addExp|addExpScaled|addItem|addItems|addGold|heal|setHp|setMana|setLevel)"')
+        called_methods = {
+            node.args[1].value
+            for node in ast.walk(ast.parse(route))
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "call"
+            and len(node.args) >= 2
+            and isinstance(node.args[1], ast.Constant)
+        }
+        self.assertEqual(
+            set(),
+            called_methods
+            & {"addExp", "addExpScaled", "addItem", "addItems", "addGold", "heal", "setHp", "setMana", "setLevel"},
+        )
 
     def testRolfEnemyDiscoveryUsesOnlyLivingAuthoredNearbyPritschers(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
@@ -853,6 +877,7 @@ class OctobogzHuntTest(unittest.TestCase):
         walker = OctobogzMcpWalkthroughTest("runTest")
         walker.player, walker.game_map = Actor("player", player=True), "map"
         walker.player.setNumericProperty("exp", 3000)
+        walker.player.getItems = lambda: []
         walker.walkable, walker.movement_steps = {(0, 0, 0), (1, 0, 0)}, 0
         walker.hunt_actors, walker.confirmed_dead, walker.phase_observations = {}, set(), []
         walker.pump = lambda: None
@@ -1016,6 +1041,100 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertEqual((11, 10, 1), tuple(observation[key] for key in ("damage_roll", "normal", "shadow")))
         self.assertTrue(observation["pulse"])
         self.assertFalse(observation["alive"])
+
+    def portalWalker(self, failure=None):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map, walker.game = Actor("player", player=True), "map", "game"
+        scroll = Properties()
+        scroll.setStringProperty("typeId", "TownPortalScroll")
+        inventory = [] if failure == "unowned" else [scroll]
+        position = [(166, 21, 0)]
+        registry = {"stage": "brood", "slots": {"scout": "dead", "alpha": "dead", "brood": "living"}}
+        walker.state = lambda: json.loads(json.dumps(registry))
+        walker.snapshot = lambda stage: {"defeat": ""}
+        walker.coords = lambda handle=None: position[0]
+        walker.pump = Mock()
+        walker.recoverOnRoadPair = Mock()
+        calls = []
+
+        def call(handle, method, *args):
+            calls.append((handle, method, args))
+            if handle == "game":
+                self.assertEqual("getMap", method)
+                return "wrong map" if failure == "map" else "map"
+            if handle == "map":
+                if method == "getPlayer":
+                    return Actor("wrong player") if failure == "player" else walker.player
+                return {"getEntryX": 110, "getEntryY": 111, "getEntryZ": 0}[method]
+            if handle is walker.player:
+                if method == "getItems":
+                    return list(inventory)
+                if method == "countItems":
+                    self.assertEqual(("TownPortalScroll",), args)
+                    return len(inventory)
+                if method == "useItem":
+                    self.assertEqual((scroll,), args)
+                    self.assertIn(scroll, inventory)
+                    if failure != "unconsumed":
+                        inventory.remove(scroll)
+                    position[0] = (109, 111, 0) if failure == "arrival" else (110, 111, 0)
+                    if failure == "defeat":
+                        walker.player.setStringProperty("uiDefeatReceipt", "native defeat")
+                    if failure == "objectives":
+                        registry["stage"] = "cleared"
+                    return
+            return getattr(handle, method)(*args)
+
+        walker.call = call
+        return walker, calls
+
+    def testMcpOwnedAuthoredPortalPreservesIdentityObjectivesAndConsumesOneRealItem(self):
+        walker, calls = self.portalWalker()
+        with patch("builtins.print"):
+            walker.retreatWithOwnedAuthoredScroll()
+        self.assertEqual(1, sum(method == "useItem" for _, method, _ in calls))
+        self.assertFalse(any(method in ("moveTo", "move", "heal", "setHp") for _, method, _ in calls))
+        walker.pump.assert_called_once_with()
+        walker.recoverOnRoadPair.assert_called_once_with((110, 111, 0), (109, 111, 0), "town portal road recovery")
+
+    def testMcpPortalRejectsUnownedUnconsumedDefeatWrongArrivalOrChangedIdentityAndObjectives(self):
+        for failure in ("unowned", "unconsumed", "defeat", "arrival", "objectives", "map", "player"):
+            with self.subTest(failure=failure):
+                walker, calls = self.portalWalker(failure)
+                with self.assertRaises(AssertionError), patch("builtins.print"):
+                    walker.retreatWithOwnedAuthoredScroll()
+                walker.recoverOnRoadPair.assert_not_called()
+                if failure == "unowned":
+                    self.assertFalse(any(method == "useItem" for _, method, _ in calls))
+
+    def testMcpRouteUsesEarnedRolfSuppliesBeforeHuntAndStillCompletesTheOriginalMainQuest(self):
+        source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        methods = {node.name: node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)}
+        preparation = ast.get_source_segment(source, methods["prepareThroughRolf"])
+        self.assertNotIn('self.walkTo("gooby1"', preparation)
+        self.assertIn('"before hunt Rolf road recovery"', preparation)
+        completion = ast.get_source_segment(source, methods["finishOriginalMainQuest"])
+        self.assertIn('self.walkTo("gooby1", allow_removed=True)', completion)
+        self.assertIn('self.assertIn("mainQuest", self.questNames("getCompletedQuests"))', completion)
+        route = ast.get_source_segment(
+            source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
+        )
+        names = (
+            "collectAuthoredRetreatScroll",
+            "prepareThroughRolf",
+            "enterHunt",
+            "retreatWithOwnedAuthoredScroll",
+            "finishOriginalMainQuest",
+        )
+        indexes = [route.index("self." + name + "(") for name in names]
+        self.assertEqual(sorted(indexes), indexes)
+        self.assertLess(route.index('self.assertEqual("cleared"'), indexes[-1])
+        self.assertIn('"MCP hunt actual earned healing stock"', source)
+        objects, _ = __import__("tests.narrative_walkthrough", fromlist=["authoredRegion"]).authoredRegion("nouraajd")
+        self.assertEqual((108, 110, 0), objects["townPortalScroll"])
 
     def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
         import textwrap

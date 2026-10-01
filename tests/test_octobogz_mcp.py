@@ -136,6 +136,35 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         actors = self.livingActors()
         self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "hunt road recovery", actors)
 
+    def collectAuthoredRetreatScroll(self):
+        before = self.call(self.player, "countItems", "TownPortalScroll")
+        self.walkTo("townPortalScroll", allow_removed=True)
+        self.assertIsNone(self.call(self.game_map, "getObjectByName", "townPortalScroll"))
+        self.assertEqual(before + 1, self.call(self.player, "countItems", "TownPortalScroll"))
+        self.snapshot("collected authored retreat scroll")
+
+    def retreatWithOwnedAuthoredScroll(self):
+        scrolls = [
+            item for item in self.call(self.player, "getItems") if self.call(item, "getTypeId") == "TownPortalScroll"
+        ]
+        self.assertEqual(1, len(scrolls), "Retreat must use the actual collected, owned source scroll")
+        before = self.snapshot("before owned town portal retreat")
+        hunt_before = self.state()
+        count_before = self.call(self.player, "countItems", "TownPortalScroll")
+        self.call(self.player, "useItem", scrolls[0])
+        self.pump()
+        self.assertEqual(self.game_map, self.call(self.game, "getMap"))
+        self.assertEqual(self.player, self.call(self.game_map, "getPlayer"))
+        entry = tuple(self.call(self.game_map, method) for method in ("getEntryX", "getEntryY", "getEntryZ"))
+        self.assertEqual((110, 111, 0), entry)
+        self.assertEqual(entry, self.coords())
+        self.assertEqual(before["defeat"], self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+        self.assertEqual(hunt_before, self.state())
+        self.assertEqual(count_before - 1, self.call(self.player, "countItems", "TownPortalScroll"))
+        self.assertGreater(self.call(self.player, "getHp"), 0)
+        self.snapshot("owned town portal retreat complete")
+        self.recoverOnRoadPair((110, 111, 0), (109, 111, 0), "town portal road recovery")
+
     def recoverOnRoadPair(self, first, second, stage, actors=None):
         self.assertEqual(1, sum(abs(a - b) for a, b in zip(first, second)))
         for destination in (first, second):
@@ -196,12 +225,16 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             after = self.snapshot("after authored Pritz " + name)
             self.assertIsNone(self.call(self.game_map, "getObjectByName", name))
             self.assertGreater(after["exp"], before["exp"], "Preparation must earn experience through real combat")
-        self.snapshot("before original Gooby approach")
+        self.assertGreaterEqual(self.call(self.player, "getLevel"), 3, self.snapshot("Rolf preparation complete"))
+        self.recoverOnRoadPair((9, 36, 0), (9, 37, 0), "before hunt Rolf road recovery")
+
+    def finishOriginalMainQuest(self):
+        self.snapshot("before original Gooby approach after hunt")
         self.recoverOnRoadPair((109, 100, 0), (109, 101, 0), "Gooby road recovery")
         self.walkTo("gooby1", allow_removed=True)
         self.assertTrue(self.call(self.game_map, "getBoolProperty", "completed_gooby"))
         self.assertIn("mainQuest", self.questNames("getCompletedQuests"))
-        self.assertGreaterEqual(self.call(self.player, "getLevel"), 3, self.snapshot("Rolf preparation complete"))
+        self.snapshot("original MainQuest complete after hunt")
 
     def useOrdinaryCombatController(self, player_class):
         # Attachment and save restoration install the interactive controller.
@@ -254,6 +287,12 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.hunt_lair_coords = self.coords(lair)
         self.capture_before_move = self.captureHuntActors
         before = self.snapshot("before entering the hunt lair")
+        healing_stock = [
+            {"type": self.call(item, "getTypeId"), "power": self.call(item, "getNumericProperty", "power")}
+            for item in self.call(self.player, "getItems")
+            if self.call(item, "hasTag", "heal")
+        ]
+        print("MCP hunt actual earned healing stock", healing_stock, flush=True)
         self.walkTo("cave2")
         self.assertIn(self.state()["stage"], ("scout", "brood"))
         if self.state()["slots"]["scout"]["status"] == "dead":
@@ -324,6 +363,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 starting_blades = self.call(self.player, "countItems", "ShadowBlade")
                 # The template's existing AI uses ordinary spells, equipment and carried potions.
                 self.useOrdinaryCombatController(player_class)
+                self.collectAuthoredRetreatScroll()
                 # Earn the authored class discovery reward through its NPC action.
                 if player_class == "Warrior":
                     self.walkTo("nouraajdDoor")
@@ -359,6 +399,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.trackLivingHuntActors()
                     self.snapshot("partial reload")
                     gold_before_final = self.call(self.player, "getGold")
+                    self.retreatWithOwnedAuthoredScroll()
                     self.recoverOnAuthoredRoad()
                     self.defeat("alpha")
                     if self.state()["slots"]["brood"]["status"] != "dead":
@@ -384,6 +425,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.action(self.dialog("dialog"), "accept_quest")
                     self.assertEqual(gold_after_claim, self.call(self.player, "getGold"))
                     self.assertEqual(starting_blades + 1, self.call(self.player, "countItems", "ShadowBlade"))
+                    self.finishOriginalMainQuest()
                     self.assertGreater(self.movement_steps, 100)
                     self.snapshot("completed")
                     print(

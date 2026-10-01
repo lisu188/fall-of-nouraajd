@@ -275,13 +275,13 @@ unexplained multi-cell arrival; being alive after native respawn is insufficient
 Source regressions cover both failures. Real ordinary preparation and recovery
 must still produce completed melee/caster hunts before this work is accepted.
 
-The revised authored route opens the town gate, earns only its class-specific
-discovery, recovers through actual road steps, then follows Rolf's original cave
-and Gooby encounters. Nearby living authored Pritschers are discovered from map
+The authored route opens the town gate, earns only its class-specific
+discovery, recovers through actual road steps, then follows Rolf's original cave.
+Nearby living authored Pritschers are discovered from map
 handles and defeated through adjacent movement, with observed XP increases and
 removal; no enemy count or resulting level is fabricated. At most32 preparation
 targets are considered, with road recovery when injured. The route requires
-actual level3 progression and MainQuest completion before entering the hunt,
+actual level3 progression before entering the hunt and real MainQuest completion afterward,
 retaining ordinary template equipment, earned loot and natural mana/HP recovery.
 Every road pair is verified against source and actual native tiles. Recovery
 requires actual HP and mana maxima, and defeat/teleport receipts remain gated.
@@ -357,3 +357,38 @@ and already-dead pulse observation have focused regressions. Cardinal movement,
 map turns, defeat receipts, incomplete partial objectives, once-only rewards
 and positive shadow-packet budget assertions remain required. Fresh completed
 melee/caster routes, full-suite and canonical coverage evidence are still pending.
+
+Head `67d66b3e` Linux job110492763102 passed every native/performance entry,
+including the unchanged770-fight matrix in1.86seconds and110-fight hunt in
+1.33seconds. Real partial actor save/recovery passed in3.943seconds and legacy
+adoption in0.350seconds. The prepared Warrior killed the scout, preserved exact
+partial registry state through reload, and had16HP/108mana with4125XP afterward.
+Its next retreat map turn caused a genuine defeat receipt and respawn. Sorcerer
+lost during the scout encounter. Both losses remain rejected; the empty positive
+packet list was an early-abort consequence, not phase acceptance. Windows
+job110494259284 again failed Python development discovery before native tests.
+
+The actual70HP/105mana scout is the ordinary initialized level-one template:
+base stamina7/strength10 plus one levelStats increment stamina3/strength5.
+The earlier49HP/70mana expectation described its uninitialized level-zero base.
+No hunt actor stat inflation was found and no combat mechanic was changed for
+these authored failures.
+
+Sorcerer's Rolf departure carried two stronger40-percent healing draughts and
+two smaller ones. The following Gooby detour spent those supplies before the
+scout. The test now explicitly visits Gooby after the hunt while retaining its
+actual final completion and quest-journal checks; naturally encountered Gooby
+combat remains active throughout. Rolf's road recovery now precedes the hunt,
+and actual carried healing types/powers are printed at the lair. No loot, level,
+equipment, HP, mana, actor or fixed-comparator state is substituted.
+
+The player also collects the already-authored Town Portal Scroll at108,110.
+After the exact partial reload, using that owned item is the ordinary retreat
+to source entry110,111. The test requires the same player/map, unchanged defeat
+receipt and hunt state, exact entry coordinates and consumption of one owned
+scroll before actual town-road recovery. Missing ownership, unconsumed items,
+defeat, incorrect arrival or changed identity/objectives reject the transit.
+This avoids the dangerous first retreat step without skipping an encounter or
+counting respawn as survival. Its runtime outcome and both completed hunts
+remain pending; strict native comparisons, actual distinct deaths, positive
+packet budget, partial objectives and one-time rewards remain unchanged.
