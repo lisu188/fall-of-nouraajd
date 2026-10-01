@@ -26,6 +26,8 @@ item rewards remain in place, and discovery receipts explain the later benefit.
 
 The town hall offers one option matching the player's race identity. Irvin's
 dialogue recognizes each origin, and the option states its exact cost and limit.
+Legacy ids such as `human` resolve to their canonical `humanRace` identity.
+Unknown ids fall back to the composed `race` object when one is present.
 
 | Race | Aid | Cost |
 | --- | --- | --- |

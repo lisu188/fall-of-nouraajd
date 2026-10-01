@@ -16806,6 +16806,7 @@ class GameTest(unittest.TestCase):
         game = load_game_module()
         g, game_map, player = load_game_map_with_player("nouraajd", "Warrior")
         self.addCleanup(g.getContext().shutdown)
+        self.assertEqual("human", player.getRaceId(), "legacy default human players must receive the human aid")
         player.setNumericProperty("warrior_barricades", 1)
         town_hall = g.createObject("townHallDialog")
         starting_gold = player.getGold()

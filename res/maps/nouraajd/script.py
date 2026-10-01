@@ -799,8 +799,11 @@ def load(self, context):
         def _canOfferRaceService(self, race_id):
             player = self.getGame().getMap().getPlayer()
             identity = player.getRaceId()
+            if identity in ("human", "outlander", "highlander", "wanderer"):
+                identity += "Race"
             if identity not in ("humanRace", "outlanderRace", "highlanderRace", "wandererRace"):
-                identity = player.getArchetypeRaceId()
+                race = player.getObjectProperty("race")
+                identity = race.getTypeId() if race else ""
             return identity == race_id and not player.getBoolProperty("nouraajdRaceServiceClaimed")
 
         def canOfferHumanRation(self):

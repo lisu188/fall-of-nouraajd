@@ -53,7 +53,10 @@ class ContentPlayer:
         return self.race_id
 
     def getArchetypeRaceId(self):
-        return self.race.getTypeId() if self.race else ""
+        return self.class_id
+
+    def getObjectProperty(self, key):
+        return self.race if key == "race" else None
 
     def getNumericProperty(self, key):
         return self.properties.get(key, 0)
@@ -246,6 +249,11 @@ class PlayerIdentityContentTest(unittest.TestCase):
         player, dialog = self.createPlayer(race_id="wandererRace")
         self.assertTrue(dialog.canOfferWandererFocus())
         self.assertFalse(dialog.canOfferOutlanderRations())
+        for race_id, suffix, *_rewards in RACE_SERVICES:
+            player.race_id = race_id.removesuffix("Race")
+            self.assertTrue(getattr(dialog, "canOffer" + suffix)())
+        player.race_id = "legacyUnknownRace"
+        self.assertTrue(dialog.canOfferOutlanderRations())
         player.race_id = ""
         self.assertTrue(dialog.canOfferOutlanderRations())
         player.race = None

@@ -50,9 +50,15 @@ class PlayerIdentityMcpTest(unittest.TestCase):
                 self.assertEqual(cost, driver.call(ability, "getNumericProperty", "manaCost"))
                 driver.walkTo("ambientMarketRationLedger")
                 coords = driver.call(driver.player, "getCoords")
-                enemy_name = driver.call(driver.game_map, "addObjectByName", "Cultist", coords)
-                self.assertTrue(enemy_name, "the combat fixture needs an authored walkable market cell")
-                enemy = driver.object(enemy_name)
+                spawned_template = driver.call(driver.game_map, "addObjectByName", "Cultist", coords)
+                self.assertEqual("Cultist", spawned_template)
+                enemies = [
+                    actor
+                    for actor in driver.call(driver.game_map, "getObjectsAtCoords", coords)
+                    if driver.call(actor, "getTypeId") == "Cultist"
+                ]
+                self.assertEqual(1, len(enemies), "the combat fixture must register one Cultist on the market cell")
+                enemy = enemies[0]
                 driver.call(enemy, "healProc", 100)
                 hp_before = driver.call(enemy, "getHp")
                 for _ in range(2):
