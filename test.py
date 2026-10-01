@@ -215,7 +215,8 @@ SERIAL_TEST_NAMES = {
 # blew past its timeout and turned the whole gameplay gate red. Balancing them like
 # any other test lets the weight-aware packer spread the heavy maps across shards
 # and size each shard's timeout to its own load.
-SERIAL_TEST_PREFIXES = ()
+# One compilation-backed class shares its setUpClass fixture across every method.
+SERIAL_TEST_PREFIXES = ("NativeTestProfileRuntimeTest.",)
 DEFAULT_TEST_DURATIONS = {
     "McpServerTest.test_stdio_map_walkthrough_castleHomecoming": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels": 70.0,

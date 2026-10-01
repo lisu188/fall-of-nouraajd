@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 # Ordered native cases on main e3d3c90, before adding diagnostic wrappers.
@@ -85,6 +86,27 @@ int main(int argc, char **argv) {
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
+    def testCompilationFixtureRunsOnceForEveryMethodAcrossParallelShards(self):
+        import test as runner
+
+        names = runner.discover_unittest_test_names(["test.py", "NativeTestProfileRuntimeTest"])
+        self.assertEqual(5, len(names))
+        self.assertEqual(names, runner.filter_test_names_by_suite(names, "fast"))
+        with (
+            tempfile.TemporaryDirectory(prefix="nouraajd-profile-sharding-") as directory,
+            mock.patch.object(runner, "TEST_OUTPUT_DIR", Path(directory)),
+            mock.patch.object(runner, "load_test_timings", return_value={}),
+            mock.patch.object(runner, "run_test_subprocess") as launch,
+            mock.patch.object(runner, "wait_test_subprocess", return_value=0),
+        ):
+            self.assertEqual(0, runner.run_sharded_tests([*names, "SourceTest.first", "SourceTest.second"], jobs=4))
+        fixture_workers = [
+            (call.args[0], call.args[1])
+            for call in launch.call_args_list
+            if any(name in names for name in call.args[0])
+        ]
+        self.assertEqual([(names, "serial")], fixture_workers)
+
     def testEveryExistingCaseKeepsItsOrderAndMetadataComesFirst(self):
         for suite, (count, digest) in BASELINE_CASES.items():
             source = (ROOT / f"tests/unit/test_{suite}.cpp").read_text(encoding="utf-8")
