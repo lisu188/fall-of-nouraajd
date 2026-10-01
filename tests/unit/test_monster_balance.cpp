@@ -452,6 +452,17 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
             const bool representative = std::string(monsterType) == "Gooby" || std::string(monsterType) == "Pritz" ||
                                         std::string(monsterType) == "OctoBogz";
             classHasMandatoryBaselineWitness |= representative && baselineWins > 0 && median(baselineHp) > 0;
+            const bool originalAllLosingPair =
+                std::string(playerType) == "Sorcerer" && std::string(monsterType) == "CultLeader";
+            const bool originalHarmlessMedianPair =
+                std::string(playerType) == "Assasin" && std::string(monsterType) == "Pritz";
+            if (!originalAllLosingPair) {
+                expect_true(baselineWins > 0, "each previously winning authored pair must retain baseline wins");
+            }
+            if (!originalHarmlessMedianPair) {
+                expect_true(median(baselineHp) > 0,
+                            "each previously damaging authored pair must retain baseline damage");
+            }
             std::cout << "role balance " << playerType << '/' << monsterType << " hp " << median(baselineHp) << " -> "
                       << median(roleHp) << " mana " << median(baselineMana) << " -> " << median(roleMana) << " items "
                       << median(baselineItems) << " -> " << median(roleItems) << " baseline wins " << baselineWins
