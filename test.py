@@ -15520,6 +15520,7 @@ class GameTest(unittest.TestCase):
             )
 
             g_with_relic, map_with_relic, player_with_relic = load_game_map_with_player("nouraajd")
+            map_with_relic.setStringProperty("quest_state_beren_chain", "relic_returned_waiting_kill")
             map_with_relic.setBoolProperty("RELIC_RETURNED", True)
             completeOctobogzFixture(map_with_relic)
             self.assertTrue(map_with_relic.getBoolProperty("OCTOBOGZ_SLAIN"))

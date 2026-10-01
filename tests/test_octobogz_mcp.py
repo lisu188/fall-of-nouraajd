@@ -121,23 +121,74 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
 
     def recoverOnAuthoredRoad(self):
         actors = self.livingActors()
-        self.walkCoords((118, 21, 0))
-        self.snapshot("road arrival")
-        self.observeActors("road arrival", actors)
-        previous_mana = None
+        self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "hunt road recovery", actors)
+
+    def recoverOnRoadPair(self, first, second, stage, actors=None):
+        self.assertEqual(1, sum(abs(a - b) for a, b in zip(first, second)))
+        for destination in (first, second):
+            tile = self.call(self.game_map, "getTile", *destination)
+            self.assertEqual("RoadTile", self.call(tile, "getTypeId"))
+        self.walkCoords(first)
+        self.snapshot(stage + " arrival")
+        if actors:
+            self.observeActors(stage + " arrival", actors)
         for index in range(128):
-            destination = (118, 20 + index % 2, 0)
+            destination = second if index % 2 == 0 else first
             tile = self.call(self.game_map, "getTile", *destination)
             self.assertEqual("RoadTile", self.call(tile, "getTypeId"))
             self.step(destination)
-            mana = self.call(self.player, "getMana")
-            if self.call(self.player, "getHpRatio") == 100 and mana == previous_mana:
-                self.snapshot("ordinary road recovery")
+            if self.call(self.player, "getHp") == self.call(self.player, "getHpMax") and self.call(
+                self.player, "getMana"
+            ) == self.call(self.player, "getManaMax"):
+                self.snapshot(stage + " complete")
                 return
-            previous_mana = mana
         self.fail(
             ("Authored road steps did not restore the ordinary player", self.snapshot("road recovery incomplete"))
         )
+
+    def nearbyRolfEnemies(self):
+        current = self.coords()
+        candidates = []
+        for actor in self.call(self.game_map, "getObjects"):
+            if self.call(actor, "getTypeId") != "Pritz" or not self.call(actor, "isAlive"):
+                continue
+            if self.call(actor, "getStringProperty", "affiliation") != "gooby":
+                continue
+            coords = self.coords(actor)
+            if coords[2] == 0 and abs(coords[0] - 19) + abs(coords[1] - 10) <= 55:
+                candidates.append((sum(abs(a - b) for a, b in zip(current, coords)), self.call(actor, "getName")))
+        return sorted(candidates)
+
+    def prepareThroughRolf(self):
+        self.recoverOnRoadPair((44, 106, 0), (44, 107, 0), "opened gate road recovery")
+        self.snapshot("before original Rolf cave")
+        self.walkTo("cave1", allow_removed=True)
+        self.assertTrue(self.call(self.game_map, "getBoolProperty", "completed_rolf"))
+        self.assertGreater(self.call(self.player, "countItems", "skullOfRolf"), 0)
+        self.snapshot("after original Rolf cave")
+        for _ in range(32):
+            if self.call(self.player, "getLevel") >= 3:
+                break
+            candidates = self.nearbyRolfEnemies()
+            if not candidates:
+                break
+            if self.call(self.player, "getHpRatio") < 75:
+                self.recoverOnRoadPair((9, 36, 0), (9, 37, 0), "Rolf road recovery")
+                candidates = self.nearbyRolfEnemies()
+                if not candidates:
+                    break
+            name = candidates[0][1]
+            before = self.snapshot("before authored Pritz " + name)
+            self.walkTo(name, allow_removed=True)
+            after = self.snapshot("after authored Pritz " + name)
+            self.assertIsNone(self.call(self.game_map, "getObjectByName", name))
+            self.assertGreater(after["exp"], before["exp"], "Preparation must earn experience through real combat")
+        self.snapshot("before original Gooby approach")
+        self.recoverOnRoadPair((109, 100, 0), (109, 101, 0), "Gooby road recovery")
+        self.walkTo("gooby1", allow_removed=True)
+        self.assertTrue(self.call(self.game_map, "getBoolProperty", "completed_gooby"))
+        self.assertIn("mainQuest", self.questNames("getCompletedQuests"))
+        self.assertGreaterEqual(self.call(self.player, "getLevel"), 3, self.snapshot("Rolf preparation complete"))
 
     def useOrdinaryCombatController(self, player_class):
         # Attachment and save restoration install the interactive controller.
@@ -213,11 +264,13 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     _, self.walkable = authoredRegion("nouraajd")
                     self.walkTo("nouraajdChapel")
                     self.action(self.dialog("berenDialog"), "decode_stained_glass_ward")
+                self.prepareThroughRolf()
                 self.walkTo("questGiver")
                 if player_class == "Warrior":
                     self.action(self.dialog("dialog"), "accept_quest")
                     self.assertIn("octoBogzQuest", self.questNames())
                 self.walkTo("ambientOctobogzNet")
+                self.recoverOnRoadPair((118, 21, 0), (118, 20, 0), "before hunt road recovery")
                 self.walkTo("cave2")
                 self.assertEqual("scout", self.state()["stage"])
                 self.defeat("scout")

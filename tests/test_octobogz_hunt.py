@@ -628,6 +628,43 @@ class OctobogzHuntTest(unittest.TestCase):
                     walker.step((166, 21, 0))
                 self.assertEqual(0, walker.movement_steps)
 
+    def testPreparedMcpRouteUsesAuthoredRoadsAndNaturalRolfProgression(self):
+        source = json.loads((ROOT / "res/maps/nouraajd/map.json").read_text(encoding="utf-8"))
+        tile_types = source["tilesets"][0]["tileproperties"]
+        layer = next(layer for layer in source["layers"] if layer["type"] == "tilelayer")
+        for x, y in ((44, 106), (44, 107), (9, 36), (9, 37), (109, 100), (109, 101), (118, 21), (118, 20)):
+            tile = layer["data"][x + y * source["width"]]
+            self.assertEqual("RoadTile", tile_types[str(tile - 1)]["type"], (x, y))
+        route = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        self.assertIn('self.walkTo("cave1", allow_removed=True)', route)
+        self.assertIn('self.walkTo("gooby1", allow_removed=True)', route)
+        self.assertIn('self.assertGreater(after["exp"], before["exp"]', route)
+        self.assertIn('self.assertIn("mainQuest", self.questNames("getCompletedQuests"))', route)
+        self.assertIn('self.call(self.player, "getHp") == self.call(self.player, "getHpMax")', route)
+        self.assertIn('self.call(self.player, "getManaMax")', route)
+        self.assertNotRegex(route, r'"(?:addExp|addExpScaled|addItem|addItems|addGold|heal|setHp|setMana|setLevel)"')
+
+    def testRolfEnemyDiscoveryUsesOnlyLivingAuthoredNearbyPritschers(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.game_map = "map"
+        near, far, dead, wrong_type, wrong_affiliation = [
+            Actor(name) for name in ("near", "far", "dead", "type", "side")
+        ]
+        for actor in (near, far, dead, wrong_type, wrong_affiliation):
+            actor.properties.update(typeId="Pritz", affiliation="gooby")
+            actor.coords = types.SimpleNamespace(x=20, y=10, z=0)
+        far.coords.x = 100
+        dead.setHp(0)
+        wrong_type.properties["typeId"] = "Cultist"
+        wrong_affiliation.properties["affiliation"] = "bogz"
+        walker.coords = lambda handle=None: (19, 10, 0) if handle is None else tuple(vars(handle.coords).values())
+        walker.call = lambda handle, method, *args: (
+            [near, far, dead, wrong_type, wrong_affiliation] if handle == "map" else getattr(handle, method)(*args)
+        )
+        self.assertEqual([(1, "near")], walker.nearbyRolfEnemies())
+
     def testEachHuntSlotPreservesTheOriginalCaveAnchorAndTenCellRange(self):
         self.director.start(self.game_map)
         scout = self.kill("scout")

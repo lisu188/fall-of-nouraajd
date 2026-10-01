@@ -274,3 +274,18 @@ authored Sorcerer gate and rejects both a changed defeat receipt and any
 unexplained multi-cell arrival; being alive after native respawn is insufficient.
 Source regressions cover both failures. Real ordinary preparation and recovery
 must still produce completed melee/caster hunts before this work is accepted.
+
+The revised authored route opens the town gate, earns only its class-specific
+discovery, recovers through actual road steps, then follows Rolf's original cave
+and Gooby encounters. Nearby living authored Pritschers are discovered from map
+handles and defeated through adjacent movement, with observed XP increases and
+removal; no enemy count or resulting level is fabricated. At most32 preparation
+targets are considered, with road recovery when injured. The route requires
+actual level3 progression and MainQuest completion before entering the hunt,
+retaining ordinary template equipment, earned loot and natural mana/HP recovery.
+Every road pair is verified against source and actual native tiles. Recovery
+requires actual HP and mana maxima, and defeat/teleport receipts remain gated.
+This is a pending authored playability witness, separate from the unchanged
+fixed no-rest comparator. The older relic boundary fixture now prepares the
+authoritative Beren quest state alongside its derived legacy flag; it does not
+claim natural relic progression or real combat.
