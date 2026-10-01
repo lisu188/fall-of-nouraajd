@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 
 class CCreature;
+class CMap;
 
 enum class CFightOutcome {
     Invalid = 0,
@@ -49,6 +50,11 @@ struct CFightResult {
 
 class CFightHandler {
   public:
+    static constexpr std::size_t CombatHistoryLimit = 64;
+    static void recordCombatStatus(const std::shared_ptr<CMap> &map, const std::string &status);
+    static std::vector<std::string> getCombatHistory(const std::shared_ptr<CMap> &map);
+    static void resetCombatHistory(const std::shared_ptr<CMap> &map);
+
     static bool fight(std::shared_ptr<CCreature> a, std::shared_ptr<CCreature> b);
 
     static bool fightMany(std::shared_ptr<CCreature> attacker,

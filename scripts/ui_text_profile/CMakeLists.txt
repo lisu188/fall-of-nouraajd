@@ -1,0 +1,27 @@
+cmake_minimum_required(VERSION 3.20)
+project(nouraajd_ui_profile LANGUAGES CXX)
+if(NOT WIN32)
+    message(FATAL_ERROR "This temporary profile harness links the existing Windows MSVC object build.")
+endif()
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
+find_package(SDL2 CONFIG REQUIRED)
+find_package(SDL2_image CONFIG REQUIRED)
+find_package(SDL2_ttf CONFIG REQUIRED)
+file(GLOB_RECURSE GAME_OBJECTS "${GAME_BUILD_DIR}/game_core_objects.dir/Release/*.obj")
+if(NOT GAME_OBJECTS)
+    message(FATAL_ERROR "Build the Release game_core_objects target before this harness.")
+endif()
+add_executable(ui_profile profile.cpp ${GAME_OBJECTS})
+add_executable(ui_choice_profile choice_profile.cpp ${GAME_OBJECTS})
+foreach(profile_target IN ITEMS ui_profile ui_choice_profile)
+    target_compile_features(${profile_target} PRIVATE cxx_std_23)
+    target_include_directories(${profile_target} PRIVATE "${GAME_SOURCE_DIR}/src" "${GAME_SOURCE_DIR}/vstd"
+        "${GAME_SOURCE_DIR}/random-dungeon-generator" "${GAME_SOURCE_DIR}/third_party/simdjson"
+        "${GAME_SOURCE_DIR}/third_party/lua")
+    target_compile_definitions(${profile_target} PRIVATE BOOST_ALLOW_DEPRECATED_HEADERS BOOST_BIND_GLOBAL_PLACEHOLDERS
+        SDL_MAIN_HANDLED _USE_MATH_DEFINES NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_compile_options(${profile_target} PRIVATE /W3 /bigobj /permissive- /Zc:preprocessor /EHsc)
+    target_link_libraries(${profile_target} PRIVATE Python3::Python pybind11::headers SDL2::SDL2 SDL2_image::SDL2_image
+        SDL2_ttf::SDL2_ttf "${GAME_BUILD_DIR}/Release/simdjson_vendor.lib" "${GAME_BUILD_DIR}/Release/lua_vendor.lib")
+endforeach()

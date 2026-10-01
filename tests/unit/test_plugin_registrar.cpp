@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/embed.h>
 
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -157,13 +158,13 @@ void test_gameplay_type_table_registration() {
                 "register_gameplay_types must register the whole table");
 
     auto handler = game->getObjectHandler();
-    // The generic CWrapper<T> template reflects under the literal meta name "CWrapper<T>" (only
-    // explicit specializations carry their instantiated name), so wrapper registration is
-    // asserted through static_meta() rather than a spelled-out string.
+    std::set<std::string> wrapperNames;
 #define FN_CHECK_TYPE(T, ...)                                                                                          \
     expect_true(handler->getType(#T) != nullptr, #T " from the gameplay type table must be constructible");
 #define FN_CHECK_WRAPPED(T, ...)                                                                                       \
     FN_CHECK_TYPE(T)                                                                                                   \
+    expect_true(wrapperNames.insert(CWrapper<T>::static_meta()->name()).second,                                        \
+                "CWrapper<" #T "> must have a unique reflected type name");                                           \
     expect_true(handler->getType(CWrapper<T>::static_meta()->name()) != nullptr,                                       \
                 "CWrapper<" #T "> must be registered for the scripted base " #T);
     FN_GAMEPLAY_TYPES(FN_CHECK_TYPE, FN_CHECK_WRAPPED)

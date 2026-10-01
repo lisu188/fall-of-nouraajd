@@ -27,7 +27,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Catherine"
     }
   },
   "castleChristianDialog": {
@@ -58,7 +59,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Christian"
     }
   }
 }

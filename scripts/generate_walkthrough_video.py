@@ -50,23 +50,21 @@ REEXEC_SENTINEL = "NOURAAJD_WALKTHROUGH_REEXEC"
 
 
 def _reexec_under_xvfb_if_needed():
-    """Re-run this process under ``xvfb-run`` with the x11 SDL driver.
-
-    A genuine SDL renderer (not the ``dummy`` driver) is required for pixel
-    readback, and on headless Linux that means an X server. This mirrors the
-    invocation used by the project's GUI tests.
-    """
+    """Render only on an isolated virtual or offscreen display."""
+    os.environ["SDL_AUDIODRIVER"] = "dummy"
+    os.environ["SDL_RENDER_DRIVER"] = "software"
+    os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
     if os.name != "posix":
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+        return
+    if os.environ.get("SDL_VIDEODRIVER") in ("dummy", "offscreen"):
         return
     if os.environ.get(REEXEC_SENTINEL) == "1":
         return
-    if os.environ.get("SDL_VIDEODRIVER") == "x11" and os.environ.get("DISPLAY"):
-        return
     import shutil
 
-    if shutil.which("xvfb-run") is None:
-        # No xvfb available; fall through and let SDL try whatever is configured.
-        return
+    if shutil.which("xvfb-run") is None or shutil.which("xauth") is None:
+        raise RuntimeError("Video capture requires xvfb-run and xauth, or SDL dummy/offscreen rendering.")
 
     env = dict(os.environ)
     env[REEXEC_SENTINEL] = "1"
@@ -577,6 +575,7 @@ def main():
     # Resolve the output path before bootstrap changes the working directory to
     # the build dir, so a relative --output is written where the user expects.
     args.output = str(Path(args.output).resolve())
+    os.environ["GAME_UI_PREFERENCES_PATH"] = str(Path(args.output).parent / ".walkthrough-preferences.json")
 
     _reexec_under_xvfb_if_needed()
     _bootstrap_paths()

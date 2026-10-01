@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from weakref import WeakKeyDictionary
 
 CAMPAIGN_FORMAT = "fall-of-nouraajd-campaign"
 CAMPAIGN_SCHEMA_VERSION = 1
@@ -49,6 +50,8 @@ CAMPAIGN_SCENARIO_PROPERTY = "campaign_scenario"
 CAMPAIGN_FINISHED_PROPERTY = "campaign_finished"
 CAMPAIGN_HISTORY_PROPERTY = "campaign_history"
 CAMPAIGN_VAR_PREFIX = "campaign_var_"
+CAMPAIGN_PENDING_PROPERTY = "campaign_pendingTransition"
+_INFLIGHT_TRANSITIONS = WeakKeyDictionary()
 
 # Carryover policy keys supported at scenario entry. ``gold_max`` clamps gold,
 # the item filters keep/strip inventory by config id. Exactly one of
@@ -59,9 +62,9 @@ CARRYOVER_ITEMS_DENY = "items_deny"
 CARRYOVER_KEYS = (CARRYOVER_GOLD_MAX, CARRYOVER_ITEMS_ALLOW, CARRYOVER_ITEMS_DENY)
 
 SCENARIO_REQUIRED_KEYS = ("map", "title", "briefing", "next")
-SCENARIO_KEYS = ("map", "title", "briefing", "epilogue", "carryover", "next")
+SCENARIO_KEYS = ("map", "title", "briefing", "epilogue", "carryover", "next", "artwork")
 MANIFEST_REQUIRED_KEYS = ("format", "schemaVersion", "campaignId", "title", "start", "scenarios")
-MANIFEST_KEYS = MANIFEST_REQUIRED_KEYS + ("description", "completionText")
+MANIFEST_KEYS = MANIFEST_REQUIRED_KEYS + ("description", "completionText", "artwork")
 
 
 class CampaignError(ValueError):
@@ -75,6 +78,60 @@ def campaigns_root():
 def _require(condition, message):
     if not condition:
         raise CampaignError(message)
+
+
+def _validateArtwork(data, where):
+    if "artwork" not in data:
+        return
+    value = data["artwork"]
+    _require(
+        isinstance(value, str)
+        and value.startswith("images/")
+        and value.endswith(".png")
+        and not any(part in value for part in ("..", "\\", ":")),
+        f'{where}: "artwork" must be a PNG path inside images/',
+    )
+
+
+def artworkForMap(map_id):
+    """Use only authored campaign artwork that is available in this resource tree."""
+    try:
+        for manifest in list_campaigns():
+            for scenario in manifest["scenarios"].values():
+                artwork = scenario.get("artwork", "")
+                if scenario["map"] == map_id and artwork and (Path(__file__).resolve().parent / artwork).is_file():
+                    return artwork
+    except (CampaignError, OSError):
+        pass
+    return ""
+
+
+def chapterCount(manifest):
+    """Count chapters along reachable playthroughs, not mutually exclusive branches."""
+    scenarios = manifest["scenarios"]
+    # Older metadata-only callers provide summaries without route information.
+    if any("next" not in scenario for scenario in scenarios.values()):
+        return str(len(scenarios))
+    memo = {}
+    visiting = set()
+
+    def depths(scenario_id):
+        _require(scenario_id in scenarios, "chapter count: unknown scenario")
+        _require(scenario_id not in visiting, "chapter count: campaign routes contain a cycle")
+        if scenario_id in memo:
+            return memo[scenario_id]
+        visiting.add(scenario_id)
+        routes = scenarios[scenario_id]["next"]
+        children = [depths(target) for target in set(routes.values())]
+        result = (
+            (1 + min(child[0] for child in children), 1 + max(child[1] for child in children)) if children else (1, 1)
+        )
+        visiting.remove(scenario_id)
+        memo[scenario_id] = result
+        return result
+
+    minimum, maximum = depths(manifest["start"])
+    return str(minimum) if minimum == maximum else f"{minimum}-{maximum}"
 
 
 # CampaignStateStore.record_outcome serializes history as
@@ -104,6 +161,7 @@ def _validate_scenario(campaign_id, scenario_id, scenario, scenario_ids):
         _require(isinstance(value, str) and value, f'{where}: "{key}" must be a non-empty string')
     epilogue = scenario.get("epilogue", "")
     _require(isinstance(epilogue, str), f'{where}: "epilogue" must be a string')
+    _validateArtwork(scenario, where)
     routes = scenario["next"]
     _require(isinstance(routes, dict), f'{where}: "next" must be an object mapping outcome to scenario id')
     for outcome, target in routes.items():
@@ -158,6 +216,7 @@ def validate_manifest(data):
     campaign_id = data["campaignId"]
     _require(isinstance(campaign_id, str) and campaign_id, 'campaign manifest: "campaignId" must be a non-empty string')
     _require(isinstance(data["title"], str) and data["title"], 'campaign manifest: "title" must be a non-empty string')
+    _validateArtwork(data, "campaign manifest")
     scenarios = data["scenarios"]
     _require(
         isinstance(scenarios, dict) and scenarios,
@@ -345,15 +404,12 @@ def _scenario_intro(scenario):
     return f'{scenario["title"]}. {scenario["briefing"]}'
 
 
-# Presentation-screen action labels, in required flow order: each briefing is
-# dismissed with BEGIN, a scenario epilogue with CONTINUE, and the terminal
-# campaign completion with RETURN.
-ACTION_BEGIN = "BEGIN"
-ACTION_CONTINUE = "CONTINUE"
-ACTION_RETURN = "RETURN"
+ACTION_BEGIN = "Begin chapter"
+ACTION_CONTINUE = "Continue"
+ACTION_RETURN = "Return to adventure"
 
 
-def _show_screen(game, title, body, action_label, fallback_text=None):
+def _show_screen(game, title, body, action_label, fallback_text=None, artwork=""):
     """Show a blocking full-window campaign presentation screen.
 
     Uses CGuiHandler.showCampaignScreen when the GUI handler provides it (the
@@ -364,6 +420,10 @@ def _show_screen(game, title, body, action_label, fallback_text=None):
     if not body:
         return
     gui = game.getGuiHandler()
+    show_artwork = getattr(gui, "showCampaignArtworkScreen", None)
+    if artwork and callable(show_artwork):
+        show_artwork(title, body, action_label, artwork)
+        return
     show = getattr(gui, "showCampaignScreen", None)
     if callable(show):
         show(title, body, action_label)
@@ -387,44 +447,187 @@ def start(game, campaign_id, player_class, race_id=""):
     store = state(game)
     _require(store is not None, f'campaign "{campaign_id}" failed to start map "{scenario["map"]}" with a player')
     store.begin(campaign_id, first_id)
-    _show_screen(game, scenario["title"], scenario["briefing"], ACTION_BEGIN, fallback_text=_scenario_intro(scenario))
+    _show_screen(
+        game,
+        scenario["title"],
+        scenario["briefing"],
+        ACTION_BEGIN,
+        fallback_text=_scenario_intro(scenario),
+        artwork=scenario.get("artwork", ""),
+    )
     return store
 
 
-def complete_scenario(game, outcome, fallback_map=None):
+def complete_scenario(game, outcome, fallback_map=None, outcome_summary=""):
     """Report the active scenario's outcome and let the manifest route it.
 
     Map scripts call this instead of hardcoding game.changeMap(next_map).
     With no active campaign (standalone map play) the legacy behavior is kept:
     the map changes to ``fallback_map`` when one is given, otherwise nothing
-    happens. Returns the next scenario id, "" when the campaign finished, or
-    None when no campaign was active.
+    happens. Optional outcome_summary describes rewards already committed by the
+    caller and is included in the existing outcome acknowledgment. Returns the
+    next scenario id, "" when the campaign finished, or None when no campaign was active.
     """
     store = state(game)
     if store is None or not store.active():
-        if fallback_map:
+        if store is not None and fallback_map:
+            _beginTransition(game, store, outcome, fallback_map)
+        elif fallback_map:
             game.changeMap(fallback_map)
         return None
+    pending = _pendingTransition(game)
+    if pending:
+        _require(
+            pending["scenario"] == store.scenario() and pending["outcome"] == outcome,
+            "a different campaign outcome is already awaiting its map transition",
+        )
+        retryPending(game)
+        return pending["targetScenario"]
     manifest = get_manifest(store.campaign_id())
     current_id = store.scenario()
     current = manifest["scenarios"][current_id]
     target_id = next_scenario(manifest, current_id, outcome)
-    store.record_outcome(current_id, outcome)
-    _show_screen(game, current["title"], current.get("epilogue", ""), ACTION_CONTINUE)
+    outcome_body = "Outcome: " + outcome.replace("_", " ").capitalize() + "."
+    if current.get("epilogue"):
+        outcome_body += "\n\n" + current["epilogue"]
+    if outcome_summary:
+        outcome_body += "\n\n" + outcome_summary
+    if target_id is not None:
+        outcome_body += "\n\nNext chapter: " + manifest["scenarios"][target_id]["title"]
+    _show_screen(
+        game,
+        current["title"],
+        outcome_body,
+        ACTION_CONTINUE,
+        fallback_text=outcome_body if outcome_summary else current.get("epilogue", outcome_body),
+        artwork=current.get("artwork", ""),
+    )
     if target_id is None:
+        store.record_outcome(current_id, outcome)
         store.finish()
         _show_screen(
             game,
             manifest["title"],
             manifest.get("completionText") or f'The campaign "{manifest["title"]}" is complete.',
             ACTION_RETURN,
+            artwork=manifest.get("artwork", ""),
         )
         return ""
-    target = manifest["scenarios"][target_id]
-    # Mutate the player before requesting the map change: the same player
-    # object is re-attached to the destination map by CSceneManager.
-    apply_carryover(game.getMap().getPlayer(), target.get("carryover"))
-    store.advance(target_id)
-    _show_screen(game, target["title"], target["briefing"], ACTION_BEGIN, fallback_text=_scenario_intro(target))
-    game.changeMap(target["map"])
+    _beginTransition(game, store, outcome, manifest["scenarios"][target_id]["map"], target_id)
     return target_id
+
+
+def _pendingTransition(game):
+    store = state(game)
+    if store is None:
+        return None
+    raw = store.player.getStringProperty(CAMPAIGN_PENDING_PROPERTY)
+    if not raw:
+        return None
+    try:
+        pending = json.loads(raw)
+        if not isinstance(pending, dict) or not all(
+            isinstance(pending.get(key), str)
+            for key in ("campaignId", "scenario", "outcome", "targetMap", "targetScenario")
+        ):
+            return None
+        if pending["campaignId"] != store.campaign_id() or pending["scenario"] != store.scenario():
+            return None
+        return pending
+    except (ValueError, TypeError):
+        return None
+
+
+def hasPendingTransition(game):
+    """Whether a saved chapter outcome still needs its map transition."""
+    return _pendingTransition(game) is not None
+
+
+def _beginTransition(game, store, outcome, target_map, target_id=""):
+    pending = {
+        "campaignId": store.campaign_id(),
+        "scenario": store.scenario(),
+        "outcome": outcome,
+        "targetMap": target_map,
+        "targetScenario": target_id,
+    }
+    store.player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, json.dumps(pending, sort_keys=True))
+    return retryPending(game)
+
+
+def retryPending(game):
+    """Retry only the saved transition; authored rewards and judgments stay claimed."""
+    pending = _pendingTransition(game)
+    if pending is None or game in _INFLIGHT_TRANSITIONS:
+        return False
+    store = state(game)
+    player = store.player
+    target = None
+    if pending["targetScenario"]:
+        manifest = get_manifest(pending["campaignId"])
+        _require(
+            next_scenario(manifest, pending["scenario"], pending["outcome"]) == pending["targetScenario"],
+            "pending campaign transition no longer matches the campaign route",
+        )
+        target = manifest["scenarios"][pending["targetScenario"]]
+        _require(target["map"] == pending["targetMap"], "pending campaign map no longer matches its chapter")
+    original = None
+    token = object()
+    _INFLIGHT_TRANSITIONS[game] = token
+
+    def beforeEntry():
+        nonlocal original
+        original = (
+            store.scenario(),
+            player.getStringProperty(CAMPAIGN_HISTORY_PROPERTY),
+            player.getGold(),
+            set(player.getItems()),
+        )
+        if target is None:
+            return
+        apply_carryover(player, target.get("carryover"))
+        store.record_outcome(pending["scenario"], pending["outcome"])
+        store.advance(pending["targetScenario"])
+        briefing = target["briefing"]
+        if target.get("carryover"):
+            briefing += f"\n\nCarryover\nGold carried: {player.getGold()}\nBag items carried: {len(player.getItems())}"
+            if CARRYOVER_GOLD_MAX in target["carryover"]:
+                briefing += f"\nThis chapter limits carried gold to {target['carryover'][CARRYOVER_GOLD_MAX]}."
+        _show_screen(
+            game,
+            target["title"],
+            briefing,
+            ACTION_BEGIN,
+            fallback_text=_scenario_intro(target),
+            artwork=target.get("artwork", ""),
+        )
+
+    def completion(success):
+        if _INFLIGHT_TRANSITIONS.get(game) is token:
+            _INFLIGHT_TRANSITIONS.pop(game, None)
+        if success:
+            player.setStringProperty(CAMPAIGN_PENDING_PROPERTY, "")
+        else:
+            if original is not None:
+                scenario_id, history, gold, items = original
+                store.advance(scenario_id)
+                player.setStringProperty(CAMPAIGN_HISTORY_PROPERTY, history)
+                player.addGold(gold - player.getGold())
+                _remove_inventory_items(player, lambda item: item not in items)
+                for item in items - set(player.getItems()):
+                    player.addItem(item)
+            context = game.getContext() if hasattr(game, "getContext") else None
+            if context is None or context.isActive():
+                _show_message(
+                    game,
+                    "The next chapter could not be loaded. Your chapter progress and carried items "
+                    "are unchanged. Retry the chapter transition from the pause menu.",
+                )
+
+    try:
+        return game.changeMapWithPreparation(pending["targetMap"], beforeEntry, completion)
+    except Exception:
+        # A binding error before the native request was queued must also release the retry lock.
+        if _INFLIGHT_TRANSITIONS.get(game) is token:
+            completion(False)
+        raise

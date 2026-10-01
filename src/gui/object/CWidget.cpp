@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "CWidget.h"
 #include "gui/CLayout.h"
 #include "gui/CTextManager.h"
+#include "gui/CUiTheme.h"
 
 #include <exception>
 
@@ -44,13 +45,16 @@ void CWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> 
 }
 
 bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
-    auto clickable = !getClick().empty();
+    auto clickable = getEnabled() && !getClick().empty();
     if (button != SDL_BUTTON_LEFT || (!clickable && !clickPressed)) {
         return false;
     }
 
     if (type == SDL_MOUSEBUTTONDOWN) {
         clickPressed = clickable;
+        if (clickable && gui) {
+            gui->focusWidget(ptr<CGameGraphicsObject>());
+        }
         return clickPressed;
     }
 
@@ -59,16 +63,7 @@ bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int butt
         auto rect = getLayout()->getRect(this->ptr<CGameGraphicsObject>());
         auto releasedInside = x >= 0 && y >= 0 && x < rect->w && y < rect->h;
         if (clickable && releasedInside) {
-            auto parent = getParent();
-            if (!parent) {
-                return true;
-            }
-            try {
-                parent->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(this->getClick(),
-                                                                                                parent, gui);
-            } catch (const std::exception &exception) {
-                vstd::logger::warning("Ignoring widget click callback failure:", getClick(), exception.what());
-            }
+            activate(gui);
         }
         return true;
     }
@@ -78,28 +73,66 @@ bool CWidget::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int butt
 
 CWidget::CWidget() {}
 
+bool CWidget::activate(std::shared_ptr<CGui> gui) {
+    auto parent = getParent();
+    if (!getEnabled() || getClick().empty() || !parent) {
+        return false;
+    }
+    try {
+        parent->meta()->invoke_method<void, CGameGraphicsObject, std::shared_ptr<CGui>>(getClick(), parent, gui);
+    } catch (const std::exception &exception) {
+        vstd::logger::warning("Ignoring widget click callback failure:", getClick(), exception.what());
+    }
+    return true;
+}
+
+bool CWidget::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) {
+    if (!gui || !gui->isFocused(this)) {
+        return false;
+    }
+    if (type == SDL_KEYDOWN && (key == SDLK_RETURN || key == SDLK_KP_ENTER || key == SDLK_SPACE)) {
+        return activate(gui);
+    }
+    return false;
+}
+
 void CTextWidget::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
     if (!gui || !rect || !gui->getTextManager()) {
         return;
     }
-    if (centered) {
-        gui->getTextManager()->drawTextCentered(text, rect->x, rect->y, rect->w, rect->h);
-    } else {
-        gui->getTextManager()->drawText(text, rect);
+    if (!getClick().empty() && !vstd::cast<CButton>(ptr<CGameGraphicsObject>()) &&
+        (getSelected() || gui->isFocused(this))) {
+        UiTheme::fill(gui->getRenderer(), *rect, UiTheme::Selection);
+        UiTheme::stroke(gui->getRenderer(), *rect, UiTheme::Accent);
     }
+    gui->getTextManager()->drawTextStyled(text, rect, textRole, getEnabled() ? UiTheme::Text : UiTheme::Muted,
+                                          centered);
 }
 
-CButton::CButton() {
-    // TODO: move to json
-    setBackground("images/button_off");
+CButton::CButton() { setBackground(""); }
+
+void CButton::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> rect, int frameTime) {
+    if (!gui || !rect) {
+        return;
+    }
+    int mouseX = 0;
+    int mouseY = 0;
+    const auto buttons = SDL_GetMouseState(&mouseX, &mouseY);
+    const bool hovered = CUtil::isIn(rect, mouseX, mouseY);
+    auto surface = getSelected() || (hovered && getEnabled()) ? UiTheme::Selection : UiTheme::Panel;
+    if (hovered && getEnabled() && (buttons & SDL_BUTTON_LMASK)) {
+        surface = UiTheme::Background;
+    }
+    UiTheme::fill(gui->getRenderer(), *rect, surface);
+    UiTheme::stroke(gui->getRenderer(), *rect,
+                    gui->isFocused(this) || getSelected() ? UiTheme::Accent : UiTheme::Border);
+    CTextWidget::renderObject(gui, UiTheme::inset(rect, UiTheme::scaled(gui, 8)), frameTime);
 }
 
 bool CButton::mouseEvent(std::shared_ptr<CGui> sharedPtr, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONDOWN && button == SDL_BUTTON_LEFT) {
-        setBackground("images/button_on");
         setModal(true);
     } else if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT) {
-        setBackground("images/button_off");
         setModal(false);
     }
     return CTextWidget::mouseEvent(sharedPtr, type, button, x, y);

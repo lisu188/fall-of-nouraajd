@@ -20,19 +20,36 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CProvider.h"
 #include "core/CScript.h"
+#include "core/CSlotConfig.h"
 #include "core/CUtil.h"
 #include "gui/CAnimation.h"
 #include "gui/CGui.h"
 #include "gui/CLayout.h"
 #include "gui/CTextureCache.h"
+#include "gui/CTextManager.h"
+#include "gui/CUiTheme.h"
 #include "gui/object/CProxyGraphicsObject.h"
 #include "gui/object/CWidget.h"
 #include "handler/CEventHandler.h"
+#include "handler/CTooltipHandler.h"
+#include "object/CQuest.h"
+#include <cctype>
 #include <cstdlib>
 #include <exception>
 #include <utility>
 
 namespace {
+std::string listObjectLabel(const std::shared_ptr<CGameObject> &object) {
+    if (!object)
+        return "Empty";
+    if (auto quest = vstd::cast<CQuest>(object); quest && !quest->getDescription().empty())
+        return quest->getDescription();
+    auto label = object->getLabel();
+    if (label.empty())
+        label = object->getDescription();
+    return label.empty() ? "Item" : label;
+}
+
 std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> &gui,
                                                     const std::shared_ptr<CGameObject> &object) {
     auto cached = object->getGraphicsObject();
@@ -49,7 +66,107 @@ std::shared_ptr<CAnimation> createListItemAnimation(const std::shared_ptr<CGui> 
 bool dragMoved(const CGui::DragSession &session) { return CGui::isDragActive(session); }
 } // namespace
 
-void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {}
+void CListView::renderObject(std::shared_ptr<CGui> gui, std::shared_ptr<SDL_Rect> loc, int frameTime) {
+    if (gui->isFocused(this))
+        UiTheme::stroke(gui->getRenderer(), *loc, UiTheme::Accent);
+    if (searchable) {
+        auto searchRect = CUtil::rect(loc->x, loc->y - UiTheme::scaled(gui, 30), loc->w, UiTheme::scaled(gui, 28));
+        gui->getTextManager()->drawTextStyled(searching || !filterText.empty() ? "Search: " + filterText + "_"
+                                                                               : "Search: focus here, press /",
+                                              searchRect, "small", UiTheme::Muted);
+    }
+    const int itemCount = getItemTypesCount(gui);
+    updateRowPaging(gui, itemCount);
+    if (!itemCount)
+        gui->getTextManager()->drawTextStyled(filterText.empty() ? "No items" : "No matching items", loc, "body",
+                                              UiTheme::Muted, true);
+}
+
+bool CListView::keyboardEvent(std::shared_ptr<CGui> gui, SDL_EventType type, SDL_Keycode key) {
+    if (!gui || !gui->isFocused(this) || type != SDL_KEYDOWN)
+        return false;
+    if (searchable && key == SDLK_SLASH) {
+        searching = true;
+        SDL_StartTextInput();
+        return true;
+    }
+    if (searching && key == SDLK_ESCAPE) {
+        searching = false;
+        filterText.clear();
+        shift = 0;
+        refreshAll();
+        SDL_StopTextInput();
+        return true;
+    }
+    if (searching && key == SDLK_BACKSPACE) {
+        if (!filterText.empty()) {
+            auto size = filterText.size() - 1;
+            while (size > 0 && (static_cast<unsigned char>(filterText[size]) & 0xc0) == 0x80)
+                --size;
+            filterText.resize(size);
+            shift = 0;
+            focusedIndex = -1;
+            refreshAll();
+        }
+        return true;
+    }
+    auto items = calculateIndices(gui);
+    const int count = getItemTypesCount(gui);
+    if (!count)
+        return key != SDLK_ESCAPE;
+    int next = std::max(0, focusedIndex);
+    if (key == SDLK_RIGHT || key == SDLK_DOWN)
+        next = focusedIndex < 0 ? 0 : next + (key == SDLK_RIGHT ? 1 : getSizeX(gui));
+    else if (key == SDLK_LEFT || key == SDLK_UP)
+        next -= key == SDLK_LEFT ? 1 : getSizeX(gui);
+    else if (key == SDLK_PAGEUP)
+        next -= getVisibleItemSlots(gui, count);
+    else if (key == SDLK_PAGEDOWN)
+        next += getVisibleItemSlots(gui, count);
+    else if (key == SDLK_HOME)
+        next = 0;
+    else if (key == SDLK_END)
+        next = count - 1;
+    else if (key != SDLK_RETURN && key != SDLK_KP_ENTER && key != SDLK_SPACE)
+        return false;
+    focusedIndex = std::clamp(next, 0, count - 1);
+    if (focusedIndex < shift)
+        shift = focusedIndex;
+    if (focusedIndex >= shift + getVisibleItemSlots(gui, count))
+        shift = focusedIndex - getVisibleItemSlots(gui, count) + 1;
+    clampShift(gui, count);
+    updateRowPaging(gui, count);
+    if (auto found = items.find(focusedIndex); found != items.end())
+        invokeCallback(gui, focusedIndex, found->second);
+    refreshAll();
+    return true;
+}
+
+bool CListView::textInput(std::shared_ptr<CGui> gui, const std::string &text) {
+    if (!searchable || !searching || !gui->isFocused(this))
+        return false;
+    if (text != "/" && filterText.size() + text.size() <= 128)
+        filterText += text;
+    shift = 0;
+    focusedIndex = -1;
+    refreshAll();
+    return true;
+}
+
+bool CListView::mouseMotionEvent(std::shared_ptr<CGui> gui, SDL_EventType, int x, int y, int, int) {
+    int index = -1;
+    std::shared_ptr<CGameObject> object;
+    if (!tryGetClickedObject(gui, x, y, index, object) || !object)
+        return false;
+    auto rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+    gui->previewObject(ptr<CGameGraphicsObject>(), object, rect->x + x, rect->y + y);
+    return true;
+}
+
+bool CListView::mouseWheelEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int x, int y, int wheelX, int wheelY) {
+    doShift(gui, -wheelY * getSizeX(gui));
+    return true;
+}
 
 bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int button, int x, int y) {
     if (type == SDL_MOUSEBUTTONUP && button == SDL_BUTTON_LEFT && gui && gui->hasDragSession()) {
@@ -101,8 +218,19 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
     if (!tryGetClickedObject(gui, x, y, index, object)) {
         return button != SDL_BUTTON_RIGHT;
     }
+    if (gui)
+        gui->focusWidget(ptr<CGameGraphicsObject>());
+    focusedIndex = index;
     if (button == SDL_BUTTON_RIGHT) {
-        return invokeRightClickCallback(gui, index, object);
+        if (invokeRightClickCallback(gui, index, object))
+            return true;
+        if (object && gui && gui->getGame()) {
+            auto rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+            gui->getGame()->getGuiHandler()->showTooltip(CTooltipHandler::buildTooltip(object), rect->x + x,
+                                                         rect->y + y);
+            return true;
+        }
+        return false;
     }
     // Command/interaction lists are non-draggable: a left mouse-down must never start a
     // drag session or capture the pointer; it only runs the normal click callback so
@@ -117,6 +245,8 @@ bool CListView::mouseEvent(std::shared_ptr<CGui> gui, SDL_EventType type, int bu
             auto self = this->ptr<CListView>();
             gui->startDragSession(self, object, index, rect->x + x, rect->y + y, true);
             gui->capturePointer(self);
+        } else {
+            invokeCallback(gui, index, object);
         }
         return true;
     }
@@ -135,7 +265,47 @@ void CListView::doShift(const std::shared_ptr<CGui> &gui, int val) {
     clampShift(gui, itemTypeCount);
     shift += val;
     clampShift(gui, itemTypeCount);
+    updateRowPaging(gui, itemTypeCount);
     refreshAll();
+}
+
+void CListView::pagePrevious(std::shared_ptr<CGui> gui) { doShift(gui, -getCellCount(gui)); }
+
+void CListView::pageNext(std::shared_ptr<CGui> gui) { doShift(gui, getCellCount(gui)); }
+
+void CListView::updateRowPaging(const std::shared_ptr<CGui> &gui, int itemCount) {
+    if (!gui || !gui->getGame() || !isAttachedToGui(gui))
+        return;
+    const bool paging = rows && isOversizedForCount(gui, itemCount);
+    if (paging && !previousPageButton) {
+        previousPageButton = gui->getGame()->createObject<CButton>();
+        nextPageButton = gui->getGame()->createObject<CButton>();
+        previousPageButton->setText("Previous");
+        nextPageButton->setText("Next");
+        previousPageButton->setClick("pagePrevious");
+        nextPageButton->setClick("pageNext");
+        for (const auto &button : {previousPageButton, nextPageButton}) {
+            button->setLayout(std::make_shared<CLayout>());
+            button->setPriority(10);
+            addChild(button);
+        }
+    }
+    if (!previousPageButton)
+        return;
+    previousPageButton->setRuntimeHidden(!paging);
+    nextPageButton->setRuntimeHidden(!paging);
+    if (!paging)
+        return;
+    const auto rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+    const int gap = UiTheme::scaled(gui, 8);
+    const int width = std::max(1, (rect->w - gap) / 2);
+    const int height =
+        std::max(UiTheme::scaled(gui, 40),
+                 gui->getTextManager()->measureText("Previous", 0, "body").second + UiTheme::scaled(gui, 16));
+    previousPageButton->getLayout()->setRect(0, rect->h + gap / 2, width, height);
+    nextPageButton->getLayout()->setRect(width + gap, rect->h + gap / 2, width, height);
+    previousPageButton->setEnabled(shift > 0);
+    nextPageButton->setEnabled(shift < getMaxShift(gui, itemCount));
 }
 
 int CListView::shiftIndex(const std::shared_ptr<CGui> &gui, int arg) {
@@ -144,6 +314,8 @@ int CListView::shiftIndex(const std::shared_ptr<CGui> &gui, int arg) {
     if (!isOversizedForCount(gui, itemTypeCount)) {
         return arg;
     }
+    if (rows)
+        return arg + shift;
     return arg > getLeftArrowIndex(gui) ? arg + shift - 1 : arg + shift;
 }
 
@@ -205,6 +377,8 @@ int CListView::getItemTypesCount(const std::shared_ptr<CGui> &gui) {
 
 // TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeX(std::shared_ptr<CGui> gui) {
+    if (rows)
+        return 1;
     const int safeTileSize = std::max(1, tileSize);
     return xPrefferedSize != -1 ? std::clamp(xPrefferedSize, 1, 128)
                                 : std::max(1, getLayout()->getRect(this->ptr<CListView>())->w / safeTileSize);
@@ -212,7 +386,9 @@ int CListView::getSizeX(std::shared_ptr<CGui> gui) {
 
 // TODO: sizes should be calculated dynamically based on preferences
 int CListView::getSizeY(std::shared_ptr<CGui> gui) {
-    const int safeTileSize = std::max(1, tileSize);
+    const int safeTileSize = getCellSize(gui);
+    if (rows)
+        return std::max(1, getLayout()->getRect(ptr<CGameGraphicsObject>())->h / safeTileSize);
     return yPrefferedSize != -1 ? std::clamp(yPrefferedSize, 1, 128)
                                 : std::max(1, getLayout()->getRect(this->ptr<CListView>())->h / safeTileSize);
 }
@@ -224,7 +400,7 @@ bool CListView::isOversizedForCount(const std::shared_ptr<CGui> &gui, int itemTy
 }
 
 int CListView::getVisibleItemSlots(const std::shared_ptr<CGui> &gui, int itemTypeCount) {
-    if (!isOversizedForCount(gui, itemTypeCount)) {
+    if (rows || !isOversizedForCount(gui, itemTypeCount)) {
         return getCellCount(gui);
     }
     return std::max(1, getCellCount(gui) - 2);
@@ -247,8 +423,22 @@ CListView::collection_pointer CListView::invokeCollection(std::shared_ptr<CGui> 
         return std::make_shared<CListView::collection_type>();
     }
     try {
-        return parent->meta()->invoke_method<CListView::collection_pointer, CGameGraphicsObject, std::shared_ptr<CGui>>(
-            collection, vstd::cast<CGameGraphicsObject>(parent), gui);
+        auto result =
+            parent->meta()->invoke_method<CListView::collection_pointer, CGameGraphicsObject, std::shared_ptr<CGui>>(
+                collection, vstd::cast<CGameGraphicsObject>(parent), gui);
+        if (!searchable || filterText.empty())
+            return result;
+        auto matches = std::make_shared<collection_type>();
+        auto lower = [](std::string value) {
+            std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return std::tolower(c); });
+            return value;
+        };
+        auto needle = lower(filterText);
+        for (const auto &item : *result) {
+            if (item && lower(listObjectLabel(item) + " " + item->getDescription()).find(needle) != std::string::npos)
+                matches->push_back(item);
+        }
+        return matches;
     } catch (const std::exception &e) {
         vstd::logger::warning("Ignoring list collection callback failure:", collection, "on", parent->getType(),
                               e.what());
@@ -378,11 +568,11 @@ bool CListView::tryGetClickedObject(std::shared_ptr<CGui> gui, int x, int y, int
                                     std::shared_ptr<CGameObject> &object, bool allowEmptyCell) {
     const int itemTypeCount = getItemTypesCount(gui);
     clampShift(gui, itemTypeCount);
-    const int safeTileSize = std::max(1, tileSize);
+    const int safeTileSize = getCellSize(gui);
     if (x < 0 || y < 0) {
         return false;
     }
-    int xIndex = x / safeTileSize;
+    int xIndex = rows ? 0 : x / safeTileSize;
     int yIndex = y / safeTileSize;
     if (xIndex < 0 || yIndex < 0 || xIndex >= getSizeX(gui) || yIndex >= getSizeY(gui)) {
         return false;
@@ -434,10 +624,10 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std
     clampShift(gui, itemTypeCount);
     int i = getSizeX(gui) * y + x;
     const bool oversized = isOversizedForCount(gui, itemTypeCount);
-    if (i == getLeftArrowIndex(gui) && oversized) {
+    if (!rows && i == getLeftArrowIndex(gui) && oversized) {
         return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(), "images/arrows/left")
                                  ->withCallback(getArrowCallback(true)));
-    } else if (i == getRightArrowIndex(gui) && oversized) {
+    } else if (!rows && i == getRightArrowIndex(gui) && oversized) {
         return_val.push_back(CAnimationProvider::getAnimation(gui->getGame(), "images/arrows/right")
                                  ->withCallback(getArrowCallback(false)));
     } else {
@@ -456,7 +646,43 @@ std::list<std::shared_ptr<CGameGraphicsObject>> CListView::getProxiedObjects(std
             addSelectionBox(gui, return_val);
         }
         if (indexedCollection.count(itemIndex) > 1) {
-            addCountBox(gui, indexedCollection.count(itemIndex), return_val);
+            if (!rows)
+                addCountBox(gui, indexedCollection.count(itemIndex), return_val);
+        }
+        if (rows && (isItemPresent || showEmpty)) {
+            auto label = gui->getGame()->createObject<CTextWidget>();
+            std::string text = listObjectLabel(isItemPresent ? indexedCollection.find(itemIndex)->second : nullptr);
+            if (collection == "equippedCollection") {
+                auto slots = gui->getGame()->getSlotConfiguration()->getConfiguration();
+                auto key = std::to_string(itemIndex);
+                const auto map = gui->getGame()->getMap();
+                const auto player = map ? map->getPlayer() : nullptr;
+                if (!isItemPresent && player) {
+                    for (const auto &[slot, equipped] : player->getEquipped()) {
+                        if (equipped && slot != key && equipped->getCoveredSlots().contains(key)) {
+                            text = "Covered by " + equipped->getLabel();
+                            break;
+                        }
+                    }
+                }
+                if (slots.count(key))
+                    text = CTooltipHandler::getSlotLabel(slots.at(key)->getSlotName()) + "\n" + text;
+            }
+            const auto count = indexedCollection.count(itemIndex);
+            if (count > 1)
+                text += " ×" + std::to_string(count);
+            label->setText(text);
+            label->setCentered(false);
+            label->setTextRole("body");
+            auto layout = std::make_shared<CLayout>();
+            layout->setX(std::to_string(getCellSize(gui) + 8));
+            layout->setY("4");
+            const auto rect = getLayout()->getRect(ptr<CGameGraphicsObject>());
+            layout->setW(std::to_string(std::max(1, rect->w - getCellSize(gui) - 16)));
+            layout->setH(std::to_string(getCellSize(gui) - 8));
+            label->setLayout(layout);
+            label->setPriority(5);
+            return_val.push_back(label);
         }
     }
     return return_val;
@@ -502,6 +728,8 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
                 return true;
             }
             if (button == SDL_BUTTON_LEFT) {
+                gui->focusWidget(self);
+                self->focusedIndex = itemIndex;
                 const bool deferSourceCallback = self->invokeSelect(gui, itemIndex, object);
                 // Command/interaction lists are non-draggable: never start a drag session,
                 // capture the pointer, or defer the source callback. The normal click
@@ -525,7 +753,7 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
                         dragStarted = gui->hasDragSession();
                     }
                 }
-                if (!self->hasSourceDragCallbacks() && (!deferSourceCallback || !dragStarted)) {
+                if ((!self->hasSourceDragCallbacks() && !deferSourceCallback) || !dragStarted) {
                     self->invokeCallback(gui, itemIndex, object);
                 }
                 return true;
@@ -536,11 +764,24 @@ void CListView::addItem(const std::shared_ptr<CGui> &gui, std::list<std::shared_
             return false;
         });
     objectGraphic->setPriority(2);
+    if (rows) {
+        auto iconLayout = std::make_shared<CLayout>();
+        const int edge = std::max(1, getCellSize(gui) - 12);
+        iconLayout->setRect(6, 6, edge, edge);
+        objectGraphic->setLayout(iconLayout);
+    }
     return_val.push_back(objectGraphic);
 }
 
 void CListView::addItemBox(const std::shared_ptr<CGui> &gui,
                            std::list<std::shared_ptr<CGameGraphicsObject>> &return_val) const {
+    if (rows) {
+        auto box = gui->getGame()->createObject<CButton>();
+        box->setLayout(std::make_shared<CParentLayout>());
+        box->setPriority(1);
+        return_val.push_back(box);
+        return;
+    }
     std::shared_ptr<CAnimation> itemBox =
         CAnimationProvider::getAnimation(gui->getGame(), "images/item")
             ->withCallback([](std::shared_ptr<CGui>, SDL_EventType, int, int, int) { return false; });
@@ -627,6 +868,24 @@ void CListView::refresh() {
     refreshSubscriptions();
     CProxyTargetGraphicsObject::refresh();
     refreshAll();
+    if (auto gui = getGui())
+        updateRowPaging(gui, getItemTypesCount(gui));
+}
+
+void CListView::restoreViewState(const ViewState &state) {
+    shift = std::max(0, state.offset);
+    focusedIndex = state.focusedIndex;
+    filterText = state.query;
+    if (searching) {
+        SDL_StopTextInput();
+    }
+    searching = false;
+    refresh();
+    if (auto gui = getGui()) {
+        const int count = getItemTypesCount(gui);
+        clampShift(gui, count);
+        focusedIndex = std::clamp(focusedIndex, -1, std::max(-1, count - 1));
+    }
 }
 
 void CListView::refreshFromRefreshEvent() { refreshFromSubscription(); }
@@ -789,6 +1048,12 @@ int CListView::getYPrefferedSize() const { return yPrefferedSize; }
 void CListView::setYPrefferedSize(int yPrefferedSize) { CListView::yPrefferedSize = yPrefferedSize; }
 
 int CListView::getTileSize() { return tileSize; }
+
+int CListView::getCellSize(const std::shared_ptr<CGui> &gui) const {
+    return rows && gui
+               ? std::max(UiTheme::scaled(gui, tileSize), static_cast<int>(std::lround(76 * gui->getTextScale())))
+               : std::max(1, tileSize);
+}
 
 void CListView::setTileSize(int _tileSize) { tileSize = std::clamp(_tileSize, 1, 512); }
 

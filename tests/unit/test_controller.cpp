@@ -64,10 +64,7 @@ std::shared_ptr<CTile> walkable_tile() {
     return tile;
 }
 
-Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future) {
-    vstd::event_loop<>::instance()->run();
-    return future->get();
-}
+Coords resolve_coords(const std::shared_ptr<vstd::future<Coords, void>> &future) { return future->get(); }
 
 std::shared_ptr<CTile> tile(bool can_step) {
     auto result = std::make_shared<CTile>();
@@ -248,26 +245,30 @@ void test_npc_random_controller_clears_stale_blocked_path() {
                 "NPC random controller should either stay put or replan to a passable step");
 }
 
-void test_ground_controller_ignores_stale_transition_generation() {
+void testGroundControllerReturnsReadyStepBeforeTransition() {
     auto game = std::make_shared<CGame>();
-    auto map = open_tile_map(game, 2, 1);
-    map->getTile(0, 0, 0)->setTileType("stone");
-    map->getTile(1, 0, 0)->setTileType("floor");
+    auto map = open_tile_map(game, 3, 3);
+    map->getTile(1, 1, 0)->setTileType("stone");
+    map->getTile(2, 1, 0)->setTileType("floor");
+    map->getTile(0, 1, 0)->setTileType("floor");
+    map->getTile(0, 1, 0)->setCanStep(false);
 
-    auto creature = creature_at(0, 0, 0);
+    auto creature = creature_at(1, 1, 0);
     creature->setGame(game);
-    creature->setName("unitStaleGroundWalker");
+    creature->setName("unitReadyGroundWalker");
     creature->setHp(1);
     auto controller = std::make_shared<CGroundController>();
     controller->setTileType("floor");
     creature->setController(controller);
     map->addObject(creature);
 
-    auto pending = controller->control(creature);
+    auto result = controller->control(creature);
+    expect_true(result->isReady(), "ground controller should resolve its step without deferred work");
     game->getContext()->advanceTransitionGeneration();
 
-    expect_true(resolve_coords(pending) == Coords(0, 0, 0),
-                "ground controller should ignore deferred steps from stale transition generations");
+    expect_true(resolve_coords(result) == Coords(2, 1, 0),
+                "ground controller should retain its already-resolved passable matching step after a later transition");
+    expect_true(creature->getCoords() == Coords(1, 1, 0), "controller planning should not commit a movement step");
 }
 
 void test_player_controller_prefers_longer_lower_cost_route() {
@@ -475,6 +476,24 @@ void test_player_controller_prefers_cheap_navigation_edge_over_expensive_band() 
     expect_true(player->getCoords() == Coords(4, 0, 0), "the weighted edge crossing should reach the target");
     expect_true(controller->isCompleted(player), "reaching the target through the edge should complete the controller");
     expect_true(map->getTiles().size() == tiles_before, "weighted edge pathing should not materialize extra tiles");
+}
+
+void test_player_controller_approaches_portal_away_from_goal_for_shortest_route() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 11, 2);
+    add_navigation_edge(map, Coords(0, 1, 0), Coords(9, 0, 0));
+    auto player = player_at(game, Coords(0, 0, 0));
+    auto controller = std::make_shared<CPlayerController>();
+    player->setController(controller);
+    controller->setTarget(player, Coords(10, 0, 0));
+
+    for (const auto &expected : {Coords(0, 1, 0), Coords(9, 0, 0), Coords(10, 0, 0)}) {
+        const auto actual = resolve_coords(controller->control(player));
+        expect_true(actual == expected, "player should use the three-step portal route instead of ten direct steps");
+        player->moveTo(actual);
+        controller->onStepCommitted(player, actual);
+    }
+    expect_true(controller->isCompleted(player), "the shortest portal route should complete at the target");
 }
 
 void test_player_controller_uses_navigation_neighbors_for_cross_level_route() {
@@ -1182,13 +1201,14 @@ int main() {
     test_movement_controller_null_and_no_map_paths();
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();
-    test_ground_controller_ignores_stale_transition_generation();
+    testGroundControllerReturnsReadyStepBeforeTransition();
     test_player_controller_prefers_longer_lower_cost_route();
     test_player_controller_stops_and_clears_path_when_obstacle_appears();
     test_npc_random_controller_prefers_longer_lower_cost_route();
     test_target_controller_flow_field_prefers_longer_lower_cost_route();
     test_target_controller_concurrent_requests_extend_and_reuse_shared_flow();
     test_player_controller_prefers_cheap_navigation_edge_over_expensive_band();
+    test_player_controller_approaches_portal_away_from_goal_for_shortest_route();
     test_player_controller_uses_navigation_neighbors_for_cross_level_route();
     test_target_controller_flow_field_uses_navigation_neighbors_for_cross_level_pursuit();
     test_player_controller_respects_disabled_and_one_way_cross_level_edges();

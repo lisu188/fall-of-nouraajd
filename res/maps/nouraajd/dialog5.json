@@ -2,6 +2,7 @@
   "berenDialog": {
     "class": "BerenDialog",
     "properties": {
+      "questIds": "deliverLetterQuest,retrieveRelicQuest,cleanseCaveQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -16,7 +17,8 @@
                   "action": "deliver_letter",
                   "nextStateId": "LETTER_DELIVERED",
                   "text": "I carry a letter for you.",
-                  "condition": "can_deliver_letter"
+                  "condition": "can_deliver_letter",
+                  "actionLabel": "Deliver letter"
                 }
               },
               {
@@ -26,7 +28,8 @@
                   "action": "return_relic",
                   "nextStateId": "RELIC_RETURNED",
                   "text": "I recovered the relic.",
-                  "condition": "can_return_relic"
+                  "condition": "can_return_relic",
+                  "actionLabel": "Return relic"
                 }
               },
               {
@@ -36,7 +39,8 @@
                   "action": "finish_cleanse",
                   "nextStateId": "CAVE_PURGED",
                   "text": "The cave has been cleansed.",
-                  "condition": "can_finish_cleanse"
+                  "condition": "can_finish_cleanse",
+                  "actionLabel": "Complete quest"
                 }
               },
               {
@@ -46,7 +50,8 @@
                   "action": "inspect_stained_glass",
                   "nextStateId": "STAINED_GLASS",
                   "text": "Let me inspect the chapel's stained glass.",
-                  "condition": "can_inspect_stained_glass"
+                  "condition": "can_inspect_stained_glass",
+                  "actionLabel": "Inquisitor"
                 }
               },
               {
@@ -56,7 +61,8 @@
                   "action": "decode_stained_glass_ward",
                   "nextStateId": "SORCERER_WARD",
                   "text": "Decode the warding sigils in the stained glass.",
-                  "condition": "can_decode_stained_glass_ward"
+                  "condition": "can_decode_stained_glass_ward",
+                  "actionLabel": "Sorcerer"
                 }
               },
               {
@@ -143,7 +149,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Father Beren"
     }
   }
 }

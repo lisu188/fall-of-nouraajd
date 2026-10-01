@@ -15,9 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """Castle campaign gates and authored geography, runnable without _game or Heroes III."""
 
+import ast
 import copy
 import importlib.util
 import json
+import re
+import shlex
 import sys
 import struct
 import types
@@ -38,6 +41,19 @@ def loadCastleModule():
     return module
 
 
+def presentationApi():
+    names = {"showReader", "rewardSnapshot", "showRewardReceipt", "requirementMessage"}
+    path = REPO_ROOT / "res/game.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    module = ast.Module(
+        body=[node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name in names],
+        type_ignores=[],
+    )
+    namespace = {}
+    exec(compile(module, str(path), "exec"), namespace)
+    return {name: namespace[name] for name in names}
+
+
 class FakeObject:
     def __init__(self, name="", game_map=None, coords=(3, 3, 0), **properties):
         self.name = name
@@ -47,6 +63,9 @@ class FakeObject:
         self.alive = True
 
     def getName(self):
+        return self.name
+
+    def getTypeId(self):
         return self.name
 
     def getMap(self):
@@ -89,6 +108,9 @@ class FakePlayer(FakeObject):
         self.gold = 37
         self.quest_checks = 0
         self.quests = []
+        self.items = []
+        self.hp = 4
+        self.max_hp = 20
 
     def isPlayer(self):
         return True
@@ -98,6 +120,24 @@ class FakePlayer(FakeObject):
 
     def addGold(self, amount):
         self.gold += amount
+
+    def getHp(self):
+        return self.hp
+
+    def getHpMax(self):
+        return self.max_hp
+
+    def healProc(self, percent):
+        self.hp = min(self.max_hp, self.hp + self.max_hp * percent // 100)
+
+    def addItem(self, name):
+        self.items.append(name)
+
+    def getItems(self):
+        return [FakeObject(item, label="Life potion" if item == "LifePotion" else item) for item in self.items]
+
+    def getEquipped(self):
+        return {}
 
     def checkQuests(self):
         self.quest_checks += 1
@@ -118,12 +158,25 @@ class FakeMap(FakeObject):
         super().__init__("castleGriffinCliff")
         self.objects = {}
         self.player = FakePlayer(self)
+        self.messages = []
+        self.notifications = []
+        self.requirements = []
+        self.readers = []
+        self.gui = types.SimpleNamespace(
+            notify=self.notifications.append,
+            notifyAt=lambda target, text: self.requirements.append((target, text)),
+        )
+        self.handler = types.SimpleNamespace(
+            showMessage=self.messages.append,
+            notify=self.notifications.append,
+            showCampaignScreen=lambda *args: self.readers.append(args),
+        )
         self.game = types.SimpleNamespace(
             getMap=lambda: self,
-            getGuiHandler=lambda: types.SimpleNamespace(showMessage=lambda text: self.messages.append(text)),
+            getGui=lambda: self.gui,
+            getGuiHandler=lambda: self.handler,
             events=[],
         )
-        self.messages = []
 
     def getGame(self):
         return self.game
@@ -185,6 +238,7 @@ class CastleCampaignGateTest(unittest.TestCase):
             campaign=types.SimpleNamespace(complete_scenario=completeScenario, state=lambda game: None),
             claim_once=claimOnce,
             mapQuest=lambda _source: lambda cls: cls,
+            **presentationApi(),
         )
         self.patch = mock.patch.dict(sys.modules, {"game": self.game_stub})
         self.patch.start()
@@ -228,7 +282,7 @@ class CastleCampaignGateTest(unittest.TestCase):
         for _ in range(8):
             self.capture("tower1")
         self.assertEqual(62, self.player.gold)
-        self.assertTrue(any("tower1" in message for message in self.game_map.messages))
+        self.assertTrue(any("tower1" in message for message in self.game_map.notifications))
         self.assertEqual([], self.routes)
         self.assertTrue(self.game_map.getBoolProperty(self.castle.objectiveFlag("tower1")))
         self.assertFalse(self.game_map.getBoolProperty("campaign_castleFinished_griffinCliff"))
@@ -292,7 +346,148 @@ class CastleCampaignGateTest(unittest.TestCase):
         self.assertTrue(self.capture("tower1"))
         self.assertEqual(1, len(self.routes))
         self.assertEqual("completed", self.routes[0][1])
-        self.assertEqual({"fallback_map": "castleGuardianAngels"}, self.routes[0][2])
+        self.assertEqual("castleGuardianAngels", self.routes[0][2]["fallback_map"])
+
+    def testVictorySummaryUsesObservedGoldAndDoesNotRepeatAfterCompletion(self):
+        self.mission.update(objectiveIds=["tower1"])
+        self.game_map.objects["castleMission"].setStringProperty("campaign_mission", json.dumps(self.mission))
+        self.defeatGuard("tower1")
+        self.assertTrue(self.capture("tower1"))
+        self.assertEqual("Rewards received\nGold: +300", self.routes[0][2].get("outcome_summary"))
+        self.assertFalse(self.castle.finishMission(self.game_map))
+        self.assertFalse(self.capture("tower1"))
+        self.assertEqual(1, len(self.routes))
+        self.assertEqual(362, self.player.gold)
+
+    def testVictoryDoesNotInventGoldWhenResolvedGrantIsZero(self):
+        self.mission.update(objectiveIds=["tower1"], victoryGold=0)
+        self.game_map.objects["castleMission"].setStringProperty("campaign_mission", json.dumps(self.mission))
+        self.defeatGuard("tower1")
+        self.assertTrue(self.capture("tower1"))
+        self.assertEqual("", self.routes[0][2].get("outcome_summary"))
+        self.assertEqual(62, self.player.gold)
+
+    def testVictorySummaryUsesActualDeltaInsteadOfConfiguredAmount(self):
+        self.mission.update(objectiveIds=["tower1"])
+        self.game_map.objects["castleMission"].setStringProperty("campaign_mission", json.dumps(self.mission))
+        self.game_map.setBoolProperty(self.castle.objectiveFlag("tower1"), True)
+        self.player.addGold = lambda amount: setattr(self.player, "gold", min(100, self.player.gold + amount))
+        self.assertTrue(self.castle.finishMission(self.game_map))
+        self.assertEqual("Rewards received\nGold: +63", self.routes[0][2].get("outcome_summary"))
+
+
+class CastlePresentationTest(unittest.TestCase):
+    defeatGuard = CastleCampaignGateTest.defeatGuard
+    capture = CastleCampaignGateTest.capture
+
+    @classmethod
+    def setUpClass(cls):
+        cls.castle = loadCastleModule()
+
+    def setUp(self):
+        CastleCampaignGateTest.setUp(self)
+        self.registry = {}
+
+        def register(context):
+            def remember(cls):
+                self.registry[cls.__name__] = cls
+                return cls
+
+            return remember
+
+        self.game_stub.CBuilding = FakeObject
+        self.game_stub.CDialog = FakeObject
+        self.game_stub.CEvent = FakeObject
+        self.game_stub.CQuest = FakeObject
+        self.game_stub.CTrigger = FakeObject
+        self.game_stub.Coords = lambda x, y, z: types.SimpleNamespace(x=x, y=y, z=z)
+        self.game_stub.register = register
+        self.castle.load(None, None)
+
+    def testBlockedGarrisonAndLandingAreAnchoredWithoutAcknowledgment(self):
+        self.assertFalse(self.capture("tower1"))
+        portal = self.registry["CastlePortal"]("portal", self.game_map)
+        self.game_map.canStep = lambda coords: False
+        before = (self.player.gold, vars(self.player.coords).copy(), self.player.properties.copy())
+        portal.onEnter(types.SimpleNamespace(getCause=lambda: self.player))
+        self.assertEqual(2, len(self.game_map.requirements))
+        self.assertIs(self.game_map.objects["tower1"], self.game_map.requirements[0][0])
+        self.assertIs(portal, self.game_map.requirements[1][0])
+        self.assertIn("Defeat its defenders", self.game_map.requirements[0][1])
+        self.assertIn("landing is blocked", self.game_map.requirements[1][1])
+        self.assertEqual(before, (self.player.gold, vars(self.player.coords), self.player.properties))
+        self.assertEqual([], self.game_map.messages + self.game_map.readers)
+
+    def testPaidRestAndProgressAreRetainedWithoutBlocking(self):
+        town = self.game_map.objects["tower1"]
+        town.setBoolProperty("campaign_isTown", True)
+        town.setBoolProperty("campaign_loyalTown", True)
+        self.assertTrue(self.castle.restAtTown(town, self.player))
+        mission = self.registry["CastleMissionStart"]("castleMission", self.game_map)
+        mission.reportProgress()
+        self.assertEqual((27, 20), (self.player.gold, self.player.hp))
+        self.assertEqual(2, len(self.game_map.notifications))
+        self.assertIn("health is fully restored", self.game_map.notifications[0])
+        self.assertIn("Positions secured: 0/7", self.game_map.notifications[1])
+        self.assertEqual([], self.game_map.messages + self.game_map.readers)
+
+    def testCapturedGoldHasOneObservedReceiptBeforeCompletion(self):
+        self.defeatGuard("tower1")
+        self.assertTrue(self.capture("tower1"))
+        self.assertFalse(self.capture("tower1"))
+        self.assertEqual(62, self.player.gold)
+        self.assertEqual(1, len(self.game_map.readers))
+        title, body, action = self.game_map.readers[0]
+        self.assertIn("tower1", title)
+        self.assertIn("Gold: +25", body)
+        self.assertIn("now flies Erathia's banner", body)
+        self.assertEqual("Continue", action)
+        self.assertEqual([], self.game_map.messages)
+        self.assertEqual([], self.routes)
+
+    def testCaptureWithoutGoldUsesOnlyHistory(self):
+        self.defeatGuard("tower1")
+        self.game_map.objects["tower1"].setNumericProperty("campaign_rewardGold", 0)
+        self.assertTrue(self.capture("tower1"))
+        self.assertEqual(37, self.player.gold)
+        self.assertEqual(1, len(self.game_map.notifications))
+        self.assertEqual([], self.game_map.messages + self.game_map.readers)
+
+    def testIntroRetainsOneTitledAcknowledgmentAndObservedStartingSupplies(self):
+        mission = self.registry["CastleMissionStart"]("castleMission", self.game_map)
+        self.assertTrue(mission.initializeMission())
+        self.assertFalse(mission.initializeMission())
+        self.assertEqual(["LifePotion", "LifePotion"], self.player.items)
+        self.assertEqual(20, self.player.hp)
+        self.assertEqual(1, len(self.game_map.readers))
+        title, body, action = self.game_map.readers[0]
+        self.assertTrue(title)
+        self.assertIn(self.mission["intro"], body)
+        self.assertIn("Life potion: +2", body)
+        self.assertEqual("Continue", action)
+        self.assertEqual([], self.game_map.messages)
+
+    def testSupplyConsolidatesAuthoredMessageAndActualGainsOnce(self):
+        supply = self.registry["CastleSupply"](
+            "loyalGarrison",
+            self.game_map,
+            campaign_rewardGold=25,
+            label="Loyal garrison",
+            campaign_aidMessage="The soldiers share medicine and dress your wounds.",
+        )
+        event = types.SimpleNamespace(getCause=lambda: self.player)
+        supply.onEnter(event)
+        supply.onEnter(event)
+        self.assertEqual((62, 20), (self.player.gold, self.player.hp))
+        self.assertEqual(["LifePotion"], self.player.items)
+        self.assertEqual(1, len(self.game_map.readers))
+        title, body, action = self.game_map.readers[0]
+        self.assertEqual("Loyal garrison", title)
+        self.assertIn("soldiers share medicine", body)
+        self.assertIn("Life potion: +1", body)
+        self.assertIn("Gold: +25", body)
+        self.assertEqual("Continue", action)
+        self.assertEqual([], self.game_map.messages)
 
 
 class CastleCampaignAuthoringTest(unittest.TestCase):
@@ -504,6 +699,39 @@ class CastleCampaignAuthoringTest(unittest.TestCase):
                 for name, (obj, z) in after.items():
                     if name in ("castleCatherine", "castleChristian") or "Support" in name:
                         self.assertNotIn((obj["x"], obj["y"], z), landmark_cells)
+
+
+class CastleCampaignPackagingTest(unittest.TestCase):
+    def test_castle_resources_are_staged_and_installed(self):
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+        staged = {}
+        for arguments in re.findall(r"(?m)^\s*configure_file\s*\(([^)]*)\)", cmake):
+            source, destination, *options = shlex.split(arguments)
+            staged[source] = (destination, options)
+
+        sources = {
+            "res/plugins/castle_campaign.py",
+            "res/campaigns/longLiveTheQueen/campaign.json",
+        }
+        for map_name in MAP_NAMES:
+            sources.add(f"res/campaigns/longLiveTheQueen/sources/{map_name}.json")
+            sources.update(
+                f"res/maps/{map_name}/{name}" for name in ("config.json", "dialog.json", "map.json", "script.py")
+            )
+        images = {path.relative_to(REPO_ROOT).as_posix() for path in (REPO_ROOT / "res/images/castle").glob("*.png")}
+        self.assertTrue(images, "the campaign requires its authored Castle artwork")
+        sources.update(images)
+        self.assertEqual([], sorted(sources - staged.keys()), "Castle resources missing from build staging")
+        for source in sorted(sources):
+            with self.subTest(resource=source):
+                self.assertTrue((REPO_ROOT / source).is_file(), "a staged campaign resource must exist")
+                destination, options = staged[source]
+                self.assertEqual(source.removeprefix("res/"), destination)
+                if source in images:
+                    self.assertIn("COPYONLY", options, "binary artwork must be copied without text substitution")
+
+        for directory in ("campaigns", "maps", "plugins", "images"):
+            self.assertRegex(cmake, rf"install\s*\(DIRECTORY\s+res/{directory}\s+DESTINATION\s+fall-of-nouraajd\s*\)")
 
 
 class CastleCampaignContentTest(unittest.TestCase):

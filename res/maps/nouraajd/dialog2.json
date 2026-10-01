@@ -2,6 +2,7 @@
   "dialog": {
     "class": "OctoBogzDialog",
     "properties": {
+      "questIds": "octoBogzQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -43,7 +44,8 @@
                   "condition": "contract_completed",
                   "nextStateId": "COMPLETED_THANKS",
                   "action": "accept_quest",
-                  "text": "The cave is quiet now. The OctoBogz are dead."
+                  "text": "The cave is quiet now. The OctoBogz are dead.",
+                  "actionLabel": "Claim reward"
                 }
               },
               {
@@ -110,7 +112,8 @@
                   "condition": "contract_not_started",
                   "nextStateId": "ACCEPT_QUEST",
                   "action": "accept_quest",
-                  "text": "I'll see the cave purged of OctoBogz."
+                  "text": "I'll see the cave purged of OctoBogz.",
+                  "actionLabel": "Accept contract"
                 }
               },
               {
@@ -184,7 +187,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Refugees"
     }
   }
 }

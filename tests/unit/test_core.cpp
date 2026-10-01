@@ -1228,6 +1228,10 @@ void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services(
     expect_true(closing_context->getTransitionGeneration() == shutdown_generation + 1,
                 "idempotent shutdown should advance transition generation only once");
     expect_true(closing_game->getMap() == nullptr, "shutdown should detach the closed game's active map");
+    closing_game->setMap(nullptr);
+    expect_runtime_error([&]() { closing_game->setMap(closing_map); },
+                         "closed game should reject a new map before changing its state");
+    expect_true(closing_game->getMap() == nullptr, "rejected closed-game map assignment must preserve shutdown state");
     expect_runtime_error([&]() { closing_game->getObjectHandler(); },
                          "closed game should reject object handler access");
     expect_runtime_error([&]() { closing_game->getGuiHandler(); }, "closed game should reject GUI handler access");
@@ -1250,6 +1254,113 @@ void test_game_context_shutdown_is_idempotent_and_preserves_other_game_services(
                 "surviving game should retain its configuration provider after another game shuts down");
     expect_true(survivor_configuration->getConfiguration("items.json") == survivor_items,
                 "surviving configuration provider cache should remain valid after another game shuts down");
+}
+
+void test_effect_cycles_release_with_map_and_context_teardown() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    auto destination = std::make_shared<CMap>();
+    destination->setGame(game);
+    game->setMap(destination);
+    std::weak_ptr<CCreature> discardedActor;
+    std::weak_ptr<CEffect> discardedEffect;
+    std::weak_ptr<CCreature> carriedActor;
+    std::weak_ptr<CEffect> carriedEffect;
+    {
+        auto source = std::make_shared<CMap>();
+        source->setGame(game);
+        auto addBuffedActor = [&](const std::string &name) {
+            auto actor = std::make_shared<CCreature>();
+            actor->setGame(game);
+            actor->setName(name);
+            actor->setLevel(1);
+            actor->setHp(100);
+            source->addObject(actor);
+            auto effect = std::make_shared<CEffect>();
+            effect->setGame(game);
+            effect->setCaster(actor);
+            effect->setVictim(actor);
+            effect->setDuration(10);
+            actor->addEffect(effect);
+            return std::make_pair(actor, effect);
+        };
+        auto discarded = addBuffedActor("discardedActor");
+        discardedActor = discarded.first;
+        discardedEffect = discarded.second;
+        auto carried = addBuffedActor("carriedActor");
+        carriedActor = carried.first;
+        carriedEffect = carried.second;
+        destination->addObject(carried.first);
+    }
+    expect_true(discardedActor.expired() && discardedEffect.expired(),
+                "discarding a map must release its actor/effect cycles");
+    expect_true(!carriedActor.expired() && !carriedEffect.expired(),
+                "discarding a source map must preserve a carried actor's effects");
+
+    std::weak_ptr<CCreature> retainedActor;
+    {
+        auto retained = std::make_shared<CMap>();
+        retained->setGame(game);
+        retained->setMapName("retainedEffects");
+        auto actor = std::make_shared<CCreature>();
+        actor->setGame(game);
+        actor->setName("retainedActor");
+        retained->addObject(actor);
+        auto effect = std::make_shared<CEffect>();
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        actor->addEffect(effect);
+        context->getMapSessionStore()->put(retained);
+        retainedActor = actor;
+    }
+
+    std::weak_ptr<CCreature> detachedFirst;
+    std::weak_ptr<CCreature> detachedSecond;
+    std::weak_ptr<CEffect> detachedEffect;
+    {
+        auto first = std::make_shared<CCreature>();
+        auto second = std::make_shared<CCreature>();
+        first->setGame(game);
+        second->setGame(game);
+        auto firstEffect = std::make_shared<CEffect>();
+        firstEffect->setCaster(second);
+        firstEffect->setVictim(first);
+        first->addEffect(firstEffect);
+        auto secondEffect = std::make_shared<CEffect>();
+        secondEffect->setCaster(first);
+        secondEffect->setVictim(second);
+        second->addEffect(secondEffect);
+        detachedFirst = first;
+        detachedSecond = second;
+        detachedEffect = firstEffect;
+    }
+    expect_true(!detachedFirst.expired() && !detachedSecond.expired(),
+                "active detached effects must retain their actors until teardown");
+    destination.reset();
+    context->shutdown();
+    expect_true(carriedActor.expired() && carriedEffect.expired(),
+                "shutdown must release active-map actor/effect cycles");
+    expect_true(detachedFirst.expired() && detachedSecond.expired() && detachedEffect.expired(),
+                "shutdown must also release detached and mutually linked effect actors");
+    expect_true(retainedActor.expired(), "shutdown must release retained-map actor/effect cycles");
+}
+
+void test_effect_owner_registry_releases_finished_and_destroyed_owners() {
+    auto game = std::make_shared<CGame>();
+    auto context = game->getContext();
+    for (int i = 0; i < 128; ++i) {
+        auto actor = std::make_shared<CCreature>();
+        actor->setGame(game);
+        auto effect = std::make_shared<CEffect>();
+        actor->addEffect(effect);
+        expect_true(context->getEffectOwnerCount() == 1, "effect registry should track each owner once");
+        actor->removeEffect(effect);
+        expect_true(context->getEffectOwnerCount() == 0, "last effect removal must unregister its owner");
+        actor->addEffect(effect);
+        actor.reset();
+        expect_true(context->getEffectOwnerCount() == 0,
+                    "destroyed effect owners must not leave expired weak allocations in the registry");
+    }
 }
 
 void test_playtest_trace_records_and_helper_payloads() {
@@ -2809,6 +2920,8 @@ int main() {
     test_game_context_rejects_services_without_owner_game();
     test_game_context_transition_generation_helpers_and_shutdown();
     test_game_context_shutdown_is_idempotent_and_preserves_other_game_services();
+    test_effect_cycles_release_with_map_and_context_teardown();
+    test_effect_owner_registry_releases_finished_and_destroyed_owners();
     test_playtest_trace_records_and_helper_payloads();
     test_delayed_future_handlers_run_through_event_loop();
     test_script_rejects_executable_expressions();

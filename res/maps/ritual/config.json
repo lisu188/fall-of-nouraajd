@@ -158,6 +158,7 @@
   "chapelWarningDialog": {
     "class": "ChapelWarningDialog",
     "properties": {
+      "questIds": "ritualQuest,destroyAnchorsQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -198,12 +199,14 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Chapel Witness"
     }
   },
   "capturedSoulDialog": {
     "class": "CapturedSoulDialog",
     "properties": {
+      "questIds": "rescueCaptiveQuest",
       "states": [
         {
           "class": "CDialogState",
@@ -218,7 +221,8 @@
                   "condition": "can_free_captive",
                   "action": "free_captive",
                   "nextStateId": "GOOD_END",
-                  "text": "Break the glass and pull the captive free."
+                  "text": "Break the glass and pull the captive free.",
+                  "actionLabel": "Free captive"
                 }
               },
               {
@@ -302,18 +306,20 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "The Captive"
     }
   },
   "recordsDialog": {
     "class": "RecordsDialog",
     "properties": {
+      "questIds": "ritualQuest",
       "states": [
         {
           "class": "CDialogState",
           "properties": {
             "stateId": "ENTRY",
-            "text": "Ritual records mention that every fifth chant draws new defenders from the crypt halls.",
+            "text": "Ritual records describe a measured rhythm: new defenders arrive every four turns while the anchors stand. Every five turns, the chant draws the captive closer to the binding.",
             "options": [
               {
                 "ref": "exitOption",
@@ -324,7 +330,8 @@
             ]
           }
         }
-      ]
+      ],
+      "speaker": "Ritual Records"
     }
   }
 }

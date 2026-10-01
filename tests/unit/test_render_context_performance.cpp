@@ -16,15 +16,31 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "core/CController.h"
+#include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CMap.h"
+#include "core/CStats.h"
 #include "core/CUtil.h"
 #include "gui/CGui.h"
+#include "gui/CDetailViewport.h"
+#include "gui/CLayout.h"
 #include "gui/CRenderContext.h"
 #include "gui/CSdlResources.h"
+#include "gui/CTextManager.h"
+#include "gui/panel/CGameCampaignBrowserPanel.h"
+#include "gui/panel/CGameCharacterPanel.h"
+#include "gui/panel/CGameLootPanel.h"
+#include "gui/panel/CGameTextPanel.h"
 #include "gui/object/CGameGraphicsObject.h"
+#include "handler/CObjectHandler.h"
+#include "object/CInteraction.h"
+#include "object/CPlayer.h"
 #include "test_harness.h"
 
 #include <cstddef>
 #include <memory>
+#include <iostream>
 
 namespace {
 
@@ -148,9 +164,276 @@ void test_render_context_stable_scene_frame_copies_do_not_grow() {
     expect_true(second.failedCopies == 0, "re-rendering an unchanged scene must not fail any copies");
 }
 
+void test_styled_text_reuses_bounded_cache() {
+    auto gui = make_headless_gui();
+    auto text = gui->getTextManager();
+    auto rect = CUtil::rect(0, 0, 600, 120);
+    constexpr int entries = 200;
+    constexpr int passes = 10;
+    for (int index = 0; index < entries; ++index) {
+        const auto measured = text->measureText("Inventory entry " + std::to_string(index), rect->w);
+        expect_true(measured.first > 0 && measured.second > 0, "bundled fonts must load in performance guards");
+    }
+    const auto loads = text->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int pass = 0; pass < passes; ++pass) {
+        for (int index = 0; index < entries; ++index) {
+            text->drawTextStyled("Inventory entry " + std::to_string(index), rect);
+        }
+    }
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(text->getTextureLoadCount() == loads, "unchanged text must not rasterize again on subsequent frames");
+    expect_true(text->getCachedTextureCount() == entries, "repeated text must retain exactly the warmed entries");
+    expect_true(copies.successfulCopies == entries * passes && copies.failedCopies == 0,
+                "cached text must issue exactly one successful copy per draw");
+    for (int index = 0; index < 800; ++index)
+        text->measureText("History entry " + std::to_string(index), rect->w);
+    expect_true(text->getCachedTextureCount() <= 512, "long sessions must respect the text texture budget");
+    expect_true(text->getCachedFontCount() <= 24, "font glyph caches must remain bounded");
+    text->clearCache();
+    const auto beforeInvalidation = text->getTextureLoadCount();
+    text->measureText("Inventory entry 0", rect->w);
+    expect_true(text->getTextureLoadCount() == beforeInvalidation + 1,
+                "explicit invalidation must rebuild obsolete font textures exactly once");
+    std::cout << "[text cache] warm entries=" << entries << " redraw copies=" << copies.successfulCopies
+              << " redraw loads=" << text->getTextureLoadCount() - beforeInvalidation - 1
+              << " texture budget=512 font budget=24\n";
+}
+
+void test_choice_layout_does_not_rasterize_hidden_rows_on_redraw() {
+    auto gui = make_headless_gui();
+    auto browser = std::make_shared<CGameCampaignBrowserPanel>();
+    std::vector<CGameCampaignBrowserPanel::ChoiceOption> choices;
+    for (int index = 0; index < 700; ++index)
+        choices.push_back({std::to_string(index), "Adventure " + std::to_string(index), "Preview", true});
+    browser->configureChoices("Saved adventures", choices, "Load save", "Back");
+    const auto bounds = CUtil::rect(0, 0, 1800, 1000);
+    auto layout = std::make_shared<CLayout>();
+    layout->setRuntimeRect(bounds);
+    browser->setLayout(layout);
+    browser->renderObject(gui, bounds, 0);
+    browser->renderObject(gui, bounds, 0);
+    const auto loads = gui->getTextManager()->getTextureLoadCount();
+    for (int frame = 0; frame < 4; ++frame)
+        browser->renderObject(gui, bounds, 0);
+    const auto redrawLoads = gui->getTextManager()->getTextureLoadCount() - loads;
+    expect_true(redrawLoads == 0, "unchanged long choice lists reuse row metrics without churning the text cache");
+    expect_true(browser->getChoiceViewport().h >= 400,
+                "the long-list render guard measures a usable viewport with valid panel geometry");
+    browser->configureChoices("Changed choices", {{"long", "A newly wrapped label for a different choice", "", true}},
+                              "Choose", "Back");
+    const auto changedBounds = CUtil::rect(0, 0, 600, 676);
+    layout->setRuntimeRect(changedBounds);
+    browser->renderObject(gui, changedBounds, 0);
+    expect_true(gui->getTextManager()->getTextureLoadCount() > loads,
+                "reconfigured choices and viewport changes must rebuild their text metrics");
+    std::cout << "[choice layout] rows=700 redraws=4 redraw texture loads=" << redrawLoads << " budget=0\n";
+}
+
+void test_detail_layout_draws_only_visible_cached_paragraphs() {
+    auto gui = make_headless_gui();
+    auto textManager = gui->getTextManager();
+    std::string text;
+    for (int index = 0; index < 700; ++index) {
+        text += "Journal entry " + std::to_string(index) + ": a discovered clue and its reward.\n";
+    }
+    DetailViewport::Layout layout;
+    const auto viewport = CUtil::rect(0, 0, 600, 180);
+    layout.update(gui, text, viewport->w);
+    const int bottom = std::max(0, layout.getContentHeight() - viewport->h);
+    textManager->clearCache();
+    const auto coldLoads = textManager->getTextureLoadCount();
+    layout.draw(gui, viewport, bottom);
+    const auto visibleLoads = textManager->getTextureLoadCount() - coldLoads;
+    expect_true(visibleLoads > 0 && visibleLoads <= 16,
+                "scrolling to a long detail ending must load only the visible paragraphs");
+    const auto warmLoads = textManager->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int frame = 0; frame < 25; ++frame) {
+        expect_true(!layout.update(gui, text, viewport->w), "warm detail frames must not remeasure hidden paragraphs");
+        layout.draw(gui, viewport, bottom);
+    }
+    const auto redrawLoads = textManager->getTextureLoadCount() - warmLoads;
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(redrawLoads == 0, "warm long-detail frames must load zero text textures");
+    expect_true(copies.successfulCopies == visibleLoads * 25 && copies.failedCopies == 0,
+                "long details must copy only their visible paragraphs on every redraw");
+    expect_true(textManager->getCachedTextureCount() <= 16,
+                "drawing long-detail endings must not repopulate the cache with hidden text");
+    std::cout << "[detail layout] paragraphs=700 redraws=25 visible loads=" << visibleLoads
+              << " visible budget=16 redraw texture loads=" << redrawLoads << " redraw budget=0\n";
+}
+
+void test_reward_receipt_draws_only_visible_cached_rows() {
+    auto gui = make_headless_gui();
+    auto textManager = gui->getTextManager();
+    auto rewards = std::make_shared<CGameLootPanel>();
+    std::set<std::shared_ptr<CItem>> items;
+    for (int index = 0; index < 700; ++index) {
+        auto item = std::make_shared<CItem>();
+        item->setLabel("Recovered relic " + std::to_string(1000 + index) + " from the forgotten archive");
+        items.insert(item);
+    }
+    rewards->setItems(items);
+    const auto viewport = CUtil::rect(0, 0, 600, 180);
+    rewards->renderRewards(gui, viewport, 0);
+    rewards->mouseWheelEvent(gui, SDL_MOUSEWHEEL, 1, 1, 0, -1000000);
+    textManager->clearCache();
+    const auto coldLoads = textManager->getTextureLoadCount();
+    rewards->renderRewards(gui, viewport, 0);
+    const auto visibleLoads = textManager->getTextureLoadCount() - coldLoads;
+    expect_true(visibleLoads > 0 && visibleLoads <= 16,
+                "long reward receipts must rasterize only a bounded visible set after scrolling");
+    const auto warmLoads = textManager->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int frame = 0; frame < 25; ++frame) {
+        rewards->renderRewards(gui, viewport, 0);
+    }
+    const auto redrawLoads = textManager->getTextureLoadCount() - warmLoads;
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(redrawLoads == 0, "warm long-receipt frames must load zero additional text textures");
+    expect_true(copies.successfulCopies > 0 && copies.successfulCopies <= 16 * 25 && copies.failedCopies == 0,
+                "long reward receipts must copy only visible rows on each warm frame");
+    expect_true(textManager->getCachedTextureCount() <= 16,
+                "warm receipt redraws must not repopulate the texture cache with hidden rows");
+    std::cout << "[reward receipt] rows=700 redraws=25 visible loads=" << visibleLoads
+              << " visible budget=16 redraw texture loads=" << redrawLoads
+              << " redraw budget=0 copies=" << copies.successfulCopies << " copy budget=400\n";
+}
+
+void testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability() {
+    auto gui = make_headless_gui();
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    game->getObjectHandler()->registerType("CPlayerController", []() { return std::make_shared<CPlayerController>(); });
+    game->getObjectHandler()->registerType("CPlayerFightController",
+                                           []() { return std::make_shared<CPlayerFightController>(); });
+    game->setMap(map);
+    game->setGui(gui);
+    map->setGame(game);
+    gui->setGame(game);
+
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setName("player");
+    player->setLevel(1);
+    auto stats = std::make_shared<CStats>();
+    stats->setMainStat("intelligence");
+    stats->setIntelligence(10);
+    stats->setStamina(10);
+    player->setBaseStats(stats);
+    player->setHp(17);
+    player->setMana(12);
+    map->setObjects({player});
+    expect_true(map->getPlayer() == player, "ability render guard must use the map's actual player");
+
+    auto action = std::make_shared<CInteraction>();
+    action->setGame(game);
+    action->setName("guardWard");
+    action->setTypeId("guardWard");
+    action->setLabel("Watcher's ward");
+    action->setManaCost(8);
+    action->setSelfTarget(true);
+    const std::string description =
+        "Raise a ward around the caster, protecting them while they prepare their next move. "
+        "The effect follows the selected ability's existing combat rules and ends when its protection expires. "
+        "Read the mana requirement and target before choosing an action in combat.";
+    action->setDescription(description);
+    player->addAction(action);
+    auto panel = std::make_shared<CGameCharacterPanel>();
+    panel->interactionsCallback(gui, 0, action);
+    const auto hp = player->getHp();
+    const auto mana = player->getMana();
+    const auto turn = map->getTurn();
+    const auto viewport = CUtil::rect(0, 0, 320, 240);
+    auto textManager = gui->getTextManager();
+    expect_true(textManager->measureText(description, viewport->w).second >
+                    textManager->measureText("Short description", viewport->w).second,
+                "ability render guard must exercise wrapped descriptions");
+    textManager->clearCache();
+    const auto availableDetails = panel->getAbilityDetails(gui);
+    expect_true(availableDetails.find(description) != std::string::npos,
+                "selected ability details must include the authored effect description");
+    const auto coldLoads = textManager->getTextureLoadCount();
+    panel->renderAbilityDetails(gui, viewport, 0);
+    const auto initialLoads = textManager->getTextureLoadCount() - coldLoads;
+    expect_true(initialLoads > 0 && initialLoads <= 16, "ability details must use a bounded initial texture set");
+    const auto warmLoads = textManager->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int frame = 0; frame < 25; ++frame) {
+        panel->renderAbilityDetails(gui, viewport, 0);
+    }
+    const auto redrawLoads = textManager->getTextureLoadCount() - warmLoads;
+    expect_true(redrawLoads == 0, "unchanged ability details must load zero new textures across 25 redraws");
+    expect_true(player->getHp() == hp && player->getMana() == mana && map->getTurn() == turn,
+                "reading available ability details must not change health, mana, or the map turn");
+
+    player->setMana(3);
+    const auto unavailableDetails = panel->getAbilityDetails(gui);
+    expect_true(unavailableDetails != availableDetails &&
+                    unavailableDetails.find("Unavailable: Needs 5 more mana.") != std::string::npos,
+                "mana changes must invalidate the displayed ability availability");
+    const auto beforeRefresh = textManager->getTextureLoadCount();
+    panel->renderAbilityDetails(gui, viewport, 0);
+    const auto refreshLoads = textManager->getTextureLoadCount() - beforeRefresh;
+    expect_true(refreshLoads > 0 && refreshLoads <= 16, "changed availability must refresh a bounded texture set");
+    const auto refreshedLoads = textManager->getTextureLoadCount();
+    for (int frame = 0; frame < 25; ++frame) {
+        panel->renderAbilityDetails(gui, viewport, 0);
+    }
+    const auto unavailableRedrawLoads = textManager->getTextureLoadCount() - refreshedLoads;
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(unavailableRedrawLoads == 0, "unchanged unavailable ability details must reuse refreshed textures");
+    expect_true(copies.successfulCopies > 0 && copies.failedCopies == 0,
+                "ability detail redraws must render successfully on the software renderer");
+    expect_true(player->getHp() == hp && player->getMana() == 3 && map->getTurn() == turn,
+                "reading unavailable ability details must not change health, mana, or the map turn");
+    std::cout << "[character ability] redraws=25 initial loads=" << initialLoads
+              << " initial budget=16 redraw loads=" << redrawLoads
+              << " redraw budget=0 availability refresh loads=" << refreshLoads
+              << " refresh budget=16 unavailable redraw loads=" << unavailableRedrawLoads
+              << " unavailable redraw budget=0\n";
+    game->getContext()->shutdown();
+}
+
+void testLoadingReaderReusesWarmTextures() {
+    auto gui = make_headless_gui();
+    auto reader = std::make_shared<CGameTextPanel>();
+    reader->setTitle("Please wait");
+    reader->setText("Loading saved adventure...");
+    reader->setCloseable(false);
+    reader->setLayout(std::make_shared<CLayout>());
+    reader->getLayout()->setRect(40, 30, 900, 640);
+    gui->pushChild(reader);
+    auto text = gui->getTextManager();
+    text->clearCache();
+    const auto before = text->getTextureLoadCount();
+    gui->render(0);
+    const auto initialLoads = text->getTextureLoadCount() - before;
+    expect_true(initialLoads > 0 && initialLoads <= 8, "the waiting reader uses a bounded initial texture set");
+    const auto warm = text->getTextureLoadCount();
+    gui->getRenderContext().resetStats();
+    for (int frame = 0; frame < 25; ++frame)
+        gui->render(0);
+    const auto redrawLoads = text->getTextureLoadCount() - warm;
+    const auto copies = gui->getRenderContext().getStats();
+    expect_true(redrawLoads == 0, "an unchanged waiting footer and message load zero textures over 25 redraws");
+    expect_true(copies.successfulCopies > 0 && copies.failedCopies == 0 && reader->getParent() == gui,
+                "the waiting reader renders successfully and remains attached after redraws");
+    std::cout << "[loading reader] redraws=25 initial loads=" << initialLoads
+              << " initial budget=8 redraw loads=" << redrawLoads << " redraw budget=0\n";
+    reader->close();
+}
+
 } // namespace
 
 void run_render_context_performance_tests() {
     test_render_context_bulk_copy_accounting_is_exact();
     test_render_context_stable_scene_frame_copies_do_not_grow();
+    test_styled_text_reuses_bounded_cache();
+    test_choice_layout_does_not_rasterize_hidden_rows_on_redraw();
+    test_detail_layout_draws_only_visible_cached_paragraphs();
+    test_reward_receipt_draws_only_visible_cached_rows();
+    testCharacterAbilityDetailsReuseTexturesAndRefreshAvailability();
+    testLoadingReaderReusesWarmTextures();
 }

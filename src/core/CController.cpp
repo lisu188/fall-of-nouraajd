@@ -325,13 +325,13 @@ CTargetController::CTargetController() {}
 
 std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shared_ptr<CCreature> creature) {
     if (!creature || !creature->getMap()) {
-        return vstd::later([]() { return ZERO; });
+        return vstd::make_ready_future(ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     auto sourceMap = deferredContext.map.lock();
     auto target_object = sourceMap ? sourceMap->getObjectByName(target) : nullptr;
     if (!target_object) {
-        return vstd::later([deferredContext]() { return deferredContext.fallback; });
+        return vstd::make_ready_future(deferredContext.fallback);
     }
     return vstd::async([deferredContext, target_object]() {
         std::shared_ptr<CCreature> creature;
@@ -348,15 +348,14 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
 
 std::shared_ptr<vstd::future<Coords, void>> CController::control(std::shared_ptr<CCreature> c) {
     if (!c) {
-        return vstd::later([]() { return ZERO; });
+        return vstd::make_ready_future(ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(c);
-    return vstd::later([deferredContext]() {
-        std::shared_ptr<CCreature> creature;
-        std::shared_ptr<CMap> map;
-        return resolve_deferred_creature_context(deferredContext, creature, map) ? creature->getCoords()
-                                                                                 : deferredContext.fallback;
-    });
+    std::shared_ptr<CCreature> creature;
+    std::shared_ptr<CMap> map;
+    return vstd::make_ready_future(resolve_deferred_creature_context(deferredContext, creature, map)
+                                       ? creature->getCoords()
+                                       : deferredContext.fallback);
 }
 
 void CController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &) {}
@@ -371,70 +370,65 @@ void CTargetController::setTarget(std::string target) { this->target = target; }
 
 std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shared_ptr<CCreature> creature) {
     if (!creature) {
-        return vstd::later([]() { return ZERO; });
+        return vstd::make_ready_future(ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([deferredContext]() {
-        std::shared_ptr<CCreature> creature;
-        std::shared_ptr<CMap> map;
-        if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-            return deferredContext.fallback;
-        }
-        Coords target = creature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
-        return map->normalizeCoords(target);
-    });
+    std::shared_ptr<CCreature> resolvedCreature;
+    std::shared_ptr<CMap> map;
+    if (!resolve_deferred_creature_context(deferredContext, resolvedCreature, map)) {
+        return vstd::make_ready_future(deferredContext.fallback);
+    }
+    Coords target = resolvedCreature->getCoords() + Coords(vstd::rand(-1, 1), vstd::rand(-1, 1), 0);
+    return vstd::make_ready_future(map->normalizeCoords(target));
 }
 
 std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CNpcRandomController>();
     if (!creature || !creature->getMap()) {
-        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([self, deferredContext]() -> Coords {
-        std::shared_ptr<CCreature> creature;
-        std::shared_ptr<CMap> map;
-        if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-            return deferredContext.fallback;
+    std::shared_ptr<CMap> map;
+    if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
+        return vstd::make_ready_future(deferredContext.fallback);
+    }
+    if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
+        auto next = map->normalizeCoords(self->path[self->currentStep]);
+        if (creature_can_follow_step(map, creature, next)) {
+            return vstd::make_ready_future(next);
         }
-        if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
-            auto next = map->normalizeCoords(self->path[self->currentStep]);
-            if (creature_can_follow_step(map, creature, next)) {
-                return next;
-            }
-            self->path.clear();
-            self->currentStep = 0;
-        }
+        self->path.clear();
+        self->currentStep = 0;
+    }
 
-        if (self->path.empty() || self->currentStep >= static_cast<int>(self->path.size())) {
-            for (int i = 0; i < 10; i++) {
-                auto dx = vstd::rand(-5, 5);
-                auto dy = vstd::rand(-5, 5);
-                auto candidate = map->normalizeCoords(creature->getCoords() + Coords(dx, dy, 0));
-                if (map->canStep(candidate)) {
-                    self->path = CPathFinder::findPath(
-                        creature->getCoords(), candidate, [map](const Coords &c) { return map->canStep(c); },
-                        [](auto) -> std::optional<Coords> { return std::nullopt; },
-                        [map](const Coords &coords) { return map->getNavigationNeighbors(coords); },
-                        [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); },
-                        [map](const Coords &from, const Coords &to) { return movement_step_cost(map, from, to); });
-                    self->currentStep = 0;
-                    break;
-                }
+    if (self->path.empty() || self->currentStep >= static_cast<int>(self->path.size())) {
+        for (int i = 0; i < 10; i++) {
+            auto dx = vstd::rand(-5, 5);
+            auto dy = vstd::rand(-5, 5);
+            auto candidate = map->normalizeCoords(creature->getCoords() + Coords(dx, dy, 0));
+            if (map->canStep(candidate)) {
+                self->path = CPathFinder::findPath(
+                    creature->getCoords(), candidate, [map](const Coords &c) { return map->canStep(c); },
+                    [](auto) -> std::optional<Coords> { return std::nullopt; },
+                    [map](const Coords &coords) { return map->getNavigationNeighbors(coords); },
+                    CPathFinder::mapHeuristic(map),
+                    [map](const Coords &from, const Coords &to) { return movement_step_cost(map, from, to); });
+                self->currentStep = 0;
+                break;
             }
         }
+    }
 
-        if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
-            auto next = map->normalizeCoords(self->path[self->currentStep]);
-            if (creature_can_follow_step(map, creature, next)) {
-                return next;
-            }
-            self->path.clear();
-            self->currentStep = 0;
+    if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
+        auto next = map->normalizeCoords(self->path[self->currentStep]);
+        if (creature_can_follow_step(map, creature, next)) {
+            return vstd::make_ready_future(next);
         }
+        self->path.clear();
+        self->currentStep = 0;
+    }
 
-        return creature->getCoords();
-    });
+    return vstd::make_ready_future(creature->getCoords());
 }
 
 void CNpcRandomController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &) { currentStep++; }
@@ -451,27 +445,24 @@ void CGroundController::setTileType(std::string type) { _tileType = type; }
 std::shared_ptr<vstd::future<Coords, void>> CGroundController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CGroundController>();
     if (!creature || !creature->getMap()) {
-        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([self, deferredContext]() -> Coords {
-        std::shared_ptr<CCreature> creature;
-        std::shared_ptr<CMap> map;
-        if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-            return deferredContext.fallback;
+    std::shared_ptr<CMap> map;
+    if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
+        return vstd::make_ready_future(deferredContext.fallback);
+    }
+    std::vector<Coords> possible;
+    for (auto c : map->getAdjacentCoords(creature->getCoords(), true)) {
+        std::string type = map->getTile(c)->getTileType();
+        if (type == self->getTileType() && map->canStep(c)) {
+            possible.push_back(c);
         }
-        std::vector<Coords> possible;
-        for (auto c : map->getAdjacentCoords(creature->getCoords(), true)) {
-            std::string type = map->getTile(c)->getTileType();
-            if (type == self->getTileType() && map->canStep(c)) {
-                possible.push_back(c);
-            }
-        }
-        if (!possible.empty()) {
-            return *vstd::random_element(possible);
-        }
-        return creature->getCoords();
-    });
+    }
+    if (!possible.empty()) {
+        return vstd::make_ready_future(*vstd::random_element(possible));
+    }
+    return vstd::make_ready_future(creature->getCoords());
 }
 
 CRangeController::CRangeController() {}
@@ -479,27 +470,24 @@ CRangeController::CRangeController() {}
 std::shared_ptr<vstd::future<Coords, void>> CRangeController::control(std::shared_ptr<CCreature> creature) {
     auto self = this->ptr<CRangeController>();
     if (!creature || !creature->getMap()) {
-        return vstd::later([creature]() { return creature ? creature->getCoords() : ZERO; });
+        return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
-    return vstd::later([self, deferredContext]() -> Coords {
-        std::shared_ptr<CCreature> creature;
-        std::shared_ptr<CMap> map;
-        if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
-            return deferredContext.fallback;
+    std::shared_ptr<CMap> map;
+    if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
+        return vstd::make_ready_future(deferredContext.fallback);
+    }
+    std::vector<Coords> possible;
+    std::shared_ptr<CMapObject> targetObject = map->getObjectByName(self->getTarget());
+    for (auto c : map->getAdjacentCoords(creature->getCoords(), true)) {
+        if ((!targetObject || map->getDistance(targetObject->getCoords(), c) < self->distance) && map->canStep(c)) {
+            possible.push_back(c);
         }
-        std::vector<Coords> possible;
-        std::shared_ptr<CMapObject> targetObject = map->getObjectByName(self->getTarget());
-        for (auto c : map->getAdjacentCoords(creature->getCoords(), true)) {
-            if ((!targetObject || map->getDistance(targetObject->getCoords(), c) < self->distance) && map->canStep(c)) {
-                possible.push_back(c);
-            }
-        }
-        if (!possible.empty()) {
-            return *vstd::random_element(possible);
-        }
-        return creature->getCoords();
-    });
+    }
+    if (!possible.empty()) {
+        return vstd::make_ready_future(*vstd::random_element(possible));
+    }
+    return vstd::make_ready_future(creature->getCoords());
 }
 
 std::string CRangeController::getTarget() { return target; }
@@ -837,12 +825,12 @@ bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
 bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) { return hasPendingPath(player); }
 
 std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
+    const auto map = player->getMap();
     return CPathFinder::findPath(
-        player->getCoords(), *target, [player](Coords coords) { return player->getMap()->canStep(coords); },
+        player->getCoords(), *target, [map](Coords coords) { return map->canStep(coords); },
         [](auto) -> std::optional<Coords> { return std::nullopt; },
-        [player](const Coords &coords) { return player->getMap()->getNavigationNeighbors(coords); },
-        [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); },
-        [player](const Coords &from, const Coords &to) { return movement_step_cost(player->getMap(), from, to); });
+        [map](const Coords &coords) { return map->getNavigationNeighbors(coords); }, CPathFinder::mapHeuristic(map),
+        [map](const Coords &from, const Coords &to) { return movement_step_cost(map, from, to); });
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {

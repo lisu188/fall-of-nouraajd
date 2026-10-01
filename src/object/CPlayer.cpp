@@ -44,6 +44,14 @@ std::string questId(const std::shared_ptr<CQuest> &quest) {
 }
 } // namespace
 
+std::string CPlayer::getUiDialogueHistory() { return uiDialogueHistory; }
+
+void CPlayer::setUiDialogueHistory(std::string history) { uiDialogueHistory = std::move(history); }
+
+std::string CPlayer::getUiDefeatReceipt() { return uiDefeatReceipt; }
+
+void CPlayer::setUiDefeatReceipt(std::string receipt) { uiDefeatReceipt = std::move(receipt); }
+
 void CPlayer::checkQuests() {
     if (checkingQuests) {
         return;

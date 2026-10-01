@@ -67,7 +67,7 @@ def restAtTown(marker, player):
         return False
     player.addGold(-TOWN_REST_GOLD)
     player.healProc(100)
-    marker.getGame().getGuiHandler().showMessage("After a warm meal and a quiet rest, your health is fully restored.")
+    marker.getGame().getGuiHandler().notify("After a warm meal and a quiet rest, your health is fully restored.")
     return True
 
 
@@ -107,13 +107,22 @@ def finishMission(game_map):
     game_map.setBoolProperty(finished_flag, True)
     player.setBoolProperty("campaign_castleCompleted_" + data["scenarioId"], True)
     player.addQuest(data["questId"])
+    gold_before = player.getGold()
     player.addGold(data.get("victoryGold", 0))
+    gold_received = player.getGold() - gold_before
     player.checkQuests()
-    campaign.complete_scenario(game_map.getGame(), "completed", fallback_map=data.get("nextMap") or None)
+    campaign.complete_scenario(
+        game_map.getGame(),
+        "completed",
+        fallback_map=data.get("nextMap") or None,
+        outcome_summary=f"Rewards received\nGold: +{gold_received}" if gold_received > 0 else "",
+    )
     return True
 
 
 def captureObjective(marker, player):
+    from game import requirementMessage, rewardSnapshot, showRewardReceipt
+
     if not canInteract(marker, player):
         return False
     game_map = marker.getMap()
@@ -124,14 +133,20 @@ def captureObjective(marker, player):
         return False
     guards = [name for name in marker.getStringProperty("campaign_guards").split(",") if name]
     if any(not game_map.getBoolProperty(defeatedFlag(name)) for name in guards):
-        game_map.getGame().getGuiHandler().showMessage(
-            "The garrison still holds this position. Defeat its defenders first."
+        requirementMessage(
+            game_map.getGame(), marker, "The garrison still holds this position. Defeat its defenders first."
         )
         return False
     game_map.setBoolProperty(objectiveFlag(object_id), True)
     marker.setStringProperty("animation", "images/castle/liberatedBanner")
+    before = rewardSnapshot(player)
     player.addGold(marker.getNumericProperty("campaign_rewardGold"))
-    game_map.getGame().getGuiHandler().showMessage(marker.getStringProperty("label") + " now flies Erathia's banner.")
+    label = marker.getStringProperty("label") or "Captured position"
+    message = label + " now flies Erathia's banner."
+    if player.getGold() > before["gold"]:
+        showRewardReceipt(game_map.getGame(), label, before, message)
+    else:
+        game_map.getGame().getGuiHandler().notify(message)
     finishMission(game_map)
     return True
 
@@ -161,6 +176,7 @@ def load(self, context):
     from game import Coords
     from game import claim_once
     from game import register
+    from game import requirementMessage, rewardSnapshot, showRewardReceipt
 
     @register(context)
     class CastleMissionStart(CEvent):
@@ -169,7 +185,7 @@ def load(self, context):
             data = missionData(game_map)
             captured = sum(game_map.getBoolProperty(objectiveFlag(name)) for name in data.get("objectiveIds", []))
             defeated = sum(game_map.getBoolProperty(defeatedFlag(name)) for name in data.get("enemyHeroIds", []))
-            self.getGame().getGuiHandler().showMessage(
+            self.getGame().getGuiHandler().notify(
                 f"Positions secured: {captured}/{len(data.get('objectiveIds', []))}. "
                 f"Enemy commanders defeated: {defeated}/{len(data.get('enemyHeroIds', []))}."
             )
@@ -204,10 +220,11 @@ def load(self, context):
             data = missionData(game_map)
             player.addQuest(data["questId"])
             if claim_once(game_map, "campaign_castleStarted_" + data["scenarioId"]):
+                before = rewardSnapshot(player)
                 player.healProc(100)
                 player.addItem("LifePotion")
                 player.addItem("LifePotion")
-                self.getGame().getGuiHandler().showMessage(data["intro"])
+                showRewardReceipt(self.getGame(), "Mission briefing", before, data["intro"])
             self.setBoolProperty("campaign_castleInitialized", True)
             return True
 
@@ -385,7 +402,7 @@ def load(self, context):
                 player.setStringProperty("campaign_castlePortalArrival", "")
                 return
             if not self.getMap().canStep(target):
-                self.getGame().getGuiHandler().showMessage("The landing is blocked.")
+                requirementMessage(self.getGame(), self, "The landing is blocked.")
                 return
             player.setStringProperty("campaign_castlePortalArrival", f"{target.x},{target.y},{target.z}")
             player.setCoords(target)
@@ -395,11 +412,15 @@ def load(self, context):
         def onEnter(self, event):
             player = event.getCause() if event else None
             if canInteract(self, player) and claim_once(self.getMap(), "campaign_castleSupply_" + self.getName()):
+                before = rewardSnapshot(player)
                 player.healProc(100)
                 player.addItem("LifePotion")
                 player.addGold(self.getNumericProperty("campaign_rewardGold"))
                 message = self.getStringProperty("campaign_aidMessage")
-                self.getGame().getGuiHandler().showMessage(
-                    message or "The loyal garrison tends your wounds and shares its supplies."
+                showRewardReceipt(
+                    self.getGame(),
+                    self.getStringProperty("label") or "Garrison supplies",
+                    before,
+                    message or "The loyal garrison tends your wounds and shares its supplies.",
                 )
             showTownServices(self, player)

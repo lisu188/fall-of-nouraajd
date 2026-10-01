@@ -21,10 +21,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CGui.h"
 #include "gui/CSdlResources.h"
 #include "object/CGameObject.h"
+#include <map>
+#include <tuple>
 
 class CTextManager : public CGameObject {
     V_META(CTextManager, CGameObject, vstd::meta::empty())
-    std::unordered_map<std::pair<std::string, int>, fn::sdl::TexturePtr> _textures;
+    using TextKey = std::tuple<std::string, int, std::string, int, Uint32>;
+    std::map<TextKey, fn::sdl::TexturePtr> _textures;
+    std::map<std::pair<std::string, int>, fn::sdl::FontPtr> fonts;
+    std::size_t textureLoads = 0;
 
   public:
     explicit CTextManager(const std::shared_ptr<CGui> &_gui = nullptr);
@@ -47,12 +52,29 @@ class CTextManager : public CGameObject {
 
     int countLines(const std::string &text, int w);
 
-  private:
-    SDL_Texture *getTexture(const std::string &text, int width = 0);
+    void drawTextStyled(const std::string &text, const std::shared_ptr<SDL_Rect> &rect,
+                        const std::string &role = "body", SDL_Color color = {242, 235, 221, 255}, bool centered = false,
+                        int offsetY = 0);
 
-    fn::sdl::TexturePtr loadTexture(std::string text, int width = 0);
+    std::pair<int, int> measureText(const std::string &text, int width, const std::string &role = "body");
+
+    void clearCache();
+
+    std::size_t getCachedTextureCount() const;
+
+    std::size_t getCachedFontCount() const;
+    std::size_t getTextureLoadCount() const { return textureLoads; }
+
+  private:
+    SDL_Texture *getTexture(const std::string &text, int width = 0, const std::string &role = "body",
+                            SDL_Color color = {242, 235, 221, 255});
+
+    fn::sdl::TexturePtr loadTexture(const std::string &text, int width, const std::string &role, int size,
+                                    SDL_Color color);
+
+    TTF_Font *getFont(const std::string &role, int size);
+
+    int getFontSize(const std::string &role) const;
 
     std::weak_ptr<CGui> _gui;
-
-    fn::sdl::FontPtr font;
 };

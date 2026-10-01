@@ -1,0 +1,9 @@
+video=dummy renderer=software uniqueStrings=200 width=600 redrawPasses=200 redrawStrings=10 warmups=1 samples=7
+sample=0 coldMs=17.528300 warmMs=0.087200 redrawMs=117.456800 copies=2000 failed=0
+sample=1 coldMs=33.235500 warmMs=0.089000 redrawMs=122.466500 copies=2000 failed=0
+sample=2 coldMs=17.089400 warmMs=0.086000 redrawMs=130.743500 copies=2000 failed=0
+sample=3 coldMs=16.360100 warmMs=0.089500 redrawMs=118.008400 copies=2000 failed=0
+sample=4 coldMs=17.304400 warmMs=0.087700 redrawMs=112.796600 copies=2000 failed=0
+sample=5 coldMs=21.938800 warmMs=0.088000 redrawMs=111.140200 copies=2000 failed=0
+sample=6 coldMs=16.288300 warmMs=0.090000 redrawMs=103.550800 copies=2000 failed=0
+median coldMs=17.304400 warmMs=0.088000 redrawMs=117.456800 dimensionsChecksum=2099200

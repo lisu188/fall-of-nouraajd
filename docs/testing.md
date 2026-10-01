@@ -128,6 +128,13 @@ python3 test.py --suite full
 Use `--jobs <n>` with any suite to enable the existing sharded runner, for example
 `python3 test.py --suite gameplay --jobs "$(nproc)"`.
 
+The console and expanded-map interaction checks run once in `gameplay`, `full`, and `coverage-safe`. To run only
+these checks, use `python3 test.py ConsoleUiInteractionTest UiMinimapInteractionTest`. Their children use guarded
+Xvfb on Linux and SDL dummy/software rendering on Windows, with separate preferences and silent audio. They verify
+console editing, history bounds, cancellation and focus restoration, plus landmark inspection, explicit travel,
+empty lists and stale scene transitions. Missing `_game` or Linux display tooling is reported as a skip; other
+import errors and child failures remain failures.
+
 ## Campaign scenario gates
 Campaign, quest, dialog, trigger, and content-routing changes should report which scenario subset ran. A skipped
 scenario is not a pass; include the skip reason in the issue or PR final report.
@@ -165,16 +172,19 @@ checks campaign transition into the later maps:
 python3 test.py \
   GameTest.test_map_walkthrough_nouraajd \
   McpServerTest.test_stdio_map_walkthrough_nouraajd \
-  GameTest.test_campaign_transitions_preserve_player_and_start_siege
+  GameTest.test_campaign_transitions_preserve_player_and_start_siege \
+  GameTest.test_campaign_driver_routes_full_campaign_with_carryover
 ```
 
 Normal pull request CI runs content validation plus the fast Nouraajd smoke and targeted quest/reward gates whenever
 native validation is required. The existing `gameplay` and `ui` suites still run after those gates; the campaign gates
 are early, named checks, not a replacement for required gameplay validation.
 
-Full-route campaign scenarios run in the Linux job on the weekly schedule, when manually dispatched with
-`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. If the full-route subset is
-not selected, CI prints the skip reason and does not treat the skipped route as passed.
+The dedicated full-route campaign gate runs in the Linux job on the weekly schedule, when manually dispatched with
+`run-campaign-scenarios=true`, or when a pull request has the `campaign-scenarios` label. These four tests also belong
+to the normal `gameplay` suite. A skip message for the dedicated gate does not mean they were excluded from that
+suite; inspect the individual test results before reporting whether a route ran. A skipped gate itself is never
+counted as passed.
 
 For any quest, campaign, dialog-trigger, or content-routing issue final report, include:
 - which of the fast content validation, fast smoke, targeted quest/reward, and full-route subsets ran;

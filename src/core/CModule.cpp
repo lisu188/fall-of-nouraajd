@@ -17,9 +17,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <utility>
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <optional>
 #include <stdexcept>
+#include <unordered_map>
 
 #include "CGlobal.h"
 #include "../../vstd/veventloop.h"
@@ -84,6 +86,106 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
+
+namespace {
+class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCallbacks> {
+    struct TransitionCallbacks {
+        std::function<void()> beforeEntry;
+        std::function<void(bool)> completion;
+    };
+
+  public:
+    bool requestTransition(const std::shared_ptr<CGame> &game, std::string mapName, std::function<void()> beforeEntry,
+                           std::function<void(bool)> completion) {
+        if (!active.load()) {
+            return false;
+        }
+        const auto id = nextId++;
+        auto bundle =
+            std::make_shared<TransitionCallbacks>(TransitionCallbacks{std::move(beforeEntry), std::move(completion)});
+        transitions.emplace(id, bundle);
+        const std::weak_ptr<TransitionCallbacks> weakBundle = bundle;
+        const auto weakOwner = weak_from_this();
+        CMapTransitionRequest request;
+        request.targetMap = std::move(mapName);
+        request.beforePlayerEntry = [weakOwner, weakBundle]() {
+            auto owner = weakOwner.lock();
+            if (!owner || !owner->active.load()) {
+                throw std::runtime_error("Python transition callbacks have been released");
+            }
+            py::gil_scoped_acquire gil;
+            auto bundle = weakBundle.lock();
+            if (!owner->active.load() || !bundle) {
+                throw std::runtime_error("Python transition callbacks have been released");
+            }
+            bundle->beforeEntry();
+        };
+        request.onFinished = [weakOwner, id](bool success) {
+            auto owner = weakOwner.lock();
+            if (!owner || !owner->active.load()) {
+                return;
+            }
+            py::gil_scoped_acquire gil;
+            if (!owner->active.load()) {
+                return;
+            }
+            auto pending = owner->transitions.extract(id);
+            if (!pending.empty()) {
+                pending.mapped()->completion(success);
+            }
+        };
+        try {
+            return game->requestMapTransition(std::move(request));
+        } catch (...) {
+            transitions.erase(id);
+            throw;
+        }
+    }
+
+    bool invoke(vstd::event_loop<> &loop, std::function<void()> callback) {
+        if (!active.load()) {
+            return false;
+        }
+        const auto id = nextId++;
+        callbacks.emplace(id, std::move(callback));
+        const auto weak = weak_from_this();
+        if (!loop.invoke([weak, id]() {
+                auto owner = weak.lock();
+                if (!owner || !owner->active.load()) {
+                    return;
+                }
+                py::gil_scoped_acquire gil;
+                if (!owner->active.load()) {
+                    return;
+                }
+                auto pending = owner->callbacks.extract(id);
+                if (!pending.empty()) {
+                    pending.mapped()();
+                }
+            })) {
+            callbacks.erase(id);
+            return false;
+        }
+        return true;
+    }
+
+    void shutdown() {
+        active.store(false);
+        // Release Python captures while the interpreter is alive. The native queue retains
+        // only weak references and must neither invoke nor destroy Python callbacks at exit.
+        auto pending = std::move(callbacks);
+        callbacks.clear();
+        auto pendingTransitions = std::move(transitions);
+        transitions.clear();
+    }
+
+  private:
+    std::atomic_bool active{true};
+    std::size_t nextId = 0;
+    std::unordered_map<std::size_t, std::function<void()>> callbacks;
+    std::unordered_map<std::size_t, std::shared_ptr<TransitionCallbacks>> transitions;
+};
+} // namespace
 
 PYBIND11_MAKE_OPAQUE(std::vector<std::string>);
 
@@ -344,6 +446,9 @@ void register_python_binding_type_metadata() {
 }
 
 void init_game_module(py::module_ &m) {
+    auto pythonEventCallbacks = std::make_shared<CPythonEventCallbacks>();
+    py::module_::import("atexit").attr("register")(
+        py::cpp_function([pythonEventCallbacks]() { pythonEventCallbacks->shutdown(); }));
     CPlaytestTrace::configureFromEnvironment();
     register_python_binding_type_metadata();
 
@@ -486,6 +591,14 @@ void init_game_module(py::module_ &m) {
         m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
+        .def(
+            "changeMapWithPreparation",
+            [pythonEventCallbacks](const std::shared_ptr<CGame> &game, std::string mapName,
+                                   std::function<void()> beforeEntry, std::function<void(bool)> completion) {
+                return pythonEventCallbacks->requestTransition(game, std::move(mapName), std::move(beforeEntry),
+                                                               std::move(completion));
+            },
+            "Queue a transition, preparing the player after loading and before entry; report success or failure.")
         .def("requestMapTransition", &CGame::requestMapTransition,
              "Queue an explicit map transition request (opt-in persistent map sessions).")
         .def("loadPlugin", &CGame::loadPlugin, "Load a plugin object into the game.")
@@ -503,6 +616,7 @@ void init_game_module(py::module_ &m) {
     py::class_<CGameGraphicsObject, CGameObject, std::shared_ptr<CGameGraphicsObject>>(
         m, "CGameGraphicsObject", "Base class for GUI graphics objects.")
         .def("getGui", &CGameGraphicsObject::getGui, "Return the owning GUI object.")
+        .def("isVisible", &CGameGraphicsObject::isVisible, "Return current visibility including responsive layout.")
         .def("getParent", &CGameGraphicsObject::getParent, "Return the parent graphics object.")
         .def("getChildren", &graphics_children, "Return this graphics object's children.")
         .def("addChild", &CGameGraphicsObject::addChild, "Attach a graphics child.")
@@ -539,6 +653,14 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CGui, CGameGraphicsObject, std::shared_ptr<CGui>>(m, "CGui", "Game GUI root object.")
         .def("getGame", &CGui::getGame, "Return the owning game.")
+        .def("getUiPreferences", &CGui::getUiPreferences)
+        .def("applyUiPreferences", &CGui::applyUiPreferences)
+        .def("getUiScale", &CGui::getUiScale)
+        .def("getTextScale", &CGui::getTextScale)
+        .def("notify", &CGui::notify)
+        .def("notifyAt", &CGui::notifyAt)
+        .def("getUiHistory", &CGui::getUiHistory)
+        .def("isActive", &CGui::isActive)
         .def("hasDragSession", &CGui::hasDragSession, "Return whether a GUI drag transaction is active.")
         .def("hasPointerCapture", &CGui::hasPointerCapture, "Return whether a GUI widget owns pointer capture.")
         .def("read_pixels", &read_gui_pixels, "Read the current SDL renderer pixels as RGBA bytes, width, and height.");
@@ -691,6 +813,19 @@ void init_game_module(py::module_ &m) {
     py::class_<CGuiHandler, CGameObject, std::shared_ptr<CGuiHandler>>(m, "CGuiHandler",
                                                                        "High-level helper for opening UI panels.")
         .def("showMessage", &CGuiHandler::showMessage, "Show a message panel.")
+        .def("notify", &CGuiHandler::notify, "Record nonblocking feedback in History.")
+        .def("showChoice", &CGuiHandler::showChoice, py::arg("title"), py::arg("choicesJson"),
+             py::arg("actionLabel") = "Select", py::arg("backLabel") = "Back")
+        .def("showCharacterCreationOptions", &CGuiHandler::showCharacterCreationOptions, py::arg("classesJson"),
+             py::arg("racesJson"))
+        .def("showConfirm", &CGuiHandler::showConfirm, py::arg("title"), py::arg("body"),
+             py::arg("confirmLabel") = "Confirm", py::arg("cancelLabel") = "Cancel")
+        .def("showPauseMenu", &CGuiHandler::showPauseMenu)
+        .def("showSaveMenu", &CGuiHandler::showSaveMenu)
+        .def("showTextInput", &CGuiHandler::showTextInput, py::arg("title"), py::arg("prompt"),
+             py::arg("initialValue") = "")
+        .def("showLoading", &CGuiHandler::showLoading)
+        .def("hideLoading", &CGuiHandler::hideLoading)
         .def("showTrade", &CGuiHandler::showTrade, "Open a trade panel.")
         .def("showDialog", &CGuiHandler::showDialog, "Open a dialog panel.")
         .def("showQuestion", &CGuiHandler::showQuestion, "Open a question/choice panel.")
@@ -700,6 +835,8 @@ void init_game_module(py::module_ &m) {
         .def("showCampaignScreen", &CGuiHandler::showCampaignScreen, py::arg("title"), py::arg("body"),
              py::arg("actionLabel"),
              "Show a full-window blocking campaign presentation screen; headless runs log and return.")
+        .def("showCampaignArtworkScreen", &CGuiHandler::showCampaignArtworkScreen, py::arg("title"), py::arg("body"),
+             py::arg("actionLabel"), py::arg("artwork"), "Show a campaign screen with optional authored artwork.")
         .def("showCampaignSelection", &CGuiHandler::showCampaignSelection, py::arg("titles"), py::arg("descriptions"),
              py::arg("scenarioCounts"),
              "Show the stable-ID campaign browser; returns the confirmed campaign id or \"\" on cancel/headless.")
@@ -838,8 +975,9 @@ void init_game_module(py::module_ &m) {
         .def("value", &CDamage::value, "Return this packet as a pure DamageValue.")
         .def("apply", &CDamage::apply, py::return_value_policy::reference_internal,
              "Add a pure DamageValue to this packet.")
-        .def("__iadd__", [](CDamage &self, const CDamage &other) -> CDamage & { return self += other; },
-             py::return_value_policy::reference_internal);
+        .def(
+            "__iadd__", [](CDamage &self, const CDamage &other) -> CDamage & { return self += other; },
+            py::return_value_policy::reference_internal);
 
     py::class_<CStats, CGameObject, std::shared_ptr<CStats>>(m, "CStats",
                                                              "Creature stat container used for combat calculations.")
@@ -861,10 +999,12 @@ void init_game_module(py::module_ &m) {
         .def("modifier", &CStats::modifier, "Return numeric stats as a pure StatsModifier.")
         .def("apply", &CStats::apply, py::return_value_policy::reference_internal,
              "Add a pure StatsModifier to this stat container.")
-        .def("__iadd__", [](CStats &self, const CStats &other) -> CStats & { return self += other; },
-             py::return_value_policy::reference_internal)
-        .def("__isub__", [](CStats &self, const CStats &other) -> CStats & { return self -= other; },
-             py::return_value_policy::reference_internal)
+        .def(
+            "__iadd__", [](CStats &self, const CStats &other) -> CStats & { return self += other; },
+            py::return_value_policy::reference_internal)
+        .def(
+            "__isub__", [](CStats &self, const CStats &other) -> CStats & { return self -= other; },
+            py::return_value_policy::reference_internal)
         .def("addBonus", &CStats::addBonus, "Add all numeric stats from another CStats object.")
         .def("removeBonus", &CStats::removeBonus, "Remove all numeric stats from another CStats object.")
         .def("getText", &CStats::getText, "Return formatted stat summary text.");
@@ -1106,7 +1246,8 @@ void init_game_module(py::module_ &m) {
                  &CMapLoader::loadRandomMapWithPlayer),
              "Load a random map and place a player template with a race override.")
         .def("loadNewMap", &CMapLoader::loadNewMap, "Load a map without changing the active player.")
-        .def("save", &CMapLoader::save, "Save the current map state to a named save slot.");
+        .def("save", &CMapLoader::save, "Save the current map state to a named save slot.")
+        .def("saveWithResult", &CMapLoader::saveWithResult, "Save a named slot and report persistence success.");
 
     py::class_<CPluginLoader, std::shared_ptr<CPluginLoader>>(m, "CPluginLoader", "Helpers for loading plugins.")
         .def("loadPlugin", &CPluginLoader::loadPlugin, "Load a Python plugin resource into the game.")
@@ -1133,7 +1274,12 @@ void init_game_module(py::module_ &m) {
                                                                         "Global async event loop utility.")
         .def_static("instance", &CRuntimeBridge::event_loop_instance, "Return the singleton event loop instance.")
         .def("run", &vstd::event_loop<>::run, "Process queued tasks/events once.")
-        .def("invoke", &vstd::event_loop<>::invoke, "Queue a callable for later execution.");
+        .def(
+            "invoke",
+            [pythonEventCallbacks](vstd::event_loop<> &loop, std::function<void()> callback) {
+                return pythonEventCallbacks->invoke(loop, std::move(callback));
+            },
+            "Queue a callable for later execution; cancel pending calls when Python exits.");
 
     auto vector_string = py::bind_vector<std::vector<std::string>>(m, "std::vector<std::string>");
     vector_string.doc() = "Mutable list of strings.";
@@ -1200,6 +1346,7 @@ void init_game_module(py::module_ &m) {
         .def("getHpRatio", &CCreature::getHpRatio, "Return HP percentage (0-100).")
         .def("isAlive", &CCreature::isAlive, "Return whether HP is above zero.")
         .def("getMana", &CCreature::getMana, "Return current mana.")
+        .def("getManaMax", &CCreature::getManaMax, "Return maximum mana.")
         .def("healProc", &CCreature::healProc, "Restore HP by percentage of max HP.")
         .def("heal", &CCreature::heal, "Restore HP by fixed amount (0 means full heal).")
         .def("getHpMax", &CCreature::getHpMax, "Return maximum HP.")
@@ -1290,6 +1437,8 @@ void init_game_module(py::module_ &m) {
 
     py::class_<CGamePanel, CGameGraphicsObject, std::shared_ptr<CGamePanel>>(m, "CGamePanel", "Base in-game GUI panel.")
         .def("refreshViews", &CGamePanel::refreshViews, "Refresh list views contained by the panel.")
+        .def("setTitle", &CGamePanel::setTitle)
+        .def("setCloseable", &CGamePanel::setCloseable)
         .def("close", &CGamePanel::close, "Close this panel.");
 
     py::class_<CGameTradePanel, CGamePanel, std::shared_ptr<CGameTradePanel>>(m, "CGameTradePanel", "Trade panel.")
@@ -1376,6 +1525,8 @@ void init_game_module(py::module_ &m) {
         .def("setCentered", &CGameTextPanel::setCentered, "Set whether text is centered.");
 
     py::class_<CListView, CProxyTargetGraphicsObject, std::shared_ptr<CListView>>(m, "CListView", "List view widget.")
+        .def("getRows", &CListView::getRows, "Return whether the list displays named rows.")
+        .def("getCellSize", &CListView::getCellSize, "Return the scaled row height or grid cell size.")
         .def("getCollection", &CListView::getCollection, "Return parent collection callback name.")
         .def("setCollection", &CListView::setCollection, "Set parent collection callback name.")
         .def("getCallback", &CListView::getCallback, "Return parent click callback name.")

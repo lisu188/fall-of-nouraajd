@@ -1,0 +1,13 @@
+video=dummy renderer=software rows=700 layout=1800x1000
+frame=0 textureLoads=729 cached=217
+frame=1 textureLoads=6 cached=223
+frame=2 textureLoads=0 cached=223
+frame=3 textureLoads=0 cached=223
+frame=4 textureLoads=0 cached=223
+
+video=dummy renderer=software rows=700 layout=unattached
+frame=0 textureLoads=715 cached=203
+frame=1 textureLoads=6 cached=209
+frame=2 textureLoads=0 cached=209
+frame=3 textureLoads=0 cached=209
+frame=4 textureLoads=0 cached=209

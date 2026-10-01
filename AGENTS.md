@@ -308,14 +308,12 @@ Coverage reports are generated under `coverage/`.
 
 ## GUI and screenshot tests
 
-Run automated game, GUI, and screenshot tests on virtual or offscreen displays. Never open test windows on the user's
-desktop, steal focus, or require the user to dismiss test UI. This also applies to screenshot regeneration and MCP
-sessions that initialize a GUI.
-
-Use Xvfb on Linux. On Windows, use a verified SDL offscreen/dummy driver with software rendering, or an isolated virtual
-display such as WSL with Xvfb or a VM. Set the display environment before SDL initializes, and verify that screenshot
-readback contains rendered pixels. Do not silently fall back to the user's visible desktop when virtual-display setup
-fails; report the exact blocked check and continue checks that do not need a GUI.
+Run all automated game GUI tests, screenshot capture, and GUI-driven MCP validation on an isolated virtual or
+offscreen display. Never open test windows on the user's desktop or steal focus. On Linux, use the Xvfb setup below.
+On Windows, use SDL's dummy/offscreen video driver with software rendering when the test supports it, or an available
+isolated virtual desktop/display. If a test requires a real display and no isolated display is available, report that
+specific validation as blocked; do not fall back to visible desktop windows. Apply this rule to subprocesses and
+delegated agents as well as the primary test process.
 
 When adding or updating GUI-focused tests in `test.py`, follow the existing `XvfbGameplayTest` and `XvfbGameplayProcessTest` style.
 
@@ -360,8 +358,9 @@ When regenerating, the screenshot set must cover, at minimum:
 - at least one screenshot showing each type of panel (one per resource id declared in `res/config/panels.json`);
 - at least one screenshot from each map directory under `res/maps/`, plus one from a randomly generated map.
 
-`scripts/generate_screenshots.py` produces exactly this set (`panel-<id>.png` for every panel and `map-<name>.png`
-for every map plus `map-random.png`). It drives a real headless GUI session, so it needs the `_game` build and, on
+`scripts/generate_screenshots.py` produces this baseline (`panel-<id>.png` for every panel and `map-<name>.png`
+for every map plus `map-random.png`), together with frontend, selected, and overflow states. It drives a real
+headless GUI session, so it needs the `_game` build and, on
 Linux, re-executes itself under `xvfb-run` automatically:
 
 ```sh

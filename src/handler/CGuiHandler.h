@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CGameObject.h"
 
 #include <utility>
+#include <map>
 
 class CListString;
 
@@ -28,6 +29,8 @@ class CMapStringString;
 class CMapStringInt;
 
 class CGamePanel;
+
+class CMap;
 
 class CDialog;
 
@@ -47,9 +50,14 @@ class CGuiHandler : public CGameObject {
 
     void showMessage(std::string message);
 
+    void notify(std::string message);
+
     void showInfo(std::string message, bool centered = false);
 
     bool showQuestion(std::string message);
+
+    bool showConfirm(std::string title, std::string body, std::string confirmLabel = "Confirm",
+                     std::string cancelLabel = "Cancel");
 
     void showTrade(std::shared_ptr<CMarket> market);
 
@@ -58,6 +66,21 @@ class CGuiHandler : public CGameObject {
     void showLoot(std::shared_ptr<CCreature>, std::set<std::shared_ptr<CItem>> items);
 
     std::string showSelection(std::shared_ptr<CListString> list);
+
+    std::string showChoice(std::string title, std::string choicesJson, std::string actionLabel = "Select",
+                           std::string backLabel = "Back");
+
+    std::pair<std::string, std::string> showCharacterCreationOptions(std::string classesJson, std::string racesJson);
+
+    void showPauseMenu();
+
+    void showSaveMenu();
+
+    std::string showTextInput(std::string title, std::string prompt, std::string initialValue = "");
+
+    void showLoading(std::string message);
+
+    void hideLoading();
 
     // Blocking character-creation chooser: two columns of buttons (class options
     // and race options, each an already-formatted label string), returning the
@@ -74,6 +97,7 @@ class CGuiHandler : public CGameObject {
     // progression. Headless execution (no GUI) logs the title/body/action
     // content and returns immediately.
     void showCampaignScreen(std::string title, std::string body, std::string actionLabel);
+    void showCampaignArtworkScreen(std::string title, std::string body, std::string actionLabel, std::string artwork);
 
     // Stable-ID campaign browser: titles/descriptions/scenarioCounts are keyed
     // by stable campaign id. Shows a two-column blocking browser (titles left,
@@ -93,4 +117,8 @@ class CGuiHandler : public CGameObject {
 
   private:
     std::weak_ptr<CGame> _game;
+    std::weak_ptr<CGamePanel> loadingPanel;
+    std::weak_ptr<CMap> managementMap;
+    std::map<std::string, std::shared_ptr<CGamePanel>> managementPanels;
+    std::pair<std::string, std::string> characterPreview;
 };

@@ -25,6 +25,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CInteraction;
 
+class CGameContext;
+
 class CEffect;
 
 class CWeapon;
@@ -55,6 +57,8 @@ typedef std::map<std::string, std::shared_ptr<CInteraction>> CInteractionMap;
 typedef std::map<std::string, std::shared_ptr<CItem>> CItemMap;
 
 class CCreature : public CMapObject, public CMoveable, public CVisitable {
+    friend class CGameContext;
+    friend class CMap;
 
     V_META(CCreature, CMapObject, V_PROPERTY(CCreature, int, exp, getExp, setExp),
            V_PROPERTY(CCreature, int, gold, getGold, setGold), V_PROPERTY(CCreature, int, level, getLevel, setLevel),
@@ -77,8 +81,7 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
                       setClassTracks),
            V_PROPERTY(CCreature, std::set<std::shared_ptr<CCreatureTemplate>>, templates, getTemplates, setTemplates),
            V_PROPERTY(CCreature, bool, npc, isNpc, setNpc), V_METHOD(CCreature, getManaMax, int),
-           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int),
-           V_METHOD(CCreature, getEffects, std::set<std::shared_ptr<CEffect>>))
+           V_METHOD(CCreature, getHpMax, int), V_METHOD(CCreature, getManaRegRate, int))
 
   public:
     CCreature();
@@ -335,6 +338,10 @@ class CCreature : public CMapObject, public CMoveable, public CVisitable {
     virtual void levelUp();
 
   private:
+    void releaseEffectReferences();
+
+    std::weak_ptr<CGameContext> effectOwnerContext;
+
     std::set<std::shared_ptr<CItem>> items;
     std::set<std::shared_ptr<CInteraction>> actions;
     std::set<std::shared_ptr<CEffect>> effects;

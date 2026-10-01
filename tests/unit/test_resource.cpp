@@ -684,6 +684,51 @@ void test_map_load_activates_scope_for_map_local_assets() {
     std::filesystem::remove_all(mapDir);
 }
 
+void test_failed_save_restore_preserves_resource_scope() {
+    auto game = CGameLoader::loadGame();
+    auto provider = game->getResourcesProvider();
+    const auto configPath = std::filesystem::path(provider->getPath("config/items.json"));
+    expect_true(!configPath.empty(), "resource root must exist for failed-save scope regression");
+    if (configPath.empty()) {
+        return;
+    }
+    const auto resourceRoot = configPath.parent_path().parent_path();
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const std::string mapA = "unit_active_scope_" + nonce;
+    const std::string mapB = "unit_rejected_scope_" + nonce;
+    const auto directoryA = resourceRoot / "maps" / mapA;
+    const auto directoryB = resourceRoot / "maps" / mapB;
+    const std::string asset = "scope_asset_" + nonce + ".txt";
+    std::filesystem::create_directories(directoryA);
+    std::filesystem::create_directories(directoryB);
+    const auto mapConfig = R"({"properties":{"x":0,"y":0,"z":0},"layers":[]})";
+    expect_true(write_text_file(directoryA / "map.json", mapConfig) &&
+                    write_text_file(directoryB / "map.json", mapConfig) &&
+                    write_text_file(directoryA / asset, "active") && write_text_file(directoryB / asset, "rejected"),
+                "failed-save scope fixtures must be written");
+    auto activeMap = CMapLoader::loadNewMap(game, mapA);
+    game->setMap(activeMap);
+    const std::string slot = "scope-failure-" + nonce;
+    auto snapshot = std::make_shared<json>(
+        json{{"class", "CMap"},
+             {"properties", {{"mapName", mapB}, {"objects", json::array({json{{"class", "MissingScopeActor"}}})}}}});
+    auto envelope = CSaveFormat::buildEnvelope(snapshot, mapB);
+    expect_true(envelope.has_value(), "failing save must pass envelope validation before deserialization");
+    if (envelope) {
+        expect_true(provider->save(CSaveFormat::primaryPath(slot), *envelope), "failed-save fixture must be saved");
+        CGameLoader::loadSavedGame(game, slot);
+        expect_true(game->getMap() == activeMap, "rejected save must preserve the active map");
+        expect_true(provider->getActiveScope() == mapA, "rejected save must preserve the active asset scope");
+        expect_true(provider->load(asset) == "active", "rejected save must still resolve active-map local assets");
+        const auto savePath = provider->getPath(CSaveFormat::primaryPath(slot));
+        if (!savePath.empty()) {
+            std::filesystem::remove(savePath);
+        }
+    }
+    std::filesystem::remove_all(directoryA);
+    std::filesystem::remove_all(directoryB);
+}
+
 } // namespace
 
 int main() {
@@ -701,6 +746,7 @@ int main() {
     test_resource_plugin_trust_boundary_rejects_escapes();
     test_scoped_search_roots_resolve_active_map_assets();
     test_map_load_activates_scope_for_map_local_assets();
+    test_failed_save_restore_preserves_resource_scope();
 
     return finish_tests();
 }
