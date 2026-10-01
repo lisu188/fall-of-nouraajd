@@ -48,5 +48,13 @@
       "animation": "images/buildings/teleporter",
       "label": "Teleporter"
     }
+  },
+  "octobogzLair": {
+    "class": "OctobogzLair",
+    "properties": {
+      "animation": "images/buildings/cave",
+      "label": "OctoBogz Lair",
+      "canStep": true
+    }
   }
 }

@@ -361,7 +361,7 @@
   "cave1": {
     "ref": "Cave",
     "properties": {
-      "message": "The earth quakes as ratmen pour around you\u00e2\u20ac\u201dcommon Pritscher wretches, not the colossal brute the letter promised. Where does their behemoth hide?",
+      "message": "The earth quakes as ratmen pour around you—common Pritscher wretches, not the colossal brute the letter promised. Where does their behemoth hide?",
       "chance": "10",
       "monster": {
         "ref": "Pritz",
@@ -400,11 +400,8 @@
     }
   },
   "cave2": {
-    "class": "OctobogzLair",
+    "ref": "octobogzLair",
     "properties": {
-      "animation": "images/buildings/cave",
-      "label": "OctoBogz Lair",
-      "canStep": true,
       "message": "With the relic blazing, the OctoBogz lair groans and collapses around you."
     }
   },
@@ -606,7 +603,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "ACCEPT_QUEST",
-            "text": "Thank you. The goblins are quick and mean as knives\u00e2\u20ac\u201dplease be careful when you seek them.",
+            "text": "Thank you. The goblins are quick and mean as knives—please be careful when you seek them.",
             "options": [
               {
                 "ref": "exitOption",

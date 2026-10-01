@@ -16543,7 +16543,10 @@ class GameTest(unittest.TestCase):
 
         # Config-level invariants (independent of the loaded class): the cave2 lair
         # spawns the "OctoBogz" creature template, and script.py grants "ShadowBlade".
-        self.assertEqual("OctobogzLair", config["cave2"]["class"])
+        self.assertEqual("octobogzLair", config["cave2"]["ref"])
+        buildings = json.loads((REPO_ROOT / "res/config/buildings.json").read_text(encoding="utf-8"))
+        self.assertEqual("OctobogzLair", buildings["octobogzLair"]["class"])
+        self.assertNotIn("animation", config["cave2"]["properties"])
         hunt_source = (REPO_ROOT / "res/plugins/octobogz_hunt.py").read_text()
         self.assertIn('createObject("OctoBogz")', hunt_source)
         self.assertIn('player.addItem("ShadowBlade")', script)

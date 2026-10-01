@@ -246,6 +246,18 @@ class OctobogzHuntTest(unittest.TestCase):
         self.pump()
         return actor
 
+    def testLairUsesSharedCaveArtworkAndPreservesOriginalDialogue(self):
+        config = json.loads((ROOT / "res/maps/nouraajd/config.json").read_text(encoding="utf-8"))
+        buildings = json.loads((ROOT / "res/config/buildings.json").read_text(encoding="utf-8"))
+        self.assertEqual("octobogzLair", config["cave2"]["ref"])
+        self.assertNotIn("animation", config["cave2"]["properties"])
+        self.assertEqual("OctobogzLair", buildings["octobogzLair"]["class"])
+        self.assertEqual(
+            buildings["Cave"]["properties"]["animation"], buildings["octobogzLair"]["properties"]["animation"]
+        )
+        self.assertIn("you\u2014common", config["cave1"]["properties"]["message"])
+        self.assertIn("knives\u2014please", json.dumps(config, ensure_ascii=False))
+
     def testFreshHuntHasExactlyThreeDeathsAndRepeatInteractionsCannotCompleteEarly(self):
         self.director.start(self.game_map)
         self.director.start(self.game_map)
