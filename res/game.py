@@ -89,6 +89,7 @@ from quest_state import LegacyBoolFlag
 from quest_state import PlayerQuestRegistry
 from quest_state import QuestStateStore
 from quest_state import ensure_quest
+from quest_state import mapQuest
 from quest_state import player_has_quest
 from quest_state import quest_id
 

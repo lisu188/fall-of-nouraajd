@@ -179,6 +179,12 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getQuests",
         "setFightController",
     },
+    "CQuest": {
+        "getHint",
+        "getObjective",
+        "getReward",
+        "isCompleted",
+    },
     "CPlayerController": {
         "isCompleted",
         "setTarget",
@@ -1398,6 +1404,8 @@ class EngineMcpServer:
 
         try:
             result = method_callable(*resolved_args, **resolved_kwargs)
+            if method in {"getQuests", "getCompletedQuests"} and isinstance(result, (set, frozenset)):
+                result = list(result)
             serialized = self._serialize_result(result, registry)
             structured = {"result": serialized}
             return {

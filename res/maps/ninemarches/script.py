@@ -3,6 +3,7 @@ def load(self, context):
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import register
     from game import trigger
@@ -248,6 +249,7 @@ def load(self, context):
 
     # ---- Quests ----
     @register(context)
+    @mapQuest("ninemarches")
     class NineMarchesQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()
@@ -292,6 +294,7 @@ def load(self, context):
                 "dead god on the throne of the world, and your name the last it answered to.",
             )
 
+    @mapQuest("ninemarches")
     class CompanionQuest(CQuest):
         JOINED_FLAG = None
         STARTED_FLAG = None

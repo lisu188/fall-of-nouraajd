@@ -7,6 +7,11 @@
 import json
 
 TOWN_REST_GOLD = 10
+CASTLE_QUEST_MAPS = {
+    "homecoming": "castleHomecoming",
+    "guardianAngels": "castleGuardianAngels",
+    "griffinCliff": "castleGriffinCliff",
+}
 
 
 def decodeMission(text):
@@ -166,6 +171,7 @@ def load(self, context):
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import Coords
     from game import claim_once
@@ -285,7 +291,14 @@ def load(self, context):
             return restAtTown(self.town(), game_map.getPlayer() if game_map else None)
 
     @register(context)
+    @mapQuest(lambda quest: CASTLE_QUEST_MAPS.get(quest.getStringProperty("campaign_scenarioId"), ""))
     class CastleMissionQuest(CQuest):
+        def hasLegacyJournal(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer() if game_map is not None else None
+            flag = "campaign_castleCompleted_" + self.getStringProperty("campaign_scenarioId")
+            return bool(player and player.getBoolProperty(flag))
+
         def isCompleted(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer() if game_map else None

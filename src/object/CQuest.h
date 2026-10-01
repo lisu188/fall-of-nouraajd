@@ -31,6 +31,8 @@ class CQuest : public CGameObject {
 
     virtual void onComplete();
 
+    virtual void captureJournal(bool completed);
+
     virtual std::string getObjective();
 
     virtual std::string getReward();

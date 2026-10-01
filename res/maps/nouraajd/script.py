@@ -3,6 +3,7 @@ def load(self, context):
     from game import CEvent
     from game import CTrigger
     from game import CQuest
+    from game import mapQuest
     from game import CPlayer
     from game import CDialog
     from game import Coords
@@ -441,6 +442,7 @@ def load(self, context):
             campaign.complete_scenario(game, "completed", fallback_map="ritual")
 
     @register(context)
+    @mapQuest("nouraajd")
     class MainQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).get_state("main") == "gooby_slain"
@@ -469,6 +471,7 @@ def load(self, context):
                 )
 
     @register(context)
+    @mapQuest("nouraajd")
     class RolfQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).get_state("rolf") == "skull_recovered"
@@ -488,6 +491,7 @@ def load(self, context):
             )
 
     @register(context)
+    @mapQuest("nouraajd")
     class DeliverLetterQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_letter_delivered()
@@ -505,6 +509,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("nouraajd")
     class RetrieveRelicQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_relic_returned()
@@ -522,6 +527,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("nouraajd")
     class CleanseCaveQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_cave_purged()
@@ -539,7 +545,13 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("nouraajd")
     class VictorQuest(CQuest):
+        def hasLegacyJournal(self):
+            game_map = self.getGame().getMap()
+            player = game_map.getPlayer() if game_map is not None else None
+            return bool(player and player.getStringProperty("nouraajdVictorState"))
+
         def _getState(self):
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
@@ -591,6 +603,7 @@ def load(self, context):
             pass
 
     @register(context)
+    @mapQuest("nouraajd")
     class OctoBogzQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_octobogz_contract_completed()
@@ -623,6 +636,7 @@ def load(self, context):
             )
 
     @register(context)
+    @mapQuest("nouraajd")
     class AmuletQuest(CQuest):
         def isCompleted(self):
             return _quest_system_from(self).is_amulet_returned()

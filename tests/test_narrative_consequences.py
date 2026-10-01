@@ -141,6 +141,7 @@ def loadMapClasses(map_name):
     fake_module.campaign = campaign
     fake_module.narrative = narrative
     fake_module.register = register
+    fake_module.mapQuest = lambda _source: lambda cls: cls
     fake_module.trigger = lambda *args: register(None)
     fake_module.showReader = lambda *args: None
     fake_module.rewardSnapshot = lambda player: player.gold
