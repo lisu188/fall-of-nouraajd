@@ -116,6 +116,7 @@ class PlayerIdentityContentTest(unittest.TestCase):
             instance=lambda: types.SimpleNamespace(invoke=lambda _task: None)
         )
         game_module.campaign = types.SimpleNamespace()
+        game_module.narrative = types.SimpleNamespace()
         with patch.dict(sys.modules, {"game": game_module}):
             for relative in ("res/plugins/interaction.py", "res/maps/nouraajd/script.py"):
                 namespace = {}
