@@ -404,6 +404,34 @@ class FrontendChoiceTest(unittest.TestCase):
                 self.assertIn("already claimed", row["detail"])
                 self.assertTrue(game.context.active)
 
+    def testMenusOmitChapterRetryWithoutPendingOutcome(self):
+        for menu, resume in ((ui.mainMenu, "continue"), (ui.pause, "resume")):
+            with self.subTest(menu=menu.__name__):
+                game = FakeGame([resume], current=object())
+                with (
+                    patch.object(ui.campaign, "hasPendingTransition", return_value=False),
+                    patch.object(ui.campaign, "retryPending") as retry,
+                ):
+                    menu(game)
+                retry.assert_not_called()
+                self.assertEqual(1, len(game.handler.screens))
+                self.assertFalse(any(row["id"] == "retryChapter" for row in game.handler.screens[0][1]))
+                self.assertTrue(game.context.active)
+
+    def testResumingWithPendingOutcomeDoesNotRetryChapterAutomatically(self):
+        for menu, resume in ((ui.mainMenu, "continue"), (ui.pause, "resume")):
+            with self.subTest(menu=menu.__name__):
+                game = FakeGame([resume], current=object())
+                with (
+                    patch.object(ui.campaign, "hasPendingTransition", return_value=True),
+                    patch.object(ui.campaign, "retryPending") as retry,
+                ):
+                    menu(game)
+                retry.assert_not_called()
+                self.assertEqual(1, len(game.handler.screens))
+                self.assertTrue(any(row["id"] == "retryChapter" for row in game.handler.screens[0][1]))
+                self.assertTrue(game.context.active)
+
     def testRejectedChapterRetryKeepsMenuAvailableWithoutRepeatingAutomatically(self):
         for menu, resume in ((ui.mainMenu, "continue"), (ui.pause, "resume")):
             with self.subTest(menu=menu.__name__):

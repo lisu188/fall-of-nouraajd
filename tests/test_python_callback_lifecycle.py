@@ -199,7 +199,7 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
                 loop.run()
             gc.collect()
             assert events[-2:] == [('prepare',), ('completed', True)], events
-            assert instance.getMap().getMapName() == 'ritual'
+            assert instance.getMap().mapName == 'ritual'
             assert all(reference() is None for reference in references)
             print('transition captures released', flush=True)
             """)
@@ -220,6 +220,46 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
             print('transition canceled on shutdown', flush=True)
             """)
         self.assertIn("transition canceled on shutdown", output)
+
+    def testSaveResourceScopeDoesNotReattachMapAfterPluginShutdown(self):
+        output = self.runChild("""
+            from pathlib import Path
+            import shutil
+            import uuid
+            instance = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
+            source = instance.getMap()
+            context = instance.getContext()
+            provider = instance.getResourcesProvider()
+            resource_root = Path(provider.getPath('config/items.json')).parent.parent
+            nonce = uuid.uuid4().hex
+            map_name = 'unitShutdownScope' + nonce
+            map_directory = resource_root / 'maps' / map_name
+            map_directory.mkdir()
+            save_path = None
+            try:
+                (map_directory / 'script.py').write_text(
+                    'def load(self, context):\\n    context.getContext().shutdown()\\n', encoding='utf-8')
+                slot = 'unit-shutdown-scope-' + nonce
+                source.mapName = map_name
+                game.CMapLoader.save(source, slot)
+                save_path = Path(provider.getPath('save/' + slot + '.json'))
+                assert save_path.is_file()
+                source.mapName = 'test'
+                try:
+                    game.CGameLoader.loadSavedGame(instance, slot)
+                except RuntimeError:
+                    pass
+                assert not context.isActive(), 'fixture plugin must close its game context'
+                assert instance.getMap() is None, 'scope unwinding must not reattach the previous closed map'
+                print('closed map stayed detached after save restore', flush=True)
+            finally:
+                if save_path is not None:
+                    save_path.unlink(missing_ok=True)
+                    Path(str(save_path) + '.bak').unlink(missing_ok=True)
+                shutil.rmtree(map_directory)
+            """)
+        self.assertIn("closed map stayed detached after save restore", output)
 
     def testShutdownDuringPreparationDoesNotAttachDestination(self):
         output = self.runChild("""

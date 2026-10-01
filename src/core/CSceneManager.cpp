@@ -195,6 +195,7 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const C
     const auto oldCoords = player ? player->getCoords() : Coords();
     const auto oldController = player ? player->getController() : nullptr;
     const auto oldFightController = player ? player->getFightController() : nullptr;
+    const auto expectedGeneration = pendingGeneration;
     std::shared_ptr<CMap> map;
     try {
         transitionState = TransitionState::Transitioning;
@@ -260,9 +261,14 @@ void CSceneManager::performMapChange(const std::shared_ptr<CGame> &game, const C
                     game->getMap()->attachPlayer(player);
                 }
             }
-            if (request.carryTurn) {
-                game->getMap()->setTurn(oldMap->getTurn());
-            }
+        }
+        // Entry hooks may close or replace the session without throwing. Validate their result
+        // before touching the active map or committing the transition.
+        if (!game->getContext()->isTransitionGenerationCurrent(expectedGeneration) || game->getMap() != map) {
+            throw std::runtime_error("The game session changed during destination entry");
+        }
+        if (oldMap && map && request.carryTurn) {
+            map->setTurn(oldMap->getTurn());
         }
         game->getContext()->advanceTransitionGeneration();
         if (CPlaytestTrace::enabled()) {

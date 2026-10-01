@@ -24,7 +24,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
-#include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
@@ -46,7 +45,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -1755,6 +1753,10 @@ class PreparedPlayerEntryProbe : public CEvent {
         auto creature = caused ? std::dynamic_pointer_cast<CCreature>(caused->getCause()) : nullptr;
         if (creature && creature->isPlayer()) {
             observedPreparation = creature->getBoolProperty("chapterPrepared");
+            if (closeSessionOnEntry) {
+                getGame()->getContext()->shutdown();
+                return;
+            }
             if (failEntry) {
                 throw std::runtime_error("deliberate destination entry failure");
             }
@@ -1762,6 +1764,7 @@ class PreparedPlayerEntryProbe : public CEvent {
     }
 
     bool observedPreparation = false;
+    bool closeSessionOnEntry = false;
     bool failEntry = false;
 };
 
@@ -1858,39 +1861,44 @@ void test_scene_manager_prepared_request_rejection_failure_and_cancellation() {
     expect_true(!game->getSceneManager()->isTransitionPending(), "cancelled work must release its transition slot");
 }
 
-void test_save_resource_scope_does_not_reattach_map_after_plugin_shutdown() {
-    auto game = CGameLoader::loadGame();
-    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
-    auto provider = game->getResourcesProvider();
-    const auto resourceRoot = std::filesystem::path(provider->getPath("config/items.json")).parent_path().parent_path();
-    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
-    const std::string mapName = "unitShutdownScope" + nonce;
-    const auto mapDirectory = resourceRoot / "maps" / mapName;
-    std::filesystem::create_directories(mapDirectory);
-    {
-        std::ofstream script(mapDirectory / "script.py");
-        script << "def load(self, context):\n    context.getContext().shutdown()\n";
+void test_scene_manager_destination_entry_shutdown_cancels_commit() {
+    for (const bool carryTurn : {true, false}) {
+        auto game = CGameLoader::loadGame();
+        CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+        auto source = game->getMap();
+        auto player = source->getPlayer();
+        auto context = game->getContext();
+        auto destination = CMapLoader::loadNewMap(game, "ritual");
+        auto probe = std::make_shared<PreparedPlayerEntryProbe>();
+        probe->setName("shutdownPlayerEntryProbe");
+        probe->setGame(game);
+        probe->closeSessionOnEntry = true;
+        const auto target = first_adjacent_walkable(destination, destination->getEntry());
+        probe->setPosX(target.x);
+        probe->setPosY(target.y);
+        probe->setPosZ(target.z);
+        destination->addObject(probe);
+        context->getMapSessionStore()->put(destination);
+        game->setMap(source);
+
+        CMapTransitionRequest request;
+        request.targetMap = "ritual";
+        request.targetCoords = target;
+        request.reuseLoadedMap = true;
+        request.carryTurn = carryTurn;
+        request.beforePlayerEntry = [&]() { player->setBoolProperty("chapterPrepared", true); };
+        std::vector<bool> completions;
+        request.onFinished = [&](bool success) { completions.push_back(success); };
+        expect_true(game->requestMapTransition(request), "shutdown-on-entry transition should be queued");
+        pump_event_loop_iterations();
+
+        expect_true(probe->observedPreparation, "shutdown must occur during the prepared destination entry");
+        expect_true(completions == std::vector<bool>{false}, "entry shutdown must complete exactly once with false");
+        expect_true(!context->isActive() && game->getMap() == nullptr,
+                    "entry shutdown must leave the session closed without resurrecting a source map");
+        expect_true(destination->getPlayer() == nullptr, "entry shutdown must detach the carried destination player");
+        expect_true(!game->getSceneManager()->isTransitionPending(), "entry shutdown must release the transition slot");
     }
-    const std::string slot = "unit-shutdown-scope-" + nonce;
-    auto snapshot = std::make_shared<json>(
-        json{{"class", "CMap"}, {"properties", {{"mapName", mapName}, {"objects", json::array()}}}});
-    auto envelope = CSaveFormat::buildEnvelope(snapshot, mapName);
-    expect_true(envelope.has_value(), "shutdown-during-resource-load fixture must have a valid envelope");
-    if (envelope) {
-        expect_true(provider->save(CSaveFormat::primaryPath(slot), *envelope), "shutdown fixture must be saved");
-        const auto savePath = provider->getPath(CSaveFormat::primaryPath(slot));
-        try {
-            CGameLoader::loadSavedGame(game, slot);
-        } catch (const std::runtime_error &) {
-            // Further service access is rejected after the fixture plugin closes the session.
-        }
-        expect_true(!game->getContext()->isActive(), "the fixture plugin must close its game context");
-        expect_true(game->getMap() == nullptr, "resource scope unwinding must not reattach the previous closed map");
-        if (!savePath.empty()) {
-            std::filesystem::remove(savePath);
-        }
-    }
-    std::filesystem::remove_all(mapDirectory);
 }
 
 void test_map_move_blocks_new_turn_while_transition_pending() {
@@ -2520,7 +2528,7 @@ int main() {
     test_scene_manager_reload_vs_persistent_transition_requests();
     test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment();
     test_scene_manager_prepared_request_rejection_failure_and_cancellation();
-    test_save_resource_scope_does_not_reattach_map_after_plugin_shutdown();
+    test_scene_manager_destination_entry_shutdown_cancels_commit();
     test_map_move_blocks_new_turn_while_transition_pending();
     test_map_add_object_fills_hp_and_mana_from_composed_stats();
     test_set_base_stats_preserves_current_hp_and_mana();
