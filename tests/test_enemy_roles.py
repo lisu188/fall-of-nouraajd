@@ -4,6 +4,7 @@
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 import sys
 import types
@@ -164,6 +165,20 @@ class EnemyRolesTest(unittest.TestCase):
     def testRoleEffectsHaveNoTickDamage(self):
         self.registered["EnemyRoleEffect"]().onEffect()
         self.target.hurt.assert_not_called()
+
+    def testNativeWitnessScopeRetainsOriginalPairsAndOnlyMeasuredExceptions(self):
+        source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        scope = source.split("const bool originalAllLosingPair =", 1)[1].split("std::cout", 1)[0]
+        required = re.search(r"const bool originallyRequiredDamage =([^;]+);", scope)
+        self.assertIsNotNone(required)
+        self.assertEqual(["Pritz", "OctoBogz"], re.findall(r'"([^"]+)"', required.group(1)))
+        hp_guard = re.search(r"if \(([^)]+)\)\s*\{\s*expect_true\(median\(baselineHp\)", scope)
+        self.assertIsNotNone(hp_guard)
+        self.assertEqual("originallyRequiredDamage && !originalHarmlessMedianPair", hp_guard.group(1).strip())
+        self.assertIn('std::string(playerType) == "Assasin" && std::string(monsterType) == "Pritz"', scope)
+        self.assertIn('std::string(playerType) == "Sorcerer" && std::string(monsterType) == "CultLeader"', scope)
+        self.assertRegex(scope, r"if \(!originalAllLosingPair\)\s*\{\s*expect_true\(baselineWins > 0")
+        self.assertEqual(3, source.count("std::abs(median(role"))
 
     def testRoleConfigKeepsRosterNumericStatsAndBoundedOwnedEffects(self):
         classes = json.loads((ROOT / "res/config/creature_classes.json").read_text(encoding="utf-8"))
