@@ -18822,13 +18822,18 @@ class GameTest(unittest.TestCase):
             self.assertFalse(loaded_store.finished())
             self.assertEqual("yes", loaded_store.get_var("spared_cultist", default="no"))
 
-            # Manifest routing keeps working on the loaded game: reporting the
-            # scenario outcome advances the campaign and requests the next map.
+            # The restored campaign commits its next chapter only when the destination is ready.
             self.assertEqual("cleansing", campaign_module.complete_scenario(loaded_game, "completed"))
-            self.assertEqual("cleansing", loaded_store.scenario())
-            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("recovery", loaded_store.scenario())
+            self.assertEqual([], loaded_store.history())
             self.assertEqual("TransitionPending", loaded_game.getSceneManager().getTransitionStateName())
             self.assertEqual("ritual", loaded_game.getSceneManager().getPendingMapName())
+            pump_event_loop(10)
+            self.assertEqual("cleansing", loaded_store.scenario())
+            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("ritual", loaded_game.getMap().mapName)
+            self.assertTrue(loaded_game.getMap().getPlayer() == loaded_player)
+            self.assertEqual("Idle", loaded_game.getSceneManager().getTransitionStateName())
         finally:
             for path in (save_path, backup_path):
                 if path.exists():
