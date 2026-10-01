@@ -358,7 +358,7 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                     archetype = self.game.createObject("CCreatureClass")
                     archetype.setActions({action})
                     actor.setObjectProperty("creatureClass", archetype)
-                    actor.setFightController(self.game.createObject("CMonsterFightController"))
+                    actor.setFightController(self.game.createObject("Warrior").getFightController())
                 self.attachTagEffect(caster, victim, effect_id)
                 engine.CFightHandler.fight(caster, victim)
                 self.assertEqual({"attacker": 3, "defender": 1}, turns)
