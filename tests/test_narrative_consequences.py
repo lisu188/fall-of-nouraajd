@@ -407,6 +407,94 @@ class SiegeBreachTest(unittest.TestCase):
 
 
 class NarrativeRouteTest(unittest.TestCase):
+    def testSiegeWaitLeavesTheSealedBorderBeforeWaitingForMageWands(self):
+        from tests.narrative_walkthrough import NarrativeWalkthrough, authoredRegion
+
+        objects, walkable = authoredRegion("siege")
+        gates = {"spawnPoint1", "spawnPoint2", "spawnPoint3", "spawnPoint4"}
+        closed = gates - {"spawnPoint2"}
+
+        class WaitingSiege(NarrativeWalkthrough):
+            def __init__(self):
+                super().__init__(lambda *_: "loop", None, "game", "map", "player")
+                self.position = objects["spawnPoint1"]
+                self.destroyed = set(closed)
+                self.wands = self.gold = 0
+                self.visited = [self.position]
+                self.log["sealedGates"] = sorted(closed)
+
+            def coords(self, handle=None):
+                return self.position
+
+            def object(self, name):
+                return name
+
+            def flag(self, name):
+                return name == "campaign_completed" and self.destroyed == gates
+
+            def questNames(self, key):
+                completed = self.destroyed == gates
+                return ["defendSiegeQuest"] if completed == (key == "completedQuests") else []
+
+            def pump(self):
+                pass
+
+            def tick(self):
+                assert self.position not in {objects[name] for name in self.destroyed}, (
+                    "Waiting on a sealed border leaves attackers without an accessible combat target",
+                    self.position,
+                )
+                if self.position == objects["siegeStart"]:
+                    self.wands = 1
+                self.log["mapTurns"] += 1
+
+            def call(self, handle, method, args=None):
+                args = args or []
+                if handle == "player":
+                    if method == "moveTo":
+                        destination = tuple(args)
+                        assert destination in walkable
+                        assert sum(abs(a - b) for a, b in zip(self.position, destination)) == 1
+                        self.position = destination
+                        self.visited.append(destination)
+                    elif method == "countItems":
+                        return self.wands
+                    elif method == "getGold":
+                        return self.gold
+                    elif method == "getLevel":
+                        return 1
+                    else:
+                        raise AssertionError((handle, method, args))
+                elif handle == "map" and method == "getTurn":
+                    return self.log["mapTurns"]
+                elif handle in gates:
+                    if method == "getBoolProperty":
+                        return {
+                            "destroyed": handle in self.destroyed,
+                            "enabled": handle not in self.destroyed,
+                            "pendingSeal": False,
+                        }[args[0]]
+                    if method == "sealBreach":
+                        if handle in self.destroyed or not self.wands or self.position != objects[handle]:
+                            return False
+                        self.wands -= 1
+                        self.gold += 500
+                        self.destroyed.add(handle)
+                        return True
+                else:
+                    raise AssertionError((handle, method, args))
+
+        driver = WaitingSiege()
+        log = driver.siege()
+        self.assertIn(objects["siegeStart"], driver.visited)
+        self.assertEqual(4, len(log["sealedGates"]))
+        self.assertEqual(0, driver.wands)
+        self.assertEqual(500, driver.gold)
+        self.assertGreater(log["movementSteps"], 0)
+        self.assertEqual(objects["spawnPoint2"], log["siegeFinalState"]["playerCoords"])
+        self.assertEqual(0, log["siegeFinalState"]["wandCount"])
+        self.assertTrue(all(state["destroyed"] for state in log["siegeFinalState"]["gates"].values()))
+
     def testEveryMandatoryRitualLandmarkHasAnAdjacentAuthoredRoute(self):
         from tests.narrative_walkthrough import authoredRegion
         from tests.castle_walkthrough import TransitRoutes, shortestRoute
