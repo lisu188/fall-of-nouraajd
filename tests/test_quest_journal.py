@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 import quest_state
+from res import campaign as campaign_driver
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -106,13 +107,14 @@ def loadQuestClasses(path):
             setattr(game_stub, name, getattr(quest_state, name))
     game_stub.register = register
     game_stub.trigger = lambda context, *_args: register(context)
-    game_stub.campaign = types.SimpleNamespace()
+    game_stub.campaign = campaign_driver
     game_stub.claim_once = lambda *_args: True
     game_stub.remove_runtime_actors = lambda *_args, **_kwargs: 0
     queued_work = []
     game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=queued_work.append))
     context = types.SimpleNamespace(getMap=lambda: None)
-    with patch.dict(sys.modules, {"game": game_stub}):
+    with patch.dict(sys.modules, {"game": game_stub, "campaign": campaign_driver}):
+        game_stub.narrative = types.SimpleNamespace(**runpy.run_path(str(REPO_ROOT / "res/narrative.py")))
         runpy.run_path(str(path))["load"](None, context)
     return classes
 
