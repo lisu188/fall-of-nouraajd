@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "handler/CGuiHandler.h"
 #include "handler/CFightHandler.h"
+#include "handler/CObjectHandler.h"
 #include "handler/CQuestHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
@@ -243,6 +244,18 @@ std::shared_ptr<CGame> load_empty_game() {
     auto game = CGameLoader::loadGame();
     CGameLoader::startGame(game, "empty");
     return game;
+}
+
+void attachFightPanelGuiFixture(const std::shared_ptr<CGame> &game) {
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(game);
+    game->setGui(gui);
+
+    // Authored GUI visibility scripts require Python bindings for native GUI types.
+    // These cancellation tests exercise the real panel without unrelated scripted child views.
+    auto fight_panel_config = std::make_shared<json>();
+    (*fight_panel_config)["class"] = "CGameFightPanel";
+    game->getObjectHandler()->registerConfig("fightPanel", fight_panel_config);
 }
 
 void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
@@ -779,7 +792,7 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
 
     player->setHp(10);
@@ -825,7 +838,7 @@ void test_player_fight_controller_returns_cancelled_when_attached_fight_panel_ca
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
 
     player->setHp(10);
@@ -863,7 +876,7 @@ void test_fight_handler_returns_cancelled_when_player_control_cancels() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
     player->setHp(10);
 
@@ -884,14 +897,28 @@ void test_fight_handler_returns_cancelled_when_player_control_cancels() {
     auto panel_was_cancelled = std::make_shared<bool>(false);
     vstd::event_loop<>::instance()->invoke([game, cancellation_callback_ran, panel_was_cancelled]() {
         *cancellation_callback_ran = true;
-        auto panel = game && game->getGui() ? vstd::cast<CGameFightPanel>(game->getGui()->findChild("CGameFightPanel"))
-                                            : nullptr;
+        auto gui = game ? game->getGui() : nullptr;
+        std::size_t fight_panel_count = 0;
+        std::shared_ptr<CGameFightPanel> attached_panel;
+        if (gui) {
+            for (const auto &child : gui->getChildren()) {
+                if (auto candidate = vstd::cast<CGameFightPanel>(child)) {
+                    ++fight_panel_count;
+                    attached_panel = candidate;
+                }
+            }
+        }
+        auto panel = gui ? vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel")) : nullptr;
+        expect_true(fight_panel_count == 1, "queued cancellation should find exactly one attached fight panel");
+        expect_true(panel && panel == attached_panel && gui->findChild(panel) == panel,
+                    "queued cancellation should target the same fight panel found by the GUI");
         if (panel) {
             panel->cancel();
             *panel_was_cancelled = panel->isCancelled();
         }
         std::cout << "[handler-test] cancellation callback ran=" << *cancellation_callback_ran
-                  << " panelFound=" << (panel != nullptr) << " isCancelled=" << *panel_was_cancelled << std::endl;
+                  << " panelFound=" << (panel != nullptr) << " panelCount=" << fight_panel_count
+                  << " isCancelled=" << *panel_was_cancelled << std::endl;
     });
 
     std::cout << "[handler-test] BEFORE fightManyResult for queued player cancellation" << std::endl;
