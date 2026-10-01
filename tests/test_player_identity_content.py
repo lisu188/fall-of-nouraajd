@@ -4,6 +4,7 @@
 """Fast authored-content checks without initializing SDL or the native engine."""
 
 import json
+import re
 import sys
 import types
 import unittest
@@ -131,6 +132,16 @@ class PlayerIdentityContentTest(unittest.TestCase):
         dialog = self.types["TownHallDialog"]()
         dialog.getGame = lambda: game
         return player, dialog
+
+    def test_race_mana_service_requires_the_native_absolute_mana_binding(self):
+        module = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
+        creature_bindings = set(re.findall(r'\.def\("(\w+)",\s*&CCreature::', module))
+        self.assertIn("addMana", creature_bindings)
+        for race_id, suffix, _gold, _hp, mana_gain in RACE_SERVICES:
+            if mana_gain:
+                player, dialog = self.createPlayer(race_id=race_id)
+                getattr(dialog, "claim" + suffix)()
+                self.assertEqual(30 + mana_gain, player.getMana())
 
     def test_mcp_exposes_paid_commit_and_resource_reads_but_rejects_raw_callbacks(self):
         import mcp
