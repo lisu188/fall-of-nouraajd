@@ -1,6 +1,7 @@
 #include "gui/object/CMapGraphicsObject.h"
 #include "CWidget.h"
 #include "core/CController.h"
+#include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "gui/CAnimation.h"
 #include "gui/CLayout.h"
@@ -179,6 +180,7 @@ void CMapGraphicsObject::initialize() {
 }
 
 void CMapGraphicsObject::previewDestination(std::shared_ptr<CGui> gui, Coords destination) {
+    validateDestinationPreview(gui);
     auto map = gui && gui->getGame() ? gui->getGame()->getMap() : nullptr;
     auto player = map ? map->getPlayer() : nullptr;
     if (!player || !player->isAlive() || map->isMoving())
@@ -186,11 +188,19 @@ void CMapGraphicsObject::previewDestination(std::shared_ptr<CGui> gui, Coords de
     auto controller = vstd::cast<CPlayerController>(player->getController());
     if (!controller)
         return;
+    destination = map->normalizeCoords(destination);
+    if (previewTarget && *previewTarget == destination)
+        return;
     controller->setTarget(player, destination);
     previewTarget = destination;
     previewMap = map;
     previewPlayer = player;
+    previewController = controller;
+    previewContext = gui->getGame()->getContext();
     previewOrigin = player->getCoords();
+    previewEpoch = map->getRoutingEpoch();
+    previewGeneration = gui->getGame()->getContext()->captureTransitionGeneration();
+    previewRequest = controller->getRequestSerial();
     if (destinationButton)
         destinationButton->setRuntimeHidden(false);
     gui->notify("Destination " + std::to_string(destination.x) + ", " + std::to_string(destination.y) +
@@ -205,14 +215,19 @@ void CMapGraphicsObject::commitDestination(std::shared_ptr<CGui> gui) {
     if (!player || !previewTarget || previewMap.lock() != map || map->isMoving())
         return;
     auto controller = vstd::cast<CPlayerController>(player->getController());
-    if (!controller) {
+    if (!controller || controller != previewController.lock()) {
         clearDestinationPreview();
         return;
     }
-    controller->setTarget(player, *previewTarget);
+    const auto request = previewRequest;
+    const auto generation = previewGeneration;
+    const auto context = previewContext.lock();
     clearDestinationPreview();
     const int maxSteps = std::max(1, gui->getTileCountX() * gui->getTileCountY() * 4);
-    for (int step = 0; step < maxSteps && gui->getGame()->getMap() == map && !controller->isCompleted(player); ++step)
+    for (int step = 0; step < maxSteps && gui->getGame()->getMap() == map && map->getPlayer() == player &&
+                       player->getController() == controller && controller->getRequestSerial() == request && context &&
+                       context->isTransitionGenerationCurrent(generation) && !controller->isCompleted(player);
+         ++step)
         map->move();
 }
 
@@ -220,7 +235,12 @@ void CMapGraphicsObject::clearDestinationPreview() {
     previewTarget.reset();
     previewMap.reset();
     previewPlayer.reset();
+    previewController.reset();
+    previewContext.reset();
     previewOrigin = ZERO;
+    previewEpoch = 0;
+    previewGeneration = 0;
+    previewRequest = 0;
     if (destinationButton)
         destinationButton->setRuntimeHidden(true);
 }
@@ -230,8 +250,14 @@ void CMapGraphicsObject::validateDestinationPreview(const std::shared_ptr<CGui> 
         return;
     const auto map = gui && gui->getGame() ? gui->getGame()->getMap() : nullptr;
     const auto player = map ? map->getPlayer() : nullptr;
+    const auto controller = player ? vstd::cast<CPlayerController>(player->getController()) : nullptr;
+    const auto context = gui && gui->getGame() ? gui->getGame()->getContext() : nullptr;
     if (!player || map != previewMap.lock() || player != previewPlayer.lock() || !player->isAlive() ||
-        player->getCoords() != previewOrigin) {
+        player->getCoords() != previewOrigin || controller != previewController.lock() ||
+        context != previewContext.lock() || !context || !context->isTransitionGenerationCurrent(previewGeneration) ||
+        map->getRoutingEpoch() != previewEpoch || !controller || controller->getRequestSerial() != previewRequest) {
+        if (controller && controller == previewController.lock() && controller->getRequestSerial() == previewRequest)
+            controller->interrupt(player);
         clearDestinationPreview();
     }
 }

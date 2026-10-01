@@ -50,6 +50,7 @@ class CScriptHandler;
 class CLuaHandler;
 
 class CSlotConfig;
+class CNavigationService;
 
 struct CMapTransitionRequest;
 
@@ -86,6 +87,7 @@ class CGame : public CGameObject {
     std::shared_ptr<CObjectHandler> getObjectHandler();
 
     std::shared_ptr<CSceneManager> getSceneManager();
+    std::shared_ptr<CNavigationService> getNavigationService();
 
     void loadPlugin(std::function<std::shared_ptr<CPlugin>()> plugin);
 
@@ -112,6 +114,8 @@ class CGame : public CGameObject {
     std::shared_ptr<CSceneManager> sceneManager;
     std::shared_ptr<CMap> map;
     std::shared_ptr<CGui> _gui;
+    std::shared_ptr<CNavigationService> navigationService;
+    std::mutex navigationServiceMutex;
 
   public:
     std::shared_ptr<CGui> getGui() const;

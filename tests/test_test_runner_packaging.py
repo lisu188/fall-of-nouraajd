@@ -55,9 +55,8 @@ class TestRunnerPackagingTest(unittest.TestCase):
         source_tests = self.package / "tests"
         source_tests.mkdir()
         (source_tests / "__init__.py").write_text("", encoding="utf-8")
-        shutil.copy2(
-            ROOT / "tests/test_python_callback_lifecycle.py", source_tests / "test_python_callback_lifecycle.py"
-        )
+        for name in ("test_navigation_mcp.py", "test_python_callback_lifecycle.py"):
+            shutil.copy2(ROOT / "tests" / name, source_tests / name)
         (source_tests / "test_ui_mcp_dialogue.py").write_text(
             'raise ImportError("deliberate source-test import failure")\n', encoding="utf-8"
         )

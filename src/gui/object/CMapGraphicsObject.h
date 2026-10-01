@@ -26,6 +26,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CProxyGraphicsObject;
 class CMap;
 class CPlayer;
+class CPlayerController;
+class CGameContext;
 
 class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     V_META(CMapGraphicsObject, CProxyTargetGraphicsObject, V_METHOD(CMapGraphicsObject, initialize),
@@ -63,7 +65,12 @@ class CMapGraphicsObject : public CProxyTargetGraphicsObject {
     std::optional<Coords> previewTarget;
     std::weak_ptr<CMap> previewMap;
     std::weak_ptr<CPlayer> previewPlayer;
+    std::weak_ptr<CPlayerController> previewController;
+    std::weak_ptr<CGameContext> previewContext;
     Coords previewOrigin = ZERO;
+    std::uint64_t previewEpoch = 0;
+    std::uint64_t previewGeneration = 0;
+    std::uint64_t previewRequest = 0;
     std::shared_ptr<CGameGraphicsObject> destinationButton;
     void clearDestinationPreview();
     void validateDestinationPreview(const std::shared_ptr<CGui> &gui);

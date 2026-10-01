@@ -1,0 +1,50 @@
+warmups=2 samples=7 metric=median_wall_time timing_is_not_a_gate=1
+generic_open_96 sample=0 milliseconds=3.902000 length=190 expanded=9026 passability=9407 edge_cost=35913 heuristic=11659
+generic_open_96 sample=1 milliseconds=3.805300 length=190 expanded=9026 passability=9407 edge_cost=35913 heuristic=11659
+generic_open_96 sample=2 milliseconds=3.986000 length=190 expanded=9026 passability=9407 edge_cost=35913 heuristic=11659
+generic_open_96 sample=3 milliseconds=3.901500 length=190 expanded=9026 passability=9407 edge_cost=35913 heuristic=11659
+generic_open_96 sample=4 milliseconds=3.840800 length=190 expanded=9026 passability=9407 edge_cost=35913 heuristic=11659
+generic_open_96 sample=5 milliseconds=3.864500 length=190 expanded=9026 passability=9407 edge_cost=35913 heuristic=11659
+generic_open_96 sample=6 milliseconds=3.814700 length=190 expanded=9026 passability=9407 edge_cost=35913 heuristic=11659
+generic_open_96 median_ms=3.864500
+generic_weighted_128 sample=0 milliseconds=1.843500 length=254 expanded=4492 passability=5004 edge_cost=17804 heuristic=6040
+generic_weighted_128 sample=1 milliseconds=1.844000 length=254 expanded=4492 passability=5004 edge_cost=17804 heuristic=6040
+generic_weighted_128 sample=2 milliseconds=1.863800 length=254 expanded=4492 passability=5004 edge_cost=17804 heuristic=6040
+generic_weighted_128 sample=3 milliseconds=1.816500 length=254 expanded=4492 passability=5004 edge_cost=17804 heuristic=6040
+generic_weighted_128 sample=4 milliseconds=1.838700 length=254 expanded=4492 passability=5004 edge_cost=17804 heuristic=6040
+generic_weighted_128 sample=5 milliseconds=1.874000 length=254 expanded=4492 passability=5004 edge_cost=17804 heuristic=6040
+generic_weighted_128 sample=6 milliseconds=1.829900 length=254 expanded=4492 passability=5004 edge_cost=17804 heuristic=6040
+generic_weighted_128 median_ms=1.843500
+generic_unreachable_96 sample=0 milliseconds=1.841400 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=5934
+generic_unreachable_96 sample=1 milliseconds=2.077400 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=5934
+generic_unreachable_96 sample=2 milliseconds=2.004500 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=5934
+generic_unreachable_96 sample=3 milliseconds=1.854100 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=5934
+generic_unreachable_96 sample=4 milliseconds=1.777700 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=5934
+generic_unreachable_96 sample=5 milliseconds=1.794700 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=5934
+generic_unreachable_96 sample=6 milliseconds=2.101500 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=5934
+generic_unreachable_96 median_ms=1.854100
+player_overlay_4096 sample=0 milliseconds=8.856000 queries=20000 matched=20000
+player_overlay_4096 sample=1 milliseconds=8.903300 queries=20000 matched=20000
+player_overlay_4096 sample=2 milliseconds=8.875000 queries=20000 matched=20000
+player_overlay_4096 sample=3 milliseconds=8.910600 queries=20000 matched=20000
+player_overlay_4096 sample=4 milliseconds=9.657700 queries=20000 matched=20000
+player_overlay_4096 sample=5 milliseconds=9.425200 queries=20000 matched=20000
+player_overlay_4096 sample=6 milliseconds=9.473700 queries=20000 matched=20000
+player_overlay_4096 median_ms=8.910600
+seeded_dungeon seed=241 dimensions=555x555 expected_cost=2306 current_only=1
+seeded_dungeon_555 sample=0 milliseconds=47.636200 length=2306 expanded=83082 searches=3 budget_peak=20907472
+seeded_dungeon_555 sample=1 milliseconds=49.047900 length=2306 expanded=83082 searches=4 budget_peak=20907472
+seeded_dungeon_555 sample=2 milliseconds=48.171200 length=2306 expanded=83082 searches=5 budget_peak=20907472
+seeded_dungeon_555 sample=3 milliseconds=44.349500 length=2306 expanded=83082 searches=6 budget_peak=20907472
+seeded_dungeon_555 sample=4 milliseconds=43.229100 length=2306 expanded=83082 searches=7 budget_peak=20907472
+seeded_dungeon_555 sample=5 milliseconds=46.374000 length=2306 expanded=83082 searches=8 budget_peak=20907472
+seeded_dungeon_555 sample=6 milliseconds=48.067800 length=2306 expanded=83082 searches=9 budget_peak=20907472
+seeded_dungeon_555 median_ms=47.636200
+moving_target_128_chasers_16_turns sample=0 milliseconds=2550.063400 requests=2048 moved=2040 expanded=386132 fields=1 repairs=15 hits=2047 deferred=8 budget_peak=1891952 current_only=1
+moving_target_128_chasers_16_turns sample=1 milliseconds=2373.931000 requests=2048 moved=2040 expanded=386132 fields=1 repairs=15 hits=2047 deferred=8 budget_peak=1891952 current_only=1
+moving_target_128_chasers_16_turns sample=2 milliseconds=2365.619500 requests=2048 moved=2040 expanded=386132 fields=1 repairs=15 hits=2047 deferred=8 budget_peak=1891952 current_only=1
+moving_target_128_chasers_16_turns sample=3 milliseconds=2337.732500 requests=2048 moved=2040 expanded=386132 fields=1 repairs=15 hits=2047 deferred=8 budget_peak=1891952 current_only=1
+moving_target_128_chasers_16_turns sample=4 milliseconds=2363.516900 requests=2048 moved=2040 expanded=386132 fields=1 repairs=15 hits=2047 deferred=8 budget_peak=1891952 current_only=1
+moving_target_128_chasers_16_turns sample=5 milliseconds=2326.457700 requests=2048 moved=2040 expanded=386132 fields=1 repairs=15 hits=2047 deferred=8 budget_peak=1891952 current_only=1
+moving_target_128_chasers_16_turns sample=6 milliseconds=2307.616000 requests=2048 moved=2040 expanded=386132 fields=1 repairs=15 hits=2047 deferred=8 budget_peak=1891952 current_only=1
+moving_target_128_chasers_16_turns median_ms=2363.516900

@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -28,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CGameFightPanel;
 class CMap;
+struct CNavigationSearchResult;
 
 class CController : public CGameObject {
     V_META(CController, CGameObject, vstd::meta::empty())
@@ -59,12 +61,18 @@ class CPlayerController : public CController {
 
     void onTurnEnded(std::shared_ptr<CCreature> creature) override;
 
-  private:
-    std::shared_ptr<Coords> target;
-    std::unordered_map<int, Coords> path;
-    int currentStep = 0;
+    std::uint64_t getRequestSerial() const;
+    std::uint64_t getOverlayLookupCount() const;
 
-    std::vector<Coords> calculatePath(std::shared_ptr<CPlayer> ptr);
+  private:
+    struct PlayerRoute;
+    std::optional<Coords> target;
+    std::shared_ptr<PlayerRoute> route;
+    std::size_t currentStep = 0;
+    std::uint64_t requestSerial = 0;
+    std::uint64_t overlayLookupCount = 0;
+
+    CNavigationSearchResult calculatePath(std::shared_ptr<CPlayer> ptr);
 
     void clearPath();
 
@@ -162,8 +170,9 @@ class CNpcRandomController : public CController {
     void interrupt(std::shared_ptr<CCreature> creature) override;
 
   private:
-    std::vector<Coords> path;
-    int currentStep = 0;
+    struct NpcRoute;
+    std::shared_ptr<NpcRoute> route;
+    std::size_t currentStep = 0;
 };
 
 class CGroundController : public CController {

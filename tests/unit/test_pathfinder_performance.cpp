@@ -17,6 +17,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #include "core/CPathFinder.h"
+#include "core/CNavigation.h"
+#include "core/CNavigationSearch.h"
 #include "core/CGame.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
@@ -539,52 +541,37 @@ void testMapMovementCostLookupDoesNotMaterializeSparseDefaultTiles() {
                        static_cast<long long>(initial_navigation_revision));
 }
 
-void testEnvelopeBudgetBoundsUnreachableGoalInOpenPlane() {
-    // Models a request against a sparse / effectively unbounded map: the goal is passable but sealed
-    // off by an impassable ring, while every other coordinate on the plane is open. Without an
-    // envelope budget the A* frontier would flood the open complement outward from the start
-    // indefinitely (capped only by the 1,000,000-node ceiling). The goal-relative envelope keeps the
-    // explored region proportional to the start->goal span, so the search fails safely after
-    // exploring a bounded neighborhood.
+void testExplicitBudgetBoundsUnreachableGoalInOpenPlane() {
+    // A geometric envelope rejected legitimate detours. Exercise explicit finite work/storage
+    // limits instead: the passable goal is enclosed, while the rest of this graph is unbounded.
     const Coords start(0, 0, 0);
     const Coords goal(32, 0, 0);
     CallbackCounters counters;
-
-    auto can_step = [&counters, goal](const Coords &coords) {
+    auto can_step = [&](const Coords &coords) {
         ++counters.canStep;
-        if (coords.z != 0) {
-            return false;
-        }
-        // Impassable ring (Chebyshev radius 3) seals the otherwise-passable goal so the frontier can
-        // never reach it; nothing but the envelope bounds the outward expansion.
-        const int chebyshev = std::max(std::abs(coords.x - goal.x), std::abs(coords.y - goal.y));
-        return chebyshev != 3;
+        return coords.z == 0 && std::max(std::abs(coords.x - goal.x), std::abs(coords.y - goal.y)) != 3;
     };
     auto waypoint = [&counters](const Coords &coords) { return noWaypoint(counters, coords); };
     auto neighbors = [&counters](const Coords &coords) { return countedDefaultNeighbors(counters, coords); };
     auto distance = [&counters](const Coords &from, const Coords &to) { return manhattanDistance(counters, from, to); };
     auto step_cost = [&counters](const Coords &from, const Coords &to) { return countedUnitCost(counters, from, to); };
-
-    const auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, step_cost);
-
-    // Goal is impassable, so the pathfinder fails safely with just the start.
-    expectMetricEquals("envelope open-plane path length", static_cast<long long>(path.size()), 1);
-    expect_true(!path.empty() && path.front() == start,
-                "envelope open-plane path returns start metric=1 baseline=1 threshold=1");
-    // The explored frontier is bounded by the envelope (4 * manhattan(start, goal) + 512 = 640 here),
-    // which limits coordinates to a finite disc; the resulting canStep calls stay far below the
-    // 1,000,000-node visit ceiling, proving the envelope (not the global cap) bounded the search.
-    const long long envelope = 4 * (std::abs(goal.x - start.x) + std::abs(goal.y - start.y)) + 512;
-    // Upper bound on distinct probed coordinates: the L1 disc of radius (envelope + 1) (one ring of
-    // out-of-envelope neighbors may still be probed before being discarded). The cache in the
-    // pathfinder dedupes per coordinate, so this is a hard mathematical ceiling, not an empirical
-    // observation; a generous safety margin keeps the assertion stable across passability-probe order.
-    const long long radius = envelope + 1;
-    const long long disc_cells = 2 * radius * radius + 2 * radius + 1;
-    const long long threshold = disc_cells + radius; // small additive margin, still far below 1,000,000
-    expectMetricAtMost("envelope open-plane canStep calls", counters.canStep, disc_cells, threshold);
-    expect_true(counters.canStep < 1'000'000,
-                "envelope open-plane stays below global node cap metric=1 baseline=1 threshold=1");
+    CNavigationSearchLimits limits;
+    limits.maxRecords = 60'000;
+    limits.maxExpansions = 60'000;
+    auto budget = std::make_shared<CNavigationBudget>(8 * 1024 * 1024);
+    const auto result = CNavigationSearch::findGenericPath(start, goal, can_step, waypoint, neighbors, distance,
+                                                           step_cost, budget, limits);
+    expect_true(result.status == CNavigationSearchStatus::ResourceLimit && result.path.empty() &&
+                    result.firstStep == start,
+                "unbounded unreachable graph fails closed at an explicit resource limit");
+    expectMetricAtMost("unbounded passability work", counters.canStep, 60'000, 60'000);
+    expectMetricAtMost("unbounded discovered records", result.statistics.records, 60'000, 60'000);
+    expectMetricAtMost("unbounded expansions", result.statistics.expansions, 60'000, 60'000);
+    expectMetricAtMost("unbounded charged bytes", budget->peak(), 8 * 1024 * 1024, 8 * 1024 * 1024);
+    expect_true(budget->used() == 0, "failed unbounded search releases all allocated scratch");
+    std::cout << "Navigation unbounded: records=" << result.statistics.records
+              << "/60000 expansions=" << result.statistics.expansions << "/60000 bytes=" << budget->peak()
+              << "/8388608\n";
 }
 
 void testEnvelopeBudgetPreservesReachableNavigation() {
@@ -630,8 +617,8 @@ std::shared_ptr<CTile> makeWeightedTile(const std::shared_ptr<CGame> &game, int 
 // Builds a fully materialized width x height open map whose row-0 band [bandStartX, bandEndX] carries
 // the supplied (expensive) movement cost; every other tile has cost 1. Returns the game so callers keep
 // the shared owners alive while the map is in use.
-std::shared_ptr<CGame> buildWeightedBandMap(int width, int height, int bandStartX, int bandEndX,
-                                            int bandCost, std::shared_ptr<CMap> &outMap) {
+std::shared_ptr<CGame> buildWeightedBandMap(int width, int height, int bandStartX, int bandEndX, int bandCost,
+                                            std::shared_ptr<CMap> &outMap) {
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
     game->setMap(map);
@@ -661,12 +648,11 @@ void testMapMovementCostRegressionPinsTileWeightsAndRouting() {
 
     // Per-tile weights are pinned exactly through both the materializing and lookup accessors.
     expectMetricEquals("regression default tile cost", static_cast<long long>(map->getMovementCost(0, 0, 0)), 1);
-    expectMetricEquals("regression band tile cost", static_cast<long long>(map->getMovementCost(2, 0, 0)),
-                       band_cost);
+    expectMetricEquals("regression band tile cost", static_cast<long long>(map->getMovementCost(2, 0, 0)), band_cost);
     expectMetricEquals("regression lookup band tile cost",
                        static_cast<long long>(map->lookupMovementCost(Coords(3, 0, 0))), band_cost);
-    expectMetricEquals("regression off-band tile cost",
-                       static_cast<long long>(map->getMovementCost(Coords(2, 1, 0))), 1);
+    expectMetricEquals("regression off-band tile cost", static_cast<long long>(map->getMovementCost(Coords(2, 1, 0))),
+                       1);
 
     // The std::max(1, ...) floor: a tile configured below 1 still reports 1.
     if (auto tile = map->getTile(Coords(0, 0, 0))) {
@@ -759,8 +745,7 @@ void testMovementCostPathStaysWithinWorkBound() {
     expectMetricAtMost("perf-bound stepCost calls", counters.stepCost, total_cells * 4, total_cells * 8);
     expectMetricAtMost("perf-bound neighbor calls", counters.neighbors, total_cells, total_cells * 4);
     expectMetricAtMost("perf-bound distance calls", counters.distance, total_cells * 4, total_cells * 8);
-    expect_true(counters.canStep < 1'000'000,
-                "perf-bound stays below global node cap metric=1 baseline=1 threshold=1");
+    expect_true(counters.canStep < 1'000'000, "perf-bound stays below global node cap metric=1 baseline=1 threshold=1");
 }
 
 void testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork() {
@@ -820,7 +805,7 @@ void testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork() {
 } // namespace
 
 void run_pathfinder_performance_tests() {
-    testEnvelopeBudgetBoundsUnreachableGoalInOpenPlane();
+    testExplicitBudgetBoundsUnreachableGoalInOpenPlane();
     testEnvelopeBudgetPreservesReachableNavigation();
     testLargeBoundedOpenGrid();
     testCorridorMazeBound();

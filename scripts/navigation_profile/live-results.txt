@@ -1,0 +1,86 @@
+Captured 2026-10-01: current-only live engine profile on an isolated WSL Ubuntu build.
+GCC 13.3.0, Release -O3 -g -DNDEBUG, Python 3.12.3, system pybind11 2.11.1,
+Valgrind 3.22.0. Existing SDL/Python/compiler dependencies were used without installation.
+The source includes the final snapshot chunk-lock fix and installed-controller invalidation fix.
+No historical live-engine baseline was built; these numbers are not a speedup comparison.
+
+The isolated source/build were /tmp/nouraajd-navigation-live-20261001/{source,build}.
+The source was copied from the working tree based on commit
+762157313795cbdc5a1ec3d63848e03565c5d57c; selected exact compiled hashes are below.
+live.py and live-client.cpp were copied verbatim from scripts/navigation_profile/.
+All runs used SDL dummy video/audio, software rendering and no game GUI.
+
+Configure/build commands from the isolated workspace:
+  cmake -G Ninja -S source -B build -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_CXX_FLAGS_RELEASE="-O3 -g -DNDEBUG" -Dpybind11_DIR=/usr/lib/cmake/pybind11 \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+  cmake --build build --target _game -j3
+  g++ -shared -fPIC -O2 live-client.cpp -o live-client.so
+The final incremental build recompiled unity_0_cxx.cxx.o and relinked the core, both native plugins
+and _game successfully. An earlier build failed because canStep omitted the required fallback
+argument to lookupNavigationCell; the explicit std::nullopt fix was copied and rebuilt first.
+
+Exact runtime commands from the isolated workspace:
+  timeout 120s python3 live.py --source source --build-dir build
+  timeout 600s valgrind --tool=callgrind --instr-atstart=no \
+    --callgrind-out-file=final-live.callgrind python3 live.py --source source --build-dir build \
+    --callgrind-client /tmp/nouraajd-navigation-live-20261001/live-client.so
+  callgrind_annotate --auto=no --inclusive=no --threshold=75 final-live.callgrind.1
+  PYTHONMALLOC=malloc timeout 600s valgrind --tool=memcheck --leak-check=full \
+    --show-leak-kinds=all --errors-for-leak-kinds=definite,indirect --error-exitcode=97 \
+    python3 live.py --source source --build-dir build
+  PYTHONMALLOC=malloc timeout 600s valgrind --tool=memcheck --leak-check=full \
+    --show-leak-kinds=all --errors-for-leak-kinds=definite,indirect --error-exitcode=97 \
+    python3 live.py --source source --build-dir build --import-only
+
+Observed route (identical normal, Callgrind and Memcheck assertions):
+  map=multilevel, hero=Warrior, planning calls=36, actual turns advanced=19
+  stairsUp             -> (4,1,1), turn 3
+  multilevelUpperGoal   -> (6,4,1), turn 8
+  stairsDown           -> (4,1,0), turn 13
+  multilevelLowerGoal   -> (6,5,0), turn 19
+  used_stairs_up, visited_upper_goal, used_stairs_down, visited_lower_goal all true.
+  Each nine-call planning batch preserved position, turn, HP, mana and item count.
+  Final HP, mana and item count were unchanged. No GUI was created.
+
+Normal route exit: 0. Callgrind exit: 0. Instrumented instruction references: 32,590,849.
+The client-request interval covers planning, actual map turns, event-loop pumps, authored callbacks
+and read-only fixture assertions. Startup/loading and shutdown are outside this interval.
+The largest self attribution was std::_Hash_bytes (1,869,230), followed by _int_free (1,682,750)
+and malloc (1,394,913). This small authored route does not establish a whole-game bottleneck,
+large-map performance, rendering performance, or elapsed-time speedup.
+
+Full-process Memcheck failed with exit 97; it is not a clean memory validation:
+  definitely lost: 377,240 bytes / 7,316 blocks
+  indirectly lost: 0 bytes / 0 blocks
+  possibly lost: 266,360 bytes / 2,357 blocks
+  still reachable: 522,607 bytes / 3,022 blocks
+  errors: 1,428 contexts; suppressed: 0
+The same-script, same-binary import-only control also failed with exit 97, without constructing
+a game, map or player:
+  definitely lost: 364,950 bytes / 7,089 blocks
+  indirectly lost: 0 bytes / 0 blocks
+  possibly lost: 92,809 bytes / 842 blocks
+  still reachable: 419,569 bytes / 1,898 blocks
+  errors: 1,463 contexts; suppressed: 0
+Both full reports contain leak diagnostics, including Python import/Unicode and pybind registration
+allocation stacks. Neither contains invalid-access/uninitialized-value diagnostics or stack frames
+named CNavigation or CPathFinder. The import control demonstrates leakage before a game is created;
+it does not prove historical origin or explain every difference between the reports. No suppression
+was added and no unrelated Python/pybind memory fix was attempted. The separate callback-only
+Memcheck result in callgrind-results.txt remains a distinct clean component-level result.
+
+Raw reports, outputs, exit-code files, annotations and build logs are retained under the ignored
+cmake-build-release/navigation-live-linux directory (final-live-*, final-import-*, build-lock-final.log).
+
+Selected source SHA256 (exact compiled/ executed bytes):
+e9149a7df1e5fb6d9f6bd524bafd79e27d3280ad2ae46a1f815005a0ccfaa88f  src/core/CPathFinder.cpp
+a60846a5b0d12147aadb79862b5fb0e5a574aacea7e442a9fd9eaf632a5b9239  src/core/CNavigationSearch.cpp
+a38eeabc5e07cf5a3ae0c06ca3ebb4b14510944e50f462329841184db9d34cf2  src/core/CNavigation.cpp
+a727422bebe92b59f067b198e94eb8b59892421223dd925b5aee182d4fa8c1d2  src/core/CNavigationFlow.cpp
+6787c5b854da9342a63eaec7eeeb65d640cfbe268b455bf2fe5e41bd8f8d6130  src/core/CController.cpp
+127dc2883e2298a8b2232b997e6955bc46d5aa2941439cfc937c6f7db529ba39  src/core/CGameContext.cpp
+fe0daa0fbf2be9fff50cfefcb00c14112cfa17666f7934b4735c7f39a6b961c2  src/core/CMap.cpp
+40913ce9f61db74ef92e2ac636796821125a6a5c4497909da55843817c39a20a  src/object/CMapObject.cpp
+e1d959062de9a064d672399c5332f6c0dafc30f5044f3c8ad3af2e50f98ebf5c  scripts/navigation_profile/live.py
+e599a1a0eed0358d276ddf148cd0bc606b369415cd5c4c89fddd32eec3e33631  scripts/navigation_profile/live-client.cpp

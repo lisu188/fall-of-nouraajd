@@ -22,6 +22,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 CPluginRegistrar::CPluginRegistrar(std::shared_ptr<CGame> game) : _game(std::move(game)) {}
 
+bool CPluginRegistrar::registerNativeFactory(const std::string &name,
+                                             std::function<std::shared_ptr<CGameObject>()> factory) const {
+    if (!_game || name.empty() || !factory)
+        return false;
+    _game->getObjectHandler()->registerNativeType(name, std::move(factory));
+    return true;
+}
+
 void CPluginRegistrar::log(const std::string &message) const { vstd::logger::info("Plugin:", message); }
 
 bool CPluginRegistrar::registerConfigJson(const std::string &id, const std::string &jsonText) const {

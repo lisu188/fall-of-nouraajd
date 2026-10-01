@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ class CGame;
 class CCreature;
 
 class CTile : public CGameObject {
+    friend class CMap;
 
     V_META(CTile, CGameObject, V_PROPERTY(CTile, bool, canStep, canStep, setCanStep),
            V_PROPERTY(CTile, int, posx, getPosx, setPosx), V_PROPERTY(CTile, int, posy, getPosy, setPosy),

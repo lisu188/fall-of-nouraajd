@@ -1,0 +1,35 @@
+revision=762157313795cbdc5a1ec3d63848e03565c5d57c
+platform=Windows x64 MSVC Release; two warmups; seven measured samples; no GUI instantiated
+warmups=2 samples=7 metric=median_wall_time timing_is_not_a_gate=1
+generic_open_96 sample=0 milliseconds=4.913400 length=190 expanded=9215 passability=9598 edge_cost=36478 heuristic=9216
+generic_open_96 sample=1 milliseconds=4.747400 length=190 expanded=9215 passability=9598 edge_cost=36478 heuristic=9216
+generic_open_96 sample=2 milliseconds=4.859900 length=190 expanded=9215 passability=9598 edge_cost=36478 heuristic=9216
+generic_open_96 sample=3 milliseconds=4.591900 length=190 expanded=9215 passability=9598 edge_cost=36478 heuristic=9216
+generic_open_96 sample=4 milliseconds=4.756300 length=190 expanded=9215 passability=9598 edge_cost=36478 heuristic=9216
+generic_open_96 sample=5 milliseconds=5.329400 length=190 expanded=9215 passability=9598 edge_cost=36478 heuristic=9216
+generic_open_96 sample=6 milliseconds=4.864500 length=190 expanded=9215 passability=9598 edge_cost=36478 heuristic=9216
+generic_open_96 median_ms=4.859900
+generic_weighted_128 sample=0 milliseconds=2.268600 length=254 expanded=4656 passability=5169 edge_cost=18332 heuristic=4877
+generic_weighted_128 sample=1 milliseconds=2.714300 length=254 expanded=4656 passability=5169 edge_cost=18332 heuristic=4877
+generic_weighted_128 sample=2 milliseconds=2.405800 length=254 expanded=4656 passability=5169 edge_cost=18332 heuristic=4877
+generic_weighted_128 sample=3 milliseconds=2.564900 length=254 expanded=4656 passability=5169 edge_cost=18332 heuristic=4877
+generic_weighted_128 sample=4 milliseconds=2.404300 length=254 expanded=4656 passability=5169 edge_cost=18332 heuristic=4877
+generic_weighted_128 sample=5 milliseconds=2.291500 length=254 expanded=4656 passability=5169 edge_cost=18332 heuristic=4877
+generic_weighted_128 sample=6 milliseconds=2.236900 length=254 expanded=4656 passability=5169 edge_cost=18332 heuristic=4877
+generic_weighted_128 median_ms=2.404300
+generic_unreachable_96 sample=0 milliseconds=2.082000 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=4608
+generic_unreachable_96 sample=1 milliseconds=2.074900 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=4608
+generic_unreachable_96 sample=2 milliseconds=2.255300 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=4608
+generic_unreachable_96 sample=3 milliseconds=2.162400 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=4608
+generic_unreachable_96 sample=4 milliseconds=2.073600 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=4608
+generic_unreachable_96 sample=5 milliseconds=2.081200 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=4608
+generic_unreachable_96 sample=6 milliseconds=2.179500 length=1 expanded=4608 passability=4897 edge_cost=18144 heuristic=4608
+generic_unreachable_96 median_ms=2.082000
+player_overlay_4096 sample=0 milliseconds=145.494600 queries=20000 matched=20000
+player_overlay_4096 sample=1 milliseconds=140.624600 queries=20000 matched=20000
+player_overlay_4096 sample=2 milliseconds=141.217700 queries=20000 matched=20000
+player_overlay_4096 sample=3 milliseconds=141.393700 queries=20000 matched=20000
+player_overlay_4096 sample=4 milliseconds=144.116400 queries=20000 matched=20000
+player_overlay_4096 sample=5 milliseconds=146.564700 queries=20000 matched=20000
+player_overlay_4096 sample=6 milliseconds=141.106700 queries=20000 matched=20000
+player_overlay_4096 median_ms=141.393700

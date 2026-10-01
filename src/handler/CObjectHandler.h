@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CSerialization.h"
 #include "object/CGameObject.h"
+#include <atomic>
 
 class CMap;
 
@@ -57,6 +58,7 @@ class CObjectHandler : public CGameObject {
     void registerConfig(const std::set<std::string> &paths);
 
     void registerType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
+    void registerNativeType(std::string name, std::function<std::shared_ptr<CGameObject>()> constructor);
 
     // Map-script registration scope. Class names registered while the scope is active (i.e. while a
     // map's script.py is being loaded) are treated as map-scoped: a later map-scoped registration of
@@ -73,6 +75,8 @@ class CObjectHandler : public CGameObject {
     std::shared_ptr<json> getConfig(const std::string &type);
 
     std::string getClass(const std::string &type);
+    std::uint64_t getNavigationConfigRevision() const;
+    std::optional<std::pair<bool, int>> getStaticTileNavigation(const std::string &type);
 
   private:
     std::shared_ptr<CGameObject> _createObject(std::shared_ptr<CGame> map, const std::string &type);
@@ -87,4 +91,6 @@ class CObjectHandler : public CGameObject {
     bool mapScriptScopeActive = false;
 
     std::unordered_map<std::string, std::shared_ptr<json>> objectConfig;
+    std::atomic_uint64_t navigationConfigRevision{1};
+    bool nativeTileFactory = false;
 };
