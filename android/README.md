@@ -67,7 +67,7 @@ The Gradle build:
 4. packages the required CPython JNI libraries and ARM64 shared dependencies, including SDL2, from the dependency prefix;
 5. invokes `android/CMakeLists.txt` to produce `libmain.so`.
 
-At first launch `RuntimeAssets` extracts the packaged Python and game payloads into app-private storage. A package-version marker avoids repeating the extraction until the app version changes. The `files/user` directory is intentionally not deleted during upgrades and is the writable resource/save root.
+At first launch `RuntimeAssets` extracts the packaged Python and game payloads into app-private storage. A marker containing the package version and Android's last package update time avoids repeating extraction for an unchanged installation. Replacing the APK refreshes both payloads even when debug builds share the same version code. The `files/user` directory is intentionally not deleted during upgrades and is the writable resource/save root.
 
 ## Native startup
 
@@ -97,4 +97,6 @@ Before touch-layout work starts, verify on a physical ARM64 device running Andro
 - a tap reaches the existing SDL mouse-event path and moves the player;
 - a save is written beneath `files/user/save` and remains loadable after force-stop/relaunch.
 
-Touch thresholds, long-press/right-click mapping, mobile panel geometry, pause/resume handling, and automated Android CI are later slices and are not claimed complete by this MVP bootstrap.
+Android CI runs the runtime extraction regression, builds the ARM64 debug APK, and uploads it as an artifact. The extraction regression executes the production Java installer against host-side Android API fixtures; it does not boot Android or verify rendering on a device.
+
+Touch thresholds, long-press/right-click mapping, mobile panel geometry, and pause/resume handling are later slices and are not claimed complete by this MVP bootstrap.
