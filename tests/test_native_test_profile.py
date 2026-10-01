@@ -12,9 +12,9 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-# Ordered native cases on main f80edd27, before adding diagnostic wrappers.
+# Ordered native cases on main e3d3c90, before adding diagnostic wrappers.
 BASELINE_CASES = {
-    "handler": (30, "b52fed9d5b269e53ba035c51fa6085bd85ee02527c0bb457a7a58e37054ca525"),
+    "handler": (36, "133d76b3db645f21a09e2b55fc738f481318a97c42532b80bb67edba5354a89d"),
     "map": (49, "17f592c7f09a057f9c3249babde697470899143ffda78688662f61ab5cfbdf9e"),
 }
 
@@ -89,15 +89,26 @@ class NativeTestProfileSourceTest(unittest.TestCase):
         for suite, (count, digest) in BASELINE_CASES.items():
             source = (ROOT / f"tests/unit/test_{suite}.cpp").read_text(encoding="utf-8")
             main = source[source.rindex("int main() {") :]
-            calls = re.findall(r'nativeTestProfile\(\)\.run\("(test\w+)",\s*(test\w+)\);', main)
+            calls = re.findall(
+                r'nativeTestProfile\(\)\.run\("(test\w+)",\s*'
+                r'(?:(test\w+)\);|\[&\] \{\s*runTimedGuiCancellationTest\("(test\w+)",\s*(test\w+)\);\s*\}\);)',
+                main,
+            )
             self.assertEqual(count, len(calls), suite)
-            self.assertTrue(all(name == callback for name, callback in calls), suite)
-            names = [name for name, _callback in calls]
+            self.assertTrue(
+                all(
+                    name == callback if callback else name == timed_name == timed_callback
+                    for name, callback, timed_name, timed_callback in calls
+                ),
+                suite,
+            )
+            names = [name for name, *_callbacks in calls]
             self.assertEqual(digest, hashlib.sha256("\n".join(names).encode()).hexdigest(), suite)
             self.assertFalse(re.search(r"^\s+(test\w+)\(\);", main, re.MULTILINE), suite)
             self.assertIn("return finish_tests();", main)
             if suite == "handler":
                 self.assertEqual("testGameplayMetadataIsAvailableBeforePluginLoading", names[0])
+                self.assertEqual(3, sum(bool(timed_name) for _name, _callback, timed_name, _timed_callback in calls))
 
     def testProfilesGoIntoTheUploadedSourceCoverageDirectoryWithoutChangingLimits(self):
         cmake = (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")

@@ -63,6 +63,8 @@ class CPlayer : public CCreature {
 
     void checkQuests();
 
+    void captureQuestJournal();
+
     void incTurn();
 
   private:
@@ -72,6 +74,8 @@ class CPlayer : public CCreature {
     std::string raceId;
     std::string uiDialogueHistory;
     std::string uiDefeatReceipt;
+
+    bool checkingQuests = false;
 
     int turn = 0;
 };

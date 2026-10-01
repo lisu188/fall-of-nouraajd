@@ -3,6 +3,7 @@ def load(self, context):
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import Coords
     from game import register
@@ -99,6 +100,7 @@ def load(self, context):
             player.checkQuests()
 
     @register(context)
+    @mapQuest("vhulmarn")
     class DrownedTitheQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()

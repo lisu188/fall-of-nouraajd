@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "handler/CGuiHandler.h"
 #include "handler/CFightHandler.h"
+#include "handler/CObjectHandler.h"
 #include "handler/CQuestHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
@@ -48,14 +49,17 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -210,10 +214,54 @@ class CompletedQuest : public CQuest {
     void onComplete() override { complete_count++; }
 };
 
+class QuestLifecycleProbe : public CQuest {
+  public:
+    int check_count = 0;
+    int complete_count = 0;
+    std::vector<bool> captures;
+    std::function<void()> check_callback;
+    std::function<void()> complete_callback;
+    std::function<void()> capture_callback;
+
+    bool isCompleted() override {
+        check_count++;
+        if (check_callback) {
+            check_callback();
+        }
+        return true;
+    }
+
+    void onComplete() override {
+        complete_count++;
+        if (complete_callback) {
+            complete_callback();
+        }
+    }
+
+    void captureJournal(bool completed) override {
+        captures.push_back(completed);
+        if (capture_callback) {
+            capture_callback();
+        }
+    }
+};
+
 std::shared_ptr<CGame> load_empty_game() {
     auto game = nativeTestProfile().run("CGameLoader::loadGame", [] { return CGameLoader::loadGame(); });
     nativeTestProfile().run("CGameLoader::startGame(empty)", [&] { CGameLoader::startGame(game, "empty"); });
     return game;
+}
+
+void attachFightPanelGuiFixture(const std::shared_ptr<CGame> &game) {
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(game);
+    game->setGui(gui);
+
+    // Authored GUI visibility scripts require Python bindings for native GUI types.
+    // These cancellation tests exercise the real panel without unrelated scripted child views.
+    auto fight_panel_config = std::make_shared<json>();
+    (*fight_panel_config)["class"] = "CGameFightPanel";
+    game->getObjectHandler()->registerConfig("fightPanel", fight_panel_config);
 }
 
 void initialize_test_creature_stats(const std::shared_ptr<CCreature> &creature) {
@@ -750,7 +798,7 @@ void test_fight_handler_reports_cancelled_closed_fight_panel() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
 
     player->setHp(10);
@@ -796,7 +844,7 @@ void test_player_fight_controller_returns_cancelled_when_attached_fight_panel_ca
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
 
     player->setHp(10);
@@ -834,7 +882,7 @@ void test_fight_handler_returns_cancelled_when_player_control_cancels() {
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 
     auto game = load_empty_game();
-    CGameLoader::loadGui(game);
+    attachFightPanelGuiFixture(game);
     auto player = add_test_player(game);
     player->setHp(10);
 
@@ -855,15 +903,34 @@ void test_fight_handler_returns_cancelled_when_player_control_cancels() {
     auto panel_was_cancelled = std::make_shared<bool>(false);
     vstd::event_loop<>::instance()->invoke([game, cancellation_callback_ran, panel_was_cancelled]() {
         *cancellation_callback_ran = true;
-        auto panel = game && game->getGui() ? vstd::cast<CGameFightPanel>(game->getGui()->findChild("CGameFightPanel"))
-                                            : nullptr;
+        auto gui = game ? game->getGui() : nullptr;
+        std::size_t fight_panel_count = 0;
+        std::shared_ptr<CGameFightPanel> attached_panel;
+        if (gui) {
+            for (const auto &child : gui->getChildren()) {
+                if (auto candidate = vstd::cast<CGameFightPanel>(child)) {
+                    ++fight_panel_count;
+                    attached_panel = candidate;
+                }
+            }
+        }
+        auto panel = gui ? vstd::cast<CGameFightPanel>(gui->findChild("CGameFightPanel")) : nullptr;
+        expect_true(fight_panel_count == 1, "queued cancellation should find exactly one attached fight panel");
+        expect_true(panel && panel == attached_panel && gui->findChild(panel) == panel,
+                    "queued cancellation should target the same fight panel found by the GUI");
         if (panel) {
             panel->cancel();
             *panel_was_cancelled = panel->isCancelled();
         }
+        std::cout << "[handler-test] cancellation callback ran=" << *cancellation_callback_ran
+                  << " panelFound=" << (panel != nullptr) << " panelCount=" << fight_panel_count
+                  << " isCancelled=" << *panel_was_cancelled << std::endl;
     });
 
+    std::cout << "[handler-test] BEFORE fightManyResult for queued player cancellation" << std::endl;
     const auto result = CFightHandler::fightManyResult(player, {defender});
+    std::cout << "[handler-test] AFTER fightManyResult for queued player cancellation outcome="
+              << static_cast<int>(result.outcome) << " rounds=" << result.rounds << std::endl;
 
     expect_true(*cancellation_callback_ran, "fight panel cancellation should run while player control is waiting");
     expect_true(*panel_was_cancelled, "queued cancellation should cancel the active fight panel");
@@ -947,6 +1014,159 @@ void test_fight_handler_counts_effect_duration_as_progress() {
     expect_true(game->getMap()->getObjectByName(attacker->getName()) == attacker &&
                     game->getMap()->getObjectByName(defender->getName()) == defender,
                 "timed-effect stale handling should not remove living participants");
+}
+
+void test_player_quest_completion_ignores_reentry_and_captures_final_callback_state() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    quest->setTypeId("reentrantQuest");
+    player->setQuests({quest});
+    std::string journal_state = "active";
+    quest->complete_callback = [&]() {
+        expect_true(player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "completion callbacks should retain the existing active-quest timing");
+        player->checkQuests();
+        journal_state = "completed";
+    };
+    quest->capture_callback = [&]() {
+        expect_true(journal_state == "completed" && player->getCompletedQuests().empty(),
+                    "completion capture should observe callback changes before completed insertion");
+    };
+
+    CPlaytestTrace::configure(true, "", 100);
+    player->checkQuests();
+    player->checkQuests();
+    int completion_records = 0;
+    for (const auto &line : CPlaytestTrace::drain()) {
+        const auto record = json::parse(line);
+        if (record.value("event", std::string()) == "quest_completed") {
+            completion_records++;
+        }
+    }
+    CPlaytestTrace::configure(false, "", 100);
+
+    expect_true(quest->check_count == 1 && quest->complete_count == 1 && completion_records == 1,
+                "nested and repeated completion checks should run and trace one completion");
+    expect_true(quest->captures == std::vector<bool>{true}, "completed quest journals should capture exactly once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "reentrant completion should move the quest into the completed journal");
+}
+
+void test_player_quest_completion_accepts_cleared_active_set() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() { player->setQuests({}); };
+
+    player->checkQuests();
+    player->checkQuests();
+
+    expect_true(quest->complete_count == 1 && quest->captures == std::vector<bool>{true},
+                "a callback clearing active quests should complete and capture safely once");
+    expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                "clearing active quests during completion should preserve the current completed quest");
+}
+
+void test_player_quest_completion_skips_removed_snapshot_entries() {
+    auto player = std::make_shared<CPlayer>();
+    auto first = std::make_shared<QuestLifecycleProbe>();
+    auto second = std::make_shared<QuestLifecycleProbe>();
+    auto replacement = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({first, second});
+    if (*player->getQuests().begin() != first) {
+        std::swap(first, second);
+    }
+    first->complete_callback = [&]() { player->setQuests({replacement}); };
+
+    player->checkQuests();
+
+    expect_true(first->complete_count == 1 && second->check_count == 0 && second->complete_count == 0,
+                "quests removed by an earlier callback should be skipped in the original snapshot");
+    expect_true(replacement->check_count == 0 && player->getQuests() == std::set<std::shared_ptr<CQuest>>{replacement},
+                "replacement quests should wait for the next completion pass");
+    player->checkQuests();
+    expect_true(replacement->complete_count == 1 && player->getCompletedQuests().size() == 2,
+                "the next pass should complete the replacement without restoring removed quests");
+
+    auto removed_during_check = std::make_shared<QuestLifecycleProbe>();
+    removed_during_check->check_callback = [&]() { player->setQuests({}); };
+    player->setQuests({removed_during_check});
+    player->checkQuests();
+    expect_true(removed_during_check->complete_count == 0 && removed_during_check->captures.empty(),
+                "a quest removed by its completion predicate should not receive completion callbacks");
+}
+
+void test_player_quest_completion_defers_new_quests_until_next_pass() {
+    auto player = std::make_shared<CPlayer>();
+    auto quest = std::make_shared<QuestLifecycleProbe>();
+    auto next_quest = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({quest});
+    quest->complete_callback = [&]() {
+        auto active = player->getQuests();
+        active.insert(next_quest);
+        player->setQuests(active);
+        player->checkQuests();
+    };
+
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->check_count == 0,
+                "quests added by a completion callback should wait even when the callback reenters checks");
+    expect_true(player->getQuests() == std::set<std::shared_ptr<CQuest>>{next_quest},
+                "new quest membership should survive completion of the original quest");
+    player->checkQuests();
+    player->checkQuests();
+    expect_true(quest->complete_count == 1 && next_quest->complete_count == 1 && player->getQuests().empty(),
+                "each original and newly added quest should complete exactly once across later passes");
+}
+
+void test_player_quest_completion_restores_guard_after_native_exceptions() {
+    for (bool throw_in_predicate : {true, false}) {
+        auto player = std::make_shared<CPlayer>();
+        auto quest = std::make_shared<QuestLifecycleProbe>();
+        player->setQuests({quest});
+        bool first_attempt = true;
+        auto fail_once = [&]() {
+            if (std::exchange(first_attempt, false)) {
+                throw std::runtime_error("quest lifecycle failure");
+            }
+        };
+        if (throw_in_predicate) {
+            quest->check_callback = fail_once;
+        } else {
+            quest->complete_callback = fail_once;
+        }
+        bool threw = false;
+        try {
+            player->checkQuests();
+        } catch (const std::runtime_error &) {
+            threw = true;
+        }
+        expect_true(threw && player->getQuests().contains(quest) && player->getCompletedQuests().empty(),
+                    "failed native callbacks should retain the existing incomplete membership");
+
+        player->checkQuests();
+        player->checkQuests();
+        expect_true(player->getQuests().empty() && player->getCompletedQuests().contains(quest),
+                    "the RAII guard should permit retry after predicate and completion exceptions");
+        expect_true(quest->complete_count == (throw_in_predicate ? 1 : 2) && quest->captures == std::vector<bool>{true},
+                    "only the successful completion attempt should capture the completed journal");
+    }
+}
+
+void test_player_capture_quest_journal_passes_membership_without_completing() {
+    auto player = std::make_shared<CPlayer>();
+    auto active = std::make_shared<QuestLifecycleProbe>();
+    auto completed = std::make_shared<QuestLifecycleProbe>();
+    player->setQuests({active});
+    player->setCompletedQuests({completed});
+
+    player->captureQuestJournal();
+
+    expect_true(active->captures == std::vector<bool>{false} && completed->captures == std::vector<bool>{true},
+                "journal capture should pass active and completed set membership to each quest");
+    expect_true(active->check_count == 0 && completed->check_count == 0 && active->complete_count == 0 &&
+                    completed->complete_count == 0,
+                "saving or leaving a map should capture journals without driving completion predicates or rewards");
 }
 
 void test_playtest_trace_records_native_limits_and_quest_completion() {
@@ -2066,6 +2286,14 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    const auto runTimedGuiCancellationTest = [](const char *name, void (*test)()) {
+        const auto started = std::chrono::steady_clock::now();
+        std::cout << "[handler-test] ENTER " << name << std::endl;
+        test();
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+        std::cout << "[handler-test] EXIT " << name << " elapsedMs=" << elapsed << std::endl;
+    };
     nativeTestProfile().run("testGameplayMetadataIsAvailableBeforePluginLoading",
                             testGameplayMetadataIsAvailableBeforePluginLoading);
 
@@ -2109,16 +2337,34 @@ int main() {
                             test_fight_handler_reports_cancelled_quit_event);
     nativeTestProfile().run("test_fight_handler_ends_original_started_controllers",
                             test_fight_handler_ends_original_started_controllers);
-    nativeTestProfile().run("test_fight_handler_reports_cancelled_closed_fight_panel",
-                            test_fight_handler_reports_cancelled_closed_fight_panel);
-    nativeTestProfile().run("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
-                            test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
-    nativeTestProfile().run("test_fight_handler_returns_cancelled_when_player_control_cancels",
-                            test_fight_handler_returns_cancelled_when_player_control_cancels);
+    nativeTestProfile().run("test_fight_handler_reports_cancelled_closed_fight_panel", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_reports_cancelled_closed_fight_panel",
+                                    test_fight_handler_reports_cancelled_closed_fight_panel);
+    });
+    nativeTestProfile().run("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels", [&] {
+        runTimedGuiCancellationTest("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
+                                    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
+    });
+    nativeTestProfile().run("test_fight_handler_returns_cancelled_when_player_control_cancels", [&] {
+        runTimedGuiCancellationTest("test_fight_handler_returns_cancelled_when_player_control_cancels",
+                                    test_fight_handler_returns_cancelled_when_player_control_cancels);
+    });
     nativeTestProfile().run("test_fight_panel_resets_status_between_sequential_encounters",
                             test_fight_panel_resets_status_between_sequential_encounters);
     nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
                             test_fight_handler_counts_effect_duration_as_progress);
+    nativeTestProfile().run("test_player_quest_completion_ignores_reentry_and_captures_final_callback_state",
+                            test_player_quest_completion_ignores_reentry_and_captures_final_callback_state);
+    nativeTestProfile().run("test_player_quest_completion_accepts_cleared_active_set",
+                            test_player_quest_completion_accepts_cleared_active_set);
+    nativeTestProfile().run("test_player_quest_completion_skips_removed_snapshot_entries",
+                            test_player_quest_completion_skips_removed_snapshot_entries);
+    nativeTestProfile().run("test_player_quest_completion_defers_new_quests_until_next_pass",
+                            test_player_quest_completion_defers_new_quests_until_next_pass);
+    nativeTestProfile().run("test_player_quest_completion_restores_guard_after_native_exceptions",
+                            test_player_quest_completion_restores_guard_after_native_exceptions);
+    nativeTestProfile().run("test_player_capture_quest_journal_passes_membership_without_completing",
+                            test_player_capture_quest_journal_passes_membership_without_completing);
     nativeTestProfile().run("test_playtest_trace_records_native_limits_and_quest_completion",
                             test_playtest_trace_records_native_limits_and_quest_completion);
     nativeTestProfile().run("test_playtest_trace_environment_targets_and_fallback_ids",
