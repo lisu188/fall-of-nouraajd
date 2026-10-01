@@ -38,6 +38,11 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                 controller = actor.getFightController()
                 assert controller.control(actor, player), template
                 assert actor.getBoolProperty('enemyRoleUsed'), template
+                effect = actions[signature_id].getObjectProperty('roleEffect')
+                recipient = actor if actions[signature_id].getBoolProperty('selfTarget') else player
+                assert any(active.name == effect.name for active in recipient.getEffects()), template
+                assert effect.getTimeLeft() == 1 and effect.getVictim() == recipient, template
+                assert not actor.getBoolProperty('enemyRoleArcaneAttack'), template
                 assert actor.getMana() == 0, template
                 assert controller.control(actor, player), template
                 assert baseline == game.jsonify(actor.baseStats), template
@@ -57,6 +62,7 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                     actor = loaded_map.getObjectByName('roleRuntime' + str(index))
                     assert actor.getBoolProperty('enemyRoleUsed'), index
                     assert actor.getBoolProperty('enemyRoleEffectApplied'), index
+                    assert not actor.getBoolProperty('enemyRoleArcaneAttack'), index
                     assert actor.getFightController().control(actor, loaded_player), index
                     assert actor.getBoolProperty('enemyRoleUsed'), index
             finally:

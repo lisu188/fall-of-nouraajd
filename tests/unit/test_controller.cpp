@@ -1240,6 +1240,7 @@ void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
         auto attack = std::make_shared<RoleActionProbe>();
         attack->setGame(game);
         attack->setName("attack");
+        attack->setTypeId("Attack");
         monster->addAction(attack);
         CMonsterFightController controller;
         if (std::string(trigger) != "opening") {
@@ -1312,6 +1313,11 @@ void testMonsterRoleExclusionsAndMalformedActions() {
         if (std::string(mode) == "guardedWounded") {
             signature->setStringProperty("enemyRoleTrigger", "guarded");
             monster->setHp(1);
+            auto attack = std::make_shared<RoleActionProbe>();
+            attack->setGame(game);
+            attack->setName("attack");
+            attack->setTypeId("Attack");
+            monster->addAction(attack);
         }
         monster->addAction(signature);
         CMonsterFightController controller;
@@ -1388,6 +1394,36 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
     }
 }
 
+void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setStringProperty("combatRole", "testRole");
+    monster->setCreatureClass(creatureClass);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "testRole");
+    signature->setStringProperty("enemyRoleTrigger", "opening");
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setName("attack");
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    auto spell = std::make_shared<RoleActionProbe>();
+    spell->setGame(game);
+    spell->setTypeId("Barrier");
+    spell->setSelfTarget(true);
+    spell->setEffect(named_self_effect(game, "ordinaryBarrier", CTag::Buff));
+    monster->addAction(spell);
+    CMonsterFightController controller;
+    expect_true(controller.control(monster, opponent), "ordinary defensive cast must retain its AI priority");
+    expect_true(spell->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                "class signature must not delay an ordinary selected spell");
+}
+
 } // namespace
 
 int main() {
@@ -1424,6 +1460,7 @@ int main() {
     testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
     testMonsterRoleExclusionsAndMalformedActions();
     testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana();
+    testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
 
     return finish_tests();
 }

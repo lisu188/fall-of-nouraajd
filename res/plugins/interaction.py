@@ -1,5 +1,5 @@
 # fall-of-nouraajd c++ dark fantasy game
-# Copyright (C) 2025  Andrzej Lis
+# Copyright (C) 2025-2026  Andrzej Lis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,9 +34,18 @@ def load(self, context):
     @register(context)
     class Attack(CInteraction):
         def performAction(self, first, second):
+            arcane = first.getBoolProperty("enemyRoleArcaneAttack")
+            if arcane:
+                first.setBoolProperty("enemyRoleArcaneAttack", False)
             dmg = first.getDmg()
             if dmg:
-                second.hurt(dmg)
+                if arcane:
+                    damage = first.getObjectProperty("enemyRoleDamagePacket")
+                    damage.setNumericProperty("normal", dmg - 1)
+                    damage.setNumericProperty("frost", 1)
+                    second.hurt(damage)
+                else:
+                    second.hurt(dmg)
                 weapon = first.getWeapon()
                 if weapon:
                     inter = weapon.getInteraction()

@@ -15,18 +15,21 @@ def load(self, context):
         def performAction(self, first, second):
             if first.getBoolProperty("enemyRoleUsed"):
                 return
+            attack = next((action for action in first.getInteractions() if action.getTypeId() == "Attack"), None)
+            if attack is None:
+                return
             first.setBoolProperty("enemyRoleUsed", True)
-            self.performSignature(first, second)
+            self.performSignature(first, second, attack)
+            effect = self.getObjectProperty("roleEffect")
+            recipient = first if self.getBoolProperty("selfTarget") else second
+            if not first.getBoolProperty("enemyRoleEffectApplied") and recipient.isAlive():
+                first.setBoolProperty("enemyRoleEffectApplied", True)
+                effect.setCaster(first)
+                effect.setVictim(recipient)
+                recipient.addEffect(effect)
 
-        def performSignature(self, first, second):
-            pass
-
-        def configureEffect(self, effect):
-            caster = effect.getCaster()
-            if caster.getBoolProperty("enemyRoleEffectApplied"):
-                return False
-            caster.setBoolProperty("enemyRoleEffectApplied", True)
-            return True
+        def performSignature(self, first, second, attack):
+            attack.performAction(first, second)
 
     @register(context)
     class EnemyBrace(EnemySignature):
@@ -34,21 +37,17 @@ def load(self, context):
 
     @register(context)
     class EnemyArcaneBolt(EnemySignature):
-        def performSignature(self, first, second):
-            budget = max(0, first.getDmg())
-            if not budget:
-                return
-            damage = first.getGame().createObject("CDamage")
-            damage.setNumericProperty("normal", budget // 2)
-            damage.setNumericProperty("frost", budget - budget // 2)
-            second.hurt(damage)
+        def performSignature(self, first, second, attack):
+            first.setObjectProperty("enemyRoleDamagePacket", self.getObjectProperty("roleDamage"))
+            first.setBoolProperty("enemyRoleArcaneAttack", True)
+            try:
+                attack.performAction(first, second)
+            finally:
+                first.setBoolProperty("enemyRoleArcaneAttack", False)
 
     @register(context)
     class EnemyOpeningStrike(EnemySignature):
-        def performSignature(self, first, second):
-            budget = max(0, first.getDmg()) * 80 // 100
-            if budget:
-                second.hurt(budget)
+        pass
 
     @register(context)
     class EnemyRitualHex(EnemySignature):

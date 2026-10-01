@@ -568,10 +568,10 @@
       "enemyRole": "brute",
       "enemyRoleTrigger": "wounded",
       "selfTarget": true,
-      "effect": {
+      "description": "Once per enemy, decorate an ordinary attack below half health: gain 1 point of Physical resistance and lose 1 point of frost resistance for 1 turn.",
+      "roleEffect": {
         "ref": "enemyBraceEffect"
-      },
-      "description": "Once per enemy: spend a turn bracing below half health, improving block and Physical resistance by 5 points while reducing hit chance by 5 for 2 turns."
+      }
     }
   },
   "enemyArcaneBolt": {
@@ -584,10 +584,13 @@
       "enemyRole": "mage",
       "enemyRoleTrigger": "opening",
       "selfTarget": true,
-      "effect": {
+      "description": "Once per enemy, convert 1 point of an ordinary attack to frost without changing its damage budget, then lose 1 point of Physical resistance for 1 turn.",
+      "roleEffect": {
         "ref": "enemyArcaneBoltEffect"
       },
-      "description": "Once per enemy: split one attack damage roll between Physical and frost damage, with 5 points less Physical resistance for 1 turn."
+      "roleDamage": {
+        "class": "CDamage"
+      }
     }
   },
   "enemyOpeningStrike": {
@@ -600,10 +603,10 @@
       "enemyRole": "thief",
       "enemyRoleTrigger": "guarded",
       "selfTarget": false,
-      "effect": {
+      "description": "Once per enemy, decorate an ordinary attack against a guarded opponent or while wounded: reduce enemy block by 1 point for 1 turn.",
+      "roleEffect": {
         "ref": "enemyOpeningStrikeEffect"
-      },
-      "description": "Once per enemy: strike for 80% of one attack roll and reduce enemy block by 5 points for 2 turns."
+      }
     }
   },
   "enemyRitualHex": {
@@ -616,10 +619,10 @@
       "enemyRole": "cultist",
       "enemyRoleTrigger": "opening",
       "selfTarget": false,
-      "effect": {
+      "description": "Once per enemy, decorate an ordinary attack: reduce enemy shadow resistance by 1 point for 1 turn.",
+      "roleEffect": {
         "ref": "enemyRitualHexEffect"
-      },
-      "description": "Once per enemy: spend a turn reducing enemy hit chance and shadow resistance by 5 points for 2 turns."
+      }
     }
   },
   "octobogzCharge": {
