@@ -449,6 +449,15 @@ void test_controller_connector_costs_agree_and_invalidate_flow() {
                 "player should use the now-cheap connector");
     expect_true(resolve_coords(npc_controller->control(chaser)) == goal,
                 "changed edge cost should invalidate cached flow");
+    map->getTile(goal)->setMovementCost(std::numeric_limits<int>::max());
+    map->unregisterNavigationEdgesForObject("costPortal");
+    map->registerNavigationEdge({start, goal, true, false, std::numeric_limits<int>::max(), "costPortal"});
+    player_controller->interrupt(player);
+    player_controller->setTarget(player, goal);
+    expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
+                "a connector price above 32 bits must remain more expensive than walking");
+    expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
+                "reverse pursuit must not narrow a large destination-plus-connector price");
 }
 
 void test_target_controller_concurrent_requests_extend_and_reuse_shared_flow() {
