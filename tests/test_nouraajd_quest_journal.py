@@ -37,6 +37,9 @@ class PropertyObject:
     def setNumericProperty(self, name, value):
         self.properties[name] = value
 
+    def getNumericProperty(self, name):
+        return self.properties.get(name, 0)
+
     def getTurn(self):
         return 12
 
@@ -54,7 +57,7 @@ def loadQuestClasses(game_map=None, context=None, pending=None):
     game_stub = types.ModuleType("game")
     for name in ("CEvent", "CTrigger", "CQuest", "CPlayer", "CDialog", "Coords"):
         setattr(game_stub, name, type(name, (PropertyObject,), {}))
-    for name in ("LegacyBoolFlag", "PlayerQuestRegistry", "QuestStateStore", "ensure_quest"):
+    for name in ("LegacyBoolFlag", "PlayerQuestRegistry", "QuestStateStore", "ensure_quest", "mapQuest"):
         setattr(game_stub, name, getattr(quest_state, name))
 
     class QuestStateStore(quest_state.QuestStateStore):
@@ -63,6 +66,10 @@ def loadQuestClasses(game_map=None, context=None, pending=None):
             classes[cls.__name__] = cls
 
     game_stub.QuestStateStore = QuestStateStore
+    game_stub.CQuest.getObjective = lambda self: self.getStringProperty("objective")
+    game_stub.CQuest.getReward = lambda self: self.getStringProperty("reward")
+    game_stub.CQuest.getHint = lambda self: self.getStringProperty("hint")
+    game_stub.CQuest.isCompleted = lambda self: False
     game_stub.claim_once = lambda *_args: True
     game_stub.remove_runtime_actors = lambda *_args, **_kwargs: 0
     game_stub.showReader = lambda *_args, **_kwargs: None
