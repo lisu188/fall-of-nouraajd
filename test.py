@@ -22998,7 +22998,8 @@ class XvfbGameplayProcessTest(unittest.TestCase):
                 if completed_ids:
                     active_pixels, width, height = g.getGui().read_pixels()
                     buttons = {
-                        button.getStringProperty("click"): button for button in find_descendants_by_type(panel, "CButton")
+                        button.getStringProperty("click"): button
+                        for button in find_descendants_by_type(panel, "CButton")
                     }
                     activate_widget(buttons["showCompleted"], g.getGui())
                     self.assertIn("[Completed]", panel.getText(g.getGui()))

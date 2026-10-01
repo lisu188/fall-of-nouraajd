@@ -103,8 +103,11 @@ class PlayerIdentityContentTest(unittest.TestCase):
         game_module = types.ModuleType("game")
         for name in ("CEvent", "CTrigger", "CQuest", "CDialog", "CInteraction"):
             setattr(game_module, name, type(name, (), {}))
+        for name in ("getObjective", "getReward", "getHint"):
+            setattr(game_module.CQuest, name, lambda _self: "")
+        game_module.CQuest.isCompleted = lambda _self: False
         game_module.CPlayer = ContentPlayer
-        for name in ("LegacyBoolFlag", "PlayerQuestRegistry", "QuestStateStore"):
+        for name in ("LegacyBoolFlag", "PlayerQuestRegistry", "QuestStateStore", "mapQuest"):
             setattr(game_module, name, getattr(quest_state, name))
         game_module.register = lambda _context: lambda cls: self.types.setdefault(cls.__name__, cls)
         game_module.trigger = lambda _context, *_args: game_module.register(None)
@@ -132,6 +135,10 @@ class PlayerIdentityContentTest(unittest.TestCase):
         dialog = self.types["TownHallDialog"]()
         dialog.getGame = lambda: game
         return player, dialog
+
+    def test_content_load_uses_the_real_map_quest_journal_decorator(self):
+        for name in ("MainQuest", "RolfQuest", "OctoBogzQuest"):
+            self.assertTrue(callable(getattr(self.types[name], "captureJournal")))
 
     def test_race_mana_service_requires_the_native_absolute_mana_binding(self):
         module = (ROOT / "src/core/CModule.cpp").read_text(encoding="utf-8")
