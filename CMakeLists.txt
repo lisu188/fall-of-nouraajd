@@ -43,6 +43,12 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_SOURCE_DIR}/cmake")
 
 file(GLOB_RECURSE GAME_SRC ${CMAKE_SOURCE_DIR}/src/**.cpp ${CMAKE_SOURCE_DIR}/src/**.h)
 list(APPEND GAME_SRC
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigation.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigation.h
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationSearch.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationSearch.h
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationFlow.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/CNavigationFlow.h
     ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.cpp
     ${CMAKE_SOURCE_DIR}/src/core/CRuntimeBridge.h
     ${CMAKE_SOURCE_DIR}/src/core/CSceneManager.cpp
@@ -848,6 +854,13 @@ endif ()
 target_compile_definitions(monster_balance_unit_tests PRIVATE
     GAME_MONSTER_BALANCE_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
 )
+add_game_unit_test(navigation_search_unit_tests tests/unit/test_navigation_search.cpp)
+add_game_unit_test(navigation_flow_unit_tests tests/unit/test_navigation_flow.cpp)
+add_game_unit_test(navigation_preview_unit_tests tests/unit/test_navigation_preview.cpp)
+add_game_unit_test(navigation_snapshot_unit_tests tests/unit/test_navigation_snapshot.cpp)
+set_tests_properties(for_unit_tests.navigation_search_unit_tests
+    for_unit_tests.navigation_flow_unit_tests for_unit_tests.navigation_preview_unit_tests
+    for_unit_tests.navigation_snapshot_unit_tests PROPERTIES LABELS "for_unit_tests;unit;navigation;performance")
 add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
 add_game_unit_test(ui_management_unit_tests tests/unit/test_ui_management.cpp)
 add_game_unit_test(ui_navigation_unit_tests tests/unit/test_ui_navigation.cpp)
