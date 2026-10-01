@@ -90,6 +90,32 @@ def sourceInteractions(roll):
 
 
 class EffectContractTest(unittest.TestCase):
+    def testRuntimeActorFixtureUsesTheBoundNamePropertySetter(self):
+        actor_properties, stat_properties, added = {}, {}, []
+        actor = types.SimpleNamespace(
+            setObjectProperty=lambda name, value: actor_properties.update({name: value}),
+            setNumericProperty=lambda name, value: actor_properties.update({name: value}),
+            setStringProperty=lambda name, value: actor_properties.update({name: value}),
+            heal=lambda amount: None,
+            setMana=lambda value: None,
+            getManaMax=lambda: 280,
+            setEffects=lambda value: None,
+        )
+        stats = types.SimpleNamespace(
+            setNumericProperty=lambda name, value: stat_properties.update({name: value}),
+            setStringProperty=lambda name, value: stat_properties.update({name: value}),
+        )
+        fixture = types.SimpleNamespace(
+            game=types.SimpleNamespace(createObject=lambda type_id: actor if type_id == "CCreature" else stats),
+            gameMap=types.SimpleNamespace(addObject=added.append),
+            addCleanup=lambda *args: None,
+        )
+        self.assertFalse(hasattr(actor, "setName"), "CGameObject does not bind setName to Python")
+        self.assertIs(actor, EffectSemanticRuntimeTest.actor(fixture, "effectProbe"))
+        self.assertEqual("effectProbe", actor_properties["name"])
+        self.assertEqual("intelligence", stat_properties["mainStat"])
+        self.assertEqual([actor], added)
+
     def testAllConfiguredEmptyTickHooksHaveAnExplicitPassiveContract(self):
         tree = ast.parse((ROOT / "res/plugins/effect.py").read_text(encoding="utf-8"))
         empty = {
@@ -187,7 +213,7 @@ class EffectSemanticRuntimeTest(unittest.TestCase):
                 stats.setNumericProperty(stat, value)
         actor.setObjectProperty("baseStats", stats)
         actor.setNumericProperty("level", 6)
-        actor.setName(name)
+        actor.setStringProperty("name", name)
         self.gameMap.addObject(actor)
         actor.heal(0)
         actor.setMana(actor.getManaMax())
