@@ -146,6 +146,8 @@ FAST_TEST_NAMES = {
     "GameTest.test_direct_rendercopy_calls_stay_inside_render_context_wrapper",
     "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
     "McpServerTest.test_engine_handle_call_rejects_private_methods",
+    "McpServerTest.test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation",
+    "McpServerTest.test_engine_handle_call_serializes_player_quest_sets_as_handles",
     "McpServerTest.test_engine_handle_call_scopes_controller_access_to_players",
     "McpServerTest.test_http_notification_response_declares_empty_body",
     "McpServerTest.test_initialize_response_preserves_request_id",
@@ -265,6 +267,9 @@ DEFAULT_TEST_DURATIONS = {
     "GameTest.test_nouraajd_quest_state_machine": 14.0,
     "GameTest.test_nouraajd_oldwoman_questgiver_conversations_are_reliable": 12.0,
     "GameTest.test_quest_journal_shows_objectives_rewards_and_hints": 12.0,
+    "GameTest.test_authored_quest_journal_snapshots_survive_travel_and_save": 35.0,
+    "McpServerTest.test_stdio_quest_journal_campaign_route_preserves_completed_history": 30.0,
+    "McpServerTest.test_stdio_active_amulet_journal_ignores_ritual_destination_state": 15.0,
     "GameTest.test_generated_tiled_map_exercises_loader_metadata_and_objects": 10.0,
     "GameTest.test_fights": 8.0,
     "GameTest.test_level": 8.0,
@@ -1747,6 +1752,7 @@ XVFB_GAMEPLAY_CHILD_TESTS = (
     "test_fight_panel_select_interaction_cancels_on_sdl_quit",
     "test_screenshot_question_panel_has_rendered_pixels",
     "test_screenshot_quest_panel_with_active_quest_has_rendered_pixels",
+    "test_quest_journal_keeps_active_and_completed_entries_after_travel",
     "test_screenshot_repeated_render_frames_are_identical",
     "test_panel_harness_info_artifacts",
     "test_all_panel_root_layout_contracts",
@@ -1782,6 +1788,7 @@ XVFB_BATCHABLE_CHILD_TESTS = {
     "test_all_panel_root_layout_contracts",
 }
 XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
+    "test_quest_journal_keeps_active_and_completed_entries_after_travel": 15,
     "test_character_creation_all_twenty_compositions": 60,
     "test_full_nouraajd_quest_walkthrough_ui": 90,
     "test_choice_panel_layouts_and_hitboxes": 12,
@@ -19521,6 +19528,177 @@ class GameTest(unittest.TestCase):
         return True, json.dumps({"campaigns": sorted(captured["titles"])}, sort_keys=True)
 
     @game_test
+    def test_authored_quest_journal_snapshots_survive_travel_and_save(self):
+        game = load_game_module()
+        results = {}
+        # Cover flag-backed, state-machine, counter, object-count and per-instance campaign quests.
+        for map_name in ("hearthfall", "nouraajd", "ritual", "siege", "castleHomecoming"):
+            with self.subTest(map_name=map_name):
+                config = json.loads((MAPS_DIR / map_name / "config.json").read_text(encoding="utf-8"))
+                quest_ids = sorted(name for name, entry in config.items() if entry.get("class", "").endswith("Quest"))
+                self.assertTrue(quest_ids)
+                g, source_map, player = load_game_map_with_player(map_name)
+                try:
+                    for quest_id in quest_ids:
+                        player.addQuest(quest_id)
+                    expected = {
+                        quest_id: questJournalEntry(find_player_quest(player, quest_id)) for quest_id in quest_ids
+                    }
+                    active_before = quest_names(player)
+                    completed_before = completed_quest_names(player)
+                    gold_before = player.getGold()
+
+                    def assertSavedEntries(game_map, label):
+                        save_name = unique_save_name("quest-journal-" + label)
+                        loaded_game = None
+                        try:
+                            game.CMapLoader.save(game_map, save_name)
+                            loaded_game = game.CGameLoader.loadGame()
+                            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+                            loaded_map = loaded_game.getMap()
+                            self.assertEqual(game_map.mapName, loaded_map.mapName)
+                            loaded_player = loaded_map.getPlayer()
+                            self.assertEqual(active_before, quest_names(loaded_player))
+                            self.assertEqual(completed_before, completed_quest_names(loaded_player))
+                            self.assertEqual(gold_before, loaded_player.getGold())
+                            for quest_id, entry in expected.items():
+                                restored = find_player_quest(loaded_player, quest_id)
+                                self.assertIsNotNone(restored, quest_id)
+                                self.assertEqual(1, restored.getNumericProperty("questJournalVersion"), quest_id)
+                                self.assertEqual(map_name, restored.getStringProperty("questJournalOrigin"), quest_id)
+                                self.assertEqual(entry, questJournalEntry(restored), quest_id)
+                        finally:
+                            if loaded_game is not None:
+                                loaded_game.getContext().shutdown()
+                            cleanup_save_slot(save_name)
+
+                    assertSavedEntries(source_map, map_name + "-source")
+                    g.changeMap("test")
+                    pump_event_loop(10)
+                    destination = g.getMap()
+                    self.assertEqual("test", destination.mapName)
+                    self.assertEqual(player, destination.getPlayer())
+                    player.checkQuests()
+                    self.assertEqual(active_before, quest_names(player))
+                    self.assertEqual(completed_before, completed_quest_names(player))
+                    self.assertEqual(gold_before, player.getGold())
+                    for quest_id, entry in expected.items():
+                        self.assertEqual(entry, questJournalEntry(find_player_quest(player, quest_id)), quest_id)
+                    destination_properties = json.loads(game.jsonify(destination))["properties"]
+                    self.assertFalse(any(name.startswith("quest_state_") for name in destination_properties))
+                    assertSavedEntries(destination, map_name + "-away")
+                    results[map_name] = quest_ids
+                finally:
+                    g.getContext().shutdown()
+        return True, json.dumps(results, sort_keys=True)
+
+    @game_test
+    def test_completed_quest_journal_stays_frozen_after_source_map_reload(self):
+        game = load_game_module()
+        g, source_map, player = load_game_map_with_player("hearthfall")
+        self.addCleanup(g.getContext().shutdown)
+        player.addQuest("hearthfallQuest")
+        source_map.removeObjectByName("watchCaptain")
+        g.createObject("elderDialog").report_victory()
+        pump_event_loop(10)
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        quest = assert_player_quest_state(self, player, "hearthfallQuest", completed=True)
+        expected = questJournalEntry(quest)
+        self.assertIn("Hearthfall is free", expected["objective"])
+        gold_after_reward = player.getGold()
+        g.changeMap("hearthfall")
+        pump_event_loop(10)
+        fresh_source = g.getMap()
+        self.assertEqual("hearthfall", fresh_source.mapName)
+        self.assertFalse(fresh_source.getBoolProperty("victory_reported"))
+        self.assertEqual(expected, questJournalEntry(quest))
+        player.checkQuests()
+        self.assertEqual(gold_after_reward, player.getGold())
+        save_name = unique_save_name("completed-quest-journal-revisit")
+        loaded_game = None
+        try:
+            game.CMapLoader.save(fresh_source, save_name)
+            loaded_game = game.CGameLoader.loadGame()
+            game.CGameLoader.loadSavedGame(loaded_game, save_name)
+            restored = find_player_quest(loaded_game.getMap().getPlayer(), "hearthfallQuest")
+            self.assertEqual(expected, questJournalEntry(restored))
+        finally:
+            if loaded_game is not None:
+                loaded_game.getContext().shutdown()
+            cleanup_save_slot(save_name)
+        return True, json.dumps(expected, sort_keys=True)
+
+    @game_test
+    def test_map_quest_native_default_getters_do_not_reenter_python_wrappers(self):
+        game = load_game_module()
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+
+        @game.mapQuest("nouraajd")
+        class UnitNativeDefaultJournalQuest(game.CQuest):
+            pass
+
+        @game.mapQuest("nouraajd")
+        class UnitPartialJournalQuest(game.CQuest):
+            def getObjective(self):
+                return "An authored objective."
+
+        for cls in (UnitNativeDefaultJournalQuest, UnitPartialJournalQuest):
+            g.getObjectHandler().registerType(cls.__name__, cls)
+        native = g.createObject("UnitNativeDefaultJournalQuest")
+        partial = g.createObject("UnitPartialJournalQuest")
+        native.objective = "An instance-owned objective."
+        native.reward = "An instance-owned reward."
+        native.hint = "An instance-owned hint."
+        for quest in (native, partial):
+            self.assertFalse(quest.isCompleted())
+            game.CQuest.captureJournal(quest, False)
+            self.assertEqual(0, quest.getNumericProperty("questJournalVersion"))
+        self.assertEqual("An instance-owned objective.", native.getObjective())
+        self.assertEqual("An instance-owned reward.", native.getReward())
+        self.assertEqual("An instance-owned hint.", native.getHint())
+        self.assertEqual("", partial.getReward())
+        self.assertEqual("", partial.getHint())
+        game.CGameLoader.startGameWithPlayer(g, "nouraajd", DEFAULT_PLAYER)
+        for quest in (native, partial):
+            game.CQuest.captureJournal(quest, False)
+            self.assertEqual(1, quest.getNumericProperty("questJournalVersion"))
+            self.assertFalse(game.CQuest.isCompleted(quest))
+        self.assertEqual("An authored objective.", game.CQuest.getObjective(partial))
+        self.assertEqual("An instance-owned reward.", game.CQuest.getReward(native))
+        self.assertEqual("An instance-owned hint.", game.CQuest.getHint(native))
+        return True, "Native default getters and partial Python overrides remain callable without recursion."
+
+    @game_test
+    def test_legacy_completed_external_quest_keeps_status_without_invented_outcome(self):
+        game = load_game_module()
+        save_name = unique_save_name("legacy-completed-quest-journal")
+        fixture = IMMUTABLE_SAVE_FIXTURE_EXPECTATIONS["ritual_completed_nouraajd_quest_v1"]
+        install_save_fixture_slot(save_name, fixture)
+        g = game.CGameLoader.loadGame()
+        self.addCleanup(g.getContext().shutdown)
+        try:
+            game.CGameLoader.loadSavedGame(g, save_name)
+            game_map = g.getMap()
+            self.assertEqual("ritual", game_map.mapName)
+            player = game_map.getPlayer()
+            quest = assert_player_quest_state(self, player, "rolfQuest", completed=True)
+            entry = questJournalEntry(quest)
+            self.assertIn("Completed; outcome details are unavailable", entry["objective"])
+            self.assertEqual("Reward details are unavailable in this older save.", entry["reward"])
+            self.assertEqual(quest_state.QUEST_JOURNAL_UNAVAILABLE_HINT, entry["hint"])
+            self.assertEqual(0, quest.getNumericProperty("questJournalVersion"))
+            gold_before = player.getGold()
+            player.checkQuests()
+            game.CMapLoader.save(game_map, save_name)
+            self.assertEqual(gold_before, player.getGold())
+            self.assertFalse(hasattr(game_map, "quest_state_rolf"))
+            self.assertEqual(entry, questJournalEntry(quest))
+            return True, json.dumps(entry, sort_keys=True)
+        finally:
+            cleanup_save_slot(save_name)
+
+    @game_test
     def test_quest_journal_shows_objectives_rewards_and_hints(self):
         game = load_game_module()
 
@@ -21650,6 +21828,15 @@ def find_player_quest(player, quest_id):
     return None
 
 
+def questJournalEntry(quest):
+    return {
+        "completed": quest.isCompleted(),
+        "objective": quest.getObjective(),
+        "reward": quest.getReward(),
+        "hint": quest.getHint(),
+    }
+
+
 def assert_player_quest_state(test_case, player, quest_id, completed):
     quest = find_player_quest(player, quest_id)
     test_case.assertIsNotNone(quest, f"{quest_id} should be present in the player's quest journal.")
@@ -22717,6 +22904,67 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         player.addQuest("mainQuest")
         open_panel_for_screenshot(self, g, "questPanel", "CGameQuestPanel")
         assert_screenshot_has_rendered_pixels(self, g, "xvfb_quest_panel_screenshot")
+
+    def test_quest_journal_keeps_active_and_completed_entries_after_travel(self):
+        game, g, source_map, player = create_xvfb_gameplay_session(self, map_name="hearthfall")
+
+        def moveToObject(map_name, object_name, *inputs):
+            definition = find_map_object_definition(map_name, object_name)
+            target = (definition["x"] // 32, definition["y"] // 32, 0)
+            run_blocking_gui_action(game, lambda: player.moveTo(*target), *inputs)
+            self.assertEqual(target, coords_tuple(player.getCoords()))
+
+        def captureJournal(name, active_ids, completed_ids):
+            initial_turn = g.getMap().getTurn()
+            self.assertFalse(gui_contains_class(g, "CGameQuestPanel"))
+            push_quest_log_key()
+            wait_for_panel_class(self, g, "CGameQuestPanel")
+            panel = find_top_level_panel(g, "CGameQuestPanel")
+            try:
+                text = readJournalTabs(panel, g.getGui(), active=active_ids, completed=completed_ids)
+                pump_event_loop(2)
+                assert_screenshot_has_rendered_pixels(self, g, name)
+                if completed_ids:
+                    active_pixels, width, height = g.getGui().read_pixels()
+                    buttons = {
+                        button.getStringProperty("click"): button for button in find_descendants_by_type(panel, "CButton")
+                    }
+                    activate_widget(buttons["showCompleted"], g.getGui())
+                    self.assertIn("[Completed]", panel.getText(g.getGui()))
+                    pump_event_loop(2)
+                    assert_screenshot_has_rendered_pixels(self, g, name + "_completed")
+                    completed_pixels, completed_width, completed_height = g.getGui().read_pixels()
+                    self.assertEqual((width, height), (completed_width, completed_height))
+                    x, y, panel_width, panel_height = resolved_rect(panel)
+                    content_rect = (x, y + panel_height // 5, panel_width, panel_height // 2)
+                    _, changed_pixels = pixel_diff_bounds(
+                        bytes(active_pixels), bytes(completed_pixels), width, content_rect
+                    )
+                    self.assertGreater(changed_pixels, 0, "Completed journal text must render after switching tabs.")
+            finally:
+                push_quest_log_key()
+                wait_for_panel_closed(self, g, "CGameQuestPanel")
+            self.assertEqual(initial_turn, g.getMap().getTurn())
+            for status, ids in (("Active", active_ids), ("Completed", completed_ids)):
+                for quest_id in ids:
+                    quest = find_player_quest(player, quest_id)
+                    self.assertIsNotNone(quest)
+                    self.assertIn(f"[{status}] {quest.getStringProperty('description')}", text)
+                    self.assertIn(quest.getObjective(), text)
+            return text
+
+        moveToObject("hearthfall", "hearthfallStart", push_space_key)
+        self.assertIn("hearthfallQuest", quest_names(player))
+        captureJournal("xvfb_quest_journal_hearthfall_active", ("hearthfallQuest",), ())
+        run_blocking_gui_action(game, lambda: source_map.removeObjectByName("watchCaptain"), push_space_key)
+        moveToObject("hearthfall", "elderMaren", lambda: push_digit_key(2))
+        run_blocking_gui_action(game, g.createObject("elderDialog").report_victory, push_space_key)
+        self.assertEqual("gravemoor", g.getMap().mapName)
+        moveToObject("gravemoor", "gravemoorStart", push_space_key)
+        self.assertTrue(find_player_quest(player, "hearthfallQuest").isCompleted())
+        text = captureJournal("xvfb_quest_journal_gravemoor_history", ("gravemoorQuest",), ("hearthfallQuest",))
+        self.assertIn("Hearthfall is free. The road leads north into the Gravemoor.", text)
+        self.assertFalse(g.getMap().getBoolProperty("victory_reported"))
 
     def test_quest_journal_scrolls_long_history_and_restores_first_frame(self):
         _, g, _, player = create_xvfb_gameplay_session(self)
@@ -25715,6 +25963,78 @@ class McpServerTest(unittest.TestCase):
             response["structuredContent"], {"error": "Method `__getattribute__` is not exported for handle calls"}
         )
 
+    def test_engine_handle_call_allows_quest_reads_without_lifecycle_mutation(self):
+        server = self.make_stub_server()
+        mutations = []
+
+        class CQuest:
+            def isCompleted(self):
+                return False
+
+            def getObjective(self):
+                return "Free the loyalists."
+
+            def getReward(self):
+                return "200 gold."
+
+            def getHint(self):
+                return "Search the three cages."
+
+            def captureJournal(self, completed):
+                mutations.append(("capture", completed))
+
+            def onComplete(self):
+                mutations.append(("complete",))
+
+        handle = server._serialize_result(CQuest())
+        advertised = {method["name"] for method in handle.get("pythonMethods", [])}
+        self.assertEqual({"isCompleted", "getObjective", "getReward", "getHint"}, advertised)
+        for method, expected in (
+            ("isCompleted", False),
+            ("getObjective", "Free the loyalists."),
+            ("getReward", "200 gold."),
+            ("getHint", "Search the three cages."),
+        ):
+            with self.subTest(method=method):
+                response = server._engine_handle_call({"handle": handle["__handle__"], "method": method})
+                self.assertFalse(response["isError"])
+                self.assertEqual(expected, response["structuredContent"]["result"])
+        for method, args in (("captureJournal", [True]), ("onComplete", [])):
+            response = server._engine_handle_call({"handle": handle["__handle__"], "method": method, "args": args})
+            self.assertTrue(response["isError"])
+            self.assertEqual(
+                {"error": f"Method `{method}` is not exported for handle calls"}, response["structuredContent"]
+            )
+        self.assertEqual([], mutations)
+
+    def test_engine_handle_call_serializes_player_quest_sets_as_handles(self):
+        server = self.make_stub_server()
+
+        class CQuest:
+            def getObjective(self):
+                return "The quest is still readable."
+
+        active, completed = CQuest(), CQuest()
+
+        class CPlayer:
+            def getQuests(self):
+                return {active}
+
+            def getCompletedQuests(self):
+                return {completed}
+
+        player_handle = server._serialize_result(CPlayer())
+        for method, expected in (("getQuests", active), ("getCompletedQuests", completed)):
+            with self.subTest(method=method):
+                response = server._engine_handle_call({"handle": player_handle["__handle__"], "method": method})
+                self.assertFalse(response["isError"])
+                handles = response["structuredContent"]["result"]
+                self.assertIsInstance(handles, list)
+                self.assertEqual(1, len(handles))
+                self.assertIs(expected, server.handles[handles[0]["__handle__"]])
+                text = server._engine_handle_call({"handle": handles[0]["__handle__"], "method": "getObjective"})
+                self.assertEqual("The quest is still readable.", text["structuredContent"]["result"])
+
     def test_engine_handle_call_scopes_controller_access_to_players(self):
         server = self.make_stub_server()
 
@@ -26250,6 +26570,140 @@ class McpServerTest(unittest.TestCase):
     def test_stdio_map_walkthrough_gravemoor(self):
         self._assert_mcp_walkthrough("gravemoor")
 
+    def test_stdio_quest_journal_campaign_route_preserves_completed_history(self):
+        proc = self._start_stdio_mcp_process("hearthfall")
+        log = {"route": [], "journal": {}}
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            game_handle, map_handle, player_handle = self._mcp_load_game_map_with_player(session, "hearthfall")
+            gold_before = self._mcp_handle_call(session, player_handle, "getGold")
+
+            def moveToObject(map_name, object_name, *, adjacent=False):
+                definition = find_map_object_definition(map_name, object_name)
+                target = [definition["x"] // 32 - int(adjacent), definition["y"] // 32, 0]
+                self._mcp_handle_call(session, player_handle, "moveTo", target)
+                self._mcp_pump_event_loop(session)
+                player_data = json.loads(self._mcp_engine_call(session, "jsonify", [player_handle]))
+                self.assertEqual(target, self._serialized_coords(player_data), object_name)
+                log["route"].append({"map": map_name, "object": object_name, "player": target})
+
+            def dialogAction(dialog_id, action):
+                dialog = self._mcp_handle_call(session, game_handle, "createObject", [dialog_id])
+                self._mcp_handle_call(session, dialog, "invokeAction", [action])
+
+            def travelTo(expected_map):
+                for _ in range(10):
+                    self._mcp_pump_event_loop(session)
+                destination = self._mcp_handle_call(session, game_handle, "getMap")
+                self.assertEqual(
+                    expected_map, self._mcp_handle_call(session, destination, "getStringProperty", ["mapName"])
+                )
+                self.assertEqual(
+                    player_handle["__handle__"],
+                    self._mcp_handle_call(session, destination, "getPlayer")["__handle__"],
+                )
+                return destination
+
+            moveToObject("hearthfall", "hearthfallStart")
+            self._mcpFindPlayerQuest(session, player_handle, "hearthfallQuest", completed=False)
+            moveToObject("hearthfall", "watchCaptain", adjacent=True)
+            self._mcp_handle_call(session, map_handle, "removeObjectByName", ["watchCaptain"])
+            moveToObject("hearthfall", "elderMaren")
+            dialogAction("elderDialog", "report_victory")
+            dialogAction("elderDialog", "report_victory")
+            map_handle = travelTo("gravemoor")
+            hearthfall = self._mcpFindPlayerQuest(session, player_handle, "hearthfallQuest", completed=True)
+            hearthfall_entry = self._mcpQuestJournalEntry(session, hearthfall)
+            self.assertTrue(hearthfall_entry["completed"])
+            self.assertIn("Hearthfall is free", hearthfall_entry["objective"])
+            self.assertEqual(gold_before + 150, self._mcp_handle_call(session, player_handle, "getGold"))
+            log["journal"]["hearthfallQuest"] = hearthfall_entry
+
+            moveToObject("gravemoor", "gravemoorStart")
+            self._mcpFindPlayerQuest(session, player_handle, "gravemoorQuest", completed=False)
+            for cage in ("loyalistCageWest", "loyalistCageEast", "loyalistCageNorth"):
+                moveToObject("gravemoor", cage)
+            self.assertEqual(3, self._mcp_handle_call(session, map_handle, "getNumericProperty", ["loyalists_freed"]))
+            moveToObject("gravemoor", "quartermasterVoss")
+            dialogAction("vossDialog", "spare_voss")
+            dialogAction("vossDialog", "spare_voss")
+            map_handle = travelTo("usurpergate")
+            gravemoor = self._mcpFindPlayerQuest(session, player_handle, "gravemoorQuest", completed=True)
+            gravemoor_entry = self._mcpQuestJournalEntry(session, gravemoor)
+            self.assertTrue(gravemoor_entry["completed"])
+            self.assertIn("Voss lives", gravemoor_entry["objective"])
+            self.assertEqual(hearthfall_entry, self._mcpQuestJournalEntry(session, hearthfall))
+            self.assertEqual(gold_before + 350, self._mcp_handle_call(session, player_handle, "getGold"))
+            log["journal"]["gravemoorQuest"] = gravemoor_entry
+
+            moveToObject("usurpergate", "usurpergateStart")
+            self._mcpFindPlayerQuest(session, player_handle, "usurpergateQuest", completed=False)
+            moveToObject("usurpergate", "theUsurper", adjacent=True)
+            self._mcp_handle_call(session, map_handle, "removeObjectByName", ["theUsurper"])
+            moveToObject("usurpergate", "obsidianThrone")
+            self._mcp_handle_call(session, player_handle, "checkQuests")
+            usurpergate = self._mcpFindPlayerQuest(session, player_handle, "usurpergateQuest", completed=True)
+            log["journal"]["usurpergateQuest"] = self._mcpQuestJournalEntry(session, usurpergate)
+            self.assertTrue(log["journal"]["usurpergateQuest"]["completed"])
+            self.assertEqual(hearthfall_entry, self._mcpQuestJournalEntry(session, hearthfall))
+            self.assertEqual(gravemoor_entry, self._mcpQuestJournalEntry(session, gravemoor))
+            self.assertEqual(gold_before + 850, self._mcp_handle_call(session, player_handle, "getGold"))
+            self.assertFalse(self._mcp_handle_call(session, map_handle, "getBoolProperty", ["victory_reported"]))
+            self.assertFalse(self._mcp_handle_call(session, map_handle, "getBoolProperty", ["voss_judged"]))
+        except Exception as exc:
+            log["error"] = str(exc)
+            raise
+        finally:
+            self._write_mcp_walkthrough_log("quest_journal_campaign", log)
+            self._shutdown_process(proc)
+
+    def test_stdio_active_amulet_journal_ignores_ritual_destination_state(self):
+        proc = self._start_stdio_mcp_process("nouraajd", trace_name="quest_journal_active_amulet")
+        log = {"route": ["nouraajd", "ritual"]}
+        try:
+            self._initialize_stdio_mcp(proc)
+            session = {"proc": proc, "next_request_id": 3}
+            game_handle, source_map, player_handle = self._mcp_load_game_map_with_player(session, "nouraajd")
+            definition = find_map_object_definition("nouraajd", "oldWoman")
+            target = [definition["x"] // 32, definition["y"] // 32, 0]
+            self._mcp_handle_call(session, player_handle, "moveTo", target)
+            self._mcp_pump_event_loop(session)
+            player_data = json.loads(self._mcp_engine_call(session, "jsonify", [player_handle]))
+            self.assertEqual(target, self._serialized_coords(player_data))
+            dialog = self._mcp_handle_call(session, game_handle, "createObject", ["questDialog"])
+            self._mcp_handle_call(session, dialog, "invokeAction", ["start_amulet_quest"])
+            self._mcp_pump_event_loop(session)
+            amulet = self._mcpFindPlayerQuest(session, player_handle, "amuletQuest", completed=False)
+            before = self._mcpQuestJournalEntry(session, amulet)
+            gold_before = self._mcp_handle_call(session, player_handle, "getGold")
+            self._mcp_handle_call(session, game_handle, "changeMap", ["ritual"])
+            for _ in range(10):
+                self._mcp_pump_event_loop(session)
+            ritual = self._mcp_handle_call(session, game_handle, "getMap")
+            self.assertEqual("ritual", self._mcp_handle_call(session, ritual, "getStringProperty", ["mapName"]))
+            self._mcp_handle_call(session, ritual, "setStringProperty", ["quest_state_amulet", "returned"])
+            self._mcp_handle_call(session, player_handle, "checkQuests")
+            self._mcpFindPlayerQuest(session, player_handle, "amuletQuest", completed=False)
+            self.assertEqual(before, self._mcpQuestJournalEntry(session, amulet))
+            self.assertEqual(
+                "active", self._mcp_handle_call(session, source_map, "getStringProperty", ["quest_state_amulet"])
+            )
+            self.assertEqual(gold_before, self._mcp_handle_call(session, player_handle, "getGold"))
+            ritual_properties = self._mcp_serialized_map(session, ritual)["properties"]
+            self.assertEqual(
+                {"quest_state_amulet": "returned"},
+                {key: value for key, value in ritual_properties.items() if key.startswith("quest_state_")},
+            )
+            log["player"] = target
+            log["journal"] = before
+        except Exception as exc:
+            log["error"] = str(exc)
+            raise
+        finally:
+            self._write_mcp_walkthrough_log("quest_journal_active_amulet", log)
+            self._shutdown_process(proc)
+
     def test_stdio_map_walkthrough_usurpergate(self):
         self._assert_mcp_walkthrough("usurpergate")
 
@@ -26380,14 +26834,14 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None):
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
         env = None
         if map_name == "nouraajd":
             TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            trace_path = TEST_OUTPUT_DIR / "mcp_walkthrough_nouraajd_trace.jsonl"
+            trace_path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{trace_name or 'nouraajd'}_trace.jsonl"
             trace_path.unlink(missing_ok=True)
             env = os.environ.copy()
             env["GAME_PLAYTEST_TRACE"] = "1"
@@ -26610,6 +27064,25 @@ class McpServerTest(unittest.TestCase):
         self.assertIsInstance(obj, dict, f"Expected object handle for {object_name}.")
         self.assertIn("__handle__", obj, f"Could not find runtime object {object_name}.")
         return obj
+
+    def _mcpFindPlayerQuest(self, session, player_handle, quest_id, *, completed):
+        collection = "getCompletedQuests" if completed else "getQuests"
+        for quest in self._mcp_handle_call(session, player_handle, collection):
+            actual = self._mcp_handle_call(session, quest, "getTypeId")
+            if actual == quest_id:
+                return quest
+        self.fail(f"{quest_id} should be in {collection}.")
+
+    def _mcpQuestJournalEntry(self, session, quest):
+        return {
+            key: self._mcp_handle_call(session, quest, method)
+            for key, method in (
+                ("completed", "isCompleted"),
+                ("objective", "getObjective"),
+                ("reward", "getReward"),
+                ("hint", "getHint"),
+            )
+        }
 
     def _mcp_serialized_map(self, session, map_handle):
         return json.loads(

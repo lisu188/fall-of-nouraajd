@@ -1135,6 +1135,8 @@ void init_game_module(py::module_ &m) {
     cquest.def(py::init_alias<>())
         .def("isCompleted", &CQuest::isCompleted, "Return whether quest objectives are completed.")
         .def("onComplete", &CQuest::onComplete, "Handle quest completion callback.")
+        .def("captureJournal", &CQuest::captureJournal, py::arg("completed"),
+             "Capture quest journal state for completion, saving, or leaving its map.")
         .def("getObjective", &CQuest::getObjective, "Return current quest objective text.")
         .def("getReward", &CQuest::getReward, "Return quest reward text.")
         .def("getHint", &CQuest::getHint, "Return optional quest hint text.");
@@ -1413,7 +1415,8 @@ void init_game_module(py::module_ &m) {
         .def("setPlayerClassId", &CPlayer::setPlayerClassId, "Set the player's class identity id.")
         .def("getRaceId", &CPlayer::getRaceId, "Return the player's race identity id.")
         .def("setRaceId", &CPlayer::setRaceId, "Set the player's race identity id.")
-        .def("checkQuests", &CPlayer::checkQuests, "Move completed quests into the completed quest log.");
+        .def("checkQuests", &CPlayer::checkQuests, "Move completed quests into the completed quest log.")
+        .def("captureQuestJournal", &CPlayer::captureQuestJournal, "Capture the active and completed quest journals.");
 
     py::class_<CListString, CGameObject, std::shared_ptr<CListString>>(m, "CListString", "String list wrapper object.")
         .def("addValue", &CListString::addValue, "Append a value to the list.")

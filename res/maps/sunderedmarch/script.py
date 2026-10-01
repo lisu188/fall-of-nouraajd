@@ -3,6 +3,7 @@ def load(self, context):
     from game import CDialog
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import register
     from game import trigger
@@ -188,6 +189,7 @@ def load(self, context):
             player.checkQuests()
 
     @register(context)
+    @mapQuest("sunderedmarch")
     class SunderedMarchQuest(CQuest):
         def isCompleted(self):
             game_map = self.getGame().getMap()
@@ -219,6 +221,7 @@ def load(self, context):
             )
 
     @register(context)
+    @mapQuest("sunderedmarch")
     class SeerHuntQuest(CQuest):
         def isCompleted(self):
             return self.getGame().getMap().getBoolProperty("seer_done")

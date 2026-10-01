@@ -690,6 +690,215 @@ class ContentValidatorTest(unittest.TestCase):
             'unknown quest id "missingQuest"',
         )
 
+    def test_quest_grants_require_cquest_inheritance_instead_of_a_name_suffix(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(script_path.read_text().replace("class GoodQuest(CQuest):", "class GoodQuest(CEvent):"))
+
+        self.assertIssueContains(validate_repo(root), '"goodQuest" does not resolve to a quest')
+
+    def test_quest_grants_accept_indirect_cquest_inheritance_without_a_name_suffix(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text().replace(
+                "    @register(context)\n    class GoodQuest(CQuest):",
+                "    class MissionBase(CQuest):\n        pass\n\n"
+                "    @register(context)\n    class JournalMission(MissionBase):",
+            )
+        )
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["goodQuest"]["class"] = "JournalMission"
+        write_json(config_path, config)
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_quests_require_nonempty_effective_descriptions(self):
+        for description in (None, "", "   ", 12):
+            with self.subTest(description=description):
+                root = self.make_fixture()
+                config_path = root / "res/maps/broken/config.json"
+                config = read_json(config_path)
+                config["goodQuest"]["properties"] = {} if description is None else {"description": description}
+                write_json(config_path, config)
+
+                self.assertIssueContains(
+                    validate_repo(root), "goodQuest.properties.description", "expected non-empty quest description"
+                )
+
+    def test_quest_descriptions_follow_refs_and_inline_overrides(self):
+        root = self.make_fixture()
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["questTemplate"] = config["goodQuest"]
+        config["goodQuest"] = {"ref": "questTemplate"}
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+        config["goodQuest"]["properties"] = {"description": " "}
+        write_json(config_path, config)
+        self.assertIssueContains(
+            validate_repo(root), "goodQuest.properties.description", "expected non-empty quest description"
+        )
+
+    def test_private_ensure_quest_helper_validates_literal_quest_ids(self):
+        root = self.make_fixture()
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(script_path.read_text() + '\n    _ensure_quest(None, "missingQuest")\n')
+
+        self.assertIssueContains(
+            validate_repo(root), '_ensure_quest("missingQuest")', 'unknown quest id "missingQuest"'
+        )
+
+    def _appendCompanionQuestGrant(self, root, classes):
+        script_path = root / "res/maps/broken/script.py"
+        script_path.write_text(
+            script_path.read_text()
+            + textwrap.indent(
+                textwrap.dedent("""
+                    class CompanionDialog(CDialog):
+                        QUEST = None
+
+                        def start(self):
+                            ensure_quest(self.getGame().getMap().getPlayer(), self.QUEST)
+                    """) + textwrap.dedent(classes),
+                "    ",
+            )
+        )
+
+    def test_inherited_companion_grants_validate_concrete_quest_constants(self):
+        for quest_id, message in (
+            ("missingQuest", 'unknown quest id "missingQuest"'),
+            ("validMarket", '"validMarket" does not resolve to a quest'),
+        ):
+            with self.subTest(quest_id=quest_id):
+                root = self.make_fixture()
+                self._appendCompanionQuestGrant(
+                    root,
+                    f"""
+                    class KnightBase(CompanionDialog):
+                        QUEST = "{quest_id}"
+
+                    @register(context)
+                    class KnightDialog(KnightBase):
+                        pass
+                    """,
+                )
+                self.assertIssueContains(
+                    validate_repo(root), "res/maps/broken/script.py", "KnightDialog.QUEST", message
+                )
+
+    def test_inherited_companion_grants_accept_valid_overrides_and_unused_abstract_constants(self):
+        root = self.make_fixture()
+        self._appendCompanionQuestGrant(
+            root,
+            """
+            class KnightBase(CompanionDialog):
+                QUEST = "missingQuest"
+
+            @register(context)
+            class KnightDialog(KnightBase):
+                QUEST = "goodQuest"
+
+            @register(context)
+            class RetiredDialog(CompanionDialog):
+                def start(self):
+                    pass
+            """,
+        )
+
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+    def test_concrete_companion_grants_require_a_literal_nonempty_quest_constant(self):
+        for value in ("None", '""', '"   "', "12"):
+            with self.subTest(value=value):
+                root = self.make_fixture()
+                self._appendCompanionQuestGrant(
+                    root,
+                    f"""
+                    @register(context)
+                    class KnightDialog(CompanionDialog):
+                        QUEST = {value}
+                    """,
+                )
+                self.assertIssueContains(validate_repo(root), "KnightDialog.QUEST", "expected non-empty quest id")
+
+    def _placeCastleMission(self, root, mission):
+        map_path = root / "res/maps/broken/map.json"
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"].append(
+            {
+                "id": 2,
+                "name": "castleMission",
+                "type": "StartEvent",
+                "x": 1,
+                "y": 1,
+                "width": 1,
+                "height": 1,
+                "properties": {"campaign_mission": mission},
+            }
+        )
+        write_json(map_path, map_data)
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["goodQuest"]["properties"]["campaign_scenarioId"] = "homecoming"
+        write_json(config_path, config)
+        return map_path
+
+    def test_castle_mission_validates_payload_shape_and_quest_target(self):
+        cases = (
+            (None, "expected non-empty castle mission JSON string"),
+            ("castleMission:{", "invalid castle mission JSON"),
+            ("[]", "expected castle mission JSON object"),
+            ({"scenarioId": "homecoming"}, "expected non-empty questId"),
+            ({"scenarioId": "homecoming", "questId": "   "}, "expected non-empty questId"),
+            ({"scenarioId": "homecoming", "questId": 12}, "expected non-empty questId"),
+            ({"scenarioId": "homecoming", "questId": "missingQuest"}, 'unknown quest id "missingQuest"'),
+            ({"scenarioId": "homecoming", "questId": "validMarket"}, '"validMarket" does not resolve to a quest'),
+            ({"scenarioId": "other", "questId": "goodQuest"}, "does not match quest campaign_scenarioId"),
+            ({"questId": "goodQuest"}, "expected non-empty scenarioId"),
+        )
+        for mission, message in cases:
+            with self.subTest(mission=mission):
+                root = self.make_fixture()
+                encoded = "castleMission:" + json.dumps(mission) if isinstance(mission, dict) else mission
+                self._placeCastleMission(root, encoded)
+                self.assertIssueContains(
+                    validate_repo(root),
+                    "res/maps/broken/map.json",
+                    "layers[1].objects[1].properties.campaign_mission",
+                    message,
+                )
+
+    def test_castle_mission_resolves_quest_refs_and_inherited_scenario_metadata(self):
+        root = self.make_fixture()
+        map_path = self._placeCastleMission(root, 'castleMission:{"scenarioId":"homecoming","questId":"goodQuest"}')
+        config_path = root / "res/maps/broken/config.json"
+        config = read_json(config_path)
+        config["questTemplate"] = config["goodQuest"]
+        config["goodQuest"] = {"ref": "questTemplate"}
+        write_json(config_path, config)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
+        config["goodQuest"]["properties"] = {"campaign_scenarioId": "other"}
+        write_json(config_path, config)
+        self.assertIssueContains(
+            validate_repo(root), "campaign_mission.scenarioId", "does not match quest campaign_scenarioId"
+        )
+
+        config["goodQuest"]["properties"] = {}
+        config["questTemplate"]["properties"].pop("campaign_scenarioId")
+        write_json(config_path, config)
+        self.assertIssueContains(
+            validate_repo(root), "campaign_mission.scenarioId", "does not match quest campaign_scenarioId"
+        )
+
+        map_data = read_json(map_path)
+        map_data["layers"][1]["objects"][1]["name"] = "unrelatedMarker"
+        write_json(map_path, map_data)
+        self.assertEqual([], [str(issue) for issue in validate_repo(root)])
+
     def test_script_analyzer_collects_quest_state_and_property_usage(self):
         root = self.make_fixture()
         script_path = root / "res/maps/broken/script.py"
@@ -3999,7 +4208,7 @@ class ContentValidatorTest(unittest.TestCase):
         write_json(
             root / "res/maps/broken/config.json",
             {
-                "goodQuest": {"class": "GoodQuest"},
+                "goodQuest": {"class": "GoodQuest", "properties": {"description": "Complete the trial."}},
                 "validMarket": {"class": "CMarket", "properties": {"items": [{"ref": "LifePotion"}]}},
             },
         )
