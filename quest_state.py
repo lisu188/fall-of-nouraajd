@@ -17,6 +17,134 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import wraps
+
+QUEST_JOURNAL_VERSION = 1
+QUEST_JOURNAL_UNAVAILABLE_HINT = "This older save has no recorded outcome details for this quest."
+
+
+def mapQuest(source_map):
+    """Keep a map quest's journal on the quest that travels with the player.
+
+    source_map is a map id, or a resolver for configured instances sharing a class.
+    A hasLegacyJournal method may opt into reading already-persistent outcome data.
+    """
+
+    def decorate(cls):
+        originals = {name: getattr(cls, name) for name in ("isCompleted", "getObjective", "getReward", "getHint")}
+        authored_text = {
+            name for name in ("getObjective", "getReward", "getHint") if hasattr(originals[name], "__code__")
+        }
+        if not hasattr(originals["isCompleted"], "__code__"):
+            originals["isCompleted"] = lambda _quest: False
+
+        def origin(quest):
+            return source_map(quest) if callable(source_map) else source_map
+
+        def currentMap(quest):
+            game = quest.getGame()
+            return game.getMap() if game is not None else None
+
+        def onSource(quest):
+            game_map = currentMap(quest)
+            return game_map is not None and game_map.mapName == origin(quest)
+
+        def hasSnapshot(quest):
+            return quest.getNumericProperty("questJournalVersion") == QUEST_JOURNAL_VERSION and quest.getStringProperty(
+                "questJournalOrigin"
+            ) == origin(quest)
+
+        def membership(quest):
+            game_map = currentMap(quest)
+            player = game_map.getPlayer() if game_map is not None else None
+            if player is not None:
+                if hasattr(player, "getCompletedQuests") and quest in player.getCompletedQuests():
+                    return True
+                if hasattr(player, "getQuests") and quest in player.getQuests():
+                    return False
+            return None
+
+        def hasLegacy(quest):
+            return bool(getattr(quest, "hasLegacyJournal", lambda: False)())
+
+        def neutralText(quest, name, completed=None):
+            if name == "getHint":
+                return QUEST_JOURNAL_UNAVAILABLE_HINT
+            if name == "getReward":
+                return "Reward details are unavailable in this older save."
+            description = quest.getStringProperty("description") or "Quest"
+            completed = membership(quest) if completed is None else completed
+            if completed:
+                return description + " Completed; outcome details are unavailable."
+            return description + " Progress details are unavailable."
+
+        def journalText(quest, name):
+            snapshot = hasSnapshot(quest)
+            if snapshot and (quest.getBoolProperty("questJournalCompleted") or not onSource(quest)):
+                return quest.getStringProperty("questJournal" + name.removeprefix("get"))
+            if onSource(quest):
+                if membership(quest) is not True or originals["isCompleted"](quest):
+                    return originals[name](quest)
+            elif hasLegacy(quest):
+                if membership(quest) is not True or originals["isCompleted"](quest):
+                    return originals[name](quest)
+            return neutralText(quest, name)
+
+        @wraps(originals["isCompleted"])
+        def isCompleted(self):
+            if hasSnapshot(self) and self.getBoolProperty("questJournalCompleted"):
+                return True
+            completed = membership(self)
+            if completed is True:
+                return True
+            if onSource(self):
+                return originals["isCompleted"](self)
+            if completed is not None:
+                return completed
+            return bool(hasLegacy(self) and originals["isCompleted"](self))
+
+        def captureJournal(self, completed):
+            if hasSnapshot(self) and self.getBoolProperty("questJournalCompleted"):
+                return
+            source = onSource(self)
+            legacy = not source and hasLegacy(self)
+            if source or legacy:
+                if completed and membership(self) is True and not originals["isCompleted"](self):
+                    values = [neutralText(self, name, completed) for name in ("getObjective", "getReward", "getHint")]
+                else:
+                    values = [originals[name](self) for name in ("getObjective", "getReward", "getHint")]
+            elif hasSnapshot(self):
+                self.setBoolProperty("questJournalCompleted", bool(completed))
+                return
+            else:
+                # Keep a missing legacy snapshot recoverable when its source becomes available.
+                return
+            if not all(isinstance(value, str) for value in values):
+                raise TypeError("Quest journal text must be strings")
+            source_id = origin(self)
+            if not isinstance(source_id, str) or not source_id:
+                raise ValueError("Quest journal requires a source map id")
+            for suffix, value in zip(("Objective", "Reward", "Hint"), values):
+                self.setStringProperty("questJournal" + suffix, value)
+            self.setStringProperty("questJournalOrigin", source_id)
+            self.setBoolProperty("questJournalCompleted", bool(completed))
+            self.setNumericProperty("questJournalVersion", QUEST_JOURNAL_VERSION)
+
+        def wrapText(name):
+            @wraps(originals[name])
+            def getter(self):
+                return journalText(self, name)
+
+            return getter
+
+        cls.isCompleted = isCompleted
+        cls.captureJournal = captureJournal
+        # Native default getters already read quest-owned fields; wrapping them would re-enter virtual dispatch.
+        for name in authored_text:
+            setattr(cls, name, wrapText(name))
+        return cls
+
+    return decorate
 
 
 @dataclass(frozen=True)

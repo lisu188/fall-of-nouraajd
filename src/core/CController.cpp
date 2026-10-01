@@ -507,7 +507,7 @@ std::shared_ptr<CInteraction> monsterRoleAction(const std::shared_ptr<CCreature>
     std::shared_ptr<CInteraction> selected;
     for (const auto &action : me->getInteractions()) {
         if (!action->getBoolProperty("enemySignature") || action->getStringProperty("enemyRole") != role ||
-            action->getManaCost() > me->getMana()) {
+            action->getManaCost() > me->getMana() || action->getNumericProperty("minimumMana") > me->getMana()) {
             continue;
         }
         const auto trigger = action->getStringProperty("enemyRoleTrigger");

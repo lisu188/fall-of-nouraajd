@@ -24,7 +24,7 @@ final class RuntimeAssets {
         File runtimeDir = new File(filesDir, RUNTIME_ASSET);
         File pythonDir = new File(filesDir, PYTHON_ASSET);
         File versionFile = new File(filesDir, VERSION_FILE);
-        String version = Long.toString(packageVersion(context));
+        String version = packageStamp(context);
 
         if (version.equals(readVersion(versionFile)) && runtimeDir.isDirectory() && pythonDir.isDirectory()) {
             return;
@@ -44,10 +44,11 @@ final class RuntimeAssets {
         }
     }
 
-    private static long packageVersion(Context context) {
+    private static String packageStamp(Context context) {
         try {
             PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
-            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? info.getLongVersionCode() : info.versionCode;
+            long version = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P ? info.getLongVersionCode() : info.versionCode;
+            return version + ":" + info.lastUpdateTime;
         } catch (Exception exception) {
             throw new IllegalStateException("Failed to read package version", exception);
         }

@@ -341,7 +341,7 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool hun
             actor->setLevel(huntPulse ? 1 : 2);
             actor->setPosX(1);
             game->getMap()->addObject(actor);
-            actor->setMana(0);
+            actor->setMana(cultistHex ? 5 : 0);
             actor->setBoolProperty("enemyRoleUsed", !enabled);
             if (huntPulse) {
                 auto director = game->createObject<CEvent>("OctobogzHuntDirector");
@@ -561,7 +561,7 @@ void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
             game->getMap()->addObject(actor);
             actor->heal(0);
             actor->setHp(std::max(1, actor->getHpMax() / 2));
-            actor->setMana(0);
+            actor->setMana(5);
             actor->setBoolProperty("enemyRoleUsed", !enabled);
             std::vector<std::string> order;
             auto targetController = std::make_shared<HexTurnProbe>(order, cultistFirst ? 2 : 3);
@@ -593,7 +593,7 @@ void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
     vstd::rng() = previousRng;
 }
 
-void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
+void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget(const std::string &selectedClass = {}) {
     const auto previousRng = vstd::rng();
     auto game = CGameLoader::loadGame();
     createOpenBalanceMap(game);
@@ -602,7 +602,11 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
         return values[values.size() / 2];
     };
     for (const auto &playerType : {"Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"}) {
+        if (!selectedClass.empty() && selectedClass != playerType) {
+            continue;
+        }
         bool classHasMandatoryBaselineWitness = false;
+        int completedRows = 0, completedPairedSeeds = 0;
         for (const auto &monsterType :
              {"Gooby", "Pritz", "OctoBogz", "PritzMage", "GoblinThief", "Cultist", "CultLeader"}) {
             std::vector<int> baselineHp, roleHp, baselineMana, roleMana, baselineItems, roleItems;
@@ -611,6 +615,7 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
             for (unsigned seed = 100; seed < 111; ++seed) {
                 const auto baseline = runRoleBalanceFight(game, playerType, monsterType, seed, false);
                 const auto roles = runRoleBalanceFight(game, playerType, monsterType, seed, true);
+                ++completedPairedSeeds;
                 baselineWins += baseline.won ? 1 : 0;
                 setupMilliseconds += baseline.setupMilliseconds + roles.setupMilliseconds;
                 fightMilliseconds += baseline.fightMilliseconds + roles.fightMilliseconds;
@@ -656,9 +661,14 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
                         "monster roles must keep median mana expenditure within 10 percent of baseline");
             expect_true(std::abs(median(roleItems) - median(baselineItems)) * 10 <= median(baselineItems),
                         "monster roles must keep median item expenditure within 10 percent of baseline");
+            ++completedRows;
         }
         expect_true(classHasMandatoryBaselineWitness,
                     "each class must win against a representative authored enemy that also causes baseline damage");
+        expect_true(completedRows == 7 && completedPairedSeeds == 77,
+                    "each class partition must execute all seven rows and 77 paired seeds");
+        std::cout << "role class complete " << playerType << " rows=" << completedRows
+                  << " pairedSeeds=" << completedPairedSeeds << " fights=" << completedPairedSeeds * 2 << std::endl;
     }
     vstd::rng() = previousRng;
 }
@@ -852,23 +862,43 @@ void testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget() {
 } // namespace
 
 int main(int argc, char **argv) {
+    const bool contractsOnly = argc == 2 && std::string(argv[1]) == "--contracts-only";
+    const bool huntRoute = argc == 2 && std::string(argv[1]) == "--hunt-route";
+    std::string selectedClass;
+    if (argc == 3 && std::string(argv[1]) == "--role-class") {
+        selectedClass = argv[2];
+        const std::vector<std::string> classes{"Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"};
+        if (std::find(classes.begin(), classes.end(), selectedClass) == classes.end()) {
+            std::cerr << "Unknown role class partition\n";
+            return 1;
+        }
+    } else if (argc != 1 && !contractsOnly && !huntRoute) {
+        std::cerr << "Usage: monster_balance_unit_tests [--contracts-only | --role-class CLASS | --hunt-route]\n";
+        return 1;
+    }
     if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
         std::cerr << "Cannot register the real embedded _game module\n";
         return 1;
     }
     pybind11::scoped_interpreter interpreter{};
     initializeBalancePythonContent();
-    testInheritedNativeMethodsDoNotBecomePythonOverrides();
-    testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();
-    testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, true);
-    testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries();
-    testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
-    testActivePlayerNeverUsesMonsterSignature();
-    if (argc == 2 && std::string(argv[1]) == "--hunt-route") {
+    if (selectedClass.empty()) {
+        testInheritedNativeMethodsDoNotBecomePythonOverrides();
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, true);
+        testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries();
+        testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
+        testActivePlayerNeverUsesMonsterSignature();
+    }
+    if (huntRoute) {
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true);
         testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget();
-    } else {
-        testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget();
+    } else if (!contractsOnly) {
+        testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget(selectedClass);
     }
-    return finish_tests();
+    const int result = finish_tests();
+    if (contractsOnly && result == 0) {
+        std::cout << "role contracts complete\n";
+    }
+    return result;
 }

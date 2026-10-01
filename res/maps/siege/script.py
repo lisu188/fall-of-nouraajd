@@ -4,6 +4,7 @@ def load(self, context):
     from game import CCreature
     from game import CEvent
     from game import CQuest
+    from game import mapQuest
     from game import CTrigger
     from game import register
     from game import trigger
@@ -58,6 +59,7 @@ def load(self, context):
             )
 
     @register(context)
+    @mapQuest("siege")
     class DefendSiegeQuest(CQuest):
         def isCompleted(self):
             return destroyed_gate_count(self.getGame().getMap()) == len(SPAWN_POINTS)

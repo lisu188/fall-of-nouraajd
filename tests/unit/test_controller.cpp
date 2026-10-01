@@ -1087,8 +1087,10 @@ std::shared_ptr<CEffect> named_self_effect(const std::shared_ptr<CGame> &game, c
 // casts. Without this the cast throws bad_any_cast (unregistered meta) or segfaults
 // (unconstructable class), exactly as documented on the weakening-ranking test.
 void register_effect_and_interaction(const std::shared_ptr<CGame> &game) {
+    CTypes::register_type<CStats, CGameObject>();
     CTypes::register_type<CEffect, CGameObject>();
     CTypes::register_type<CInteraction, CGameObject>();
+    game->getObjectHandler()->registerType("CStats", []() { return std::make_shared<CStats>(); });
     game->getObjectHandler()->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
     game->getObjectHandler()->registerType("CInteraction", []() { return std::make_shared<CInteraction>(); });
 }
@@ -1304,6 +1306,37 @@ void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
         expect_true(signature->calls == 1, "offensive fallback must never select the spent signature");
         expect_true(monster->getMana() == 0, "class signatures must remain affordable at zero mana");
     }
+}
+
+void testMonsterRitualMinimumManaGatesEligibilityWithoutSpending() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, true);
+    auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    auto creatureClass = std::make_shared<CCreatureClass>();
+    creatureClass->setCombatRole("cultist");
+    monster->setCreatureClass(creatureClass);
+    auto signature = std::make_shared<RoleActionProbe>();
+    signature->setGame(game);
+    signature->setBoolProperty("enemySignature", true);
+    signature->setStringProperty("enemyRole", "cultist");
+    signature->setStringProperty("enemyRoleTrigger", "wounded");
+    signature->setNumericProperty("minimumMana", 5);
+    monster->addAction(signature);
+    auto attack = std::make_shared<RoleActionProbe>();
+    attack->setGame(game);
+    attack->setTypeId("Attack");
+    monster->addAction(attack);
+    CMonsterFightController controller;
+    monster->setMana(4);
+    expect_true(controller.control(monster, opponent), "an exhausted cultist must retain ordinary Attack");
+    expect_true(attack->calls == 1 && signature->calls == 0 && monster->getMana() == 4 &&
+                    !monster->getBoolProperty("enemyRoleUsed"),
+                "ritual reserve eligibility must not consume the action or mana below five points");
+    monster->setMana(5);
+    expect_true(controller.control(monster, opponent), "a wounded cultist with five mana may use its ritual");
+    expect_true(attack->calls == 1 && signature->calls == 1 && monster->getMana() == 5,
+                "the ritual threshold must gate eligibility without charging mana");
 }
 
 void testMonsterRoleExclusionsAndMalformedActions() {
@@ -1551,6 +1584,14 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
     expect_true(controller.control(monster, opponent), "ordinary defensive cast must retain its AI priority");
     expect_true(spell->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
                 "class signature must not delay an ordinary selected spell");
+    const auto effects = monster->getEffects();
+    const auto clonedBonus = effects.empty() ? nullptr : (*effects.begin())->getBonus();
+    expect_true(clonedBonus != nullptr, "the cloned ordinary Barrier must retain its per-game stats factory");
+    if (clonedBonus) {
+        expect_true(controller.control(monster, opponent), "a second control must safely inspect the cloned Barrier");
+        expect_true(spell->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "an active ordinary Barrier must be skipped before the eligible attack signature");
+    }
 }
 
 } // namespace
@@ -1588,6 +1629,7 @@ int main() {
     test_monster_fight_controller_skips_duplicate_self_buff();
     test_monster_fight_controller_heals_self_only_when_hurt();
     testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
+    testMonsterRitualMinimumManaGatesEligibilityWithoutSpending();
     testMonsterRoleExclusionsAndMalformedActions();
     testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana();
     testHuntPhasesKeepOrdinarySpellAndItemPriority();
