@@ -36,7 +36,8 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                 actor.x, actor.y, actor.z = 3 + index, 5, 0
                 game_map.addObject(actor)
                 actor.setHp(max(1, actor.getHpMax() // 2))
-                actor.setMana(0)
+                reserve_mana = 5 if signature_id == 'enemyRitualHex' else 0
+                actor.setMana(reserve_mana)
                 baseline = game.jsonify(actor.baseStats)
                 actions = {action.getTypeId(): action for action in actor.getEffectiveInteractions()}
                 assert signature_id in actions, (template, actions)
@@ -49,7 +50,7 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                 assert any(active.name == effect.name for active in recipient.getEffects()), template
                 assert effect.getTimeLeft() == 1 and effect.getVictim() == recipient, template
                 assert not actor.getBoolProperty('enemyRoleArcaneAttack'), template
-                assert actor.getMana() == 0, template
+                assert actor.getMana() == reserve_mana, template
                 assert controller.control(actor, player), template
                 assert baseline == game.jsonify(actor.baseStats), template
                 saved = json.loads(game.jsonify(actor))
