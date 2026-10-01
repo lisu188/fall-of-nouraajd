@@ -47,7 +47,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <algorithm>
-#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -206,12 +205,8 @@ class CompletedQuest : public CQuest {
 };
 
 std::shared_ptr<CGame> load_empty_game() {
-    const auto started = std::chrono::steady_clock::now();
     auto game = CGameLoader::loadGame();
     CGameLoader::startGame(game, "empty");
-    const auto elapsed =
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
-    std::cout << "[handler-fixture] loadEmptyGame elapsedMs=" << elapsed << std::endl;
     return game;
 }
 
@@ -2056,46 +2051,37 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
-    auto run = [](const char *name, auto test) {
-        const auto started = std::chrono::steady_clock::now();
-        std::cout << "[handler-test] START " << name << std::endl;
-        test();
-        const auto elapsed =
-            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
-        std::cout << "[handler-test] DONE " << name << " elapsedMs=" << elapsed << std::endl;
-    };
-#define RUN_HANDLER_TEST(test) run(#test, test)
-    RUN_HANDLER_TEST(testGameplayMetadataIsAvailableBeforePluginLoading);
-    RUN_HANDLER_TEST(test_script_handler_executes_commands_and_wraps_functions);
-    RUN_HANDLER_TEST(test_handler_constructors_are_covered_by_native_tests);
-    RUN_HANDLER_TEST(test_creature_scale_preserves_level_plus_sw_invariant);
-    RUN_HANDLER_TEST(test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions);
-    RUN_HANDLER_TEST(test_rng_handler_builds_encounters_from_concrete_creature_sw);
-    RUN_HANDLER_TEST(test_rng_handler_scales_fresh_creatures_before_map_insertion);
-    RUN_HANDLER_TEST(test_rng_handler_excludes_noncombatants_from_encounters);
-    RUN_HANDLER_TEST(test_rng_handler_excludes_archetype_definitions_from_encounters);
-    RUN_HANDLER_TEST(test_rng_handler_excludes_player_templates_from_encounters);
-    RUN_HANDLER_TEST(test_rng_handler_captures_encounter_power_and_scale_baseline);
-    RUN_HANDLER_TEST(test_rng_handler_encounter_candidates_stay_in_stable_power_buckets);
-    RUN_HANDLER_TEST(test_rng_handler_distinguishes_associated_classes_with_neutral_scale);
-    RUN_HANDLER_TEST(test_creature_subtype_inventory_is_enumerable_on_loaded_game);
-    RUN_HANDLER_TEST(test_event_handler_trigger_registration_uses_named_comparison_helpers);
-    RUN_HANDLER_TEST(test_fight_handler_rejects_stale_and_cross_map_participants);
-    RUN_HANDLER_TEST(test_fight_handler_attributes_lethal_effects_to_valid_casters);
-    RUN_HANDLER_TEST(test_fight_handler_reports_explicit_outcomes_and_final_status);
-    RUN_HANDLER_TEST(test_fight_handler_reports_invalid_result_metadata);
-    RUN_HANDLER_TEST(test_fight_handler_reports_cancelled_quit_event);
-    RUN_HANDLER_TEST(test_fight_handler_ends_original_started_controllers);
-    RUN_HANDLER_TEST(test_fight_handler_reports_cancelled_closed_fight_panel);
-    RUN_HANDLER_TEST(test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
-    RUN_HANDLER_TEST(test_fight_handler_returns_cancelled_when_player_control_cancels);
-    RUN_HANDLER_TEST(test_fight_panel_resets_status_between_sequential_encounters);
-    RUN_HANDLER_TEST(test_fight_handler_counts_effect_duration_as_progress);
-    RUN_HANDLER_TEST(test_playtest_trace_records_native_limits_and_quest_completion);
-    RUN_HANDLER_TEST(test_playtest_trace_environment_targets_and_fallback_ids);
-    RUN_HANDLER_TEST(test_fight_handler_records_outcome_trace_metadata);
-    RUN_HANDLER_TEST(test_player_respawn_normalizes_wrapped_entry_coords);
-#undef RUN_HANDLER_TEST
+    testGameplayMetadataIsAvailableBeforePluginLoading();
+
+    test_script_handler_executes_commands_and_wraps_functions();
+    test_handler_constructors_are_covered_by_native_tests();
+    test_creature_scale_preserves_level_plus_sw_invariant();
+    test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions();
+    test_rng_handler_builds_encounters_from_concrete_creature_sw();
+    test_rng_handler_scales_fresh_creatures_before_map_insertion();
+    test_rng_handler_excludes_noncombatants_from_encounters();
+    test_rng_handler_excludes_archetype_definitions_from_encounters();
+    test_rng_handler_excludes_player_templates_from_encounters();
+    test_rng_handler_captures_encounter_power_and_scale_baseline();
+    test_rng_handler_encounter_candidates_stay_in_stable_power_buckets();
+    test_rng_handler_distinguishes_associated_classes_with_neutral_scale();
+    test_creature_subtype_inventory_is_enumerable_on_loaded_game();
+    test_event_handler_trigger_registration_uses_named_comparison_helpers();
+    test_fight_handler_rejects_stale_and_cross_map_participants();
+    test_fight_handler_attributes_lethal_effects_to_valid_casters();
+    test_fight_handler_reports_explicit_outcomes_and_final_status();
+    test_fight_handler_reports_invalid_result_metadata();
+    test_fight_handler_reports_cancelled_quit_event();
+    test_fight_handler_ends_original_started_controllers();
+    test_fight_handler_reports_cancelled_closed_fight_panel();
+    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels();
+    test_fight_handler_returns_cancelled_when_player_control_cancels();
+    test_fight_panel_resets_status_between_sequential_encounters();
+    test_fight_handler_counts_effect_duration_as_progress();
+    test_playtest_trace_records_native_limits_and_quest_completion();
+    test_playtest_trace_environment_targets_and_fallback_ids();
+    test_fight_handler_records_outcome_trace_metadata();
+    test_player_respawn_normalizes_wrapped_entry_coords();
 
     return finish_tests();
 }
