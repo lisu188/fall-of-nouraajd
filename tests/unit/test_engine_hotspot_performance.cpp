@@ -21,9 +21,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
+#include "core/CUtil.h"
+#include "gui/CGui.h"
+#include "gui/object/CMinimapGraphicsObject.h"
 #include "object/CCreature.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
+#include "object/CPlayer.h"
 #include "object/CTile.h"
 #include "test_harness.h"
 #include "veventloop.h"
@@ -563,6 +567,54 @@ void test_weighted_target_flow_field_is_single_build_and_materialization_bounded
                 "repeated weighted reads should keep reusing the cached target flow field");
 }
 
+void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
+    constexpr int CACHED_FRAMES = 32;
+    SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    auto fixture = make_open_map(8, 8);
+    auto gui = std::make_shared<CGui>();
+    gui->setGame(fixture.game);
+    fixture.game->setGui(gui);
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(fixture.game);
+    player->setBaseStats(make_actor_stats());
+    fixture.map->setPlayer(player);
+    auto minimap = std::make_shared<CMinimapGraphicsObject>();
+    gui->addChild(minimap);
+    const auto rect = CUtil::rect(0, 0, 128, 128);
+
+    for (int frame = 0; frame < CACHED_FRAMES; ++frame) {
+        minimap->renderObject(gui, rect, 0);
+    }
+    expect_true(minimap->getTerrainTextureBuildCount() == 1, "unchanged minimap frames must build one terrain texture");
+    expect_true(gui->getRenderContext().getStats().successfulCopies == CACHED_FRAMES,
+                "each cached minimap frame must copy its valid terrain texture");
+
+    player->moveTo(3, 4, 0);
+    minimap->renderObject(gui, rect, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 1, "moving a player marker must reuse the terrain texture");
+    fixture.map->getTile(Coords(4, 4, 0))->setTileType("grass");
+    minimap->renderObject(gui, rect, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 2, "changing terrain must rebuild the minimap texture once");
+    const auto resized = CUtil::rect(0, 0, 129, 128);
+    minimap->renderObject(gui, resized, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 3,
+                "changing minimap dimensions must rebuild its texture once");
+    expect_true(gui->getRenderContext().getStats().successfulCopies == CACHED_FRAMES + 3,
+                "marker, terrain, and size changes must retain valid rendering");
+
+    auto replacement = std::make_shared<CGui>();
+    replacement->setGame(fixture.game);
+    gui->removeChild(minimap);
+    replacement->addChild(minimap);
+    minimap->renderObject(replacement, resized, 0);
+    expect_true(minimap->getTerrainTextureBuildCount() == 4, "changing a live GUI owner must rebuild the texture once");
+    expect_true(replacement->getRenderContext().getStats().successfulCopies == 1,
+                "the replacement GUI must receive its own valid terrain texture");
+    std::cout << "minimap terrain cache guard: cells=64 frames=" << CACHED_FRAMES + 4
+              << " builds=" << minimap->getTerrainTextureBuildCount() << " budget=4\n";
+}
+
 } // namespace
 
 void run_engine_hotspot_performance_tests() {
@@ -580,4 +632,5 @@ void run_engine_hotspot_performance_tests() {
     test_coordinate_cache_lookup_cardinality_and_move_updates();
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
     test_bulk_inventory_property_notifications_are_count_bounded();
+    testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
 }

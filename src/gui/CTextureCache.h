@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 class CTextureCache : public CGameObject {
     V_META(CTextureCache, CGameObject, vstd::meta::empty())
-    std::unordered_map<std::string, fn::sdl::TexturePtr> _textures;
+    std::unordered_map<std::string, fn::sdl::GuiTexturePtr> _textures;
 
   public:
     CTextureCache(std::shared_ptr<CGui> _gui);
