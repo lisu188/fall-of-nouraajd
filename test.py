@@ -130,6 +130,8 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "EnemyRoleContractTest.",
+    "OctobogzHuntContractTest.",
     "EffectContractTest.",
     "CharacterCreationFlowTest.",
     "CoverageReportTest.",
@@ -24864,6 +24866,19 @@ class TestRunnerSuiteTest(unittest.TestCase):
                     with self.assertRaisesRegex(AssertionError, "fixture failure"):
                         run_blocking_panel_inspection(self, game, g, "CGameLootPanel", action, inspect, close_input)
 
+    def test_source_contracts_are_discovered_once_in_fast_suites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only contracts are not installed with the game")
+        for test_class in (EnemyRoleContractTest, OctobogzHuntContractTest):
+            methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
+            self.assertTrue(methods)
+            for method in methods:
+                test_name = f"{test_class.__name__}.{method}"
+                self.assertEqual(f"{__name__}.{test_name}", test_class(method).id())
+                for suite_name in ("fast", "full", "coverage-safe"):
+                    self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+            self.assertNotIn("_" + test_class.__name__, globals())
+
     def test_ui_mcp_routes_are_discovered_once_in_native_suites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only UI tests are not installed with the game")
@@ -25301,6 +25316,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
     from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
+    from tests.test_enemy_roles import EnemyRolesTest as _EnemyRoleContractTest
+    from tests.test_octobogz_hunt import OctobogzHuntTest as _OctobogzHuntContractTest
     from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
     from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
     from tests.test_octobogz_runtime import OctobogzRuntimeTest as _OctobogzRuntimeTest
@@ -25338,6 +25355,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class PythonCallbackLifecycleTest(_PythonCallbackLifecycleTest):
         pass
 
+    class EnemyRoleContractTest(_EnemyRoleContractTest):
+        pass
+
+    class OctobogzHuntContractTest(_OctobogzHuntContractTest):
+        pass
+
     class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
         pass
 
@@ -25361,6 +25384,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest
+    del _EnemyRoleContractTest, _OctobogzHuntContractTest
     del _OctobogzMcpWalkthroughTest
     del _OctobogzRuntimeTest
     del _NavigationMcpWalkthroughTest

@@ -27,6 +27,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
             assert not game_map.getBoolProperty('octobogzHuntCleared')
             director.start(game_map)
             scout = game_map.getObjectByName(state()['slots']['scout']['name'])
+            assert scout.getController().getTarget() == 'cave2' and scout.getController().getDistance() == 10
             scout.setHp(0)
             game_map.removeObject(scout)
             for _ in range(3): loop.run()
@@ -36,6 +37,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
             assert json.loads(game.jsonify(alpha))['properties']['creatureClass']['properties']['combatRole'] == 'brute'
             assert {'Attack', 'octobogzCharge', 'octobogzShadowPulse'} <= {
                 action.getTypeId() for action in alpha.getActions()}
+            assert alpha.getController().getTarget() == 'cave2' and alpha.getController().getDistance() == 10
             alpha.setHp(9)
             alpha.setMana(6)
             assert alpha.getFightController().control(alpha, player)
@@ -63,6 +65,7 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 restored = game_map.getObjectByName(alpha_name)
                 assert restored is not None and restored != alpha
                 assert restored.getHp() == 9 and restored.getMana() == 6
+                assert restored.getController().getTarget() == 'cave2' and restored.getController().getDistance() == 10
                 assert restored.getStringProperty('octobogzCombatPhase') == 'charged'
                 assert len([obj for obj in game_map.getObjects() if obj.getName() == alpha_name]) == 1
                 pulse = next(action for action in restored.getActions() if action.getTypeId() == 'octobogzShadowPulse')

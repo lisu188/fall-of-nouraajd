@@ -169,3 +169,38 @@ traces record initial HP/mana, equipment/inventory/experience and each encounter
 outcome, survivors, phase use and observed costs without changing random streams,
 loadouts or route state. Actual authored journey preparation is a separate MCP
 acceptance requirement and cannot replace this fixed no-rest balance comparator.
+
+
+## Authored map turns and ordinary retreat
+
+Hunt actors retain the original cave-anchored `CRangeController` with target
+`cave2` and distance10. Replacing it with player pursuit/leash256 introduced
+pressure outside the three-slot objective and is reverted. The slot count,
+placements, death gates, phase values and fixed no-rest combat comparator are
+unchanged. Native save/recovery tests assert the anchor and range.
+
+The required stdio MCP route now obtains each authored cardinal destination from
+source terrain, checks native walkability, queues that single step in the real
+player controller, calls `CMap.move`, pumps its event loop, and verifies one
+actual map turn and at most one cell of movement. It replans after combat rollback,
+blocked objects or wandering target movement. It records real level, experience,
+HP/mana, inventory and turns before encounters and after a partial reload.
+Source/mocked contracts verify movement and export APIs; they do not substitute
+for actual binary/MCP evidence.
+
+The route earns its existing class discovery750XP through the visited NPC.
+This is natural progression and is not assumed to match the fixed level-three
+balance comparator. After scout death it saves/reloads remaining living slots.
+It then physically retreats to the existing road at(118,21),48 Wasteland cells
+west of the lair, and takes bounded adjacent steps on verified RoadTiles at
+(118,20)/(118,21). Ordinary road steps heal1HP and actual map turns regenerate
+mana. It can encounter living actors during retreat and must remain alive;
+there is no direct heal, stat/level setter, fabricated supply or reward call.
+The same authored recovery can be used before the final encounter. Genuine
+incidental deaths still count once and preserve any-order objectives.
+
+Source contract classes are exposed through `test.py` so their cheap API,
+movement, registry and sandbox regressions run in fast/full/coverage-safe suites.
+Native runtime/MCP cases retain gameplay/full/coverage-safe discovery. A new
+export check rejects the previous unexported `CMapLoader.save` call; the route
+uses the published `saveWithResult` and requires successful persistence.

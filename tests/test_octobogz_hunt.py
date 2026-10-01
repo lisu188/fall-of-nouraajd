@@ -259,7 +259,7 @@ class OctobogzHuntTest(unittest.TestCase):
         }
         if type_id == "OctoBogz":
             result = Actor()
-        elif type_id == "CTargetController":
+        elif type_id == "CRangeController":
             result = Mock()
         else:
             result = self.registered.get(mapping.get(type_id, type_id), Properties)()
@@ -504,6 +504,83 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertNotIn("getInteractions", called)
         self.assertNotIn("getManaCost", called)
         self.assertNotIn("getLabel", called)
+
+    def testMcpHuntCallsUseExistingPublishedExportsAndHandleMethods(self):
+        module = ast.parse((ROOT / "mcp.py").read_text(encoding="utf-8"))
+        assignments = {
+            node.targets[0].id: ast.literal_eval(node.value)
+            for node in module.body
+            if isinstance(node, ast.Assign)
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id in {"MCP_ALLOWED_EXPORTS", "MCP_ALLOWED_HANDLE_METHODS"}
+        }
+        published = assignments["MCP_ALLOWED_EXPORTS"]
+        methods = set().union(*assignments["MCP_ALLOWED_HANDLE_METHODS"].values())
+        tree = ast.parse((ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            index = 0 if node.func.attr == "engine" else 1 if node.func.attr == "call" else None
+            if index is not None and len(node.args) > index and isinstance(node.args[index], ast.Constant):
+                self.assertIn(node.args[index].value, published if index == 0 else methods)
+
+    def testMcpRouteQueuesOnlyAdjacentControllerStepsAndReplansAfterBlockersOrRollback(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map = "player", "map"
+        walker.walkable = {(x, y, 0) for x in range(3) for y in range(2)}
+        walker.movement_steps = 0
+        state = {"coords": (0, 0, 0), "turn": 0, "target": None}
+        calls = []
+        walker.coords = lambda handle=None: state["coords"]
+        walker.pump = lambda: None
+
+        def call(handle, method, *args):
+            calls.append((handle, method, args))
+            if method == "getTile":
+                return tuple(args)
+            if method == "getCoords":
+                return handle
+            if method == "canStep":
+                return args[0] != (1, 0, 0)
+            if method == "getController":
+                return "controller"
+            if method == "setTarget":
+                self.assertEqual("player", args[0])
+                self.assertEqual(1, sum(abs(a - b) for a, b in zip(state["coords"], args[1])))
+                state["target"] = args[1]
+            if method == "getTurn":
+                return state["turn"]
+            if method == "isAlive":
+                return True
+            if method == "move":
+                # A first-turn combat rollback must cause replanning from the live position.
+                if state["turn"]:
+                    state["coords"] = state["target"]
+                state["turn"] += 1
+
+        walker.call = call
+        walker.walkCoords((2, 0, 0))
+        self.assertEqual((2, 0, 0), state["coords"])
+        self.assertEqual(5, state["turn"])
+        self.assertEqual(state["turn"], walker.movement_steps)
+        self.assertNotIn("moveTo", [method for _, method, _ in calls])
+        self.assertNotIn((1, 0, 0), [args[1] for _, method, args in calls if method == "setTarget"])
+
+    def testEachHuntSlotPreservesTheOriginalCaveAnchorAndTenCellRange(self):
+        self.director.start(self.game_map)
+        scout = self.kill("scout")
+        for slot in self.module.SLOT_NAMES:
+            actor = scout if slot == "scout" else self.game_map.getObjectByName(self.state()["slots"][slot]["name"])
+            controller = actor.getController()
+            self.assertEqual("cave2", actor.getStringProperty("octobogzHuntTarget"))
+            controller.setTarget.assert_called_once_with("cave2")
+            controller.setDistance.assert_called_once_with(10)
+        scout.setStringProperty("octobogzHuntTarget", "player")
+        self.director.configureActor(scout, "scout")
+        scout.getController().setTarget.assert_called_once_with("cave2")
+        scout.getController().setDistance.assert_called_once_with(10)
 
     def testRuntimeChildrenUseOnlyPublishedNativeCallsAndExistingScriptMethods(self):
         import textwrap

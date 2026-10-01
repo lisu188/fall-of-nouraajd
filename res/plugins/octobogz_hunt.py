@@ -93,14 +93,12 @@ def load(self, context):
                         actor.addAction(self.getGame().createObject(action_id))
                 if slot == "alpha":
                     actor.setStringProperty("label", "OctoBogz Alpha")
-            player = actor.getMap().getPlayer() if actor.getMap() else self.getGame().getMap().getPlayer()
-            if player is not None and (
-                actor.getController() is None or actor.getStringProperty("octobogzHuntTarget") != player.getName()
-            ):
-                controller = self.getGame().createObject("CTargetController")
-                controller.setTarget(player.getName())
+            if actor.getController() is None or actor.getStringProperty("octobogzHuntTarget") != "cave2":
+                controller = self.getGame().createObject("CRangeController")
+                controller.setTarget("cave2")
+                controller.setDistance(10)
                 actor.setController(controller)
-                actor.setStringProperty("octobogzHuntTarget", player.getName())
+                actor.setStringProperty("octobogzHuntTarget", "cave2")
 
         def registerDefeat(self, game_map, slot, actor):
             trigger = self.getGame().createObject("OctobogzHuntDefeatTrigger")
