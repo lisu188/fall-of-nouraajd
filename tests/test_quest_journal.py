@@ -85,6 +85,9 @@ class JournalObject:
     def getObjectByName(self, name):
         return self.objects.get(name)
 
+    def getObjects(self):
+        return list(self.objects.values())
+
 
 def loadQuestClasses(path):
     classes = {}
@@ -133,6 +136,8 @@ class MapQuestJournalTest(unittest.TestCase):
         destination.mapName = "destination"
         destination.player = player
         game.map = source
+        hunt_classes = loadQuestClasses(REPO_ROOT / "res/plugins/octobogz_hunt.py")
+        game.createObject = lambda type_id: hunt_classes[type_id](game)
         return game, source, destination, player
 
     def createQuest(self, game, player):
@@ -195,6 +200,37 @@ class MapQuestJournalTest(unittest.TestCase):
         quest.captureJournal(True)
         self.assertEqual(("Done", "", ""), self.journalText(quest))
         self.assertTrue(quest.isCompleted())
+
+    def testHuntPartialAndCompletedJournalUsesRealDirectorAndSurvivesDeparture(self):
+        classes = loadQuestClasses(REPO_ROOT / "res/maps/nouraajd/script.py")
+        game, source, destination, player = self.createSession("nouraajd")
+        quest = classes["OctoBogzQuest"](game)
+        quest.properties.update(name="octoBogzQuest", typeId="octoBogzQuest")
+        player.quests.append(quest)
+        slots = {slot: {"name": slot, "status": "living"} for slot in ("scout", "brood", "alpha")}
+        slots["scout"]["status"] = "dead"
+        source.setStringProperty("octobogzHuntRegistry", json.dumps({"version": 1, "stage": "brood", "slots": slots}))
+        quest.captureJournal(False)
+        active_text = self.journalText(quest)
+        self.assertIn("1/3 threats slain", active_text[0])
+        game.map = destination
+        self.assertEqual(active_text, self.journalText(quest))
+        game.map = source
+        for slot in slots.values():
+            slot["status"] = "dead"
+        source.setStringProperty("octobogzHuntRegistry", json.dumps({"version": 1, "stage": "cleared", "slots": slots}))
+        source.setStringProperty("quest_state_octobogz_contract", "completed")
+        self.assertTrue(quest.isCompleted())
+        quest.captureJournal(True)
+        completed_text = self.journalText(quest)
+        self.assertIn("3/3 threats slain", completed_text[0])
+        restored = classes["OctoBogzQuest"](game)
+        restored.properties = json.loads(json.dumps(quest.properties))
+        player.quests.clear()
+        player.completed.append(restored)
+        game.map = destination
+        self.assertTrue(restored.isCompleted())
+        self.assertEqual(completed_text, self.journalText(restored))
 
     def test_failed_capture_keeps_last_valid_snapshot(self):
         game, source, destination, player = self.createSession()
