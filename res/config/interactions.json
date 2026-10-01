@@ -618,9 +618,9 @@
       "enemySignature": true,
       "enemyRole": "cultist",
       "enemyRoleTrigger": "wounded",
-        "minimumMana": 5,
+      "minimumMana": 5,
       "selfTarget": false,
-        "description": "Once per wounded enemy with at least 5 mana remaining, decorate an ordinary attack: convert 1 damage point to shadow, then reduce enemy shadow resistance by 1 point for 1 turn. No mana is spent.",
+      "description": "Once per wounded enemy with at least 5 mana remaining, make an ordinary attack. When the target's physical and shadow resistance differ, convert 1 damage point to shadow. Reduce shadow resistance by 1 for 1 turn. No mana is spent.",
       "roleEffect": {
         "ref": "enemyRitualHexEffect"
       },

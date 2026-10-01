@@ -62,3 +62,10 @@ def load(self, context):
     @register(context)
     class EnemyRitualHex(EnemyPacketSignature):
         damageChannel = "shadow"
+
+        def performSignature(self, first, second, attack):
+            stats = second.getStats()
+            if stats.getNumericProperty("normalResist") == stats.getNumericProperty("shadowResist"):
+                attack.performAction(first, second)
+            else:
+                super().performSignature(first, second, attack)

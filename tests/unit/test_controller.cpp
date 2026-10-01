@@ -1503,6 +1503,8 @@ void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast() {
     auto game = fight_fixture_game();
     auto monster = self_target_fixture_monster(game, false);
     auto opponent = self_target_fixture_opponent(game);
+    opponent->setHp(opponent->getHpMax());
+    expect_true(monster->isAlive() && opponent->isAlive(), "both ordinary priority fixture actors must be alive");
     auto creatureClass = std::make_shared<CCreatureClass>();
     creatureClass->setStringProperty("combatRole", "testRole");
     monster->setCreatureClass(creatureClass);

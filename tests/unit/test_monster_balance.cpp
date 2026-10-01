@@ -58,7 +58,7 @@ void createOpenBalanceMap(const std::shared_ptr<CGame> &game) {
 
 struct RitualTurnState {
     bool used;
-    int hp, hpMax, mana, targetHp, targetMana, targetNormalResist, targetShadowResist;
+    int hp, hpMax, mana, targetHp, targetMana, targetNormalResist, targetShadowResist, targetArmor, targetBlock;
 };
 
 struct RitualControlRecord {
@@ -74,7 +74,9 @@ RitualTurnState observeRitualTurn(const std::shared_ptr<CCreature> &actor, const
             target->getHp(),
             target->getMana(),
             targetStats->getNormalResist(),
-            targetStats->getShadowResist()};
+            targetStats->getShadowResist(),
+            targetStats->getArmor(),
+            targetStats->getBlock()};
 }
 
 struct RoleBalanceSample {
@@ -334,7 +336,8 @@ void printRitualTrace(const RoleBalanceSample &sample, const std::string &mode, 
                   << before.mana << " -> " << after.mana << " target hp " << before.targetHp << " -> " << after.targetHp
                   << " mana " << before.targetMana << " -> " << after.targetMana << " normal/shadow resist "
                   << before.targetNormalResist << '/' << before.targetShadowResist << " -> " << after.targetNormalResist
-                  << '/' << after.targetShadowResist << '\n';
+                  << '/' << after.targetShadowResist << " armor/block " << before.targetArmor << '/'
+                  << before.targetBlock << " -> " << after.targetArmor << '/' << after.targetBlock << '\n';
     }
 }
 
@@ -375,17 +378,31 @@ void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
     expect_true(!player->getEffects().empty(), "inherited native performAction must return and apply the real barrier");
 }
 
-void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool cultistHex = false) {
+void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool cultistHex = false,
+                                                                        bool equalWards = false) {
     auto game = CGameLoader::loadGame();
     createOpenBalanceMap(game);
     auto expectedNativeRng = vstd::rng();
     int expectedNextBlockRoll = 0;
     int expectedWeaponCalls = 0;
+    int expectedPlayerHp = 0;
     bool observedWeaponProc = false;
     for (unsigned seed = 100; seed < 111; ++seed) {
         for (bool enabled : {false, true}) {
             auto player = game->createObject<CPlayer>("Warrior");
             player->setLevel(3);
+            if (equalWards) {
+                const auto originalStats = player->getStats();
+                auto baseStats = player->getBaseStats();
+                baseStats->setShadowResist(baseStats->getShadowResist() + originalStats->getNormalResist() -
+                                           originalStats->getShadowResist());
+                baseStats->setArmor(17);
+                baseStats->setBlock(25);
+                const auto stats = player->getStats();
+                expect_true(stats->getNormalResist() == stats->getShadowResist() && stats->getArmor() > 0 &&
+                                stats->getBlock() > 0,
+                            "equal-ward packet contract must exercise existing armor and blocking");
+            }
             game->getMap()->attachPlayer(player, Coords(0, 0, 0));
             player->heal(0);
             auto actor = game->createObject<CCreature>(cultistHex ? "Cultist" : "PritzMage");
@@ -477,6 +494,10 @@ signatureType.performAction = originalSignature
                             actor->getStringProperty("enemyRoleDamageChannel").empty(),
                         "the temporary damage hook must be disarmed before a save or subsequent action");
             if (enabled) {
+                if (equalWards) {
+                    expect_true(player->getHp() == expectedPlayerHp && !actor->hasProperty("enemyRoleAttackBudget"),
+                                "equal wards must preserve the whole ordinary Attack mitigation and block path");
+                }
                 expect_true(afterNativeRng == expectedNativeRng && nextBlockRoll == expectedNextBlockRoll,
                             "eager owned role objects must preserve both ordinary Attack random streams");
                 expect_true(weaponCalls == expectedWeaponCalls,
@@ -500,6 +521,7 @@ signatureType.performAction = originalSignature
                 expectedNativeRng = afterNativeRng;
                 expectedNextBlockRoll = nextBlockRoll;
                 expectedWeaponCalls = weaponCalls;
+                expectedPlayerHp = player->getHp();
                 const int afterResist =
                     cultistHex ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
                 expect_true(recipient->getEffects().empty() && afterResist == beforeResist,
@@ -752,6 +774,7 @@ int main(int argc, char **argv) {
         testInheritedNativeMethodsDoNotBecomePythonOverrides();
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true);
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true, true);
         testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries();
         testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
         testActivePlayerNeverUsesMonsterSignature();
