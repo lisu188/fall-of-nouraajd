@@ -14,6 +14,7 @@ if str(REPO_ROOT / "res") not in sys.path:
 
 import campaign
 import narrative
+import quest_state
 
 
 class PropertyObject:
@@ -148,21 +149,42 @@ def loadMapClasses(map_name):
     fake_module.logger = lambda *args: None
     fake_module.randint = lambda low, high: low
     fake_module.CTag = types.SimpleNamespace(WAND="wand")
+    for name in ("LegacyBoolFlag", "PlayerQuestRegistry", "QuestStateStore", "ensure_quest"):
+        setattr(fake_module, name, getattr(quest_state, name))
+    fake_module.remove_runtime_actors = lambda *args, **kwargs: 0
+    fake_module.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=lambda callback: None))
     fake_module.claim_once = lambda obj, flag: (
         False if obj.getBoolProperty(flag) else obj.setBoolProperty(flag, True) or True
     )
-    for name in ("CDialog", "CEvent", "CQuest", "CTrigger", "CCreature"):
+    for name in ("CDialog", "CEvent", "CQuest", "CTrigger", "CCreature", "CPlayer", "Coords"):
         setattr(fake_module, name, type(name, (PropertyObject,), {}))
     script_path = REPO_ROOT / "res/maps" / map_name / "script.py"
     spec = importlib.util.spec_from_file_location(map_name + "NarrativeFixture", script_path)
     script = importlib.util.module_from_spec(spec)
     with patch.dict(sys.modules, {"game": fake_module}):
         spec.loader.exec_module(script)
-        script.load(None, None)
+        script.load(None, types.SimpleNamespace(getMap=lambda: None))
     return registered
 
 
 class NarrativeConsequenceTest(unittest.TestCase):
+    def testBeerVendorUsesBoundMarketPropertySetterForBothPriceRoutes(self):
+        classes = loadMapClasses("nouraajd")
+        for approach, percent in (("cooperative", 100), ("threatened", 105)):
+            with self.subTest(approach=approach):
+                game = Game()
+                game.map.map_name = "nouraajd"
+                market = types.SimpleNamespace(properties={})
+                market.setNumericProperty = lambda key, value: market.properties.update({key: value})
+                game.createObject = lambda object_id: market if object_id == "tavernBeerMarket" else None
+                traded = []
+                game.getGuiHandler = lambda: types.SimpleNamespace(showTrade=traded.append)
+                narrative.recordGateApproach(game, approach)
+                self.assertFalse(hasattr(market, "setSell"), "CMarket does not bind setSell to Python")
+                classes["TavernDialog1"](game).sell_beer()
+                self.assertEqual(percent, market.properties["sell"])
+                self.assertEqual([market], traded)
+
     def testLegacyAndStandaloneDefaultsPreservePricesAndBounty(self):
         game = Game()
         self.assertEqual(100, narrative.beerSalePercent(game))

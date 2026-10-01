@@ -742,7 +742,7 @@ def load(self, context):
         def sell_beer(self):
             game = self.getGame()
             market = game.createObject("tavernBeerMarket")
-            market.setSell(narrative.beerSalePercent(game))
+            market.setNumericProperty("sell", narrative.beerSalePercent(game))
             game.getGuiHandler().showTrade(market)
 
         def asked_about_girl(self):

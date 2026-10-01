@@ -224,6 +224,9 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "remove",
         "sellItem",
     },
+    "SpawnPoint": {
+        "sealBreach",
+    },
     "event_loop": {
         "run",
     },

@@ -15954,12 +15954,16 @@ class GameTest(unittest.TestCase):
             market_refs = [item["ref"] for item in config["tavernBeerMarket"]["properties"]["items"]]
 
             self.assertEqual(market.getTypeId(), "tavernBeerMarket")
+            self.assertEqual(100, market.getNumericProperty("sell"))
             self.assertEqual(market_refs, ["DarkBeer", "DarkBeer", "SpicedBeer"])
             self.assertEqual(labels, ["Dark Beer", "Dark Beer", "Spiced Beer"])
             self.assertTrue(
                 all(ref in potions for ref in market_refs),
                 "Configured tavern beers should exist in potions.json",
             )
+            game.narrative.recordGateApproach(g, "threatened")
+            g.createObject("tavernDialog1").sell_beer()
+            self.assertEqual(105, captured["market"].getNumericProperty("sell"))
 
             log = {
                 "market_type": market.getTypeId(),
@@ -25516,6 +25520,26 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(handle["__type__"], "CDialog")
         method_names = {method["name"] for method in handle["pythonMethods"]}
         self.assertEqual({"invokeAction", "invokeCondition"}, method_names)
+
+    def test_siege_handle_exports_only_the_guarded_breach_action(self):
+        server = self.make_stub_server()
+
+        class SpawnPoint:
+            def sealBreach(self):
+                return True
+
+            def completePendingSeal(self):
+                raise AssertionError("Internal gate callbacks are not MCP actions")
+
+        handle = server._serialize_result(SpawnPoint())
+        self.assertEqual({"sealBreach"}, {method["name"] for method in handle.get("pythonMethods", [])})
+        response = server._engine_handle_call({"handle": handle["__handle__"], "method": "sealBreach", "args": []})
+        self.assertFalse(response["isError"])
+        self.assertTrue(response["structuredContent"]["result"])
+        denied = server._engine_handle_call(
+            {"handle": handle["__handle__"], "method": "completePendingSeal", "args": []}
+        )
+        self.assertTrue(denied["isError"])
 
     def test_engine_handle_call_rejects_private_methods(self):
         server = self.make_stub_server()
