@@ -151,11 +151,15 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getArchetypeClassLabel",
         "getArchetypeRaceId",
         "getArchetypeRaceLabel",
+        "getEffects",
         "getGold",
+        "getHp",
+        "getHpMax",
         "getHpRatio",
         "getItems",
         "getLevel",
         "getMana",
+        "getManaMax",
         "heal",
         "healProc",
         "isAlive",
@@ -184,6 +188,10 @@ MCP_ALLOWED_HANDLE_METHODS = {
     "CPlayerController": {
         "isCompleted",
         "setTarget",
+    },
+    "CInteraction": {
+        "getCommittedManaRefund",
+        "onAction",
     },
     "CObjectHandler": {
         "createObject",
