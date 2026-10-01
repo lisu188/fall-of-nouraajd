@@ -18426,7 +18426,7 @@ class GameTest(unittest.TestCase):
         return issues_by_file == {}, json.dumps(log, indent=2, sort_keys=True)
 
     def test_map_json_tiled_compatibility_allows_default_entry_coordinates(self):
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         map_data = {
             "type": "map",
             "orientation": "orthogonal",
@@ -24747,6 +24747,22 @@ class QuestStateHelperTest(unittest.TestCase):
 
 class TestRunnerSuiteTest(unittest.TestCase):
 
+    def testMcpWalkthroughLogsCreateNestedWorkerDirectories(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory(prefix="nouraajd-mcp-log-") as temporary:
+            output_dir = Path(temporary) / "test" / "workers" / "4"
+            self.assertFalse(output_dir.parent.exists())
+            log = [{"map": "sunderedmarch", "step": "load"}]
+            harness = McpServerTest()
+            with patch(__name__ + ".TEST_OUTPUT_DIR", output_dir):
+                harness._write_mcp_walkthrough_log("sunderedmarch", log)
+                harness._write_mcp_walkthrough_log("castleHomecoming", [{"step": "start"}])
+            self.assertEqual(log, json.loads((output_dir / "mcp_walkthrough_sunderedmarch.json").read_text()))
+            self.assertEqual(
+                [{"step": "start"}], json.loads((output_dir / "mcp_walkthrough_castleHomecoming.json").read_text())
+            )
+
     def testImportedHarnessUsesExecutingModule(self):
         import test as harness
 
@@ -26046,7 +26062,7 @@ class McpServerTest(unittest.TestCase):
             "discovered_maps": discovered_maps,
             "walkthroughs": self.MCP_WALKTHROUGHS,
         }
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         (TEST_OUTPUT_DIR / "mcp_walkthroughs.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
 
     def test_stdio_map_walkthrough_nouraajd(self):
@@ -26272,7 +26288,7 @@ class McpServerTest(unittest.TestCase):
         trace_path = None
         env = None
         if map_name == "nouraajd":
-            TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+            TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
             trace_path = TEST_OUTPUT_DIR / "mcp_walkthrough_nouraajd_trace.jsonl"
             trace_path.unlink(missing_ok=True)
             env = os.environ.copy()
@@ -26452,7 +26468,7 @@ class McpServerTest(unittest.TestCase):
         self.assertEqual(log_level_response.get("id"), 2)
 
     def _write_mcp_walkthrough_log(self, map_name, log):
-        TEST_OUTPUT_DIR.mkdir(exist_ok=True)
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         path = TEST_OUTPUT_DIR / f"mcp_walkthrough_{map_name}.json"
         path.write_text(json.dumps(log, indent=2, sort_keys=True))
 
