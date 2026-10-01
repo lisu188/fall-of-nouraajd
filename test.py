@@ -130,6 +130,7 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "PlayerIdentityContentTest.",
     "CoverageReportTest.",
     "PlayBootstrapTest.",
     "QuestStateHelperTest.",
@@ -16762,6 +16763,76 @@ class GameTest(unittest.TestCase):
         return True, json.dumps(results, sort_keys=True)
 
     @game_test
+    def test_nouraajd_class_perks_refund_only_paid_committed_casts(self):
+        cases = (
+            ("Warrior", "Barrier", "warrior_barricades", 17),
+            ("Assasin", "SneakAttack", "assasin_trails", 15),
+            ("Sorcerer", "FrostBolt", "sorcerer_sigils", 20),
+        )
+        for class_id, ability_id, counter, cost in cases:
+            with self.subTest(class_id=class_id):
+                g, _game_map, player = load_game_map_with_player("nouraajd", class_id)
+                self.addCleanup(g.getContext().shutdown)
+                player.getBaseStats().setNumericProperty("intelligence", 30)
+                player.setMana(80)
+                player.setNumericProperty(counter, 1)
+                ability = g.createObject(ability_id)
+                target = g.createObject("CCreature")
+                target.getBaseStats().setNumericProperty("stamina", 1000)
+                target.setHp(target.getHpMax())
+                self.assertEqual(cost, ability.getManaCost())
+                for _ in range(2):
+                    before_mana = player.getMana()
+                    self.assertEqual(3, ability.getCommittedManaRefund(player))
+                    self.assertEqual(before_mana, player.getMana())
+                    ability.performAction(player, target)
+                    self.assertEqual(before_mana, player.getMana())
+                    ability.onAction(player, player if ability_id == "Barrier" else target)
+                    self.assertEqual(before_mana - cost + 3, player.getMana())
+                    self.assertEqual(1, player.getNumericProperty(counter))
+                player.setMana(cost - 1)
+                before = (player.getMana(), target.getHp(), len(player.getEffects()))
+                ability.onAction(player, player if ability_id == "Barrier" else target)
+                self.assertEqual(before, (player.getMana(), target.getHp(), len(player.getEffects())))
+                player.setPlayerClassId("Wayfarer")
+                self.assertEqual(0, ability.getCommittedManaRefund(player))
+        return True, "earned class perks refund 3 mana repeatedly, after a full-cost paid commit only"
+
+    @game_test
+    def test_nouraajd_identity_rewards_survive_save_and_map_carryover(self):
+        game = load_game_module()
+        g, game_map, player = load_game_map_with_player("nouraajd", "Warrior")
+        self.addCleanup(g.getContext().shutdown)
+        player.setNumericProperty("warrior_barricades", 1)
+        town_hall = g.createObject("townHallDialog")
+        starting_gold = player.getGold()
+        self.assertTrue(town_hall.claimHumanRation())
+        self.assertEqual(starting_gold + 20, player.getGold())
+        save_name = unique_save_name("identity_rewards")
+        self.addCleanup(cleanup_save_slot, save_name)
+        game.CMapLoader.save(game_map, save_name)
+        loaded_game = game.CGameLoader.loadGame()
+        self.addCleanup(loaded_game.getContext().shutdown)
+        game.CGameLoader.loadSavedGame(loaded_game, save_name)
+        loaded_player = loaded_game.getMap().getPlayer()
+        self.assertEqual(1, loaded_player.getNumericProperty("warrior_barricades"))
+        self.assertTrue(loaded_player.getBoolProperty("nouraajdRaceServiceClaimed"))
+        self.assertEqual("humanRace", loaded_player.getStringProperty("nouraajdRaceServiceKind"))
+        loaded_town_hall = loaded_game.createObject("townHallDialog")
+        self.assertFalse(loaded_town_hall.claimHumanRation())
+        self.assertEqual(starting_gold + 20, loaded_player.getGold())
+        self.assertEqual(3, loaded_game.createObject("Barrier").getCommittedManaRefund(loaded_player))
+        loaded_game.getMap().changeMap("ritual")
+        game.event_loop.instance().run()
+        carried_player = loaded_game.getMap().getPlayer()
+        self.assertEqual(loaded_player, carried_player)
+        self.assertEqual(1, carried_player.getNumericProperty("warrior_barricades"))
+        self.assertTrue(carried_player.getBoolProperty("nouraajdRaceServiceClaimed"))
+        self.assertEqual(starting_gold + 20, carried_player.getGold())
+        self.assertEqual(3, loaded_game.createObject("Barrier").getCommittedManaRefund(carried_player))
+        return True, "player exploration perks and one-time Irvin claim persist through saves and chapter carryover"
+
+    @game_test
     def test_nouraajd_class_dialogs_honor_player_class_id_over_type(self):
         # After the identity migration, class-specific dialog routes gate on the player's class
         # identity (playerClassId) rather than the raw type id. A player whose type id is not the
@@ -25154,6 +25225,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_player_identity_content import PlayerIdentityContentTest as _PlayerIdentityContentTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
@@ -25163,6 +25235,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
+        pass
+
+    class PlayerIdentityContentTest(_PlayerIdentityContentTest):
         pass
 
     class ManagementMcpWalkthroughTest(_ManagementMcpWalkthroughTest):
@@ -25185,6 +25260,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _UiPixelAnalysisTest
+    del _PlayerIdentityContentTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 
