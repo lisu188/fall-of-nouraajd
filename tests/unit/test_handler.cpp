@@ -29,6 +29,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CPlaytestTrace.h"
 #include "core/CStats.h"
+#include "core/CTypes.h"
+#include "core/CWrapper.h"
 #include "gui/CGui.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "object/CCreature.h"
@@ -49,6 +51,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -58,6 +61,44 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <vector>
 
 namespace {
+
+void testGameplayMetadataIsAvailableBeforePluginLoading() {
+    const auto expectMetadata = []<typename T>(const char *message) {
+        using Pointer = std::shared_ptr<T>;
+        using Set = std::set<Pointer>;
+        using Map = std::map<std::string, Pointer>;
+        const auto hasSerializer = [](auto key) {
+            auto found = CTypes::serializers()->find(key);
+            return found != CTypes::serializers()->end() && found->second;
+        };
+        expect_true(CTypes::is_pointer_type<Pointer>() && CTypes::is_array_type<Set>() && CTypes::is_map_type<Map>() &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Pointer>()) &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Set>()) &&
+                        hasSerializer(vstd::type_pair<std::shared_ptr<json>, Map>()),
+                    message);
+        expect_true(!CTypes::builders()->contains(T::static_meta()->name()),
+                    "gameplay builders must remain unavailable until the native plugin registers them");
+    };
+    expectMetadata.operator()<CFightController>("fight controller metadata must exist before plugin loading");
+    expectMetadata.operator()<CMonsterFightController>(
+        "derived fight controller metadata must exist before plugin loading");
+    expectMetadata.operator()<CCreatureRace>("race metadata must exist before plugin loading");
+    expectMetadata.operator()<CCreatureClass>("class metadata must exist before plugin loading");
+    expectMetadata.operator()<CInteraction>("interaction metadata must exist before plugin loading");
+    expectMetadata.operator()<CWrapper<CInteraction>>("wrapped interaction metadata must exist before plugin loading");
+
+    auto controller = std::make_shared<CMonsterFightController>();
+    auto interaction = std::make_shared<CWrapper<CInteraction>>();
+    try {
+        expect_true(vstd::any_cast<std::shared_ptr<CFightController>>(std::any(controller)) == controller &&
+                        vstd::any_cast<std::shared_ptr<CGameObject>>(std::any(controller)) == controller &&
+                        vstd::any_cast<std::shared_ptr<CInteraction>>(std::any(interaction)) == interaction &&
+                        vstd::any_cast<std::shared_ptr<CGameObject>>(std::any(interaction)) == interaction,
+                    "gameplay metadata must register the complete controller and wrapper base chains");
+    } catch (const std::bad_any_cast &) {
+        expect_true(false, "gameplay metadata must register the complete controller and wrapper base chains");
+    }
+}
 
 class NoProgressFightController : public CFightController {
   public:
@@ -1108,6 +1149,28 @@ std::shared_ptr<json> make_unit_creature_config(int sw) {
     return config;
 }
 
+void primeEncounterFixtureLevels(const std::shared_ptr<CGame> &game, int budget, int samples,
+                                 const std::string &fixture) {
+    // These samples assert candidate membership, not XP progression. Prime copied configs after
+    // checking their authored prototypes so every sample avoids replaying unrelated level unlocks.
+    // The fresh-template XP regression and raw baseline remain separate and unmodified.
+    auto handler = game->getObjectHandler();
+    std::size_t primed = 0;
+    for (const auto &type : handler->getAllSubTypes("CCreature")) {
+        auto resolvedClass = handler->getType(handler->getClass(type));
+        if (resolvedClass && resolvedClass->meta()->inherits("CPlayer")) {
+            continue;
+        }
+        auto config = CJsonUtil::clone(handler->getConfig(type));
+        (*config)["properties"]["exp"] = 0;
+        (*config)["properties"]["level"] = budget;
+        handler->registerConfig(type, config);
+        ++primed;
+    }
+    std::cout << "[encounter-fixture] " << fixture << " templates=" << primed << " level=" << budget
+              << " samples=" << samples << " maxSamplingLevelUps=0\n";
+}
+
 void test_rng_handler_scales_fresh_creatures_before_map_insertion() {
     auto game = load_empty_game();
     auto handler = game->getObjectHandler();
@@ -1222,6 +1285,7 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
 
     // Building the handler against the live game ingests every registered subtype's concrete getSw()
     // into the creature power table used to assemble encounters.
+    primeEncounterFixtureLevels(game, 40, 64, "concrete-sw");
     CRngHandler rng_handler(game);
 
     for (int attempt = 0; attempt < 64; attempt++) {
@@ -1231,6 +1295,7 @@ void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
             if (!creature) {
                 continue;
             }
+            expect_true(creature->getLevel() == 40, "concrete-sw sampling must not replay fixture level-ups");
             // Encounter power compatibility: the post-scaling sum stays getScale() == level + sw.
             expect_true(creature->getScale() == creature->getLevel() + creature->getSw(),
                         "scaled encounter creatures should keep getScale() == level + sw");
@@ -1314,6 +1379,7 @@ void test_rng_handler_excludes_archetype_definitions_from_encounters() {
 
     // Build the live handler: it seeds creaturePowerTable from the enumeration above, so
     // no definition can have entered it. Assembled encounters must be only real creatures.
+    primeEncounterFixtureLevels(game, 40, 64, "archetype-exclusion");
     CRngHandler rng_handler(game);
     bool producedEncounter = false;
     for (int attempt = 0; attempt < 64; attempt++) {
@@ -1323,6 +1389,7 @@ void test_rng_handler_excludes_archetype_definitions_from_encounters() {
             if (!creature) {
                 continue;
             }
+            expect_true(creature->getLevel() == 40, "archetype-exclusion sampling must not replay fixture level-ups");
             producedEncounter = true;
             expect_true(creature->meta()->inherits("CCreature"),
                         "every assembled encounter creature must be a concrete CCreature");
@@ -1511,20 +1578,21 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     expect_true(eligibleSwBuckets.contains(kHighSw),
                 "the high archetype's sw must register as an eligible encounter power bucket");
 
-    CRngHandler rng_handler(game);
-
     // (1) Candidate-set equivalence at a full power budget: across many samples every
     // assembled creature's sw must be a member of the eligible bucket set -- the
     // generator must never invent an sw key outside the registered candidate set, and
     // the post-scaling scale invariant must hold. Sampling order is irrelevant: this is a
     // set-membership comparison, not a sequence comparison.
     const int kFullBudget = 60;
+    primeEncounterFixtureLevels(game, kFullBudget, 256, "full-power-buckets");
+    CRngHandler rng_handler(game);
     bool producedFullEncounter = false;
     for (int attempt = 0; attempt < 256; attempt++) {
         for (const auto &creature : rng_handler.getRandomEncounter(kFullBudget)) {
             if (!creature) {
                 continue;
             }
+            expect_true(creature->getLevel() == kFullBudget, "full-budget sampling must not replay fixture level-ups");
             producedFullEncounter = true;
             expect_true(eligibleSwBuckets.contains(creature->getSw()),
                         "every encounter creature's sw must be drawn from a registered eligible power bucket");
@@ -1543,11 +1611,14 @@ void test_rng_handler_encounter_candidates_stay_in_stable_power_buckets() {
     // and every assembled creature's sw must be <= the tight budget. This is deterministic
     // regardless of which low bucket the RNG happens to sample.
     const int kTightBudget = kHighSw - 1; // 8: below the high bucket, so it is never eligible
+    primeEncounterFixtureLevels(game, kTightBudget, 256, "tight-power-buckets");
     for (int attempt = 0; attempt < 256; attempt++) {
         for (const auto &creature : rng_handler.getRandomEncounter(kTightBudget)) {
             if (!creature) {
                 continue;
             }
+            expect_true(creature->getLevel() == kTightBudget,
+                        "tight-budget sampling must not replay fixture level-ups");
             expect_true(creature->getSw() <= kTightBudget,
                         "a tight power budget must exclude every bucket whose sw exceeds the budget");
             expect_true(creature->getSw() != kHighSw,
@@ -1663,6 +1734,7 @@ void test_rng_handler_distinguishes_associated_classes_with_neutral_scale() {
 
     // The live handler (built with the hook in place) must still assemble encounters
     // exclusively from the raw concrete sw buckets, exactly as before the hook.
+    primeEncounterFixtureLevels(game, 40, 64, "neutral-associated-class-hook");
     CRngHandler rng_handler(game);
     bool producedEncounter = false;
     for (int attempt = 0; attempt < 64; attempt++) {
@@ -1670,6 +1742,7 @@ void test_rng_handler_distinguishes_associated_classes_with_neutral_scale() {
             if (!sampled) {
                 continue;
             }
+            expect_true(sampled->getLevel() == 40, "neutral-hook sampling must not replay fixture level-ups");
             producedEncounter = true;
             expect_true(rawSwKeys.contains(sampled->getSw()),
                         "encounter creatures must still be drawn from the raw concrete sw power buckets");
@@ -1779,6 +1852,7 @@ void test_rng_handler_excludes_player_templates_from_encounters() {
     expect_true(highBucketIsExclusive,
                 "no other monster template may share the high monster's sw bucket for the determinism proof");
 
+    primeEncounterFixtureLevels(game, 60, 256, "player-exclusion");
     CRngHandler rng_handler(game);
 
     bool sawRegisteredMonster = false;
@@ -1788,6 +1862,7 @@ void test_rng_handler_excludes_player_templates_from_encounters() {
             if (!creature) {
                 continue;
             }
+            expect_true(creature->getLevel() == 60, "player-exclusion sampling must not replay fixture level-ups");
             producedEncounter = true;
 
             // (1) A player template must NEVER be assembled into a random encounter. The
@@ -1976,6 +2051,7 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    testGameplayMetadataIsAvailableBeforePluginLoading();
 
     test_script_handler_executes_commands_and_wraps_functions();
     test_handler_constructors_are_covered_by_native_tests();
