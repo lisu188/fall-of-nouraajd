@@ -79,7 +79,8 @@ checks pass on the delivered head and its PR merges. Source assertions alone
 do not establish rendered correctness.
 
 Captures live in the test session's `GAME_TEST_OUTPUT_DIR`. The current PR
-workflow does not upload that directory as an artifact; the six captures are
-validated during the run but are not durable downloadable PR evidence. This
+Linux UI job validates them without uploading that directory. The existing
+coverage report uploads `coverage/test-output` when available; durable capture
+evidence requires its published artifact to contain the six chooser PNGs. This
 acceptance change alters tests and documentation, so it does not change the
 rendered UI or require regeneration of the repository's full screenshot set.
