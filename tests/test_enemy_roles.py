@@ -257,6 +257,18 @@ class EnemyRolesTest(unittest.TestCase):
         }
         self.assertEqual(set(), calls - published - {"loads", "items", "values", "get", "uuid4", "unlink"})
 
+    def testOrdinaryBarrierPriorityFixtureRegistersClonedBonusBeforeSecondControl(self):
+        source = (ROOT / "tests/unit/test_controller.cpp").read_text(encoding="utf-8")
+        registration = source.split("void register_effect_and_interaction", 1)[1].split("\n}", 1)[0]
+        self.assertIn("register_type<CStats, CGameObject>()", registration)
+        self.assertIn('registerType("CStats"', registration)
+        priority = source.split("void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast", 1)[1].split("\n}", 1)[
+            0
+        ]
+        self.assertIn("clonedBonus != nullptr", priority)
+        self.assertIn("if (clonedBonus)", priority)
+        self.assertEqual(2, priority.count("controller.control(monster, opponent)"))
+
     def testRoleConfigKeepsRosterNumericStatsAndBoundedOwnedEffects(self):
         classes = json.loads((ROOT / "res/config/creature_classes.json").read_text(encoding="utf-8"))
         interactions = json.loads((ROOT / "res/config/interactions.json").read_text(encoding="utf-8"))
@@ -284,6 +296,7 @@ class EnemyRolesTest(unittest.TestCase):
             self.assertEqual(0, action["manaCost"])
             if action_id == "enemyRitualHex":
                 self.assertEqual("wounded", action["enemyRoleTrigger"])
+                self.assertEqual(5, action["minimumMana"])
             self.assertNotIn("effect", action)
             effect = effects[action["roleEffect"]["ref"]]["properties"]
             self.assertEqual(1, effect["duration"])

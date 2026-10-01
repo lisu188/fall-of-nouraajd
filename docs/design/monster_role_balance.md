@@ -34,7 +34,7 @@ The current one-turn effects are:
 | Brute | At or below half health | Physical resistance +1, frost resistance -1 |
 | Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
 | Thief | Guarded opponent or at/below half health | Opponent block -1 |
-| Cultist | At or below half health | Convert one damage point to shadow, opponent shadow resistance -1 |
+| Cultist | At or below half health, at least5 mana remaining | Convert one damage point to shadow, opponent shadow resistance -1; no mana spent |
 
 Each action owns its effect from configuration; the mage and cultist also own
 damage packets. The packet hook accepts only frost or shadow. The cultist packet
@@ -207,3 +207,43 @@ Sorcerer/Octo8.82seconds and Sorcerer/Mage7.16seconds; setup was151–166ms perp
 Release corresponding rows cost0.20–0.81seconds with14–17ms setup. The coverage
 CTest failure output contained no debug log lines. This is measured instrumented
 combat work; no canonical coverage acceptance was reached.
+
+The wounded trial `afd35336` completed all35 Linux rows with identical resource
+medians, including Wayfarer/Cultist6 to6. It nevertheless lost the original
+Wayfarer/CultLeader seed104 victory (baseline HP/mana/items80/100/0;
+roles81/80/0), so the unchanged per-seed victory gate failed. Coverage again hit
+the existing60-second limit. These results remain failed evidence.
+
+The separate controller fixture now registers `CStats` with its per-game object
+factory as well as effects and interactions. Its ordinary Barrier priority test
+requires a nonnull cloned stats bonus before a second controller selection;
+that second selection must retain the existing buff and select the eligible
+ordinary Attack signature safely. This fixes the fixture's incomplete clone
+setup without changing production combat or its priority assertions.
+
+The next ritual trial requires5 mana remaining without spending it. An exhausted
+CultLeader keeps its ordinary Attack; a wounded Cultist with reserve mana can
+still use the substantive shadow packet. Both controlled mechanism modes receive
+the same5 mana and retain the real damage, callbacks, random streams, initiative
+and expiry assertions. The35×11 ordinary balance matrix is unchanged.
+
+## Aggregate execution budget
+
+`ctest --test-dir cmake-build-release --output-on-failure -R for_unit_tests`
+previously ran the770 fights sequentially in one native process. Release rows
+completed, while `./scripts/run_coverage.sh` timed out that instrumented entry
+at60 seconds before completing all35 rows. The commands and outer60-second
+CTest entry remain unchanged. The entry now runs common native contracts once,
+then up to four independent class processes from the same compiled executable.
+Each process must complete all seven rows and77 paired seeds (154 fights);
+the coordinator rejects missing, duplicate, incomplete or failed partitions.
+Total required work remains five classes,35 rows,385 paired seeds and770 fights.
+Its55-second aggregate internal deadline leaves cleanup margin inside CTest60;
+there are no separate per-class60-second gates. Direct executable invocation
+still runs the full contracts and matrix. The separate hunt command is unchanged.
+
+Focused source/runner tests prove complete counts, common contracts once, native
+failure propagation, concurrent stderr draining and child deadline cleanup.
+They do not establish native speedup or coverage. Fresh Linux/Windows complete
+metrics, native performance guards and canonical coverage must supply that
+evidence before delivery; no budget or coverage threshold was changed.

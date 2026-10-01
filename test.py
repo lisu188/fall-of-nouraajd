@@ -131,6 +131,7 @@ XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
     "EnemyRoleContractTest.",
+    "MonsterBalanceRunnerTest.",
     "EffectContractTest.",
     "CharacterCreationFlowTest.",
     "CoverageReportTest.",
@@ -24835,7 +24836,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
     def test_source_contracts_are_discovered_once_in_fast_suites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only contracts are not installed with the game")
-        for test_class in (EnemyRoleContractTest,):
+        for test_class in (EnemyRoleContractTest, MonsterBalanceRunnerTest):
             methods = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(methods)
             for method in methods:
@@ -25279,6 +25280,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
     from tests.test_enemy_roles import EnemyRolesTest as _EnemyRoleContractTest
+    from tests.test_monster_balance_runner import MonsterBalanceRunnerTest as _MonsterBalanceRunnerTest
     from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
@@ -25317,6 +25319,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class EnemyRoleContractTest(_EnemyRoleContractTest):
         pass
 
+    class MonsterBalanceRunnerTest(_MonsterBalanceRunnerTest):
+        pass
+
     class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
         pass
 
@@ -25335,6 +25340,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest
     del _EnemyRoleContractTest
+    del _MonsterBalanceRunnerTest
     del _NavigationMcpWalkthroughTest
     del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
