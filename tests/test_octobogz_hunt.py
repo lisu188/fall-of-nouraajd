@@ -418,6 +418,7 @@ class OctobogzHuntTest(unittest.TestCase):
         self.setUp()
         self.game_map.mapName = "ritual"
         self.director.start(self.game_map)
+        self.assertIn("Return to", self.director.objectiveText(self.game_map))
         self.assertIsNone(self.state())
 
     def testLairRequiresActualActivePlayerAtAuthoredCoordinates(self):

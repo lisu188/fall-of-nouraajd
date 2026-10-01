@@ -253,6 +253,8 @@ def load(self, context):
                 event_loop.instance().invoke(lambda: self.synchronize(game_map))
 
         def objectiveText(self, game_map):
+            if not self.isActive(game_map):
+                return "Return to the eastern lair in Nouraajd and defeat its scout, shadow brood, and Alpha."
             state = self.readState(game_map)
             count = sum(record["status"] == "dead" for record in state["slots"].values())
             return (
