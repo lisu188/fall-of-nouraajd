@@ -379,7 +379,7 @@ void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
 }
 
 void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool cultistHex = false,
-                                                                        bool equalWards = false) {
+                                                                        bool equalWards = false, int resolvedHit = 0) {
     auto game = CGameLoader::loadGame();
     createOpenBalanceMap(game);
     auto expectedNativeRng = vstd::rng();
@@ -415,6 +415,16 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool cul
             auto weapon = game->createObject<CWeapon>("Staff");
             actor->setEquipped({{"0", weapon}});
             actor->heal(0);
+            if (resolvedHit > 0) {
+                const auto originalStats = actor->getStats();
+                auto baseStats = actor->getBaseStats();
+                baseStats->setDmgMin(baseStats->getDmgMin() + resolvedHit - originalStats->getDamage() -
+                                     originalStats->getDmgMin());
+                baseStats->setDmgMax(baseStats->getDmgMax() + resolvedHit - originalStats->getDamage() -
+                                     originalStats->getDmgMax());
+                baseStats->setHit(100);
+                baseStats->setCrit(0);
+            }
             if (cultistHex) {
                 actor->setHp(std::max(1, actor->getHpMax() / 4));
             }
@@ -491,9 +501,24 @@ signatureType.performAction = originalSignature
                         "signature and ordinary Attack must retain one attack and at most one configured weapon proc");
             observedWeaponProc |= weaponCalls == 1;
             expect_true(!actor->getBoolProperty("enemyRoleArcaneAttack") &&
-                            actor->getStringProperty("enemyRoleDamageChannel").empty(),
+                            actor->getStringProperty("enemyRoleDamageChannel").empty() &&
+                            actor->getNumericProperty("enemyRoleDamageMinimum") == 0,
                         "the temporary damage hook must be disarmed before a save or subsequent action");
             if (enabled) {
+                if (resolvedHit > 0) {
+                    expect_true(actor->getNumericProperty("enemyRoleAttackBudget") == resolvedHit && weaponCalls == 1,
+                                "the boundary fixture must resolve exactly one real hit and configured weapon proc");
+                    const auto packet = actor->getObjectProperty<CDamage>("enemyRoleDamagePacket");
+                    expect_true(packet && packet->getNumericProperty("shadow") == (resolvedHit >= 10 ? 1 : 0),
+                                "the ritual shadow component must begin at the ten-point resolved-hit boundary");
+                    if (resolvedHit < 10) {
+                        expect_true(player->getHp() == expectedPlayerHp,
+                                    "a nine-point ritual hit must preserve ordinary mitigation and weapon damage");
+                    } else if (packet) {
+                        expect_true(packet->getNumericProperty("normal") == resolvedHit - 1,
+                                    "the ritual packet must retain the complete original raw damage budget");
+                    }
+                }
                 if (equalWards) {
                     expect_true(player->getHp() == expectedPlayerHp && !actor->hasProperty("enemyRoleAttackBudget"),
                                 "equal wards must preserve the whole ordinary Attack mitigation and block path");
@@ -776,6 +801,8 @@ int main(int argc, char **argv) {
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true);
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true, true);
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true, false, 9);
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true, false, 10);
         testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries();
         testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
         testActivePlayerNeverUsesMonsterSignature();

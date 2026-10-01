@@ -34,7 +34,7 @@ The current one-turn effects are:
 | Brute | At or below half health | Physical resistance +1, frost resistance -1 |
 | Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
 | Thief | Guarded opponent or at/below half health | Opponent block -1 |
-| Cultist | At or below exact quarter health, at least5 mana remaining | Convert one damage point to shadow when the target's physical and shadow wards differ; opponent shadow resistance -1; no mana spent |
+| Cultist | At or below exact quarter health, at least5 mana remaining | On a resolved hit of at least10 damage, convert one point to shadow when the target's physical and shadow wards differ; opponent shadow resistance -1; no mana spent |
 
 Each action owns its effect from configuration; the mage and cultist also own
 damage packets. The packet hook accepts only frost or shadow. The cultist packet
@@ -294,6 +294,18 @@ health and five mana, retaining substantive shadow damage, ordinary callbacks,
 both RNG streams and both initiative/expiry proofs. The35×11 ordinary
 player/monster matrix and all winning-seed/resource gates remain unchanged.
 Fresh Windows/Linux/coverage acceptance is still required.
+
+The exact-quarter head18b70600 still failed Windows job110428850960:
+Warrior/Cultist HP median4 to3, while the other shown ritual medians passed.
+The next generic trial caps the shadow component at10% of an already resolved
+raw hit: only hits of at least10 can convert one point. Smaller hits retain the
+complete ordinary physical packet, armor/block path and weapon proc. This adds
+no roll and leaves the once-only debuff, critical-health/reserve eligibility and
+unequal-ward rule intact. Controlled native9/10 boundary cases retain both RNG
+streams and a real Staff proc; the21-point real-fight initiative/expiry proof
+still demonstrates substantive shadow damage. All35 seeded resource/victory
+rows remain unchanged. The failed4-to3 evidence is retained, and this revision
+requires fresh actual Linux, Windows and coverage results.
 
 The same head's coverage job110412610004 failed with an incomplete matrix at
 the shared55.13-second deadline and map at60.05seconds; handler passed54.17seconds.
