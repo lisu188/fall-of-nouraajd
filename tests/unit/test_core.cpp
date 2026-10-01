@@ -43,6 +43,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "test_harness.h"
+#include "stat_composition_fixture.h"
 #include "vutil.h"
 
 #include <pybind11/embed.h>
@@ -166,6 +167,82 @@ void drain_event_loop() {
     for (int i = 0; i < 5; ++i) {
         loop->run();
     }
+}
+
+class StatsNotificationProbe : public CGameObject {
+    V_META(StatsNotificationProbe, CGameObject, V_METHOD(StatsNotificationProbe, onPropertyChanged, void, std::string),
+           V_METHOD(StatsNotificationProbe, onStrengthChanged), V_METHOD(StatsNotificationProbe, onDamageChanged))
+
+  public:
+    void onPropertyChanged(std::string name) {
+        notifications.push_back("generic:" + name);
+        if (insert_shadow && name == "strength") {
+            observed_partial_write =
+                stats->getStrength() == 10 && stats->getAgility() == 11 && stats->getStamina() == 13;
+            stats->meta()->set_dynamic_property("stamina", stats, 100);
+        }
+    }
+    void onStrengthChanged() { notifications.push_back("specific:strength"); }
+    void onDamageChanged() { notifications.push_back("specific:damage"); }
+
+    std::shared_ptr<CStats> stats;
+    std::vector<std::string> notifications;
+    bool insert_shadow = false;
+    bool observed_partial_write = false;
+};
+
+// Delivery is normally queued. This test-only reflective getter drains the already
+// queued strength notification between apply's first and second field operations.
+class StatsPartialRead : public CStats {
+    V_META(StatsPartialRead, CStats, V_PROPERTY(StatsPartialRead, int, agility, getAgilityAfterDelivery, setAgility))
+
+  public:
+    int getAgilityAfterDelivery() {
+        drain_event_loop();
+        return getAgility();
+    }
+};
+
+void test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows() {
+    CTypes::register_type_metadata<StatsNotificationProbe, CGameObject>();
+    CTypes::register_type_metadata<StatsPartialRead, CStats>();
+    auto stats = std::make_shared<CStats>();
+    auto probe = std::make_shared<StatsNotificationProbe>();
+    stats->connect("propertyChanged", probe, "onPropertyChanged");
+    stats->connect("strengthChanged", probe, "onStrengthChanged");
+    stats->connect("damageChanged", probe, "onDamageChanged");
+    stats->apply(StatsModifier{});
+    drain_event_loop();
+    std::vector<std::string> expected;
+    for (const auto &field : stat_composition_fixture::fieldNames) {
+        expected.push_back("generic:" + field);
+        if (field == "strength" || field == "damage") {
+            expected.push_back("specific:" + field);
+        }
+    }
+    expect_true(probe->notifications == expected,
+                "public apply must write all 17 zero fields and retain generic/specific notification order");
+
+    auto partial = std::make_shared<StatsPartialRead>();
+    partial->setStrength(7);
+    partial->setAgility(11);
+    partial->setStamina(13);
+    auto observer = std::make_shared<StatsNotificationProbe>();
+    observer->stats = partial;
+    observer->insert_shadow = true;
+    partial->connect("propertyChanged", observer, "onPropertyChanged");
+    StatsModifier delta;
+    delta.strength = 3;
+    delta.agility = 2;
+    delta.stamina = 5;
+    partial->apply(delta);
+    drain_event_loop();
+    expect_true(observer->observed_partial_write,
+                "public apply subscribers delivered mid-write must see only the completed strength increment");
+    expect_true(partial->getStrength() == 10 && partial->getAgility() == 13 && partial->getStamina() == 13 &&
+                    partial->getNumericProperty("stamina") == 105,
+                "public apply must reflect a dynamic shadow inserted by an earlier field's notification");
+    expect_true(observer->notifications.size() == 17, "midpoint delivery must preserve all 17 public writes");
 }
 
 static_assert(fn::PathPassability<ConceptCanStep>);
@@ -2931,6 +3008,7 @@ int main() {
     test_tag_round_trip_and_ordering();
     test_unknown_tag_rejection();
     test_tag_mutation_iteration_and_range_helpers();
+    test_public_stats_apply_preserves_zero_notifications_and_midpoint_dynamic_shadows();
     test_property_setters_emit_change_signals();
     test_inventory_mutation_notifies_property_subscribers_once();
     test_map_domain_signals_emit_for_tile_and_object_changes();
