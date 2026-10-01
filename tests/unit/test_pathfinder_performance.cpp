@@ -802,6 +802,60 @@ void testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork() {
     }
 }
 
+void testWeightedConnectorCostsStayWithinWorkBound() {
+    constexpr int width = 96;
+    const Coords start(0, 0, 0), goal(width - 1, 0, 0);
+    for (const int connector_cost : {1, 5, 128}) {
+        auto game = std::make_shared<CGame>();
+        auto map = std::make_shared<CMap>();
+        game->setMap(map);
+        map->setGame(game);
+        map->setXBounds({{0, width - 1}});
+        map->setYBounds({{0, 1}});
+        for (int x = 0; x < width; ++x)
+            map->addTile(makeWeightedTile(game, 1), x, 0, 0);
+        map->addTile(makeWeightedTile(game, 1), 0, 1, 0);
+        map->registerNavigationEdge({Coords(0, 1, 0), Coords(width - 2, 0, 0), true, false, connector_cost});
+        CallbackCounters counters;
+        auto can_step = [&counters, map](const Coords &coords) {
+            ++counters.canStep;
+            return map->canStep(coords);
+        };
+        auto waypoint = [&counters](const Coords &coords) { return noWaypoint(counters, coords); };
+        auto neighbors = [&counters, map](const Coords &coords) {
+            ++counters.neighbors;
+            return map->getNavigationNeighbors(coords);
+        };
+        auto cost = [&counters, map](const Coords &from, const Coords &to) {
+            ++counters.stepCost;
+            return map->lookupNavigationStepCost(from, to);
+        };
+        const auto path =
+            CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, CPathFinder::mapHeuristic(map), cost);
+        const bool use_connector = connector_cost < width - 2;
+        expectMetricEquals("weighted connector path length", static_cast<long long>(path.size()),
+                           use_connector ? 3 : width - 1);
+        expect_true(!path.empty() && path.front() == (use_connector ? Coords(0, 1, 0) : Coords(1, 0, 0)),
+                    "weighted connector must compete with the ordinary route by total cost");
+        expectMetricAtMost("weighted connector neighbor calls", counters.neighbors,
+                           use_connector ? connector_cost + 4 : width, width * 2);
+        expectMetricAtMost("weighted connector step-cost calls", counters.stepCost,
+                           use_connector ? connector_cost * 4 + 16 : width * 4, width * 8);
+        expectMetricAtMost("weighted connector passability calls", counters.canStep, width, width * 4);
+        auto service = map->getNavigationService();
+        const auto indexed = service->findPathResult(map, start, goal);
+        expect_true(indexed.status == CNavigationSearchStatus::Found &&
+                        indexed.path.size() == (use_connector ? 3 : width - 1) &&
+                        indexed.cost == (use_connector ? connector_cost + 2 : width - 1),
+                    "snapshot service honors the same connector prices as the generic callback route");
+        expectMetricAtMost("snapshot weighted connector expansions", indexed.statistics.expansions, width, width * 2);
+        expectMetricAtMost("snapshot weighted connector cost calls", indexed.statistics.costCalls, width * 4,
+                           width * 8);
+        expect_true(service->budget()->peak() <= service->budget()->limit(),
+                    "weighted connector routes stay within the existing shared memory cap");
+    }
+}
+
 } // namespace
 
 void run_pathfinder_performance_tests() {
@@ -820,4 +874,5 @@ void run_pathfinder_performance_tests() {
     testMapMovementCostRegressionPinsTileWeightsAndRouting();
     testMovementCostPathStaysWithinWorkBound();
     testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork();
+    testWeightedConnectorCostsStayWithinWorkBound();
 }

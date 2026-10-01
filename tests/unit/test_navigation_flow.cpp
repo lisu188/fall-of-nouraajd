@@ -225,6 +225,25 @@ void testNativeMovementWaitsForPythonBeforeLockingTheMap() {
                 "native movement and lifecycle workers must complete after the GIL is released");
 }
 
+std::int64_t authoredStepCost(const std::shared_ptr<CMap> &map, Coords from, Coords to) {
+    from = map->normalizeCoords(from);
+    to = map->normalizeCoords(to);
+    const std::int64_t terrain = map->lookupMovementCost(to);
+    const auto adjacent = map->getAdjacentCoords(from);
+    if (std::ranges::find(adjacent, to) != adjacent.end())
+        return terrain;
+    auto best = NO_ROUTE;
+    for (const auto &edge : map->getNavigationEdges()) {
+        if (!edge.enabled)
+            continue;
+        const auto source = map->normalizeCoords(edge.source);
+        const auto target = map->normalizeCoords(edge.target);
+        if ((source == from && target == to) || (edge.bidirectional && target == from && source == to))
+            best = std::min(best, terrain + std::max(1, edge.movementCost) - 1);
+    }
+    return best;
+}
+
 std::int64_t oracle(const std::shared_ptr<CMap> &map, Coords start, Coords goal) {
     using Entry = std::pair<std::int64_t, Coords>;
     std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> queue;
@@ -249,7 +268,10 @@ std::int64_t oracle(const std::shared_ptr<CMap> &map, Coords start, Coords goal)
             if (!map->canStep(next)) {
                 continue;
             }
-            const auto candidate = cost + map->lookupMovementCost(next);
+            const auto step_cost = authoredStepCost(map, coords, next);
+            if (step_cost == NO_ROUTE || cost > NO_ROUTE - step_cost)
+                continue;
+            const auto candidate = cost + step_cost;
             auto found = distance.find(next);
             if (found == distance.end() || candidate < found->second) {
                 distance[next] = candidate;
@@ -278,7 +300,9 @@ void expectExact(Fixture &fixture, Coords start, std::int64_t turn = 0) {
     const auto neighbors = fixture.map->getNavigationNeighbors(start);
     expect_true(std::ranges::find(neighbors, result.step) != neighbors.end(), "flow step must use a legal graph edge");
     const auto remaining = oracle(fixture.map, result.step, fixture.target->getCoords());
-    expect_true(remaining != NO_ROUTE && fixture.map->lookupMovementCost(result.step) + remaining == expected,
+    const auto first_cost = authoredStepCost(fixture.map, start, result.step);
+    expect_true(remaining != NO_ROUTE && first_cost != NO_ROUTE && remaining <= NO_ROUTE - first_cost &&
+                    first_cost + remaining == expected,
                 "flow first step must belong to a minimum-cost route");
 }
 
@@ -365,10 +389,11 @@ void testDirectedConnectorCostsAndTopologyRebuilds() {
     fixture.map->registerNavigationEdge(edge);
     const Coords start(0, 0, 0);
     expectExact(fixture, start);
-    expect_true(fixture.step(start).cost == 5, "connector movementCost remains unused; entering the tile costs one");
+    expect_true(fixture.step(start).cost == 1003, "directed flow must include the authored connector fee");
     arrival->setMovementCost(17);
     expectExact(fixture, start, 1);
-    expect_true(fixture.step(start, 1).cost == 21, "destination-cost repair must include incoming directed connectors");
+    expect_true(fixture.step(start, 1).cost == 1019,
+                "destination-cost repair must preserve the incoming directed connector fee");
     const auto before_remove = fixture.flow->statistics();
     fixture.map->removeNavigationEdge(edge.source, edge.target);
     expectExact(fixture, start, 2);

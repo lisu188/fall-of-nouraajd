@@ -103,6 +103,7 @@ class CNavigationSnapshot {
     ~CNavigationSnapshot();
     bool canStep(Coords coords) const;
     int movementCost(Coords coords) const;
+    std::int64_t stepCost(Coords from, Coords to) const;
     Coords normalize(Coords coords) const;
     CNavigationNeighbors neighbors(Coords coords, bool reverse = false) const;
     double heuristic(Coords from, Coords goal) const;

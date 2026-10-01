@@ -134,6 +134,12 @@ class CastleWalkthrough:
     def walkTo(self, target):
         route = shortestRoute(self.walkable, self.portals, self.coords(), target)
         for step, arrival in route:
+            portal_cost = None
+            if step != arrival:
+                target_tile = self.call(self.gameMap, "getTile", list(arrival))
+                portal_cost = self.call(self.gameMap, "lookupNavigationStepCost", list(step) + list(arrival))
+                terrain_cost = max(1, self.call(target_tile, "getNumericProperty", ["movementCost"]))
+                assert portal_cost == terrain_cost, ("Castle connectors retain their authored unit cost", step, arrival)
             guards = [name for name in self.guardsByCell.get(step, ()) if self.object(name)]
             self.call(self.player, "moveTo", list(step))
             self.pump()
@@ -149,7 +155,7 @@ class CastleWalkthrough:
             if self.call(self.gameMap, "getBoolProperty", ["campaign_castleFinished_" + self.mission["scenarioId"]]):
                 return
             if step != arrival:
-                self.log["portals"].append({"from": list(step), "to": list(arrival)})
+                self.log["portals"].append({"from": list(step), "to": list(arrival), "cost": portal_cost})
         assert self.coords() == tuple(target), ("Route ended at the wrong position", self.coords(), target)
 
     def chapter(self, map_name, *, finish=True):

@@ -243,7 +243,7 @@ struct GenericGraph {
     bool current() const { return true; }
     bool canStep(Coords coords) const { return passable(coords); }
     double heuristic(Coords from, Coords goal) const { return distance(from, goal); }
-    int cost(Coords from, Coords to) const { return std::max(1, stepCost(from, to)); }
+    Cost cost(Coords from, Coords to) const { return std::max<Cost>(1, stepCost(from, to)); }
     template <typename Visitor> void visit(Coords coords, Visitor visitor) const {
         for (auto neighbor : neighbors(coords))
             visitor(neighbor);
@@ -257,7 +257,7 @@ struct MapGraph {
     bool current() const { return snapshot.isCurrent(); }
     bool canStep(Coords coords) const { return snapshot.canStep(coords); }
     double heuristic(Coords from, Coords goal) const { return snapshot.heuristic(from, goal); }
-    int cost(Coords, Coords to) const { return std::max(1, snapshot.movementCost(to)); }
+    Cost cost(Coords from, Coords to) const { return std::max<Cost>(1, snapshot.stepCost(from, to)); }
     template <typename Visitor> void visit(Coords coords, Visitor visitor) const {
         const auto neighbors = snapshot.neighbors(coords);
         for (std::size_t i = 0; i < neighbors.count; ++i)
