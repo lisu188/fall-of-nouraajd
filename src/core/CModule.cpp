@@ -189,9 +189,7 @@ class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCa
 
 PYBIND11_MAKE_OPAQUE(std::vector<std::string>);
 
-int randint(int i, int j) {
-    return vstd::rand(i, j); // TODO: unify and document exclusive inclusive
-}
+int randint(int i, int j) { return vstd::rand(i, j); }
 
 std::string jsonify(std::shared_ptr<CGameObject> x) { return JSONIFY(x); }
 
@@ -1560,7 +1558,8 @@ void init_game_module(py::module_ &m) {
                 return py::make_tuple(self.getSizeX(gui), self.getSizeY(gui));
             },
             "Return resolved list grid size as (columns, rows).");
-    PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a random integer in engine-defined bounds.");
+    PY_WRAP_GENERIC_DOC(randint, "randint(lower, upper) -> int: Return a uniform integer with both bounds inclusive. "
+                                 "Reversed bounds are normalized.");
     m.def("jsonify", &jsonify_py, "jsonify(obj) -> str: Serialize a game object to JSON text.");
     PY_WRAP_GENERIC_DOC(logger, "logger(message) -> None: Write an info log message to the engine logger.");
     m.def("set_logger_sink", set_logger_sink_py, py::arg("sink_name"), py::arg("path") = py::none(),
