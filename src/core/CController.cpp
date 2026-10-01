@@ -22,39 +22,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CMap.h"
+#include "core/CNavigation.h"
+#include "core/CNavigationFlow.h"
+#include "core/CNavigationSearch.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
 
 namespace {
-constexpr std::size_t MAX_FLOW_FIELD_CELLS = 1'000'000;
-
-struct FlowQueueNode {
-    int cost;
-    Coords coords;
-};
-
-struct FlowQueueCompare {
-    bool operator()(const FlowQueueNode &a, const FlowQueueNode &b) const { return a.cost > b.cost; }
-};
-
-struct TargetFlowField {
-    std::weak_ptr<CMap> map;
-    std::uint64_t revision = 0;
-    Coords goal;
-    std::unordered_map<Coords, Coords> nextSteps;
-    // Incremental Dijkstra state: the flood from `goal` is extended lazily, only far
-    // enough to settle each requesting creature's start cell, so a single chaser on a
-    // huge map never pays for flooding the whole map. `frontier`/`costs` persist so a
-    // later, farther request resumes the same search instead of rebuilding.
-    std::unordered_map<Coords, int> costs;
-    std::priority_queue<FlowQueueNode, std::vector<FlowQueueNode>, FlowQueueCompare> frontier;
-    bool exhausted = false;
-};
-
-std::mutex targetFlowMutex;
-std::vector<std::shared_ptr<TargetFlowField>> targetFlowCache;
-
 struct DeferredCreatureContext {
     std::weak_ptr<CCreature> creature;
     std::weak_ptr<CMap> map;
@@ -126,42 +101,6 @@ bool contains_navigation_neighbor(const std::shared_ptr<CMap> &map, Coords from,
     return std::ranges::find(neighbors, to) != neighbors.end();
 }
 
-void add_unique_candidate(const std::shared_ptr<CMap> &map, std::vector<Coords> &candidates, Coords candidate) {
-    candidate = map->normalizeCoords(candidate);
-    if (std::ranges::find(candidates, candidate) == candidates.end()) {
-        candidates.push_back(candidate);
-    }
-}
-
-std::vector<Coords> get_reverse_navigation_neighbors(const std::shared_ptr<CMap> &map, Coords coords) {
-    coords = map->normalizeCoords(coords);
-    auto candidates = map->getNavigationNeighbors(coords);
-    if (map->getNavigationEdges().empty()) {
-        return candidates;
-    }
-
-    for (const auto &edge : map->getNavigationEdges()) {
-        if (!edge.enabled) {
-            continue;
-        }
-        if (edge.target == coords) {
-            add_unique_candidate(map, candidates, edge.source);
-        }
-        if (edge.bidirectional && edge.source == coords) {
-            add_unique_candidate(map, candidates, edge.target);
-        }
-    }
-
-    std::vector<Coords> reachable;
-    for (auto candidate : candidates) {
-        candidate = map->normalizeCoords(candidate);
-        if (candidate != coords && contains_navigation_neighbor(map, candidate, coords)) {
-            add_unique_candidate(map, reachable, candidate);
-        }
-    }
-    return reachable;
-}
-
 bool creature_can_follow_step(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &creature,
                               const Coords &step) {
     if (!map || !creature) {
@@ -170,112 +109,6 @@ bool creature_can_follow_step(const std::shared_ptr<CMap> &map, const std::share
     auto current = map->normalizeCoords(creature->getCoords());
     auto target = map->normalizeCoords(step);
     return target != current && map->canStep(target) && contains_navigation_neighbor(map, current, target);
-}
-
-int movement_step_cost(const std::shared_ptr<CMap> &map, const Coords &, const Coords &to) {
-    return map ? map->lookupMovementCost(to) : 1;
-}
-
-std::shared_ptr<TargetFlowField> seed_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
-                                                        std::uint64_t revision) {
-    auto field = std::make_shared<TargetFlowField>();
-    field->map = map;
-    field->revision = revision;
-    field->goal = goal;
-
-    if (!map->canStep(goal)) {
-        field->exhausted = true;
-        return field;
-    }
-
-    field->costs[goal] = 0;
-    field->frontier.push({0, goal});
-    return field;
-}
-
-// Extends the flood until `start` is settled (or the search is exhausted, or the
-// per-call work budget runs out). With positive step costs Dijkstra pops in
-// nondecreasing cost order, so once the cheapest frontier entry costs at least as
-// much as the best known cost for `start`, no future relaxation can improve
-// `start` and its nextStep is final. The unpopped frontier stays in the field so
-// a later, farther request resumes where this one stopped. The per-call budget
-// bounds the work a single chase step can trigger on huge maps (a 1000x1000 map
-// would otherwise flood up to a million cells inside one map turn); a chaser
-// whose start was not reached within budget follows its best-known step or
-// stalls for the turn, and the resumed search covers more cells on later calls.
-void extend_target_flow_field(const std::shared_ptr<TargetFlowField> &field, const std::shared_ptr<CMap> &map,
-                              const Coords &start) {
-    constexpr std::size_t maxExpansionsPerCall = 25'000;
-    std::size_t expansions = 0;
-    while (!field->exhausted && !field->frontier.empty()) {
-        auto settled = field->costs.find(start);
-        if (settled != field->costs.end() && field->frontier.top().cost >= settled->second) {
-            return;
-        }
-        if (field->costs.size() >= MAX_FLOW_FIELD_CELLS) {
-            vstd::logger::warning("Target flow field reached visit limit");
-            field->exhausted = true;
-            return;
-        }
-        if (++expansions > maxExpansionsPerCall) {
-            vstd::logger::debug("Target flow field expansion budget reached before settling requested start");
-            return;
-        }
-        auto current = field->frontier.top();
-        field->frontier.pop();
-
-        auto best = field->costs.find(current.coords);
-        if (best == field->costs.end() || best->second != current.cost) {
-            continue;
-        }
-
-        for (auto previous : get_reverse_navigation_neighbors(map, current.coords)) {
-            if (previous != field->goal && !map->canStep(previous)) {
-                continue;
-            }
-
-            const int nextCost = current.cost + movement_step_cost(map, previous, current.coords);
-            auto previousCost = field->costs.find(previous);
-            if (previousCost == field->costs.end() || nextCost < previousCost->second) {
-                field->costs[previous] = nextCost;
-                field->nextSteps[previous] = current.coords;
-                field->frontier.push({nextCost, previous});
-            }
-        }
-    }
-    if (field->frontier.empty()) {
-        field->exhausted = true;
-    }
-}
-
-Coords get_target_flow_step(const std::shared_ptr<CMap> &map, const Coords &goal, const Coords &start) {
-    constexpr std::size_t maxCachedFlowFields = 32;
-    const auto revision = map->getNavigationRevision();
-    std::lock_guard<std::mutex> lock(targetFlowMutex);
-
-    targetFlowCache.erase(std::remove_if(targetFlowCache.begin(), targetFlowCache.end(),
-                                         [](const auto &field) { return !field || field->map.expired(); }),
-                          targetFlowCache.end());
-
-    auto cached = std::find_if(targetFlowCache.begin(), targetFlowCache.end(), [&](const auto &field) {
-        return field->map.lock() == map && field->revision == revision && field->goal == goal;
-    });
-
-    std::shared_ptr<TargetFlowField> field;
-    if (cached != targetFlowCache.end()) {
-        field = *cached;
-    } else {
-        field = seed_target_flow_field(map, goal, revision);
-        targetFlowCache.push_back(field);
-        while (targetFlowCache.size() > maxCachedFlowFields) {
-            targetFlowCache.erase(targetFlowCache.begin());
-        }
-    }
-    extend_target_flow_field(field, map, start);
-    // Copy the result while the lock also excludes other chasers extending and
-    // rehashing nextSteps. No mutable field or iterator may escape this scope.
-    const auto next = field->nextSteps.find(start);
-    return next == field->nextSteps.end() ? start : next->second;
 }
 
 Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std::shared_ptr<CCreature> &creature,
@@ -290,17 +123,22 @@ Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std:
         return start;
     }
 
-    // Chase leash: a chaser farther than this from its target holds position instead of
-    // flooding the navigation field toward it. Every authored map before the 1000x1000
-    // world maps fits inside the leash (200x200 tops), so their behavior is unchanged;
-    // on huge maps this bounds the per-turn navigation cost that made a single map turn
-    // take tens of seconds in CI.
+    // Preserve the existing raw-axis chase leash, including on wrapped maps.
     constexpr int maxChaseDistance = 256;
-    if (std::abs(start.x - goal.x) > maxChaseDistance || std::abs(start.y - goal.y) > maxChaseDistance) {
+    if (std::abs(static_cast<std::int64_t>(start.x) - goal.x) > maxChaseDistance ||
+        std::abs(static_cast<std::int64_t>(start.y) - goal.y) > maxChaseDistance) {
         return start;
     }
 
-    auto step = map->normalizeCoords(get_target_flow_step(map, goal, start));
+    const auto result = map->getNavigationService()->nextStep(map, targetObject, start, goal, map->getTurn());
+    if (map->normalizeCoords(creature->getCoords()) != start ||
+        map->normalizeCoords(targetObject->getCoords()) != goal) {
+        return creature->getCoords();
+    }
+    if (result.status != CNavigationFlowStatus::Complete) {
+        return start;
+    }
+    auto step = map->normalizeCoords(result.step);
     if (!creature_can_follow_step(map, creature, step)) {
         return start;
     }
@@ -308,18 +146,9 @@ Coords find_shared_target_next_step(const std::shared_ptr<CMap> &map, const std:
 }
 } // namespace
 
-std::size_t performance_guard::targetFlowCacheSize() {
-    std::lock_guard<std::mutex> lock(targetFlowMutex);
-    targetFlowCache.erase(std::remove_if(targetFlowCache.begin(), targetFlowCache.end(),
-                                         [](const auto &field) { return !field || field->map.expired(); }),
-                          targetFlowCache.end());
-    return targetFlowCache.size();
-}
+std::size_t performance_guard::targetFlowCacheSize() { return CNavigationService::flowCacheSize(); }
 
-void performance_guard::clearTargetFlowCache() {
-    std::lock_guard<std::mutex> lock(targetFlowMutex);
-    targetFlowCache.clear();
-}
+void performance_guard::clearTargetFlowCache() { CNavigationService::clearFlows(); }
 
 CTargetController::CTargetController() {}
 
@@ -342,7 +171,19 @@ std::shared_ptr<vstd::future<Coords, void>> CTargetController::control(std::shar
         if (!target_object->getName().empty() && map->getObjectByName(target_object->getName()) != target_object) {
             return deferredContext.fallback;
         }
-        return find_shared_target_next_step(map, creature, target_object);
+        Coords step;
+        try {
+            step = find_shared_target_next_step(map, creature, target_object);
+        } catch (const std::exception &) {
+            if (!resolve_deferred_creature_context(deferredContext, creature, map))
+                return deferredContext.fallback;
+            throw;
+        }
+        if (!resolve_deferred_creature_context(deferredContext, creature, map) ||
+            (!target_object->getName().empty() && map->getObjectByName(target_object->getName()) != target_object)) {
+            return deferredContext.fallback;
+        }
+        return step;
     });
 }
 
@@ -382,59 +223,108 @@ std::shared_ptr<vstd::future<Coords, void>> CRandomController::control(std::shar
     return vstd::make_ready_future(map->normalizeCoords(target));
 }
 
+struct CNpcRandomController::NpcRoute {
+    explicit NpcRoute(const std::shared_ptr<CNavigationBudget> &budget)
+        : allocationBudget(budget), steps(budget.get()) {}
+
+    std::shared_ptr<CNavigationBudget> allocationBudget;
+    std::pmr::vector<Coords> steps;
+    std::weak_ptr<CCreature> creature;
+    std::weak_ptr<CMap> map;
+    std::weak_ptr<CGameContext> context;
+    std::uint64_t generation = 0;
+    bool hadContext = false;
+    bool wasRegistered = false;
+    bool wasInstalled = false;
+    std::weak_ptr<CController> installedController;
+    Coords origin;
+};
+
 std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::shared_ptr<CCreature> creature) {
-    auto self = this->ptr<CNpcRandomController>();
     if (!creature || !creature->getMap()) {
+        interrupt(creature);
         return vstd::make_ready_future(creature ? creature->getCoords() : ZERO);
     }
     auto deferredContext = capture_deferred_creature_context(creature);
     std::shared_ptr<CMap> map;
     if (!resolve_deferred_creature_context(deferredContext, creature, map)) {
+        interrupt(creature);
         return vstd::make_ready_future(deferredContext.fallback);
     }
-    if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
-        auto next = map->normalizeCoords(self->path[self->currentStep]);
-        if (creature_can_follow_step(map, creature, next)) {
-            return vstd::make_ready_future(next);
+    if (route) {
+        if (currentStep >= route->steps.size()) {
+            interrupt(creature);
+            return vstd::make_ready_future(creature->getCoords());
         }
-        self->path.clear();
-        self->currentStep = 0;
+        const auto expectedOrigin = currentStep ? route->steps[currentStep - 1] : route->origin;
+        const auto context = route->context.lock();
+        const bool staleContext =
+            route->hadContext && (!context || !context->isTransitionGenerationCurrent(route->generation) ||
+                                  !creature->getGame() || creature->getGame()->getContext() != context);
+        if (staleContext || route->creature.lock() != creature || route->map.lock() != map ||
+            (route->wasRegistered && map->getObjectByName(creature->getName()) != creature) ||
+            creature->getCoords() != expectedOrigin ||
+            (route->wasInstalled && creature->getController() != route->installedController.lock())) {
+            interrupt(creature);
+            return vstd::make_ready_future(creature->getCoords());
+        }
+        const auto next = map->normalizeCoords(route->steps[currentStep]);
+        if (creature_can_follow_step(map, creature, next))
+            return vstd::make_ready_future(next);
+        interrupt(creature);
+        return vstd::make_ready_future(creature->getCoords());
     }
 
-    if (self->path.empty() || self->currentStep >= static_cast<int>(self->path.size())) {
-        for (int i = 0; i < 10; i++) {
-            auto dx = vstd::rand(-5, 5);
-            auto dy = vstd::rand(-5, 5);
-            auto candidate = map->normalizeCoords(creature->getCoords() + Coords(dx, dy, 0));
-            if (map->canStep(candidate)) {
-                self->path = CPathFinder::findPath(
-                    creature->getCoords(), candidate, [map](const Coords &c) { return map->canStep(c); },
-                    [](auto) -> std::optional<Coords> { return std::nullopt; },
-                    [map](const Coords &coords) { return map->getNavigationNeighbors(coords); },
-                    [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); },
-                    [map](const Coords &from, const Coords &to) { return movement_step_cost(map, from, to); });
-                self->currentStep = 0;
-                break;
+    for (int i = 0; i < 10; i++) {
+        const auto dx = vstd::rand(-5, 5);
+        const auto dy = vstd::rand(-5, 5);
+        const auto candidate = map->normalizeCoords(creature->getCoords() + Coords(dx, dy, 0));
+        if (!map->canStep(candidate))
+            continue;
+        auto result = map->getNavigationService()->findPathResult(map, creature->getCoords(), candidate);
+        if (result.status == CNavigationSearchStatus::Found && !result.path.empty() &&
+            result.path.front() != creature->getCoords()) {
+            try {
+                auto budget = result.allocationBudget;
+                route = std::allocate_shared<NpcRoute>(CNavigationAllocator<NpcRoute>(budget), budget);
+                route->steps = std::move(result.path);
+                route->creature = creature;
+                route->map = map;
+                route->context = deferredContext.context;
+                route->generation = deferredContext.generation;
+                route->hadContext = deferredContext.hadContext;
+                route->wasRegistered = deferredContext.wasRegistered;
+                const auto installedController = creature->getController();
+                route->wasInstalled = installedController.get() == this;
+                if (route->wasInstalled)
+                    route->installedController = installedController;
+                route->origin = creature->getCoords();
+                currentStep = 0;
+            } catch (const std::bad_alloc &) {
+                interrupt(creature);
             }
         }
+        break;
     }
 
-    if (!self->path.empty() && self->currentStep < static_cast<int>(self->path.size())) {
-        auto next = map->normalizeCoords(self->path[self->currentStep]);
-        if (creature_can_follow_step(map, creature, next)) {
+    if (route) {
+        const auto next = map->normalizeCoords(route->steps[currentStep]);
+        if (creature_can_follow_step(map, creature, next))
             return vstd::make_ready_future(next);
-        }
-        self->path.clear();
-        self->currentStep = 0;
+        interrupt(creature);
     }
 
     return vstd::make_ready_future(creature->getCoords());
 }
 
-void CNpcRandomController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &) { currentStep++; }
+void CNpcRandomController::onStepCommitted(std::shared_ptr<CCreature> creature, const Coords &coords) {
+    if (!route || currentStep >= route->steps.size() || route->steps[currentStep] != coords ||
+        ++currentStep == route->steps.size())
+        interrupt(creature);
+}
 
 void CNpcRandomController::interrupt(std::shared_ptr<CCreature>) {
-    path.clear();
+    route.reset();
     currentStep = 0;
 }
 
@@ -727,6 +617,22 @@ std::shared_ptr<CInteraction> CMonsterFightController::selectInteraction(std::sh
     return {};
 }
 
+struct CPlayerController::PlayerRoute {
+    explicit PlayerRoute(const std::shared_ptr<CNavigationBudget> &budget)
+        : allocationBudget(budget), steps(budget.get()), nextOccurrence(budget.get()), firstRemaining(budget.get()) {}
+
+    std::shared_ptr<CNavigationBudget> allocationBudget;
+    std::pmr::vector<Coords> steps;
+    std::pmr::vector<std::size_t> nextOccurrence;
+    std::pmr::unordered_map<Coords, std::size_t, CNavigationCoordsHash> firstRemaining;
+    std::weak_ptr<CMap> map;
+    std::weak_ptr<CPlayer> player;
+    std::weak_ptr<CGameContext> context;
+    std::uint64_t generation = 0;
+    bool hadContext = false;
+    Coords origin;
+};
+
 std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shared_ptr<CCreature> c) {
     auto player = vstd::cast<CPlayer>(c);
     if (!player) {
@@ -740,40 +646,67 @@ std::shared_ptr<vstd::future<Coords, void>> CPlayerController::control(std::shar
             clearPath();
             return player->getCoords();
         }
-        return path.at(currentStep);
+        return route->steps.at(currentStep);
     });
 }
 
 void CPlayerController::setTarget(std::shared_ptr<CPlayer> player, Coords _target) {
+    clearPath();
     if (!player || !player->getMap()) {
-        clearPath();
         return;
     }
     auto map = player->getMap();
     auto normalized = map->normalizeCoords(_target);
-    // Reject targets outside the configured map extents before invoking the pathfinder so that
-    // arbitrary (potentially adversarial) coordinates cannot trigger a search over unbounded space.
-    // Note: passability of the goal tile is intentionally NOT checked here. A* exempts the goal from
-    // the canStep test, so legitimately targeting a momentarily non-steppable in-bounds tile (e.g.
-    // one occupied by a transition object or creature) must still compute a path. The pathfinder's
-    // envelope / node / path-length budgets bound the search even for adversarial in-bounds goals.
     if (!map->isWithinBounds(normalized)) {
-        clearPath();
         return;
     }
-    target = std::make_shared<Coords>(normalized);
-    path.clear();
-    currentStep = 0;
-    auto _path = calculatePath(player);
-    for (int i = 0; i < static_cast<int>(_path.size()); i++) {
-        path[i] = _path[i];
+    target = normalized;
+    auto result = calculatePath(player);
+    if (result.status != CNavigationSearchStatus::Found || result.path.empty() || result.path.back() != normalized ||
+        result.path.front() == player->getCoords()) {
+        target.reset();
+        return;
+    }
+    try {
+        auto budget = result.allocationBudget;
+        route = std::allocate_shared<PlayerRoute>(CNavigationAllocator<PlayerRoute>(budget), budget);
+        route->steps = std::move(result.path);
+        const auto &steps = route->steps;
+        route->nextOccurrence.resize(steps.size(), std::numeric_limits<std::size_t>::max());
+        route->firstRemaining.reserve(steps.size());
+        for (std::size_t index = steps.size(); index-- > 0;) {
+            auto [entry, inserted] = route->firstRemaining.try_emplace(steps[index], index);
+            if (!inserted) {
+                route->nextOccurrence[index] = entry->second;
+                entry->second = index;
+            }
+        }
+        route->map = map;
+        route->player = player;
+        route->origin = player->getCoords();
+        if (auto game = player->getGame()) {
+            route->context = game->getContext();
+            route->generation = game->getContext()->captureTransitionGeneration();
+            route->hadContext = true;
+        }
+    } catch (const std::bad_alloc &) {
+        clearPath();
     }
 }
 
 void CPlayerController::onStepCommitted(std::shared_ptr<CCreature>, const Coords &coords) {
-    auto it = path.find(currentStep);
-    if (it != path.end() && it->second == coords) {
+    if (route && currentStep < route->steps.size() && route->steps[currentStep] == coords) {
         currentStep++;
+        if (currentStep == route->steps.size()) {
+            clearPath();
+        } else if (currentStep > 1) {
+            const auto previous = currentStep - 2;
+            const auto next = route->nextOccurrence[previous];
+            if (next == std::numeric_limits<std::size_t>::max())
+                route->firstRemaining.erase(route->steps[previous]);
+            else
+                route->firstRemaining[route->steps[previous]] = next;
+        }
     } else {
         clearPath();
     }
@@ -785,52 +718,67 @@ void CPlayerController::onTurnEnded(std::shared_ptr<CCreature>) {}
 
 std::pair<bool, Coords::Direction> CPlayerController::isOnPath(std::shared_ptr<CPlayer> player, Coords coords) {
     if (!isCompleted(player)) {
-        for (auto it : path | std::views::filter([this](auto it) { return it.first >= currentStep - 1; })) {
-            if (it.second == coords) {
-                auto prev = it.first > 0 ? path[it.first - 1] : player->getCoords();
-                auto dir = player->getMap()->getShortestDelta(prev, coords);
-                return std::make_pair(true, CUtil::getDirection(dir));
-            }
+        ++overlayLookupCount;
+        const auto found = route->firstRemaining.find(player->getMap()->normalizeCoords(coords));
+        if (found != route->firstRemaining.end()) {
+            const auto index = found->second;
+            const auto previous = index ? route->steps[index - 1] : route->origin;
+            const auto direction = player->getMap()->getShortestDelta(previous, route->steps[index]);
+            return std::make_pair(true, CUtil::getDirection(direction));
         }
     }
     return std::make_pair(false, Coords::Direction::ZERO);
 }
 
-bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) { return !hasPendingPath(player); }
+bool CPlayerController::isCompleted(std::shared_ptr<CPlayer> player) {
+    if (hasPendingPath(player))
+        return false;
+    if (route || target)
+        clearPath();
+    return true;
+}
 
 void CPlayerController::clearPath() {
+    ++requestSerial;
     target.reset();
-    path.clear();
+    route.reset();
     currentStep = 0;
 }
 
+std::uint64_t CPlayerController::getRequestSerial() const { return requestSerial; }
+
+std::uint64_t CPlayerController::getOverlayLookupCount() const { return overlayLookupCount; }
+
 bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
-    if (!target || currentStep < 0 || !player || !player->getMap()) {
+    if (!target || !route || !player || !player->getMap() || currentStep >= route->steps.size()) {
         return false;
     }
     auto map = player->getMap();
+    if (route->map.lock() != map || route->player.lock() != player)
+        return false;
+    if (route->hadContext) {
+        const auto context = route->context.lock();
+        if (!context || !player->getGame() || player->getGame()->getContext() != context ||
+            !context->isTransitionGenerationCurrent(route->generation))
+            return false;
+    }
+    const auto expectedOrigin = currentStep ? route->steps[currentStep - 1] : route->origin;
+    if (player->getCoords() != expectedOrigin)
+        return false;
     auto normalized_target = map->normalizeCoords(*target);
     if (player->getCoords() == normalized_target || !map->canStep(normalized_target)) {
         return false;
     }
-    auto it = path.find(currentStep);
-    if (it == path.end()) {
-        return false;
-    }
-    auto next = map->normalizeCoords(it->second);
+    auto next = map->normalizeCoords(route->steps[currentStep]);
     return next != player->getCoords() && map->canStep(next) &&
            contains_navigation_neighbor(map, player->getCoords(), next);
 }
 
 bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) { return hasPendingPath(player); }
 
-std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
-    return CPathFinder::findPath(
-        player->getCoords(), *target, [player](Coords coords) { return player->getMap()->canStep(coords); },
-        [](auto) -> std::optional<Coords> { return std::nullopt; },
-        [player](const Coords &coords) { return player->getMap()->getNavigationNeighbors(coords); },
-        [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); },
-        [player](const Coords &from, const Coords &to) { return movement_step_cost(player->getMap(), from, to); });
+CNavigationSearchResult CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
+    auto map = player->getMap();
+    return map->getNavigationService()->findPathResult(map, player->getCoords(), *target);
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {

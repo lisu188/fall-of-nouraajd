@@ -161,6 +161,8 @@ GAMEPLAY_TEST_PREFIXES = (
     "McpServerTest.",
     "DialogueMcpWalkthroughTest.",
     "ManagementMcpWalkthroughTest.",
+    "NavigationMcpWalkthroughTest.",
+    "NavigationCallbackTest.",
     "ArtifactPreviewTest.",
     "PythonCallbackLifecycleTest.",
     "ConsoleUiInteractionTest.",
@@ -24750,6 +24752,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         for test_class in (
             DialogueMcpWalkthroughTest,
             ManagementMcpWalkthroughTest,
+            NavigationMcpWalkthroughTest,
+            NavigationCallbackTest,
             ArtifactPreviewTest,
             PythonCallbackLifecycleTest,
             ConsoleUiInteractionTest,
@@ -24765,6 +24769,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertFalse(test_name_matches_suite(test_name, "fast"))
         self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationMcpWalkthroughTest", globals())
+        self.assertNotIn("_NavigationCallbackTest", globals())
         self.assertNotIn("_ArtifactPreviewTest", globals())
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
@@ -25136,6 +25142,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_navigation_mcp import NavigationCallbackTest as _NavigationCallbackTest
+    from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
@@ -25148,6 +25156,12 @@ if SOURCE_UI_TESTS_AVAILABLE:
         pass
 
     class ManagementMcpWalkthroughTest(_ManagementMcpWalkthroughTest):
+        pass
+
+    class NavigationMcpWalkthroughTest(_NavigationMcpWalkthroughTest):
+        pass
+
+    class NavigationCallbackTest(_NavigationCallbackTest):
         pass
 
     class ArtifactPreviewTest(_ArtifactPreviewTest):
@@ -25167,6 +25181,8 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _UiPixelAnalysisTest
+    del _NavigationMcpWalkthroughTest
+    del _NavigationCallbackTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 

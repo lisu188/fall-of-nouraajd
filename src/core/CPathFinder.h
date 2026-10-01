@@ -21,6 +21,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGlobal.h"
 #include "core/CUtil.h"
 
+#include <cmath>
+#include <cstdint>
+#include <limits>
+
 class CCreature;
 
 template <fn::CoordsLike CoordsLike> std::list<Coords> near_coords(const CoordsLike &coords) {
@@ -40,7 +44,11 @@ inline std::vector<Coords> default_neighbors(const Coords &coords) {
     std::vector<Coords> list;
     list.reserve(CARDINAL_DIRECTIONS.size());
     for (const auto &offset : CARDINAL_DIRECTIONS) {
-        list.push_back(coords + offset);
+        const auto x = static_cast<std::int64_t>(coords.x) + offset.x;
+        const auto y = static_cast<std::int64_t>(coords.y) + offset.y;
+        if (x >= std::numeric_limits<int>::min() && x <= std::numeric_limits<int>::max() &&
+            y >= std::numeric_limits<int>::min() && y <= std::numeric_limits<int>::max())
+            list.emplace_back(static_cast<int>(x), static_cast<int>(y), coords.z);
     }
     return list;
 }
@@ -48,7 +56,11 @@ inline std::vector<Coords> default_neighbors(const Coords &coords) {
 class CPathFinder {
   public:
     struct DefaultDistance {
-        double operator()(const Coords &a, const Coords &b) const { return a.getDist(b); }
+        double operator()(const Coords &a, const Coords &b) const {
+            const double dx = static_cast<double>(a.x) - b.x;
+            const double dy = static_cast<double>(a.y) - b.y;
+            return std::hypot(dx, dy);
+        }
     };
 
     struct DefaultStepCost {
@@ -61,7 +73,7 @@ class CPathFinder {
     using Distance = std::function<double(const Coords &, const Coords &)>;
     using StepCost = std::function<int(const Coords &, const Coords &)>;
 
-    // TODO change naming
+    // Distances must be admissible for optimal routes. Searches fail closed on resource limits.
     static std::shared_ptr<vstd::future<Coords, void>> findNextStep(Coords start, Coords goal, const CanStep &canStep,
                                                                     const Waypoint waypoint,
                                                                     const Neighbors &neighbors = default_neighbors,

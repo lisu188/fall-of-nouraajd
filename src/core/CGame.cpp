@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CGame.h"
+#include "core/CNavigation.h"
 #include "core/CGameContext.h"
 #include "core/CLoader.h"
 #include "core/CSceneManager.h"
@@ -25,6 +26,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/CTooltip.h"
 
 CGame::CGame() {}
+
+std::shared_ptr<CNavigationService> CGame::getNavigationService() {
+    std::lock_guard lock(navigationServiceMutex);
+    if (context && !context->isActive())
+        throw std::runtime_error("Cannot access CNavigationService after CGameContext shutdown.");
+    if (!navigationService)
+        navigationService = std::make_shared<CNavigationService>();
+    return navigationService;
+}
 
 CGame::~CGame() {
     if (context) {

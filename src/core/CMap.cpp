@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CMap.h"
+#include "core/CNavigation.h"
 #include <algorithm>
 #include "core/CController.h"
 #include "core/CGame.h"
@@ -40,15 +41,15 @@ void recordCoordinateLookupProbe() {
 }
 
 int normalize_wrapped_axis(int value, int max_value) {
-    const int size = max_value + 1;
+    const auto size = static_cast<std::int64_t>(max_value) + 1;
     if (size <= 0) {
         return value;
     }
-    int normalized = value % size;
+    auto normalized = static_cast<std::int64_t>(value) % size;
     if (normalized < 0) {
         normalized += size;
     }
-    return normalized;
+    return static_cast<int>(normalized);
 }
 } // namespace
 
@@ -69,27 +70,71 @@ std::map<int, std::pair<int, int>> CMap::getBounds() {
 
 std::map<int, int> CMap::getXBounds() { return xBounds; }
 
-void CMap::setXBounds(std::map<int, int> bounds) { xBounds = std::move(bounds); }
+void CMap::setXBounds(std::map<int, int> bounds) {
+    std::lock_guard lock(navigationMutex);
+    if (xBounds == bounds)
+        return;
+    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
+        navigationDomainCanonical = false;
+    xBounds = std::move(bounds);
+    routingChanged();
+}
 
 std::map<int, int> CMap::getYBounds() { return yBounds; }
 
-void CMap::setYBounds(std::map<int, int> bounds) { yBounds = std::move(bounds); }
+void CMap::setYBounds(std::map<int, int> bounds) {
+    std::lock_guard lock(navigationMutex);
+    if (yBounds == bounds)
+        return;
+    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
+        navigationDomainCanonical = false;
+    yBounds = std::move(bounds);
+    routingChanged();
+}
 
 std::map<int, std::string> CMap::getDefaultTiles() { return defaultTiles; }
 
-void CMap::setDefaultTiles(std::map<int, std::string> tiles) { defaultTiles = std::move(tiles); }
+void CMap::setDefaultTiles(std::map<int, std::string> tiles) {
+    std::lock_guard lock(navigationMutex);
+    if (defaultTiles == tiles)
+        return;
+    defaultTiles = std::move(tiles);
+    routingChanged();
+}
 
 std::map<int, std::string> CMap::getOutOfBoundsTiles() { return outOfBoundsTiles; }
 
-void CMap::setOutOfBoundsTiles(std::map<int, std::string> tiles) { outOfBoundsTiles = std::move(tiles); }
+void CMap::setOutOfBoundsTiles(std::map<int, std::string> tiles) {
+    std::lock_guard lock(navigationMutex);
+    if (outOfBoundsTiles == tiles)
+        return;
+    outOfBoundsTiles = std::move(tiles);
+    routingChanged();
+}
 
 std::map<int, int> CMap::getWrapX() { return wrapX; }
 
-void CMap::setWrapX(std::map<int, int> values) { wrapX = std::move(values); }
+void CMap::setWrapX(std::map<int, int> values) {
+    std::lock_guard lock(navigationMutex);
+    if (wrapX == values)
+        return;
+    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
+        navigationDomainCanonical = false;
+    wrapX = std::move(values);
+    routingChanged();
+}
 
 std::map<int, int> CMap::getWrapY() { return wrapY; }
 
-void CMap::setWrapY(std::map<int, int> values) { wrapY = std::move(values); }
+void CMap::setWrapY(std::map<int, int> values) {
+    std::lock_guard lock(navigationMutex);
+    if (wrapY == values)
+        return;
+    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
+        navigationDomainCanonical = false;
+    wrapY = std::move(values);
+    routingChanged();
+}
 
 void CMap::removeObjectByName(std::string name) { this->removeObject(this->getObjectByName(name)); }
 
@@ -242,6 +287,109 @@ std::shared_ptr<CEventHandler> CMap::getEventHandler() {
 
 std::uint64_t CMap::getNavigationRevision() const { return navigationRevision; }
 
+std::recursive_mutex &CMap::getNavigationMutex() const { return navigationMutex; }
+
+std::uint64_t CMap::getRoutingEpoch() const {
+    std::lock_guard lock(navigationMutex);
+    auto game = const_cast<CMap *>(this)->getGame();
+    auto revision = game ? game->getObjectHandler()->getNavigationConfigRevision() : 0;
+    if (revision != routingConfigRevision) {
+        routingConfigRevision = revision;
+        const_cast<CMap *>(this)->routingChanged();
+    }
+    return routingEpoch;
+}
+
+std::shared_ptr<CNavigationService> CMap::getNavigationService() {
+    std::lock_guard lock(navigationMutex);
+    if (!navigationService) {
+        auto game = getGame();
+        navigationService = game ? game->getNavigationService() : std::make_shared<CNavigationService>();
+    }
+    return navigationService;
+}
+
+void CMap::includeNavigationTile(Coords coords) {
+    auto end = navigationTileExtents.begin() + navigationTileExtentCount;
+    auto found =
+        std::find_if(navigationTileExtents.begin(), end, [&](const auto &entry) { return entry.level == coords.z; });
+    if (found == end) {
+        if (navigationTileExtentCount == navigationTileExtents.size()) {
+            navigationTileExtentOverflow = true;
+            return;
+        }
+        *found = {coords.z, {coords.x, coords.x, coords.y, coords.y}};
+        ++navigationTileExtentCount;
+        return;
+    }
+    auto &extent = found->extent;
+    extent[0] = std::min(extent[0], coords.x);
+    extent[1] = std::max(extent[1], coords.x);
+    extent[2] = std::min(extent[2], coords.y);
+    extent[3] = std::max(extent[3], coords.y);
+}
+
+void CMap::routingChanged(std::optional<Coords> coords) {
+    ++routingEpoch;
+    if (navigationService)
+        navigationService->recordChange(ptr<CMap>(), routingEpoch, coords);
+}
+
+void CMap::navigationCellChanged(Coords coords) {
+    std::lock_guard lock(navigationMutex);
+    routingChanged(normalizeCoords(coords));
+}
+
+bool CMap::hasRegisteredTile(const CTile *tile) const {
+    std::lock_guard lock(navigationMutex);
+    auto coords = normalizeCoords(Coords(tile->getPosx(), tile->getPosy(), tile->getPosz()));
+    auto found = tiles.find(coords);
+    return found != tiles.end() && found->second.get() == tile;
+}
+
+CNavigationCell CMap::lookupNavigationCell(Coords coords, std::optional<CNavigationCell> fallback) {
+    std::unique_lock lock(navigationMutex);
+    coords = normalizeCoords(coords);
+    const auto epoch = getRoutingEpoch();
+    CNavigationCell result;
+    auto tile = tiles.find(coords);
+    if (tile != tiles.end() && tile->second) {
+        result = {tile->second->canStep(), tile->second->getMovementCost()};
+    } else if (fallback) {
+        result = *fallback;
+    } else {
+        // Factories may execute Python and release its GIL; never keep the map lock across them.
+        lock.unlock();
+        auto value = resolveTileForLookup(coords);
+        lock.lock();
+        if (getRoutingEpoch() != epoch)
+            return {};
+        auto current = tiles.find(coords);
+        if (current != tiles.end() && current->second)
+            value = current->second;
+        if (value) {
+            result = {value->canStep(), value->getMovementCost()};
+        } else if (!getGame()) {
+            const int x = xBounds.contains(coords.z) ? xBounds.at(coords.z) : 0;
+            const int y = yBounds.contains(coords.z) ? yBounds.at(coords.z) : 0;
+            result = {coords.x >= 0 && coords.y >= 0 && coords.x <= x && coords.y <= y, 1};
+        }
+    }
+    if (result.walkable) {
+        const auto range = mapObjectsCache.equal_range(coords);
+        for (auto it = range.first; it != range.second; ++it) {
+            recordCoordinateLookupProbe();
+            auto object = mapObjects.find(it->second);
+            if (object != mapObjects.end() && object->second && !object->second->getCanStep()) {
+                result.walkable = false;
+                break;
+            }
+        }
+    }
+    result.cost = std::max(1, result.cost);
+    return result;
+}
+
 const std::vector<CNavigationEdge> &CMap::getNavigationEdges() const { return navigationEdges; }
 
 std::vector<Coords> CMap::getNavigationNeighbors(Coords coords, bool includeSelf) const {
@@ -270,15 +418,18 @@ std::vector<Coords> CMap::getNavigationNeighbors(Coords coords, bool includeSelf
 }
 
 void CMap::registerNavigationEdge(CNavigationEdge edge) {
+    std::lock_guard lock(navigationMutex);
     edge.source = normalizeCoords(edge.source);
     edge.target = normalizeCoords(edge.target);
     navigationEdges.push_back(std::move(edge));
     bumpNavigationRevision();
+    routingChanged();
 }
 
 void CMap::addNavigationEdge(CNavigationEdge edge) { registerNavigationEdge(std::move(edge)); }
 
 bool CMap::removeNavigationEdge(Coords source, Coords target, std::optional<std::string> sourceObjectName) {
+    std::lock_guard lock(navigationMutex);
     source = normalizeCoords(source);
     target = normalizeCoords(target);
     auto it = std::ranges::find_if(navigationEdges, [&](const CNavigationEdge &edge) {
@@ -289,10 +440,12 @@ bool CMap::removeNavigationEdge(Coords source, Coords target, std::optional<std:
     }
     navigationEdges.erase(it);
     bumpNavigationRevision();
+    routingChanged();
     return true;
 }
 
 std::size_t CMap::unregisterNavigationEdgesForObject(const std::string &sourceObjectName) {
+    std::lock_guard lock(navigationMutex);
     const auto old_size = navigationEdges.size();
     navigationEdges.erase(std::remove_if(navigationEdges.begin(), navigationEdges.end(),
                                          [&](const CNavigationEdge &edge) {
@@ -302,6 +455,7 @@ std::size_t CMap::unregisterNavigationEdgesForObject(const std::string &sourceOb
     const auto removed = old_size - navigationEdges.size();
     if (removed > 0) {
         bumpNavigationRevision();
+        routingChanged();
     }
     return removed;
 }
@@ -327,6 +481,7 @@ void CMap::bumpNavigationRevision() {
 }
 
 void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
+    std::lock_guard lock(navigationMutex);
     if (!tile) {
         return;
     }
@@ -338,9 +493,7 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     }
     if (coords == target) {
         tile->setOwningMap(this->ptr<CMap>());
-        tile->setPosx(target.x);
-        tile->setPosy(target.y);
-        tile->setPosz(target.z);
+        tile->setXYZ(target.x, target.y, target.z);
         return;
     }
     if (!tiles.emplace(target, tile).second) {
@@ -348,16 +501,18 @@ void CMap::moveTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
     }
 
     tiles.erase(coords);
+    includeNavigationTile(target);
     tile->setOwningMap(this->ptr<CMap>());
-    tile->setPosx(target.x);
-    tile->setPosy(target.y);
-    tile->setPosz(target.z);
+    tile->setXYZ(target.x, target.y, target.z);
     bumpNavigationRevision();
+    routingChanged(coords);
+    routingChanged(target);
     recordDirectPropertyChanged("tiles");
     signal("tileChanged", target);
 }
 
 bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
+    std::lock_guard lock(navigationMutex);
     if (!tile) {
         return false;
     }
@@ -366,17 +521,18 @@ bool CMap::addTile(std::shared_ptr<CTile> tile, int x, int y, int z) {
         return false;
     }
     tile->setOwningMap(this->ptr<CMap>());
-    tile->setPosx(coords.x);
-    tile->setPosy(coords.y);
-    tile->setPosz(coords.z);
+    tile->setXYZ(coords.x, coords.y, coords.z);
     tiles.insert(std::make_pair(coords, tile));
+    includeNavigationTile(coords);
     bumpNavigationRevision();
+    routingChanged(coords);
     recordDirectPropertyChanged("tiles");
     signal("tileChanged", coords);
     return true;
 }
 
 void CMap::removeTile(int x, int y, int z) {
+    std::lock_guard lock(navigationMutex);
     Coords coords = normalizeCoords(Coords(x, y, z));
     auto it = this->tiles.find(coords);
     if (it != this->tiles.end()) {
@@ -387,45 +543,32 @@ void CMap::removeTile(int x, int y, int z) {
         }
     }
     bumpNavigationRevision();
+    routingChanged(coords);
     recordDirectPropertyChanged("tiles");
     signal("tileChanged", coords);
 }
 
 std::shared_ptr<CTile> CMap::getTile(int x, int y, int z) {
-    Coords coords = normalizeCoords(Coords(x, y, z));
-    std::shared_ptr<CTile> tile;
-    auto it = this->tiles.find(coords);
-    if (it == this->tiles.end()) {
-        tile = getGame()->createObject<CTile>(fallbackTileType(coords));
-        if (tile) {
-            this->addTile(tile, coords.x, coords.y, coords.z);
-        }
-    } else {
-        tile = (*it).second;
+    Coords coords;
+    {
+        std::lock_guard lock(navigationMutex);
+        coords = normalizeCoords(Coords(x, y, z));
+        auto found = tiles.find(coords);
+        if (found != tiles.end())
+            return found->second;
+    }
+    auto tile = resolveTileForLookup(coords);
+    if (tile && !addTile(tile, coords.x, coords.y, coords.z)) {
+        std::lock_guard lock(navigationMutex);
+        auto found = tiles.find(normalizeCoords(coords));
+        return found != tiles.end() ? found->second : nullptr;
     }
     return tile;
 }
 
-std::shared_ptr<CTile> CMap::getTile(Coords coords) { return this->getTile(coords.x, coords.y, coords.z); }
+std::shared_ptr<CTile> CMap::getTile(Coords coords) { return getTile(coords.x, coords.y, coords.z); }
 
-bool CMap::canStep(int x, int y, int z) {
-    Coords coords = normalizeCoords(Coords(x, y, z));
-    for (const auto &object : getObjectsAtCoords(coords)) {
-        if (!object->getCanStep()) {
-            return false;
-        }
-    }
-    auto tile = resolveTileForLookup(coords);
-    if (tile) {
-        return tile->canStep();
-    }
-    if (getGame()) {
-        return false;
-    }
-    const int x_bound = vstd::ctn(xBounds, z) ? xBounds.at(z) : 0;
-    const int y_bound = vstd::ctn(yBounds, z) ? yBounds.at(z) : 0;
-    return !(coords.x < 0 || coords.y < 0 || coords.x > x_bound || coords.y > y_bound);
-}
+bool CMap::canStep(int x, int y, int z) { return lookupNavigationCell(Coords(x, y, z), std::nullopt).walkable; }
 
 bool CMap::canStep(Coords coords) { return canStep(coords.x, coords.y, coords.z); }
 
@@ -444,10 +587,7 @@ int CMap::lookupMovementCost(int x, int y, int z) {
     return tile ? std::max(1, tile->getMovementCost()) : 1;
 }
 
-int CMap::lookupMovementCost(Coords coords) {
-    coords = normalizeCoords(coords);
-    return lookupMovementCost(coords.x, coords.y, coords.z);
-}
+int CMap::lookupMovementCost(Coords coords) { return lookupMovementCost(coords.x, coords.y, coords.z); }
 
 bool CMap::contains(int x, int y, int z) {
     Coords coords = normalizeCoords(Coords(x, y, z));
@@ -456,6 +596,10 @@ bool CMap::contains(int x, int y, int z) {
 }
 
 void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    std::unique_lock lock(navigationMutex);
     if (!mapObject) {
         vstd::logger::warning("Ignoring null map object");
         return;
@@ -466,6 +610,7 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
     }
     std::shared_ptr<CCreature> creature = vstd::cast<CCreature>(mapObject);
     mapObject->setOwningMap(this->ptr<CMap>());
+    lock.unlock();
     if (creature.get()) {
         if (creature->getLevel() == 0) {
             creature->addExp(0);
@@ -474,15 +619,29 @@ void CMap::addObject(const std::shared_ptr<CMapObject> &mapObject) {
         }
         creature->addExp(0);
     }
+    lock.lock();
+    if (vstd::ctn(mapObjects, mapObject->getName())) {
+        if (mapObjects.at(mapObject->getName()) != mapObject)
+            mapObject->clearOwningMap(this->ptr<CMap>());
+        vstd::logger::warning("Ignoring duplicate map object after initialization:", mapObject->getName());
+        return;
+    }
     mapObjects.insert(std::make_pair(mapObject->getName(), mapObject));
     mapObjectsCache.insert(std::make_pair(normalizeCoords(mapObject->getCoords()), mapObject->getName()));
     bumpNavigationRevision();
+    if (!mapObject->getCanStep())
+        routingChanged(mapObject->getCoords());
     recordDirectPropertyChanged("objects");
+    lock.unlock();
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onCreate));
     signal("objectChanged", mapObject->getCoords());
 }
 
 void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    std::unique_lock lock(navigationMutex);
     if (!mapObject) {
         return;
     }
@@ -495,16 +654,22 @@ void CMap::removeObject(const std::shared_ptr<CMapObject> &mapObject) {
     mapObjects.erase(map_object_it);
     vstd::erase_if(mapObjectsCache, [mapObject](auto it) { return it.second == mapObject->getName(); });
     bumpNavigationRevision();
+    if (!mapObject->getCanStep())
+        routingChanged(mapObject->getCoords());
     recordDirectPropertyChanged("objects");
+    lock.unlock();
     getEventHandler()->gameEvent(mapObject, std::make_shared<CGameEvent>(CGameEvent::CType::onDestroy));
+    lock.lock();
     auto current_object_it = mapObjects.find(mapObject->getName());
     if (current_object_it == mapObjects.end() || current_object_it->second != mapObject) {
         mapObject->clearOwningMap(this->ptr<CMap>());
     }
+    lock.unlock();
     signal("objectChanged", mapObject->getCoords());
 }
 
 bool CMap::removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObject) {
+    std::lock_guard lock(navigationMutex);
     if (!mapObject) {
         return false;
     }
@@ -520,6 +685,8 @@ bool CMap::removeObjectWithoutEvents(const std::shared_ptr<CMapObject> &mapObjec
     vstd::erase_if(mapObjectsCache, [&registeredName](auto it) { return it.second == registeredName; });
     mapObject->clearOwningMap(this->ptr<CMap>());
     bumpNavigationRevision();
+    if (!mapObject->getCanStep())
+        routingChanged(mapObject->getCoords());
     recordDirectPropertyChanged("objects");
     signal("objectChanged", coords);
     return true;
@@ -538,6 +705,7 @@ void CMap::setEntryY(int y) { entryy = y; }
 void CMap::setEntryZ(int z) { entryz = z; }
 
 std::shared_ptr<CMapObject> CMap::getObjectByName(const std::string &name) {
+    std::lock_guard lock(navigationMutex);
     auto it = mapObjects.find(name);
     if (it != mapObjects.end()) {
         return (*it).second;
@@ -613,8 +781,8 @@ void CMap::move() {
         auto should_interrupt_after_step = [map](const std::shared_ptr<CCreature> &creature, const Coords &target) {
             auto objects = map->getObjectsAtCoords(target);
             return std::any_of(objects.begin(), objects.end(), [&](const auto &object) {
-                return object != creature &&
-                       (vstd::cast<CCreature>(object) || (vstd::cast<CVisitable>(object) && !vstd::cast<CItem>(object)));
+                return object != creature && (vstd::cast<CCreature>(object) ||
+                                              (vstd::cast<CVisitable>(object) && !vstd::cast<CItem>(object)));
             });
         };
 
@@ -635,7 +803,12 @@ void CMap::move() {
         auto loop = vstd::event_loop<>::instance();
         while (!plannedFuture->isReady()) {
             if (loop->runPostedTasks() == 0) {
-                plannedFuture->waitFor(std::chrono::milliseconds(1));
+                if (Py_IsInitialized() && PyGILState_Check()) {
+                    pybind11::gil_scoped_release release;
+                    plannedFuture->waitFor(std::chrono::milliseconds(1));
+                } else {
+                    plannedFuture->waitFor(std::chrono::milliseconds(1));
+                }
             }
         }
         auto plannedCoordinates = plannedFuture->get();
@@ -707,6 +880,7 @@ void CMap::setTurn(int turn) {
 }
 
 void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
+    std::lock_guard lock(navigationMutex);
     auto map = this->ptr<CMap>();
     for (const auto &[coords, tile] : tiles) {
         if (tile) {
@@ -714,14 +888,19 @@ void CMap::setTiles(std::set<std::shared_ptr<CTile>> objects) {
         }
     }
     tiles.clear();
+    navigationTileExtentCount = 0;
+    navigationTileExtentOverflow = false;
     for (const auto &ob : objects) {
         if (!ob) {
             continue;
         }
         ob->setOwningMap(map);
-        tiles[normalizeCoords(ob->getCoords())] = ob;
+        auto coords = normalizeCoords(ob->getCoords());
+        tiles[coords] = ob;
+        includeNavigationTile(coords);
     }
     bumpNavigationRevision();
+    routingChanged();
     recordDirectPropertyChanged("tiles");
 }
 
@@ -734,6 +913,7 @@ std::set<std::shared_ptr<CTile>> CMap::getTiles() {
 }
 
 void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
+    std::lock_guard lock(navigationMutex);
     if (CSerialization::isStrict()) {
         std::set<std::string> names;
         for (const auto &ob : objects) {
@@ -766,6 +946,7 @@ void CMap::setObjects(std::set<std::shared_ptr<CMapObject>> objects) {
         mapObjectsCache.insert(std::make_pair(normalizeCoords(ob->getCoords()), ob->getName()));
     }
     bumpNavigationRevision();
+    routingChanged();
     recordDirectPropertyChanged("objects");
 }
 
@@ -820,6 +1001,7 @@ std::string CMap::getCombatHistory() { return combatHistory; }
 void CMap::setCombatHistory(std::string history) { combatHistory = std::move(history); }
 
 void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, Coords _new) {
+    std::lock_guard lock(navigationMutex);
     if (!object) {
         return;
     }
@@ -835,10 +1017,20 @@ void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, C
         CPlaytestTrace::addMapContext(fields, this->ptr<CMap>());
         CPlaytestTrace::record("movement", fields);
     }
-    vstd::erase_if(mapObjectsCache, [object](auto it) { return it.second == object->getName(); });
+    auto range = mapObjectsCache.equal_range(_old);
+    for (auto it = range.first; it != range.second;) {
+        if (it->second == object->getName())
+            it = mapObjectsCache.erase(it);
+        else
+            ++it;
+    }
 
     mapObjectsCache.insert(std::make_pair(_new, object->getName()));
     bumpNavigationRevision();
+    if (!object->getCanStep() && _old != _new) {
+        routingChanged(_old);
+        routingChanged(_new);
+    }
     recordDirectPropertyChanged("objects");
 
     // TODO: check if it`s correct
@@ -847,6 +1039,7 @@ void CMap::objectMoved(const std::shared_ptr<CMapObject> &object, Coords _old, C
 }
 
 std::set<std::shared_ptr<CMapObject>> CMap::getObjectsAtCoords(Coords coords) {
+    std::lock_guard lock(navigationMutex);
     coords = normalizeCoords(coords);
     std::set<std::shared_ptr<CMapObject>> ret;
     auto range = mapObjectsCache.equal_range(coords);
@@ -900,13 +1093,23 @@ std::string CMap::fallbackTileType(Coords coords) const {
 }
 
 std::shared_ptr<CTile> CMap::resolveTileForLookup(Coords coords) {
-    coords = normalizeCoords(coords);
-    auto it = tiles.find(coords);
-    if (it != tiles.end()) {
-        return it->second;
+    std::shared_ptr<CGame> game;
+    std::string type;
+    {
+        std::lock_guard lock(navigationMutex);
+        coords = normalizeCoords(coords);
+        auto found = tiles.find(coords);
+        if (found != tiles.end())
+            return found->second;
+        game = getGame();
+        type = fallbackTileType(coords);
     }
-    auto game = getGame();
-    return game ? game->createObject<CTile>(fallbackTileType(coords)) : nullptr;
+    if (!game)
+        return nullptr;
+    std::optional<pybind11::gil_scoped_acquire> gil;
+    if (Py_IsInitialized())
+        gil.emplace();
+    return game->createObject<CTile>(type);
 }
 
 int CMap::normalizeAxis(int value, int z, bool wrapAxis, const std::map<int, int> &bounds) const {
@@ -925,54 +1128,51 @@ Coords CMap::normalizeCoords(Coords coords) const {
 std::vector<Coords> CMap::getAdjacentCoords(Coords coords, bool includeSelf) const {
     std::vector<Coords> adjacent;
     adjacent.reserve(includeSelf ? 5 : 4);
-
-    if (!wrapsX(coords.z) && !wrapsY(coords.z)) {
-        if (includeSelf) {
-            adjacent.push_back(coords);
-        }
-        adjacent.push_back(coords + EAST);
-        adjacent.push_back(coords + WEST);
-        adjacent.push_back(coords + SOUTH);
-        adjacent.push_back(coords + NORTH);
-        return adjacent;
-    }
-
-    auto add = [&adjacent, this](Coords candidate) {
+    auto add = [&](Coords candidate) {
         candidate = normalizeCoords(candidate);
-        if (std::ranges::find(adjacent, candidate) == adjacent.end()) {
+        if (std::ranges::find(adjacent, candidate) == adjacent.end())
             adjacent.push_back(candidate);
-        }
     };
-    if (includeSelf) {
+    if (includeSelf)
         add(coords);
+    for (auto delta : {EAST, WEST, SOUTH, NORTH}) {
+        auto x = static_cast<std::int64_t>(coords.x) + delta.x;
+        auto y = static_cast<std::int64_t>(coords.y) + delta.y;
+        if (wrapsX(coords.z) && xBounds.contains(coords.z) && xBounds.at(coords.z) >= 0) {
+            auto size = static_cast<std::int64_t>(xBounds.at(coords.z)) + 1;
+            x = (x % size + size) % size;
+        }
+        if (wrapsY(coords.z) && yBounds.contains(coords.z) && yBounds.at(coords.z) >= 0) {
+            auto size = static_cast<std::int64_t>(yBounds.at(coords.z)) + 1;
+            y = (y % size + size) % size;
+        }
+        if (x >= INT_MIN && x <= INT_MAX && y >= INT_MIN && y <= INT_MAX)
+            add(Coords(static_cast<int>(x), static_cast<int>(y), coords.z));
     }
-    add(coords + EAST);
-    add(coords + WEST);
-    add(coords + SOUTH);
-    add(coords + NORTH);
     return adjacent;
 }
 
 Coords CMap::getShortestDelta(Coords from, Coords to) const {
-    Coords normalized_from = normalizeCoords(from);
-    Coords normalized_to = normalizeCoords(to);
-    int dx = normalized_to.x - normalized_from.x;
-    int dy = normalized_to.y - normalized_from.y;
+    const auto normalized_from = normalizeCoords(from);
+    const auto normalized_to = normalizeCoords(to);
+    auto dx = static_cast<std::int64_t>(normalized_to.x) - normalized_from.x;
+    auto dy = static_cast<std::int64_t>(normalized_to.y) - normalized_from.y;
 
-    if (wrapsX(normalized_from.z) && vstd::ctn(xBounds, normalized_from.z)) {
-        const int width = xBounds.at(normalized_from.z) + 1;
-        if (std::abs(dx) > width / 2) {
+    if (wrapsX(normalized_from.z) && xBounds.contains(normalized_from.z)) {
+        const auto width = static_cast<std::int64_t>(xBounds.at(normalized_from.z)) + 1;
+        if (width > 0 && std::abs(dx) > width / 2)
             dx += dx > 0 ? -width : width;
-        }
     }
-    if (wrapsY(normalized_from.z) && vstd::ctn(yBounds, normalized_from.z)) {
-        const int height = yBounds.at(normalized_from.z) + 1;
-        if (std::abs(dy) > height / 2) {
+    if (wrapsY(normalized_from.z) && yBounds.contains(normalized_from.z)) {
+        const auto height = static_cast<std::int64_t>(yBounds.at(normalized_from.z)) + 1;
+        if (height > 0 && std::abs(dy) > height / 2)
             dy += dy > 0 ? -height : height;
-        }
     }
 
-    return Coords(dx, dy, normalized_to.z - normalized_from.z);
+    auto narrow = [](std::int64_t value) {
+        return static_cast<int>(std::clamp<std::int64_t>(value, INT_MIN, INT_MAX));
+    };
+    return Coords(narrow(dx), narrow(dy), narrow(static_cast<std::int64_t>(normalized_to.z) - normalized_from.z));
 }
 
 double CMap::getDistance(Coords from, Coords to) const { return getShortestDelta(from, to).getDist(ZERO); }

@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGameContext.h"
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CNavigation.h"
 #include "core/CMap.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
@@ -204,7 +205,6 @@ void CGameContext::shutdown(CGame *owner) {
         }
         owner->map.reset();
     }
-    performance_guard::clearTargetFlowCache();
     // Close the Lua state before the Python script handler releases: Lua-registered factories
     // and hook tables die with the state, and retained objects fall back to base behavior
     // through the expired weak_ptr guard in CLuaOverrides.
@@ -226,6 +226,12 @@ void CGameContext::shutdown(CGame *owner) {
     guiHandler.reset();
     rngHandler.reset();
     objectHandler.reset();
+    if (owner) {
+        std::lock_guard lock(owner->navigationServiceMutex);
+        if (owner->navigationService)
+            owner->navigationService->clearSessionCaches();
+        owner->navigationService.reset();
+    }
 }
 
 CGameContext::TransitionGeneration CGameContext::getTransitionGeneration() const {
