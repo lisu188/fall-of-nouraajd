@@ -35,7 +35,8 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                 actor.name = 'roleRuntime' + str(index)
                 actor.x, actor.y, actor.z = 3 + index, 5, 0
                 game_map.addObject(actor)
-                actor.setHp(max(1, actor.getHpMax() // 2))
+                health_divisor = 4 if signature_id == 'enemyRitualHex' else 2
+                actor.setHp(max(1, actor.getHpMax() // health_divisor))
                 reserve_mana = 5 if signature_id == 'enemyRitualHex' else 0
                 actor.setMana(reserve_mana)
                 baseline = game.jsonify(actor.baseStats)

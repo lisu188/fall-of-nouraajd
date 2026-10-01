@@ -416,7 +416,7 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool cul
             actor->setEquipped({{"0", weapon}});
             actor->heal(0);
             if (cultistHex) {
-                actor->setHp(std::max(1, actor->getHpMax() / 2));
+                actor->setHp(std::max(1, actor->getHpMax() / 4));
             }
             const auto interactions = actor->getInteractions();
             const auto attackIt =
@@ -614,7 +614,8 @@ void testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries() {
             actor->setPosX(1);
             game->getMap()->addObject(actor);
             actor->heal(0);
-            actor->setHp(std::max(1, actor->getHpMax() / 2));
+            const int ritualHealthDivisor = 4;
+            actor->setHp(std::max(1, actor->getHpMax() / ritualHealthDivisor));
             actor->setMana(5);
             actor->setBoolProperty("enemyRoleUsed", !enabled);
             std::vector<std::string> order;

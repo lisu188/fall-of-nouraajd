@@ -34,7 +34,7 @@ The current one-turn effects are:
 | Brute | At or below half health | Physical resistance +1, frost resistance -1 |
 | Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
 | Thief | Guarded opponent or at/below half health | Opponent block -1 |
-| Cultist | At or below half health, at least5 mana remaining | Convert one damage point to shadow when the target's physical and shadow wards differ; opponent shadow resistance -1; no mana spent |
+| Cultist | At or below exact quarter health, at least5 mana remaining | Convert one damage point to shadow when the target's physical and shadow wards differ; opponent shadow resistance -1; no mana spent |
 
 Each action owns its effect from configuration; the mage and cultist also own
 damage packets. The packet hook accepts only frost or shadow. The cultist packet
@@ -279,6 +279,27 @@ CultLeader keeps its ordinary Attack; a wounded Cultist with reserve mana can
 still use the substantive shadow packet. Both controlled mechanism modes receive
 the same5 mana and retain the real damage, callbacks, random streams, initiative
 and expiry assertions. The35×11 ordinary balance matrix is unchanged.
+
+The conditional ward head429eb1a6 passed Linux's22 native tests and five
+performance guards, including its complete35-row matrix in6.12seconds. Actual
+Windows job110413581789 still rejected Warrior/Cultist HP median4 to3 (-25%).
+Its other shown medians passed; neither a lower cost nor Linux passage bypasses
+the absolute10-percent gate. The current generic critical-health trial retains
+conditional wards and the five-mana unspent reserve, but permits the cultist
+signature only at or below exact25% HP. The closed `critical` trigger checks
+positive maximum HP with64-bit `4*hp <= hpMax`, avoiding truncated percentage
+rounding:9/35 HP rejects while8/35 accepts. It does not branch by class or seed.
+Controlled enabled and disabled mechanism fixtures both use that same quarter
+health and five mana, retaining substantive shadow damage, ordinary callbacks,
+both RNG streams and both initiative/expiry proofs. The35×11 ordinary
+player/monster matrix and all winning-seed/resource gates remain unchanged.
+Fresh Windows/Linux/coverage acceptance is still required.
+
+The same head's coverage job110412610004 failed with an incomplete matrix at
+the shared55.13-second deadline and map at60.05seconds; handler passed54.17seconds.
+No eligible-line coverage result was reached. The required workload/timeouts
+remain unchanged while the separately reviewed profile-guided stats fold supplies
+the needed shared-core speedup.
 
 ## Aggregate execution budget
 

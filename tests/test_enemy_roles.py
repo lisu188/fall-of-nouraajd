@@ -314,6 +314,18 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertIn("reserve_mana = 5 if signature_id == 'enemyRitualHex' else 0", source)
         self.assertIn("actor.setMana(reserve_mana)", source)
         self.assertIn("assert actor.getMana() == reserve_mana", source)
+        self.assertIn("health_divisor = 4 if signature_id == 'enemyRitualHex' else 2", source)
+        self.assertIn("actor.getHpMax() // health_divisor", source)
+        controller = (ROOT / "src/core/CController.cpp").read_text(encoding="utf-8")
+        self.assertIn('(trigger == "critical" && criticalHealth)', controller)
+        self.assertIn("criticalHpMax > 0 && static_cast<std::int64_t>(me->getHp()) * 4 <= criticalHpMax", controller)
+        native = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        packet = native.split("void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks", 1)[1].split(
+            "class HexTurnProbe", 1
+        )[0]
+        self.assertRegex(packet, r"if \(cultistHex\)\s*\{\s*actor->setHp\(std::max\(1, actor->getHpMax\(\) / 4\)\)")
+        self.assertIn("const int ritualHealthDivisor = 4", native)
+        self.assertIn("actor->getHpMax() / ritualHealthDivisor", native)
 
     def testRoleConfigKeepsRosterNumericStatsAndBoundedOwnedEffects(self):
         classes = json.loads((ROOT / "res/config/creature_classes.json").read_text(encoding="utf-8"))
@@ -341,7 +353,7 @@ class EnemyRolesTest(unittest.TestCase):
             self.assertEqual(properties["combatRole"], action["enemyRole"])
             self.assertEqual(0, action["manaCost"])
             if action_id == "enemyRitualHex":
-                self.assertEqual("wounded", action["enemyRoleTrigger"])
+                self.assertEqual("critical", action["enemyRoleTrigger"])
                 self.assertEqual(5, action["minimumMana"])
             self.assertNotIn("effect", action)
             effect = effects[action["roleEffect"]["ref"]]["properties"]
