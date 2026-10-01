@@ -27,7 +27,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 class CTextManager : public CGameObject {
     V_META(CTextManager, CGameObject, vstd::meta::empty())
     using TextKey = std::tuple<std::string, int, std::string, int, Uint32>;
-    std::map<TextKey, fn::sdl::TexturePtr> _textures;
+    std::map<TextKey, fn::sdl::GuiTexturePtr> _textures;
     std::map<std::pair<std::string, int>, fn::sdl::FontPtr> fonts;
     std::size_t textureLoads = 0;
 
