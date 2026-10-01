@@ -22867,13 +22867,25 @@ class XvfbGameplayProcessTest(unittest.TestCase):
             panel = find_top_level_panel(g, "CGameQuestPanel")
             try:
                 text = readJournalTabs(panel, g.getGui(), active=active_ids, completed=completed_ids)
+                pump_event_loop(2)
                 assert_screenshot_has_rendered_pixels(self, g, name)
                 if completed_ids:
+                    active_pixels, width, height = g.getGui().read_pixels()
                     buttons = {
                         button.getStringProperty("click"): button for button in find_descendants_by_type(panel, "CButton")
                     }
                     activate_widget(buttons["showCompleted"], g.getGui())
+                    self.assertIn("[Completed]", panel.getText(g.getGui()))
+                    pump_event_loop(2)
                     assert_screenshot_has_rendered_pixels(self, g, name + "_completed")
+                    completed_pixels, completed_width, completed_height = g.getGui().read_pixels()
+                    self.assertEqual((width, height), (completed_width, completed_height))
+                    x, y, panel_width, panel_height = resolved_rect(panel)
+                    content_rect = (x, y + panel_height // 5, panel_width, panel_height // 2)
+                    _, changed_pixels = pixel_diff_bounds(
+                        bytes(active_pixels), bytes(completed_pixels), width, content_rect
+                    )
+                    self.assertGreater(changed_pixels, 0, "Completed journal text must render after switching tabs.")
             finally:
                 push_quest_log_key()
                 wait_for_panel_closed(self, g, "CGameQuestPanel")
