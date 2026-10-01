@@ -22,8 +22,10 @@ extension is built (mirroring how scripts/validate_content.py runs first in CI).
 """
 
 import json
+import importlib.util
 import sys
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -118,6 +120,9 @@ class FakePlayer:
     def item_type_ids(self):
         return sorted(item.getTypeId() for item in self.items)
 
+    def addItem(self, item):
+        self.items.append(item)
+
 
 class FakeGuiHandler:
     def __init__(self):
@@ -170,6 +175,35 @@ class FakeGame:
 
     def changeMap(self, map_name):
         self.map_changes.append(map_name)
+
+    def changeMapWithPreparation(self, map_name, beforeEntry, completion):
+        beforeEntry()
+        self.changeMap(map_name)
+        completion(True)
+        return True
+
+
+class DeferredFakeGame(FakeGame):
+    def __init__(self, player):
+        super().__init__(player)
+        self.pending = None
+        self.accept = True
+
+    def changeMapWithPreparation(self, map_name, beforeEntry, completion):
+        if not self.accept or self.pending:
+            completion(False)
+            return False
+        self.pending = (map_name, beforeEntry, completion)
+        return True
+
+    def finishTransition(self, success=True, fail_after_preparation=False):
+        map_name, beforeEntry, completion = self.pending
+        self.pending = None
+        if success or fail_after_preparation:
+            beforeEntry()
+        if success:
+            self.changeMap(map_name)
+        completion(success)
 
 
 class ManifestTest(unittest.TestCase):
@@ -589,6 +623,181 @@ class CompleteScenarioTest(unittest.TestCase):
         with self.assertRaises(campaign.CampaignError):
             campaign.complete_scenario(game, "unrouted")
         self.assertEqual([], game.map_changes)
+
+    def testRejectedTransitionPreservesStateAndCanBeRetried(self):
+        player = FakePlayer(gold=500, items=("sword", "cursedIdol"))
+        game = DeferredFakeGame(player)
+        store = campaign.CampaignStateStore(player)
+        store.begin("trial", "one")
+        game.accept = False
+        campaign.complete_scenario(game, "completed")
+        self.assertEqual("one", store.scenario())
+        self.assertEqual([], store.history())
+        self.assertEqual(500, player.gold)
+        self.assertEqual(["cursedIdol", "sword"], player.item_type_ids())
+        self.assertTrue(campaign.hasPendingTransition(game))
+        game.accept = True
+        self.assertTrue(campaign.retryPending(game))
+        game.finishTransition()
+        self.assertEqual("two", store.scenario())
+        self.assertEqual([("one", "completed")], store.history())
+        self.assertFalse(campaign.hasPendingTransition(game))
+
+    def testAsynchronousFailureDoesNotConsumeCarryoverAndRetryPaysOnce(self):
+        player = FakePlayer(gold=500, items=("sword", "cursedIdol"))
+        game = DeferredFakeGame(player)
+        store = campaign.CampaignStateStore(player)
+        store.begin("trial", "one")
+        campaign.complete_scenario(game, "completed")
+        self.assertEqual("one", store.scenario(), "queued requests cannot commit chapter progress")
+        campaign.complete_scenario(game, "completed")
+        game.finishTransition(success=False)
+        self.assertEqual("one", store.scenario())
+        self.assertEqual([], store.history())
+        self.assertEqual(500, player.gold)
+        self.assertEqual(["cursedIdol", "sword"], player.item_type_ids())
+        self.assertTrue(campaign.retryPending(game))
+        game.finishTransition()
+        self.assertEqual("two", store.scenario())
+        self.assertEqual(100, player.gold)
+        self.assertEqual(["sword"], player.item_type_ids())
+        self.assertEqual([("one", "completed")], store.history())
+
+    def testAttachmentFailureRestoresRemovedItemInstancesAndMetadata(self):
+        player = FakePlayer(gold=500, items=("sword", "cursedIdol"))
+        original_items = set(player.getItems())
+        game = DeferredFakeGame(player)
+        store = campaign.CampaignStateStore(player)
+        store.begin("trial", "one")
+        campaign.complete_scenario(game, "completed")
+        game.finishTransition(success=False, fail_after_preparation=True)
+        self.assertEqual("one", store.scenario())
+        self.assertEqual([], store.history())
+        self.assertEqual(500, player.gold)
+        self.assertEqual(original_items, player.getItems())
+        self.assertTrue(campaign.retryPending(game))
+
+    def testFailedEntryDoesNotKeepItemsAwardedByTheDestination(self):
+        player = FakePlayer(gold=500, items=("sword", "cursedIdol"))
+        original_items = player.getItems()
+        game = DeferredFakeGame(player)
+        store = campaign.CampaignStateStore(player)
+        store.begin("trial", "one")
+        campaign.complete_scenario(game, "completed")
+        _map_name, beforeEntry, completion = game.pending
+        game.pending = None
+        beforeEntry()
+        player.addItem(FakeItem("destinationReward", "failedEntryReward"))
+        player.addGold(50)
+        completion(False)
+        self.assertEqual(original_items, player.getItems())
+        self.assertEqual(500, player.gold)
+        self.assertEqual("one", store.scenario())
+
+    def testReloadedPendingOutcomeCanBeRetriedWithoutRepeatingReward(self):
+        player = FakePlayer(gold=500, items=("sword", "cursedIdol"))
+        game = DeferredFakeGame(player)
+        store = campaign.CampaignStateStore(player)
+        store.begin("trial", "one")
+        campaign.complete_scenario(game, "completed")
+        reloaded = DeferredFakeGame(player)
+        self.assertTrue(campaign.retryPending(reloaded))
+        reloaded.finishTransition()
+        game.finishTransition(success=False)
+        self.assertEqual("two", store.scenario())
+        self.assertEqual(100, player.gold)
+        self.assertEqual([("one", "completed")], store.history())
+
+    def testStandaloneFallbackFailureHasAnExplicitRetry(self):
+        game = DeferredFakeGame(FakePlayer())
+        campaign.complete_scenario(game, "completed", fallback_map="legacy")
+        self.assertIsNotNone(game.pending)
+        game.finishTransition(success=False)
+        self.assertTrue(campaign.retryPending(game))
+        game.finishTransition()
+        self.assertEqual(["legacy"], game.map_changes)
+
+    def testShutdownCancellationDoesNotOpenFailureGui(self):
+        player = FakePlayer(gold=500)
+        game = DeferredFakeGame(player)
+        store = campaign.CampaignStateStore(player)
+        store.begin("trial", "one")
+        campaign.complete_scenario(game, "completed")
+        previous_messages = list(game.gui_handler.messages)
+        game.getContext = lambda: types.SimpleNamespace(isActive=lambda: False)
+        game.finishTransition(success=False)
+        self.assertEqual(previous_messages, game.gui_handler.messages)
+        self.assertEqual("one", store.scenario())
+        self.assertEqual(500, player.gold)
+
+
+class ShippedJudgmentRetryTest(unittest.TestCase):
+    def testVossJudgmentFailureKeepsRewardAndRetriesOnlyTheJourney(self):
+        registered = {}
+
+        def register(context):
+            def decorate(cls):
+                registered[cls.__name__] = cls
+                return cls
+
+            return decorate
+
+        def claim_once(owner, name):
+            if owner.getBoolProperty(name):
+                return False
+            owner.setBoolProperty(name, True)
+            return True
+
+        fake_game_module = types.ModuleType("game")
+        fake_game_module.campaign = campaign
+        fake_game_module.register = register
+        fake_game_module.trigger = lambda *args: register(None)
+        fake_game_module.claim_once = claim_once
+        fake_game_module.showReader = lambda *args: None
+        fake_game_module.rewardSnapshot = lambda player: player.getGold()
+        receipts = []
+        fake_game_module.showRewardReceipt = lambda *args: receipts.append(args)
+        for name in ("CDialog", "CEvent", "CQuest", "CTrigger"):
+            setattr(fake_game_module, name, type(name, (), {}))
+        script_path = REPO_ROOT / "res" / "maps" / "gravemoor" / "script.py"
+        spec = importlib.util.spec_from_file_location("gravemoorRetryFixture", script_path)
+        script = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {"game": fake_game_module}):
+            spec.loader.exec_module(script)
+            script.load(None, None)
+
+        player = FakePlayer(gold=600)
+        player.checkQuests = lambda: None
+        game = DeferredFakeGame(player)
+        flags = {}
+        game.map.getBoolProperty = lambda name: flags.get(name, False)
+        game.map.setBoolProperty = lambda name, value: flags.__setitem__(name, value)
+        game.map.getNumericProperty = lambda name: 3 if name == "loyalists_freed" else 0
+        store = campaign.CampaignStateStore(player)
+        store.begin("wardensRoad", "rescue")
+        dialog = registered["VossDialog"]()
+        dialog.getGame = lambda: game
+        manifest = campaign.get_manifest("wardensRoad")
+        with patch.object(campaign, "get_manifest", return_value=manifest):
+            dialog.execute_voss()
+            self.assertTrue(flags["voss_judged"])
+            self.assertTrue(flags["judgment_reward_claimed"])
+            self.assertEqual(700, player.gold)
+            game.finishTransition(success=False)
+            self.assertEqual("rescue", store.scenario())
+            self.assertEqual([], store.history())
+            self.assertEqual(700, player.gold)
+            self.assertTrue(campaign.hasPendingTransition(game))
+            dialog.execute_voss()
+            self.assertIsNone(game.pending)
+            self.assertEqual(1, len(receipts))
+            self.assertTrue(campaign.retryPending(game))
+            game.finishTransition()
+        self.assertEqual("assault_wrath", store.scenario())
+        self.assertEqual([("rescue", "executed")], store.history())
+        self.assertEqual(400, player.gold)
+        self.assertEqual(1, len(receipts))
+        self.assertEqual(["usurpergate"], game.map_changes)
 
 
 if __name__ == "__main__":

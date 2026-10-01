@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CPlaytestTrace.h"
 #include "core/CProvider.h"
 #include "core/CSceneManager.h"
+#include "core/CSaveFormat.h"
 #include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
@@ -45,6 +46,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -1746,6 +1748,151 @@ class TurnCountingController : public CController {
     int controlCalls = 0;
 };
 
+class PreparedPlayerEntryProbe : public CEvent {
+  public:
+    void onEnter(std::shared_ptr<CGameEvent> event) override {
+        auto caused = std::dynamic_pointer_cast<CGameEventCaused>(event);
+        auto creature = caused ? std::dynamic_pointer_cast<CCreature>(caused->getCause()) : nullptr;
+        if (creature && creature->isPlayer()) {
+            observedPreparation = creature->getBoolProperty("chapterPrepared");
+            if (failEntry) {
+                throw std::runtime_error("deliberate destination entry failure");
+            }
+        }
+    }
+
+    bool observedPreparation = false;
+    bool failEntry = false;
+};
+
+void test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto source = game->getMap();
+    auto player = source->getPlayer();
+    const auto sourceCoords = player->getCoords();
+    const auto sourceController = player->getController();
+    const auto sourceScope = game->getResourcesProvider()->getActiveScope();
+    auto destination = CMapLoader::loadNewMap(game, "ritual");
+    auto probe = std::make_shared<PreparedPlayerEntryProbe>();
+    probe->setName("preparedPlayerEntryProbe");
+    probe->setGame(game);
+    const auto target = first_adjacent_walkable(destination, destination->getEntry());
+    probe->setPosX(target.x);
+    probe->setPosY(target.y);
+    probe->setPosZ(target.z);
+    destination->addObject(probe);
+    game->getContext()->getMapSessionStore()->put(destination);
+    game->setMap(source);
+
+    CMapTransitionRequest request;
+    request.targetMap = "ritual";
+    request.targetCoords = target;
+    request.reuseLoadedMap = true;
+    request.beforePlayerEntry = [&]() {
+        expect_true(game->getMap() == source, "interactive preparation must see the complete source map");
+        expect_true(game->getResourcesProvider()->getActiveScope() == sourceScope,
+                    "interactive preparation must retain source resources");
+        player->setBoolProperty("chapterPrepared", true);
+    };
+    std::vector<bool> completions;
+    request.onFinished = [&](bool success) {
+        completions.push_back(success);
+        if (!success) {
+            expect_true(game->getMap() == source, "failure completion must observe the restored source map");
+            player->setBoolProperty("chapterPrepared", false);
+        }
+    };
+    probe->failEntry = true;
+    expect_true(game->requestMapTransition(request), "prepared transition should be queued");
+    pump_event_loop_iterations();
+    expect_true(completions == std::vector<bool>{false}, "failed attachment must complete exactly once with false");
+    expect_true(probe->observedPreparation, "destination entry must observe prepared campaign state");
+    expect_true(game->getMap() == source && source->getPlayer() == player,
+                "failed destination entry must restore the same source/player");
+    expect_true(player->getMap() == source && player->getCoords() == sourceCoords,
+                "failed destination entry must restore player ownership and coordinates");
+    expect_true(player->getController() == sourceController, "failed attachment must restore the source controller");
+    expect_true(destination->getPlayer() == nullptr, "failed destination must release the carried player");
+    expect_true(game->getResourcesProvider()->getActiveScope() == sourceScope,
+                "failed entry must restore the previous resource scope");
+    expect_true(!game->getSceneManager()->isTransitionPending(), "failed attachment must release the transition slot");
+
+    probe->failEntry = false;
+    expect_true(game->requestMapTransition(request), "failed prepared transition must be retryable");
+    pump_event_loop_iterations();
+    expect_true(completions == std::vector<bool>({false, true}), "retry must complete once with true");
+    expect_true(game->getMap() == destination && destination->getPlayer() == player,
+                "successful retry must transfer the same prepared player");
+    expect_true(game->getResourcesProvider()->getActiveScope() == "ritual",
+                "reusing a retained map must activate its scoped resources");
+}
+
+void test_scene_manager_prepared_request_rejection_failure_and_cancellation() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto source = game->getMap();
+    const auto sourceScope = game->getResourcesProvider()->getActiveScope();
+    int preparations = 0;
+    std::vector<bool> completions;
+    CMapTransitionRequest request;
+    request.targetMap = "missingPreparedTransitionMap";
+    request.beforePlayerEntry = [&]() { preparations++; };
+    request.onFinished = [&](bool success) { completions.push_back(success); };
+    expect_true(game->requestMapTransition(request), "a destination load attempt should be queued");
+    expect_true(!game->requestMapTransition(request), "a duplicate prepared request must be rejected");
+    expect_true(completions == std::vector<bool>{false}, "rejection must complete immediately with false");
+    pump_event_loop_iterations();
+    expect_true(preparations == 0, "a missing destination must not consume campaign carryover");
+    expect_true(completions == std::vector<bool>({false, false}), "load failure must deliver false once");
+    expect_true(game->getMap() == source, "load failure must preserve the source map");
+    expect_true(game->getResourcesProvider()->getActiveScope() == sourceScope,
+                "load failure must preserve source resource scope");
+
+    request.targetMap = "ritual";
+    expect_true(game->requestMapTransition(request), "retry after load failure must be accepted");
+    game->getContext()->advanceTransitionGeneration();
+    pump_event_loop_iterations();
+    expect_true(preparations == 0, "cancelled work must not invoke preparation");
+    expect_true(completions == std::vector<bool>({false, false, false}), "cancellation must deliver false once");
+    expect_true(!game->getSceneManager()->isTransitionPending(), "cancelled work must release its transition slot");
+}
+
+void test_save_resource_scope_does_not_reattach_map_after_plugin_shutdown() {
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGameWithPlayer(game, "test", "Warrior");
+    auto provider = game->getResourcesProvider();
+    const auto resourceRoot = std::filesystem::path(provider->getPath("config/items.json")).parent_path().parent_path();
+    const auto nonce = std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const std::string mapName = "unitShutdownScope" + nonce;
+    const auto mapDirectory = resourceRoot / "maps" / mapName;
+    std::filesystem::create_directories(mapDirectory);
+    {
+        std::ofstream script(mapDirectory / "script.py");
+        script << "def load(self, context):\n    context.getContext().shutdown()\n";
+    }
+    const std::string slot = "unit-shutdown-scope-" + nonce;
+    auto snapshot = std::make_shared<json>(
+        json{{"class", "CMap"}, {"properties", {{"mapName", mapName}, {"objects", json::array()}}}});
+    auto envelope = CSaveFormat::buildEnvelope(snapshot, mapName);
+    expect_true(envelope.has_value(), "shutdown-during-resource-load fixture must have a valid envelope");
+    if (envelope) {
+        expect_true(provider->save(CSaveFormat::primaryPath(slot), *envelope), "shutdown fixture must be saved");
+        const auto savePath = provider->getPath(CSaveFormat::primaryPath(slot));
+        try {
+            CGameLoader::loadSavedGame(game, slot);
+        } catch (const std::runtime_error &) {
+            // Further service access is rejected after the fixture plugin closes the session.
+        }
+        expect_true(!game->getContext()->isActive(), "the fixture plugin must close its game context");
+        expect_true(game->getMap() == nullptr, "resource scope unwinding must not reattach the previous closed map");
+        if (!savePath.empty()) {
+            std::filesystem::remove(savePath);
+        }
+    }
+    std::filesystem::remove_all(mapDirectory);
+}
+
 void test_map_move_blocks_new_turn_while_transition_pending() {
     auto game = CGameLoader::loadGame();
     CGameLoader::startGameWithPlayer(game, "test", "Warrior");
@@ -2371,6 +2518,9 @@ int main() {
     test_map_session_store_put_get_evict_and_ownership();
     test_game_context_owns_a_map_session_store();
     test_scene_manager_reload_vs_persistent_transition_requests();
+    test_scene_manager_preparation_precedes_entry_and_restores_failed_attachment();
+    test_scene_manager_prepared_request_rejection_failure_and_cancellation();
+    test_save_resource_scope_does_not_reattach_map_after_plugin_shutdown();
     test_map_move_blocks_new_turn_while_transition_pending();
     test_map_add_object_fills_hp_and_mana_from_composed_stats();
     test_set_base_stats_preserves_current_hp_and_mana();

@@ -1098,10 +1098,83 @@ void test_creature_scale_preserves_level_plus_sw_invariant() {
 }
 
 std::shared_ptr<json> make_unit_creature_config(int sw) {
-    auto config = CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":" + std::to_string(sw) + "}}",
+    auto config = CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":" + std::to_string(sw) +
+                                             ",\"fightController\":{\"class\":\"CMonsterFightController\"},"
+                                             "\"baseStats\":{\"class\":\"CStats\",\"properties\":{\"stamina\":10,"
+                                             "\"strength\":5,\"mainStat\":\"strength\"}},"
+                                             "\"levelStats\":{\"class\":\"CStats\",\"properties\":{\"stamina\":2}}}}",
                                          "unitCreatureSwConfig");
     expect_true(config != nullptr, "unit creature sw config json should parse for the RNG encounter regression test");
     return config;
+}
+
+void test_rng_handler_scales_fresh_creatures_before_map_insertion() {
+    auto game = load_empty_game();
+    auto handler = game->getObjectHandler();
+    for (const auto &type : handler->getAllSubTypes("CCreature")) {
+        handler->unregisterConfig(type);
+    }
+    handler->registerConfig("unitScaledEncounter", make_unit_creature_config(1));
+    auto prototype = game->createObject<CCreature>("unitScaledEncounter");
+    expect_true(prototype && prototype->getHp() == 0 && prototype->getLevel() == 0,
+                "the scaling regression must exercise an uninitialized creature template");
+
+    CRngHandler rng(game);
+    const auto previousRng = vstd::rng();
+    vstd::rng().seed(7);
+    const auto encounterRng = vstd::rng();
+    std::multiset<int> expectedLevels;
+    int expectedExperience = 0;
+    for (int component : vstd::random_components(40, std::views::iota(1, 41))) {
+        const int level = std::max(1, component - 1);
+        expectedLevels.insert(level);
+        expectedExperience += prototype->getExpForLevel(level);
+    }
+    expect_true(!expectedLevels.empty() && *expectedLevels.rbegin() > 1,
+                "the fixed encounter seed must include a component that needs level scaling");
+    vstd::rng() = encounterRng;
+    std::multiset<int> actualLevels;
+    int actualExperience = 0;
+    for (const auto &creature : rng.getRandomEncounter(40)) {
+        actualLevels.insert(creature->getLevel());
+        actualExperience += creature->getExp();
+        expect_true(creature->isAlive() && creature->getHp() == creature->getHpMax(),
+                    "generated encounters must start alive at their scaled maximum hit points");
+        const auto level = creature->getLevel();
+        game->getMap()->addObject(creature);
+        expect_true(creature->getLevel() == level,
+                    "adding an initialized encounter to the map must preserve its scaled level");
+    }
+    vstd::rng() = previousRng;
+    expect_true(actualLevels == expectedLevels, "encounter levels must match the allocated component powers");
+    expect_true(actualExperience == expectedExperience, "encounter scaling must retain the allocated experience");
+}
+
+void test_rng_handler_excludes_noncombatants_from_encounters() {
+    auto game = load_empty_game();
+    auto handler = game->getObjectHandler();
+    for (const auto &type : handler->getAllSubTypes("CCreature")) {
+        handler->unregisterConfig(type);
+    }
+    const std::vector<std::shared_ptr<json>> noncombatants = {
+        CJsonUtil::from_string("{\"class\":\"CCreature\"}", "neutralEncounter"),
+        CJsonUtil::from_string("{\"class\":\"CCreature\",\"properties\":{\"sw\":1}}", "uncontrolledEncounter"),
+        make_unit_creature_config(0),
+        make_unit_creature_config(1),
+    };
+    (*noncombatants.back())["properties"]["npc"] = true;
+    for (const auto &config : noncombatants) {
+        handler->registerConfig("unitNoncombatant", config);
+        CRngHandler rng(game);
+        expect_true(rng.getRandomEncounter(1).empty(),
+                    "neutral, uncontrolled, zero-power and NPC templates must not become hostile encounters");
+    }
+    handler->unregisterConfig("unitNoncombatant");
+    handler->registerConfig("unitCombatant", make_unit_creature_config(1));
+    CRngHandler rng(game);
+    const auto encounter = rng.getRandomEncounter(1);
+    expect_true(encounter.size() == 1 && (*encounter.begin())->getTypeId() == "unitCombatant",
+                "a controlled positive-power monster must remain eligible for encounters");
 }
 
 void test_rng_handler_builds_encounters_from_concrete_creature_sw() {
@@ -1320,6 +1393,8 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
         entry.sw = creature->getSw();
         entry.level = creature->getLevel();
         entry.scale = creature->getScale();
+        entry.inPowerTable = !creature->meta()->inherits("CPlayer") && !creature->isNpc() &&
+                             creature->getFightController() && entry.sw > 0;
 
         // Every concrete monster must preserve a defined sw/level pair, and getScale()
         // stays level + sw (src/object/CCreature.cpp:366), which the encounter power
@@ -1330,18 +1405,19 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
         baseline.push_back(entry);
     }
 
-    // Rebuild the creature power table the way CRngHandler's constructor does
-    // (src/handler/CRngHandler.cpp:63-69): one entry per concrete subtype keyed on
-    // getSw(). Mark which templates participate so the artifact records membership.
+    // Keep the baseline's encounter membership consistent with the eligible monster registry.
     std::unordered_multimap<int, std::string> creaturePowerTable;
-    for (auto &entry : baseline) {
-        creaturePowerTable.insert(std::make_pair(entry.sw, entry.type));
-        entry.inPowerTable = true;
+    for (const auto &entry : baseline) {
+        if (entry.inPowerTable) {
+            creaturePowerTable.insert(std::make_pair(entry.sw, entry.type));
+        }
     }
     expect_true(!creaturePowerTable.empty(),
                 "the creature power table should be produced non-empty from concrete templates");
-    expect_true(creaturePowerTable.size() == baseline.size(),
-                "every concrete template should contribute exactly one power-table entry");
+    expect_true(creaturePowerTable.size() ==
+                    static_cast<std::size_t>(std::count_if(baseline.begin(), baseline.end(),
+                                                           [](const auto &entry) { return entry.inPowerTable; })),
+                "only eligible monster templates should contribute power-table entries");
 
     // Emit the deterministic, ordered baseline artifact for review.
     std::cout << "[SS04] encounter power/scale baseline (type sw level scale inPowerTable)\n";
@@ -1356,7 +1432,9 @@ void test_rng_handler_captures_encounter_power_and_scale_baseline() {
     CRngHandler rng_handler(game);
     std::set<int> baselineSw;
     for (const auto &entry : baseline) {
-        baselineSw.insert(entry.sw);
+        if (entry.inPowerTable) {
+            baselineSw.insert(entry.sw);
+        }
     }
     bool producedEncounter = false;
     for (int attempt = 0; attempt < 64 && !producedEncounter; attempt++) {
@@ -1904,6 +1982,8 @@ int main() {
     test_creature_scale_preserves_level_plus_sw_invariant();
     test_tooltip_handler_exposes_present_archetypes_without_duplicate_descriptions();
     test_rng_handler_builds_encounters_from_concrete_creature_sw();
+    test_rng_handler_scales_fresh_creatures_before_map_insertion();
+    test_rng_handler_excludes_noncombatants_from_encounters();
     test_rng_handler_excludes_archetype_definitions_from_encounters();
     test_rng_handler_excludes_player_templates_from_encounters();
     test_rng_handler_captures_encounter_power_and_scale_baseline();

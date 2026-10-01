@@ -89,7 +89,59 @@ namespace py = pybind11;
 
 namespace {
 class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCallbacks> {
+    struct TransitionCallbacks {
+        std::function<void()> beforeEntry;
+        std::function<void(bool)> completion;
+    };
+
   public:
+    bool requestTransition(const std::shared_ptr<CGame> &game, std::string mapName, std::function<void()> beforeEntry,
+                           std::function<void(bool)> completion) {
+        if (!active.load()) {
+            return false;
+        }
+        const auto id = nextId++;
+        auto bundle =
+            std::make_shared<TransitionCallbacks>(TransitionCallbacks{std::move(beforeEntry), std::move(completion)});
+        transitions.emplace(id, bundle);
+        const std::weak_ptr<TransitionCallbacks> weakBundle = bundle;
+        const auto weakOwner = weak_from_this();
+        CMapTransitionRequest request;
+        request.targetMap = std::move(mapName);
+        request.beforePlayerEntry = [weakOwner, weakBundle]() {
+            auto owner = weakOwner.lock();
+            if (!owner || !owner->active.load()) {
+                throw std::runtime_error("Python transition callbacks have been released");
+            }
+            py::gil_scoped_acquire gil;
+            auto bundle = weakBundle.lock();
+            if (!owner->active.load() || !bundle) {
+                throw std::runtime_error("Python transition callbacks have been released");
+            }
+            bundle->beforeEntry();
+        };
+        request.onFinished = [weakOwner, id](bool success) {
+            auto owner = weakOwner.lock();
+            if (!owner || !owner->active.load()) {
+                return;
+            }
+            py::gil_scoped_acquire gil;
+            if (!owner->active.load()) {
+                return;
+            }
+            auto pending = owner->transitions.extract(id);
+            if (!pending.empty()) {
+                pending.mapped()->completion(success);
+            }
+        };
+        try {
+            return game->requestMapTransition(std::move(request));
+        } catch (...) {
+            transitions.erase(id);
+            throw;
+        }
+    }
+
     bool invoke(vstd::event_loop<> &loop, std::function<void()> callback) {
         if (!active.load()) {
             return false;
@@ -123,12 +175,15 @@ class CPythonEventCallbacks : public std::enable_shared_from_this<CPythonEventCa
         // only weak references and must neither invoke nor destroy Python callbacks at exit.
         auto pending = std::move(callbacks);
         callbacks.clear();
+        auto pendingTransitions = std::move(transitions);
+        transitions.clear();
     }
 
   private:
     std::atomic_bool active{true};
     std::size_t nextId = 0;
     std::unordered_map<std::size_t, std::function<void()>> callbacks;
+    std::unordered_map<std::size_t, std::shared_ptr<TransitionCallbacks>> transitions;
 };
 } // namespace
 
@@ -391,6 +446,9 @@ void register_python_binding_type_metadata() {
 }
 
 void init_game_module(py::module_ &m) {
+    auto pythonEventCallbacks = std::make_shared<CPythonEventCallbacks>();
+    py::module_::import("atexit").attr("register")(
+        py::cpp_function([pythonEventCallbacks]() { pythonEventCallbacks->shutdown(); }));
     CPlaytestTrace::configureFromEnvironment();
     register_python_binding_type_metadata();
 
@@ -533,6 +591,14 @@ void init_game_module(py::module_ &m) {
         m, "CGame", "Top-level game container holding the active map, handlers, and GUI.")
         .def("getMap", &CGame::getMap, "Return the currently loaded map.")
         .def("changeMap", &CGame::changeMap, "Load and switch to another map.")
+        .def(
+            "changeMapWithPreparation",
+            [pythonEventCallbacks](const std::shared_ptr<CGame> &game, std::string mapName,
+                                   std::function<void()> beforeEntry, std::function<void(bool)> completion) {
+                return pythonEventCallbacks->requestTransition(game, std::move(mapName), std::move(beforeEntry),
+                                                               std::move(completion));
+            },
+            "Queue a transition, preparing the player after loading and before entry; report success or failure.")
         .def("requestMapTransition", &CGame::requestMapTransition,
              "Queue an explicit map transition request (opt-in persistent map sessions).")
         .def("loadPlugin", &CGame::loadPlugin, "Load a plugin object into the game.")
@@ -1202,9 +1268,6 @@ void init_game_module(py::module_ &m) {
     cplugin.def(py::init_alias<>()).def("load", &CPlugin::load, "Load plugin content through a registrar.");
     m.attr("CPluginBase") = cplugin;
 
-    auto pythonEventCallbacks = std::make_shared<CPythonEventCallbacks>();
-    py::module_::import("atexit").attr("register")(
-        py::cpp_function([pythonEventCallbacks]() { pythonEventCallbacks->shutdown(); }));
     py::class_<vstd::event_loop<>, std::shared_ptr<vstd::event_loop<>>>(m, "event_loop",
                                                                         "Global async event loop utility.")
         .def_static("instance", &CRuntimeBridge::event_loop_instance, "Return the singleton event loop instance.")

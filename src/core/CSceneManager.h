@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <memory>
+#include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 
@@ -49,6 +51,10 @@ struct CMapTransitionRequest {
     // Copy the source map turn onto the destination (legacy behavior). Persistent sessions can keep
     // their own turn counter by disabling this.
     bool carryTurn = true;
+    // Transaction hooks for callers that must prepare the carried player before destination
+    // entry events. Loading/rejection never calls preparation; completion reports every exit.
+    std::function<void()> beforePlayerEntry;
+    std::function<void(bool)> onFinished;
 };
 
 class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
@@ -78,4 +84,5 @@ class CSceneManager : public std::enable_shared_from_this<CSceneManager> {
 
     TransitionState transitionState = TransitionState::Idle;
     std::string pendingMapName;
+    std::uint64_t pendingGeneration = 0;
 };

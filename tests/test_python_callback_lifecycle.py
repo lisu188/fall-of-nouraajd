@@ -150,6 +150,97 @@ class PythonCallbackLifecycleTest(unittest.TestCase):
             """)
         self.assertIn("shutdown canceled pending callbacks", output)
 
+    def testPendingTransitionCapturesReleaseBeforePythonFinalizes(self):
+        output = self.runChild("""
+            instance = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
+            class Payload:
+                def __del__(self):
+                    print('transition released', sys.is_finalizing(), flush=True)
+            payload = Payload()
+            assert instance.changeMapWithPreparation(
+                'ritual', lambda captured=payload: print('unexpected preparation', flush=True),
+                lambda success, captured=payload: print('unexpected completion', flush=True))
+            del payload
+            print('transition queued', flush=True)
+            """)
+        self.assertIn("transition queued", output)
+        self.assertIn("transition released False", output)
+        self.assertNotIn("unexpected preparation", output)
+        self.assertNotIn("unexpected completion", output)
+
+    def testCompletedRejectedAndFailedTransitionCapturesRelease(self):
+        output = self.runChild("""
+            import gc
+            import weakref
+            instance = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
+            source = instance.getMap()
+            events = []
+            references = []
+            class Callback:
+                def __init__(self, label):
+                    self.label = label
+                    references.append(weakref.ref(self))
+                def __call__(self, *args):
+                    events.append((self.label, *args))
+            assert instance.changeMapWithPreparation('missingPreparedMap', Callback('prepareMissing'),
+                                                     Callback('missing'))
+            assert not instance.changeMapWithPreparation('ritual', Callback('prepareRejected'),
+                                                         Callback('rejected'))
+            for index in range(10):
+                loop.run()
+            gc.collect()
+            assert events == [('rejected', False), ('missing', False)], events
+            assert instance.getMap() == source
+            assert all(reference() is None for reference in references)
+            assert instance.changeMapWithPreparation('ritual', Callback('prepare'), Callback('completed'))
+            for index in range(10):
+                loop.run()
+            gc.collect()
+            assert events[-2:] == [('prepare',), ('completed', True)], events
+            assert instance.getMap().getMapName() == 'ritual'
+            assert all(reference() is None for reference in references)
+            print('transition captures released', flush=True)
+            """)
+        self.assertIn("transition captures released", output)
+
+    def testContextShutdownCancelsTransitionWithoutPreparing(self):
+        output = self.runChild("""
+            instance = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
+            events = []
+            assert instance.changeMapWithPreparation('ritual', lambda: events.append('unexpected preparation'),
+                                                     lambda success: events.append(('completed', success)))
+            instance.getContext().shutdown()
+            for index in range(10):
+                loop.run()
+            assert events == [('completed', False)], events
+            assert instance.getMap() is None
+            print('transition canceled on shutdown', flush=True)
+            """)
+        self.assertIn("transition canceled on shutdown", output)
+
+    def testShutdownDuringPreparationDoesNotAttachDestination(self):
+        output = self.runChild("""
+            instance = game.CGameLoader.loadGame()
+            game.CGameLoader.startGameWithPlayer(instance, 'test', 'Warrior')
+            source = instance.getMap()
+            events = []
+            def prepare():
+                assert instance.getMap() == source
+                events.append('prepared')
+                instance.getContext().shutdown()
+            assert instance.changeMapWithPreparation('ritual', prepare,
+                                                     lambda success: events.append(('completed', success)))
+            for index in range(10):
+                loop.run()
+            assert events == ['prepared', ('completed', False)], events
+            assert instance.getMap() is None
+            print('preparation shutdown preserved', flush=True)
+            """)
+        self.assertIn("preparation shutdown preserved", output)
+
 
 if __name__ == "__main__":
     unittest.main()

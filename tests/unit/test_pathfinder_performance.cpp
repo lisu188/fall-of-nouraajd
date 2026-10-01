@@ -763,6 +763,60 @@ void testMovementCostPathStaysWithinWorkBound() {
                 "perf-bound stays below global node cap metric=1 baseline=1 threshold=1");
 }
 
+void testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork() {
+    constexpr int width = 96;
+    const Coords start(0, 0, 0);
+    const Coords goal(width - 1, 0, 0);
+    for (const int edge_state : {0, 1, 2}) {
+        const bool enabled = edge_state == 2;
+        auto game = std::make_shared<CGame>();
+        auto map = std::make_shared<CMap>();
+        game->setMap(map);
+        map->setGame(game);
+        map->setXBounds({{0, width - 1}});
+        map->setYBounds({{0, 1}});
+        for (int x = 0; x < width; ++x)
+            map->addTile(makeWeightedTile(game, 1), x, 0, 0);
+        map->addTile(makeWeightedTile(game, 1), 0, 1, 0);
+        if (edge_state != 0)
+            map->registerNavigationEdge({Coords(0, 1, 0), Coords(width - 2, 0, 0), enabled});
+        const auto heuristic = CPathFinder::mapHeuristic(map);
+        expectMetricEquals("map heuristic lower bound", static_cast<long long>(heuristic(start, goal)),
+                           enabled ? 0 : width - 1);
+        CallbackCounters counters;
+        auto can_step = [&counters, map](const Coords &coords) {
+            ++counters.canStep;
+            return map->canStep(coords);
+        };
+        auto waypoint = [&counters](const Coords &coords) { return noWaypoint(counters, coords); };
+        auto neighbors = [&counters, map](const Coords &coords) {
+            ++counters.neighbors;
+            return map->getNavigationNeighbors(coords);
+        };
+        auto distance = [&counters, &heuristic](const Coords &from, const Coords &to) {
+            ++counters.distance;
+            return heuristic(from, to);
+        };
+        auto step_cost = [&counters, map](const Coords &, const Coords &to) {
+            ++counters.stepCost;
+            return map->lookupMovementCost(to);
+        };
+        const auto path = CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, distance, step_cost);
+        const std::string label = enabled ? "portal-map" : edge_state == 0 ? "ordinary-map" : "disabled-portal-map";
+        const int expected_steps = enabled ? 3 : width - 1;
+        expectMetricEquals(label + " path length", static_cast<long long>(path.size()), expected_steps);
+        expect_true(!path.empty() && path.front() == (enabled ? Coords(0, 1, 0) : Coords(1, 0, 0)),
+                    "map heuristic must choose the cheapest first step");
+        expect_true(!path.empty() && path.back() == goal, "map heuristic must reach the goal");
+        const int expansion_bound = enabled ? 8 : width;
+        expectMetricAtMost(label + " neighbor calls", counters.neighbors, expected_steps, expansion_bound);
+        expectMetricAtMost(label + " waypoint calls", counters.waypoint, expected_steps, expansion_bound);
+        expectMetricAtMost(label + " canStep calls", counters.canStep, expected_steps * 3, expansion_bound * 4);
+        expectMetricAtMost(label + " stepCost calls", counters.stepCost, expected_steps * 3, expansion_bound * 4);
+        expectMetricAtMost(label + " distance calls", counters.distance, expected_steps * 3, expansion_bound * 4);
+    }
+}
+
 } // namespace
 
 void run_pathfinder_performance_tests() {
@@ -780,4 +834,5 @@ void run_pathfinder_performance_tests() {
     testMapMovementCostLookupDoesNotMaterializeSparseDefaultTiles();
     testMapMovementCostRegressionPinsTileWeightsAndRouting();
     testMovementCostPathStaysWithinWorkBound();
+    testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork();
 }

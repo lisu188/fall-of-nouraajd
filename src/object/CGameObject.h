@@ -36,6 +36,7 @@ class CAnimation;
 
 class CGameObject : public vstd::stringable, public std::enable_shared_from_this<CGameObject> {
     friend class CMap;
+    friend class CSceneManager;
 
     V_META(CGameObject, vstd::meta::empty, V_PROPERTY(CGameObject, std::string, name, getName, setName),
            V_PROPERTY(CGameObject, std::string, type, getType, setType),

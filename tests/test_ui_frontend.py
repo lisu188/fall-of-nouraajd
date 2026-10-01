@@ -142,6 +142,9 @@ class FakeGame:
 
 
 class FrontendChoiceTest(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(ui.campaign, "hasPendingTransition", return_value=False))
+
     def testChoicePreservesOrderAndDuplicateLabels(self):
         game = FakeGame(["second"])
         rows = [{"id": "second", "label": "Same"}, {"id": "first", "label": "Same"}]
@@ -386,11 +389,55 @@ class FrontendChoiceTest(unittest.TestCase):
         self.assertEqual([], game.gui.notifications)
         self.assertTrue(game.context.active)
 
+    def testMenusOfferAndExecuteOnlyExplicitPendingChapterRetry(self):
+        for menu in (ui.mainMenu, ui.pause):
+            with self.subTest(menu=menu.__name__):
+                game = FakeGame(["retryChapter"], current=object())
+                with (
+                    patch.object(ui.campaign, "hasPendingTransition", return_value=True),
+                    patch.object(ui.campaign, "retryPending", return_value=True) as retry,
+                ):
+                    menu(game)
+                retry.assert_called_once_with(game)
+                row = next(row for row in game.handler.screens[0][1] if row["id"] == "retryChapter")
+                self.assertEqual("Retry chapter transition", row["label"])
+                self.assertIn("already claimed", row["detail"])
+                self.assertTrue(game.context.active)
+
+    def testRejectedChapterRetryKeepsMenuAvailableWithoutRepeatingAutomatically(self):
+        for menu, resume in ((ui.mainMenu, "continue"), (ui.pause, "resume")):
+            with self.subTest(menu=menu.__name__):
+                game = FakeGame(["retryChapter", resume], current=object())
+                with (
+                    patch.object(ui.campaign, "hasPendingTransition", return_value=True),
+                    patch.object(ui.campaign, "retryPending", return_value=False) as retry,
+                ):
+                    menu(game)
+                retry.assert_called_once_with(game)
+                self.assertEqual(2, len(game.handler.screens))
+                self.assertTrue(
+                    all(any(row["id"] == "retryChapter" for row in screen[1]) for screen in game.handler.screens)
+                )
+
+    def testChapterRetryExceptionShowsErrorAndAllowsResuming(self):
+        for menu, resume in ((ui.mainMenu, "continue"), (ui.pause, "resume")):
+            with self.subTest(menu=menu.__name__):
+                game = FakeGame(["retryChapter", resume], current=object())
+                with (
+                    patch.object(ui.campaign, "hasPendingTransition", return_value=True),
+                    patch.object(ui.campaign, "retryPending", side_effect=ValueError("Changed manifest")) as retry,
+                ):
+                    menu(game)
+                retry.assert_called_once_with(game)
+                self.assertIn("could not be retried", game.handler.errors[0])
+                self.assertTrue(game.context.active)
+
 
 class FrontendSaveTest(unittest.TestCase):
     def setUp(self):
         ui.SAVE_PREVIEW_CACHE.clear()
         ui.SESSION_SAVE_STATUS.clear()
+        self.enterContext(patch.object(ui.campaign, "hasPendingTransition", return_value=False))
 
     def testSuccessfulSaveTimestampIsShownInPauseAndRetainedAfterFailure(self):
         game = FakeGame(["resume"], current=object())
@@ -554,6 +601,48 @@ class FrontendSaveTest(unittest.TestCase):
             self.assertFalse(ui.saveMenu(game))
         save.assert_not_called()
 
+    def testCaseAliasedSaveRequiresConfirmationAndKeepsExistingSlotName(self):
+        for suffix in (".json", ".json.bak"):
+            with self.subTest(suffix=suffix), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "save").mkdir()
+                existing = root / "save" / ("Journey" + suffix)
+                existing.write_text("{}", encoding="utf-8")
+                game = FakeGame(["newSave"], current=object())
+                game.provider = FakeProvider(root, saves=["Journey"])
+                game.handler.input_value = "journey"
+                original_get_path = game.provider.getPath
+                # The native provider resolves these spellings to the same file on Windows.
+                game.provider.getPath = lambda name: (
+                    str(existing) if name == "save/journey" + suffix else original_get_path(name)
+                )
+                game.handler.answer = False
+                with patch.object(ui, "saveGame") as save:
+                    self.assertFalse(ui.saveMenu(game))
+                save.assert_not_called()
+                self.assertEqual(1, len(game.handler.confirmations))
+
+                game.handler.selections = ["newSave"]
+                game.handler.answer = True
+                with patch.object(ui, "saveGame", return_value=True) as save:
+                    self.assertTrue(ui.saveMenu(game))
+                save.assert_called_once_with(game, "Journey")
+
+    def testDistinctCaseSaveFilesRemainIndependent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "save").mkdir()
+            (root / "save" / "Journey.json").write_text("{}", encoding="utf-8")
+            if (root / "save" / "journey.json").exists():
+                self.skipTest("A case-sensitive filesystem is required for distinct-case save slots.")
+            game = FakeGame(["newSave"], current=object())
+            game.provider = FakeProvider(root, saves=["Journey"])
+            game.handler.input_value = "journey"
+            with patch.object(ui, "saveGame", return_value=True) as save:
+                self.assertTrue(ui.saveMenu(game))
+            save.assert_called_once_with(game, "journey")
+            self.assertEqual([], game.handler.confirmations)
+
     def testSaveNameValidationRejectsPathTraversal(self):
         for name in ("../escape", "save/elsewhere", ".hidden", "double..dot", "", " " * 10, "a" * 81):
             with self.subTest(name=name):
@@ -648,6 +737,9 @@ class FrontendPreferencesTest(unittest.TestCase):
 
 
 class FrontendSafetyDetailsTest(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(ui.campaign, "hasPendingTransition", return_value=False))
+
     def testCampaignPreviewUsesCampaignOrOpeningChapterArtwork(self):
         for campaign_art, chapter_art, expected in (
             ("images/campaign.png", "images/chapter.png", "images/campaign.png"),

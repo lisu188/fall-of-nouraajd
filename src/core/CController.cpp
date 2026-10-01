@@ -411,7 +411,7 @@ std::shared_ptr<vstd::future<Coords, void>> CNpcRandomController::control(std::s
                     creature->getCoords(), candidate, [map](const Coords &c) { return map->canStep(c); },
                     [](auto) -> std::optional<Coords> { return std::nullopt; },
                     [map](const Coords &coords) { return map->getNavigationNeighbors(coords); },
-                    [map](const Coords &from, const Coords &to) { return map->getDistance(from, to); },
+                    CPathFinder::mapHeuristic(map),
                     [map](const Coords &from, const Coords &to) { return movement_step_cost(map, from, to); });
                 self->currentStep = 0;
                 break;
@@ -825,12 +825,12 @@ bool CPlayerController::hasPendingPath(std::shared_ptr<CPlayer> player) {
 bool CPlayerController::canContinue(std::shared_ptr<CPlayer> player) { return hasPendingPath(player); }
 
 std::vector<Coords> CPlayerController::calculatePath(std::shared_ptr<CPlayer> player) {
+    const auto map = player->getMap();
     return CPathFinder::findPath(
-        player->getCoords(), *target, [player](Coords coords) { return player->getMap()->canStep(coords); },
+        player->getCoords(), *target, [map](Coords coords) { return map->canStep(coords); },
         [](auto) -> std::optional<Coords> { return std::nullopt; },
-        [player](const Coords &coords) { return player->getMap()->getNavigationNeighbors(coords); },
-        [player](const Coords &from, const Coords &to) { return player->getMap()->getDistance(from, to); },
-        [player](const Coords &from, const Coords &to) { return movement_step_cost(player->getMap(), from, to); });
+        [map](const Coords &coords) { return map->getNavigationNeighbors(coords); }, CPathFinder::mapHeuristic(map),
+        [map](const Coords &from, const Coords &to) { return movement_step_cost(map, from, to); });
 }
 
 bool CFightController::control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) {
