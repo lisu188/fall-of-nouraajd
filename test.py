@@ -130,6 +130,8 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "EffectContractTest.",
+    "CharacterCreationFlowTest.",
     "CoverageReportTest.",
     "PlayBootstrapTest.",
     "QuestStateHelperTest.",
@@ -156,6 +158,8 @@ FAST_TEST_NAMES = {
 }
 GAMEPLAY_TEST_PREFIXES = (
     "EnemyRoleRuntimeTest.",
+    "EffectSemanticRuntimeTest.",
+    "CharacterPreviewRuntimeTest.",
     "PaidActionRuntimeTest.",
     "ConsoleEventIsolationTest.",
     "ConsoleEventProcessTest.",
@@ -1706,6 +1710,7 @@ PANEL_LAYOUT_CASES = {
 COMBAT_STALE_LOOP_TIMEOUT_SECONDS = 5.0 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 2.0
 XVFB_GAMEPLAY_CHILD_TIMEOUT = 300 if os.environ.get("GAME_COVERAGE_RUN") == "1" else 90
 XVFB_GAMEPLAY_CHILD_TESTS = (
+    "test_character_creation_all_twenty_compositions",
     "test_campaign_browser_layout_selection_and_cancel",
     "test_campaign_panel_layout_blocking_and_resize",
     "test_keyboard_input_moves_player",
@@ -1775,6 +1780,7 @@ XVFB_BATCHABLE_CHILD_TESTS = {
     "test_all_panel_root_layout_contracts",
 }
 XVFB_GAMEPLAY_CHILD_DURATION_HINTS = {
+    "test_character_creation_all_twenty_compositions": 60,
     "test_full_nouraajd_quest_walkthrough_ui": 90,
     "test_choice_panel_layouts_and_hitboxes": 12,
     "test_inventory_loot_trade_list_layouts": 12,
@@ -2122,6 +2128,24 @@ def push_sdl_mouse_motion_event(x, y, xrel=0, yrel=0):
         raise AssertionError(f"SDL_PushEvent returned {pushed}.")
 
 
+def isolatedGameplaySdlWindow(sdl):
+    """Find a window in this process, only inside the verified Xvfb gameplay child."""
+    import ctypes
+
+    if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1" or os.environ.get("SDL_VIDEODRIVER") != "x11":
+        return None
+    sdl.SDL_GetCurrentVideoDriver.restype = ctypes.c_char_p
+    if sdl.SDL_GetCurrentVideoDriver() != b"x11":
+        return None
+    sdl.SDL_GetWindowFromID.argtypes = [ctypes.c_uint32]
+    sdl.SDL_GetWindowFromID.restype = ctypes.c_void_p
+    for window_id in range(1, 256):
+        window = sdl.SDL_GetWindowFromID(window_id)
+        if window:
+            return window
+    return None
+
+
 def push_sdl_window_size_changed_event(width, height):
     if isOffscreenGameplayChild():
         raise unittest.SkipTest("This resize injection requires window focus; SDL dummy/offscreen cannot provide it.")
@@ -2148,7 +2172,7 @@ def push_sdl_window_size_changed_event(width, height):
         ]
 
     sdl = load_sdl_library()
-    focused_window = focused_sdl_window()
+    focused_window = focused_sdl_window() or isolatedGameplaySdlWindow(sdl)
     if not focused_window:
         raise AssertionError("Expected a focused SDL window for resize event injection.")
 
@@ -21899,6 +21923,11 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1" and not isOffscreenGameplayChild():
             self.skipTest("Run through isolated Xvfb, or explicitly enable Windows dummy/software GUI validation.")
 
+    def test_character_creation_all_twenty_compositions(self):
+        from tests.test_character_creation_acceptance import exerciseCharacterChooser
+
+        exerciseCharacterChooser(self)
+
     def test_keyboard_input_moves_player(self):
         _, g, game_map, player = create_xvfb_gameplay_session(self)
         initial = player.getCoords()
@@ -24806,6 +24835,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
         if not SOURCE_UI_TESTS_AVAILABLE:
             self.skipTest("Source-only UI tests are not installed with the game")
         for test_class in (
+            EffectSemanticRuntimeTest,
+            CharacterPreviewRuntimeTest,
             PaidActionRuntimeTest,
             DialogueMcpWalkthroughTest,
             ManagementMcpWalkthroughTest,
@@ -24827,6 +24858,8 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 self.assertFalse(test_name_matches_suite(test_name, "fast"))
         self.assertNotIn("_DialogueMcpWalkthroughTest", globals())
         self.assertNotIn("_PaidActionRuntimeTest", globals())
+        self.assertNotIn("_EffectSemanticRuntimeTest", globals())
+        self.assertNotIn("_CharacterPreviewRuntimeTest", globals())
         self.assertNotIn("_ManagementMcpWalkthroughTest", globals())
         self.assertNotIn("_NavigationMcpWalkthroughTest", globals())
         self.assertNotIn("_NavigationCallbackTest", globals())
@@ -24847,6 +24880,21 @@ class TestRunnerSuiteTest(unittest.TestCase):
             for suite_name in ("fast", "full", "coverage-safe"):
                 self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
         self.assertNotIn("_UiPixelAnalysisTest", globals())
+
+    def testEffectAndCharacterContractsAreDiscoveredOnceInSourceSuites(self):
+        if not SOURCE_UI_TESTS_AVAILABLE:
+            self.skipTest("Source-only UI tests are not installed with the game")
+        for test_class in (EffectContractTest, CharacterCreationFlowTest):
+            names = unittest.defaultTestLoader.getTestCaseNames(test_class)
+            self.assertTrue(names)
+            for method in names:
+                test_name = f"{test_class.__name__}.{method}"
+                self.assertEqual(f"{__name__}.{test_name}", test_class(method).id())
+                for suite_name in ("fast", "full", "coverage-safe"):
+                    self.assertTrue(test_name_matches_suite(test_name, suite_name), (test_name, suite_name))
+                self.assertFalse(test_name_matches_suite(test_name, "gameplay"))
+        self.assertNotIn("_EffectContractTest", globals())
+        self.assertNotIn("_CharacterCreationFlowTest", globals())
 
     def test_explicit_transition_wait_accepts_completed_slow_pump(self):
         from unittest.mock import Mock, patch
@@ -25206,6 +25254,10 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_navigation_mcp import NavigationMcpWalkthroughTest as _NavigationMcpWalkthroughTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
+    from tests.test_effect_semantics import EffectContractTest as _EffectContractTest
+    from tests.test_effect_semantics import EffectSemanticRuntimeTest as _EffectSemanticRuntimeTest
+    from tests.test_character_creation_acceptance import CharacterCreationFlowTest as _CharacterCreationFlowTest
+    from tests.test_character_creation_acceptance import CharacterPreviewRuntimeTest as _CharacterPreviewRuntimeTest
     from tests.test_paid_actions import PaidActionRuntimeTest as _PaidActionRuntimeTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
     from tests.test_ui_pixel_analysis import UiPixelAnalysisTest as _UiPixelAnalysisTest
@@ -25215,6 +25267,18 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
+        pass
+
+    class EffectContractTest(_EffectContractTest):
+        pass
+
+    class EffectSemanticRuntimeTest(_EffectSemanticRuntimeTest):
+        pass
+
+    class CharacterCreationFlowTest(_CharacterCreationFlowTest):
+        pass
+
+    class CharacterPreviewRuntimeTest(_CharacterPreviewRuntimeTest):
         pass
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
@@ -25249,6 +25313,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _PaidActionRuntimeTest
+    del _EffectContractTest, _EffectSemanticRuntimeTest, _CharacterCreationFlowTest, _CharacterPreviewRuntimeTest
     del _UiPixelAnalysisTest
     del _EnemyRoleRuntimeTest
     del _NavigationMcpWalkthroughTest

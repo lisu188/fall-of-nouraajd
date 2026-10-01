@@ -128,6 +128,7 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getPlayer",
         "getTile",
         "getTurn",
+        "lookupNavigationStepCost",
         "move",
         "removeObjectByName",
         "replaceTile",
