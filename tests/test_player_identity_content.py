@@ -269,6 +269,24 @@ class PlayerIdentityContentTest(unittest.TestCase):
                 self.assertEqual([False], nested_results)
                 self.assertEqual((30 + gold, 30 + hp, 30 + mana), (player.gold, player.hp, player.mana))
 
+    def test_claim_also_blocks_reentry_during_origin_persistence(self):
+        for race_id, suffix, gold, hp, mana in RACE_SERVICES:
+            with self.subTest(race_id=race_id):
+                player, dialog = self.createPlayer(race_id=race_id)
+                original_write = player.setStringProperty
+                nested_results = []
+
+                def reenterOrigin(key, value):
+                    self.assertTrue(player.getBoolProperty("nouraajdRaceServiceClaimed"))
+                    nested_results.append(getattr(dialog, "claim" + suffix)())
+                    original_write(key, value)
+
+                player.setStringProperty = reenterOrigin
+                self.assertTrue(getattr(dialog, "claim" + suffix)())
+                self.assertEqual([False], nested_results)
+                self.assertEqual(race_id, player.properties["nouraajdRaceServiceKind"])
+                self.assertEqual((30 + gold, 30 + hp, 30 + mana), (player.gold, player.hp, player.mana))
+
     def test_authored_options_resolve_to_methods_and_preserve_the_existing_roster_and_costs(self):
         config = json.loads((ROOT / "res/maps/nouraajd/dialog4.json").read_text())
         entry = config["townHallDialog"]["properties"]["states"][0]["properties"]

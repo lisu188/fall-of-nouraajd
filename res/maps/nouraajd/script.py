@@ -832,8 +832,8 @@ def load(self, context):
                     self.getGame(), "Irvin's aid", "You need no recovery now. The hall will hold your one-time aid."
                 )
                 return False
-            player.setStringProperty("nouraajdRaceServiceKind", race_id)
             player.setBoolProperty("nouraajdRaceServiceClaimed", True)
+            player.setStringProperty("nouraajdRaceServiceKind", race_id)
             player.addGold(20 if race_id == "humanRace" else -cost)
             if hp_gain:
                 player.heal(hp_gain)
