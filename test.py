@@ -226,6 +226,9 @@ SERIAL_TEST_NAMES = {
 # and size each shard's timeout to its own load.
 SERIAL_TEST_PREFIXES = ()
 DEFAULT_TEST_DURATIONS = {
+    # Windows 57e44f00 took 213.5s before failing on the approach. This rounded
+    # cold-cache hint is a lower bound until a completed route supplies timings.
+    "OctobogzMcpWalkthroughTest.testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce": 214.0,
     "McpServerTest.test_stdio_map_walkthrough_castleHomecoming": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_castleGuardianAngels": 70.0,
     "McpServerTest.test_stdio_map_walkthrough_castleGriffinCliff": 90.0,
@@ -25614,6 +25617,36 @@ class TestRunnerSuiteTest(unittest.TestCase):
                 1,
                 f"shard {group} bundles multiple huge-map walkthroughs",
             )
+
+    def testHuntColdCacheHintStartsTheWalkthroughBeforeOtherLongTests(self):
+        hunt_name = (
+            "OctobogzMcpWalkthroughTest."
+            "testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"
+        )
+        long_walkthroughs = [
+            "McpServerTest.test_stdio_castle_campaign_full_route",
+            "McpServerTest.test_stdio_narrative_outcomes_complete_with_natural_objectives",
+            "McpServerTest.test_stdio_map_walkthrough_ninemarches",
+        ]
+        test_names = [*long_walkthroughs, hunt_name]
+        for test_name in long_walkthroughs:
+            self.assertEqual(200.0, test_duration_weight(test_name, {}))
+
+        underestimated_groups = shard_test_names(test_names, jobs=3, timings={hunt_name: 2.5})
+        self.assertEqual([long_walkthroughs[0], hunt_name], underestimated_groups[0])
+        cold_groups = shard_test_names(test_names, jobs=3)
+        self.assertEqual(hunt_name, cold_groups[0][0])
+        for groups in (underestimated_groups, cold_groups):
+            self.assertEqual(sorted(test_names), sorted(test_name for group in groups for test_name in group))
+
+        workload_weights = {test_name: test_duration_weight(test_name, {}) for test_name in test_names}
+        underestimated_work = max(
+            sum(workload_weights[test_name] for test_name in group) for group in underestimated_groups
+        )
+        cold_work = max(sum(workload_weights[test_name] for test_name in group) for group in cold_groups)
+        self.assertLess(cold_work, underestimated_work)
+
+        self.assertEqual(2.5, test_duration_weight(hunt_name, {hunt_name: 2.5}))
 
     def test_suite_commands_are_documented_and_used_by_automation(self):
         build_workflow = (REPO_ROOT / ".github" / "workflows" / "build.yml").read_text(encoding="utf-8")
