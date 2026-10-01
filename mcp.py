@@ -71,6 +71,7 @@ MCP_ALLOWED_EXPORTS = {
     "CGameLoader.startGameWithPlayer",
     "CGameLoader.startRandomGameWithPlayer",
     "CGameLoader.loadSavedGame",
+    "CMapLoader.saveWithResult",
     "event_loop.instance",
     "jsonify",
     "logger",
@@ -222,6 +223,9 @@ MCP_ALLOWED_HANDLE_METHODS = {
         "getSellCost",
         "remove",
         "sellItem",
+    },
+    "SpawnPoint": {
+        "sealBreach",
     },
     "event_loop": {
         "run",

@@ -84,6 +84,7 @@ def requirementMessage(game_instance, target, message):
 
 
 import campaign
+import narrative
 from quest_state import LegacyBoolFlag
 from quest_state import PlayerQuestRegistry
 from quest_state import QuestStateStore

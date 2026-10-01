@@ -35,6 +35,7 @@
                 "class": "CDialogOption",
                 "properties": {
                   "number": 2,
+                  "action": "threatenGate",
                   "nextStateId": "NOT_WELCOME",
                   "text": "Open up, or these gates become splinters beneath my boot."
                 }
@@ -113,7 +114,7 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "NOT_WELCOME",
-            "text": "Bold words. May the rats enjoy them.",
+            "text": "Bold words. The watch will remember them. The inn charges troublemakers five percent more for beer, and the gatehouse keeps 25 gold of their final bounty for repairs. Present Rolf's letter when you are ready to help.",
             "options": [
               {
                 "ref": "exitOption",

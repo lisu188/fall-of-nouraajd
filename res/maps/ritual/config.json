@@ -280,12 +280,22 @@
           "class": "CDialogState",
           "properties": {
             "stateId": "BAD_END",
-            "text": "Only an empty husk remains. The rite finished before you could intervene.",
+            "text": "Only an empty husk remains. The rite finished before you could intervene. Destroy every anchor and defeat the leader; then carry this loss to the gatehouse as a warning.",
             "options": [
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 0,
+                  "condition": "canContinueAfterLoss",
+                  "action": "continueAfterLoss",
+                  "nextStateId": "EXIT",
+                  "text": "Carry this warning to the gatehouse."
+                }
+              },
               {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 0
+                  "number": 1
                 }
               }
             ]
