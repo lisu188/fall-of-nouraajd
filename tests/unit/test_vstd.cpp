@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "vfunctional.h"
 #include "vutil.h"
 
+#include <array>
 #include <list>
 #include <memory>
 #include <queue>
@@ -241,6 +242,29 @@ void test_vstd_string_helpers() {
     expect_true(vstd::camel("hello world") == "Hello World ", "camel should title-case space-separated words");
 }
 
+void testInclusiveIntegerRandomSampling() {
+    const auto saved_rng = vstd::rng();
+    vstd::rng().seed(401);
+    std::array<int, 4> counts{};
+    for (int sample = 0; sample < 64000; ++sample) {
+        const int value = vstd::rand(0, 3);
+        expect_true(value >= 0 && value <= 3, "integer samples must stay within both inclusive bounds");
+        if (value >= 0 && value <= 3) {
+            ++counts[static_cast<std::size_t>(value)];
+        }
+    }
+    for (int count : counts) {
+        expect_true(count >= 12800 && count <= 19200,
+                    "integer interval endpoints must be as likely as interior values");
+    }
+    expect_true(vstd::rand(-7, -7) == -7, "negative singleton bounds must return the bound");
+    const auto before_reversed = vstd::rng();
+    const int ordered = vstd::rand(-8, 3);
+    vstd::rng() = before_reversed;
+    expect_true(vstd::rand(3, -8) == ordered, "reversed integer bounds must normalize to the same interval");
+    vstd::rng() = saved_rng;
+}
+
 struct MetaIntegrationObject : CGameObject {
     V_META_NAMED(MetaIntegrationObject, CGameObject, "tests::MetaIntegrationObject",
                  V_PROPERTY(MetaIntegrationObject, std::string, probeText, getProbeText, setProbeText),
@@ -316,6 +340,7 @@ int main() {
     test_vstd_container_and_pointer_helpers();
     test_vstd_queue_collection_and_function_helpers();
     test_vstd_allocation_random_and_value_helpers();
+    testInclusiveIntegerRandomSampling();
     test_vstd_string_helpers();
     test_vmeta_game_object_integration();
     test_vmeta_explicit_pair_hashers();
