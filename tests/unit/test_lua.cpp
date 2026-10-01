@@ -455,6 +455,36 @@ end
     game->getLuaHandler()->releaseState();
 }
 
+void testLuaInclusiveIntegerRandomSampling() {
+    const auto saved_rng = vstd::rng();
+    vstd::rng().seed(401);
+    auto game = std::make_shared<CGame>();
+    const char *plugin = R"lua(
+function load(context)
+    assert(randint(-7, -7) == -7)
+    local counts = {0, 0, 0, 0}
+    for sample = 1, 64000 do
+        local value = randint(0, 3)
+        assert(value >= 0 and value <= 3)
+        counts[value + 1] = counts[value + 1] + 1
+    end
+    for _, count in ipairs(counts) do
+        assert(count >= 12800 and count <= 19200)
+    end
+    for sample = 1, 100 do
+        local value = randint(3, -8)
+        assert(value >= -8 and value <= 3)
+    end
+    context.game.randomContractPassed = true
+end
+)lua";
+    expect_true(game->getLuaHandler()->loadPlugin(game, "plugins/random_contract.lua", plugin),
+                "Lua randint must sample inclusive uniform intervals and normalize reversed bounds");
+    expect_true(game->getBoolProperty("randomContractPassed"), "the Lua random contract must finish its assertions");
+    game->getLuaHandler()->releaseState();
+    vstd::rng() = saved_rng;
+}
+
 void testLuaInvalidApiCallsDoNotMutateObjectsOrPoisonTheState() {
     auto game = std::make_shared<CGame>();
     register_base_game_object_factory(game);
@@ -641,6 +671,7 @@ int main() {
     test_lua_trusted_path_gate();
     testLuaDispatchesEverySupportedHookAndReleasesObjects();
     testLuaCuratedObjectApiPreservesValuesAndIdentity();
+    testLuaInclusiveIntegerRandomSampling();
     testLuaInvalidApiCallsDoNotMutateObjectsOrPoisonTheState();
     testLuaMissingAndFailedHooksUseDocumentedFallbacks();
     testLuaRegistrationErrorsAndSandboxIsolation();

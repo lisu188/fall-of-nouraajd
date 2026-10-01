@@ -5524,6 +5524,21 @@ def run_walkthrough(map_name, fn):
 
 class GameTest(unittest.TestCase):
     @game_test
+    def test_randint_inclusive_integer_contract(self):
+        game = load_game_module()
+        self.assertIn("both bounds inclusive", game.randint.__doc__)
+        self.assertIn("Reversed bounds are normalized", game.randint.__doc__)
+        self.assertEqual(-7, game.randint(-7, -7))
+        self.assertEqual(7, game.randint(7, 7))
+        for lower, upper in ((-12, -3), (-2, 3), (3, -2), (-(2**31), 2**31 - 1)):
+            for _ in range(100):
+                value = game.randint(lower, upper)
+                self.assertIs(type(value), int)
+                self.assertLessEqual(min(lower, upper), value)
+                self.assertLessEqual(value, max(lower, upper))
+        return True, "Python randint shares the inclusive normalized native integer contract"
+
+    @game_test
     def test_invalid_inputs(self):
         game = load_game_module()
 

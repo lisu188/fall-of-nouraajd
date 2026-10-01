@@ -42,6 +42,15 @@ duplicate ids, unknown scope maps, missing plugin files) and cross-checks that
 the native gameplay entry actually loads every class row of
 `src/plugin/CGameplayTypeTable.h`.
 
+### Script random integers
+
+Python and Lua plugins share `randint(lower, upper)`: it samples a uniform integer
+with both bounds included. Reversed bounds are normalized, so `randint(3, -2)`
+uses the same interval as `randint(-2, 3)`; equal bounds return that value.
+Bounds must fit the engine's signed 32-bit integer API. For a one-in-ten chance,
+`randint(1, 10) == 10` gives the endpoint the same probability as every other result.
+The integer sampler uses the vstd pin from [upstream PR #29](https://github.com/lisu188/vstd/pull/29).
+
 ## Map assets (`map.json` → `assets`)
 
 Each map lives in `res/maps/<name>/` and is described by a Tiled-style
