@@ -25155,7 +25155,6 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
-    from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
@@ -25163,6 +25162,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_ui_presentation import ArtifactPreviewTest as _ArtifactPreviewTest
     from tests.test_ui_console_interactions import ConsoleUiInteractionTest as _ConsoleUiInteractionTest
     from tests.test_ui_minimap_interactions import UiMinimapInteractionTest as _UiMinimapInteractionTest
+    from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
 
     class DialogueMcpWalkthroughTest(_DialogueMcpWalkthroughTest):
         pass
