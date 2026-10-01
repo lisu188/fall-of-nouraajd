@@ -21,9 +21,10 @@
       "map": "ritual",
       "title": "Chapter II - The Ritual",
       "briefing": "An abandoned chapel pulses with a soul-binding rite. Break the three anchors before the final verse completes, defeat the ritual leader, and decide the fate of the captive soul held in the stained glass.",
-      "epilogue": "The rescued captive walks beside you out of the chapel, pointing past the marsh to a gatehouse under siege. The cult's remnants have somewhere left to run - and something left to burn.",
+      "epilogue": "The chapel's rite is broken. You carry its warning past the marsh to a gatehouse under siege. The cult's remnants have somewhere left to run - and something left to burn.",
       "next": {
-        "good_ending": "siege"
+        "good_ending": "siege",
+        "bad_ending": "siege"
       },
       "artwork": "images/buildings/chapel.png"
     },
