@@ -41,6 +41,10 @@ int boundedWidth(int width) { return std::clamp(width, 0, MAX_TEXT_WRAP_WIDTH); 
 } // namespace
 
 SDL_Texture *CTextManager::getTexture(const std::string &text, int width, const std::string &role, SDL_Color color) {
+    if (_gui.expired()) {
+        _textures.clear();
+        return nullptr;
+    }
     if (auto gui = _gui.lock(); gui && gui->isHighContrast())
         color = {255, 255, 255, 255};
     const auto normalizedRole =
@@ -53,8 +57,9 @@ SDL_Texture *CTextManager::getTexture(const std::string &text, int width, const 
         if (_textures.size() >= MAX_TEXT_TEXTURES) {
             _textures.clear();
         }
+        auto loaded = loadTexture(std::get<0>(key), std::get<1>(key), normalizedRole, size, color);
         auto [inserted, _] =
-            _textures.emplace(key, loadTexture(std::get<0>(key), std::get<1>(key), normalizedRole, size, color));
+            _textures.emplace(key, fn::sdl::GuiTexturePtr(loaded.release(), fn::sdl::GuiTextureDeleter{_gui}));
         return inserted->second.get();
     }
     return texture->second.get();

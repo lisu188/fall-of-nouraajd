@@ -88,10 +88,16 @@ void putpixel(SDL_Surface *surface, int x, int y, Uint32 pixel) {
 }
 
 SDL_Texture *CTextureCache::getTexture(std::string path) {
+    if (_gui.expired()) {
+        _textures.clear();
+        return nullptr;
+    }
     if (vstd::ends_with(path, ".png")) {
         auto anim = _textures.find(path);
         if (anim == _textures.end()) {
-            auto [inserted, _] = _textures.emplace(path, this->loadTexture(path));
+            auto texture = loadTexture(path);
+            auto [inserted, _] =
+                _textures.emplace(path, fn::sdl::GuiTexturePtr(texture.release(), fn::sdl::GuiTextureDeleter{_gui}));
             return inserted->second.get();
         }
         return anim->second.get();

@@ -405,9 +405,10 @@ void CMinimapGraphicsObject::renderObject(std::shared_ptr<CGui> gui, std::shared
     }
     const auto scale = make_scale(rect, *maybeBounds);
     const auto signature = terrain_signature(map, playerCoords.z, *maybeBounds, rect->w, rect->h);
-    if (!terrainTexture || terrainRenderer != renderer || terrainSignature != signature) {
-        terrainTexture = build_terrain_texture(renderer, map, playerCoords.z, rect, *maybeBounds);
-        terrainRenderer = renderer;
+    if (!terrainTexture || terrainTexture.get_deleter().owner.lock() != gui || terrainSignature != signature) {
+        auto texture = build_terrain_texture(renderer, map, playerCoords.z, rect, *maybeBounds);
+        terrainTexture = fn::sdl::GuiTexturePtr(texture.release(), fn::sdl::GuiTextureDeleter{gui});
+        ++terrainTextureBuildCount;
         terrainSignature = signature;
     }
     if (terrainTexture) {

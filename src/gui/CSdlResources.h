@@ -19,6 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CGlobal.h"
 
+class CGui;
+
 namespace fn::sdl {
 struct SurfaceDeleter {
     void operator()(SDL_Surface *surface) const noexcept {
@@ -32,6 +34,17 @@ struct TextureDeleter {
     void operator()(SDL_Texture *texture) const noexcept {
         if (texture) {
             SDL_DestroyTexture(texture);
+        }
+    }
+};
+
+struct GuiTextureDeleter {
+    std::weak_ptr<CGui> owner;
+
+    void operator()(SDL_Texture *texture) const noexcept {
+        // SDL_DestroyRenderer already frees its textures. A detached cache/widget can outlive its GUI.
+        if (auto gui = owner.lock()) {
+            TextureDeleter{}(texture);
         }
     }
 };
@@ -62,6 +75,7 @@ struct FontDeleter {
 
 using SurfacePtr = std::unique_ptr<SDL_Surface, SurfaceDeleter>;
 using TexturePtr = std::unique_ptr<SDL_Texture, TextureDeleter>;
+using GuiTexturePtr = std::unique_ptr<SDL_Texture, GuiTextureDeleter>;
 using RendererPtr = std::unique_ptr<SDL_Renderer, RendererDeleter>;
 using WindowPtr = std::unique_ptr<SDL_Window, WindowDeleter>;
 using FontPtr = std::unique_ptr<TTF_Font, FontDeleter>;
