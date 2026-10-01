@@ -54,7 +54,7 @@
       "label": "Barrier",
       "manaCost": 17,
       "selfTarget": true,
-      "description": "Increase your Physical resistance by 10 percentage points for 3 turns."
+      "description": "Increase your Physical resistance by 10 percentage points for 3 turns. After bracing Nouraajd's gate, Warriors recover 3 mana after each cast; the full 17 mana is still required."
     }
   },
   "BloodThirst": {
@@ -154,7 +154,7 @@
       "animation": "images/interactions/frostbolt",
       "label": "Frost Bolt",
       "manaCost": 20,
-      "description": "Make a standard attack, then deal additional frost damage based on your Intelligence."
+      "description": "Make a standard attack, then deal additional frost damage based on your Intelligence. After decoding Nouraajd's stained glass, Sorcerers recover 3 mana after each cast; the full 20 mana is still required."
     }
   },
   "LethalPoison": {
@@ -208,7 +208,7 @@
       "animation": "images/interactions/sneakattack",
       "label": "Sneak Attack",
       "manaCost": 15,
-      "description": "Make a standard attack, with a chance to attack again that increases with the enemy's remaining health."
+      "description": "Make a standard attack, with a chance to attack again that increases with the enemy's remaining health. After following Nouraajd's robed men, Assasins recover 3 mana after each cast; the full 15 mana is still required."
     }
   },
   "Strike": {

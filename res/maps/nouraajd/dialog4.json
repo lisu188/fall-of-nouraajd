@@ -76,9 +76,53 @@
                 }
               },
               {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 7,
+                  "condition": "canOfferHumanRation",
+                  "action": "claimHumanRation",
+                  "nextStateId": "EXIT",
+                  "text": "Ask Irvin to check your people's ration ledger: claim 20 gold once.",
+                  "actionLabel": "Human aid"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 8,
+                  "condition": "canOfferOutlanderRations",
+                  "action": "claimOutlanderRations",
+                  "nextStateId": "EXIT",
+                  "text": "Share an outlander's trail rations: 5 gold for up to 5 health and 5 mana, once.",
+                  "actionLabel": "Outlander aid"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 9,
+                  "condition": "canOfferHighlanderAid",
+                  "action": "claimHighlanderAid",
+                  "nextStateId": "EXIT",
+                  "text": "Ask after the highland shield bearers' medical chest: 5 gold for up to 10 health, once.",
+                  "actionLabel": "Highlander aid"
+                }
+              },
+              {
+                "class": "CDialogOption",
+                "properties": {
+                  "number": 10,
+                  "condition": "canOfferWandererFocus",
+                  "action": "claimWandererFocus",
+                  "nextStateId": "EXIT",
+                  "text": "Study the wanderers' star charts at a quiet desk: 5 gold for up to 10 mana, once.",
+                  "actionLabel": "Wanderer aid"
+                }
+              },
+              {
                 "ref": "exitOption",
                 "properties": {
-                  "number": 7
+                  "number": 11
                 }
               }
             ]

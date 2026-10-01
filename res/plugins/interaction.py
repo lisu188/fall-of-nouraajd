@@ -31,6 +31,15 @@ def load(self, context):
         affiliation = creature.getStringProperty("affiliation")
         return affiliation in {"cult", "marumi"} or "Cult" in creature.getType()
 
+    def committedManaRefund(caster, class_id, counter):
+        if not caster or not caster.isPlayer():
+            return 0
+        game = caster.getGame()
+        game_map = game.getMap() if game else None
+        if not game_map or game_map.getPlayer() != caster or caster.getMap() != game_map:
+            return 0
+        return 3 if caster.getPlayerClassId() == class_id and caster.getNumericProperty(counter) > 0 else 0
+
     @register(context)
     class Attack(CInteraction):
         def performAction(self, first, second):
@@ -73,6 +82,9 @@ def load(self, context):
 
     @register(context)
     class SneakAttack(Attack):
+        def getCommittedManaRefund(self, caster):
+            return committedManaRefund(caster, "Assasin", "assasin_trails")
+
         def performAction(self, first, second):
             super(SneakAttack, self).performAction(first, second)
             if randint(1, 100) > (100 - second.getHpRatio()) and second.isAlive():
@@ -109,6 +121,9 @@ def load(self, context):
 
     @register(context)
     class FrostBolt(CInteraction):
+        def getCommittedManaRefund(self, caster):
+            return committedManaRefund(caster, "Sorcerer", "sorcerer_sigils")
+
         def performAction(self, first, second):
             Attack().onAction(first, second)
             damage = spell_damage(first)
@@ -179,6 +194,9 @@ def load(self, context):
 
     @register(context)
     class Barrier(CInteraction):
+        def getCommittedManaRefund(self, caster):
+            return committedManaRefund(caster, "Warrior", "warrior_barricades")
+
         def configureEffect(self, effect):
             caster = effect.getCaster()
             if not caster:
