@@ -47,6 +47,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <SDL.h>
 #include <pybind11/embed.h>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -889,9 +890,14 @@ void test_fight_handler_returns_cancelled_when_player_control_cancels() {
             panel->cancel();
             *panel_was_cancelled = panel->isCancelled();
         }
+        std::cout << "[handler-test] cancellation callback ran=" << *cancellation_callback_ran
+                  << " panelFound=" << (panel != nullptr) << " isCancelled=" << *panel_was_cancelled << std::endl;
     });
 
+    std::cout << "[handler-test] BEFORE fightManyResult for queued player cancellation" << std::endl;
     const auto result = CFightHandler::fightManyResult(player, {defender});
+    std::cout << "[handler-test] AFTER fightManyResult for queued player cancellation outcome="
+              << static_cast<int>(result.outcome) << " rounds=" << result.rounds << std::endl;
 
     expect_true(*cancellation_callback_ran, "fight panel cancellation should run while player control is waiting");
     expect_true(*panel_was_cancelled, "queued cancellation should cancel the active fight panel");
@@ -2238,6 +2244,14 @@ void test_tooltip_handler_exposes_present_archetypes_without_duplicate_descripti
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    const auto runTimedGuiCancellationTest = [](const char *name, void (*test)()) {
+        const auto started = std::chrono::steady_clock::now();
+        std::cout << "[handler-test] ENTER " << name << std::endl;
+        test();
+        const auto elapsed =
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+        std::cout << "[handler-test] EXIT " << name << " elapsedMs=" << elapsed << std::endl;
+    };
     testGameplayMetadataIsAvailableBeforePluginLoading();
 
     test_script_handler_executes_commands_and_wraps_functions();
@@ -2260,9 +2274,12 @@ int main() {
     test_fight_handler_reports_invalid_result_metadata();
     test_fight_handler_reports_cancelled_quit_event();
     test_fight_handler_ends_original_started_controllers();
-    test_fight_handler_reports_cancelled_closed_fight_panel();
-    test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels();
-    test_fight_handler_returns_cancelled_when_player_control_cancels();
+    runTimedGuiCancellationTest("test_fight_handler_reports_cancelled_closed_fight_panel",
+                                test_fight_handler_reports_cancelled_closed_fight_panel);
+    runTimedGuiCancellationTest("test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels",
+                                test_player_fight_controller_returns_cancelled_when_attached_fight_panel_cancels);
+    runTimedGuiCancellationTest("test_fight_handler_returns_cancelled_when_player_control_cancels",
+                                test_fight_handler_returns_cancelled_when_player_control_cancels);
     test_fight_panel_resets_status_between_sequential_encounters();
     test_fight_handler_counts_effect_duration_as_progress();
     test_player_quest_completion_ignores_reentry_and_captures_final_callback_state();
