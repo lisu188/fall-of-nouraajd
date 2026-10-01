@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CGame.h"
 #include "core/CGameContext.h"
 #include "core/CJson.h"
+#include "core/CLoader.h"
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
@@ -28,7 +29,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "gui/object/CGameGraphicsObject.h"
 #include "gui/panel/CGameFightPanel.h"
 #include "handler/CObjectHandler.h"
+#include "handler/CFightHandler.h"
 #include "object/CCreature.h"
+#include "object/CCreatureClass.h"
 #include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
@@ -41,6 +44,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pybind11/embed.h>
 
 #include <map>
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -1193,6 +1197,202 @@ void test_monster_fight_controller_heals_self_only_when_hurt() {
     }
 }
 
+class RoleActionProbe : public CInteraction {
+  public:
+    int calls = 0;
+    void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { ++calls; }
+};
+
+void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
+    for (const auto &trigger : {"opening", "wounded", "guarded"}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setStringProperty("combatRole", "testRole");
+        monster->setCreatureClass(creatureClass);
+        monster->setMana(0);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setName("roleSignature");
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "testRole");
+        signature->setStringProperty("enemyRoleTrigger", trigger);
+        monster->addAction(signature);
+        auto attack = std::make_shared<RoleActionProbe>();
+        attack->setGame(game);
+        attack->setName("attack");
+        monster->addAction(attack);
+        CMonsterFightController controller;
+        if (std::string(trigger) != "opening") {
+            expect_true(controller.control(monster, opponent), "healthy monster should retain its ordinary attack");
+            expect_true(signature->calls == 0 && attack->calls == 1, "signature condition must gate the action");
+            if (std::string(trigger) == "wounded") {
+                monster->setHp(monster->getHpMax() / 2);
+            } else {
+                opponent->getBaseStats()->setBlock(10);
+            }
+        }
+        expect_true(controller.control(monster, opponent), "eligible zero-mana signature should use one turn");
+        expect_true(signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "signature must persist its once-per-actor flag");
+        expect_true(controller.control(monster, opponent), "spent signature should fall back to the ordinary attack");
+        expect_true(signature->calls == 1, "offensive fallback must never select the spent signature");
+        expect_true(monster->getMana() == 0, "class signatures must remain affordable at zero mana");
+    }
+}
+
+void testMonsterRoleExclusionsAndMalformedActions() {
+    for (const auto &mode : {"npc", "player", "dead", "ally", "missingClass", "missingRole", "wrongRole",
+                             "unknownTrigger", "expensive", "used", "duplicate", "guardedWounded"}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        if (std::string(mode) == "player") {
+            auto player = std::make_shared<CPlayer>();
+            player->setGame(game);
+            player->setBaseStats(monster->getBaseStats());
+            player->setHp(player->getHpMax());
+            player->setMana(60);
+            monster = player;
+        }
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setStringProperty("combatRole", "testRole");
+        monster->setCreatureClass(creatureClass);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setName("roleSignature");
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "testRole");
+        signature->setStringProperty("enemyRoleTrigger", "opening");
+        if (std::string(mode) == "npc") {
+            monster->setNpc(true);
+        }
+        if (std::string(mode) == "dead") {
+            opponent->setHp(0);
+        }
+        if (std::string(mode) == "ally") {
+            monster->setAffiliation("allied");
+            opponent->setAffiliation("allied");
+        }
+        if (std::string(mode) == "missingClass") {
+            monster->setCreatureClass(nullptr);
+        }
+        if (std::string(mode) == "missingRole") {
+            creatureClass->setStringProperty("combatRole", "");
+        }
+        if (std::string(mode) == "wrongRole") {
+            signature->setStringProperty("enemyRole", "otherRole");
+        }
+        if (std::string(mode) == "unknownTrigger") {
+            signature->setStringProperty("enemyRoleTrigger", "unknown");
+        }
+        if (std::string(mode) == "expensive") {
+            signature->setManaCost(61);
+        }
+        if (std::string(mode) == "used") {
+            monster->setBoolProperty("enemyRoleUsed", true);
+        }
+        if (std::string(mode) == "duplicate") {
+            auto effect = named_self_effect(game, "roleEffect", CTag::Buff);
+            signature->setEffect(effect);
+            monster->addEffect(effect);
+        }
+        if (std::string(mode) == "guardedWounded") {
+            signature->setStringProperty("enemyRoleTrigger", "guarded");
+            monster->setHp(1);
+        }
+        monster->addAction(signature);
+        CMonsterFightController controller;
+        const bool expected = std::string(mode) == "guardedWounded";
+        expect_true(controller.control(monster, opponent) == expected,
+                    "role eligibility must honor actor and action gates");
+        expect_true(signature->calls == (expected ? 1 : 0),
+                    "excluded signatures must never leak into baseline selection");
+    }
+}
+
+struct RoleBalanceSample {
+    bool won;
+    int healthSpent;
+    int manaSpent;
+    int itemsSpent;
+};
+
+RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const std::string &playerType,
+                                      const std::string &monsterType, unsigned seed, bool rolesEnabled) {
+    auto map = game->getMap();
+    auto player = game->createObject<CPlayer>(playerType);
+    player->setName("balancePlayer");
+    player->setLevel(3);
+    player->setPosX(0);
+    player->setPosY(0);
+    map->addObject(player);
+    player->setHp(player->getHpMax());
+    player->setMana(player->getManaMax());
+    auto enemy = game->createObject<CCreature>(monsterType);
+    enemy->setName("balanceEnemy");
+    enemy->setLevel(2);
+    enemy->setPosX(1);
+    enemy->setPosY(0);
+    map->addObject(enemy);
+    enemy->setHp(enemy->getHpMax());
+    enemy->setMana(enemy->getManaMax());
+    enemy->setBoolProperty("enemyRoleUsed", !rolesEnabled);
+    const int startingHp = player->getHp();
+    const int startingMana = player->getMana();
+    const int startingItems = static_cast<int>(player->getItems().size());
+    vstd::rng().seed(seed);
+    const auto result = CFightHandler::fightManyResult(player, {enemy});
+    RoleBalanceSample sample{result.attackerSucceeded(), std::max(0, startingHp - player->getHp()),
+                             std::max(0, startingMana - player->getMana()),
+                             std::max(0, startingItems - static_cast<int>(player->getItems().size()))};
+    map->removeObject(player);
+    if (map->getObjectByName(enemy->getName()) == enemy) {
+        map->removeObject(enemy);
+    }
+    return sample;
+}
+
+void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
+    const auto previousRng = vstd::rng();
+    auto game = CGameLoader::loadGame();
+    CGameLoader::startGame(game, "empty");
+    auto median = [](std::vector<int> values) {
+        std::sort(values.begin(), values.end());
+        return values[values.size() / 2];
+    };
+    for (const auto &playerType : {"Warrior", "Sorcerer", "Assasin", "Inquisitor", "Wayfarer"}) {
+        for (const auto &monsterType :
+             {"Gooby", "Pritz", "OctoBogz", "PritzMage", "GoblinThief", "Cultist", "CultLeader"}) {
+            std::vector<int> baselineHp, roleHp, baselineMana, roleMana, baselineItems, roleItems;
+            for (unsigned seed = 100; seed < 111; ++seed) {
+                const auto baseline = runRoleBalanceFight(game, playerType, monsterType, seed, false);
+                const auto roles = runRoleBalanceFight(game, playerType, monsterType, seed, true);
+                expect_true(!baseline.won || roles.won, "monster role must preserve every seeded baseline victory");
+                baselineHp.push_back(baseline.healthSpent);
+                roleHp.push_back(roles.healthSpent);
+                baselineMana.push_back(baseline.manaSpent);
+                roleMana.push_back(roles.manaSpent);
+                baselineItems.push_back(baseline.itemsSpent);
+                roleItems.push_back(roles.itemsSpent);
+            }
+            std::cout << "role balance " << playerType << '/' << monsterType << " hp " << median(baselineHp) << " -> "
+                      << median(roleHp) << " mana " << median(baselineMana) << " -> " << median(roleMana) << " items "
+                      << median(baselineItems) << " -> " << median(roleItems) << '\n';
+            expect_true(std::abs(median(roleHp) - median(baselineHp)) * 10 <= median(baselineHp),
+                        "monster roles must keep median health expenditure within 10 percent of baseline");
+            expect_true(std::abs(median(roleMana) - median(baselineMana)) * 10 <= median(baselineMana),
+                        "monster roles must keep median mana expenditure within 10 percent of baseline");
+            expect_true(std::abs(median(roleItems) - median(baselineItems)) * 10 <= median(baselineItems),
+                        "monster roles must keep median item expenditure within 10 percent of baseline");
+        }
+    }
+    vstd::rng() = previousRng;
+}
+
 } // namespace
 
 int main() {
@@ -1226,6 +1426,9 @@ int main() {
     test_monster_fight_controller_applies_missing_self_buff();
     test_monster_fight_controller_skips_duplicate_self_buff();
     test_monster_fight_controller_heals_self_only_when_hurt();
+    testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
+    testMonsterRoleExclusionsAndMalformedActions();
+    testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget();
 
     return finish_tests();
 }

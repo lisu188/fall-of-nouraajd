@@ -557,5 +557,69 @@
       "manaCost": 15,
       "description": "For 3 turns, the enemy may be unable to act each turn. Higher Agility helps them resist."
     }
+  },
+  "enemyBrace": {
+    "class": "EnemyBrace",
+    "properties": {
+      "label": "Brace",
+      "animation": "images/interactions/barrier",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "brute",
+      "enemyRoleTrigger": "wounded",
+      "selfTarget": true,
+      "effect": {
+        "ref": "enemyBraceEffect"
+      },
+      "description": "Once per enemy: spend a turn bracing below half health, improving block and Physical resistance by 5 points while reducing hit chance by 5 for 2 turns."
+    }
+  },
+  "enemyArcaneBolt": {
+    "class": "EnemyArcaneBolt",
+    "properties": {
+      "label": "Arcane Bolt",
+      "animation": "images/interactions/frostbolt",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "mage",
+      "enemyRoleTrigger": "opening",
+      "selfTarget": true,
+      "effect": {
+        "ref": "enemyArcaneBoltEffect"
+      },
+      "description": "Once per enemy: split one attack damage roll between Physical and frost damage, with 5 points less Physical resistance for 1 turn."
+    }
+  },
+  "enemyOpeningStrike": {
+    "class": "EnemyOpeningStrike",
+    "properties": {
+      "label": "Opening Strike",
+      "animation": "images/interactions/backstab",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "thief",
+      "enemyRoleTrigger": "guarded",
+      "selfTarget": false,
+      "effect": {
+        "ref": "enemyOpeningStrikeEffect"
+      },
+      "description": "Once per enemy: strike for 80% of one attack roll and reduce enemy block by 5 points for 2 turns."
+    }
+  },
+  "enemyRitualHex": {
+    "class": "EnemyRitualHex",
+    "properties": {
+      "label": "Ritual Hex",
+      "animation": "images/interactions/endlesspain",
+      "manaCost": 0,
+      "enemySignature": true,
+      "enemyRole": "cultist",
+      "enemyRoleTrigger": "opening",
+      "selfTarget": false,
+      "effect": {
+        "ref": "enemyRitualHexEffect"
+      },
+      "description": "Once per enemy: spend a turn reducing enemy hit chance and shadow resistance by 5 points for 2 turns."
+    }
   }
 }

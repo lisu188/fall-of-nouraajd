@@ -193,5 +193,56 @@
     "properties": {
       "duration": 3
     }
+  },
+  "enemyBraceEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 2,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "block": 5,
+          "normalResist": 5,
+          "hit": -5
+        }
+      }
+    }
+  },
+  "enemyArcaneBoltEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 1,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "normalResist": -5
+        }
+      }
+    }
+  },
+  "enemyOpeningStrikeEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 2,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "block": -5
+        }
+      }
+    }
+  },
+  "enemyRitualHexEffect": {
+    "class": "EnemyRoleEffect",
+    "properties": {
+      "duration": 2,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "hit": -5,
+          "shadowResist": -5
+        }
+      }
+    }
   }
 }

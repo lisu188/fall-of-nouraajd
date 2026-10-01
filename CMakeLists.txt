@@ -454,6 +454,7 @@ endforeach ()
 
 configure_file(res/plugins/effect.py plugins/effect.py)
 configure_file(res/plugins/interaction.py plugins/interaction.py)
+configure_file(res/plugins/enemy_roles.py plugins/enemy_roles.py)
 configure_file(res/plugins/object.py plugins/object.py)
 configure_file(res/plugins/crafting.py plugins/crafting.py)
 configure_file(res/plugins/artifact_sets.py plugins/artifact_sets.py)

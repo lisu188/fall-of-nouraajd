@@ -72,3 +72,7 @@ std::string CCreatureClass::getMainStat() { return mainStat; }
 // mainStat is stored as a plain string; validating that it names a real CStats
 // property belongs to the content validator, not runtime construction.
 void CCreatureClass::setMainStat(std::string value) { mainStat = value; }
+
+std::string CCreatureClass::getCombatRole() { return combatRole; }
+
+void CCreatureClass::setCombatRole(std::string value) { combatRole = value; }

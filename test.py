@@ -155,6 +155,7 @@ FAST_TEST_NAMES = {
     "PanelLayoutManifestTest.test_reactive_list_views_subscribe_to_model_signals",
 }
 GAMEPLAY_TEST_PREFIXES = (
+    "EnemyRoleRuntimeTest.",
     "ConsoleEventIsolationTest.",
     "ConsoleEventProcessTest.",
     "GameTest.",
@@ -25154,6 +25155,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
 SOURCE_UI_TESTS_AVAILABLE = (REPO_ROOT / "tests" / "__init__.py").is_file()
 
 if SOURCE_UI_TESTS_AVAILABLE:
+    from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
     from tests.test_python_callback_lifecycle import PythonCallbackLifecycleTest as _PythonCallbackLifecycleTest
     from tests.test_ui_mcp_dialogue import DialogueMcpWalkthroughTest as _DialogueMcpWalkthroughTest
     from tests.test_ui_mcp_management import ManagementMcpWalkthroughTest as _ManagementMcpWalkthroughTest
@@ -25174,6 +25176,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class PythonCallbackLifecycleTest(_PythonCallbackLifecycleTest):
         pass
 
+    class EnemyRoleRuntimeTest(_EnemyRoleRuntimeTest):
+        pass
+
     class UiPixelAnalysisTest(_UiPixelAnalysisTest):
         pass
 
@@ -25185,6 +25190,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
 
     del _DialogueMcpWalkthroughTest, _ManagementMcpWalkthroughTest, _ArtifactPreviewTest, _PythonCallbackLifecycleTest
     del _UiPixelAnalysisTest
+    del _EnemyRoleRuntimeTest
     del _ConsoleUiInteractionTest, _UiMinimapInteractionTest
 
 
