@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
+#include "object/CWeapon.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
@@ -312,6 +313,105 @@ void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
     expect_true(!player->getEffects().empty(), "inherited native performAction must return and apply the real barrier");
 }
 
+void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks() {
+    auto game = CGameLoader::loadGame();
+    createOpenBalanceMap(game);
+    auto expectedNativeRng = vstd::rng();
+    int expectedNextBlockRoll = 0;
+    int expectedWeaponCalls = 0;
+    bool observedWeaponProc = false;
+    for (unsigned seed = 100; seed < 111; ++seed) {
+        for (bool enabled : {false, true}) {
+            auto player = game->createObject<CPlayer>("Warrior");
+            player->setLevel(3);
+            game->getMap()->attachPlayer(player, Coords(0, 0, 0));
+            player->heal(0);
+            auto actor = game->createObject<CCreature>("PritzMage");
+            actor->setName("roleContractMage");
+            actor->setLevel(2);
+            actor->setPosX(1);
+            game->getMap()->addObject(actor);
+            actor->setMana(0);
+            actor->setBoolProperty("enemyRoleUsed", !enabled);
+            auto weapon = game->createObject<CWeapon>("Staff");
+            actor->setEquipped({{0, weapon}});
+            actor->heal(0);
+            const auto interactions = actor->getInteractions();
+            const auto attackIt =
+                std::ranges::find_if(interactions, [](const auto &action) { return action->getTypeId() == "Attack"; });
+            if (attackIt == interactions.end() || !weapon->getInteraction()) {
+                expect_true(false, "role contract fixture must load real Attack and configured Staff interaction");
+                return;
+            }
+            const auto attack = *attackIt;
+            auto globals = pybind11::dict();
+            globals["attack"] = pybind11::cast(attack);
+            globals["weaponAction"] = pybind11::cast(weapon->getInteraction());
+            pybind11::exec(R"(
+attackType = type(attack)
+weaponType = type(weaponAction)
+originalAttack = attackType.performAction
+originalWeaponAction = weaponType.performAction
+calls = {'attack': 0, 'weapon': 0}
+def countedAttack(self, first, second):
+    calls['attack'] += 1
+    return originalAttack(self, first, second)
+def countedWeaponAction(self, first, second):
+    calls['weapon'] += 1
+    return originalWeaponAction(self, first, second)
+attackType.performAction = countedAttack
+weaponType.performAction = countedWeaponAction
+)",
+                           globals);
+            const int beforeResist = actor->getStats()->getNormalResist();
+            vstd::rng().seed(seed);
+            std::srand(seed);
+            CMonsterFightController controller;
+            const bool acted = controller.control(actor, player);
+            const auto afterNativeRng = vstd::rng();
+            const int nextBlockRoll = std::rand();
+            pybind11::exec(R"(
+attackType.performAction = originalAttack
+weaponType.performAction = originalWeaponAction
+)",
+                           globals);
+            expect_true(acted, "real configured Attack must execute in the role contract fixture");
+            const auto calls = globals["calls"].cast<pybind11::dict>();
+            const int weaponCalls = calls["weapon"].cast<int>();
+            expect_true(calls["attack"].cast<int>() == 1 && weaponCalls <= 1,
+                        "signature and ordinary Attack must retain one attack and at most one configured weapon proc");
+            observedWeaponProc |= weaponCalls == 1;
+            expect_true(!actor->getBoolProperty("enemyRoleArcaneAttack"),
+                        "the temporary damage hook must be disarmed before a save or subsequent action");
+            if (enabled) {
+                expect_true(afterNativeRng == expectedNativeRng && nextBlockRoll == expectedNextBlockRoll,
+                            "eager owned role objects must preserve both ordinary Attack random streams");
+                expect_true(weaponCalls == expectedWeaponCalls,
+                            "the role hook must preserve the configured weapon proc on both hits and misses");
+                expect_true(actor->getStats()->getNormalResist() == beforeResist - 1 && actor->getEffects().size() == 1,
+                            "the one-turn mage tradeoff must actually affect combat stats");
+                if (!actor->getEffects().empty()) {
+                    const auto effect = *actor->getEffects().begin();
+                    expect_true(effect->getTimeLeft() == 1 && effect->getCaster() == actor &&
+                                    effect->getVictim() == actor,
+                                "the eagerly owned effect must have a real duration and actor endpoints");
+                    effect->apply(actor);
+                    expect_true(effect->getTimeLeft() == 0, "the role effect must expire after one application");
+                }
+            } else {
+                expectedNativeRng = afterNativeRng;
+                expectedNextBlockRoll = nextBlockRoll;
+                expectedWeaponCalls = weaponCalls;
+                expect_true(actor->getEffects().empty() && actor->getStats()->getNormalResist() == beforeResist,
+                            "disabled roles must leave ordinary Attack stats unchanged");
+            }
+            game->getMap()->detachPlayer();
+            game->getMap()->removeObject(actor);
+        }
+    }
+    expect_true(observedWeaponProc, "paired role contract samples must exercise a real configured weapon proc");
+}
+
 void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
     const auto previousRng = vstd::rng();
     auto game = CGameLoader::loadGame();
@@ -397,6 +497,7 @@ int main() {
     pybind11::scoped_interpreter interpreter{};
     initializeBalancePythonContent();
     testInheritedNativeMethodsDoNotBecomePythonOverrides();
+    testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();
     testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
     testActivePlayerNeverUsesMonsterSignature();
     testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget();

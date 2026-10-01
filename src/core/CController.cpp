@@ -624,7 +624,10 @@ std::shared_ptr<CInteraction> monsterRoleAction(const std::shared_ptr<CCreature>
         const bool eligible =
             trigger == "opening" || (trigger == "wounded" && me->getHpRatio() <= 50) ||
             (trigger == "guarded" && (opponent->getStats()->getBlock() > 0 || me->getHpRatio() <= 50));
-        if (eligible && !caster_already_has_effect(me, action->getEffect()) &&
+        const auto effect = action->hasProperty("roleEffect")
+                                ? vstd::cast<CEffect>(action->getObjectProperty<CGameObject>("roleEffect"))
+                                : action->getEffect();
+        if (eligible && !caster_already_has_effect(me, effect) &&
             (!selected || action->getName() < selected->getName())) {
             selected = action;
         }
@@ -651,12 +654,14 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
             return true;
         }
     }
-    if (auto action = monsterRoleAction(me, opponent)) {
-        me->useAction(action, opponent);
-        me->setBoolProperty("enemyRoleUsed", true);
-        return true;
-    }
     if (auto action = selectInteraction(me, opponent)) {
+        if (action->getTypeId() == "Attack") {
+            if (auto signature = monsterRoleAction(me, opponent)) {
+                me->useAction(signature, opponent);
+                me->setBoolProperty("enemyRoleUsed", true);
+                return true;
+            }
+        }
         me->useAction(action, opponent);
         return true;
     }

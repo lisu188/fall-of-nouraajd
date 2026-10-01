@@ -19,6 +19,35 @@ positive HP/mana decreases and removed inventory identities at control/lifecycle
 boundaries. Recovery and later loot do not erase earlier costs. Opposing changes
 within one callback can coalesce; this limitation also applies to both baselines.
 
+## Revised signature trial
+
+The ordinary controller ranks its existing interactions first. A signature can
+decorate a selected `Attack` only; existing item, healing, defensive and offensive
+spell turns retain their priority. The signature invokes that configured Attack
+once, retaining its damage roll, zero-damage guard and configured weapon proc.
+All signatures cost zero mana and persist once-per-actor flags.
+
+The current one-turn effects are:
+
+| Class | Condition | Change |
+| --- | --- | --- |
+| Brute | At or below half health | Physical resistance +1, frost resistance -1 |
+| Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
+| Thief | Guarded opponent or at/below half health | Opponent block -1 |
+| Cultist | First selected ordinary Attack | Opponent shadow resistance -1 |
+
+Each action owns its effect from configuration; the mage also owns a damage
+packet. Both are decoded before combat instead of created or cloned in the
+signature. Once applied, the owned effect uses the ordinary effect lifecycle and
+save serialization. A real-bound paired regression observes configured Attack
+and Staff callbacks, both random streams, actual stat changes and one-turn
+expiration. The temporary mage packet hook clears before the weapon proc, on a
+miss, and in a `finally` block after rejected execution. Its default path preserves
+ordinary Attack behavior. Matching setup is present with roles disabled too.
+
+These are measured revisions, not acceptance claims. The unchanged matrix and
+strict budgets must pass on Linux and Windows before the trial is complete.
+
 ## Corrected harness evidence, before signature revision
 
 [Linux job 110303082419](https://github.com/lisu188/fall-of-nouraajd/actions/runs/36841791157/job/110303082419)

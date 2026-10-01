@@ -197,13 +197,12 @@
   "enemyBraceEffect": {
     "class": "EnemyRoleEffect",
     "properties": {
-      "duration": 2,
+      "duration": 1,
       "bonus": {
         "class": "CStats",
         "properties": {
-          "block": 5,
-          "normalResist": 5,
-          "hit": -5
+          "normalResist": 1,
+          "frostResist": -1
         }
       }
     }
@@ -215,7 +214,7 @@
       "bonus": {
         "class": "CStats",
         "properties": {
-          "normalResist": -5
+          "normalResist": -1
         }
       }
     }
@@ -223,11 +222,11 @@
   "enemyOpeningStrikeEffect": {
     "class": "EnemyRoleEffect",
     "properties": {
-      "duration": 2,
+      "duration": 1,
       "bonus": {
         "class": "CStats",
         "properties": {
-          "block": -5
+          "block": -1
         }
       }
     }
@@ -235,12 +234,11 @@
   "enemyRitualHexEffect": {
     "class": "EnemyRoleEffect",
     "properties": {
-      "duration": 2,
+      "duration": 1,
       "bonus": {
         "class": "CStats",
         "properties": {
-          "hit": -5,
-          "shadowResist": -5
+          "shadowResist": -1
         }
       }
     }

@@ -590,6 +590,7 @@ void testMonsterRoleCallbackAndStateGrowthAreBounded() {
     auto attack = std::make_shared<CombatActionCountProbe>();
     attack->setGame(fixture.game);
     attack->setName("attack");
+    attack->setTypeId("Attack");
     actor->addAction(attack);
     for (int i = 0; i < 64; ++i) {
         auto excluded = std::make_shared<CombatActionCountProbe>();
