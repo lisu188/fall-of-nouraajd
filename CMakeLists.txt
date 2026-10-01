@@ -839,7 +839,10 @@ function(add_game_unit_test target_name)
 endfunction()
 
 add_game_unit_test(core_unit_tests tests/unit/test_core.cpp)
-add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp)
+add_game_unit_test(controller_unit_tests tests/unit/test_controller.cpp src/core/CModule.cpp)
+target_compile_definitions(controller_unit_tests PRIVATE
+    GAME_CONTROLLER_TEST_RESOURCE_ROOT="${CMAKE_CURRENT_BINARY_DIR}"
+)
 add_game_unit_test(gui_unit_tests tests/unit/test_gui.cpp)
 add_game_unit_test(ui_management_unit_tests tests/unit/test_ui_management.cpp)
 add_game_unit_test(ui_navigation_unit_tests tests/unit/test_ui_navigation.cpp)

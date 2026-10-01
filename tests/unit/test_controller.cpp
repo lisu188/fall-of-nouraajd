@@ -48,6 +48,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <vector>
 
+void init_game_module(pybind11::module_ &module);
+PYBIND11_EMBEDDED_MODULE(_controller_game, module) { init_game_module(module); }
+
 namespace {
 
 std::shared_ptr<CCreature> creature_at(int x, int y, int z) {
@@ -1256,6 +1259,7 @@ void testMonsterRoleExclusionsAndMalformedActions() {
             player->setBaseStats(monster->getBaseStats());
             player->setHp(player->getHpMax());
             player->setMana(60);
+            game->getMap()->attachPlayer(player);
             monster = player;
         }
         auto creatureClass = std::make_shared<CCreatureClass>();
@@ -1307,8 +1311,11 @@ void testMonsterRoleExclusionsAndMalformedActions() {
         monster->addAction(signature);
         CMonsterFightController controller;
         const bool expected = std::string(mode) == "guardedWounded";
-        expect_true(controller.control(monster, opponent) == expected,
-                    "role eligibility must honor actor and action gates");
+        const bool acted = controller.control(monster, opponent);
+        if (acted != expected || signature->calls != (expected ? 1 : 0)) {
+            std::cerr << "role exclusion fixture: " << mode << '\n';
+        }
+        expect_true(acted == expected, "role eligibility must honor actor and action gates");
         expect_true(signature->calls == (expected ? 1 : 0),
                     "excluded signatures must never leak into baseline selection");
     }
@@ -1325,11 +1332,10 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
                                       const std::string &monsterType, unsigned seed, bool rolesEnabled) {
     auto map = game->getMap();
     auto player = game->createObject<CPlayer>(playerType);
-    player->setName("balancePlayer");
+    const auto ordinaryController = player->getFightController();
     player->setLevel(3);
-    player->setPosX(0);
-    player->setPosY(0);
-    map->addObject(player);
+    map->attachPlayer(player, Coords(0, 0, 0));
+    player->setFightController(ordinaryController);
     player->setHp(player->getHpMax());
     player->setMana(player->getManaMax());
     auto enemy = game->createObject<CCreature>(monsterType);
@@ -1341,6 +1347,12 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     enemy->setHp(enemy->getHpMax());
     enemy->setMana(enemy->getManaMax());
     enemy->setBoolProperty("enemyRoleUsed", !rolesEnabled);
+    const auto actions = enemy->getInteractions();
+    expect_true(std::ranges::any_of(actions, [](const auto &action) { return action->getTypeId() == "Attack"; }),
+                "balance fixture must load the real Attack interaction");
+    expect_true(
+        std::ranges::any_of(actions, [](const auto &action) { return action->getBoolProperty("enemySignature"); }),
+        "balance fixture must load its configured Python role signature");
     const int startingHp = player->getHp();
     const int startingMana = player->getMana();
     const int startingItems = static_cast<int>(player->getItems().size());
@@ -1349,7 +1361,7 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     RoleBalanceSample sample{result.attackerSucceeded(), std::max(0, startingHp - player->getHp()),
                              std::max(0, startingMana - player->getMana()),
                              std::max(0, startingItems - static_cast<int>(player->getItems().size()))};
-    map->removeObject(player);
+    map->detachPlayer();
     if (map->getObjectByName(enemy->getName()) == enemy) {
         map->removeObject(enemy);
     }
@@ -1357,9 +1369,14 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
 }
 
 void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
+    auto sys = pybind11::module_::import("sys");
+    sys.attr("path").attr("insert")(0, GAME_CONTROLLER_TEST_RESOURCE_ROOT);
+    sys.attr("modules")["_game"] = pybind11::module_::import("_controller_game");
+    pybind11::module_::import("game");
+    pybind11::module_::import("json");
     const auto previousRng = vstd::rng();
     auto game = CGameLoader::loadGame();
-    CGameLoader::startGame(game, "empty");
+    open_tile_map(game, 3, 3);
     auto median = [](std::vector<int> values) {
         std::sort(values.begin(), values.end());
         return values[values.size() / 2];
@@ -1368,9 +1385,11 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
         for (const auto &monsterType :
              {"Gooby", "Pritz", "OctoBogz", "PritzMage", "GoblinThief", "Cultist", "CultLeader"}) {
             std::vector<int> baselineHp, roleHp, baselineMana, roleMana, baselineItems, roleItems;
+            int baselineWins = 0;
             for (unsigned seed = 100; seed < 111; ++seed) {
                 const auto baseline = runRoleBalanceFight(game, playerType, monsterType, seed, false);
                 const auto roles = runRoleBalanceFight(game, playerType, monsterType, seed, true);
+                baselineWins += baseline.won ? 1 : 0;
                 expect_true(!baseline.won || roles.won, "monster role must preserve every seeded baseline victory");
                 baselineHp.push_back(baseline.healthSpent);
                 roleHp.push_back(roles.healthSpent);
@@ -1378,6 +1397,11 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
                 roleMana.push_back(roles.manaSpent);
                 baselineItems.push_back(baseline.itemsSpent);
                 roleItems.push_back(roles.itemsSpent);
+            }
+            expect_true(baselineWins > 0, "ordinary balance fixture must include a real baseline victory");
+            if (std::string(monsterType) == "Pritz" || std::string(monsterType) == "OctoBogz") {
+                expect_true(median(baselineHp) > 0,
+                            "representative mandatory enemies must cause nonzero baseline damage");
             }
             std::cout << "role balance " << playerType << '/' << monsterType << " hp " << median(baselineHp) << " -> "
                       << median(roleHp) << " mana " << median(baselineMana) << " -> " << median(roleMana) << " items "
