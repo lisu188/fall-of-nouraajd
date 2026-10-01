@@ -36,6 +36,26 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <utility>
 
 namespace {
+void initializeComposedStats(CStats &stats, const StatsModifier &value) {
+    stats.setStrength(value.strength);
+    stats.setAgility(value.agility);
+    stats.setStamina(value.stamina);
+    stats.setIntelligence(value.intelligence);
+    stats.setArmor(value.armor);
+    stats.setBlock(value.block);
+    stats.setDmgMin(value.dmgMin);
+    stats.setDmgMax(value.dmgMax);
+    stats.setAttack(value.attack);
+    stats.setHit(value.hit);
+    stats.setCrit(value.crit);
+    stats.setFireResist(value.fireResist);
+    stats.setFrostResist(value.frostResist);
+    stats.setNormalResist(value.normalResist);
+    stats.setThunderResist(value.thunderResist);
+    stats.setShadowResist(value.shadowResist);
+    stats.setDamage(value.damage);
+}
+
 template <typename Callback> class ScopeExit {
   public:
     explicit ScopeExit(Callback callback) : callback(std::move(callback)) {}
@@ -1072,6 +1092,7 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     // set independently empty-guarded: usesArchetypeComposition() only guarantees
     // at least one of race / creatureClass / templates is present.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
+    StatsModifier total;
     const auto orderedTracks = getOrderedClassTracks();
     // Main stat is a *selected* (not accumulated) field, so it must be set explicitly
     // (CStats::addBonus copies only numeric properties). The creatureClass is
@@ -1100,7 +1121,7 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     }
     // 1. race.baseStats.
     if (race && race->getBaseStats()) {
-        ret->addBonus(race->getBaseStats());
+        total += race->getBaseStats()->modifier();
     }
     // 2. class baseStats: each track's class in ascending track order when tracks
     // are present (subsuming the single creatureClass), otherwise the single
@@ -1109,14 +1130,14 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
         for (const auto &track : orderedTracks) {
             auto trackClass = track->getCreatureClass();
             if (trackClass && trackClass->getBaseStats()) {
-                ret->addBonus(trackClass->getBaseStats());
+                total += trackClass->getBaseStats()->modifier();
             }
         }
     } else if (creatureClass && creatureClass->getBaseStats()) {
-        ret->addBonus(creatureClass->getBaseStats());
+        total += creatureClass->getBaseStats()->modifier();
     }
     // 3. creature.baseStats (concrete template's own base).
-    ret->addBonus(getBaseStats());
+    total += getBaseStats()->modifier();
     // 3a. race.racialLevelStats per racialLevel -- racial advancement, modeled
     // separately from the class-driven `level` (EPIC_08/STORY_04/SUBSTORY_01).
     // Race-derived growth is the least-specific per-level source, so it opens the
@@ -1127,7 +1148,7 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     // so every existing creature composes bit-identically to today.
     if (race && race->getRacialLevelStats()) {
         for (int i = 0; i < racialLevel; i++) {
-            ret->addBonus(race->getRacialLevelStats());
+            total += race->getRacialLevelStats()->modifier();
         }
     }
     // 4. class levelStats: each track's class.levelStats multiplied by that
@@ -1139,18 +1160,18 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
             auto trackClass = track->getCreatureClass();
             if (trackClass && trackClass->getLevelStats()) {
                 for (int i = 0; i < track->getLevel(); i++) {
-                    ret->addBonus(trackClass->getLevelStats());
+                    total += trackClass->getLevelStats()->modifier();
                 }
             }
         }
     } else if (creatureClass && creatureClass->getLevelStats()) {
         for (int i = 0; i < level; i++) {
-            ret->addBonus(creatureClass->getLevelStats());
+            total += creatureClass->getLevelStats()->modifier();
         }
     }
     // 5. creature.levelStats per level.
     for (int i = 0; i < level; i++) {
-        ret->addBonus(getLevelStats());
+        total += getLevelStats()->modifier();
     }
     // 6. template overlays in ascending `order`: additive stat adjustments layered
     // AFTER the race/class/creature intrinsic stack, before external modifiers. A
@@ -1158,21 +1179,22 @@ std::shared_ptr<CStats> CCreature::buildComposedStats() {
     // to the pre-template contract.
     for (const auto &overlay : getOrderedTemplates()) {
         if (overlay->getStatAdjustments()) {
-            ret->addBonus(overlay->getStatAdjustments());
+            total += overlay->getStatAdjustments()->modifier();
         }
     }
     // 7. equipment bonuses.
     for (auto [slot, item] : getEquipped()) {
         if (item) {
-            ret->addBonus(item->getBonus());
+            total += item->getBonus()->modifier();
         }
     }
     // 8. effect bonuses.
     for (auto effect : getEffects()) {
         if (effect) {
-            ret->addBonus(effect->getBonus());
+            total += effect->getBonus()->modifier();
         }
     }
+    initializeComposedStats(*ret, total);
     return ret;
 }
 
@@ -1195,6 +1217,7 @@ std::shared_ptr<CStats> CCreature::buildLegacyStats() {
     // compatibility contract"): for a creature with no race and no creatureClass
     // (every creature today) this composes the legacy stat block exactly.
     std::shared_ptr<CStats> ret = std::make_shared<CStats>();
+    StatsModifier total;
     // Main stat selection (class-first, authoritative): the composed block's mainStat is a
     // *selected* (not accumulated) field -- CStats::addBonus copies only numeric properties, so
     // the std::string mainStat must be assigned explicitly. When the creature has a composed
@@ -1209,27 +1232,28 @@ std::shared_ptr<CStats> CCreature::buildLegacyStats() {
     ret->setMainStat(composedMainStat);
     // 1-2. race / creature-class baseStats: extension point (nothing to add yet).
     // 3. creature.baseStats (legacy concrete base).
-    ret->addBonus(getBaseStats());
+    total += getBaseStats()->modifier();
     // 3a. racial advancement (race.racialLevelStats per racialLevel) is race-carried,
     // so the legacy path (race == null) has no racial source by construction: a
     // racialLevel on a legacy creature contributes nothing, exactly as before.
     // 4. creatureClass.levelStats per level: extension point (nothing to add yet).
     // 5. creature.levelStats per level (legacy concrete growth).
     for (int i = 0; i < level; i++) {
-        ret->addBonus(getLevelStats());
+        total += getLevelStats()->modifier();
     }
     // 6. equipment bonuses.
     for (auto [slot, item] : getEquipped()) {
         if (item) {
-            ret->addBonus(item->getBonus());
+            total += item->getBonus()->modifier();
         }
     }
     // 7. effect bonuses.
     for (auto effect : getEffects()) {
         if (effect) {
-            ret->addBonus(effect->getBonus());
+            total += effect->getBonus()->modifier();
         }
     }
+    initializeComposedStats(*ret, total);
     return ret;
 }
 
