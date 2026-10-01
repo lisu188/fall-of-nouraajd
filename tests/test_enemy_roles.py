@@ -282,6 +282,8 @@ class EnemyRolesTest(unittest.TestCase):
             self.assertTrue(action["enemySignature"])
             self.assertEqual(properties["combatRole"], action["enemyRole"])
             self.assertEqual(0, action["manaCost"])
+            if action_id == "enemyRitualHex":
+                self.assertEqual("wounded", action["enemyRoleTrigger"])
             self.assertNotIn("effect", action)
             effect = effects[action["roleEffect"]["ref"]]["properties"]
             self.assertEqual(1, effect["duration"])

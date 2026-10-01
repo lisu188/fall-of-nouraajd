@@ -617,14 +617,14 @@
       "manaCost": 0,
       "enemySignature": true,
       "enemyRole": "cultist",
-      "enemyRoleTrigger": "opening",
+      "enemyRoleTrigger": "wounded",
       "selfTarget": false,
-        "description": "Once per enemy, convert 1 point of an ordinary attack to shadow without changing its damage budget, then reduce enemy shadow resistance by 1 point for 1 turn.",
+      "description": "Once per wounded enemy, decorate an ordinary attack: convert 1 damage point to shadow, then reduce enemy shadow resistance by 1 point for 1 turn.",
       "roleEffect": {
         "ref": "enemyRitualHexEffect"
-        },
-        "roleDamage": {
-          "class": "CDamage"
+      },
+      "roleDamage": {
+        "class": "CDamage"
       }
     }
   }
