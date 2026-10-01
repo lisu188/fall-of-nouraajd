@@ -1323,7 +1323,7 @@ class RoleActionProbe : public CInteraction {
 };
 
 void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
-    for (const auto &trigger : {"opening", "wounded", "guarded"}) {
+    for (const auto &trigger : {"opening", "wounded", "critical", "guarded"}) {
         auto game = fight_fixture_game();
         auto monster = self_target_fixture_monster(game, false);
         auto opponent = self_target_fixture_opponent(game);
@@ -1350,6 +1350,8 @@ void testMonsterRolesUseEligibleSignatureOnceAndKeepFallback() {
             expect_true(signature->calls == 0 && attack->calls == 1, "signature condition must gate the action");
             if (std::string(trigger) == "wounded") {
                 monster->setHp(monster->getHpMax() / 2);
+            } else if (std::string(trigger) == "critical") {
+                monster->setHp(std::max(1, monster->getHpMax() / 4));
             } else {
                 opponent->getBaseStats()->setBlock(10);
             }
@@ -1375,7 +1377,7 @@ void testMonsterRitualMinimumManaGatesEligibilityWithoutSpending() {
     signature->setGame(game);
     signature->setBoolProperty("enemySignature", true);
     signature->setStringProperty("enemyRole", "cultist");
-    signature->setStringProperty("enemyRoleTrigger", "wounded");
+    signature->setStringProperty("enemyRoleTrigger", "critical");
     signature->setNumericProperty("minimumMana", 5);
     monster->addAction(signature);
     auto attack = std::make_shared<RoleActionProbe>();
@@ -1383,15 +1385,58 @@ void testMonsterRitualMinimumManaGatesEligibilityWithoutSpending() {
     attack->setTypeId("Attack");
     monster->addAction(attack);
     CMonsterFightController controller;
+    monster->setHp(std::max(1, monster->getHpMax() / 2));
+    monster->setMana(5);
+    expect_true(controller.control(monster, opponent), "a ritual must wait until critical health");
+    expect_true(attack->calls == 1 && signature->calls == 0 && monster->getMana() == 5 &&
+                    !monster->getBoolProperty("enemyRoleUsed"),
+                "a half-health cultist must retain ordinary Attack despite its eligible mana reserve");
+    monster->setHp(std::max(1, monster->getHpMax() / 4));
     monster->setMana(4);
     expect_true(controller.control(monster, opponent), "an exhausted cultist must retain ordinary Attack");
-    expect_true(attack->calls == 1 && signature->calls == 0 && monster->getMana() == 4 &&
+    expect_true(attack->calls == 2 && signature->calls == 0 && monster->getMana() == 4 &&
                     !monster->getBoolProperty("enemyRoleUsed"),
                 "ritual reserve eligibility must not consume the action or mana below five points");
     monster->setMana(5);
-    expect_true(controller.control(monster, opponent), "a wounded cultist with five mana may use its ritual");
-    expect_true(attack->calls == 1 && signature->calls == 1 && monster->getMana() == 5,
+    expect_true(controller.control(monster, opponent), "a critical cultist with five mana may use its ritual");
+    expect_true(attack->calls == 2 && signature->calls == 1 && monster->getMana() == 5,
                 "the ritual threshold must gate eligibility without charging mana");
+}
+
+void testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage() {
+    for (int stamina : {5, 20}) {
+        auto game = fight_fixture_game();
+        auto monster = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        monster->getBaseStats()->setStamina(stamina);
+        monster->setMana(0);
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setCombatRole("boundaryRole");
+        monster->setCreatureClass(creatureClass);
+        auto signature = std::make_shared<RoleActionProbe>();
+        signature->setGame(game);
+        signature->setBoolProperty("enemySignature", true);
+        signature->setStringProperty("enemyRole", "boundaryRole");
+        signature->setStringProperty("enemyRoleTrigger", "critical");
+        monster->addAction(signature);
+        auto attack = std::make_shared<RoleActionProbe>();
+        attack->setGame(game);
+        attack->setTypeId("Attack");
+        monster->addAction(attack);
+        const int maximumHp = monster->getHpMax();
+        expect_true(maximumHp == (stamina == 5 ? 35 : 140), "the actual boundary fixture must retain its authored HP");
+        monster->setHp(maximumHp / 4 + 1);
+        expect_true(monster->getHpRatio() == 25, "the rejected boundary must expose percentage truncation");
+        CMonsterFightController controller;
+        expect_true(controller.control(monster, opponent), "above exact quarter health must retain ordinary Attack");
+        expect_true(attack->calls == 1 && signature->calls == 0 && !monster->getBoolProperty("enemyRoleUsed"),
+                    "9/35 and36/140 HP must not prematurely consume the critical signature");
+        monster->setHp(maximumHp / 4);
+        expect_true(controller.control(monster, opponent), "at or below exact quarter health may use the signature");
+        expect_true(attack->calls == 1 && signature->calls == 1 && monster->getBoolProperty("enemyRoleUsed"),
+                    "8/35 and35/140 HP must admit the critical signature once");
+    }
 }
 
 void testMonsterRoleExclusionsAndMalformedActions() {
@@ -1696,6 +1741,7 @@ int main() {
     test_monster_fight_controller_heals_self_only_when_hurt();
     testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
     testMonsterRitualMinimumManaGatesEligibilityWithoutSpending();
+    testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage();
     testMonsterRoleExclusionsAndMalformedActions();
     testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana();
     testHuntPhasesKeepOrdinarySpellAndItemPriority();

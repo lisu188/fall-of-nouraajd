@@ -63,6 +63,7 @@ class EnemyRolesTest(unittest.TestCase):
         self.actor.getStringProperty.side_effect = lambda name: self.properties.get(name, "")
         self.actor.setStringProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
         self.actor.setNumericProperty.side_effect = lambda name, value: self.properties.__setitem__(name, value)
+        self.actor.getNumericProperty.side_effect = lambda name: self.properties.get(name, 0)
         self.actor.getObjectProperty.side_effect = lambda name: self.object_properties[name]
         self.actor.setObjectProperty.side_effect = lambda name, value: self.object_properties.__setitem__(name, value)
         self.actor.getDmg.return_value = 11
@@ -83,6 +84,7 @@ class EnemyRolesTest(unittest.TestCase):
         action.getObjectProperty = Mock(side_effect=owned.__getitem__)
         action.setObjectProperty = Mock(side_effect=lambda name, value: owned.__setitem__(name, value))
         action.getBoolProperty = Mock(return_value=class_name in ("EnemyBrace", "EnemyArcaneBolt"))
+        action.getNumericProperty = Mock(return_value=10 if class_name == "EnemyRitualHex" else 0)
         return action, effect, packet
 
     def testSignaturesDecorateExactlyOneConfiguredAttackAndCannotRepeatAfterSave(self):
@@ -123,12 +125,17 @@ class EnemyRolesTest(unittest.TestCase):
                 action, _, packet = self.makeSignature(class_name)
                 action.performAction(self.actor, self.target)
                 channels = dict(call.args for call in packet.setNumericProperty.call_args_list)
-                self.assertEqual({"normal": roll - 1, channel: 1}, channels)
-                self.assertEqual(roll, sum(channels.values()))
-                self.target.hurt.assert_called_once_with(packet)
+                if class_name == "EnemyRitualHex" and roll < 10:
+                    self.assertEqual({}, channels)
+                    self.target.hurt.assert_called_once_with(roll)
+                else:
+                    self.assertEqual({"normal": roll - 1, channel: 1}, channels)
+                    self.assertEqual(roll, sum(channels.values()))
+                    self.target.hurt.assert_called_once_with(packet)
                 self.actor.getDmg.assert_called_once_with()
                 self.assertFalse(self.properties["enemyRoleArcaneAttack"])
                 self.assertEqual("", self.properties["enemyRoleDamageChannel"])
+                self.assertEqual(0, self.properties["enemyRoleDamageMinimum"])
                 self.actor.getGame.assert_not_called()
 
     def testDefaultAttackRetainsItsDamageAndConfiguredWeaponProcSequence(self):
@@ -144,6 +151,30 @@ class EnemyRolesTest(unittest.TestCase):
         self.actor.getObjectProperty.assert_not_called()
         self.actor.setBoolProperty.assert_not_called()
         self.actor.getGame.assert_not_called()
+
+    def testRitualNinePointHitKeepsOrdinaryPacketAndTenPointHitConvertsExactlyOnePoint(self):
+        for roll in (9, 10):
+            with self.subTest(roll=roll):
+                self.properties.clear()
+                self.actor.getDmg.return_value = roll
+                self.actor.getDmg.reset_mock()
+                self.target.hurt.reset_mock()
+                weapon, proc = Mock(), Mock()
+                weapon.getInteraction.return_value = proc
+                self.actor.getWeapon.return_value = weapon
+                action, _, packet = self.makeSignature("EnemyRitualHex")
+                action.performAction(self.actor, self.target)
+                self.actor.getDmg.assert_called_once_with()
+                proc.onAction.assert_called_once_with(self.actor, self.target)
+                if roll == 9:
+                    packet.setNumericProperty.assert_not_called()
+                    self.target.hurt.assert_called_once_with(9)
+                else:
+                    self.assertEqual(
+                        {"normal": 9, "shadow": 1}, dict(call.args for call in packet.setNumericProperty.call_args_list)
+                    )
+                    self.target.hurt.assert_called_once_with(packet)
+                self.assertEqual(0, self.properties["enemyRoleDamageMinimum"])
 
     def testArcaneHookRetainsWeaponProcAndDoesNotLeakToAnotherAttack(self):
         weapon, proc = Mock(), Mock()
@@ -314,6 +345,18 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertIn("reserve_mana = 5 if signature_id == 'enemyRitualHex' else 0", source)
         self.assertIn("actor.setMana(reserve_mana)", source)
         self.assertIn("assert actor.getMana() == reserve_mana", source)
+        self.assertIn("health_divisor = 4 if signature_id == 'enemyRitualHex' else 2", source)
+        self.assertIn("actor.getHpMax() // health_divisor", source)
+        controller = (ROOT / "src/core/CController.cpp").read_text(encoding="utf-8")
+        self.assertIn('(trigger == "critical" && criticalHealth)', controller)
+        self.assertIn("criticalHpMax > 0 && static_cast<std::int64_t>(me->getHp()) * 4 <= criticalHpMax", controller)
+        native = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        packet = native.split("void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks", 1)[1].split(
+            "class HexTurnProbe", 1
+        )[0]
+        self.assertRegex(packet, r"if \(cultistHex\)\s*\{\s*actor->setHp\(std::max\(1, actor->getHpMax\(\) / 4\)\)")
+        self.assertIn("const int ritualHealthDivisor = 4", native)
+        self.assertIn("actor->getHpMax() / ritualHealthDivisor", native)
 
     def testRoleConfigKeepsRosterNumericStatsAndBoundedOwnedEffects(self):
         classes = json.loads((ROOT / "res/config/creature_classes.json").read_text(encoding="utf-8"))
@@ -341,8 +384,9 @@ class EnemyRolesTest(unittest.TestCase):
             self.assertEqual(properties["combatRole"], action["enemyRole"])
             self.assertEqual(0, action["manaCost"])
             if action_id == "enemyRitualHex":
-                self.assertEqual("wounded", action["enemyRoleTrigger"])
+                self.assertEqual("critical", action["enemyRoleTrigger"])
                 self.assertEqual(5, action["minimumMana"])
+                self.assertEqual(10, action["minimumPacketHit"])
             self.assertNotIn("effect", action)
             effect = effects[action["roleEffect"]["ref"]]["properties"]
             self.assertEqual(1, effect["duration"])

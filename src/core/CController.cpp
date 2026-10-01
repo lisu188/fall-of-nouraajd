@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "core/CController.h"
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 
 #include "core/CGame.h"
@@ -511,8 +512,11 @@ std::shared_ptr<CInteraction> monsterRoleAction(const std::shared_ptr<CCreature>
             continue;
         }
         const auto trigger = action->getStringProperty("enemyRoleTrigger");
+        const int criticalHpMax = trigger == "critical" ? me->getHpMax() : 0;
+        const bool criticalHealth = criticalHpMax > 0 && static_cast<std::int64_t>(me->getHp()) * 4 <= criticalHpMax;
         const bool eligible =
             trigger == "opening" || (trigger == "wounded" && me->getHpRatio() <= 50) ||
+            (trigger == "critical" && criticalHealth) ||
             (trigger == "guarded" && (opponent->getStats()->getBlock() > 0 || me->getHpRatio() <= 50));
         const auto effect = action->hasProperty("roleEffect")
                                 ? vstd::cast<CEffect>(action->getObjectProperty<CGameObject>("roleEffect"))

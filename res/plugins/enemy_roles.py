@@ -44,12 +44,14 @@ def load(self, context):
         def performSignature(self, first, second, attack):
             first.setObjectProperty("enemyRoleDamagePacket", self.getObjectProperty("roleDamage"))
             first.setStringProperty("enemyRoleDamageChannel", self.damageChannel)
+            first.setNumericProperty("enemyRoleDamageMinimum", self.getNumericProperty("minimumPacketHit"))
             first.setBoolProperty("enemyRoleArcaneAttack", True)
             try:
                 attack.performAction(first, second)
             finally:
                 first.setBoolProperty("enemyRoleArcaneAttack", False)
                 first.setStringProperty("enemyRoleDamageChannel", "")
+                first.setNumericProperty("enemyRoleDamageMinimum", 0)
 
     @register(context)
     class EnemyArcaneBolt(EnemyPacketSignature):
