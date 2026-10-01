@@ -34,7 +34,7 @@ The current one-turn effects are:
 | Brute | At or below half health | Physical resistance +1, frost resistance -1 |
 | Mage | First selected ordinary Attack | Convert one damage point to frost, Physical resistance -1 |
 | Thief | Guarded opponent or at/below half health | Opponent block -1 |
-| Cultist | First selected ordinary Attack | Convert one damage point to shadow, opponent shadow resistance -1 |
+| Cultist | At or below half health | Convert one damage point to shadow, opponent shadow resistance -1 |
 
 Each action owns its effect from configuration; the mage and cultist also own
 damage packets. The packet hook accepts only frost or shadow. The cultist packet
@@ -180,3 +180,30 @@ configured Attack, weapon or signature callbacks before asserting success.
 Runtime child source checks also verify that their native calls use published
 bindings. No production override handling, sandbox allowlist, RNG API or global
 combat statistics change.
+
+
+## Wounded Cultist timing and instrumented workload
+
+Head `82870c53`, run `36860223503`, completed all35 Linux comparisons and the
+configured callback/random-stream, real shadow damage and both-initiative
+expiry proofs.34 rows had identical HP/mana/item medians; every baseline-winning
+seed was preserved. The sole strict failure was Wayfarer/Cultist health6 to5:
+a16.7-percent decrease still violates the absolute10-percent contract. That
+failure is preserved; no metric threshold or workload is changed.
+
+The next trial keeps the one-point shadow packet and one-turn debuff, but permits
+Cultist's signature only at or below half health. This avoids changing its first
+full-health attack in a short encounter and retains its shadow identity when
+wounded in a longer fight. The paired callback and controlled mechanism fixtures
+use the same wounded condition in both modes; the ordinary35×11 matrix remains
+unchanged. Source contract tests now run through fast/full/coverage-safe discovery.
+
+Windows828 native/performance suites passed; its Python suite failed the separate
+`ConsoleUiInteractionTest.testHistoryNavigationInputBoundsAndCancellationPreserveState`
+child with0xC0000005 and no captured child output (job110363712420).
+Coverage job110362889839 reached12 of35 comparisons before the unchanged60-second
+monster-fixture timeout. Instrumented Warrior fight rows cost2.20–5.62seconds,
+Sorcerer/Octo8.82seconds and Sorcerer/Mage7.16seconds; setup was151–166ms perpair.
+Release corresponding rows cost0.20–0.81seconds with14–17ms setup. The coverage
+CTest failure output contained no debug log lines. This is measured instrumented
+combat work; no canonical coverage acceptance was reached.
