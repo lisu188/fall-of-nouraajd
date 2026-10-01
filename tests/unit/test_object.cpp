@@ -42,6 +42,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CQuest.h"
 #include "object/CTile.h"
 #include "test_harness.h"
+#include "stat_composition_fixture.h"
 #include "vutil.h"
 
 #include <pybind11/embed.h>
@@ -867,6 +868,63 @@ void test_equip_item_same_instance_is_noop_and_keeps_cursed_lock() {
     creature->equipItem("3", nullptr);
     expect_true(creature->getItemAtSlot("3") == nullptr, "lifting the curse must unlock the slot again");
     expect_true(creature->hasInInventory(cursed_armor), "an unlocked unequip must return the item to the inventory");
+}
+
+void test_stat_composition_matches_reflective_reference_and_reads_current_inputs() {
+    using namespace stat_composition_fixture;
+    for (int mode = 0; mode < 7; ++mode) {
+        auto fixture = make(mode);
+        std::vector<StatsModifier> original;
+        for (const auto &source : fixture.sources) {
+            original.push_back(source->modifier());
+        }
+        for (int level : {-1, 0, 1, 4}) {
+            fixture.creature->setLevel(level);
+            fixture.creature->setRacialLevel(level);
+            std::size_t contributions = 0;
+            auto expected = reflectiveReference(fixture.creature, contributions);
+            auto actual = fixture.creature->getStats();
+            expect_true(actual->modifier() == expected->modifier(),
+                        "private stat fold must preserve all 17 old reflective sums at negative/zero/positive levels");
+            expect_true(actual->getMainStat() == expected->getMainStat(),
+                        "private stat fold must preserve legacy, single-class and first-track main-stat precedence");
+            for (const auto &field : fieldNames) {
+                expect_true(actual->getNumericProperty(field) == expected->getNumericProperty(field),
+                            "materialized stat reflection must agree with the independent old reference");
+            }
+            expect_true(actual != fixture.creature->getStats(), "each stat read must return a fresh aggregate");
+        }
+        for (std::size_t i = 0; i < fixture.sources.size(); ++i) {
+            expect_true(fixture.sources[i]->modifier() == original[i], "stat reads must never mutate a source");
+            expect_true(fixture.sources[i]->getMainStat() == "stamina", "stat reads must preserve source main stats");
+        }
+        expect_true(fixture.sources.front()->getNumericProperty("strength") == 900,
+                    "source dynamic shadows must remain untouched and must not replace typed modifier input");
+
+        auto old_result = fixture.creature->getStats();
+        const auto old_values = old_result->modifier();
+        for (const auto &source : fixture.sources) {
+            source->setDamage(source->getDamage() + 3);
+        }
+        fixture.creature->setLevel(2);
+        fixture.creature->setRacialLevel(1);
+        fixture.creature->getBaseStats()->setMainStat("agility");
+        if (auto klass = fixture.creature->getCreatureClass()) {
+            klass->setMainStat("");
+        }
+        for (const auto &track : fixture.creature->getClassTracks()) {
+            track->setOrder(-track->getOrder());
+            track->setLevel(1);
+        }
+        fixture.creature->setEquipped({});
+        fixture.creature->setEffects({});
+        std::size_t contributions = 0;
+        auto expected = reflectiveReference(fixture.creature, contributions);
+        auto actual = fixture.creature->getStats();
+        expect_true(actual->modifier() == expected->modifier() && actual->getMainStat() == expected->getMainStat(),
+                    "later reads must observe changed source stats, levels, track order and removed items/effects");
+        expect_true(old_result->modifier() == old_values, "later input mutations must not change an earlier aggregate");
+    }
 }
 
 void test_no_archetype_creature_stats_keep_legacy_composition() {
@@ -3587,6 +3645,7 @@ int main() {
     test_creature_inventory_equipment_and_ratio_helpers();
     test_creature_armor_caps_mitigation_for_loot_stacks_and_effects();
     test_equip_item_same_instance_is_noop_and_keeps_cursed_lock();
+    test_stat_composition_matches_reflective_reference_and_reads_current_inputs();
     test_no_archetype_creature_stats_keep_legacy_composition();
     test_creature_stat_precedence_orders_sources_and_main_stat();
     test_racial_progression_defaults_keep_composition_neutral();
