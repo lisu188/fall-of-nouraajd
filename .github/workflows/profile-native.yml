@@ -1,0 +1,78 @@
+name: Native routine profiling
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Complete native binary to profile
+        type: choice
+        options: [both, handler, map]
+        default: both
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/profile-native.yml
+      - scripts/profile_native_tests.py
+      - tests/test_native_callgrind.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-routine-profile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  callgrind:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GAME_CONFIGURE_SKIP_APT: "1"
+      GAME_CONFIGURE_SKIP_SUBMODULES: "1"
+      PROFILE_SUITE: ${{ github.event_name == 'workflow_dispatch' && inputs.suite || 'both' }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+      - name: Install existing build dependencies and diagnostic Valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache python3-dev pybind11-dev \
+            libboost-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev xvfb xauth valgrind
+          python3 -m pip install -r requirements-dev.txt
+      - name: Configure diagnostic build with optimization and symbols
+        run: GAME_CONFIGURE_BUILD_TYPES=RelWithDebInfo ./configure.sh
+      - name: Record selected build metadata before compiling
+        run: |
+          python3 scripts/profile_native_tests.py --metadata-only \
+            --build-dir cmake-build-relwithdebinfo \
+            --output-dir "test/native-callgrind/${{ github.run_id }}-${{ github.run_attempt }}/setup"
+      - name: Build complete selected native test binaries
+        shell: bash
+        run: |
+          case "${PROFILE_SUITE}" in
+            handler) targets=(handler_unit_tests) ;;
+            map) targets=(map_unit_tests) ;;
+            both) targets=(handler_unit_tests map_unit_tests) ;;
+            *) exit 2 ;;
+          esac
+          cmake --build cmake-build-relwithdebinfo --target "${targets[@]}" -j"$(nproc)"
+      - name: Profile complete workloads on virtual displays
+        run: |
+          python3 scripts/profile_native_tests.py \
+            --build-dir cmake-build-relwithdebinfo \
+            --output-dir "test/native-callgrind/${{ github.run_id }}-${{ github.run_attempt }}/runtime" \
+            --suite "${PROFILE_SUITE}" --timeout-seconds 1800
+      - name: Retain complete and partial profiling evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: native-callgrind-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test/native-callgrind/
+            coverage/native-test-profiles/
+          if-no-files-found: warn
