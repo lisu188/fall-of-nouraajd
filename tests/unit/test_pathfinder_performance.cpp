@@ -630,8 +630,8 @@ std::shared_ptr<CTile> makeWeightedTile(const std::shared_ptr<CGame> &game, int 
 // Builds a fully materialized width x height open map whose row-0 band [bandStartX, bandEndX] carries
 // the supplied (expensive) movement cost; every other tile has cost 1. Returns the game so callers keep
 // the shared owners alive while the map is in use.
-std::shared_ptr<CGame> buildWeightedBandMap(int width, int height, int bandStartX, int bandEndX,
-                                            int bandCost, std::shared_ptr<CMap> &outMap) {
+std::shared_ptr<CGame> buildWeightedBandMap(int width, int height, int bandStartX, int bandEndX, int bandCost,
+                                            std::shared_ptr<CMap> &outMap) {
     auto game = std::make_shared<CGame>();
     auto map = std::make_shared<CMap>();
     game->setMap(map);
@@ -661,12 +661,11 @@ void testMapMovementCostRegressionPinsTileWeightsAndRouting() {
 
     // Per-tile weights are pinned exactly through both the materializing and lookup accessors.
     expectMetricEquals("regression default tile cost", static_cast<long long>(map->getMovementCost(0, 0, 0)), 1);
-    expectMetricEquals("regression band tile cost", static_cast<long long>(map->getMovementCost(2, 0, 0)),
-                       band_cost);
+    expectMetricEquals("regression band tile cost", static_cast<long long>(map->getMovementCost(2, 0, 0)), band_cost);
     expectMetricEquals("regression lookup band tile cost",
                        static_cast<long long>(map->lookupMovementCost(Coords(3, 0, 0))), band_cost);
-    expectMetricEquals("regression off-band tile cost",
-                       static_cast<long long>(map->getMovementCost(Coords(2, 1, 0))), 1);
+    expectMetricEquals("regression off-band tile cost", static_cast<long long>(map->getMovementCost(Coords(2, 1, 0))),
+                       1);
 
     // The std::max(1, ...) floor: a tile configured below 1 still reports 1.
     if (auto tile = map->getTile(Coords(0, 0, 0))) {
@@ -759,8 +758,7 @@ void testMovementCostPathStaysWithinWorkBound() {
     expectMetricAtMost("perf-bound stepCost calls", counters.stepCost, total_cells * 4, total_cells * 8);
     expectMetricAtMost("perf-bound neighbor calls", counters.neighbors, total_cells, total_cells * 4);
     expectMetricAtMost("perf-bound distance calls", counters.distance, total_cells * 4, total_cells * 8);
-    expect_true(counters.canStep < 1'000'000,
-                "perf-bound stays below global node cap metric=1 baseline=1 threshold=1");
+    expect_true(counters.canStep < 1'000'000, "perf-bound stays below global node cap metric=1 baseline=1 threshold=1");
 }
 
 void testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork() {
@@ -817,6 +815,49 @@ void testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork() {
     }
 }
 
+void testWeightedConnectorCostsStayWithinWorkBound() {
+    constexpr int width = 96;
+    const Coords start(0, 0, 0), goal(width - 1, 0, 0);
+    for (const int connector_cost : {1, 5, 128}) {
+        auto game = std::make_shared<CGame>();
+        auto map = std::make_shared<CMap>();
+        game->setMap(map);
+        map->setGame(game);
+        map->setXBounds({{0, width - 1}});
+        map->setYBounds({{0, 1}});
+        for (int x = 0; x < width; ++x)
+            map->addTile(makeWeightedTile(game, 1), x, 0, 0);
+        map->addTile(makeWeightedTile(game, 1), 0, 1, 0);
+        map->registerNavigationEdge({Coords(0, 1, 0), Coords(width - 2, 0, 0), true, false, connector_cost});
+        CallbackCounters counters;
+        auto can_step = [&counters, map](const Coords &coords) {
+            ++counters.canStep;
+            return map->canStep(coords);
+        };
+        auto waypoint = [&counters](const Coords &coords) { return noWaypoint(counters, coords); };
+        auto neighbors = [&counters, map](const Coords &coords) {
+            ++counters.neighbors;
+            return map->getNavigationNeighbors(coords);
+        };
+        auto cost = [&counters, map](const Coords &from, const Coords &to) {
+            ++counters.stepCost;
+            return map->lookupNavigationStepCost(from, to);
+        };
+        const auto path =
+            CPathFinder::findPath(start, goal, can_step, waypoint, neighbors, CPathFinder::mapHeuristic(map), cost);
+        const bool use_connector = connector_cost < width - 2;
+        expectMetricEquals("weighted connector path length", static_cast<long long>(path.size()),
+                           use_connector ? 3 : width - 1);
+        expect_true(!path.empty() && path.front() == (use_connector ? Coords(0, 1, 0) : Coords(1, 0, 0)),
+                    "weighted connector must compete with the ordinary route by total cost");
+        expectMetricAtMost("weighted connector neighbor calls", counters.neighbors,
+                           use_connector ? connector_cost + 4 : width, width * 2);
+        expectMetricAtMost("weighted connector step-cost calls", counters.stepCost,
+                           use_connector ? connector_cost * 4 + 16 : width * 4, width * 8);
+        expectMetricAtMost("weighted connector passability calls", counters.canStep, width, width * 4);
+    }
+}
+
 } // namespace
 
 void run_pathfinder_performance_tests() {
@@ -835,4 +876,5 @@ void run_pathfinder_performance_tests() {
     testMapMovementCostRegressionPinsTileWeightsAndRouting();
     testMovementCostPathStaysWithinWorkBound();
     testMapHeuristicPreservesPortalRoutesAndOrdinarySearchWork();
+    testWeightedConnectorCostsStayWithinWorkBound();
 }

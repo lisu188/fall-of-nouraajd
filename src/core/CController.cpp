@@ -18,6 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CController.h"
 #include <algorithm>
 #include <cstdlib>
+#include <limits>
 
 #include "core/CGame.h"
 #include "core/CGameContext.h"
@@ -172,8 +173,8 @@ bool creature_can_follow_step(const std::shared_ptr<CMap> &map, const std::share
     return target != current && map->canStep(target) && contains_navigation_neighbor(map, current, target);
 }
 
-int movement_step_cost(const std::shared_ptr<CMap> &map, const Coords &, const Coords &to) {
-    return map ? map->lookupMovementCost(to) : 1;
+int movement_step_cost(const std::shared_ptr<CMap> &map, const Coords &from, const Coords &to) {
+    return map ? map->lookupNavigationStepCost(from, to) : 1;
 }
 
 std::shared_ptr<TargetFlowField> seed_target_flow_field(const std::shared_ptr<CMap> &map, const Coords &goal,
@@ -234,7 +235,11 @@ void extend_target_flow_field(const std::shared_ptr<TargetFlowField> &field, con
                 continue;
             }
 
-            const int nextCost = current.cost + movement_step_cost(map, previous, current.coords);
+            const int step_cost = movement_step_cost(map, previous, current.coords);
+            if (current.cost >= std::numeric_limits<int>::max() - step_cost) {
+                continue;
+            }
+            const int nextCost = current.cost + step_cost;
             auto previousCost = field->costs.find(previous);
             if (previousCost == field->costs.end() || nextCost < previousCost->second) {
                 field->costs[previous] = nextCost;

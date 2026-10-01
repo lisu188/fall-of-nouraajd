@@ -766,6 +766,8 @@ void init_game_module(py::module_ &m) {
              "Return a Python list of map objects at the given coordinates.")
         .def("getNavigationNeighbors", getNavigationNeighbors, py::arg("coords"), py::arg("includeSelf") = false,
              "Return cardinal neighbors plus enabled registered navigation edges.")
+        .def("lookupNavigationStepCost", &CMap::lookupNavigationStepCost, py::arg("fromCoords"), py::arg("toCoords"),
+             "Price a graph step using destination terrain plus a registered connector surcharge.")
         .def("registerNavigationEdge", &map_register_navigation_edge, py::arg("source"), py::arg("target"),
              py::arg("enabled") = true, py::arg("bidirectional") = false, py::arg("movementCost") = 1,
              py::arg("sourceObjectName") = py::none(), "Register a navigation edge for map pathing.")

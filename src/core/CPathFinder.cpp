@@ -32,6 +32,7 @@ constexpr int MAX_PATH_DUMP_PIXELS = 4'000'000;
 // goal over sparse or effectively unbounded coordinate space. They are intentionally generous so
 // normal navigation stays unaffected, while still failing safely on pathological inputs.
 constexpr int MAX_PATH_LENGTH = 100'000;
+constexpr int MAX_PATH_COST = std::numeric_limits<int>::max();
 constexpr long long PATHFINDER_ENVELOPE_FACTOR = 4;
 // Additive slack on top of the goal-relative term. It must comfortably exceed the largest legitimate
 // raw-coordinate detour, including the worst case on a *wrapping* (toroidal) map where the shortest
@@ -57,6 +58,10 @@ inline bool withinEnvelope(const Coords &start, const Coords &candidate, long lo
     return manhattanSpan(start, candidate) <= budget;
 }
 using Values = std::shared_ptr<std::unordered_map<Coords, int>>;
+
+int boundedCost(int cost, int extra) {
+    return static_cast<int>(std::min<long long>(static_cast<long long>(cost) + extra, MAX_PATH_COST));
+}
 
 struct QueueNode {
     int cost;
@@ -158,7 +163,10 @@ Values fillValues(const CanStep &canStep, const Coords &goal, const Waypoint &wa
         forEachCandidate(current.coords, waypoint, neighbors, [&](Coords previous) {
             if ((stopAt && previous == *stopAt) || passability.canStepAt(previous)) {
                 const int edge_cost = std::max(1, stepCost(previous, current.coords));
-                const int next_cost = current.cost + edge_cost;
+                const int next_cost = boundedCost(current.cost, edge_cost);
+                if (next_cost == MAX_PATH_COST) {
+                    return;
+                }
                 auto value = values->find(previous);
                 if (value == values->end() || next_cost < value->second) {
                     (*values)[previous] = next_cost;
@@ -173,7 +181,11 @@ Values fillValues(const CanStep &canStep, const Coords &goal, const Waypoint &wa
 
 template <fn::PathDistance Distance>
 int estimateCost(const Distance &distance, const Coords &from, const Coords &goal) {
-    return std::max(0, static_cast<int>(std::floor(distance(from, goal))));
+    const double estimate = distance(from, goal);
+    if (!std::isfinite(estimate) || estimate >= MAX_PATH_COST) {
+        return MAX_PATH_COST;
+    }
+    return estimate <= 0 ? 0 : static_cast<int>(std::floor(estimate));
 }
 
 std::vector<Coords> buildPath(const Coords &start, const Coords &goal,
@@ -245,12 +257,15 @@ std::vector<Coords> findAStarPath(Coords start, Coords goal, const CanStep &canS
             }
 
             const int edgeCost = std::max(1, stepCost(current.coords, next));
-            const int nextCost = current.cost + edgeCost;
+            const int nextCost = boundedCost(current.cost, edgeCost);
+            if (nextCost == MAX_PATH_COST) {
+                return;
+            }
             auto nextBest = bestCost.find(next);
             if (nextBest == bestCost.end() || nextCost < nextBest->second) {
                 bestCost[next] = nextCost;
                 previous[next] = current.coords;
-                frontier.push({nextCost + estimateCost(distance, next, goal), nextCost, next});
+                frontier.push({boundedCost(nextCost, estimateCost(distance, next, goal)), nextCost, next});
             }
         });
     }
@@ -303,11 +318,14 @@ Coords findAStarNextStep(Coords start, Coords goal, const CanStep &canStep, cons
             }
 
             const int edgeCost = std::max(1, stepCost(current.coords, next));
-            const int nextCost = current.cost + edgeCost;
+            const int nextCost = boundedCost(current.cost, edgeCost);
+            if (nextCost == MAX_PATH_COST) {
+                return;
+            }
             auto nextBest = bestCost.find(next);
             if (nextBest == bestCost.end() || nextCost < nextBest->second) {
                 bestCost[next] = nextCost;
-                frontier.push({nextCost + estimateCost(distance, next, goal), nextCost, next,
+                frontier.push({boundedCost(nextCost, estimateCost(distance, next, goal)), nextCost, next,
                                current.coords == start ? next : current.firstStep});
             }
         });

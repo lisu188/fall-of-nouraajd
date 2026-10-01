@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <atomic>
 #include <chrono>
+#include <limits>
 
 namespace {
 std::atomic_bool mapCoordinateLookupProbeEnabled{false};
@@ -285,6 +286,7 @@ std::vector<Coords> CMap::getNavigationNeighbors(Coords coords, bool includeSelf
 void CMap::registerNavigationEdge(CNavigationEdge edge) {
     edge.source = normalizeCoords(edge.source);
     edge.target = normalizeCoords(edge.target);
+    edge.movementCost = std::max(1, edge.movementCost);
     navigationEdges.push_back(std::move(edge));
     bumpNavigationRevision();
 }
@@ -462,6 +464,31 @@ int CMap::lookupMovementCost(Coords coords) {
     return lookupMovementCost(coords.x, coords.y, coords.z);
 }
 
+int CMap::lookupNavigationStepCost(Coords from, Coords to) {
+    from = normalizeCoords(from);
+    to = normalizeCoords(to);
+    const int terrain_cost = lookupMovementCost(to);
+    if (navigationEdges.empty()) {
+        return terrain_cost;
+    }
+    const auto adjacent = getAdjacentCoords(from);
+    if (std::ranges::find(adjacent, to) != adjacent.end()) {
+        return terrain_cost;
+    }
+    int best_cost = std::numeric_limits<int>::max();
+    bool matched = false;
+    for (const auto &edge : navigationEdges) {
+        if (edge.enabled && ((edge.source == from && edge.target == to) ||
+                             (edge.bidirectional && edge.target == from && edge.source == to))) {
+            matched = true;
+            const auto cost = static_cast<long long>(terrain_cost) + std::max(1, edge.movementCost) - 1;
+            best_cost =
+                std::min(best_cost, static_cast<int>(std::min<long long>(cost, std::numeric_limits<int>::max())));
+        }
+    }
+    return matched ? best_cost : terrain_cost;
+}
+
 bool CMap::contains(int x, int y, int z) {
     Coords coords = normalizeCoords(Coords(x, y, z));
     auto it = tiles.find(coords);
@@ -626,8 +653,8 @@ void CMap::move() {
         auto should_interrupt_after_step = [map](const std::shared_ptr<CCreature> &creature, const Coords &target) {
             auto objects = map->getObjectsAtCoords(target);
             return std::any_of(objects.begin(), objects.end(), [&](const auto &object) {
-                return object != creature &&
-                       (vstd::cast<CCreature>(object) || (vstd::cast<CVisitable>(object) && !vstd::cast<CItem>(object)));
+                return object != creature && (vstd::cast<CCreature>(object) ||
+                                              (vstd::cast<CVisitable>(object) && !vstd::cast<CItem>(object)));
             });
         };
 
@@ -800,7 +827,8 @@ void CMap::dumpPaths(std::string path) {
         currentPlayer->getCoords(), [this](auto coords) { return this->canStep(coords); }, path,
         [](auto) -> std::optional<Coords> { return std::nullopt; },
         [this](auto coords) { return this->getNavigationNeighbors(coords); },
-        CPathFinder::mapHeuristic(this->ptr<CMap>()), [this](auto, auto to) { return this->lookupMovementCost(to); });
+        CPathFinder::mapHeuristic(this->ptr<CMap>()),
+        [this](auto from, auto to) { return this->lookupNavigationStepCost(from, to); });
 }
 
 std::set<std::shared_ptr<CTrigger>> CMap::getTriggers() {

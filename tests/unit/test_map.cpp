@@ -48,6 +48,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <limits>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -992,6 +993,50 @@ void test_map_movement_cost_default_lookup_without_materializing() {
     expect_true(!map->contains(4, 1, 0), "out-of-bounds cost lookup should leave the sparse coordinate empty");
     expect_true(map->getNavigationRevision() == initial_navigation_revision,
                 "non-materializing movement cost lookup should not bump navigation revision");
+}
+
+void test_navigation_step_cost_preserves_terrain_and_prices_connectors() {
+    auto game = std::make_shared<CGame>();
+    auto map = std::make_shared<CMap>();
+    map->setGame(game);
+    game->setMap(map);
+    map->setXBounds({{0, 8}, {1, 8}});
+    map->setYBounds({{0, 2}, {1, 2}});
+    map->setWrapX({{0, 1}});
+    const Coords source(0, 0, 0), target(5, 0, 1);
+    auto tile = std::make_shared<CTile>();
+    tile->setGame(game);
+    tile->setMovementCost(3);
+    map->addTile(tile, target.x, target.y, target.z);
+    map->registerNavigationEdge({source, target, true, true, 8});
+    const auto tile_count = map->getTiles().size();
+    const auto revision = map->getNavigationRevision();
+    expect_true(map->lookupNavigationStepCost(source, target) == 10, "connector should add its surcharge to terrain");
+    expect_true(map->lookupNavigationStepCost(target, source) == 8,
+                "reverse connector should use its destination terrain");
+    expect_true(map->lookupNavigationStepCost(Coords(9, 0, 0), target) == 10, "cost query should normalize endpoints");
+    expect_true(map->lookupNavigationStepCost(Coords(4, 0, 1), target) == 3,
+                "ordinary adjacency should keep terrain cost");
+    expect_true(map->getTiles().size() == tile_count && map->getNavigationRevision() == revision,
+                "cost lookup must not materialize tiles or invalidate navigation");
+    map->registerNavigationEdge({source, target, false, false, 1});
+    expect_true(map->lookupNavigationStepCost(source, target) == 10,
+                "disabled cheap connector should not affect costs");
+    map->registerNavigationEdge({source, target, true, false, 4});
+    expect_true(map->lookupNavigationStepCost(source, target) == 6,
+                "duplicate connectors should use their minimum cost");
+    expect_true(map->lookupNavigationStepCost(target, source) == 8,
+                "one-way connector must not discount reverse costs");
+    map->registerNavigationEdge({Coords(4, 0, 1), target, true, false, 20});
+    expect_true(map->lookupNavigationStepCost(Coords(4, 0, 1), target) == 3,
+                "cardinal movement should beat an overlapping edge");
+    map->registerNavigationEdge({Coords(2, 0, 0), target, true, false, -4});
+    expect_true(map->getNavigationEdges().back().movementCost == 1, "registered edge costs should clamp to one");
+    expect_true(map->lookupNavigationStepCost(Coords(2, 0, 0), target) == 3,
+                "default connector should keep terrain pricing");
+    map->registerNavigationEdge({Coords(3, 0, 0), target, true, false, std::numeric_limits<int>::max()});
+    expect_true(map->lookupNavigationStepCost(Coords(3, 0, 0), target) == std::numeric_limits<int>::max(),
+                "an excessive connector cost must saturate instead of wrapping or becoming a cheap default");
 }
 
 void test_map_navigation_edges_update_revision() {
@@ -2511,6 +2556,7 @@ int main() {
     test_tile_movement_cost_deserialization();
     test_map_movement_cost_default_lookup_without_materializing();
     test_map_navigation_edges_update_revision();
+    test_navigation_step_cost_preserves_terrain_and_prices_connectors();
     test_map_navigation_neighbors_include_registered_edges();
     test_map_dump_paths_uses_navigation_neighbors();
     test_map_defensive_branches_and_strict_validation();
