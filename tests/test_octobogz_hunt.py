@@ -38,6 +38,18 @@ class Properties:
     def setNumericProperty(self, name, value):
         self.properties[name] = value
 
+    def getObjectProperty(self, name):
+        return self.properties.get(name)
+
+    def setObjectProperty(self, name, value):
+        self.properties[name] = value
+
+    def setCaster(self, actor):
+        self.caster = actor
+
+    def setVictim(self, actor):
+        self.victim = actor
+
     def getGame(self):
         return self.game
 
@@ -103,6 +115,15 @@ class Actor(Properties):
     def getActions(self):
         return list(self.actions.values())
 
+    def getInteractions(self):
+        return self.getActions()
+
+    def getWeapon(self):
+        return getattr(self, "weapon", None)
+
+    def addEffect(self, effect):
+        self.effects.append(effect)
+
     def getController(self):
         return getattr(self, "controller", None)
 
@@ -114,7 +135,12 @@ class Actor(Properties):
         return self.getNumericProperty("damageRoll")
 
     def hurt(self, packet):
-        self.setHp(self.getHp() - packet.getNumericProperty("shadow"))
+        damage = (
+            packet
+            if isinstance(packet, int)
+            else sum(packet.getNumericProperty(channel) for channel in ("normal", "frost", "shadow"))
+        )
+        self.setHp(self.getHp() - damage)
 
 
 class HuntMap(Properties):
@@ -195,9 +221,16 @@ class OctobogzHuntTest(unittest.TestCase):
         for name in ("CBuilding", "CEffect", "CEvent", "CInteraction", "CTrigger"):
             setattr(game_stub, name, type(name, (Properties,), {}))
         game_stub.Coords = lambda x, y, z: types.SimpleNamespace(x=x, y=y, z=z)
+        game_stub.randint = Mock()
         game_stub.register = lambda context: lambda cls: self.registered.setdefault(cls.__name__, cls)
         game_stub.event_loop = types.SimpleNamespace(instance=lambda: types.SimpleNamespace(invoke=self.pending.append))
         with patch.dict(sys.modules, {"game": game_stub}):
+            attack_spec = importlib.util.spec_from_file_location(
+                "hunt_attack_under_test", ROOT / "res/plugins/interaction.py"
+            )
+            attack_module = importlib.util.module_from_spec(attack_spec)
+            attack_spec.loader.exec_module(attack_module)
+            attack_module.load(None, None)
             spec = importlib.util.spec_from_file_location(
                 "octobogz_hunt_under_test", ROOT / "res/plugins/octobogz_hunt.py"
             )
@@ -226,6 +259,10 @@ class OctobogzHuntTest(unittest.TestCase):
             result = self.registered.get(mapping.get(type_id, type_id), Properties)()
         result.game = self.game
         result.setStringProperty("typeId", type_id)
+        if type_id == "octobogzShadowPulse":
+            result.setObjectProperty("roleDamage", Properties())
+            result.setObjectProperty("roleEffect", self.createObject("OctobogzShadowPulseEffect"))
+            result.getManaCost = lambda: 5
         if type_id == "cave2":
             result.setStringProperty("name", "cave2")
             result.relocateWithoutMoveHooks(types.SimpleNamespace(x=166, y=21, z=0))
@@ -444,45 +481,118 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertEqual("scout", self.state()["stage"])
         self.assertIsNotNone(self.game_map.getObjectByName("cave2"))
 
-    def testPulseCapturesOneBasicRollAndDistributesExactlyItsBoundedBudget(self):
+    def phaseActor(self, roll=11):
         actor = Actor("alpha")
         actor.game = self.game
-        actor.properties["damageRoll"] = 11
-        pulse = self.createObject("octobogzShadowPulse")
-        effect = self.createObject("OctobogzShadowPulseEffect")
-        effect.getCaster = lambda: actor
-        effect.getVictim = lambda: self.game_map.player
-        effect.getTimeLeft = lambda: 2
-        pulse.performAction(actor, self.game_map.player)
-        self.assertTrue(pulse.configureEffect(effect))
-        self.assertEqual(1, actor.damage_rolls)
-        self.assertEqual(8, effect.getNumericProperty("octobogzDamageBudget"))
-        before = self.game_map.player.getHp()
-        effect.onEffect()
-        effect.getTimeLeft = lambda: 1
-        effect.onEffect()
-        self.assertEqual(before - 8, self.game_map.player.getHp())
-        self.assertEqual(1, actor.damage_rolls)
-        self.assertEqual("spent", actor.getStringProperty("octobogzCombatPhase"))
-        self.assertTrue(actor.getBoolProperty("octobogzPulseUsed"))
-        pulse.performAction(actor, self.game_map.player)
-        duplicate = self.createObject("OctobogzShadowPulseEffect")
-        duplicate.getCaster = lambda: actor
-        self.assertFalse(pulse.configureEffect(duplicate))
-        self.assertEqual(1, actor.damage_rolls)
-        self.assertEqual(0, duplicate.getNumericProperty("octobogzDamageBudget"))
+        actor.properties["damageRoll"] = roll
+        attack = self.registered["Attack"]()
+        attack.getTypeId = lambda: "Attack"
+        actor.addAction(attack)
+        return actor, attack
 
-    def testMissedPulseAndRoundedZeroTickDoNotConsumeBlockDice(self):
-        effect = self.createObject("OctobogzShadowPulseEffect")
-        victim = Mock()
-        effect.getVictim = lambda: victim
-        for budget, ticks in ((0, (2, 1)), (1, (2,))):
-            effect.setNumericProperty("octobogzDamageBudget", budget)
-            for remaining in ticks:
-                effect.getTimeLeft = lambda: remaining
-                effect.onEffect()
-        victim.hurt.assert_not_called()
-        victim.getGame.assert_not_called()
+    def testChargeAndPulseRetainOneConfiguredAttackEachAndCannotRepeatAfterSave(self):
+        actor, _ = self.phaseActor()
+        target = self.game_map.player
+        before = target.getHp()
+        charge = self.createObject("octobogzCharge")
+        pulse = self.createObject("octobogzShadowPulse")
+        packet = pulse.getObjectProperty("roleDamage")
+        effect = pulse.getObjectProperty("roleEffect")
+        self.game.createObject.reset_mock()
+        charge.performAction(actor, target)
+        self.assertEqual("charged", actor.getStringProperty("octobogzCombatPhase"))
+        self.assertEqual(1, actor.damage_rolls)
+        self.assertEqual(before - 11, target.getHp())
+        self.game.getGuiHandler().notify.assert_called_once()
+        pulse.performAction(actor, target)
+        self.assertEqual(2, actor.damage_rolls)
+        self.assertEqual({"normal": 10, "shadow": 1}, packet.properties)
+        self.assertEqual(11, actor.getNumericProperty("enemyRoleAttackBudget"))
+        self.assertEqual(before - 22, target.getHp())
+        self.assertIsNone(pulse.getObjectProperty("roleEffect"))
+        self.assertEqual([effect], target.effects)
+        self.assertIs(effect.caster, actor)
+        self.assertIs(effect.victim, target)
+        self.assertEqual(0, pulse.getCommittedManaRefund(actor))
+        self.assertFalse(actor.getBoolProperty("enemyRoleArcaneAttack"))
+        self.assertEqual("", actor.getStringProperty("enemyRoleDamageChannel"))
+        flags = {key: value for key, value in actor.properties.items() if isinstance(value, (str, int, bool))}
+        actor.properties.update(json.loads(json.dumps(flags)))
+        charge.performAction(actor, target)
+        pulse.performAction(actor, target)
+        self.assertEqual(2, actor.damage_rolls)
+        self.assertEqual(5, pulse.getCommittedManaRefund(actor))
+        self.assertEqual(1, len(target.effects))
+        self.game.createObject.assert_not_called()
+
+    def testShadowPacketPreservesWeaponProcAndCannotLeakAcrossMissOrLaterAttack(self):
+        actor, attack = self.phaseActor()
+        weapon, proc = Mock(), Mock()
+        weapon.getInteraction.return_value = proc
+        actor.weapon = weapon
+        actor.setStringProperty("octobogzCombatPhase", "charged")
+        pulse = self.createObject("octobogzShadowPulse")
+        pulse.performAction(actor, self.game_map.player)
+        proc.onAction.assert_called_once_with(actor, self.game_map.player)
+        self.assertFalse(actor.getBoolProperty("enemyRoleArcaneAttack"))
+        attack.performAction(actor, self.game_map.player)
+        self.assertEqual(2, proc.onAction.call_count)
+        self.assertEqual(2, actor.damage_rolls)
+        actor, attack = self.phaseActor(0)
+        actor.weapon = weapon
+        actor.setStringProperty("octobogzCombatPhase", "charged")
+        pulse = self.createObject("octobogzShadowPulse")
+        target = Mock()
+        target.isAlive.return_value = True
+        pulse.performAction(actor, target)
+        target.hurt.assert_not_called()
+        self.assertEqual({}, pulse.getObjectProperty("roleDamage").properties)
+        self.assertEqual(2, proc.onAction.call_count)
+        self.assertEqual(1, actor.damage_rolls)
+        self.assertFalse(actor.getBoolProperty("enemyRoleArcaneAttack"))
+        self.assertEqual("", actor.getStringProperty("enemyRoleDamageChannel"))
+
+    def testRejectedOrCancelledPulseClearsHookAndRefundsPaidManaWithoutConsumingPhase(self):
+        actor, attack = self.phaseActor()
+        actor.setStringProperty("octobogzCombatPhase", "charged")
+        pulse = self.createObject("octobogzShadowPulse")
+        actor.actions.clear()
+        pulse.performAction(actor, self.game_map.player)
+        self.assertEqual(5, pulse.getCommittedManaRefund(actor))
+        self.assertFalse(actor.getBoolProperty("octobogzPulseUsed"))
+        actor.addAction(attack)
+        attack.performAction = Mock(side_effect=RuntimeError("cancelled attack"))
+        with self.assertRaisesRegex(RuntimeError, "cancelled attack"):
+            pulse.performAction(actor, self.game_map.player)
+        self.assertFalse(actor.getBoolProperty("enemyRoleArcaneAttack"))
+        self.assertEqual("", actor.getStringProperty("enemyRoleDamageChannel"))
+        self.assertEqual("charged", actor.getStringProperty("octobogzCombatPhase"))
+        self.assertFalse(actor.getBoolProperty("octobogzPulseUsed"))
+        self.assertEqual(5, pulse.getCommittedManaRefund(actor))
+        self.assertEqual([], self.game_map.player.effects)
+        pulse.performAction(actor, None)
+        self.assertEqual(5, pulse.getCommittedManaRefund(actor))
+
+    def testOnlyExplicitFrostOrShadowPacketChannelsCanChangeOrdinaryAttack(self):
+        actor, attack = self.phaseActor()
+        actor.setBoolProperty("enemyRoleArcaneAttack", True)
+        actor.setStringProperty("enemyRoleDamageChannel", "fire")
+        packet = Properties()
+        actor.setObjectProperty("enemyRoleDamagePacket", packet)
+        attack.performAction(actor, self.game_map.player)
+        self.assertEqual({}, packet.properties)
+        self.assertFalse(actor.getBoolProperty("enemyRoleArcaneAttack"))
+        self.assertEqual("", actor.getStringProperty("enemyRoleDamageChannel"))
+        config = json.loads((ROOT / "res/config/interactions.json").read_text(encoding="utf-8"))
+        props = config["octobogzShadowPulse"]["properties"]
+        self.assertEqual(5, props["manaCost"])
+        self.assertNotIn("effect", props)
+        self.assertEqual({"class": "CDamage"}, props["roleDamage"])
+        effects = json.loads((ROOT / "res/config/effects.json").read_text(encoding="utf-8"))
+        props = effects["octobogzShadowPulseEffect"]["properties"]
+        self.assertEqual(1, props["duration"])
+        self.assertEqual({"shadowResist": -1}, props["bonus"]["properties"])
+        self.createObject("OctobogzShadowPulseEffect").onEffect()
 
 
 if __name__ == "__main__":

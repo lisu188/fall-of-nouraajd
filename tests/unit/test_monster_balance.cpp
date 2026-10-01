@@ -30,7 +30,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
-#include "object/CWeapon.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>
@@ -314,7 +313,7 @@ void testInheritedNativeMethodsDoNotBecomePythonOverrides() {
     expect_true(!player->getEffects().empty(), "inherited native performAction must return and apply the real barrier");
 }
 
-void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks() {
+void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(bool huntPulse = false) {
     auto game = CGameLoader::loadGame();
     createOpenBalanceMap(game);
     auto expectedNativeRng = vstd::rng();
@@ -327,15 +326,22 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks() {
             player->setLevel(3);
             game->getMap()->attachPlayer(player, Coords(0, 0, 0));
             player->heal(0);
-            auto actor = game->createObject<CCreature>("PritzMage");
-            actor->setName("roleContractMage");
-            actor->setLevel(2);
+            auto actor = game->createObject<CCreature>(huntPulse ? "OctoBogz" : "PritzMage");
+            actor->setName("roleContractActor");
+            actor->setLevel(huntPulse ? 1 : 2);
             actor->setPosX(1);
             game->getMap()->addObject(actor);
             actor->setMana(0);
             actor->setBoolProperty("enemyRoleUsed", !enabled);
+            if (huntPulse) {
+                auto director = game->createObject<CEvent>("OctobogzHuntDirector");
+                pybind11::cast(director).attr("configureActor")(actor, "brood");
+                actor->setStringProperty("octobogzCombatPhase", enabled ? "charged" : "spent");
+                actor->setBoolProperty("octobogzPulseUsed", !enabled);
+                actor->setMana(5);
+            }
             auto weapon = game->createObject<CWeapon>("Staff");
-            actor->setEquipped({{0, weapon}});
+            actor->setEquipped({{"0", weapon}});
             actor->heal(0);
             const auto interactions = actor->getInteractions();
             const auto attackIt =
@@ -364,7 +370,9 @@ attackType.performAction = countedAttack
 weaponType.performAction = countedWeaponAction
 )",
                            globals);
-            const int beforeResist = actor->getStats()->getNormalResist();
+            const auto recipient = huntPulse ? vstd::cast<CCreature>(player) : actor;
+            const int beforeResist =
+                huntPulse ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
             vstd::rng().seed(seed);
             std::srand(seed);
             CMonsterFightController controller;
@@ -382,29 +390,44 @@ weaponType.performAction = originalWeaponAction
             expect_true(calls["attack"].cast<int>() == 1 && weaponCalls <= 1,
                         "signature and ordinary Attack must retain one attack and at most one configured weapon proc");
             observedWeaponProc |= weaponCalls == 1;
-            expect_true(!actor->getBoolProperty("enemyRoleArcaneAttack"),
+            expect_true(!actor->getBoolProperty("enemyRoleArcaneAttack") &&
+                            actor->getStringProperty("enemyRoleDamageChannel").empty(),
                         "the temporary damage hook must be disarmed before a save or subsequent action");
             if (enabled) {
                 expect_true(afterNativeRng == expectedNativeRng && nextBlockRoll == expectedNextBlockRoll,
                             "eager owned role objects must preserve both ordinary Attack random streams");
                 expect_true(weaponCalls == expectedWeaponCalls,
                             "the role hook must preserve the configured weapon proc on both hits and misses");
-                expect_true(actor->getStats()->getNormalResist() == beforeResist - 1 && actor->getEffects().size() == 1,
-                            "the one-turn mage tradeoff must actually affect combat stats");
-                if (!actor->getEffects().empty()) {
-                    const auto effect = *actor->getEffects().begin();
+                const int afterResist =
+                    huntPulse ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
+                expect_true(afterResist == beforeResist - 1 && recipient->getEffects().size() == 1,
+                            "the one-turn signature tradeoff must actually affect combat stats");
+                if (huntPulse) {
+                    expect_true(actor->getMana() == 0 && actor->getBoolProperty("octobogzPulseUsed") &&
+                                    actor->getBoolProperty("octobogzPulseEffectApplied"),
+                                "an actual pulse must spend exactly five mana and apply its owned effect once");
+                    expect_true(!actor->getBoolProperty("enemyRoleUsed"),
+                                "a hunt pulse must remain exclusive of the composed brute class signature");
+                }
+                if (!recipient->getEffects().empty()) {
+                    const auto effect = *recipient->getEffects().begin();
                     expect_true(effect->getTimeLeft() == 1 && effect->getCaster() == actor &&
-                                    effect->getVictim() == actor,
+                                    effect->getVictim() == recipient,
                                 "the eagerly owned effect must have a real duration and actor endpoints");
-                    effect->apply(actor);
+                    effect->apply(recipient);
                     expect_true(effect->getTimeLeft() == 0, "the role effect must expire after one application");
                 }
             } else {
                 expectedNativeRng = afterNativeRng;
                 expectedNextBlockRoll = nextBlockRoll;
                 expectedWeaponCalls = weaponCalls;
-                expect_true(actor->getEffects().empty() && actor->getStats()->getNormalResist() == beforeResist,
-                            "disabled roles must leave ordinary Attack stats unchanged");
+                const int afterResist =
+                    huntPulse ? recipient->getStats()->getShadowResist() : recipient->getStats()->getNormalResist();
+                expect_true(recipient->getEffects().empty() && afterResist == beforeResist,
+                            "disabled signatures must leave ordinary Attack stats unchanged");
+                if (huntPulse) {
+                    expect_true(actor->getMana() == 5, "a spent hunt phase must retain mana on ordinary Attack");
+                }
             }
             game->getMap()->detachPlayer();
             game->getMap()->removeObject(actor);
@@ -522,7 +545,8 @@ HuntBalanceSample runHuntBalanceRoute(const std::shared_ptr<CGame> &game, const 
     for (const auto &slot : {"scout", "alpha", "brood"}) {
         auto enemy = game->createObject<CCreature>("OctoBogz");
         enemy->setName("routeOctobogz" + std::string(slot));
-        enemy->setLevel(2);
+        // The authored map creates fresh OctoBogz actors, which enter at level one.
+        enemy->setLevel(1);
         enemy->setPosX(1);
         map->addObject(enemy);
         enemy->heal(0);
@@ -554,9 +578,14 @@ HuntBalanceSample runHuntBalanceRoute(const std::shared_ptr<CGame> &game, const 
     }
     observer->observe();
     const auto cleanupStarted = std::chrono::steady_clock::now();
-    HuntBalanceSample sample{{won, observer->healthSpent, observer->manaSpent, observer->itemsSpent, 0, 0, 0},
-                             enemies[1]->getBoolProperty("octobogzPulseUsed") ? 1 : 0,
-                             enemies[2]->getBoolProperty("octobogzPulseUsed") ? 1 : 0};
+    HuntBalanceSample sample{
+        {won, observer->healthSpent, observer->manaSpent, observer->itemsSpent, 0, 0, 0},
+        enemies[1]->getBoolProperty("octobogzPulseUsed") && enemies[1]->getBoolProperty("octobogzPulseEffectApplied")
+            ? 1
+            : 0,
+        enemies[2]->getBoolProperty("octobogzPulseUsed") && enemies[2]->getBoolProperty("octobogzPulseEffectApplied")
+            ? 1
+            : 0};
     map->detachPlayer();
     for (const auto &enemy : enemies) {
         if (map->getObjectByName(enemy->getName()) == enemy) {
@@ -642,6 +671,7 @@ int main(int argc, char **argv) {
     testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
     testActivePlayerNeverUsesMonsterSignature();
     if (argc == 2 && std::string(argv[1]) == "--hunt-route") {
+        testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(true);
         testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget();
     } else {
         testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget();

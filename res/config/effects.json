@@ -246,7 +246,13 @@
   "octobogzShadowPulseEffect": {
     "class": "OctobogzShadowPulseEffect",
     "properties": {
-      "duration": 2
+      "duration": 1,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "shadowResist": -1
+        }
+      }
     }
   }
 }

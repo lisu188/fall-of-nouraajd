@@ -24,6 +24,7 @@ def load(self, context):
             recipient = first if self.getBoolProperty("selfTarget") else second
             if not first.getBoolProperty("enemyRoleEffectApplied") and recipient.isAlive():
                 first.setBoolProperty("enemyRoleEffectApplied", True)
+                self.setObjectProperty("roleEffect", None)
                 effect.setCaster(first)
                 effect.setVictim(recipient)
                 recipient.addEffect(effect)
@@ -39,11 +40,13 @@ def load(self, context):
     class EnemyArcaneBolt(EnemySignature):
         def performSignature(self, first, second, attack):
             first.setObjectProperty("enemyRoleDamagePacket", self.getObjectProperty("roleDamage"))
+            first.setStringProperty("enemyRoleDamageChannel", "frost")
             first.setBoolProperty("enemyRoleArcaneAttack", True)
             try:
                 attack.performAction(first, second)
             finally:
                 first.setBoolProperty("enemyRoleArcaneAttack", False)
+                first.setStringProperty("enemyRoleDamageChannel", "")
 
     @register(context)
     class EnemyOpeningStrike(EnemySignature):

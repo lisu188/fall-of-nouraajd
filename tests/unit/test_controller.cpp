@@ -1353,6 +1353,8 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
         auto attack = action("Attack", 0);
         auto charge = action("octobogzCharge", 0);
         auto pulse = action("octobogzShadowPulse", 5);
+        charge->setBoolProperty("enemySignature", true);
+        pulse->setBoolProperty("enemySignature", true);
         auto brace = action("enemyBrace", 0);
         brace->setBoolProperty("enemySignature", true);
         brace->setStringProperty("enemyRole", "brute");
@@ -1367,9 +1369,9 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
             actor->setHp(1);
         }
         const int attacksBeforeWarning = attack->calls;
-        expect_true(controller.control(actor, opponent), "hunt warning should use its own action turn");
+        expect_true(controller.control(actor, opponent), "hunt warning should decorate the selected ordinary attack");
         expect_true(charge->calls == 1 && attack->calls == attacksBeforeWarning && brace->calls == 0,
-                    "warning must not also brace or attack");
+                    "warning must not also select the generic brace or another outer action");
         expect_true(actor->getStringProperty("octobogzCombatPhase") == "charged", "charged phase must persist");
         expect_true(controller.control(actor, opponent), "charged hunt actor should release one five-mana pulse");
         expect_true(pulse->calls == 1 && actor->getMana() == 0 && actor->getBoolProperty("octobogzPulseUsed"),
@@ -1391,6 +1393,54 @@ void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
         actor->addItem(potion);
         expect_true(controller.control(actor, opponent), "charged hunt actor may recover using a carried mana item");
         expect_true(actor->getItems().empty() && pulse->calls == 1, "mana recovery must be an exclusive action turn");
+    }
+}
+
+void testHuntPhasesKeepOrdinarySpellAndItemPriority() {
+    for (const auto &role : {"alpha", "shadow"}) {
+        for (const auto &phase : {"predator", "charged"}) {
+            auto game = fight_fixture_game();
+            auto actor = self_target_fixture_monster(game, false);
+            auto opponent = self_target_fixture_opponent(game);
+            opponent->setHp(opponent->getHpMax());
+            actor->setHp(1);
+            actor->setStringProperty("octobogzCombatRole", role);
+            actor->setStringProperty("octobogzCombatPhase", phase);
+            auto addAction = [game, actor](const std::string &id, bool signature) {
+                auto action = std::make_shared<RoleActionProbe>();
+                action->setGame(game);
+                action->setName(id);
+                action->setTypeId(id);
+                action->setBoolProperty("enemySignature", signature);
+                actor->addAction(action);
+                return action;
+            };
+            auto attack = addAction("Attack", false);
+            auto charge = addAction("octobogzCharge", true);
+            auto pulse = addAction("octobogzShadowPulse", true);
+            pulse->setManaCost(5);
+            auto spell = addAction("Barrier", false);
+            spell->setSelfTarget(true);
+            spell->setEffect(named_self_effect(game, "ordinaryHuntBarrier", CTag::Buff));
+            CMonsterFightController controller;
+            expect_true(controller.control(actor, opponent), "a hunt actor must retain useful ordinary spell priority");
+            expect_true(spell->calls == 1 && attack->calls == 0 && charge->calls == 0 && pulse->calls == 0,
+                        "hunt phases must not replace a selected ordinary spell");
+            expect_true(actor->getStringProperty("octobogzCombatPhase") == phase &&
+                            !actor->getBoolProperty("octobogzPulseUsed"),
+                        "casting an ordinary spell must not advance the hunt phase");
+            actor->setMana(0);
+            auto potion = std::make_shared<CPotion>();
+            potion->setGame(game);
+            potion->setPower(1);
+            potion->addTag(CTag::Mana);
+            actor->addItem(potion);
+            expect_true(controller.control(actor, opponent), "a hunt actor must retain ordinary mana-item priority");
+            expect_true(actor->getItems().empty() && charge->calls == 0 && pulse->calls == 0,
+                        "an ordinary item turn must not additionally execute a hunt signature");
+            expect_true(actor->getStringProperty("octobogzCombatPhase") == phase,
+                        "ordinary item recovery must preserve the pending phase");
+        }
     }
 }
 
@@ -1460,6 +1510,7 @@ int main() {
     testMonsterRolesUseEligibleSignatureOnceAndKeepFallback();
     testMonsterRoleExclusionsAndMalformedActions();
     testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana();
+    testHuntPhasesKeepOrdinarySpellAndItemPriority();
     testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
 
     return finish_tests();

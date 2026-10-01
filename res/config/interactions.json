@@ -631,7 +631,7 @@
       "label": "Gather Shadow",
       "manaCost": 0,
       "enemySignature": true,
-      "description": "Gather shadow for one turn before releasing a single bounded pulse."
+      "description": "Warn of a coming shadow pulse while executing the ordinary selected attack."
     }
   },
   "octobogzShadowPulse": {
@@ -641,10 +641,13 @@
       "manaCost": 5,
       "animation": "images/interactions/abyssalshadows",
       "enemySignature": true,
-      "effect": {
+      "description": "Spend 5 mana once to convert one point of an ordinary attack to shadow and reduce shadow resistance by 1 for one turn.",
+      "roleEffect": {
         "ref": "octobogzShadowPulseEffect"
       },
-      "description": "Spend 5 mana to release 80% of one attack roll as shadow damage over two turns."
+      "roleDamage": {
+        "class": "CDamage"
+      }
     }
   }
 }

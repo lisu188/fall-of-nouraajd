@@ -65,6 +65,32 @@ class OctobogzRuntimeTest(unittest.TestCase):
                 assert restored.getHp() == 9 and restored.getMana() == 6
                 assert restored.getStringProperty('octobogzCombatPhase') == 'charged'
                 assert len([obj for obj in game_map.getObjects() if obj.getName() == alpha_name]) == 1
+                pulse = next(action for action in restored.getActions() if action.getTypeId() == 'octobogzShadowPulse')
+                effect = pulse.getObjectProperty('roleEffect')
+                before_shadow = player.getStats().getNumericProperty('shadowResist')
+                assert restored.getFightController().control(restored, player)
+                assert restored.getMana() == 1 and restored.getBoolProperty('octobogzPulseUsed')
+                assert restored.getBoolProperty('octobogzPulseEffectApplied')
+                assert pulse.getObjectProperty('roleEffect') is None
+                assert effect.getCaster() == restored and effect.getVictim() == player
+                assert effect in player.getEffects() and effect.getTimeLeft() == 1
+                assert player.getStats().getNumericProperty('shadowResist') == before_shadow - 1
+                assert not restored.getBoolProperty('enemyRoleArcaneAttack')
+                assert restored.getStringProperty('enemyRoleDamageChannel') == ''
+                pulse.onAction(restored, player)
+                assert restored.getMana() == 1 and len([active for active in player.getEffects() if active == effect]) == 1
+                assert game.CMapLoader.saveWithResult(game_map, save_slot)
+                game.CGameLoader.loadSavedGame(instance, save_slot)
+                game_map = instance.getMap()
+                player = game_map.getPlayer()
+                for _ in range(3): loop.run()
+                restored = game_map.getObjectByName(alpha_name)
+                assert restored.getBoolProperty('octobogzPulseUsed') and restored.getMana() == 1
+                pulse = next(action for action in restored.getActions() if action.getTypeId() == 'octobogzShadowPulse')
+                assert not pulse.hasProperty('roleEffect') or pulse.getObjectProperty('roleEffect') is None
+                linked = [active for active in player.getEffects() if active.getCaster() == restored]
+                assert len(linked) == 1 and linked[0].getVictim() == player and linked[0].getTimeLeft() == 1
+                director = instance.createObject('OctobogzHuntDirector')
                 restored.setHp(0)
                 game_map.removeObject(restored)
                 for _ in range(3): loop.run()

@@ -634,6 +634,8 @@ void testOctobogzPhaseCallbackAndStateGrowthAreBounded() {
     const auto attack = addAction("Attack", 0);
     const auto charge = addAction("octobogzCharge", 0);
     const auto pulse = addAction("octobogzShadowPulse", 5);
+    charge->setBoolProperty("enemySignature", true);
+    pulse->setBoolProperty("enemySignature", true);
     const auto actionCount = actor->getInteractions().size();
     CMonsterFightController controller;
     constexpr int turns = 200;

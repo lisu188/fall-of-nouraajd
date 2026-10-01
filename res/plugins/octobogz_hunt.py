@@ -285,40 +285,66 @@ def load(self, context):
         def trigger(self, actor, event):
             self.getGame().createObject("OctobogzHuntDirector").actorRemoved(actor)
 
+    def ordinaryAttack(first, second):
+        if second is None or not first.isAlive() or not second.isAlive():
+            return None
+        return next((action for action in first.getInteractions() if action.getTypeId() == "Attack"), None)
+
     @register(context)
     class OctobogzCharge(CInteraction):
         def performAction(self, first, second):
-            if first.getStringProperty(PHASE_PROPERTY) in ("charged", "spent"):
+            phase = first.getStringProperty(PHASE_PROPERTY)
+            if phase in ("charged", "spent"):
+                return
+            attack = ordinaryAttack(first, second)
+            if attack is None:
                 return
             first.setStringProperty(PHASE_PROPERTY, "charged")
             first.getGame().getGuiHandler().notify(
-                first.getLabel() + " gathers shadow. Its next pulse can be outlasted or interrupted by defeating it."
+                first.getLabel() + " gathers shadow while striking. Its next attack may release a shadow pulse."
             )
+            try:
+                attack.performAction(first, second)
+            except Exception:
+                first.setStringProperty(PHASE_PROPERTY, phase)
+                raise
 
     @register(context)
     class OctobogzShadowPulse(CInteraction):
         def performAction(self, first, second):
-            if first.getBoolProperty("octobogzPulseUsed"):
+            self.setBoolProperty("octobogzPulseCommitted", False)
+            if first.getBoolProperty("octobogzPulseUsed") or first.getStringProperty(PHASE_PROPERTY) != "charged":
+                return
+            attack = ordinaryAttack(first, second)
+            if attack is None:
                 return
             first.setStringProperty(PHASE_PROPERTY, "spent")
             first.setBoolProperty("octobogzPulseUsed", True)
+            first.setObjectProperty("enemyRoleDamagePacket", self.getObjectProperty("roleDamage"))
+            first.setStringProperty("enemyRoleDamageChannel", "shadow")
+            first.setBoolProperty("enemyRoleArcaneAttack", True)
+            try:
+                attack.performAction(first, second)
+                self.setBoolProperty("octobogzPulseCommitted", True)
+            except Exception:
+                first.setStringProperty(PHASE_PROPERTY, "charged")
+                first.setBoolProperty("octobogzPulseUsed", False)
+                raise
+            finally:
+                first.setBoolProperty("enemyRoleArcaneAttack", False)
+                first.setStringProperty("enemyRoleDamageChannel", "")
+            if not first.getBoolProperty("octobogzPulseEffectApplied") and second.isAlive():
+                first.setBoolProperty("octobogzPulseEffectApplied", True)
+                effect = self.getObjectProperty("roleEffect")
+                self.setObjectProperty("roleEffect", None)
+                effect.setCaster(first)
+                effect.setVictim(second)
+                second.addEffect(effect)
 
-        def configureEffect(self, effect):
-            caster = effect.getCaster()
-            if caster.getBoolProperty("octobogzPulseEffectApplied"):
-                return False
-            caster.setBoolProperty("octobogzPulseEffectApplied", True)
-            budget = max(0, caster.getDmg()) * 80 // 100
-            effect.setNumericProperty("octobogzDamageBudget", budget)
-            return True
+        def getCommittedManaRefund(self, caster):
+            return 0 if self.getBoolProperty("octobogzPulseCommitted") else self.getManaCost()
 
     @register(context)
     class OctobogzShadowPulseEffect(CEffect):
         def onEffect(self):
-            budget = self.getNumericProperty("octobogzDamageBudget")
-            tick_damage = budget // 2 if self.getTimeLeft() == 2 else budget - budget // 2
-            if not tick_damage:
-                return
-            damage = self.getVictim().getGame().createObject("CDamage")
-            damage.setNumericProperty("shadow", tick_damage)
-            self.getVictim().hurt(damage)
+            pass
