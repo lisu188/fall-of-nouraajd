@@ -38,8 +38,10 @@ The current one-turn effects are:
 
 Each action owns its effect from configuration; the mage also owns a damage
 packet. Both are decoded before combat instead of created or cloned in the
-signature. Once applied, the owned effect uses the ordinary effect lifecycle and
-save serialization. A real-bound paired regression observes configured Attack
+signature. Before applying, the signature clears its owned effect slot, then links the effect
+to its caster and victim. The active creature effect set uses the ordinary effect
+lifecycle and save serialization without retaining a signature-to-effect-to-actor
+ownership cycle. A real-bound paired regression observes configured Attack
 and Staff callbacks, both random streams, actual stat changes and one-turn
 expiration. The temporary mage packet hook clears before the weapon proc, on a
 miss, and in a `finally` block after rejected execution. Its default path preserves

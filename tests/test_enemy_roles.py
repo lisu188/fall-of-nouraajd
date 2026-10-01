@@ -49,7 +49,9 @@ class EnemyRolesTest(unittest.TestCase):
     def makeSignature(self, class_name):
         action = self.registered[class_name]()
         effect, packet = Mock(), Mock()
-        action.getObjectProperty = Mock(side_effect=lambda name: {"roleEffect": effect, "roleDamage": packet}[name])
+        owned = {"roleEffect": effect, "roleDamage": packet}
+        action.getObjectProperty = Mock(side_effect=owned.__getitem__)
+        action.setObjectProperty = Mock(side_effect=lambda name, value: owned.__setitem__(name, value))
         action.getBoolProperty = Mock(return_value=class_name in ("EnemyBrace", "EnemyArcaneBolt"))
         return action, effect, packet
 
@@ -69,6 +71,8 @@ class EnemyRolesTest(unittest.TestCase):
                 self.assertTrue(self.properties["enemyRoleEffectApplied"])
                 self.actor.getDmg.assert_called_once_with()
                 self.target.hurt.assert_called_once()
+                action.setObjectProperty.assert_called_once_with("roleEffect", None)
+                self.assertIsNone(action.getObjectProperty("roleEffect"))
                 effect.setCaster.assert_called_once_with(self.actor)
                 recipient = self.actor if class_name in ("EnemyBrace", "EnemyArcaneBolt") else self.target
                 effect.setVictim.assert_called_once_with(recipient)

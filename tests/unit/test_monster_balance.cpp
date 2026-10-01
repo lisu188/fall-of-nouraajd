@@ -387,6 +387,11 @@ weaponType.performAction = originalWeaponAction
                             "eager owned role objects must preserve both ordinary Attack random streams");
                 expect_true(weaponCalls == expectedWeaponCalls,
                             "the role hook must preserve the configured weapon proc on both hits and misses");
+                const auto signatureIt = std::ranges::find_if(
+                    interactions, [](const auto &action) { return action->getTypeId() == "enemyArcaneBolt"; });
+                expect_true(signatureIt != interactions.end() &&
+                                !(*signatureIt)->getObjectProperty<CGameObject>("roleEffect"),
+                            "consumed eager effects must transfer out of the actor-owned signature slot");
                 expect_true(actor->getStats()->getNormalResist() == beforeResist - 1 && actor->getEffects().size() == 1,
                             "the one-turn mage tradeoff must actually affect combat stats");
                 if (!actor->getEffects().empty()) {

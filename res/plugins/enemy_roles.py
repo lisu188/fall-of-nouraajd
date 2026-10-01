@@ -24,6 +24,7 @@ def load(self, context):
             recipient = first if self.getBoolProperty("selfTarget") else second
             if not first.getBoolProperty("enemyRoleEffectApplied") and recipient.isAlive():
                 first.setBoolProperty("enemyRoleEffectApplied", True)
+                self.setObjectProperty("roleEffect", None)
                 effect.setCaster(first)
                 effect.setVictim(recipient)
                 recipient.addEffect(effect)

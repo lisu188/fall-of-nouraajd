@@ -36,9 +36,10 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                 actions = {action.getTypeId(): action for action in actor.getEffectiveInteractions()}
                 assert signature_id in actions, (template, actions)
                 controller = actor.getFightController()
+                effect = actions[signature_id].getObjectProperty('roleEffect')
                 assert controller.control(actor, player), template
                 assert actor.getBoolProperty('enemyRoleUsed'), template
-                effect = actions[signature_id].getObjectProperty('roleEffect')
+                assert actions[signature_id].getObjectProperty('roleEffect') is None, template
                 recipient = actor if actions[signature_id].getBoolProperty('selfTarget') else player
                 assert any(active.name == effect.name for active in recipient.getEffects()), template
                 assert effect.getTimeLeft() == 1 and effect.getVictim() == recipient, template
@@ -63,6 +64,11 @@ class EnemyRoleRuntimeTest(unittest.TestCase):
                     assert actor.getBoolProperty('enemyRoleUsed'), index
                     assert actor.getBoolProperty('enemyRoleEffectApplied'), index
                     assert not actor.getBoolProperty('enemyRoleArcaneAttack'), index
+                    signature = next(action for action in actor.getEffectiveInteractions() if action.getBoolProperty('enemySignature'))
+                    assert not signature.hasProperty('roleEffect') or signature.getObjectProperty('roleEffect') is None, index
+                    recipient = actor if signature.getBoolProperty('selfTarget') else loaded_player
+                    linked = [effect for effect in recipient.getEffects() if effect.getCaster() == actor]
+                    assert len(linked) == 1 and linked[0].getVictim() == recipient, index
                     assert actor.getFightController().control(actor, loaded_player), index
                     assert actor.getBoolProperty('enemyRoleUsed'), index
             finally:
