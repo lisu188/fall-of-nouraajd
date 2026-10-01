@@ -18822,13 +18822,18 @@ class GameTest(unittest.TestCase):
             self.assertFalse(loaded_store.finished())
             self.assertEqual("yes", loaded_store.get_var("spared_cultist", default="no"))
 
-            # Manifest routing keeps working on the loaded game: reporting the
-            # scenario outcome advances the campaign and requests the next map.
+            # The restored campaign commits its next chapter only when the destination is ready.
             self.assertEqual("cleansing", campaign_module.complete_scenario(loaded_game, "completed"))
-            self.assertEqual("cleansing", loaded_store.scenario())
-            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("recovery", loaded_store.scenario())
+            self.assertEqual([], loaded_store.history())
             self.assertEqual("TransitionPending", loaded_game.getSceneManager().getTransitionStateName())
             self.assertEqual("ritual", loaded_game.getSceneManager().getPendingMapName())
+            pump_event_loop(10)
+            self.assertEqual("cleansing", loaded_store.scenario())
+            self.assertEqual([("recovery", "completed")], loaded_store.history())
+            self.assertEqual("ritual", loaded_game.getMap().mapName)
+            self.assertTrue(loaded_game.getMap().getPlayer() == loaded_player)
+            self.assertEqual("Idle", loaded_game.getSceneManager().getTransitionStateName())
         finally:
             for path in (save_path, backup_path):
                 if path.exists():
@@ -24128,21 +24133,34 @@ class XvfbGameplayProcessTest(unittest.TestCase):
         )
 
         transitions = []
-        original_change_map = game.CGame.changeMap
+        transition_phases = []
+        original_prepared_change_map = game.CGame.changeMapWithPreparation
         try:
 
-            def capture_change_map(self, map_name):
+            def capturePreparedChangeMap(game_instance, map_name, beforeEntry, completion):
                 transitions.append(map_name)
+                self_map = game_instance.getMap()
+                pending = json.loads(player.getStringProperty("campaign_pendingTransition"))
+                self.assertEqual(game_map, self_map)
+                self.assertEqual(map_name, pending["targetMap"])
+                self.assertEqual("", pending["targetScenario"], "this walkthrough starts a standalone map")
+                beforeEntry()
+                transition_phases.append("prepared")
+                completion(True)
+                transition_phases.append("completed")
+                return True
 
-            game.CGame.changeMap = capture_change_map
+            game.CGame.changeMapWithPreparation = capturePreparedChangeMap
             show_dialog_with_keyboard(self, game, g, beren, [2])
             run_blocking_gui_action(game, beren.finish_cleanse)
         finally:
-            game.CGame.changeMap = original_change_map
+            game.CGame.changeMapWithPreparation = original_prepared_change_map
 
         player.checkQuests()
         pump_event_loop(5)
         self.assertEqual(["ritual"], transitions)
+        self.assertEqual(["prepared", "completed"], transition_phases)
+        self.assertEqual("", player.getStringProperty("campaign_pendingTransition"))
         self.assertEqual("purged", quest_state("beren_chain"))
         self.assertTrue(game_map.getBoolProperty("CAVE_PURGED"))
         assert_completed("cleanseCaveQuest")

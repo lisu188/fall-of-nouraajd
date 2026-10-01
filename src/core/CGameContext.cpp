@@ -28,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "handler/CObjectHandler.h"
 #include "handler/CRngHandler.h"
 #include "handler/CScriptHandler.h"
+#include "object/CCreature.h"
 
 #include <atomic>
 #include <stdexcept>
@@ -123,6 +124,16 @@ void CGameContext::addEventLoopConnection(vstd::event_loop<>::connection connect
     eventLoopConnections.push_back(std::move(connection));
 }
 
+void CGameContext::trackEffectOwner(const std::shared_ptr<CCreature> &creature) {
+    if (isActive() && creature) {
+        effectOwners[creature.get()] = creature;
+    }
+}
+
+void CGameContext::untrackEffectOwner(const CCreature *creature) { effectOwners.erase(creature); }
+
+std::size_t CGameContext::getEffectOwnerCount() const { return effectOwners.size(); }
+
 std::string CMapSessionStore::makeKey(const std::string &mapName, const std::string &instanceId) {
     // Length-prefix the map name so distinct (mapName, instanceId) pairs never collide.
     return std::to_string(mapName.size()) + ":" + mapName + ":" + instanceId;
@@ -202,6 +213,17 @@ void CGameContext::shutdown(CGame *owner) {
             owner->_gui->shutdown();
             owner->_gui.reset();
         }
+    }
+    // Effects retain their actors for save/reload continuity. Break their cycles before releasing
+    // maps and plugin runtimes, including actors kept alive only by detached effect graphs.
+    auto pendingEffectOwners = std::move(effectOwners);
+    effectOwners.clear();
+    for (const auto &[identity, reference] : pendingEffectOwners) {
+        if (auto creature = reference.lock()) {
+            creature->releaseEffectReferences();
+        }
+    }
+    if (owner) {
         owner->map.reset();
     }
     performance_guard::clearTargetFlowCache();

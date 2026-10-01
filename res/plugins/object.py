@@ -133,7 +133,13 @@ def load(self, context):
     @register(context)
     class Chest(CBuilding):
         def onEnter(self, event):
-            self.getGame().getRngHandler().addRandomLoot(self.getMap().getPlayer(), self.getNumericProperty("value"))
+            player = acting_player(event)
+            game_map = self.getMap()
+            if not player or not game_map or game_map.getPlayer() != player:
+                return
+            if not claim_once(self, "looted"):
+                return
+            self.getGame().getRngHandler().addRandomLoot(player, self.getNumericProperty("value"))
 
     @register(context)
     class Cave(CBuilding):

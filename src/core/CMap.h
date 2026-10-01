@@ -73,6 +73,8 @@ class CMap : public CGameObject {
   public:
     CMap() = default;
 
+    ~CMap() override;
+
     bool addTile(std::shared_ptr<CTile> tile, int x, int y, int z);
 
     void removeTile(int x, int y, int z);

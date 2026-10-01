@@ -238,8 +238,8 @@ void CGameCharacterPanel::renderCharacterSheet(std::shared_ptr<CGui> gui, std::s
                 "\nStamina: " + std::to_string(stats->getStamina()) +
                 "    Intelligence: " + std::to_string(stats->getIntelligence()) +
                 "\n\nCOMBAT\nAttack: " + std::to_string(stats->getAttack()) +
-                "    Armor: " + std::to_string(stats->getArmor()) + "\nDamage: " + std::to_string(stats->getDmgMin()) +
-                " - " + std::to_string(stats->getDmgMax());
+                "    Armor: " + std::to_string(std::min(95, stats->getArmor())) +
+                "%\nDamage: " + std::to_string(stats->getDmgMin()) + " - " + std::to_string(stats->getDmgMax());
     }
     sheetViewport = *rect;
     sheetMaximum =

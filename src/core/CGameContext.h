@@ -29,6 +29,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CUtil.h"
 
 class CGame;
+class CCreature;
 class CGuiHandler;
 class CConfigurationProvider;
 class CLuaHandler;
@@ -98,6 +99,12 @@ class CGameContext {
 
     void addEventLoopConnection(vstd::event_loop<>::connection connection);
 
+    void trackEffectOwner(const std::shared_ptr<CCreature> &creature);
+
+    void untrackEffectOwner(const CCreature *creature);
+
+    std::size_t getEffectOwnerCount() const;
+
     bool isActive() const;
 
     void shutdown();
@@ -125,6 +132,7 @@ class CGameContext {
     std::shared_ptr<CConfigurationProvider> configurationProvider;
     std::shared_ptr<CMapSessionStore> mapSessionStore;
     std::vector<vstd::event_loop<>::connection> eventLoopConnections;
+    std::unordered_map<const CCreature *, std::weak_ptr<CCreature>> effectOwners;
     vstd::lazy<CSlotConfig> slotConfiguration;
     std::atomic<bool> active = true;
     std::atomic<TransitionGeneration> transitionGeneration = 0;

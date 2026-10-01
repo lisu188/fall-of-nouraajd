@@ -508,12 +508,34 @@ def saveMenu(game):
             suggested = entered
     else:
         slot = selection.removeprefix("slot:")
-    if slot in {row["id"] for row in saves}:
+    existing_slot = existingSaveSlot(game.getResourcesProvider(), slot, saves)
+    if existing_slot:
+        slot = existing_slot
         if not confirm(
             game, "Replace this save?", "The selected save will be replaced by your current adventure.", "Replace save"
         ):
             return False
     return saveGame(game, slot)
+
+
+def existingSaveSlot(provider, slot, saves):
+    for row in saves:
+        if row["id"] == slot:
+            return slot
+    for suffix in (".json", ".json.bak"):
+        requested = provider.getPath("save/" + slot + suffix)
+        if not requested:
+            continue
+        for row in saves:
+            existing = provider.getPath("save/" + row["id"] + suffix)
+            if not existing:
+                continue
+            try:
+                if Path(requested).samefile(existing):
+                    return row["id"]
+            except OSError:
+                continue
+    return ""
 
 
 def normalizeSaveName(value):
@@ -714,6 +736,26 @@ def showSettings(game):
             notify(game, "Settings saved.")
 
 
+def pendingChapterChoices(game):
+    if not campaign.hasPendingTransition(game):
+        return []
+    return [
+        {
+            "id": "retryChapter",
+            "label": "Retry chapter transition",
+            "detail": "Continue the completed chapter. Your previous rewards are already claimed.",
+        }
+    ]
+
+
+def retryChapter(game):
+    try:
+        return campaign.retryPending(game)
+    except Exception:
+        showError(game, "The chapter transition could not be retried. Check the game content, then try again.")
+        return False
+
+
 def mainMenu(game, in_session=False):
     while game.getContext().isActive():
         current = game.getMap() is not None
@@ -732,6 +774,7 @@ def mainMenu(game, in_session=False):
             "Fall of Nouraajd",
             [
                 {"id": "continue", "label": "Continue", "detail": continue_detail, "enabled": current or bool(saves)},
+                *pendingChapterChoices(game),
                 {
                     "id": "new",
                     "label": "New adventure",
@@ -751,6 +794,9 @@ def mainMenu(game, in_session=False):
             return True
         if action == "continue":
             if current or (saves and loadGame(game, saves[0]["id"], ask_replace=False)):
+                return True
+        elif action == "retryChapter":
+            if retryChapter(game):
                 return True
         elif action == "new":
             if newAdventure(game):
@@ -781,6 +827,7 @@ def pause(game):
                     "label": "Resume",
                     "detail": "Return to your adventure.\n\n" + sessionSaveStatus(game),
                 },
+                *pendingChapterChoices(game),
                 {
                     "id": "save",
                     "label": "Save",
@@ -802,7 +849,10 @@ def pause(game):
         )
         if action in {"", "resume"}:
             return
-        if action == "save":
+        if action == "retryChapter":
+            if retryChapter(game):
+                return
+        elif action == "save":
             saveMenu(game)
         elif action == "load":
             if loadMenu(game):
