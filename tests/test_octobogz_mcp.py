@@ -326,7 +326,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             "completed": self.questNames("getCompletedQuests"),
         }
 
-    def prepareHealingStockAtAuthoredMarket(self):
+    def sellWeakHealingStockAtAuthoredMarket(self, preserve_ingredients=False):
         self.walkTo("market1")
         market_actor = self.object("market1")
         self.assertEqual((106, 111, 0), self.coords(market_actor))
@@ -339,7 +339,8 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             for item in inventory
             if self.call(item, "hasTag", "heal") and self.call(item, "getNumericProperty", "power") > 1
         ]
-        self.assertTrue(strong, "Ordinary preparation must retain genuinely earned stronger healing stock")
+        if not preserve_ingredients:
+            self.assertTrue(strong, "Ordinary preparation must retain genuinely earned stronger healing stock")
         weak = [
             item
             for item in inventory
@@ -347,6 +348,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             and not self.call(item, "hasTag", "mana")
             and self.call(item, "getNumericProperty", "power") == 1
             and self.call(item, "getBoolProperty", "singleUse")
+            and (not preserve_ingredients or self.call(item, "getTypeId") != "LesserLifePotion")
         ]
         weak.sort(key=lambda item: (self.call(item, "getTypeId"), self.call(item, "getName")))
         self.assertLessEqual(len(weak), 128)
@@ -367,6 +369,101 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         for item in strong:
             self.assertIn(item["__handle__"], [owned["__handle__"] for owned in self.call(self.player, "getItems")])
         print("MCP hunt ordinary authored market preparation", {"sold": sold, "strongStock": len(strong)}, flush=True)
+
+    def basicLesserIngredients(self, items):
+        return sorted(
+            [item for item in items if self.call(item, "getTypeId") == "LesserLifePotion"],
+            key=lambda item: self.call(item, "getName"),
+        )
+
+    def brewOwnedBasicLifePotions(self):
+        self.walkTo("alchemyTable1")
+        station = self.object("alchemyTable1")
+        self.assertEqual((105, 110, 0), self.coords(station))
+        self.assertEqual(self.coords(station), self.coords())
+        self.assertEqual("CraftingStation", self.call(station, "getType"))
+        self.assertEqual("AlchemyTable", self.call(station, "getTypeId"))
+        self.assertTrue(self.call(station, "getBoolProperty", "enabled"))
+        crafted = 0
+        while len(self.basicLesserIngredients(self.call(self.player, "getItems"))) >= 2:
+            gold_before = self.call(self.player, "getGold")
+            if gold_before < 20:
+                break
+            self.assertLess(crafted, 64, "Basic brewing must consume bounded existing ingredients")
+            before = self.marketTransactionState()
+            inventory = self.call(self.player, "getItems")
+            identities = {item["__handle__"]: item for item in inventory}
+            lesser = {item["__handle__"] for item in self.basicLesserIngredients(inventory)}
+            result = self.engine("craftRecipe", self.game, station, "brew_life_potion")
+            self.pump()
+            self.assertEqual({"ok": True, "reason": ""}, result)
+            self.assertEqual(gold_before - 20, self.call(self.player, "getGold"))
+            after_items = {item["__handle__"]: item for item in self.call(self.player, "getItems")}
+            removed = set(identities) - set(after_items)
+            added = set(after_items) - set(identities)
+            self.assertEqual(2, len(removed))
+            self.assertTrue(removed <= lesser, "The ordinary recipe must consume only actual Lesser Life ingredients")
+            self.assertEqual(1, len(added))
+            output = after_items[added.pop()]
+            self.assertEqual("LifePotion", self.call(output, "getTypeId"))
+            self.assertEqual(2, self.call(output, "getNumericProperty", "power"))
+            self.assertEqual(before, self.marketTransactionState())
+            crafted += 1
+        print(
+            "MCP hunt ordinary basic brewing",
+            {"crafted": crafted, "gold": self.call(self.player, "getGold")},
+            flush=True,
+        )
+        return crafted
+
+    def buyFiniteBasicIngredientsAtAuthoredMarket(self, initial):
+        self.walkTo("market1")
+        market_actor = self.object("market1")
+        self.assertEqual((106, 111, 0), self.coords(market_actor))
+        self.assertEqual(self.coords(market_actor), self.coords())
+        market = self.call(market_actor, "getObjectProperty", "market")
+        candidates = self.basicLesserIngredients(self.call(market, "getItems"))
+        if initial:
+            # Retain an original finite shop ingredient for genuinely looted odd stock after Scout.
+            self.retained_lesser_shop_name = self.call(candidates[-1], "getName") if candidates else None
+            candidates = candidates[:-1]
+            limit = 2
+        else:
+            retained = getattr(self, "retained_lesser_shop_name", None)
+            candidates = [item for item in candidates if self.call(item, "getName") == retained]
+            limit = 1
+        needed = 1 if len(self.basicLesserIngredients(self.call(self.player, "getItems"))) % 2 else 2
+        candidates = candidates[:needed]
+        if needed > limit or len(candidates) < needed:
+            return 0
+        quotes = [self.call(market, "getSellCost", item) for item in candidates]
+        self.assertTrue(all(price > 0 for price in quotes))
+        if sum(quotes) + 20 > self.call(self.player, "getGold"):
+            return 0
+        before = self.marketTransactionState()
+        purchases = []
+        for item, price in zip(candidates, quotes):
+            identity = item["__handle__"]
+            self.assertIn(identity, [stocked["__handle__"] for stocked in self.call(market, "getItems")])
+            self.assertNotIn(identity, [owned["__handle__"] for owned in self.call(self.player, "getItems")])
+            gold_before = self.call(self.player, "getGold")
+            self.assertTrue(self.call(market, "sellItem", self.player, item))
+            self.assertEqual(gold_before - price, self.call(self.player, "getGold"))
+            self.assertNotIn(identity, [stocked["__handle__"] for stocked in self.call(market, "getItems")])
+            self.assertIn(identity, [owned["__handle__"] for owned in self.call(self.player, "getItems")])
+            self.assertEqual(before, self.marketTransactionState())
+            purchases.append({"name": self.call(item, "getName"), "price": price})
+        print("MCP hunt finite authored ingredient purchase", {"initial": initial, "items": purchases}, flush=True)
+        return len(purchases)
+
+    def prepareHealingStockAtAuthoredMarket(self, initial=True):
+        self.brewOwnedBasicLifePotions()
+        self.sellWeakHealingStockAtAuthoredMarket(preserve_ingredients=True)
+        self.brewOwnedBasicLifePotions()
+        self.buyFiniteBasicIngredientsAtAuthoredMarket(initial)
+        self.brewOwnedBasicLifePotions()
+        self.sellWeakHealingStockAtAuthoredMarket()
+        self.snapshot("initial basic healing preparation" if initial else "new loot healing preparation")
 
     def prepareThroughRolf(self):
         self.recoverOnRoadPair((44, 106, 0), (44, 107, 0), "opened gate road recovery")
@@ -815,12 +912,17 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     decision_state = self.captureDecisionReplayState(slot) if player_class == "Warrior" else None
                     gold_before_final = self.call(self.player, "getGold")
                     self.retreatWithOwnedAuthoredScroll()
+                    if player_class == "Sorcerer":
+                        self.prepareHealingStockAtAuthoredMarket(initial=False)
                     self.recoverOnAuthoredRoad()
                     self.defeat("alpha")
                     if self.state()["slots"]["brood"]["status"] != "dead":
                         self.assertIsNotNone(self.call(self.game_map, "getObjectByName", "cave2"))
                         self.assertFalse(self.call(self.game_map, "getBoolProperty", "OCTOBOGZ_SLAIN"))
                         self.recoverOnAuthoredRoad()
+                        if player_class == "Sorcerer":
+                            self.prepareHealingStockAtAuthoredMarket(initial=False)
+                            self.recoverOnAuthoredRoad()
                     self.defeat("brood")
                     self.assertEqual({"scout", "brood", "alpha"}, self.confirmed_dead)
                     self.assertEqual("cleared", self.state()["stage"])

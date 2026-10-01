@@ -2258,19 +2258,20 @@ class OctobogzHuntTest(unittest.TestCase):
             return data["typeId"] if method == "getTypeId" else data["name"]
 
         walker.engine, walker.call = engine, call
+        walker.fixture_metadata, walker.fixture_properties = metadata, properties
         return walker, handles, inventory, stock, purchases, gold
 
     def testSorcererMarketPreparationSellsOnlyOwnedWeakHealAndKeepsAllOtherStockAndComposition(self):
         walker, handles, inventory, stock, purchases, gold = self.authoredMarketFixture()
         with patch("builtins.print"):
-            walker.prepareHealingStockAtAuthoredMarket()
+            walker.sellWeakHealingStockAtAuthoredMarket()
         walker.walkTo.assert_called_once_with("market1")
         self.assertEqual([handles["weak"]], purchases)
         self.assertEqual([handles["weak"]], stock)
         self.assertEqual([handles[name] for name in ("strong", "mana", "dual", "reusable")], inventory)
         self.assertEqual(520, gold[0])
         with patch("builtins.print"):
-            walker.prepareHealingStockAtAuthoredMarket()
+            walker.sellWeakHealingStockAtAuthoredMarket()
         self.assertEqual([handles["weak"]], purchases)
         self.assertEqual(520, gold[0])
 
@@ -2279,11 +2280,11 @@ class OctobogzHuntTest(unittest.TestCase):
             with self.subTest(corruption=corruption):
                 walker, *rest = self.authoredMarketFixture(corruption)
                 with patch("builtins.print"), self.assertRaises(AssertionError):
-                    walker.prepareHealingStockAtAuthoredMarket()
+                    walker.sellWeakHealingStockAtAuthoredMarket()
         walker, handles, inventory, stock, purchases, gold = self.authoredMarketFixture()
         inventory.remove(handles["strong"])
         with self.assertRaises(AssertionError):
-            walker.prepareHealingStockAtAuthoredMarket()
+            walker.sellWeakHealingStockAtAuthoredMarket()
         self.assertEqual([], purchases)
         self.assertEqual(200, gold[0])
 
@@ -2291,7 +2292,7 @@ class OctobogzHuntTest(unittest.TestCase):
         walker, *rest = self.authoredMarketFixture()
         walker.coords = lambda handle=None: (106, 111, 0) if handle else (107, 111, 0)
         with self.assertRaises(AssertionError):
-            walker.prepareHealingStockAtAuthoredMarket()
+            walker.sellWeakHealingStockAtAuthoredMarket()
         source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
         methods = {node.name: node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef)}
         route = ast.get_source_segment(
@@ -2307,6 +2308,203 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertIn(
             'if player_class == "Sorcerer":\n                    self.prepareHealingStockAtAuthoredMarket()', route
         )
+
+    def authoredBrewingFixture(self, lessers=6, beers=4, strong_count=5, corruption=None):
+        walker, handles, inventory, stock, sales, gold = self.authoredMarketFixture()
+        walker.game = "game"
+        metadata, properties = walker.fixture_metadata, walker.fixture_properties
+        inventory.remove(handles["weak"])
+        actor = {"__handle__": "authoredMarketActor"}
+        market = {"__handle__": "authoredMarket"}
+        station = {"__handle__": "authoredAlchemy"}
+        position = [(106, 111, 0)]
+        purchases, crafts = [], []
+
+        def add_item(identity, type_id, power, destination):
+            item = {"__handle__": identity}
+            metadata[identity] = {
+                "name": identity,
+                "typeId": type_id,
+                "power": power,
+                "heal": True,
+                "mana": False,
+                "singleUse": True,
+            }
+            destination.append(item)
+            return item
+
+        for index in range(lessers):
+            add_item(f"earnedLesser{index}", "LesserLifePotion", 1, inventory)
+        for index in range(beers):
+            add_item(f"earnedBeer{index}", "DarkBeer", 1, inventory)
+        for index in range(strong_count - 1):
+            add_item(f"earnedStrong{index}", "LifePotion", 2, inventory)
+        original_stock = [add_item(f"originalShopLesser{index}", "LesserLifePotion", 1, stock) for index in range(3)]
+        original_engine, original_call = walker.engine, walker.call
+        walker.object = lambda name: station if name == "alchemyTable1" else actor
+        walker.coords = lambda handle=None: (
+            (105, 110, 0) if handle == station else (106, 111, 0) if handle == actor else position[0]
+        )
+        walker.walkTo = lambda name: position.__setitem__(
+            0, (105, 110, 0) if name == "alchemyTable1" else (106, 111, 0)
+        )
+        walker.snapshot, walker.pump = Mock(), Mock()
+
+        def call(handle, method, *args):
+            if handle == station:
+                return {"getType": "CraftingStation", "getTypeId": "AlchemyTable", "getBoolProperty": True}[method]
+            if handle == market and method == "getSellCost":
+                return 400
+            if handle == market and method == "sellItem":
+                self.assertEqual("player", args[0])
+                item = args[1]
+                self.assertIn(item, stock)
+                purchases.append(item)
+                stock.remove(item)
+                inventory.append({"__handle__": "clonedPurchase"} if corruption == "purchasedClone" else item)
+                gold[0] -= 399 if corruption == "purchasePrice" else 400
+                return True
+            return original_call(handle, method, *args)
+
+        def engine(name, *args):
+            if name != "craftRecipe":
+                return original_engine(name, *args)
+            self.assertEqual(("game", station, "brew_life_potion"), args)
+            self.assertEqual((105, 110, 0), position[0])
+            ingredients = [item for item in inventory if metadata[item["__handle__"]]["typeId"] == "LesserLifePotion"]
+            self.assertGreaterEqual(len(ingredients), 2)
+            self.assertGreaterEqual(gold[0], 20)
+            if corruption != "retainedIngredient":
+                inventory.remove(ingredients[0])
+                inventory.remove(handles["strong"] if corruption == "wrongIngredient" else ingredients[1])
+            output = add_item(
+                f"craftedLife{len(crafts)}", "LifePotion", 1 if corruption == "outputPower" else 2, inventory
+            )
+            gold[0] -= 19 if corruption == "craftPrice" else 20
+            if corruption == "craftResources":
+                properties["mana"] += 1
+            crafts.append({"inputs": ingredients[:2], "output": output})
+            return {"ok": True, "reason": ""}
+
+        walker.engine, walker.call = engine, call
+        return walker, metadata, inventory, stock, sales, purchases, crafts, gold, original_stock, add_item
+
+    def testBasicPreparationConvertsActualIngredientsAndRetainsTheFiniteThirdForScoutLoot(self):
+        walker, metadata, inventory, stock, sales, purchases, crafts, gold, original_stock, add_item = (
+            self.authoredBrewingFixture()
+        )
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket()
+        self.assertEqual(4, len(crafts))
+        self.assertEqual(original_stock[:2], purchases)
+        self.assertIn(original_stock[2], stock)
+        self.assertEqual("originalShopLesser2", walker.retained_lesser_shop_name)
+        self.assertEqual(4, len(sales))
+        self.assertTrue(all(metadata[item["__handle__"]]["typeId"] == "DarkBeer" for item in sales))
+        self.assertEqual(600, gold[0])
+        self.assertEqual(9, len([item for item in inventory if metadata[item["__handle__"]]["power"] > 1]))
+        self.assertEqual([], walker.basicLesserIngredients(inventory))
+        # Actual newly looted stock in this source regression pairs with the untouched third shop identity.
+        add_item("actualScoutLesser", "LesserLifePotion", 1, inventory)
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual(original_stock, purchases)
+        self.assertEqual(5, len(crafts))
+        self.assertEqual(180, gold[0])
+        self.assertNotIn(original_stock[2], stock)
+        self.assertEqual([], walker.basicLesserIngredients(inventory))
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual(5, len(crafts), "Consumed shop stock must not be recreated or cycled")
+        self.assertEqual(original_stock, purchases)
+
+    def testBasicPreparationAdaptsToMeasuredLinuxAndCoverageStockWithoutUnaffordablePurchases(self):
+        for lessers, beers, strong, expected_gold, expected_crafts, expected_buys in (
+            (0, 0, 17, 200, 0, 0),
+            (1, 1, 9, 100, 1, 1),
+        ):
+            with self.subTest(lessers=lessers, beers=beers):
+                walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = (
+                    self.authoredBrewingFixture(lessers, beers, strong)
+                )
+                with patch("builtins.print"):
+                    walker.prepareHealingStockAtAuthoredMarket()
+                self.assertEqual(expected_gold, gold[0])
+                self.assertEqual(expected_crafts, len(crafts))
+                self.assertEqual(expected_buys, len(buys))
+                self.assertIn(original_stock[-1], stock)
+                self.assertEqual([], walker.basicLesserIngredients(inventory))
+
+    def testBasicIngredientPurchaseReservesTheActualBrewingFeeAndNeverBuysAnUnpairableOddItem(self):
+        for current_lessers, available_gold, initial, expected_count in (
+            (1, 400, False, 0),
+            (1, 419, False, 0),
+            (1, 420, False, 1),
+            (0, 800, False, 0),
+            (0, 820, False, 0),
+            (0, 819, True, 0),
+            (0, 820, True, 2),
+        ):
+            with self.subTest(lessers=current_lessers, gold=available_gold, initial=initial):
+                walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = (
+                    self.authoredBrewingFixture(current_lessers, 0, 5)
+                )
+                gold[0] = available_gold
+                walker.retained_lesser_shop_name = "originalShopLesser2"
+                with patch("builtins.print"):
+                    bought = walker.buyFiniteBasicIngredientsAtAuthoredMarket(initial)
+                self.assertEqual(expected_count, bought)
+                self.assertEqual(expected_count, len(buys))
+                self.assertEqual(available_gold - expected_count * 400, gold[0])
+                if expected_count == 0:
+                    self.assertEqual(original_stock, stock)
+                else:
+                    self.assertEqual(20, gold[0], "A funded ingredient batch must retain its real brewing fee")
+                    self.assertTrue(all(item in inventory and item not in stock for item in buys))
+
+    def testBasicBrewingRejectsWrongInputsOutputPaymentResourcesAndNativePurchaseIdentity(self):
+        for corruption in (
+            "retainedIngredient",
+            "wrongIngredient",
+            "outputPower",
+            "craftPrice",
+            "craftResources",
+            "purchasedClone",
+            "purchasePrice",
+        ):
+            with self.subTest(corruption=corruption):
+                walker, *rest = self.authoredBrewingFixture(corruption=corruption)
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.prepareHealingStockAtAuthoredMarket()
+        walker, *rest = self.authoredBrewingFixture()
+        walker.coords = lambda handle=None: (105, 110, 0) if handle else (105, 111, 0)
+        with self.assertRaises(AssertionError):
+            walker.brewOwnedBasicLifePotions()
+
+    def testBasicPreparationUsesTheExistingCertainRecipeAndServicesRealNewLootBetweenEncounters(self):
+        recipes = json.loads((ROOT / "res/config/crafting.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            {
+                "station": "alchemyTable",
+                "inputs": [{"item": "LesserLifePotion", "count": 2}],
+                "output": {"item": "LifePotion", "count": 1},
+                "gold": 20,
+                "successChance": 100,
+            },
+            recipes["brew_life_potion"],
+        )
+        source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        self.assertIn('self.engine("craftRecipe", self.game, station, "brew_life_potion")', source)
+        methods = {node.name: node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef)}
+        route = ast.get_source_segment(
+            source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
+        )
+        after_portal = route[route.index("self.retreatWithOwnedAuthoredScroll()") :]
+        self.assertLess(after_portal.index("initial=False"), after_portal.index('self.defeat("alpha")'))
+        after_alpha = after_portal[after_portal.index('self.defeat("alpha")') :]
+        self.assertLess(after_alpha.index("initial=False"), after_alpha.index('self.defeat("brood")'))
+        self.assertEqual(1, route.count("self.retreatWithOwnedAuthoredScroll()"))
+        self.assertNotIn("randint", ast.get_source_segment(source, methods["brewOwnedBasicLifePotions"]))
 
     def testAutomaticActualKillsWithoutPulseStillRequireAnIndependentOrdinaryDecisionWitness(self):
         walker, expected, result = self.decisionReplayFixture()

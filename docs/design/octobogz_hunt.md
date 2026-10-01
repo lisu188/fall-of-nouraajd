@@ -675,3 +675,53 @@ completed Scout and Alpha, restored 91 HP/175 MP before Brood, then lost at turn
 coverage phase returned exit code one and produced no canonical eligible-line percentage.
 Artifact `11194943840` (`linux-coverage-report`, 12,696,559 bytes) retains those diagnostics
 remotely. This completed failure is separate from the earlier phase timeout.
+
+
+## Finite basic brewing after the prepared Windows loss
+
+Head `87b40884`, build 36930416096, passed Linux and canonical coverage at 90.69%
+(17664/19478 lines). Linux's hunt case passed in 269.127 seconds: Warrior completed
+1420 steps and Sorcerer 1513, both at 6375 XP with their full natural resources and
+no defeat. The saved-hero replay survived and observed a linked Brood effect with
+a 16-to-15 normal plus one shadow packet and exactly five enemy mana spent. Its
+actual loaded Greater Life Potion was consumed once, restoring 21 to 88 HP at a
+112 maximum without changing player mana or enemy resources.
+
+The instrumented hunt case passed in 846.425 seconds. Both authored routes and
+the linked-effect replay completed; the replay consumed an actually loaded
+Fountain tonic from 41 to 40 inventory items, restoring 46 to 90 HP at a 112 maximum.
+The unchanged full partial-save fixture passed in 33.440 seconds. Coverage artifact
+`11196933053` preserves the completed diagnostics remotely. These outcomes do not
+waive the failed Windows check.
+
+Windows job 110599324033 passed native tests and performance guards. Warrior and
+the linked-effect replay passed, and Sorcerer actually sold four Dark Beers and six
+Lesser Life Potions at 320 gold each. Sorcerer entered Scout at level four with
+91 HP/175 MP and five stronger heals. Scout consumed all five; the victory left
+57 HP/120 MP and a genuinely looted lesser heal. After the owned portal and road
+recovery, Alpha defeated the fully recovered hero at turn 1163/6125 XP. The receipt
+contained only five non-healing items. This is an observed stock-exhaustion failure.
+
+The next preparation preserves Lesser Life Potions as actual recipe inputs. At
+the authored alchemy table `(105,110,0)`, the existing `brew_life_potion` recipe
+consumes two Lesser Life Potions and 20 gold to produce one Life Potion. Its success
+chance is 100%, with no unlock or random roll. Each invocation verifies two removed
+owned ingredient identities, one new configured power-two output, exact gold
+payment, and unchanged equipment, stats, HP, MP, XP, quests and hunt state.
+
+Other weak healing-only consumables may be sold at the actual market to fund the
+recipe. Purchases use the finite existing shop stock and native quoted prices,
+reserve the brewing fee, and happen only in a batch that completes a pair. The
+first visit can buy up to two ingredients while retaining an original third shop
+identity for newly looted odd stock. After Scout's existing owned portal transit
+and after later real road recovery, the hero revisits these actual services to
+convert or sell new weak loot before another encounter. There is no second portal,
+restock, item grant, seed search, or change to ordinary combat selection.
+
+The measured Linux inventory with no weak heals and 17 stronger heals skips an
+unaffordable purchase. The instrumented case's one lesser and one beer can fund
+one real ingredient purchase and recipe. The failed Windows case's six lessers
+and four beers can produce four Life Potions, leaving 600 gold and the third
+original shop ingredient; Scout's actual lesser can later complete one more pair
+for 420 gold. These are source-backed accounting examples, not a promised victory.
+Fresh native gameplay on both platforms and canonical coverage remain required.
