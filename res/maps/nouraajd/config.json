@@ -391,7 +391,7 @@
           "controller": {
             "class": "CGroundController",
             "properties": {
-              "tileType": "ground"
+              "tileType": "grass"
             }
           }
         }

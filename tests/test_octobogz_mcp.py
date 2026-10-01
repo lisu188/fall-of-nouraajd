@@ -3,7 +3,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import json
+from hashlib import sha256
+import os
+from pathlib import Path
 from statistics import median
+import subprocess
+import sys
 from time import perf_counter
 import unittest
 import uuid
@@ -133,13 +138,18 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         return tuple(data["pos" + axis] for axis in "xyz")
 
     def coords(self, handle=None):
-        return self.fullJsonCoords(handle)
+        actor = handle or self.player
+        return tuple(self.call(actor, "getNumericProperty", "pos" + axis) for axis in "xyz")
 
     def snapshot(self, stage):
         data = json.loads(self.engine("jsonify", self.player))["properties"]
+        coords = self.coords()
+        self.assertEqual(
+            tuple(data["pos" + axis] for axis in "xyz"), coords, "Scalar coordinates must match the native snapshot"
+        )
         result = {
             "stage": stage,
-            "coords": self.coords(),
+            "coords": coords,
             "level": self.call(self.player, "getLevel"),
             "exp": self.call(self.player, "getNumericProperty", "exp"),
             "hp": data.get("hp"),
@@ -487,8 +497,183 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         )
         self.assertSlotDefeated(slot)
 
+    @staticmethod
+    def itemIdentity(item):
+        if item is None:
+            return None
+        properties = item["properties"]
+        return {key: properties.get(key, 0 if key == "power" else "") for key in ("name", "typeId", "power")}
+
+    def captureDecisionReplayState(self, slot):
+        data = json.loads(self.engine("jsonify", self.player))["properties"]
+        player = {
+            "name": self.call(self.player, "getName"),
+            "classId": self.mcp_profile_class,
+            "typeId": self.call(self.player, "getTypeId"),
+            "level": self.call(self.player, "getLevel"),
+            "exp": data["exp"],
+            "hp": data["hp"],
+            "mana": data["mana"],
+            "gold": self.call(self.player, "getGold"),
+            "hpMax": self.call(self.player, "getHpMax"),
+            "manaMax": self.call(self.player, "getManaMax"),
+            "effects": data["effects"],
+            "coords": {axis: data["pos" + axis] for axis in "xyz"},
+            "raceId": data.get("raceId", ""),
+            "archetypeRaceId": self.call(self.player, "getArchetypeRaceId"),
+            "archetypeClassId": self.call(self.player, "getArchetypeClassId"),
+            "baseStats": data["baseStats"],
+            "levelStats": data["levelStats"],
+            "equipment": {slot: self.itemIdentity(item) for slot, item in (data.get("equipped") or {}).items()},
+            "inventory": sorted(
+                (self.itemIdentity(item) for item in data.get("items") or []),
+                key=lambda item: (item["name"], item["typeId"], item["power"]),
+            ),
+        }
+        actors = []
+        for actor_slot, actor in sorted(self.livingActors().items()):
+            actors.append(
+                {
+                    "slot": actor_slot,
+                    "name": self.call(actor, "getName"),
+                    "typeId": self.call(actor, "getTypeId"),
+                    "level": self.call(actor, "getLevel"),
+                    "hp": self.call(actor, "getHp"),
+                    "mana": self.call(actor, "getMana"),
+                    "phase": self.call(actor, "getStringProperty", "octobogzCombatPhase"),
+                    "role": self.call(actor, "getStringProperty", "octobogzCombatRole"),
+                }
+            )
+        return {
+            "saveSlot": slot,
+            "playerBefore": player,
+            "actorsBefore": actors,
+            "registryBefore": self.call(self.game_map, "getStringProperty", "octobogzHuntRegistry"),
+        }
+
+    def validateDecisionReplay(self, result, expected):
+        self.assertTrue(result["success"])
+        self.assertEqual("deterministic-manual-earned-save", result["mode"])
+        self.assertEqual(expected["saveSlot"], result["saveSlot"])
+        self.assertIsInstance(result["playerComposedStatsBefore"], dict)
+        self.assertIsInstance(result["playerComposedStatsBefore"]["properties"], dict)
+        self.assertEqual(100, result["seed"])
+        for field in ("playerBefore", "actorsBefore", "registryBefore"):
+            self.assertEqual(expected[field], result[field], field)
+        self.assertTrue(result["cardinalVerified"])
+        self.assertGreater(result["movements"], 0)
+        self.assertLessEqual(result["movements"], 512)
+        self.assertTrue(result["playerAlive"])
+        self.assertTrue(result["defeatReceiptUnchanged"])
+        self.assertTrue(result["sourceUnchanged"])
+        barriers = [decision for decision in result["decisions"] if decision["action"] == "Barrier"]
+        self.assertEqual(len(barriers), result["paidBarriers"])
+        self.assertGreater(result["paidBarriers"], 0)
+        for decision in barriers:
+            self.assertEqual(17, decision["cost"], "The learned Barrier must retain its authored cost")
+            self.assertGreaterEqual(decision["refund"], 0)
+            self.assertLessEqual(decision["refund"], decision["cost"])
+            self.assertEqual(decision["cost"] - decision["refund"], decision["manaBefore"] - decision["manaAfter"])
+        self.assertTrue(any(decision["refund"] < decision["cost"] for decision in barriers))
+        self.assertTrue(result["positivePackets"], "A real paid defensive turn must expose a positive pulse")
+        for packet in result["positivePackets"]:
+            self.assertIn(packet["slot"], ("brood", "alpha"))
+            self.assertTrue(packet["pulse"])
+            self.assertTrue(packet["effect"])
+            self.assertGreater(packet["damage_roll"], 0)
+            self.assertEqual(1, packet["shadow"])
+            self.assertEqual(packet["damage_roll"] - 1, packet["normal"])
+            self.assertEqual(5, packet["enemyManaBefore"] - packet["enemyManaAfter"])
+        return result["positivePackets"]
+
+    def requireDecisionReplayExecutable(self):
+        import test as harness
+
+        executable_name = "monster_balance_unit_tests" + (".exe" if os.name == "nt" else "")
+        candidates = [Path(directory) / executable_name for directory in (*harness.extension_dirs, self.build_dir)]
+        executable = next((path for path in candidates if path.is_file()), None)
+        if executable is None:
+            if os.environ.get("CI"):
+                self.fail("The required native saved-hero decision fixture is missing: " + str(candidates))
+            self.skipTest("The current monster_balance_unit_tests binary is required for the saved-hero replay")
+        return executable
+
+    def replaySavedOrdinaryDefensiveDecisions(self, slot, save_path, expected):
+        executable = getattr(self, "decision_executable", None) or self.requireDecisionReplayExecutable()
+        environment = os.environ.copy()
+        if os.name == "nt":
+            cache = self.build_dir / "CMakeCache.txt"
+            values = {}
+            if cache.is_file():
+                for line in cache.read_text(encoding="utf-8").splitlines():
+                    if "=" in line and ":" in line.split("=", 1)[0]:
+                        key, value = line.split("=", 1)
+                        values[key.split(":", 1)[0]] = value
+            python_path = Path(values.get("Python3_EXECUTABLE", sys.executable)).parent
+            installed = values.get("_VCPKG_INSTALLED_DIR") or values.get("VCPKG_INSTALLED_DIR")
+            triplet = values.get("VCPKG_TARGET_TRIPLET")
+            runtime_paths = [executable.parent, self.build_dir, python_path]
+            if installed and triplet:
+                runtime_paths.append(Path(installed) / triplet / "bin")
+            environment["PYTHONHOME"] = str(python_path)
+            environment["PATH"] = os.pathsep.join(map(str, runtime_paths)) + os.pathsep + environment.get("PATH", "")
+        before_hash = sha256(save_path.read_bytes()).hexdigest()
+        live_before = (self.game, self.game_map, self.player, self.call(self.game_map, "getTurn"), self.state())
+        resources_before = (self.call(self.player, "getHp"), self.call(self.player, "getMana"), self.coords())
+        try:
+            completed = subprocess.run(
+                [str(executable), "--hunt-decision", slot],
+                cwd=self.build_dir,
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            self.assertEqual(0, completed.returncode, (completed.stdout[-8192:], completed.stderr[-8192:]))
+            marker = "NATIVE_HUNT_DECISION_RESULT "
+            results = [
+                json.loads(line[len(marker) :]) for line in completed.stdout.splitlines() if line.startswith(marker)
+            ]
+            self.assertEqual(1, len(results), completed.stdout[-8192:])
+            packets = self.validateDecisionReplay(results[0], expected)
+            print("MCP hunt deterministic ordinary defensive replay", results[0], flush=True)
+            return packets
+        except subprocess.TimeoutExpired as error:
+            for name in ("stdout", "stderr"):
+                output = getattr(error, name) or ""
+                if isinstance(output, bytes):
+                    output = output.decode("utf-8", errors="replace")
+                print("Saved hunt decision replay timeout " + name, output[-8192:], file=sys.stderr, flush=True)
+            raise
+        finally:
+            self.assertEqual(
+                before_hash, sha256(save_path.read_bytes()).hexdigest(), "Replay must not rewrite the save"
+            )
+            self.assertEqual(
+                live_before, (self.game, self.game_map, self.player, self.call(self.game_map, "getTurn"), self.state())
+            )
+            self.assertEqual(
+                resources_before, (self.call(self.player, "getHp"), self.call(self.player, "getMana"), self.coords())
+            )
+
+    def assertMeaningfulPulseWitness(self):
+        self.assertTrue(self.manual_phase_observations, "The ordinary saved-hero defensive replay remains mandatory")
+        positive_packets = [
+            observed
+            for observed in self.phase_observations + self.manual_phase_observations
+            if observed["pulse"] and observed["damage_roll"] > 0 and observed["shadow"] == 1
+        ]
+        self.assertTrue(positive_packets, "Real combat must exercise a positive shadow packet, not only a phase flag")
+        for observed in positive_packets:
+            self.assertEqual(
+                observed["damage_roll"] - 1, observed["normal"], "The original damage budget must be preserved"
+            )
+
     def testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce(self):
+        self.decision_executable = self.requireDecisionReplayExecutable()
         self.phase_observations = []
+        self.manual_phase_observations = []
         for player_class in ("Warrior", "Sorcerer"):
             with self.subTest(player_class=player_class):
                 self.resetMcpProfile(player_class)
@@ -542,6 +727,7 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     self.useOrdinaryCombatController(player_class)
                     self.trackLivingHuntActors()
                     self.snapshot("partial reload")
+                    decision_state = self.captureDecisionReplayState(slot) if player_class == "Warrior" else None
                     gold_before_final = self.call(self.player, "getGold")
                     self.retreatWithOwnedAuthoredScroll()
                     self.recoverOnAuthoredRoad()
@@ -579,22 +765,14 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                         self.movement_steps,
                         flush=True,
                     )
+                    if decision_state is not None:
+                        self.manual_phase_observations += self.replaySavedOrdinaryDefensiveDecisions(
+                            slot, save_path, decision_state
+                        )
                 finally:
                     save_path.unlink(missing_ok=True)
                     save_path.with_suffix(".json.bak").unlink(missing_ok=True)
-        positive_packets = [
-            observed
-            for observed in self.phase_observations
-            if observed["pulse"] and observed["damage_roll"] > 0 and observed["shadow"] == 1
-        ]
-        self.assertTrue(
-            positive_packets,
-            "The real melee/caster routes must exercise a positive shadow packet, not only a phase flag",
-        )
-        for observed in positive_packets:
-            self.assertEqual(
-                observed["damage_roll"] - 1, observed["normal"], "The original damage budget must be preserved"
-            )
+        self.assertMeaningfulPulseWitness()
 
 
 if __name__ == "__main__":

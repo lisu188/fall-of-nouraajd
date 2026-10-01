@@ -4,11 +4,13 @@
 
 import ast
 import builtins
+from copy import deepcopy
 import importlib.util
 import json
 import re
 from pathlib import Path
 import sys
+from tempfile import TemporaryDirectory
 import types
 import unittest
 from unittest.mock import Mock, patch
@@ -677,6 +679,84 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertEqual(2, sum(call.args[1] == "moveTo" for call in walker.call.call_args_list))
         self.assertEqual(2, sum(call.args[1] == "move" for call in walker.call.call_args_list))
 
+    def testMcpMovementCoordinatesUseThreeScalarReadsAndNeverSerializeOrCacheTheActor(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player = "player"
+        positions = {"player": {"posx": 57, "posy": 115, "posz": 0}, "actor": {"posx": 165, "posy": 20, "posz": 0}}
+        calls = []
+
+        def call(handle, method, name):
+            calls.append((handle, method, name))
+            self.assertEqual("getNumericProperty", method)
+            return positions[handle][name]
+
+        walker.call = call
+        walker.engine = Mock(side_effect=AssertionError("Movement must not serialize the actor"))
+        walker.fullJsonCoords = Mock(side_effect=AssertionError("The full JSON reader is reserved for explicit probes"))
+        self.assertEqual((57, 115, 0), walker.coords())
+        self.assertEqual((165, 20, 0), walker.coords("actor"))
+        positions["player"]["posx"] = 58
+        self.assertEqual((58, 115, 0), walker.coords())
+        self.assertEqual(
+            [
+                (handle, "getNumericProperty", "pos" + axis)
+                for handle in ("player", "actor", "player")
+                for axis in "xyz"
+            ],
+            calls,
+        )
+        walker.engine.assert_not_called()
+        walker.fullJsonCoords.assert_not_called()
+
+    def testMcpScalarCoordinatesFollowReloadedPlayerAndPreserveSignedFloorsAndNativeErrors(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player = "restored-player"
+        walker.call = Mock(side_effect=(-3, 0, -1))
+        walker.engine = Mock(side_effect=AssertionError("Coordinate reads must not fall back to serialization"))
+        self.assertEqual((-3, 0, -1), walker.coords())
+        self.assertEqual(
+            [("restored-player", "getNumericProperty", "pos" + axis) for axis in "xyz"],
+            [call.args for call in walker.call.call_args_list],
+        )
+        failure = RuntimeError("actual native getter failure")
+        walker.call = Mock(side_effect=(57, failure))
+        with self.assertRaises(RuntimeError) as caught:
+            walker.coords()
+        self.assertIs(failure, caught.exception)
+        self.assertEqual(2, walker.call.call_count)
+        walker.engine.assert_not_called()
+
+    def testMcpJourneyChecksScalarCoordinatesAgainstItsExistingNativeSnapshotWithoutAnotherJsonRead(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        for wrong_x in (False, True):
+            with self.subTest(wrong_x=wrong_x):
+                walker = OctobogzMcpWalkthroughTest("runTest")
+                walker.player, walker.game_map = "player", "map"
+                data = {"posx": 57, "posy": 115, "posz": 0, "hp": 84, "items": []}
+                walker.engine = Mock(return_value=json.dumps({"properties": data}))
+                walker.reportMcpProfile = Mock()
+
+                def call(handle, method, *args):
+                    if method == "getNumericProperty":
+                        return {**data, "posx": 58 if wrong_x else 57, "exp": 4000}[args[0]]
+                    return {"getLevel": 3, "getMana": 154, "getGold": 0, "getTurn": 459, "getStringProperty": ""}[
+                        method
+                    ]
+
+                walker.call = call
+                with patch("builtins.print"):
+                    if wrong_x:
+                        with self.assertRaises(AssertionError):
+                            walker.snapshot("prepared checkpoint")
+                    else:
+                        self.assertEqual((57, 115, 0), walker.snapshot("prepared checkpoint")["coords"])
+                walker.engine.assert_called_once_with("jsonify", "player")
+
     def testMcpPairedCoordinateProbeMeasuresTwentyReadonlyPairsAfterWarmup(self):
         from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
 
@@ -1038,6 +1118,35 @@ class OctobogzHuntTest(unittest.TestCase):
         )
         self.assertIn('self.assertGreaterEqual(self.call(self.player, "getLevel"), 4', source)
         self.assertIn('self.assertGreaterEqual(self.call(self.player, "getNumericProperty", "exp"), 6000)', source)
+
+    def testCatacombsControllerMatchesItsAuthoredGrassNeighborhoodWithoutChangingTheEncounter(self):
+        config = json.loads((ROOT / "res/maps/nouraajd/config.json").read_text(encoding="utf-8"))
+        document = json.loads((ROOT / "res/maps/nouraajd/map.json").read_text(encoding="utf-8"))
+        tiles = json.loads((ROOT / "res/config/tiles.json").read_text(encoding="utf-8"))
+        cat = config["catacombs"]["properties"]
+        monster = cat["monster"]
+        controller = monster["properties"]["controller"]
+        self.assertEqual("Pritz", monster["ref"])
+        self.assertEqual("gooby", monster["properties"]["affiliation"])
+        self.assertEqual("CGroundController", controller["class"])
+        self.assertEqual(("10", "10"), (cat["chance"], cat["monsters"]))
+        self.assertEqual(
+            "ground", config["cave1"]["properties"]["monster"]["properties"]["controller"]["properties"]["tileType"]
+        )
+        objects = [obj for layer in document["layers"] if layer["type"] == "objectgroup" for obj in layer["objects"]]
+        authored_cat = next(obj for obj in objects if obj["name"] == "catacombs")
+        anchor = (int(authored_cat["x"] / document["tilewidth"]), int(authored_cat["y"] / document["tileheight"]))
+        self.assertEqual((57, 103), anchor)
+        layer = next(layer for layer in document["layers"] if layer["type"] == "tilelayer")
+        tileset = document["tilesets"][0]
+        for x in range(anchor[0] - 2, anchor[0] + 3):
+            for y in range(anchor[1] - 2, anchor[1] + 3):
+                gid = layer["data"][x + y * document["width"]]
+                tile_type = tileset["tileproperties"][str(gid - tileset["firstgid"])]["type"]
+                properties = tiles[tile_type]["properties"]
+                self.assertEqual("GrassTile", tile_type, (x, y))
+                self.assertTrue(properties["canStep"])
+                self.assertEqual(properties["tileType"], controller["properties"]["tileType"], (x, y))
 
     def testCatacombsRecoveryDetourStaysOnAuthoredRoadsAndAvoidsTheStackedCaveBeforeRealEntry(self):
         from tests.castle_walkthrough import TransitRoutes, shortestRoute
@@ -1815,6 +1924,261 @@ class OctobogzHuntTest(unittest.TestCase):
         self.assertEqual(1, props["duration"])
         self.assertEqual({"shadowResist": -1}, props["bonus"]["properties"])
         self.createObject("OctobogzShadowPulseEffect").onEffect()
+
+    def decisionReplayFixture(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        expected = {
+            "saveSlot": "partial",
+            "playerBefore": {"name": "earnedWarrior", "level": 4, "hp": 27, "mana": 123},
+            "actorsBefore": [{"slot": "brood", "name": "actualBrood", "hp": 70, "mana": 105}],
+            "registryBefore": "octobogzHunt.v1:actual-partial-state",
+        }
+        result = {
+            **deepcopy(expected),
+            "seed": 100,
+            "success": True,
+            "mode": "deterministic-manual-earned-save",
+            "playerComposedStatsBefore": {"class": "CStats", "properties": {"normalResist": 0}},
+            "cardinalVerified": True,
+            "movements": 3,
+            "playerAlive": True,
+            "defeatReceiptUnchanged": True,
+            "sourceUnchanged": True,
+            "paidBarriers": 2,
+            "decisions": [
+                {"action": "Barrier", "manaBefore": 123, "manaAfter": 106, "cost": 17, "refund": 0},
+                {"action": "Barrier", "manaBefore": 106, "manaAfter": 106, "cost": 17, "refund": 17},
+                {"action": "Attack", "manaBefore": 106, "manaAfter": 106, "cost": 0, "refund": 0},
+            ],
+            "positivePackets": [
+                {
+                    "slot": "brood",
+                    "damage_roll": 18,
+                    "normal": 17,
+                    "shadow": 1,
+                    "pulse": True,
+                    "effect": True,
+                    "enemyManaBefore": 105,
+                    "enemyManaAfter": 100,
+                }
+            ],
+        }
+        return walker, expected, result
+
+    def testSavedHeroReplayRequiresExactIdentityRealPaidBarrierAndFiveManaPositivePacket(self):
+        walker, expected, result = self.decisionReplayFixture()
+        self.assertEqual(result["positivePackets"], walker.validateDecisionReplay(result, expected))
+        changes = (
+            ("success", False),
+            ("mode", "manufactured-combat"),
+            ("saveSlot", "other-save"),
+            ("playerBefore", {"name": "fabricatedHero", "level": 4, "hp": 27, "mana": 123}),
+            ("actorsBefore", [{"slot": "brood", "name": "clone", "hp": 70, "mana": 105}]),
+            ("registryBefore", "changed"),
+            ("seed", 101),
+            ("cardinalVerified", False),
+            ("movements", 0),
+            ("movements", 513),
+            ("playerAlive", False),
+            ("defeatReceiptUnchanged", False),
+            ("sourceUnchanged", False),
+            ("paidBarriers", 0),
+            ("positivePackets", []),
+        )
+        for field, value in changes:
+            with self.subTest(field=field, value=value):
+                altered = deepcopy(result)
+                altered[field] = value
+                with self.assertRaises(AssertionError):
+                    walker.validateDecisionReplay(altered, expected)
+        for field, value in (
+            ("shadow", 0),
+            ("normal", 18),
+            ("pulse", False),
+            ("effect", False),
+            ("enemyManaAfter", 99),
+        ):
+            with self.subTest(packet=field):
+                altered = deepcopy(result)
+                altered["positivePackets"][0][field] = value
+                with self.assertRaises(AssertionError):
+                    walker.validateDecisionReplay(altered, expected)
+        altered = deepcopy(result)
+        altered["decisions"][0]["manaAfter"] = 104
+        with self.assertRaises(AssertionError):
+            walker.validateDecisionReplay(altered, expected)
+
+    def testDecisionReplayCaptureKeepsTheUuidSaveSlotAndExactSerializedCompositionInputs(self):
+        from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest
+
+        walker = OctobogzMcpWalkthroughTest("runTest")
+        walker.player, walker.game_map, walker.mcp_profile_class = "player", "map", "Warrior"
+        item = {"properties": {"name": "earnedSword", "typeId": "Sword", "power": 1}}
+        data = {
+            "properties": {
+                "exp": 6125,
+                "hp": 27,
+                "mana": 123,
+                "raceId": "humanRace",
+                "posx": 165,
+                "posy": 21,
+                "posz": 0,
+                "baseStats": {"class": "CStats", "properties": {"strength": 7}},
+                "levelStats": {"class": "CStats", "properties": {"strength": 2}},
+                "effects": [{"class": "BarrierEffect", "properties": {"duration": 2}}],
+                "equipped": {"weapon": item},
+                "items": [item],
+            }
+        }
+        walker.engine = Mock(return_value=json.dumps(data))
+        walker.livingActors = lambda: {"brood": "broodActor", "alpha": "alphaActor"}
+        fields = {
+            "getName": "actualWarrior",
+            "getTypeId": "Warrior",
+            "getLevel": 4,
+            "getGold": 200,
+            "getHpMax": 112,
+            "getManaMax": 147,
+            "getArchetypeRaceId": "humanRace",
+            "getArchetypeClassId": "warriorClass",
+        }
+
+        def call(handle, method, *args):
+            if handle == "player":
+                return fields[method]
+            if handle == "map":
+                self.assertEqual(("getStringProperty", "octobogzHuntRegistry"), (method, *args))
+                return "octobogzHunt.v1:actual-raw-registry"
+            if method == "getStringProperty":
+                return "charged" if args[0] == "octobogzCombatPhase" else "shadow"
+            return {"getName": handle, "getTypeId": "OctoBogz", "getLevel": 1, "getHp": 70, "getMana": 105}[method]
+
+        walker.call = call
+        slot = "mcp-octobogz-0123456789abcdef"
+        captured = walker.captureDecisionReplayState(slot)
+        self.assertEqual(slot, captured["saveSlot"])
+        self.assertEqual(["alpha", "brood"], [actor["slot"] for actor in captured["actorsBefore"]])
+        for field in ("baseStats", "levelStats", "effects"):
+            self.assertEqual(data["properties"][field], captured["playerBefore"][field])
+        self.assertEqual("humanRace", captured["playerBefore"]["raceId"])
+        self.assertEqual(
+            {"name": "earnedSword", "typeId": "Sword", "power": 1}, captured["playerBefore"]["equipment"]["weapon"]
+        )
+        walker.engine.assert_called_once_with("jsonify", "player")
+        data["properties"]["effects"] = None
+        walker.engine.return_value = json.dumps(data)
+        self.assertIsNone(walker.captureDecisionReplayState(slot)["playerBefore"]["effects"])
+
+    def testAutomaticActualKillsWithoutPulseStillRequireAnIndependentOrdinaryDecisionWitness(self):
+        walker, expected, result = self.decisionReplayFixture()
+        walker.phase_observations = [{"pulse": False, "damage_roll": 0, "normal": 0, "shadow": 0}] * 3
+        walker.manual_phase_observations = []
+        with self.assertRaises(AssertionError):
+            walker.assertMeaningfulPulseWitness()
+        walker.phase_observations.append(result["positivePackets"][0])
+        with self.assertRaises(AssertionError):
+            walker.assertMeaningfulPulseWitness()
+        walker.manual_phase_observations = walker.validateDecisionReplay(result, expected)
+        walker.assertMeaningfulPulseWitness()
+
+    def testNativeDecisionReplayUsesOriginalPrimaryHashAndDoesNotMutateTheActiveMcpSession(self):
+        from tests import test_octobogz_mcp as module
+
+        walker, expected, result = self.decisionReplayFixture()
+        with TemporaryDirectory() as temporary:
+            walker.build_dir = Path(temporary)
+            executable = walker.build_dir / (
+                "monster_balance_unit_tests.exe" if module.os.name == "nt" else "monster_balance_unit_tests"
+            )
+            executable.touch()
+            save_path = walker.build_dir / "partial.json"
+            save_path.write_bytes(b"genuinely-earned-save")
+            walker.game, walker.game_map, walker.player = "game", "map", "player"
+            walker.state = lambda: {"stage": "cleared"}
+            walker.coords = lambda: (110, 111, 0)
+            walker.call = lambda handle, method: {"getTurn": 1000, "getHp": 112, "getMana": 147}[method]
+            fake_harness = types.SimpleNamespace(extension_dirs=[])
+            completed = types.SimpleNamespace(
+                returncode=0, stdout="NATIVE_HUNT_DECISION_RESULT " + json.dumps(result) + "\n", stderr=""
+            )
+            with (
+                patch.dict(sys.modules, {"test": fake_harness}),
+                patch.object(module.subprocess, "run", return_value=completed) as run,
+                patch("builtins.print"),
+            ):
+                self.assertEqual(
+                    result["positivePackets"],
+                    walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected),
+                )
+            self.assertEqual([str(executable), "--hunt-decision", "partial"], run.call_args.args[0])
+            self.assertEqual(30, run.call_args.kwargs["timeout"])
+            self.assertEqual(walker.build_dir, run.call_args.kwargs["cwd"])
+            self.assertTrue(run.call_args.kwargs["capture_output"])
+            self.assertEqual(b"genuinely-earned-save", save_path.read_bytes())
+            for corruption in ("primary", "session", "resources"):
+                with self.subTest(corruption=corruption):
+                    save_path.write_bytes(b"genuinely-earned-save")
+                    walker.game = "game"
+                    walker.coords = lambda: (110, 111, 0)
+
+                    def corrupt(*args, **kwargs):
+                        if corruption == "primary":
+                            save_path.write_bytes(b"rewritten-by-loader")
+                        elif corruption == "session":
+                            walker.game = "replaced-game"
+                        else:
+                            walker.coords = lambda: (109, 111, 0)
+                        return completed
+
+                    with (
+                        patch.dict(sys.modules, {"test": fake_harness}),
+                        patch.object(module.subprocess, "run", side_effect=corrupt),
+                        patch("builtins.print"),
+                        self.assertRaises(AssertionError),
+                    ):
+                        walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+
+    def testNativeDecisionReplayCannotSilentlySkipAMissingBinaryInCi(self):
+        from tests import test_octobogz_mcp as module
+
+        walker, expected, result = self.decisionReplayFixture()
+        with TemporaryDirectory() as temporary:
+            walker.build_dir = Path(temporary)
+            with (
+                patch.dict(sys.modules, {"test": types.SimpleNamespace(extension_dirs=[])}),
+                patch.dict(module.os.environ, {"CI": "true"}),
+                self.assertRaises(AssertionError),
+            ):
+                walker.replaySavedOrdinaryDefensiveDecisions("partial", walker.build_dir / "partial.json", expected)
+            with (
+                patch.dict(sys.modules, {"test": types.SimpleNamespace(extension_dirs=[])}),
+                patch.dict(module.os.environ, {"CI": ""}),
+                self.assertRaises(unittest.SkipTest),
+            ):
+                walker.requireDecisionReplayExecutable()
+
+    def testSavedHeroReplayRemainsSeparateFromAutomaticVictoriesAndImmutableSeededComparisons(self):
+        source = (ROOT / "tests/test_octobogz_mcp.py").read_text(encoding="utf-8")
+        methods = {node.name: node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.FunctionDef)}
+        route = ast.get_source_segment(
+            source, methods["testWarriorAndSorcererFinishThreeRealEncountersWithPartialReloadAndRewardOnce"]
+        )
+        self.assertLess(route.index("self.requireDecisionReplayExecutable()"), route.index("for player_class in"))
+        self.assertLess(
+            route.index('self.snapshot("partial reload")'), route.index("self.captureDecisionReplayState(slot)")
+        )
+        self.assertLess(
+            route.index("self.captureDecisionReplayState(slot)"), route.index("self.retreatWithOwnedAuthoredScroll()")
+        )
+        self.assertLess(
+            route.index('self.snapshot("completed")'), route.index("self.replaySavedOrdinaryDefensiveDecisions(")
+        )
+        self.assertLess(route.index("self.replaySavedOrdinaryDefensiveDecisions("), route.index("save_path.unlink("))
+        self.assertIn('if player_class == "Warrior" else None', route)
+        native = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        self.assertIn('"--hunt-decision"', native)
 
 
 if __name__ == "__main__":

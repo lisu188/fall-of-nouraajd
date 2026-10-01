@@ -18,9 +18,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "core/CController.h"
 #include "core/CGame.h"
+#include "core/CGameContext.h"
+#include "core/CJson.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CNavigation.h"
+#include "core/CNavigationSearch.h"
+#include "core/CProvider.h"
 #include "core/CPythonOverrides.h"
+#include "core/CSaveFormat.h"
+#include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "handler/CFightHandler.h"
 #include "object/CCreature.h"
@@ -38,6 +45,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
 extern "C" PyObject *PyInit__game();
@@ -1013,11 +1023,395 @@ void testStagedHuntPreservesOriginalThreeActorRouteWinsAndResourceBudget() {
                 "route comparison must exercise actual wounded Alpha and shadow brood pulses");
     vstd::rng() = previousRng;
 }
+void requireHuntDecision(bool condition, const char *message) {
+    if (!condition) {
+        throw std::runtime_error(message);
+    }
+}
+
+json huntItemIdentity(const std::shared_ptr<CItem> &item) {
+    return item ? json{{"name", item->getName()}, {"typeId", item->getTypeId()}, {"power", item->getPower()}}
+                : json(nullptr);
+}
+
+json huntPlayerSnapshot(const std::shared_ptr<CPlayer> &player) {
+    const auto serialized = object_serialize(player);
+    json equipment = json::object();
+    for (const auto &[slot, item] : player->getEquipped()) {
+        equipment[slot] = huntItemIdentity(item);
+    }
+    auto items = player->getItems();
+    std::vector<std::shared_ptr<CItem>> orderedItems(items.begin(), items.end());
+    std::sort(orderedItems.begin(), orderedItems.end(), [](const auto &left, const auto &right) {
+        return std::tuple(left->getName(), left->getTypeId(), left->getPower()) <
+               std::tuple(right->getName(), right->getTypeId(), right->getPower());
+    });
+    json inventory = json::array();
+    for (const auto &item : orderedItems) {
+        inventory[inventory.size()] = huntItemIdentity(item);
+    }
+    const auto coords = player->getCoords();
+    return {{"name", player->getName()},
+            {"typeId", player->getTypeId()},
+            {"classId", player->getPlayerClassId()},
+            {"raceId", player->getRaceId()},
+            {"archetypeRaceId", player->getArchetypeRaceId()},
+            {"archetypeClassId", player->getArchetypeClassId()},
+            {"level", player->getLevel()},
+            {"exp", player->getNumericProperty("exp")},
+            {"hp", player->getHp()},
+            {"mana", player->getMana()},
+            {"gold", player->getGold()},
+            {"hpMax", player->getHpMax()},
+            {"manaMax", player->getManaMax()},
+            {"equipment", equipment},
+            {"inventory", inventory},
+            {"effects", serialized->at("properties").at("effects")},
+            {"baseStats", *object_serialize(player->getBaseStats())},
+            {"levelStats", *object_serialize(player->getLevelStats())},
+            {"coords", {{"x", coords.x}, {"y", coords.y}, {"z", coords.z}}}};
+}
+
+struct HuntDecisionActor {
+    std::string slot;
+    std::shared_ptr<CCreature> actor;
+    std::shared_ptr<CFightController> controller;
+    int mana;
+    std::string phase;
+    bool pulse;
+    std::set<std::shared_ptr<CItem>> items;
+};
+
+class HuntDecisionController : public CFightController {
+  public:
+    explicit HuntDecisionController(std::vector<HuntDecisionActor> actors) : actors(std::move(actors)) {}
+
+    void observe() {
+        for (auto &entry : actors) {
+            auto actor = entry.actor;
+            const int mana = actor->getMana();
+            const auto phase = actor->getStringProperty("octobogzCombatPhase");
+            const bool pulse = actor->getBoolProperty("octobogzPulseUsed");
+            if (!entry.pulse && pulse) {
+                auto packet = actor->hasProperty("enemyRoleDamagePacket")
+                                  ? actor->getObjectProperty<CDamage>("enemyRoleDamagePacket")
+                                  : nullptr;
+                const int raw = actor->getNumericProperty("enemyRoleAttackBudget");
+                const bool effect = actor->getBoolProperty("octobogzPulseEffectApplied");
+                json observation = {{"slot", entry.slot},
+                                    {"name", actor->getName()},
+                                    {"damage_roll", raw},
+                                    {"normal", packet ? packet->getNormal() : 0},
+                                    {"shadow", packet ? packet->getShadow() : 0},
+                                    {"pulse", pulse},
+                                    {"effect", effect},
+                                    {"enemyManaBefore", entry.mana},
+                                    {"enemyManaAfter", mana},
+                                    {"phaseBefore", entry.phase},
+                                    {"phaseAfter", phase}};
+                pulseObservations[pulseObservations.size()] = observation;
+                if (raw > 0 && packet && packet->getNormal() == raw - 1 && packet->getShadow() == 1 && effect &&
+                    packet->getFire() == 0 && packet->getFrost() == 0 && packet->getThunder() == 0 &&
+                    entry.phase == "charged" && phase == "spent" && entry.mana - mana == 5 &&
+                    entry.items == actor->getItems()) {
+                    positivePackets[positivePackets.size()] = observation;
+                }
+            }
+            entry.mana = mana;
+            entry.phase = phase;
+            entry.pulse = pulse;
+            entry.items = actor->getItems();
+        }
+    }
+
+    void start(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { observe(); }
+    void end(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override { observe(); }
+    void setOpponents(std::shared_ptr<CCreature>, const std::vector<std::shared_ptr<CCreature>> &) override {
+        observe();
+    }
+
+    std::shared_ptr<CCreature> selectOpponent(std::shared_ptr<CCreature> me,
+                                              const std::vector<std::shared_ptr<CCreature>> &opponents,
+                                              std::shared_ptr<CCreature> opponent) override {
+        observe();
+        for (const auto &candidate : opponents) {
+            if (candidate->getStringProperty("octobogzHuntSlot") == "brood" &&
+                !candidate->getBoolProperty("octobogzPulseUsed")) {
+                return candidate;
+            }
+        }
+        return CFightController::selectOpponent(me, opponents, opponent);
+    }
+
+    bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
+        observe();
+        auto map = me ? me->getMap() : nullptr;
+        requireHuntDecision(
+            map && me->isPlayer() && opponent && opponent->isAlive() && me->getGame()->getMap() == map &&
+                map->getPlayer() == me && map->getObjectByName(me->getName()) == me && opponent->getMap() == map &&
+                map->getObjectByName(opponent->getName()) == opponent && me->getCoords() == opponent->getCoords() &&
+                std::ranges::any_of(actors, [&](const auto &entry) { return entry.actor == opponent; }),
+            "manual decisions require the actual registered player and hunt opponent in one fight cell");
+        const auto slot = opponent->getStringProperty("octobogzHuntSlot");
+        const auto phase = opponent->getStringProperty("octobogzCombatPhase");
+        const int turn = ++playerTurns[opponent->getName()];
+        const bool chooseBarrier = (slot == "brood" && turn <= 2) || (slot == "alpha" && phase == "charged");
+        const std::string actionId = chooseBarrier ? "Barrier" : "Attack";
+        const auto actions = me->getEffectiveInteractions();
+        const auto selected =
+            std::ranges::find_if(actions, [&](const auto &action) { return action->getTypeId() == actionId; });
+        requireHuntDecision(selected != actions.end(), "manual decisions must select an actual learned action");
+        const auto action = *selected;
+        const int cost = action->getManaCost();
+        const int manaBefore = me->getMana();
+        const int hpBefore = me->getHp();
+        const int enemyHpBefore = opponent->getHp();
+        const int enemyManaBefore = opponent->getMana();
+        requireHuntDecision(cost >= 0 && manaBefore >= cost, "the loaded hero must pay its configured action cost");
+        const int refund = std::clamp(action->getCommittedManaRefund(me), 0, cost);
+        requireHuntDecision(decisions.size() < 256, "manual hunt decisions exceeded their fixed observation bound");
+        if (chooseBarrier) {
+            requireHuntDecision(cost == 17, "the learned Barrier must retain its full configured mana cost");
+            if (slot == "brood") {
+                requireHuntDecision(enemyHpBefore == opponent->getHpMax(),
+                                    "the first two Barrier decisions must leave the actual Brood at full health");
+            }
+        }
+        me->useAction(action, opponent);
+        requireHuntDecision(opponent->getMana() == enemyManaBefore,
+                            "a player decision must not change the enemy's mana payment");
+        requireHuntDecision(manaBefore - me->getMana() == cost - refund,
+                            "native useAction must pay and refund the real configured action cost");
+        if (chooseBarrier) {
+            requireHuntDecision(
+                std::ranges::any_of(me->getEffects(),
+                                    [](const auto &effect) { return effect->getTypeId() == "BarrierEffect"; }),
+                "a paid Barrier decision must apply its actual configured effect");
+            requireHuntDecision(me->getStats()->getNormalResist() != me->getStats()->getShadowResist(),
+                                "the paid Barrier must leave unequal real wards for the shadow packet");
+            ++paidBarriers;
+        }
+        decisions[decisions.size()] = {{"action", actionId},
+                                       {"slot", slot},
+                                       {"target", opponent->getName()},
+                                       {"round", me->getMap()->getNumericProperty("combatRound")},
+                                       {"phase", phase},
+                                       {"manaBefore", manaBefore},
+                                       {"manaAfter", me->getMana()},
+                                       {"cost", cost},
+                                       {"refund", refund},
+                                       {"hpBefore", hpBefore},
+                                       {"hpAfter", me->getHp()},
+                                       {"enemyHpBefore", enemyHpBefore},
+                                       {"enemyHpAfter", opponent->getHp()}};
+        observe();
+        return true;
+    }
+
+    json decisions = json::array();
+    json pulseObservations = json::array();
+    json positivePackets = json::array();
+    int paidBarriers = 0;
+    std::vector<HuntDecisionActor> actors;
+
+  private:
+    std::map<std::string, int> playerTurns;
+};
+
+void walkHuntDecisionToActor(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
+                             const std::shared_ptr<CPlayer> &player, const std::shared_ptr<CCreature> &enemy,
+                             int &movements, const std::string &defeatReceipt) {
+    while (enemy->isAlive() && map->getObjectByName(enemy->getName()) == enemy) {
+        requireHuntDecision(movements < 512, "manual hunt movement exceeded its bounded adjacent route");
+        const auto origin = player->getCoords();
+        const auto goal = enemy->getCoords();
+        requireHuntDecision(origin != goal, "the loaded player must approach the hostile cell by an actual step");
+        auto passable = [map, player, goal](Coords coords) {
+            if (!map->isWithinBounds(coords) || !map->canStep(coords)) {
+                return false;
+            }
+            bool unintendedHostile = false;
+            if (coords != goal) {
+                map->forObjectsAtCoords(coords, [&](const auto &object) {
+                    auto creature = std::dynamic_pointer_cast<CCreature>(object);
+                    unintendedHostile |= creature && creature != player && creature->isAlive() && !creature->isNpc() &&
+                                         !player->isAffiliatedWith(creature);
+                });
+            }
+            return !unintendedHostile;
+        };
+        const auto path = CNavigationSearch::findGenericPath(
+            origin, goal, passable, [](const Coords &) { return std::optional<Coords>(); },
+            [map](const Coords &coords) { return map->getAdjacentCoords(coords); }, CPathFinder::mapHeuristic(map),
+            [map](const Coords &from, const Coords &to) { return map->lookupNavigationStepCost(from, to); },
+            map->getNavigationService()->budget(), CNavigationSearchLimits{4096, 4096, 512});
+        requireHuntDecision(path.status == CNavigationSearchStatus::Found && !path.path.empty(),
+                            "the native walkability search must find a bounded route to the actual hunt actor");
+        const auto next = path.path.front();
+        const auto delta = map->getShortestDelta(origin, next);
+        requireHuntDecision(delta.z == 0 && std::abs(delta.x) + std::abs(delta.y) == 1 && map->canStep(next),
+                            "every manual witness movement must use a passable cardinal neighbor");
+        // Stepping onto the living actor invokes the production fight and its initiative exactly once.
+        player->moveTo(next);
+        vstd::event_loop<>::instance()->run();
+        ++movements;
+        requireHuntDecision(game->getMap() == map && map->getPlayer() == player && player->isAlive() &&
+                                player->getUiDefeatReceipt() == defeatReceipt,
+                            "manual witness movement must not accept death, respawn or a map transition");
+        const int turn = map->getTurn();
+        map->move();
+        vstd::event_loop<>::instance()->run();
+        requireHuntDecision(map->getTurn() == turn + 1 && game->getMap() == map && map->getPlayer() == player &&
+                                player->isAlive() && player->getUiDefeatReceipt() == defeatReceipt,
+                            "each manual adjacent step must preserve a real living player through its native turn");
+        const auto arrivalDelta = map->getShortestDelta(origin, player->getCoords());
+        requireHuntDecision(arrivalDelta.z == 0 && std::abs(arrivalDelta.x) + std::abs(arrivalDelta.y) <= 1,
+                            "the manual witness must not jump or accept an unobserved relocation");
+    }
+}
+
+void testManualHuntDecisionFromEarnedSave(const std::string &saveSlot) {
+    json report = {{"mode", "deterministic-manual-earned-save"}, {"saveSlot", saveSlot}, {"seed", 100}};
+    const int previousFailures = failures;
+    struct RestoreNativeRng {
+        std::decay_t<decltype(vstd::rng())> previous = vstd::rng();
+        ~RestoreNativeRng() { vstd::rng() = previous; }
+    } restoreRng;
+    std::shared_ptr<CGame> game;
+    std::shared_ptr<CPlayer> player;
+    std::shared_ptr<CFightController> ordinaryController;
+    std::shared_ptr<HuntDecisionController> controller;
+    std::string defeatReceipt;
+    std::string primaryBytes;
+    int movements = 0;
+    try {
+        requireHuntDecision(CSaveFormat::isValidSlotName(saveSlot), "manual witness requires a valid save slot");
+        game = CGameLoader::loadGame();
+        auto resources = game->getResourcesProvider();
+        const auto primaryPath = CSaveFormat::primaryPath(saveSlot);
+        requireHuntDecision(!resources->getPath(primaryPath).empty() &&
+                                resources->getPath(CSaveFormat::backupPath(saveSlot)).empty(),
+                            "manual replay requires a unique valid primary without backup-repair fallback");
+        primaryBytes = resources->load(primaryPath);
+        auto decoded = CSaveFormat::decodeDocument(std::make_shared<json>(json::parse(primaryBytes)));
+        requireHuntDecision(decoded.has_value() && decoded->mapName == "nouraajd",
+                            "manual replay must load the earned primary Nouraajd save");
+        CGameLoader::loadSavedGame(game, saveSlot);
+        auto map = game->getMap();
+        requireHuntDecision(map && map->getMapName() == "nouraajd", "the supplied primary save must actually load");
+        player = map->getPlayer();
+        requireHuntDecision(player && player->isAlive() && player->getPlayerClassId() == "Warrior",
+                            "manual replay requires the genuinely earned living Warrior");
+        report["playerBefore"] = huntPlayerSnapshot(player);
+        report["playerComposedStatsBefore"] = *object_serialize(player->getStats());
+        defeatReceipt = player->getUiDefeatReceipt();
+        report["defeatReceiptBefore"] = defeatReceipt;
+        const auto registryText = map->getStringProperty("octobogzHuntRegistry");
+        const std::string registryPrefix = "octobogzHunt.v1:";
+        requireHuntDecision(registryText.starts_with(registryPrefix),
+                            "the partial save must retain its actual registry");
+        const auto registry = json::parse(registryText.substr(registryPrefix.size()));
+        report["registryBefore"] = registryText;
+        report["actorsBefore"] = json::array();
+        std::vector<HuntDecisionActor> actors;
+        for (const auto &slot : {"alpha", "brood", "scout"}) {
+            const auto &record = registry.at("slots").at(slot);
+            if (record.at("status").get<std::string>() != "living") {
+                continue;
+            }
+            auto actor =
+                std::dynamic_pointer_cast<CCreature>(map->getObjectByName(record.at("name").get<std::string>()));
+            requireHuntDecision(actor && actor->isAlive() && actor->getTypeId() == "OctoBogz" &&
+                                    actor->getStringProperty("octobogzHuntSlot") == slot,
+                                "each loaded living registry identity must match the actual hunt actor");
+            actors.push_back({slot, actor, actor->getFightController(), actor->getMana(),
+                              actor->getStringProperty("octobogzCombatPhase"),
+                              actor->getBoolProperty("octobogzPulseUsed"), actor->getItems()});
+            auto &before = report["actorsBefore"];
+            before[before.size()] = {{"slot", slot},
+                                     {"name", actor->getName()},
+                                     {"typeId", actor->getTypeId()},
+                                     {"level", actor->getLevel()},
+                                     {"hp", actor->getHp()},
+                                     {"mana", actor->getMana()},
+                                     {"phase", actor->getStringProperty("octobogzCombatPhase")},
+                                     {"role", actor->getStringProperty("octobogzCombatRole")}};
+        }
+        const auto learned = player->getEffectiveInteractions();
+        for (const auto &actionId : {"Attack", "Barrier"}) {
+            requireHuntDecision(
+                std::ranges::any_of(learned, [&](const auto &action) { return action->getTypeId() == actionId; }),
+                "the earned Warrior must already know its configured Attack and Barrier");
+        }
+        ordinaryController = player->getFightController();
+        controller = std::make_shared<HuntDecisionController>(actors);
+        player->setFightController(controller);
+        requireHuntDecision(report["playerBefore"].dump() == huntPlayerSnapshot(player).dump() &&
+                                report["playerComposedStatsBefore"].dump() ==
+                                    object_serialize(player->getStats())->dump() &&
+                                map->getStringProperty("octobogzHuntRegistry") == registryText,
+                            "installing the decision controller must preserve every loaded hero field and registry");
+        // This is one deterministic replay of the earned save, independent of the unchanged automatic victories.
+        // The C RNG belongs to this isolated CLI process; the native generator is restored on exit.
+        vstd::rng().seed(100);
+        std::srand(100);
+        for (const auto &slot : {"brood", "alpha"}) {
+            auto target = std::ranges::find_if(actors, [&](const auto &entry) { return entry.slot == slot; });
+            if (target == actors.end() || !target->actor->isAlive() ||
+                target->actor->getBoolProperty("octobogzPulseUsed")) {
+                continue;
+            }
+            walkHuntDecisionToActor(game, map, player, target->actor, movements, defeatReceipt);
+            controller->observe();
+            requireHuntDecision(!target->actor->isAlive() && !map->getObjectByName(target->actor->getName()),
+                                "the movement encounter must actually defeat and remove its selected hunt actor");
+            const auto after = map->getStringProperty("octobogzHuntRegistry");
+            const auto state = json::parse(after.substr(registryPrefix.size()));
+            requireHuntDecision(state.at("slots").at(slot).at("status").get<std::string>() == "dead",
+                                "only the actual defeat trigger may register this hunt slot as dead");
+            if (!controller->positivePackets.empty()) {
+                break;
+            }
+        }
+        requireHuntDecision(movements > 0 && controller->paidBarriers > 0 && !controller->positivePackets.empty(),
+                            "manual replay must witness a paid Barrier and a positive native five-mana shadow pulse");
+        for (const auto &entry : controller->actors) {
+            requireHuntDecision(entry.actor->getFightController() == entry.controller,
+                                "manual replay must leave every enemy's configured controller unchanged");
+        }
+        requireHuntDecision(resources->load(primaryPath) == primaryBytes,
+                            "manual replay must not overwrite its input save");
+        report["sourceUnchanged"] = true;
+        report["registryAfter"] = map->getStringProperty("octobogzHuntRegistry");
+    } catch (const std::exception &error) {
+        report["error"] = error.what();
+        expect_true(false, error.what());
+    }
+    report["movements"] = movements;
+    report["cardinalVerified"] = movements > 0 && failures == previousFailures;
+    report["playerAlive"] = player && player->isAlive();
+    report["defeatReceiptUnchanged"] = player && player->getUiDefeatReceipt() == defeatReceipt;
+    if (controller) {
+        report["paidBarriers"] = controller->paidBarriers;
+        report["decisions"] = controller->decisions;
+        report["pulseObservations"] = controller->pulseObservations;
+        report["positivePackets"] = controller->positivePackets;
+    }
+    report["success"] = failures == previousFailures;
+    if (player && ordinaryController) {
+        player->setFightController(ordinaryController);
+    }
+    if (game) {
+        game->getContext()->shutdown();
+    }
+    std::cout << "NATIVE_HUNT_DECISION_RESULT " << report.dump() << std::endl;
+}
 } // namespace
 
 int main(int argc, char **argv) {
     const bool contractsOnly = argc == 2 && std::string(argv[1]) == "--contracts-only";
     const bool huntRoute = argc == 2 && std::string(argv[1]) == "--hunt-route";
+    const bool huntDecision = argc == 3 && std::string(argv[1]) == "--hunt-decision";
     std::string selectedClass;
     if (argc == 3 && std::string(argv[1]) == "--role-class") {
         selectedClass = argv[2];
@@ -1026,8 +1420,9 @@ int main(int argc, char **argv) {
             std::cerr << "Unknown role class partition\n";
             return 1;
         }
-    } else if (argc != 1 && !contractsOnly && !huntRoute) {
-        std::cerr << "Usage: monster_balance_unit_tests [--contracts-only | --role-class CLASS | --hunt-route]\n";
+    } else if (argc != 1 && !contractsOnly && !huntRoute && !huntDecision) {
+        std::cerr << "Usage: monster_balance_unit_tests [--contracts-only | --role-class CLASS | --hunt-route | "
+                     "--hunt-decision SAVE_SLOT]\n";
         return 1;
     }
     if (PyImport_AppendInittab("_game", PyInit__game) != 0) {
@@ -1036,6 +1431,10 @@ int main(int argc, char **argv) {
     }
     pybind11::scoped_interpreter interpreter{};
     initializeBalancePythonContent();
+    if (huntDecision) {
+        testManualHuntDecisionFromEarnedSave(argv[2]);
+        return finish_tests();
+    }
     if (selectedClass.empty()) {
         testInheritedNativeMethodsDoNotBecomePythonOverrides();
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks();

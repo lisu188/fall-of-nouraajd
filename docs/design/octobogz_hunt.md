@@ -476,7 +476,7 @@ alternative. The paired probe therefore moves to the recovered Rolf checkpoint
 before the risky approach. Its full JSON baseline now has an explicit reader;
 the regression requires22 JSON reads and63 scalar reads, so a future coordinate
 optimization cannot accidentally compare the same reader against itself.
-Current movement coordinates still use full JSON pending paired measurements.
+At that head, movement coordinates still used full JSON pending paired measurements.
 
 The cold-cache scheduler now records 607 seconds from the failed 606.600-second
 coverage case, with the earlier ordinary 213.500-second failure also retained.
@@ -509,6 +509,104 @@ The timeout still reports bounded captured streams and reraises the same failure
 
 Regression checks exercise the real shared subprocess wrapper with default 30
 and explicit 60, and prove that only the exact instrumented partial fixture opts
-in. The next CI run must supply the actual after-change elapsed stages and all
-required outcomes; canonical coverage and both completed authored routes remain
-pending rather than inferred from this watchdog correction.
+in. Head `eea2ab9e` supplied actual after-change evidence: the same instrumented
+partial test completed in 37.972 seconds in job 110557430042. Ordinary Linux and
+Windows completed it in 3.919 and 9.016 seconds. The whole coverage Python phase
+still reached its 1800-second limit, so this scoped functional watchdog correction
+does not establish canonical coverage or full delivery.
+
+## Catacombs movement defect and retained failures
+
+Head `eea2ab9e` reached the untouched catacombs after full road recovery on both
+platforms. Linux Warrior then lost at turn 577 with 4750 XP and Sorcerer at
+turn 601 with 4625 XP. Windows Sorcerer lost at turn 602 with 4750 XP. These actual native
+defeat receipts remain failed outcomes. Windows Warrior completed the three hunt
+deaths and MainQuest with 1294 adjacent steps, 6375 XP, 112 HP, 147 MP and 1200 gold;
+its two special actors died after warning, before a positive pulse.
+
+The authored catacombs at `(57,103,0)` incorrectly configured its Pritz movement
+controller for `ground`. Its center and 5×5 surrounding cells are GrassTile with
+tile type `grass`. The controller admits only matching terrain, so its ten timed
+spawns stayed together at the entrance. Entering that occupied cell resolves the
+whole stack through the ordinary `fightManyResult`; recovery cannot occur between
+its internal kills. The correction changes only that controller's terrain to
+`grass`, retaining the timer budget 10, chance 10, monster templates, affiliation,
+stats and rewards. The Rolf cave remains configured for ground.
+
+A native regression deserializes the actual authored controller and source
+terrain into a bounded map. The old ground setting remains stationary; the
+corrected setting selects real passable grass cells and commits movement under
+one fixed test seed. The center remains an eligible choice, so the test requires
+observed movement rather than claiming every random choice moves. Its generator
+state is restored after the fixture. Actual prepared-route survival still needs
+fresh CI evidence.
+
+The instrumented Warrior also completed a natural route in the old coverage run
+with 1292 steps and an actual Alpha packet of 18→17 normal+1 shadow, spending five mana.
+Sorcerer subsequently lost in the catacombs at turn 591 with 4250 XP. The next test in
+that worker began at 20:35:17.126Z, approximately 1370.82 seconds after this failed
+case began; no exact completion-duration line was emitted for its failed subtest.
+The whole coverage run failed and emitted no canonical percentage. Remote
+artifact 11192049807 retains those diagnostics.
+
+## Measured MCP coordinate reads
+
+The unchanged paired probe used one warmup and 20 samples per prepared class,
+checking identical coordinates, map turns, objective state and player resources.
+Each full JSON sample used one RPC; each scalar sample used exactly three ordered
+`getNumericProperty` calls for `posx`, `posy` and `posz`.
+
+| Platform / class | Full JSON median | Three scalar reads median |
+| --- | ---: | ---: |
+| Linux Warrior |0.089056s|0.001749s|
+| Linux Sorcerer |0.040288s|0.001365s|
+| Windows Warrior |0.076328s|0.002115s|
+| Windows Sorcerer |0.035393s|0.001591s|
+
+The instrumented route's partial checkpoint recorded 400.247 seconds in full JSON
+RPCs versus 241.363 seconds in map movement. The walkthrough's coordinate helper
+therefore reads three scalar properties on demand, with no coordinate cache and
+no extra game turns. It follows the current loaded player and preserves signed
+floor coordinates and native errors. Checkpoints compare those values against
+the full player JSON they already read; item and resource snapshots remain
+native JSON. The explicit full-JSON paired probe remains intact. This optimizes
+test RPC work, without changing production serialization or native performance
+budgets. Fresh completed-route and coverage measurements remain required.
+
+## Ordinary defensive decision replay
+
+Automatic victories can legitimately end after warning without a positive pulse:
+the earned Warrior learns Bloodlash, and Sorcerer attacks and stuns can shorten
+the phase window. A phase flag alone cannot establish the shadow mechanic. Both
+automatic Warrior and Sorcerer routes therefore retain their full actual-death,
+partial-save, reward, MainQuest and survival checks. A separate mandatory native
+replay exercises ordinary manual decisions from the Warrior's genuinely earned
+partial save, after its automatic route completes.
+
+`monster_balance_unit_tests --hunt-decision <save-slot>` loads the original unique
+primary without backup repair, snapshots the exact hero, equipment, inventory,
+effects, archetypes, base/level stats, resources and living registry identities,
+then sets only a test-local player decision controller. The loaded enemy
+controllers and combat stats remain intact. One fixed seed 100 is applied once
+before the whole adjacent-movement and combat replay; no seed search or retry is
+used. The native generator is restored, and the isolated process owns its C RNG.
+
+The player walks through real passable cardinal cells and enters the production
+fight and initiative. For the opening Brood window it selects its existing paid
+Barrier on two player turns, then its existing ordinary Attack. If necessary,
+the living Alpha uses an observed charged phase as the cue for a learned Barrier.
+No pulse is called outside combat, and no phase, HP, item, stat or objective is
+granted. Native payment/refund checks retain Barrier's authored 17 mana cost.
+The result must prove a positive one-point shadow packet with
+`normal == damage_roll - 1`, its real linked effect, and exactly five enemy mana
+spent. Loaded identities, state and composition inputs are compared with the
+MCP snapshot; native composed stats are reported separately.
+
+The parent walkthrough verifies the source save's SHA256 and its active game,
+player, map turn, resources and objective state are unchanged by this separate
+process. Missing native replay binaries fail in CI and skip the whole case before
+any route work outside CI. The child retains a 30-second watchdog, captures both
+streams and reports bounded timeout diagnostics. This deterministic manual
+decision proof supplements the two natural automatic victories and does not
+alter their controllers or the fixed seeded balance matrices. Its native passage,
+both complete authored routes and canonical coverage remain fresh CI gates.
