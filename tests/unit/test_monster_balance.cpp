@@ -333,7 +333,7 @@ void testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks() {
             actor->setMana(0);
             actor->setBoolProperty("enemyRoleUsed", !enabled);
             auto weapon = game->createObject<CWeapon>("Staff");
-            actor->setEquipped({{0, weapon}});
+            actor->setEquipped({{"0", weapon}});
             actor->heal(0);
             const auto interactions = actor->getInteractions();
             const auto attackIt =
