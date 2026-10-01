@@ -7,6 +7,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from scripts import run_monster_balance as runner
 
@@ -75,10 +76,21 @@ class MonsterBalanceRunnerTest(unittest.TestCase):
         self.assertEqual(5, sum(len(line) > 200000 for line in lines))
 
     def testAggregateDeadlineKillsAndReapsRunningWorkers(self):
+        processes = []
+        original_popen = runner.subprocess.Popen
+
+        def recordProcess(*args, **kwargs):
+            process = original_popen(*args, **kwargs)
+            processes.append(process)
+            return process
+
         started = time.monotonic()
-        result, lines = self.runFixture("timeout", timeout=1)
+        with patch.object(runner.subprocess, "Popen", side_effect=recordProcess):
+            result, lines = self.runFixture("timeout", timeout=1)
         self.assertEqual(1, result)
         self.assertTrue(any("partition started" in line for line in lines))
+        self.assertGreater(len(processes), 1)
+        self.assertTrue(all(process.returncode is not None for process in processes))
         self.assertLess(time.monotonic() - started, 6)
 
     def testOuterGateAndNativeClosedWhitelistPreserveOriginalWorkload(self):
