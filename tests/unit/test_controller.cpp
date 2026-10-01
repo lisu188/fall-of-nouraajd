@@ -419,6 +419,51 @@ void test_target_controller_flow_field_prefers_longer_lower_cost_route() {
     expect_true(chaser->getCoords() == target->getCoords(), "target weighted detour should reach the target");
 }
 
+void test_controller_connector_costs_agree_and_invalidate_flow() {
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 6, 1);
+    const Coords start(0, 0, 0), goal(5, 0, 0);
+    auto target = std::make_shared<CMapObject>();
+    target->setGame(game);
+    target->setName("costTarget");
+    target->setCanStep(true);
+    target->setCoords(goal);
+    map->addObject(target);
+    auto chaser = creature_at(0, 0, 0);
+    chaser->setGame(game);
+    chaser->setName("costChaser");
+    chaser->setHp(1);
+    map->addObject(chaser);
+    auto npc_controller = std::make_shared<CTargetController>();
+    npc_controller->setTarget(target->getName());
+    auto player = player_at(game, start);
+    auto player_controller = std::make_shared<CPlayerController>();
+    map->registerNavigationEdge({start, goal, true, false, 20, "costPortal"});
+    performance_guard::clearTargetFlowCache();
+    player_controller->setTarget(player, goal);
+    expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
+                "player should reject an expensive connector in favor of five ordinary steps");
+    expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
+                "reverse flow field should price the forward connector and agree with player A*");
+    map->unregisterNavigationEdgesForObject("costPortal");
+    map->registerNavigationEdge({start, goal, true, false, 1, "costPortal"});
+    player_controller->interrupt(player);
+    player_controller->setTarget(player, goal);
+    expect_true(resolve_coords(player_controller->control(player)) == goal,
+                "player should use the now-cheap connector");
+    expect_true(resolve_coords(npc_controller->control(chaser)) == goal,
+                "changed edge cost should invalidate cached flow");
+    map->getTile(goal)->setMovementCost(std::numeric_limits<int>::max());
+    map->unregisterNavigationEdgesForObject("costPortal");
+    map->registerNavigationEdge({start, goal, true, false, std::numeric_limits<int>::max(), "costPortal"});
+    player_controller->interrupt(player);
+    player_controller->setTarget(player, goal);
+    expect_true(resolve_coords(player_controller->control(player)) == Coords(1, 0, 0),
+                "a connector price above 32 bits must remain more expensive than walking");
+    expect_true(resolve_coords(npc_controller->control(chaser)) == Coords(1, 0, 0),
+                "reverse pursuit must not narrow a large destination-plus-connector price");
+}
+
 void test_target_controller_concurrent_requests_extend_and_reuse_shared_flow() {
     auto game = std::make_shared<CGame>();
     auto map = open_tile_map(game, 257, 1);
@@ -1522,6 +1567,7 @@ int main() {
     test_npc_random_controller_prefers_longer_lower_cost_route();
     test_target_controller_flow_field_prefers_longer_lower_cost_route();
     test_target_controller_concurrent_requests_extend_and_reuse_shared_flow();
+    test_controller_connector_costs_agree_and_invalidate_flow();
     test_player_controller_prefers_cheap_navigation_edge_over_expensive_band();
     test_player_controller_approaches_portal_away_from_goal_for_shortest_route();
     test_player_controller_uses_navigation_neighbors_for_cross_level_route();

@@ -103,7 +103,7 @@ void fillValues(Values &values, const CanStep &canStep, const Coords &goal, cons
         }
         forEachCandidate(current.coords, waypoint, neighbors, [&](Coords previous) {
             if (passability.canStepAt(previous)) {
-                const int edge_cost = std::max(1, stepCost(previous, current.coords));
+                const auto edge_cost = std::max<std::int64_t>(1, stepCost(previous, current.coords));
                 if (current.cost > std::numeric_limits<std::int64_t>::max() - edge_cost)
                     return;
                 const auto next_cost = current.cost + edge_cost;
