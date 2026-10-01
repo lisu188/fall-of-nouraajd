@@ -4,6 +4,7 @@
 """Stable character identities, shared frontend routes, and virtual-display chooser acceptance."""
 
 import json
+import os
 from pathlib import Path
 import sys
 import types
@@ -20,6 +21,48 @@ RACES = ("highlanderRace", "humanRace", "outlanderRace", "wandererRace")
 
 
 class CharacterCreationFlowTest(unittest.TestCase):
+    def testResizeWithoutFocusUsesOnlyAWindowInTheVerifiedXvfbChild(self):
+        import test as harness
+
+        def fillSize(window, width, height):
+            width._obj.value, height._obj.value = 800, 600
+
+        sdl = types.SimpleNamespace(
+            SDL_GetCurrentVideoDriver=Mock(return_value=b"x11"),
+            SDL_GetWindowFromID=Mock(side_effect=lambda window_id: 123 if window_id == 7 else None),
+            SDL_SetWindowSize=Mock(),
+            SDL_GetWindowSize=Mock(side_effect=fillSize),
+            SDL_GetWindowID=Mock(return_value=7),
+            SDL_PushEvent=Mock(return_value=1),
+        )
+        with (
+            patch.object(harness, "load_sdl_library", return_value=sdl),
+            patch.object(harness, "focused_sdl_window", return_value=None),
+            patch.object(harness, "isOffscreenGameplayChild", return_value=False),
+            patch.dict(os.environ, {"GAME_XVFB_GAMEPLAY_CHILD": "1", "SDL_VIDEODRIVER": "x11"}),
+        ):
+            self.assertEqual((800, 600), harness.push_sdl_window_size_changed_event(800, 600))
+            sdl.SDL_SetWindowSize.assert_called_once_with(123, 800, 600)
+            event = sdl.SDL_PushEvent.call_args.args[0]._obj
+            self.assertEqual(7, event.window.windowID)
+            self.assertEqual((800, 600), (event.window.data1, event.window.data2))
+            for child, configured, actual in (("", "x11", b"x11"), ("1", "dummy", b"x11"), ("1", "x11", b"dummy")):
+                with self.subTest(child=child, configured=configured, actual=actual):
+                    sdl.SDL_GetWindowFromID.reset_mock()
+                    sdl.SDL_GetCurrentVideoDriver.return_value = actual
+                    with patch.dict(os.environ, {"GAME_XVFB_GAMEPLAY_CHILD": child, "SDL_VIDEODRIVER": configured}):
+                        with self.assertRaisesRegex(AssertionError, "Expected a focused SDL window"):
+                            harness.push_sdl_window_size_changed_event(800, 600)
+                    sdl.SDL_GetWindowFromID.assert_not_called()
+            sdl.SDL_GetCurrentVideoDriver.return_value = b"x11"
+            sdl.SDL_GetWindowFromID.reset_mock()
+            sdl.SDL_GetWindowFromID.side_effect = None
+            sdl.SDL_GetWindowFromID.return_value = None
+            with self.assertRaisesRegex(AssertionError, "Expected a focused SDL window"):
+                harness.push_sdl_window_size_changed_event(800, 600)
+            self.assertEqual(255, sdl.SDL_GetWindowFromID.call_count)
+            sdl.SDL_GetWindowFromID.assert_called_with(255)
+
     def choices(self):
         return (
             [{"id": value, "label": value} for value in CLASSES],

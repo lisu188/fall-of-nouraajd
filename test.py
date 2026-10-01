@@ -2125,6 +2125,24 @@ def push_sdl_mouse_motion_event(x, y, xrel=0, yrel=0):
         raise AssertionError(f"SDL_PushEvent returned {pushed}.")
 
 
+def isolatedGameplaySdlWindow(sdl):
+    """Find a window in this process, only inside the verified Xvfb gameplay child."""
+    import ctypes
+
+    if os.environ.get("GAME_XVFB_GAMEPLAY_CHILD") != "1" or os.environ.get("SDL_VIDEODRIVER") != "x11":
+        return None
+    sdl.SDL_GetCurrentVideoDriver.restype = ctypes.c_char_p
+    if sdl.SDL_GetCurrentVideoDriver() != b"x11":
+        return None
+    sdl.SDL_GetWindowFromID.argtypes = [ctypes.c_uint32]
+    sdl.SDL_GetWindowFromID.restype = ctypes.c_void_p
+    for window_id in range(1, 256):
+        window = sdl.SDL_GetWindowFromID(window_id)
+        if window:
+            return window
+    return None
+
+
 def push_sdl_window_size_changed_event(width, height):
     if isOffscreenGameplayChild():
         raise unittest.SkipTest("This resize injection requires window focus; SDL dummy/offscreen cannot provide it.")
@@ -2151,7 +2169,7 @@ def push_sdl_window_size_changed_event(width, height):
         ]
 
     sdl = load_sdl_library()
-    focused_window = focused_sdl_window()
+    focused_window = focused_sdl_window() or isolatedGameplaySdlWindow(sdl)
     if not focused_window:
         raise AssertionError("Expected a focused SDL window for resize event injection.")
 
