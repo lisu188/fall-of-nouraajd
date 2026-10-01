@@ -1368,12 +1368,17 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     return sample;
 }
 
-void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
+void initializeControllerPythonContent() {
+    std::cerr << "controller content: initializing bindings\n";
     auto sys = pybind11::module_::import("sys");
     sys.attr("path").attr("insert")(0, GAME_CONTROLLER_TEST_RESOURCE_ROOT);
     sys.attr("modules")["_game"] = pybind11::module_::import("_controller_game");
     pybind11::module_::import("game");
     pybind11::module_::import("json");
+    std::cerr << "controller content: game and json initialized\n";
+}
+
+void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
     const auto previousRng = vstd::rng();
     auto game = CGameLoader::loadGame();
     open_tile_map(game, 3, 3);
@@ -1421,6 +1426,7 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget() {
 
 int main() {
     pybind11::scoped_interpreter guard{};
+    initializeControllerPythonContent();
 
     test_movement_controller_null_and_no_map_paths();
     test_npc_random_controller_clears_current_tile_path();

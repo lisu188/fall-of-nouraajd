@@ -24773,6 +24773,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
             PythonCallbackLifecycleTest,
             ConsoleUiInteractionTest,
             UiMinimapInteractionTest,
+            EnemyRoleRuntimeTest,
         ):
             names = unittest.defaultTestLoader.getTestCaseNames(test_class)
             self.assertTrue(names)
@@ -24788,6 +24789,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         self.assertNotIn("_PythonCallbackLifecycleTest", globals())
         self.assertNotIn("_ConsoleUiInteractionTest", globals())
         self.assertNotIn("_UiMinimapInteractionTest", globals())
+        self.assertNotIn("_EnemyRoleRuntimeTest", globals())
 
     def testPixelAnalysisIsDiscoveredOnceInSourceSuites(self):
         if not SOURCE_UI_TESTS_AVAILABLE:
