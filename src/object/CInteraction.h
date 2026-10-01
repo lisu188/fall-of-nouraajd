@@ -1,6 +1,6 @@
 /*
 fall-of-nouraajd c++ dark fantasy game
-Copyright (C) 2025  Andrzej Lis
+Copyright (C) 2025-2026  Andrzej Lis
 
 This program is free software: you can redistribute it and/or modify
         it under the terms of the GNU General Public License as published by
@@ -42,6 +42,8 @@ class CInteraction : public CGameObject {
     virtual void performAction(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>);
 
     virtual bool configureEffect(std::shared_ptr<CEffect>);
+
+    virtual int getCommittedManaRefund(std::shared_ptr<CCreature> caster);
 
     std::shared_ptr<CEffect> getEffect() const;
 

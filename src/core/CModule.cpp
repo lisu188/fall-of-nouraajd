@@ -915,7 +915,9 @@ void init_game_module(py::module_ &m) {
     cinteraction
         .def("performAction", &CInteraction::performAction,
              "Perform the interaction between source and target creatures.")
-        .def("configureEffect", &CInteraction::configureEffect, "Configure an effect instance before it is applied.");
+        .def("configureEffect", &CInteraction::configureEffect, "Configure an effect instance before it is applied.")
+        .def("getCommittedManaRefund", &CInteraction::getCommittedManaRefund, py::arg("caster"),
+             "Query the mana refund after a fully paid cast; querying never restores mana.");
     m.attr("CInteractionBase") = cinteraction;
 
     py::class_<StatsModifier>(m, "StatsModifier", "Pure numeric stat modifier value.")
