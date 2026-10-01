@@ -192,6 +192,17 @@ class NarrativeConsequenceTest(unittest.TestCase):
         self.assertEqual(500, narrative.siegeRewardGold(game))
         self.assertIn("listened", narrative.victorResponse(game))
 
+    def testLaterThreatOverridesCooperationAndRemainsSticky(self):
+        for approaches in (("cooperative", "threatened"), ("threatened", "cooperative")):
+            with self.subTest(approaches=approaches):
+                game = Game()
+                for approach in approaches:
+                    narrative.recordGateApproach(game, approach)
+                narrative.recordGateApproach(game, "cooperative")
+                self.assertEqual("threatened", narrative.getVariable(game, "nouraajdGateApproach"))
+                self.assertEqual(105, narrative.beerSalePercent(game))
+                self.assertEqual(475, narrative.siegeRewardGold(game))
+
     def testTownSnapshotSeparatesOptionalVictorOutcomesAndOnlyThePlayersOwnDeed(self):
         for state, outcome in (("good_end", "rescued"), ("bad_end", "lost"), ("encounter_active", "unresolved")):
             with self.subTest(state=state):
@@ -277,7 +288,13 @@ class RitualResolutionTest(unittest.TestCase):
         self.assertTrue(campaign.hasPendingTransition(self.game))
         self.assertEqual("cleansing", store.scenario())
         self.assertEqual("bad", narrative.getVariable(self.game, "ritualOutcome"))
-        campaign.retryPending(self.game)
+        self.game.player.coords.x -= 1
+        self.dialog.continueAfterLoss()
+        self.assertIsNone(self.game.pending)
+        self.game.player.coords.x += 1
+        self.dialog.continueAfterLoss()
+        self.assertEqual(["checkQuests", "transition", "transition"], self.game.events)
+        self.assertEqual(100, self.game.player.gold)
         self.game.finishTransition(True)
         self.assertEqual("siege", store.scenario())
         self.assertEqual([("cleansing", "bad_ending")], store.history())

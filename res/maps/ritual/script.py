@@ -221,7 +221,10 @@ def load(self, context):
                 game_map.getBoolProperty("captive_lost")
                 and game_map.getBoolProperty("anchors_destroyed")
                 and game_map.getBoolProperty("leader_defeated")
-                and not game_map.getBoolProperty("ritual_resolution_chosen")
+            ):
+                return False
+            if game_map.getBoolProperty("ritual_resolution_chosen") and not campaign.hasPendingTransition(
+                self.getGame()
             ):
                 return False
             captive = game_map.getObjectByName("ritualCaptive")
@@ -236,6 +239,9 @@ def load(self, context):
                 return
             game_map = self.getGame().getMap()
             player = game_map.getPlayer()
+            if game_map.getBoolProperty("ritual_resolution_chosen"):
+                campaign.retryPending(self.getGame())
+                return
             game_map.setBoolProperty("ritual_resolution_chosen", True)
             narrative.recordRitualOutcome(self.getGame(), "bad")
             reward_before = rewardSnapshot(player)

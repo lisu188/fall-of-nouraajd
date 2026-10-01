@@ -37,7 +37,9 @@ def _recordFirstChoice(game, name, value):
 def recordGateApproach(game, approach):
     if approach not in ("cooperative", "threatened"):
         raise ValueError("Unknown gate approach")
-    _recordFirstChoice(game, "nouraajdGateApproach", approach)
+    store = campaign.state(game)
+    if store and store.get_var("nouraajdGateApproach") != "threatened":
+        store.set_var("nouraajdGateApproach", approach)
 
 
 def recordVictorConfrontation(game, approach):
