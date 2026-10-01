@@ -260,7 +260,7 @@ class EnemyRolesTest(unittest.TestCase):
     def testOrdinaryBarrierPriorityFixtureRegistersClonedBonusBeforeSecondControl(self):
         source = (ROOT / "tests/unit/test_controller.cpp").read_text(encoding="utf-8")
         registration = source.split("void register_effect_and_interaction", 1)[1].split("\n}", 1)[0]
-        self.assertIn("register_type<CStats, CGameObject>()", registration)
+        self.assertIn("register_type_metadata<CStats, CGameObject>()", registration)
         self.assertIn('registerType("CStats"', registration)
         priority = source.split("void testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast", 1)[1].split("\n}", 1)[
             0
@@ -268,6 +268,12 @@ class EnemyRolesTest(unittest.TestCase):
         self.assertIn("clonedBonus != nullptr", priority)
         self.assertIn("if (clonedBonus)", priority)
         self.assertEqual(2, priority.count("controller.control(monster, opponent)"))
+
+    def testRuntimeRitualReserveMatchesZeroCostEligibility(self):
+        source = (ROOT / "tests/test_enemy_role_runtime.py").read_text(encoding="utf-8")
+        self.assertIn("reserve_mana = 5 if signature_id == 'enemyRitualHex' else 0", source)
+        self.assertIn("actor.setMana(reserve_mana)", source)
+        self.assertIn("assert actor.getMana() == reserve_mana", source)
 
     def testRoleConfigKeepsRosterNumericStatsAndBoundedOwnedEffects(self):
         classes = json.loads((ROOT / "res/config/creature_classes.json").read_text(encoding="utf-8"))

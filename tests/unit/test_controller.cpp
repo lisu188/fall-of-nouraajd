@@ -1082,12 +1082,10 @@ std::shared_ptr<CEffect> named_self_effect(const std::shared_ptr<CGame> &game, c
     return effect;
 }
 
-// Registers CEffect/CInteraction in both the meta system and the object builder so that
-// CInteraction::onAction can clone its effect (serialize -> deserialize) when the monster
-// casts. Without this the cast throws bad_any_cast (unregistered meta) or segfaults
-// (unconstructable class), exactly as documented on the weakening-ranking test.
+// Effect cloning also reconstructs its nested CStats bonus. Bare fixtures need all three
+// per-game factories even when serializer metadata is already registered globally.
 void register_effect_and_interaction(const std::shared_ptr<CGame> &game) {
-    CTypes::register_type<CStats, CGameObject>();
+    CTypes::register_type_metadata<CStats, CGameObject>();
     CTypes::register_type<CEffect, CGameObject>();
     CTypes::register_type<CInteraction, CGameObject>();
     game->getObjectHandler()->registerType("CStats", []() { return std::make_shared<CStats>(); });
@@ -1097,15 +1095,7 @@ void register_effect_and_interaction(const std::shared_ptr<CGame> &game) {
 
 void test_monster_fight_controller_ranks_interactions_by_weakening() {
     auto game = fight_fixture_game();
-    // CInteraction::onAction clones its effect through the object handler (serialize ->
-    // deserialize) when the interaction is cast. The clone only works if CInteraction and CEffect
-    // are wired into the type system for both meta serialization and class-name construction, the
-    // same way the configured-object clone coverage in test_object.cpp registers them. Without this
-    // the cast throws bad_any_cast (unregistered meta) or segfaults (unconstructable class).
-    CTypes::register_type<CEffect, CGameObject>();
-    CTypes::register_type<CInteraction, CGameObject>();
-    game->getObjectHandler()->registerType("CEffect", []() { return std::make_shared<CEffect>(); });
-    game->getObjectHandler()->registerType("CInteraction", []() { return std::make_shared<CInteraction>(); });
+    register_effect_and_interaction(game);
     auto monster = creature_at(0, 0, 0);
     monster->setGame(game);
     // A single landed hit lands 10 damage; the opponent has no armor/resist.
@@ -1166,6 +1156,71 @@ std::shared_ptr<CCreature> self_target_fixture_opponent(const std::shared_ptr<CG
     opponent->setGame(game);
     opponent->getBaseStats()->setStamina(10);
     return opponent;
+}
+
+void testEffectCloneFixturePreservesStatsAcrossControllerTurns() {
+    auto game = fight_fixture_game();
+    auto monster = self_target_fixture_monster(game, false);
+    auto opponent = self_target_fixture_opponent(game);
+    auto effect = named_self_effect(game, "unitCloneShield", CTag::Buff);
+    effect->setTypeId("unitCloneShield");
+    effect->setDuration(3);
+    effect->getBonus()->setStamina(2);
+    effect->getBonus()->setIntelligence(4);
+    effect->getBonus()->setArmor(13);
+
+    auto clone = effect->clone<CEffect>();
+    expect_true(clone != nullptr, "the controller fixture should construct a cloned effect");
+    if (!clone) {
+        return;
+    }
+    auto clonedBonus = clone->getBonus();
+    expect_true(clonedBonus != nullptr, "the controller fixture should reconstruct the cloned CStats bonus");
+    if (!clonedBonus) {
+        return;
+    }
+    expect_true(clone != effect && clonedBonus != effect->getBonus(),
+                "effect cloning should construct independent effect and bonus instances");
+    expect_true(clonedBonus->getStamina() == 2 && clonedBonus->getIntelligence() == 4 && clonedBonus->getArmor() == 13,
+                "effect cloning should preserve nonzero bonus values");
+    effect->getBonus()->setStamina(9);
+    clonedBonus->setArmor(17);
+    expect_true(clonedBonus->getStamina() == 2 && effect->getBonus()->getArmor() == 13,
+                "mutating either bonus should leave the other bonus unchanged");
+
+    auto selfBuff = caster_interaction(game, 10, clone);
+    selfBuff->setName("unitCloneSelfBuff");
+    auto offensive = caster_interaction(game, 5, nullptr);
+    offensive->setName("unitCloneOffensive");
+    monster->addAction(selfBuff);
+    monster->addAction(offensive);
+    auto controller = std::make_shared<CMonsterFightController>();
+    expect_true(controller->control(monster, opponent), "the controller should cast the cloned self-buff");
+    expect_true(monster->getMana() == 50, "casting the cloned self-buff should spend its ten mana");
+
+    auto effects = monster->getEffects();
+    expect_true(effects.size() == 1, "casting the cloned self-buff should install exactly one effect");
+    if (effects.size() != 1) {
+        return;
+    }
+    auto installedEffect = *effects.begin();
+    auto installedBonus = installedEffect ? installedEffect->getBonus() : nullptr;
+    expect_true(installedBonus != nullptr, "casting should reconstruct a non-null bonus for the installed effect");
+    if (!installedBonus) {
+        return;
+    }
+    expect_true(installedEffect != clone && installedBonus != clonedBonus,
+                "casting should clone the effect template and its bonus independently");
+    expect_true(installedBonus->getStamina() == 2 && installedBonus->getIntelligence() == 4 &&
+                    installedBonus->getArmor() == 17,
+                "casting should retain the cloned effect template's bonus values");
+    auto stats = monster->getStats();
+    expect_true(stats->getStamina() == 12 && stats->getIntelligence() == 104 && stats->getArmor() == 17,
+                "a real creature stat read should include the installed cloned bonus");
+    expect_true(controller->control(monster, opponent), "the controller should act again after installing the effect");
+    expect_true(monster->getMana() == 45 && monster->getEffects().size() == 1,
+                "the following turn should skip the duplicate self-buff and cast the five-mana offensive action");
+    game->getContext()->shutdown();
 }
 
 void test_monster_fight_controller_applies_missing_self_buff() {
@@ -1624,6 +1679,7 @@ int main() {
     test_monster_fight_controller_heals_when_heal_outpaces_incoming_damage();
     test_monster_fight_controller_gates_heal_on_the_potion_it_will_actually_drink();
     test_monster_fight_controller_heals_when_next_hit_would_kill();
+    testEffectCloneFixturePreservesStatsAcrossControllerTurns();
     test_monster_fight_controller_ranks_interactions_by_weakening();
     test_monster_fight_controller_applies_missing_self_buff();
     test_monster_fight_controller_skips_duplicate_self_buff();

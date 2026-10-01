@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import pathlib
+import io
 import sys
 import tempfile
+import threading
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from scripts import run_monster_balance as runner
 
@@ -74,6 +76,35 @@ class MonsterBalanceRunnerTest(unittest.TestCase):
         result, lines = self.runFixture("stderr-flood")
         self.assertEqual(0, result)
         self.assertEqual(5, sum(len(line) > 200000 for line in lines))
+
+    def testReaderFailureCannotMasqueradeAsSuccessfulEndOfStream(self):
+        class BrokenStream:
+            def __iter__(self):
+                raise OSError("native pipe read failed")
+
+            def close(self):
+                pass
+
+        complete_stdout = "\n".join(
+            [f"role balance Warrior/{monster_id} hp 1 -> 1" for monster_id in runner.MONSTER_IDS]
+            + ["role class complete Warrior rows=7 pairedSeeds=77 fights=154"]
+        )
+        for broken_stdout in (False, True):
+            with self.subTest(broken_stdout=broken_stdout):
+                process = Mock()
+                process.stdout = BrokenStream() if broken_stdout else io.StringIO(complete_stdout)
+                process.stderr = io.StringIO("") if broken_stdout else BrokenStream()
+                process.wait.return_value = 0
+                process.poll.return_value = 0
+                lines = []
+                with patch.object(runner.subprocess, "Popen", return_value=process):
+                    result = runner.runWorker(
+                        ["fixture"], "Warrior", time.monotonic() + 10, lines.append, threading.Lock(), threading.Event()
+                    )
+                self.assertEqual(0, result.return_code)
+                self.assertFalse(result.complete_streams)
+                self.assertFalse(runner.validateWorker(result))
+                self.assertTrue(any("OSError: native pipe read failed" in line for line in lines))
 
     def testAggregateDeadlineKillsAndReapsRunningWorkers(self):
         processes = []
