@@ -29,7 +29,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CItem.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
-#include "object/CWeapon.h"
 #include "test_harness.h"
 
 #include <pybind11/embed.h>

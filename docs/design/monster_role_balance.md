@@ -119,9 +119,12 @@ before any mechanic revision; they are not passing acceptance evidence.
 | Wayfarer | CultLeader | 71 | 55 | 100 | 100 | 10/11 |
 
 
-The individual witness assertions remain required for all previously valid pairs.
-Only the measured Sorcerer/CultLeader baseline win predicate (0/11 wins) and the
-Assasin/Pritz baseline health predicate (median zero) are exempt. Each exempt pair
-still checks its other witness predicate, all three strict resource medians, and
-every seeded baseline victory. These baseline-only exceptions reflect the same
-ordinary templates on both platforms; no workload or difficulty value changes.
+The individual win witness remains required for every pair except the measured
+Sorcerer/CultLeader baseline (0/11 wins). The individual positive median-health
+witness retains its original Pritz/OctoBogz scope, except Assasin/Pritz (median
+zero). Assasin/GoblinThief and Assasin/Cultist also have legitimate zero baseline
+health costs and were never part of that original health witness scope. The first
+revision accidentally broadened the health predicate; this restores its original
+scope. All 35 strict resource medians and every seeded baseline victory remain
+required, alongside the same-pair representative witness for each player class.
+No workload or difficulty value changes.
