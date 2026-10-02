@@ -724,6 +724,10 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget(const std::str
                               << roles.itemsSpent << '\n';
                 }
                 expect_true(!baseline.won || roles.won, "monster role must preserve every seeded baseline victory");
+                if (std::string(playerType) == "Wayfarer" && std::string(monsterType) == "OctoBogz" && seed == 109) {
+                    expect_true(baseline.won && roles.won,
+                                "deterministic effect ticks must preserve the historical seed 109 baseline victory");
+                }
                 baselineHp.push_back(baseline.healthSpent);
                 roleHp.push_back(roles.healthSpent);
                 baselineMana.push_back(baseline.manaSpent);

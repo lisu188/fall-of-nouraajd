@@ -123,6 +123,7 @@ except Exception:
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
 MCP_STDIO_TOOL_TIMEOUT_SECONDS = 10
+MCP_STDIO_MAP_START_TIMEOUT_SECONDS = 60
 MCP_STDIO_MAP_JSON_TIMEOUT_SECONDS = 60
 MCP_STDIO_SHUTDOWN_TIMEOUT_SECONDS = 30
 MCP_STDIO_TAIL_LIMIT_BYTES = 8192
@@ -158,6 +159,7 @@ FAST_TEST_NAMES = {
     "McpServerTest.test_map_design_brief_rejects_path_traversal",
     "McpServerTest.test_stdio_process_drains_stderr_while_waiting_for_stdout",
     "McpServerTest.test_stdio_timeout_diagnostics_include_request_context_and_stream_tails",
+    "McpServerTest.testFullMapStartupUsesExplicitDeadlineAndKeepsQuickRpcBudget",
     "McpServerTest.test_serialize_result_lists_python_methods_for_handles",
     "McpServerTest.test_stdio_batch_handles_initialize_and_tool_listing",
     "PanelLayoutManifestTest.test_panel_layout_manifest_matches_panels_json",
@@ -26821,6 +26823,64 @@ class McpServerTest(unittest.TestCase):
         finally:
             self._shutdown_process(proc)
 
+    def testFullMapStartupUsesExplicitDeadlineAndKeepsQuickRpcBudget(self):
+        from unittest import mock
+
+        self.assertEqual(10, MCP_STDIO_TOOL_TIMEOUT_SECONDS)
+        game_handle = {"__handle__": 1}
+        map_handle = {"__handle__": 2}
+        player_handle = {"__handle__": 3}
+        for player_name in (None, DEFAULT_PLAYER, "Sorcerer"):
+            with self.subTest(player=player_name):
+                proc = object()
+                session = {"proc": proc, "next_request_id": 3}
+                calls = []
+
+                def respond(actual_proc, request_id, tool, arguments, *, timeout):
+                    self.assertIs(proc, actual_proc)
+                    self.assertEqual(3 + len(calls), request_id)
+                    operation = arguments.get("name", arguments.get("method"))
+                    calls.append((tool, operation, arguments, timeout))
+                    if operation in ("CGameLoader.startGame", "CGameLoader.startGameWithPlayer"):
+                        self.assertGreater(
+                            timeout, 12, "A full map response beyond the quick deadline must be accepted"
+                        )
+                        self.assertEqual(60, timeout)
+                        return {"result": None}
+                    self.assertEqual(MCP_STDIO_TOOL_TIMEOUT_SECONDS, timeout)
+                    if operation == "CGameLoader.loadGame":
+                        return {"result": game_handle}
+                    if operation == "getMap":
+                        self.assertEqual(1, arguments["handle"])
+                        return {"result": map_handle}
+                    self.assertEqual("getPlayer", operation)
+                    self.assertEqual(2, arguments["handle"])
+                    return {"result": player_handle}
+
+                with mock.patch.object(self, "_call_tool", side_effect=respond):
+                    if player_name is None:
+                        self.assertEqual((game_handle, map_handle), self._mcp_load_game_map(session, "nouraajd"))
+                        expected_start = "CGameLoader.startGame"
+                        expected_args = [game_handle, "nouraajd"]
+                    else:
+                        if player_name == DEFAULT_PLAYER:
+                            result = self._mcp_load_game_map_with_player(session, "nouraajd")
+                        else:
+                            result = self._mcp_load_game_map_with_player(session, "nouraajd", player_name)
+                        self.assertEqual((game_handle, map_handle, player_handle), result)
+                        expected_start = "CGameLoader.startGameWithPlayer"
+                        expected_args = [game_handle, "nouraajd", player_name]
+                    self.assertEqual(game_handle, self._mcp_engine_call(session, "CGameLoader.loadGame"))
+                    self.assertEqual(map_handle, self._mcp_handle_call(session, game_handle, "getMap"))
+                expected_operations = ["CGameLoader.loadGame", expected_start, "getMap"]
+                if player_name is not None:
+                    expected_operations.append("getPlayer")
+                expected_operations.extend(("CGameLoader.loadGame", "getMap"))
+                self.assertEqual(expected_operations, [call[1] for call in calls])
+                self.assertEqual("engine_call", calls[1][0])
+                self.assertEqual(expected_args, calls[1][2]["args"])
+                self.assertEqual(3 + len(calls), session["next_request_id"])
+
     def test_stdio_timeout_diagnostics_include_request_context_and_stream_tails(self):
         script = (
             "import json, sys\n"
@@ -27681,13 +27741,20 @@ class McpServerTest(unittest.TestCase):
 
     def _mcp_load_game_map(self, session, map_name):
         game_handle = self._mcp_engine_call(session, "CGameLoader.loadGame")
-        self._mcp_engine_call(session, "CGameLoader.startGame", [game_handle, map_name])
+        self._mcp_engine_call(
+            session, "CGameLoader.startGame", [game_handle, map_name], timeout=MCP_STDIO_MAP_START_TIMEOUT_SECONDS
+        )
         map_handle = self._mcp_handle_call(session, game_handle, "getMap")
         return game_handle, map_handle
 
     def _mcp_load_game_map_with_player(self, session, map_name, player_name=DEFAULT_PLAYER):
         game_handle = self._mcp_engine_call(session, "CGameLoader.loadGame")
-        self._mcp_engine_call(session, "CGameLoader.startGameWithPlayer", [game_handle, map_name, player_name])
+        self._mcp_engine_call(
+            session,
+            "CGameLoader.startGameWithPlayer",
+            [game_handle, map_name, player_name],
+            timeout=MCP_STDIO_MAP_START_TIMEOUT_SECONDS,
+        )
         map_handle = self._mcp_handle_call(session, game_handle, "getMap")
         player_handle = self._mcp_handle_call(session, map_handle, "getPlayer")
         return game_handle, map_handle, player_handle

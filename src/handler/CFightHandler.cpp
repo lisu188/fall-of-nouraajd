@@ -341,11 +341,25 @@ effect_application_result apply_effects_with_result(const std::shared_ptr<CCreat
     }
 
     effects = cr->getEffects();
+    const bool buffsFirst = effects.size() > 1 && cr->getHp() < cr->getHpMax();
+    using tick_key_type = std::tuple<bool, std::string, std::string, std::string>;
+    std::vector<std::pair<tick_key_type, std::shared_ptr<CEffect>>> orderedEffects;
+    orderedEffects.reserve(effects.size());
     for (const auto &effect : effects) {
         if (!effect) {
             vstd::logger::warning("Skipping null effect while applying effects for", cr->to_string());
             continue;
         }
+        // Recover first while hurt; at full health, let other ticks create room for recovery.
+        auto key = effects.size() > 1 ? tick_key_type{effect->hasTag(CTag::Buff) != buffsFirst, effect->getTypeId(),
+                                                      effect->getType(), effect->getName()}
+                                      : tick_key_type{};
+        orderedEffects.emplace_back(std::move(key), effect);
+    }
+    std::sort(orderedEffects.begin(), orderedEffects.end(),
+              [](const auto &left, const auto &right) { return left.first < right.first; });
+    for (const auto &entry : orderedEffects) {
+        const auto &effect = entry.second;
         const bool was_alive = cr->isAlive();
         vstd::logger::debug(cr->to_string(), "suffers from", effect->to_string());
         effect->apply(cr);
