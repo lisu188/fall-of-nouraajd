@@ -9,17 +9,62 @@ from pathlib import Path
 from statistics import median
 import subprocess
 import sys
+import tempfile
 from time import perf_counter
 import unittest
 import uuid
+from unittest.mock import patch
 
 from tests import test_ui_mcp_dialogue as dialogue_mcp
 from tests.castle_walkthrough import TransitRoutes, shortestRoute
 from tests.narrative_walkthrough import authoredRegion
 
 
+def readNativeLogTail(path, *, max_bytes=65536, max_lines=256):
+    if max_bytes <= 0 or max_lines <= 0:
+        raise ValueError("Native diagnostic tail limits must be positive")
+    path = Path(path)
+    with path.open("rb") as stream:
+        stream.seek(0, os.SEEK_END)
+        size = stream.tell()
+        offset = max(0, size - max_bytes)
+        stream.seek(offset)
+        raw = stream.read(max_bytes)
+    lines = raw.splitlines()
+    if offset and lines:
+        lines = lines[1:]
+    omitted_lines = max(0, len(lines) - max_lines)
+    selected = b"\n".join(lines[-max_lines:])
+    # Replacement characters can expand malformed UTF-8; bound the printed text as well as the read.
+    encoded = selected.decode("utf-8", errors="replace").encode("utf-8")
+    text = encoded[-max_bytes:].decode("utf-8", errors="ignore")
+    return {
+        "path": str(path),
+        "fileBytes": size,
+        "startOffset": offset,
+        "readBytes": len(raw),
+        "printedBytes": len(text.encode("utf-8")),
+        "byteLimit": max_bytes,
+        "lineLimit": max_lines,
+        "truncated": bool(offset or omitted_lines or len(encoded) > max_bytes),
+        "text": text,
+    }
+
+
 class OctobogzMcpWalkthroughTest(unittest.TestCase):
-    setUp = dialogue_mcp.DialogueMcpWalkthroughTest.setUp
+    def setUp(self):
+        import test as harness
+
+        self.native_log_path = harness.TEST_OUTPUT_DIR / f"mcp-octobogz-native-{uuid.uuid4().hex}.log"
+        startup = harness.McpServerTest._start_stdio_mcp_process
+
+        def startWithNativeLog(instance, *args, **kwargs):
+            return startup(instance, *args, native_log_file=self.native_log_path, **kwargs)
+
+        with patch.object(harness.McpServerTest, "_start_stdio_mcp_process", startWithNativeLog):
+            dialogue_mcp.DialogueMcpWalkthroughTest.setUp(self)
+        print("MCP hunt native log", str(self.native_log_path), flush=True)
+
     pump = dialogue_mcp.DialogueMcpWalkthroughTest.pump
     object = dialogue_mcp.DialogueMcpWalkthroughTest.object
     dialog = dialogue_mcp.DialogueMcpWalkthroughTest.dialog
@@ -647,6 +692,57 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             print("MCP hunt actor combat", observation, flush=True)
             self.phase_observations.append(observation)
 
+    def reportCombatFailure(self, stage, actors):
+        tail = None
+        tail_error = None
+        try:
+            tail = readNativeLogTail(self.native_log_path)
+        except Exception as exc:
+            tail_error = (type(exc).__name__, str(exc))
+        evidence = {"stage": stage, "class": getattr(self, "mcp_profile_class", "unassigned")}
+        try:
+            if self.process.poll() is not None:
+                raise RuntimeError("MCP process exited before the failure snapshot")
+            for key, method, args in (
+                ("combatHistory", "getStringProperty", ["combatHistory"]),
+                ("combatStatus", "getStringProperty", ["combatStatus"]),
+                ("combatRound", "getNumericProperty", ["combatRound"]),
+                ("turn", "getTurn", []),
+            ):
+                evidence[key] = self.harness._mcp_handle_call(self.session, self.game_map, method, args, timeout=5)
+            for key, actor in [("player", self.player), *sorted(actors.items())]:
+                evidence[key] = json.loads(self.harness._mcp_engine_call(self.session, "jsonify", [actor], timeout=5))
+                evidence.setdefault("actorLimits", {})[key] = {
+                    "hpMax": self.harness._mcp_handle_call(self.session, actor, "getHpMax", [], timeout=5),
+                    "manaMax": self.harness._mcp_handle_call(self.session, actor, "getManaMax", [], timeout=5),
+                }
+        except Exception as exc:
+            evidence["diagnosticError"] = {"type": type(exc).__name__, "message": str(exc)}
+        finally:
+            try:
+                path = self.native_log_path.with_suffix(".failure.jsonl")
+                serialized = json.dumps(evidence, ensure_ascii=False)
+                with path.open("a", encoding="utf-8") as stream:
+                    stream.write(serialized + "\n")
+                encoded = serialized.encode("utf-8")
+                print(
+                    "MCP hunt combat failure snapshot",
+                    {"path": str(path), "bytes": len(encoded), "byteLimit": 65536, "truncated": len(encoded) > 65536},
+                    flush=True,
+                )
+                print(encoded[:65536].decode("utf-8", errors="ignore"), flush=True)
+            except Exception as exc:
+                print("MCP hunt failure snapshot unavailable", type(exc).__name__, str(exc), flush=True)
+            try:
+                if tail is not None:
+                    text = tail.pop("text")
+                    print("MCP hunt native failure tail", tail, flush=True)
+                    print(text, flush=True)
+                else:
+                    print("MCP hunt native failure tail unavailable", tail_error, flush=True)
+            except Exception as exc:
+                print("MCP hunt native failure tail unavailable", type(exc).__name__, str(exc), flush=True)
+
     def defeat(self, slot):
         record = self.state()["slots"][slot]
         if record["status"] == "dead":
@@ -656,13 +752,20 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.trackLivingHuntActors()
         actors = self.livingActors()
         self.snapshot("before " + slot)
-        self.walkTo(record["name"], allow_removed=True)
-        self.snapshot("after " + slot)
-        self.observeActors("after " + slot, actors)
-        self.assertGreater(
-            self.call(self.player, "getNumericProperty", "hp"), 0, "Ordinary player loadout failed against " + slot
-        )
-        self.assertSlotDefeated(slot)
+        try:
+            self.walkTo(record["name"], allow_removed=True)
+            self.snapshot("after " + slot)
+            self.observeActors("after " + slot, actors)
+            self.assertGreater(
+                self.call(self.player, "getNumericProperty", "hp"), 0, "Ordinary player loadout failed against " + slot
+            )
+            self.assertSlotDefeated(slot)
+        except Exception:
+            try:
+                self.reportCombatFailure("defeat " + slot, actors)
+            except Exception:
+                pass
+            raise
 
     @staticmethod
     def itemIdentity(item):
@@ -978,6 +1081,184 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                     save_path.unlink(missing_ok=True)
                     save_path.with_suffix(".json.bak").unlink(missing_ok=True)
         self.assertMeaningfulPulseWitness()
+
+
+class OctobogzDiagnosticTest(unittest.TestCase):
+    def testNativeLoggerIsOptInAndPassesTheExactFileArgument(self):
+        import ast
+        from types import SimpleNamespace
+
+        root = Path(__file__).resolve().parents[1]
+        tree = ast.parse((root / "test.py").read_text(encoding="utf-8"))
+        owner = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "McpServerTest")
+        method = next(
+            node for node in owner.body if isinstance(node, ast.FunctionDef) and node.name == "_start_stdio_mcp_process"
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            namespace = {
+                "REPO_ROOT": Path(dialogue_mcp.__file__).resolve().parents[1],
+                "TEST_OUTPUT_DIR": Path(temporary),
+                "build_dir": root / "cmake-build-release",
+                "build_config": "Release",
+                "Path": Path,
+                "os": os,
+                "sys": sys,
+            }
+            exec(compile(ast.Module(body=[method], type_ignores=[]), "<exact-mcp-startup>", "exec"), namespace)
+            commands = []
+
+            def start(command, **kwargs):
+                commands.append((command, kwargs))
+                return SimpleNamespace()
+
+            fixture = SimpleNamespace(assertTrue=self.assertTrue, _start_stdio_process=start)
+            default = namespace[method.name](fixture)
+            path = Path(temporary) / "nested" / "native log.txt"
+            enabled = namespace[method.name](fixture, native_log_file=path)
+            self.assertIsNone(default._native_log_file)
+            self.assertEqual(path, enabled._native_log_file)
+            self.assertTrue(path.parent.is_dir())
+            self.assertIn("disabled", commands[0][0])
+            self.assertNotIn("--native-log-file", commands[0][0])
+            sink_index = commands[1][0].index("--native-log-sink")
+            self.assertEqual(
+                ["--native-log-sink", "file", "--native-log-file", str(path)],
+                commands[1][0][sink_index : sink_index + 4],
+            )
+            self.assertEqual(commands[0][1], commands[1][1])
+            self.assertIsNone(default._playtest_trace_path)
+            self.assertIsNone(enabled._playtest_trace_path)
+
+    def testNativeTailBoundsBothReadsAndPrintedBytesAndLines(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "native.log"
+            for raw in (b"early\n" * 100 + b"last1\nlast2\n", b"\xff" * 100 + b"\nlast\n"):
+                with self.subTest(raw=raw[-16:]):
+                    path.write_bytes(raw)
+                    tail = readNativeLogTail(path, max_bytes=32, max_lines=2)
+                    self.assertEqual(raw, path.read_bytes())
+                    self.assertEqual(len(raw), tail["fileBytes"])
+                    self.assertLessEqual(tail["readBytes"], 32)
+                    self.assertLessEqual(len(tail["text"].encode("utf-8")), 32)
+                    self.assertLessEqual(len(tail["text"].splitlines()), 2)
+                    self.assertTrue(tail["truncated"])
+                    self.assertTrue(tail["text"].endswith("last2" if raw.endswith(b"last2\n") else "last"))
+            for limits in ({"max_bytes": 0}, {"max_lines": 0}):
+                with self.subTest(limits=limits), self.assertRaises(ValueError):
+                    readNativeLogTail(path, **limits)
+
+    def testFailureCapturesReadOnlyCombatAndActualLinkedEffectJson(self):
+        import contextlib
+        import io
+        from types import SimpleNamespace
+
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "native.log"
+            path.write_text("actual effect applied\n", encoding="utf-8")
+            calls = []
+
+            def handle(session, actor, method, args, *, timeout):
+                calls.append((method, args, timeout))
+                with path.open("a", encoding="utf-8") as stream:
+                    stream.write("snapshot getter noise\n" * 4096)
+                return "recorded combat" if method == "getStringProperty" else 7
+
+            def engine(session, name, args, *, timeout):
+                calls.append((name, args, timeout))
+                return json.dumps(
+                    {"properties": {"name": args[0], "effects": [{"caster": "brood", "victim": "player"}]}}
+                )
+
+            fixture = SimpleNamespace(
+                process=SimpleNamespace(poll=lambda: None),
+                harness=SimpleNamespace(_mcp_handle_call=handle, _mcp_engine_call=engine),
+                session={},
+                game_map="map",
+                player="player",
+                native_log_path=path,
+                mcp_profile_class="Sorcerer",
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                OctobogzMcpWalkthroughTest.reportCombatFailure(fixture, "defeat brood", {"brood": "brood"})
+            evidence = json.loads(path.with_suffix(".failure.jsonl").read_text(encoding="utf-8"))
+            self.assertEqual("recorded combat", evidence["combatHistory"])
+            self.assertEqual(7, evidence["combatRound"])
+            self.assertEqual({"caster": "brood", "victim": "player"}, evidence["player"]["properties"]["effects"][0])
+            self.assertEqual("brood", evidence["brood"]["properties"]["name"])
+            self.assertEqual({"hpMax": 7, "manaMax": 7}, evidence["actorLimits"]["player"])
+            self.assertEqual({"hpMax": 7, "manaMax": 7}, evidence["actorLimits"]["brood"])
+            self.assertEqual(
+                [
+                    "getStringProperty",
+                    "getStringProperty",
+                    "getNumericProperty",
+                    "getTurn",
+                    "jsonify",
+                    "getHpMax",
+                    "getManaMax",
+                    "jsonify",
+                    "getHpMax",
+                    "getManaMax",
+                ],
+                [entry[0] for entry in calls],
+            )
+            self.assertTrue(all(entry[2] == 5 for entry in calls))
+            self.assertIn("actual effect applied", output.getvalue())
+            self.assertNotIn("snapshot getter noise", output.getvalue())
+
+    def testNativeTailSurvivesFailedDiagnosticRpc(self):
+        import contextlib
+        import io
+        from types import SimpleNamespace
+
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "native.log"
+            path.write_text("last actual combat action\n", encoding="utf-8")
+
+            def broken(*args, **kwargs):
+                raise OSError("stdio unavailable")
+
+            fixture = SimpleNamespace(
+                process=SimpleNamespace(poll=lambda: None),
+                harness=SimpleNamespace(_mcp_handle_call=broken),
+                session={},
+                game_map="map",
+                native_log_path=path,
+            )
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                OctobogzMcpWalkthroughTest.reportCombatFailure(fixture, "defeat brood", {})
+            evidence = json.loads(path.with_suffix(".failure.jsonl").read_text(encoding="utf-8"))
+            self.assertEqual("OSError", evidence["diagnosticError"]["type"])
+            self.assertIn("last actual combat action", output.getvalue())
+
+    def testDiagnosticFailurePreservesTheOriginalCombatException(self):
+        from types import SimpleNamespace
+
+        failure = AssertionError("original authored combat failure")
+        calls = []
+
+        def walk(name, *, allow_removed):
+            calls.append((name, allow_removed))
+            raise failure
+
+        def diagnostic(*args):
+            raise OSError("diagnostic output failed")
+
+        fixture = SimpleNamespace(
+            state=lambda: {"slots": {"brood": {"status": "living", "name": "actualBrood"}}},
+            assertEqual=self.assertEqual,
+            trackLivingHuntActors=lambda: None,
+            livingActors=lambda: {"brood": "actualBrood"},
+            snapshot=lambda stage: None,
+            walkTo=walk,
+            reportCombatFailure=diagnostic,
+        )
+        with self.assertRaises(AssertionError) as raised:
+            OctobogzMcpWalkthroughTest.defeat(fixture, "brood")
+        self.assertIs(failure, raised.exception)
+        self.assertEqual([("actualBrood", True)], calls)
 
 
 if __name__ == "__main__":

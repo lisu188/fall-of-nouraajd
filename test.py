@@ -130,6 +130,7 @@ GAME_TEST_WORKER = os.environ.get("GAME_TEST_WORKER") == "1"
 XVFB_GAMEPLAY_PARENT_TEST = "XvfbGameplayTest.test_keyboard_gameplay_under_xvfb"
 VALID_TEST_SUITES = ("fast", "gameplay", "ui", "coverage-safe", "full")
 FAST_TEST_PREFIXES = (
+    "OctobogzDiagnosticTest.",
     "WindowsPythonConfigurationTest.",
     "EnemyRoleContractTest.",
     "OctobogzHuntContractTest.",
@@ -25725,6 +25726,7 @@ class TestRunnerSuiteTest(unittest.TestCase):
         for test_class in (
             EnemyRoleContractTest,
             OctobogzHuntContractTest,
+            OctobogzDiagnosticTest,
             MonsterBalanceRunnerTest,
             WindowsPythonConfigurationTest,
         ):
@@ -26219,6 +26221,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     from tests.test_monster_balance_runner import MonsterBalanceRunnerTest as _MonsterBalanceRunnerTest
     from tests.test_enemy_role_runtime import EnemyRoleRuntimeTest as _EnemyRoleRuntimeTest
     from tests.test_octobogz_mcp import OctobogzMcpWalkthroughTest as _OctobogzMcpWalkthroughTest
+    from tests.test_octobogz_mcp import OctobogzDiagnosticTest as _OctobogzDiagnosticTest
     from tests.test_octobogz_runtime import OctobogzRuntimeTest as _OctobogzRuntimeTest
 
     class PaidActionRuntimeTest(_PaidActionRuntimeTest):
@@ -26287,6 +26290,9 @@ if SOURCE_UI_TESTS_AVAILABLE:
     class OctobogzMcpWalkthroughTest(_OctobogzMcpWalkthroughTest):
         pass
 
+    class OctobogzDiagnosticTest(_OctobogzDiagnosticTest):
+        pass
+
     class OctobogzRuntimeTest(_OctobogzRuntimeTest):
         pass
 
@@ -26309,6 +26315,7 @@ if SOURCE_UI_TESTS_AVAILABLE:
     del _EnemyRoleRuntimeTest
     del _EnemyRoleContractTest, _OctobogzHuntContractTest
     del _OctobogzMcpWalkthroughTest
+    del _OctobogzDiagnosticTest
     del _OctobogzRuntimeTest
     del _MonsterBalanceRunnerTest
     del _PlayerIdentityContentTest
@@ -27558,7 +27565,7 @@ class McpServerTest(unittest.TestCase):
             self._write_mcp_walkthrough_log(map_name, log)
         return success, log
 
-    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None):
+    def _start_stdio_mcp_process(self, map_name=None, *, trace_name=None, native_log_file=None):
         script = REPO_ROOT / "mcp.py"
         self.assertTrue(script.exists(), "MCP entry point is missing")
         trace_path = None
@@ -27579,12 +27586,17 @@ class McpServerTest(unittest.TestCase):
             "--build-dir",
             str(build_dir),
             "--native-log-sink",
-            "disabled",
+            "file" if native_log_file is not None else "disabled",
         ]
+        if native_log_file is not None:
+            native_log_file = Path(native_log_file)
+            native_log_file.parent.mkdir(parents=True, exist_ok=True)
+            command.extend(["--native-log-file", str(native_log_file)])
         if build_config:
             command.extend(["--build-config", build_config])
         proc = self._start_stdio_process(command, env=env, map_name=map_name)
         proc._playtest_trace_path = trace_path
+        proc._native_log_file = native_log_file
         return proc
 
     def _start_stdio_process(self, command, *, env=None, map_name=None):

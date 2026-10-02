@@ -99,6 +99,29 @@ struct RoleBalanceSample {
     double fightMilliseconds;
     double cleanupMilliseconds;
     std::vector<RitualControlRecord> ritualTurns;
+    CFightOutcome outcome = CFightOutcome::Invalid;
+    int rounds = 0, playerHp = 0, playerMana = 0, enemyHp = 0, enemyMana = 0;
+    bool enemyRoleUsed = false, enemyRoleEffectApplied = false;
+    std::string defeatReceipt;
+};
+
+class ScopedRoleDiagnosticLog {
+  public:
+    explicit ScopedRoleDiagnosticLog(bool active) : active(active) {
+        if (active) {
+            vstd::logger::set_sink(vstd::logger::sink::stderr_sink);
+        }
+    }
+
+    ~ScopedRoleDiagnosticLog() {
+        if (active) {
+            // The imported production game module installs this process's disabled sink.
+            vstd::logger::set_sink(vstd::logger::sink::disabled);
+        }
+    }
+
+  private:
+    bool active;
 };
 
 class PlayerResourceObserver {
@@ -141,13 +164,17 @@ class ObservedFightController : public CFightController {
   public:
     ObservedFightController(std::shared_ptr<CFightController> delegate,
                             std::shared_ptr<PlayerResourceObserver> observer,
-                            std::shared_ptr<std::vector<RitualControlRecord>> ritualTurns = {})
-        : delegate(std::move(delegate)), observer(std::move(observer)), ritualTurns(std::move(ritualTurns)) {}
+                            std::shared_ptr<std::vector<RitualControlRecord>> ritualTurns = {},
+                            bool focusedDiagnostic = false)
+        : delegate(std::move(delegate)), observer(std::move(observer)), ritualTurns(std::move(ritualTurns)),
+          focusedDiagnostic(focusedDiagnostic) {}
 
     bool control(std::shared_ptr<CCreature> me, std::shared_ptr<CCreature> opponent) override {
         observer->observe();
         const auto before = ritualTurns ? observeRitualTurn(me, opponent) : RitualTurnState{};
+        reportDiagnosticState("before", me, opponent);
         const bool result = delegate->control(me, opponent);
+        reportDiagnosticState("after", me, opponent);
         if (ritualTurns) {
             ritualTurns->push_back({before, observeRitualTurn(me, opponent)});
         }
@@ -191,9 +218,19 @@ class ObservedFightController : public CFightController {
     }
 
   private:
+    void reportDiagnosticState(const char *stage, const std::shared_ptr<CCreature> &me,
+                               const std::shared_ptr<CCreature> &opponent) const {
+        if (focusedDiagnostic) {
+            std::cerr << "role diagnostic control " << stage << " actor " << me->getTypeId() << " hp/mana "
+                      << me->getHp() << '/' << me->getMana() << " target " << opponent->getTypeId() << " hp/mana "
+                      << opponent->getHp() << '/' << opponent->getMana() << std::endl;
+        }
+    }
+
     std::shared_ptr<CFightController> delegate;
     std::shared_ptr<PlayerResourceObserver> observer;
     std::shared_ptr<std::vector<RitualControlRecord>> ritualTurns;
+    bool focusedDiagnostic;
 };
 
 class ObserverDelegateProbe : public CFightController {
@@ -306,17 +343,51 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     auto ritualTurns = (monsterType == "Cultist" || monsterType == "CultLeader")
                            ? std::make_shared<std::vector<RitualControlRecord>>()
                            : nullptr;
-    player->setFightController(std::make_shared<ObservedFightController>(ordinaryController, observer));
-    enemy->setFightController(
-        std::make_shared<ObservedFightController>(enemy->getFightController(), observer, ritualTurns));
+    const bool focusedDiagnostic = playerType == "Wayfarer" && monsterType == "OctoBogz" && seed == 109;
+    player->setFightController(
+        std::make_shared<ObservedFightController>(ordinaryController, observer, nullptr, focusedDiagnostic));
+    enemy->setFightController(std::make_shared<ObservedFightController>(enemy->getFightController(), observer,
+                                                                        ritualTurns, focusedDiagnostic));
     vstd::rng().seed(seed);
     std::srand(seed);
     const auto fightStarted = std::chrono::steady_clock::now();
-    const auto result = CFightHandler::fightManyResult(player, {enemy});
+    // Captured strings and diagnostic output can affect later allocation order; a passing cell is not a fix.
+    const auto result = [&]() {
+        ScopedRoleDiagnosticLog logging(focusedDiagnostic);
+        if (focusedDiagnostic) {
+            std::cerr << "role diagnostic begin " << playerType << '/' << monsterType << " seed " << seed << " roles "
+                      << rolesEnabled << " player hp/mana " << player->getHp() << '/' << player->getMana()
+                      << " enemy hp/mana " << enemy->getHp() << '/' << enemy->getMana() << std::endl;
+            for (const auto &action : actions) {
+                const auto effect = action->hasProperty("roleEffect")
+                                        ? vstd::cast<CEffect>(action->getObjectProperty<CGameObject>("roleEffect"))
+                                        : action->getEffect();
+                if (effect) {
+                    std::cerr << "role diagnostic configured effect action " << action->getTypeId() << " effect "
+                              << effect->getTypeId() << ' ' << effect->to_string() << std::endl;
+                }
+            }
+        }
+        const auto result = CFightHandler::fightManyResult(player, {enemy});
+        if (focusedDiagnostic) {
+            std::cerr << "role diagnostic end " << playerType << '/' << monsterType << " seed " << seed << " roles "
+                      << rolesEnabled << std::endl;
+        }
+        return result;
+    }();
     observer->observe();
     const auto cleanupStarted = std::chrono::steady_clock::now();
     RoleBalanceSample sample{
         result.attackerSucceeded(), observer->healthSpent, observer->manaSpent, observer->itemsSpent, 0, 0, 0, {}};
+    sample.outcome = result.outcome;
+    sample.rounds = result.rounds;
+    sample.playerHp = player->getHp();
+    sample.playerMana = player->getMana();
+    sample.enemyHp = enemy->getHp();
+    sample.enemyMana = enemy->getMana();
+    sample.enemyRoleUsed = enemy->getBoolProperty("enemyRoleUsed");
+    sample.enemyRoleEffectApplied = enemy->getBoolProperty("enemyRoleEffectApplied");
+    sample.defeatReceipt = player->getUiDefeatReceipt();
     if (ritualTurns) {
         sample.ritualTurns = std::move(*ritualTurns);
     }
@@ -330,6 +401,42 @@ RoleBalanceSample runRoleBalanceFight(const std::shared_ptr<CGame> &game, const 
     sample.fightMilliseconds = milliseconds(cleanupStarted - fightStarted);
     sample.cleanupMilliseconds = milliseconds(finished - cleanupStarted);
     return sample;
+}
+
+const char *roleBalanceOutcomeName(CFightOutcome outcome) {
+    switch (outcome) {
+    case CFightOutcome::Invalid:
+        return "Invalid";
+    case CFightOutcome::AttackerVictory:
+        return "AttackerVictory";
+    case CFightOutcome::AttackerDefeat:
+        return "AttackerDefeat";
+    case CFightOutcome::Stalled:
+        return "Stalled";
+    case CFightOutcome::Cancelled:
+        return "Cancelled";
+    }
+    return "Unknown";
+}
+
+void printRoleBalanceOutcome(const RoleBalanceSample &sample, const std::string &mode, const std::string &playerType,
+                             const std::string &monsterType, unsigned seed) {
+    const json fields = {{"class", playerType},
+                         {"monster", monsterType},
+                         {"seed", seed},
+                         {"mode", mode},
+                         {"won", sample.won},
+                         {"outcome", static_cast<int>(sample.outcome)},
+                         {"outcomeName", roleBalanceOutcomeName(sample.outcome)},
+                         {"rounds", sample.rounds},
+                         {"playerHp", sample.playerHp},
+                         {"playerMana", sample.playerMana},
+                         {"enemyHp", sample.enemyHp},
+                         {"enemyMana", sample.enemyMana},
+                         {"enemyRoleUsed", sample.enemyRoleUsed},
+                         {"enemyRoleEffectApplied", sample.enemyRoleEffectApplied},
+                         {"defeatReceipt", sample.defeatReceipt}};
+    std::cerr << "ROLE_BALANCE_DIAGNOSTIC_RESULT " << fields.dump() << std::endl;
 }
 
 void printRitualTrace(const RoleBalanceSample &sample, const std::string &mode, const std::string &playerType,
@@ -776,6 +883,11 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget(const std::str
             for (unsigned seed = 100; seed < 111; ++seed) {
                 const auto baseline = runRoleBalanceFight(game, playerType, monsterType, seed, false);
                 const auto roles = runRoleBalanceFight(game, playerType, monsterType, seed, true);
+                if ((std::string(playerType) == "Wayfarer" && std::string(monsterType) == "OctoBogz" && seed == 109) ||
+                    (baseline.won && !roles.won)) {
+                    printRoleBalanceOutcome(baseline, "baseline", playerType, monsterType, seed);
+                    printRoleBalanceOutcome(roles, "roles", playerType, monsterType, seed);
+                }
                 printRitualTrace(roles, "roles", playerType, monsterType, seed, false);
                 ++completedPairedSeeds;
                 baselineWins += baseline.won ? 1 : 0;
