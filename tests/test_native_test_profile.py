@@ -18,6 +18,12 @@ BASELINE_CASES = {
     "handler": (36, "133d76b3db645f21a09e2b55fc738f481318a97c42532b80bb67edba5354a89d"),
     "map": (49, "17f592c7f09a057f9c3249babde697470899143ffda78688662f61ab5cfbdf9e"),
 }
+ADDITIONAL_CASES = {
+    "handler": (
+        "testEffectTickCappingAndExpiryIgnoreAllocationOrder",
+        "testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
+    ),
+}
 
 
 class NativeTestProfileSourceTest(unittest.TestCase):
@@ -62,7 +68,8 @@ class NativeTestProfileSourceTest(unittest.TestCase):
                 r'(?:(test\w+)\);|\[&\] \{\s*runTimedGuiCancellationTest\("(test\w+)",\s*(test\w+)\);\s*\}\);)',
                 main,
             )
-            self.assertEqual(count, len(calls), suite)
+            additions = ADDITIONAL_CASES.get(suite, ())
+            self.assertEqual(count + len(additions), len(calls), suite)
             self.assertTrue(
                 all(
                     name == callback if callback else name == timed_name == timed_callback
@@ -71,7 +78,10 @@ class NativeTestProfileSourceTest(unittest.TestCase):
                 suite,
             )
             names = [name for name, *_callbacks in calls]
-            self.assertEqual(digest, hashlib.sha256("\n".join(names).encode()).hexdigest(), suite)
+            self.assertEqual(additions, tuple(name for name in names if name in additions), suite)
+            baseline_names = [name for name in names if name not in additions]
+            self.assertEqual(count, len(baseline_names), suite)
+            self.assertEqual(digest, hashlib.sha256("\n".join(baseline_names).encode()).hexdigest(), suite)
             self.assertFalse(re.search(r"^\s+(test\w+)\(\);", main, re.MULTILINE), suite)
             self.assertIn("return finish_tests();", main)
             if suite == "handler":
