@@ -217,6 +217,97 @@ class ManagementMcpWalkthroughTest(unittest.TestCase):
         self.pump()
         self.assertEqual(before, snapshot(), "Repeated inspection must preserve turns, resources, equipment, and stock")
 
+    def testNarrativeRecoveryConsumesOwnedNativeHealingWithoutTakingTurns(self):
+        from tests.narrative_walkthrough import NarrativeWalkthrough
+
+        self.walkTo("market1")
+        healing = self.call(self.game, "createObject", "FullLifePotion")
+        mana = self.call(self.game, "createObject", "ManaPotion")
+        mixed = self.call(self.game, "createObject", "OasisWater")
+        reusable = self.call(self.game, "createObject", "CItem")
+        self.call(reusable, "addTag", "heal")
+        self.call(reusable, "setNumericProperty", "power", 1)
+        for item in (healing, mana, mixed, reusable):
+            self.call(self.player, "addItem", item)
+        hp_max = self.call(self.player, "getHpMax")
+        wounded_hp = max(1, hp_max * 2 // 5)
+        self.call(self.player, "setNumericProperty", "hp", wounded_hp)
+        self.call(self.player, "takeMana", max(1, self.call(self.player, "getManaMax") // 2))
+        self.assertTrue(self.call(healing, "hasTag", "heal"))
+        self.assertFalse(self.call(healing, "hasTag", "mana"))
+        self.assertEqual("LifePotion", self.call(healing, "getType"))
+        self.assertTrue(self.call(healing, "getBoolProperty", "singleUse"))
+        power = self.call(healing, "getNumericProperty", "power")
+        self.assertEqual(5, power)
+        self.assertFalse(self.call(mana, "hasTag", "heal"))
+        self.assertTrue(self.call(mixed, "hasTag", "heal"))
+        self.assertTrue(self.call(mixed, "hasTag", "mana"))
+        self.assertFalse(self.call(reusable, "getBoolProperty", "singleUse"))
+        self.assertLess(wounded_hp * 4, hp_max * 3)
+        self.assertGreater(wounded_hp + hp_max, hp_max, "The native potion must overflow HP before capping")
+        expected_hp = min(hp_max, wounded_hp + max(1, int(power * 20 / 100.0 * hp_max)))
+
+        driver = NarrativeWalkthrough(
+            lambda name, args: self.engine(name, *args),
+            lambda handle, method, args: self.call(handle, method, *args),
+            self.game,
+            self.game_map,
+            self.player,
+        )
+
+        def snapshot():
+            return {
+                "turn": self.call(self.game_map, "getTurn"),
+                "mana": self.call(self.player, "getMana"),
+                "manaMax": self.call(self.player, "getManaMax"),
+                "hpMax": self.call(self.player, "getHpMax"),
+                "gold": self.call(self.player, "getGold"),
+                "experience": self.call(self.player, "getNumericProperty", "exp"),
+                "level": self.call(self.player, "getLevel"),
+                "class": self.call(self.player, "getTypeId"),
+                "quests": sorted(quest["__handle__"] for quest in self.call(self.player, "getQuests")),
+                "completedQuests": sorted(
+                    quest["__handle__"] for quest in self.call(self.player, "getCompletedQuests")
+                ),
+                "equipped": json.loads(self.engine("jsonify", self.player))["properties"].get("equipped"),
+                "coords": driver.coords(),
+            }
+
+        before = snapshot()
+        owned_before = {item["__handle__"] for item in self.call(self.player, "getItems")}
+        self.assertIn(healing["__handle__"], owned_before)
+        self.assertIn(mana["__handle__"], owned_before)
+        driver.recoverBeforeAction("native inventory regression")
+        self.pump()
+        self.assertEqual(expected_hp, self.call(self.player, "getHp"))
+        self.assertEqual(hp_max, expected_hp)
+        owned_after = {item["__handle__"] for item in self.call(self.player, "getItems")}
+        self.assertNotIn(healing["__handle__"], owned_after)
+        self.assertIn(mana["__handle__"], owned_after)
+        self.assertEqual(owned_before - {healing["__handle__"]}, owned_after)
+        self.assertEqual(before, snapshot(), "Native recovery must preserve progression, resources, and turns")
+        self.assertEqual("", self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+        self.assertEqual(0, driver.log["movementSteps"])
+        self.assertEqual(0, driver.log["mapTurns"])
+        self.assertEqual(["FullLifePotion"], [entry["typeId"] for entry in driver.log["recoveryItems"]])
+
+        self.call(self.player, "addItem", "LesserLifePotion")
+        self.call(self.player, "setNumericProperty", "hp", wounded_hp)
+        receipt = '{"map":"Controlled earlier defeat","hp":0,"lostItemCount":0}'
+        self.call(self.player, "setStringProperty", "uiDefeatReceipt", receipt)
+        guarded_before = snapshot()
+        guarded_items = {item["__handle__"] for item in self.call(self.player, "getItems")}
+        recovery_before = list(driver.log["recoveryItems"])
+        with self.assertRaises(AssertionError) as error:
+            driver.recoverBeforeAction("native direct-call receipt regression")
+        self.assertEqual("Walkthrough player was defeated", error.exception.args[0]["reason"])
+        self.assertEqual(receipt, error.exception.args[0]["uiDefeatReceipt"])
+        self.assertEqual(receipt, self.call(self.player, "getStringProperty", "uiDefeatReceipt"))
+        self.assertEqual(wounded_hp, self.call(self.player, "getHp"))
+        self.assertEqual(guarded_items, {item["__handle__"] for item in self.call(self.player, "getItems")})
+        self.assertEqual(guarded_before, snapshot())
+        self.assertEqual(recovery_before, driver.log["recoveryItems"])
+
     def testCombatActionAtTheAuthoredEnemyUsesAnOwnedAbility(self):
         self.walkTo("cave1")
         self.call(self.game_map, "removeObjectByName", "cave1")
