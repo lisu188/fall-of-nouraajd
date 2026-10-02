@@ -148,6 +148,7 @@ FAST_TEST_PREFIXES = (
     "UiPixelAnalysisTest.",
 )
 FAST_TEST_NAMES = {
+    "McpServerTest.testNativeLogSinkSurvivesGameBootstrap",
     "McpServerTest.test_engine_handle_call_scopes_fight_controllers_to_players",
     "GameTest.test_direct_rendercopy_calls_stay_inside_render_context_wrapper",
     "McpServerTest.test_engine_call_resolves_handle_arguments_for_python_methods",
@@ -26343,6 +26344,76 @@ class McpServerTest(unittest.TestCase):
         "gravemoor": "_mcp_walkthrough_gravemoor",
         "usurpergate": "_mcp_walkthrough_usurpergate",
     }
+
+    def testNativeLogSinkSurvivesGameBootstrap(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for requested in ("file", "stderr", "disabled", "stdout"):
+                with self.subTest(sink=requested):
+                    changes = []
+                    active = []
+
+                    def setter(sink, path=None):
+                        changes.append((sink, path))
+                        active[:] = [sink, path]
+
+                    native = types.SimpleNamespace(set_logger_sink=setter)
+                    game_stub = types.SimpleNamespace()
+                    log_path = root / "native.log" if requested == "file" else None
+
+                    def importModule(name):
+                        if name == "_game":
+                            return native
+                        self.assertEqual("game", name)
+                        self.assertEqual([requested, str(log_path) if log_path else None], active)
+                        setter("disabled", None)
+                        return game_stub
+
+                    server = mcp.EngineMcpServer(
+                        repo_root=root, build_dir=root, native_log_sink=requested, native_log_path=log_path
+                    )
+                    with (
+                        patch.object(mcp.importlib, "import_module", side_effect=importModule),
+                        patch.object(mcp.os, "chdir"),
+                        patch.object(sys, "path", sys.path.copy()),
+                    ):
+                        server.import_modules()
+                    expected = (requested, str(log_path) if log_path else None)
+                    self.assertEqual(list(expected), active)
+                    self.assertEqual(expected, changes[0])
+                    self.assertIs(game_stub, server.game_module)
+
+    def testStdioNativeFileLoggerEmitsMarkerAfterGameBootstrap(self):
+        from unittest.mock import patch
+
+        try:
+            import game
+        except ImportError as exc:
+            self.skipTest("The current _game extension is required for native MCP file logging: " + str(exc))
+        self.assertTrue(callable(game.logger))
+        TEST_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=TEST_OUTPUT_DIR, prefix="mcp-native-log-") as temporary:
+            log_path = Path(temporary) / "native.log"
+            marker = "nouraajd-native-log-marker-" + Path(temporary).name
+            with patch.dict(
+                os.environ,
+                SDL_VIDEODRIVER="dummy",
+                SDL_AUDIODRIVER="dummy",
+                SDL_RENDER_DRIVER="software",
+                LIBGL_ALWAYS_SOFTWARE="1",
+            ):
+                proc = self._start_stdio_mcp_process(native_log_file=log_path)
+                try:
+                    self._initialize_stdio_mcp(proc)
+                    session = {"proc": proc, "next_request_id": 3}
+                    self.assertIsNotNone(self._mcp_engine_call(session, "CGameLoader.loadGame", []))
+                    self._mcp_engine_call(session, "logger", [marker])
+                    self.assertTrue(log_path.is_file())
+                    self.assertIn(marker, log_path.read_text(encoding="utf-8"))
+                finally:
+                    self._shutdown_process(proc)
 
     def make_stub_server(self):
         server = mcp.EngineMcpServer(repo_root=REPO_ROOT, build_dir=build_dir)
