@@ -656,6 +656,70 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         )
         return crafted
 
+    def fundBasicIngredientsWithOwnedMana(self, market, required_gold):
+        self.assertEqual((106, 111, 0), self.coords())
+        self.assertEqual(market, self.call(self.object("market1"), "getObjectProperty", "market"))
+        shortfall = required_gold - self.call(self.player, "getGold")
+        if shortfall <= 0 or self.call(self.player, "getMana") != self.call(self.player, "getManaMax"):
+            return 0
+        potions = json.loads(
+            (Path(__file__).resolve().parents[1] / "res/config/potions.json").read_text(encoding="utf-8")
+        )
+        disposable_mana_ids = {
+            type_id
+            for type_id, config in potions.items()
+            if config.get("class") == "ManaPotion" and config.get("properties", {}).get("singleUse") is True
+        }
+        inventory = self.call(self.player, "getItems")
+        candidates = [
+            item
+            for item in inventory
+            if self.call(item, "getTypeId") in disposable_mana_ids
+            and self.call(item, "hasTag", "mana")
+            and not self.call(item, "hasTag", "heal")
+            and not self.call(item, "hasTag", "quest")
+            and self.call(item, "getBoolProperty", "singleUse")
+        ]
+        self.assertLessEqual(len(candidates), 128)
+        quoted = [
+            (self.call(market, "getBuyCost", item), self.call(item, "getTypeId"), self.call(item, "getName"), item)
+            for item in candidates
+        ]
+        quoted = sorted((quote for quote in quoted if quote[0] > 0), key=lambda quote: quote[:3])
+        selected, proceeds = [], 0
+        for quote in quoted:
+            selected.append(quote)
+            proceeds += quote[0]
+            if proceeds >= shortfall:
+                break
+        if proceeds < shortfall:
+            return 0
+        before = self.marketTransactionState()
+        owned = {item["__handle__"] for item in inventory}
+        stocked = {item["__handle__"] for item in self.call(market, "getItems")}
+        sold = []
+        for price, type_id, name, item in selected:
+            identity = item["__handle__"]
+            self.assertIn(identity, owned)
+            self.assertNotIn(identity, stocked)
+            self.assertIn(identity, [entry["__handle__"] for entry in self.call(self.player, "getItems")])
+            gold_before = self.call(self.player, "getGold")
+            self.call(market, "buyItem", self.player, item)
+            self.assertEqual(gold_before + price, self.call(self.player, "getGold"))
+            owned.remove(identity)
+            stocked.add(identity)
+            self.assertEqual(owned, {entry["__handle__"] for entry in self.call(self.player, "getItems")})
+            self.assertEqual(stocked, {entry["__handle__"] for entry in self.call(market, "getItems")})
+            self.assertEqual(before, self.marketTransactionState())
+            sold.append({"name": name, "typeId": type_id, "price": price})
+        self.assertGreaterEqual(self.call(self.player, "getGold"), required_gold)
+        print(
+            "MCP hunt owned mana funding",
+            {"sold": sold, "requiredGold": required_gold, "gold": self.call(self.player, "getGold")},
+            flush=True,
+        )
+        return len(sold)
+
     def buyFiniteBasicIngredientsAtAuthoredMarket(self, initial):
         self.walkTo("market1")
         market_actor = self.object("market1")
@@ -691,7 +755,11 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             return 0
         quotes = [self.call(market, "getSellCost", item) for item in candidates]
         self.assertTrue(all(price > 0 for price in quotes))
-        if sum(quotes) + 20 > self.call(self.player, "getGold"):
+        required_gold = sum(quotes) + 20
+        if required_gold > self.call(self.player, "getGold"):
+            self.fundBasicIngredientsWithOwnedMana(market, required_gold)
+            receipt["gold"] = self.call(self.player, "getGold")
+        if required_gold > self.call(self.player, "getGold"):
             print("MCP hunt finite original stock", {**receipt, "quotes": quotes, "skip": "unaffordable"}, flush=True)
             return 0
         print("MCP hunt finite original stock", {**receipt, "quotes": quotes, "skip": ""}, flush=True)
@@ -714,13 +782,20 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         return len(purchases)
 
     def prepareHealingStockAtAuthoredMarket(self, initial=True):
-        self.brewOwnedBasicLifePotions()
-        self.sellWeakHealingStockAtAuthoredMarket(preserve_ingredients=True)
-        self.brewOwnedBasicLifePotions()
-        self.buyFiniteBasicIngredientsAtAuthoredMarket(initial)
-        self.brewOwnedBasicLifePotions()
-        self.sellWeakHealingStockAtAuthoredMarket()
-        self.snapshot("initial basic healing preparation" if initial else "new loot healing preparation")
+        try:
+            self.brewOwnedBasicLifePotions()
+            self.sellWeakHealingStockAtAuthoredMarket(preserve_ingredients=True)
+            self.brewOwnedBasicLifePotions()
+            self.buyFiniteBasicIngredientsAtAuthoredMarket(initial)
+            self.brewOwnedBasicLifePotions()
+            self.sellWeakHealingStockAtAuthoredMarket()
+            self.snapshot("initial basic healing preparation" if initial else "new loot healing preparation")
+        except Exception:
+            try:
+                self.reportCombatFailure("healing preparation", getattr(self, "hunt_actors", {}))
+            except Exception:
+                pass
+            raise
 
     def prepareThroughRolf(self):
         self.recoverOnRoadPair((44, 106, 0), (44, 107, 0), "opened gate road recovery")
@@ -1540,6 +1615,81 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             OctobogzMcpWalkthroughTest.defeat(fixture, "brood")
         self.assertIs(failure, raised.exception)
         self.assertEqual([("actualBrood", True)], calls)
+
+    def testPreparationFailureRetainsNativeTailAndPreservesItsOriginalAssertion(self):
+        import contextlib
+        import io
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+
+        for diagnostic_failure in (None, "rpc", "read", "print"):
+            with self.subTest(diagnostic_failure=diagnostic_failure), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "native.log"
+                path.write_text("last actual Alpha combat action\n", encoding="utf-8")
+                failure = AssertionError("original stronger healing stock assertion")
+                actions, diagnostics = [], []
+
+                def brew():
+                    actions.append("brew")
+
+                def sell(preserve_ingredients=False):
+                    actions.append(("sell", preserve_ingredients))
+                    if not preserve_ingredients:
+                        raise failure
+
+                def handle(*args, **kwargs):
+                    if diagnostic_failure == "rpc":
+                        raise OSError("diagnostic RPC failed")
+                    return 7
+
+                fixture = SimpleNamespace(
+                    brewOwnedBasicLifePotions=brew,
+                    sellWeakHealingStockAtAuthoredMarket=sell,
+                    buyFiniteBasicIngredientsAtAuthoredMarket=lambda initial: actions.append(("buy", initial)),
+                    snapshot=lambda stage: actions.append(("snapshot", stage)),
+                    process=SimpleNamespace(poll=lambda: None),
+                    harness=SimpleNamespace(
+                        _mcp_handle_call=handle,
+                        _mcp_engine_call=lambda *args, **kwargs: json.dumps({"properties": {"hp": 91}}),
+                    ),
+                    session={},
+                    game_map="map",
+                    player="player",
+                    native_log_path=path,
+                    mcp_profile_class="Sorcerer",
+                    hunt_actors={"alpha": "actualAlpha", "brood": "actualBrood"},
+                )
+
+                def diagnostic(stage, actors):
+                    diagnostics.append((stage, actors))
+                    OctobogzMcpWalkthroughTest.reportCombatFailure(fixture, stage, actors)
+
+                fixture.reportCombatFailure = diagnostic
+                output = io.StringIO()
+                with contextlib.ExitStack() as stack:
+                    stack.enter_context(contextlib.redirect_stdout(output))
+                    if diagnostic_failure == "read":
+                        stack.enter_context(patch(__name__ + ".readNativeLogTail", side_effect=OSError("read failed")))
+                    if diagnostic_failure == "print":
+                        stack.enter_context(patch("builtins.print", side_effect=OSError("report failed")))
+                    with self.assertRaises(AssertionError) as raised:
+                        OctobogzMcpWalkthroughTest.prepareHealingStockAtAuthoredMarket(fixture, initial=False)
+                self.assertIs(failure, raised.exception)
+                self.assertEqual(["brew", ("sell", True), "brew", ("buy", False), "brew", ("sell", False)], actions)
+                self.assertEqual([("healing preparation", fixture.hunt_actors)], diagnostics)
+                if diagnostic_failure in (None, "rpc"):
+                    self.assertIn("last actual Alpha combat action", output.getvalue())
+                self.assertEqual("last actual Alpha combat action\n", path.read_text(encoding="utf-8"))
+
+        actions = []
+        fixture.brewOwnedBasicLifePotions = lambda: actions.append("brew")
+        fixture.sellWeakHealingStockAtAuthoredMarket = lambda **kwargs: actions.append(("sell", kwargs))
+        fixture.buyFiniteBasicIngredientsAtAuthoredMarket = lambda initial: actions.append(("buy", initial))
+        fixture.snapshot = lambda stage: actions.append(("snapshot", stage))
+        fixture.reportCombatFailure = Mock(side_effect=AssertionError("successful preparation must not diagnose"))
+        OctobogzMcpWalkthroughTest.prepareHealingStockAtAuthoredMarket(fixture, initial=False)
+        fixture.reportCombatFailure.assert_not_called()
+        self.assertEqual(7, len(actions))
 
 
 if __name__ == "__main__":

@@ -2225,7 +2225,14 @@ class OctobogzHuntTest(unittest.TestCase):
             if handle == "map":
                 return 930 if method == "getTurn" else "unchanged-hunt-registry"
             if handle == "player":
-                return list(inventory) if method == "getItems" else gold[0]
+                if method == "getItems":
+                    return list(inventory)
+                if method == "getMana":
+                    return properties["mana"]
+                if method == "getManaMax":
+                    return 175
+                self.assertEqual("getGold", method)
+                return gold[0]
             if handle == actor:
                 self.assertEqual(("getObjectProperty", "market"), (method, *args))
                 return market
@@ -2233,13 +2240,14 @@ class OctobogzHuntTest(unittest.TestCase):
                 if method == "getItems":
                     return list(stock)
                 if method == "getBuyCost":
-                    return 320
+                    return (2 ** metadata[args[0]["__handle__"]]["power"] * 200) * 80 // 100
                 self.assertEqual("buyItem", method)
                 self.assertEqual("player", args[0])
                 item = args[1]
                 self.assertIn(item, inventory)
                 purchases.append(item)
-                gold[0] += 319 if corruption == "price" else 320
+                price = (2 ** metadata[item["__handle__"]]["power"] * 200) * 80 // 100
+                gold[0] += price - 1 if corruption == "price" else price
                 stock.append({"__handle__": "fabricatedClone"} if corruption == "clone" else item)
                 if corruption != "retained":
                     inventory.remove(item)
@@ -2252,7 +2260,7 @@ class OctobogzHuntTest(unittest.TestCase):
                 return
             data = metadata[handle["__handle__"]]
             if method == "hasTag":
-                return data[args[0]]
+                return data.get(args[0], False)
             if method in ("getNumericProperty", "getBoolProperty"):
                 return data[args[0]]
             return data["typeId"] if method == "getTypeId" else data["name"]
@@ -2310,10 +2318,11 @@ class OctobogzHuntTest(unittest.TestCase):
         )
 
     def authoredBrewingFixture(self, lessers=6, beers=4, strong_count=5, corruption=None):
-        walker, handles, inventory, stock, sales, gold = self.authoredMarketFixture()
+        walker, handles, inventory, stock, sales, gold = self.authoredMarketFixture(corruption)
         walker.game = "game"
         metadata, properties = walker.fixture_metadata, walker.fixture_properties
         inventory.remove(handles["weak"])
+        inventory.remove(handles["mana"])
         actor = {"__handle__": "authoredMarketActor"}
         market = {"__handle__": "authoredMarket"}
         station = {"__handle__": "authoredAlchemy"}
@@ -2339,6 +2348,8 @@ class OctobogzHuntTest(unittest.TestCase):
             add_item(f"earnedBeer{index}", "DarkBeer", 1, inventory)
         for index in range(strong_count - 1):
             add_item(f"earnedStrong{index}", "LifePotion", 2, inventory)
+        if strong_count == 0:
+            inventory.remove(handles["strong"])
         original_stock = [add_item(f"originalShopLesser{index}", "LesserLifePotion", 1, stock) for index in range(3)]
         original_engine, original_call = walker.engine, walker.call
         walker.object = lambda name: station if name == "alchemyTable1" else actor
@@ -2470,6 +2481,119 @@ class OctobogzHuntTest(unittest.TestCase):
                 self.assertEqual(expected_buys, len(buys))
                 self.assertIn(original_stock[-1], stock)
                 self.assertEqual([], walker.basicLesserIngredients(inventory))
+
+    def depletedHealingFundingFixture(self, corruption=None, *, lessers=1):
+        fixture = self.authoredBrewingFixture(lessers, 0, 0, corruption)
+        walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, add_item = fixture
+        inventory[:] = walker.basicLesserIngredients(inventory)
+        potions = json.loads((ROOT / "res/config/potions.json").read_text(encoding="utf-8"))
+        self.assertEqual("ManaPotion", potions["MagicWellDraught"]["class"])
+        potion_source = ast.parse((ROOT / "res/plugins/potion.py").read_text(encoding="utf-8"))
+        mana_class = next(
+            node for node in ast.walk(potion_source) if isinstance(node, ast.ClassDef) and node.name == "ManaPotion"
+        )
+        self.assertEqual(["CPotion"], [base.id for base in mana_class.bases])
+        actual = potions["MagicWellDraught"]["properties"]
+        mana = add_item("actualAlphaMagicWell", "MagicWellDraught", actual["power"], inventory)
+        metadata[mana["__handle__"]].update(
+            heal="heal" in actual["tags"], mana="mana" in actual["tags"], singleUse=actual["singleUse"]
+        )
+        for identity, type_id in (("actualLetter", "letterFromRolf"), ("actualScroll", "Scroll")):
+            item = add_item(identity, type_id, 0, inventory)
+            metadata[item["__handle__"]].update(heal=False, mana=False, singleUse=False, quest=True)
+        walker.original_lesser_shop_names = tuple(metadata[item["__handle__"]]["name"] for item in original_stock)
+        walker.purchased_lesser_shop_names = set()
+        walker.retained_lesser_shop_name = walker.original_lesser_shop_names[-1]
+        return fixture, mana
+
+    def testDepletedPostAlphaHealingUsesActualOwnedManaQuoteToFundOneOriginalIngredientAndRecipe(self):
+        fixture, mana = self.depletedHealingFundingFixture()
+        walker, metadata, inventory, stock, sales, buys, crafts, gold, original_stock, _ = fixture
+        before = walker.marketTransactionState()
+        retained = [item for item in inventory if not metadata[item["__handle__"]]["mana"]]
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual([mana], sales)
+        self.assertIn(mana, stock)
+        self.assertNotIn(mana, inventory)
+        self.assertEqual([original_stock[0]], buys)
+        self.assertEqual(1, len(crafts))
+        self.assertEqual(420, gold[0])
+        self.assertEqual(before, walker.marketTransactionState())
+        self.assertTrue(all(item in inventory for item in retained if metadata[item["__handle__"]].get("quest")))
+        self.assertEqual({"earnedLesser0", "originalShopLesser0"}, {item["__handle__"] for item in crafts[0]["inputs"]})
+        self.assertEqual("LifePotion", metadata[crafts[0]["output"]["__handle__"]]["typeId"])
+        self.assertEqual([], walker.basicLesserIngredients(inventory))
+        self.assertEqual({"originalShopLesser0"}, walker.purchased_lesser_shop_names)
+        self.assertEqual(original_stock[1:], [item for item in stock if item in original_stock])
+
+    def testRecoveryFundingKeepsIneligibleManaAndUnfundableOrDepletedOriginalStock(self):
+        for case in (
+            "dual",
+            "reusable",
+            "unknownType",
+            "quest",
+            "notFullMana",
+            "insufficientProceeds",
+            "noOriginalStock",
+        ):
+            with self.subTest(case=case):
+                fixture, mana = self.depletedHealingFundingFixture(lessers=0 if case == "insufficientProceeds" else 1)
+                walker, metadata, inventory, stock, sales, buys, crafts, gold, _, _ = fixture
+                data = metadata[mana["__handle__"]]
+                if case == "dual":
+                    data["heal"] = True
+                    data["power"] = 1
+                elif case == "reusable":
+                    data["singleUse"] = False
+                elif case == "unknownType":
+                    data["typeId"] = "manaTaggedSingleUseGear"
+                elif case == "quest":
+                    data["quest"] = True
+                elif case == "notFullMana":
+                    walker.fixture_properties["mana"] = 174
+                elif case == "insufficientProceeds":
+                    data["power"] = 1
+                elif case == "noOriginalStock":
+                    stock.clear()
+                before = walker.marketTransactionState()
+                owned_before, stocked_before = list(inventory), list(stock)
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.prepareHealingStockAtAuthoredMarket(initial=False)
+                self.assertEqual([], sales)
+                self.assertEqual([], buys)
+                self.assertEqual([], crafts)
+                self.assertEqual(200, gold[0])
+                self.assertEqual(owned_before, inventory)
+                self.assertEqual(stocked_before, stock)
+                self.assertEqual(before, walker.marketTransactionState())
+
+    def testRecoveryFundingTransfersOnlyEnoughOwnedManaAndRejectsCorruptPaymentIdentityOrResources(self):
+        fixture, mana = self.depletedHealingFundingFixture()
+        walker, metadata, inventory, stock, sales, buys, crafts, gold, _, add_item = fixture
+        lesser_mana = add_item("actualUnusedSpicedBeer", "SpicedBeer", 1, inventory)
+        metadata[lesser_mana["__handle__"]].update(heal=False, mana=True)
+        with patch("builtins.print"):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual([lesser_mana], sales)
+        self.assertIn(mana, inventory)
+        self.assertEqual(100, gold[0])
+        self.assertEqual(1, len(buys))
+        self.assertEqual(1, len(crafts))
+        for corruption in ("price", "clone", "retained", "resources", "equipment"):
+            with self.subTest(corruption=corruption):
+                fixture, _ = self.depletedHealingFundingFixture(corruption)
+                walker, *_ = fixture
+                with patch("builtins.print"), self.assertRaises(AssertionError):
+                    walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        fixture, _ = self.depletedHealingFundingFixture()
+        walker, _, _, _, sales, buys, crafts, *_ = fixture
+        walker.coords = lambda handle=None: (106, 111, 0) if handle else (107, 111, 0)
+        with patch("builtins.print"), self.assertRaises(AssertionError):
+            walker.prepareHealingStockAtAuthoredMarket(initial=False)
+        self.assertEqual([], sales)
+        self.assertEqual([], buys)
+        self.assertEqual([], crafts)
 
     def testBasicIngredientPurchaseReservesTheActualBrewingFeeAndNeverBuysAnUnpairableOddItem(self):
         for current_lessers, available_gold, initial, expected_count in (
