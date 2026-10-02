@@ -995,6 +995,211 @@ void test_fight_panel_resets_status_between_sequential_encounters() {
                 "second fight status should not include the previous encounter");
 }
 
+class AllocationOrderTickEffect : public CEffect {
+  public:
+    int ticks = 0;
+
+    void prepare(bool restoresHealth, const std::shared_ptr<CCreature> &victim,
+                 const std::shared_ptr<CCreature> &caster) {
+        healTick = restoresHealth;
+        ticks = 0;
+        setTypeId(healTick ? "unitAllocationHealTick" : "unitAllocationDamageTick");
+        setName(getTypeId());
+        setGame(victim->getGame());
+        setDuration(1);
+        setVictim(victim);
+        setCaster(caster);
+    }
+
+    void onEffect() override {
+        ++ticks;
+        if (healTick) {
+            getVictim()->heal(2);
+        } else {
+            // A fixed native tick isolates ordering from attack, block and critical RNG.
+            getVictim()->setHp(getVictim()->getHp() - 3);
+        }
+    }
+
+  private:
+    bool healTick = false;
+};
+
+using AllocationOrderEffectPair =
+    std::pair<std::shared_ptr<AllocationOrderTickEffect>, std::shared_ptr<AllocationOrderTickEffect>>;
+
+AllocationOrderEffectPair makePointerRankedEffectPair() {
+    auto first = std::make_shared<AllocationOrderTickEffect>();
+    auto second = std::make_shared<AllocationOrderTickEffect>();
+    const std::less<std::shared_ptr<CEffect>> pointerOrder;
+    if (pointerOrder(second, first)) {
+        std::swap(first, second);
+    }
+    expect_true(pointerOrder(first, second), "the two probe effects must have distinct pointer ranks");
+    return {first, second};
+}
+
+AllocationOrderEffectPair attachAllocationOrderEffects(const AllocationOrderEffectPair &pointerRanked,
+                                                       bool healAtLowerPointer,
+                                                       const std::shared_ptr<CCreature> &victim,
+                                                       const std::shared_ptr<CCreature> &damageCaster) {
+    auto heal = healAtLowerPointer ? pointerRanked.first : pointerRanked.second;
+    auto damage = healAtLowerPointer ? pointerRanked.second : pointerRanked.first;
+    heal->prepare(true, victim, victim);
+    damage->prepare(false, victim, damageCaster);
+    // Identical semantic insertion order in both cases; only address-to-role assignment changes.
+    victim->addEffect(heal);
+    victim->addEffect(damage);
+    expect_true(victim->getEffects().size() == 2, "both distinct configured probe effects must be attached");
+    return {heal, damage};
+}
+
+void releaseAllocationOrderEndpoints(const AllocationOrderEffectPair &effects) {
+    for (const auto &effect : {effects.first, effects.second}) {
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
+    }
+}
+
+struct AllocationOrderTickSample {
+    int hp;
+    int healTicks;
+    int damageTicks;
+    int healTimeLeft;
+    int damageTimeLeft;
+
+    bool operator==(const AllocationOrderTickSample &) const = default;
+};
+
+AllocationOrderTickSample allocationOrderTickSample(const std::shared_ptr<CCreature> &victim,
+                                                    const AllocationOrderEffectPair &semanticEffects) {
+    return {victim->getHp(), semanticEffects.first->ticks, semanticEffects.second->ticks,
+            semanticEffects.first->getTimeLeft(), semanticEffects.second->getTimeLeft()};
+}
+
+void testEffectTickCappingAndExpiryIgnoreAllocationOrder() {
+    auto game = load_empty_game();
+    const auto pointerRanked = makePointerRankedEffectPair();
+    std::optional<AllocationOrderTickSample> reference;
+    for (bool healAtLowerPointer : {true, false}) {
+        auto victim = add_test_creature(game, "unitAllocationCappingVictim");
+        const int hpMax = victim->getHpMax();
+        victim->setHp(hpMax);
+        const auto semanticEffects = attachAllocationOrderEffects(pointerRanked, healAtLowerPointer, victim, victim);
+
+        CFightHandler::applyEffects(victim);
+        const auto sample = allocationOrderTickSample(victim, semanticEffects);
+        expect_true(sample.hp == hpMax - 3 || sample.hp == hpMax - 1,
+                    "both real native ticks must execute with immediate healing saturation");
+        expect_true(sample.healTicks == 1 && sample.damageTicks == 1 && sample.healTimeLeft == 0 &&
+                        sample.damageTimeLeft == 0,
+                    "both one-turn effects must tick exactly once and reach zero duration");
+        expect_true(victim->getEffects().size() == 2,
+                    "a just-ticked zero-duration effect remains attached until the next expiry pass");
+
+        CFightHandler::applyEffects(victim);
+        expect_true(victim->getEffects().empty() && allocationOrderTickSample(victim, semanticEffects) == sample,
+                    "the next expiry pass must remove both effects without repeating a tick");
+
+        if (reference) {
+            expect_true(sample == *reference, "healing saturation must not depend on effect pointer layout");
+        } else {
+            reference = sample;
+        }
+        game->getMap()->removeObject(victim);
+        releaseAllocationOrderEndpoints(pointerRanked);
+    }
+}
+
+class AllocationOrderCancellationProbe : public CancellingFightController {
+  public:
+    int controls = 0;
+
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature>) override {
+        ++controls;
+        return false;
+    }
+};
+
+struct AllocationOrderFightSample {
+    AllocationOrderTickSample ticks;
+    CFightOutcome outcome;
+    int rounds;
+    int controllerCalls;
+    int damageCasterLoot;
+    int selectedOpponentLoot;
+    bool victimRegistered;
+
+    bool operator==(const AllocationOrderFightSample &) const = default;
+};
+
+void testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder() {
+    auto game = load_empty_game();
+    auto map = game->getMap();
+    const auto pointerRanked = makePointerRankedEffectPair();
+
+    // HP 1 dies under either sequential policy, proving actual caster attribution.
+    // HP 2 survives only if healing runs first, proving action eligibility at the boundary.
+    // A production fix must choose/document a stable policy; this proposal does not choose one.
+    for (int initialHp : {1, 2}) {
+        std::optional<AllocationOrderFightSample> reference;
+        for (bool healAtLowerPointer : {true, false}) {
+            auto victim = add_test_creature(game, "unitAllocationFightVictim");
+            auto selected = add_test_creature(game, "unitAAllocationSelectedOpponent", 1, 0);
+            auto damageCaster = add_test_creature(game, "unitZAllocationActualCaster", 1, 0);
+            victim->getBaseStats()->setAgility(20);
+            victim->setHp(initialHp);
+            auto controller = std::make_shared<AllocationOrderCancellationProbe>();
+            victim->setFightController(controller);
+            add_unit_loot(game, victim, "unitAllocationCasterLoot");
+            const auto semanticEffects =
+                attachAllocationOrderEffects(pointerRanked, healAtLowerPointer, victim, damageCaster);
+
+            const auto result = CFightHandler::fightManyResult(victim, {selected, damageCaster});
+            const AllocationOrderFightSample sample{allocationOrderTickSample(victim, semanticEffects),
+                                                    result.outcome,
+                                                    result.rounds,
+                                                    controller->controls,
+                                                    damageCaster->countItems("unitAllocationCasterLoot"),
+                                                    selected->countItems("unitAllocationCasterLoot"),
+                                                    map->getObjectByName(victim->getName()) == victim};
+            expect_true(sample.rounds == 1 && sample.ticks.damageTicks == 1 && sample.ticks.damageTimeLeft == 0,
+                        "the controlled first actor turn must execute exactly one damage tick");
+            expect_true(sample.selectedOpponentLoot == 0,
+                        "the selected opponent must never receive another caster's lethal-effect loot");
+
+            if (victim->isAlive()) {
+                expect_true(initialHp == 2 && sample.ticks.hp == 1 && sample.outcome == CFightOutcome::Cancelled &&
+                                sample.controllerCalls == 1 && sample.ticks.healTicks == 1 &&
+                                sample.ticks.healTimeLeft == 0 && sample.damageCasterLoot == 0 &&
+                                sample.victimRegistered && result.survivor == victim && result.opponent == selected,
+                            "a surviving effect phase must reach the cancelling action without granting defeat loot");
+            } else {
+                expect_true(sample.outcome == CFightOutcome::AttackerDefeat && sample.controllerCalls == 0 &&
+                                sample.damageCasterLoot == 1 && !sample.victimRegistered &&
+                                result.survivor == damageCaster && result.opponent == victim,
+                            "a lethal tick must skip the action, remove the victim and credit its actual caster");
+                expect_true((sample.ticks.healTicks == 0 && sample.ticks.healTimeLeft == 1) ||
+                                (sample.ticks.healTicks == 1 && sample.ticks.healTimeLeft == 0),
+                            "healing duration may decrement only if that effect actually executes before death");
+            }
+
+            if (reference) {
+                expect_true(sample == *reference,
+                            "lethality, action eligibility and effect timing must not depend on pointer layout");
+            } else {
+                reference = sample;
+            }
+            if (map->getObjectByName(victim->getName()) == victim) {
+                map->removeObject(victim);
+            }
+            map->removeObject(selected);
+            map->removeObject(damageCaster);
+            releaseAllocationOrderEndpoints(pointerRanked);
+        }
+    }
+}
+
 void test_fight_handler_counts_effect_duration_as_progress() {
     auto game = load_empty_game();
     auto attacker = add_test_creature(game, "unitTimedEffectAttacker");
@@ -2351,6 +2556,10 @@ int main() {
     });
     nativeTestProfile().run("test_fight_panel_resets_status_between_sequential_encounters",
                             test_fight_panel_resets_status_between_sequential_encounters);
+    nativeTestProfile().run("testEffectTickCappingAndExpiryIgnoreAllocationOrder",
+                            testEffectTickCappingAndExpiryIgnoreAllocationOrder);
+    nativeTestProfile().run("testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder",
+                            testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder);
     nativeTestProfile().run("test_fight_handler_counts_effect_duration_as_progress",
                             test_fight_handler_counts_effect_duration_as_progress);
     nativeTestProfile().run("test_player_quest_completion_ignores_reentry_and_captures_final_callback_state",
