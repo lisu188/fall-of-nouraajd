@@ -816,7 +816,8 @@ function(add_game_unit_test target_name)
     if (target_name STREQUAL "monster_balance_unit_tests")
         add_test(NAME "${test_name}"
             COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monster_balance.py"
-                $<TARGET_FILE:${target_name}>)
+                $<TARGET_FILE:${target_name}>
+                --diagnostic-output-dir "${CMAKE_CURRENT_SOURCE_DIR}/coverage/test-output/native-role-diagnostics")
     else ()
         add_test(NAME "${test_name}" COMMAND ${target_name})
     endif ()
