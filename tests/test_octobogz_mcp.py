@@ -51,6 +51,196 @@ def readNativeLogTail(path, *, max_bytes=65536, max_lines=256):
     }
 
 
+def retainDecisionReplayStreams(stdout, stderr):
+    evidence = {"paths": {}, "bytes": {}, "errors": []}
+
+    def report():
+        try:
+            print("Saved hunt decision replay streams", evidence, file=sys.stderr, flush=True)
+        except Exception as error:
+            evidence["errors"].append({"stream": "report", "type": type(error).__name__, "message": str(error)[:512]})
+
+    try:
+        import test as harness
+
+        output = Path(harness.TEST_OUTPUT_DIR)
+        output.mkdir(parents=True, exist_ok=True)
+        directory = Path(tempfile.mkdtemp(prefix="mcp-octobogz-decision-", dir=output))
+    except Exception as error:
+        evidence["errors"].append({"stream": "directory", "type": type(error).__name__, "message": str(error)[:512]})
+        report()
+        return evidence
+    for name, value in (("stdout", stdout), ("stderr", stderr)):
+        path = directory / (name + ".log")
+        try:
+            raw = value if isinstance(value, bytes) else (value or "").encode("utf-8")
+            with path.open("xb") as stream:
+                stream.write(raw)
+            evidence["paths"][name] = str(path)
+            evidence["bytes"][name] = len(raw)
+        except Exception as error:
+            evidence["errors"].append({"stream": name, "type": type(error).__name__, "message": str(error)[:512]})
+    report()
+    return evidence
+
+
+def reportDecisionReplayFailure(stdout, returncode, evidence):
+    try:
+        marker = "NATIVE_HUNT_DECISION_RESULT "
+        reports = [json.loads(line[len(marker) :]) for line in stdout.splitlines() if line.startswith(marker)]
+        if len(reports) != 1 or not isinstance(reports[0], dict):
+            return
+        report = reports[0]
+        decisions = report.get("decisions", [])
+        if not isinstance(decisions, list):
+            return
+        columns = (
+            "index",
+            "round",
+            "slot",
+            "target",
+            "phase",
+            "action",
+            "hpBefore",
+            "hpAfter",
+            "hpMax",
+            "manaBefore",
+            "manaAfter",
+            "enemyHpBefore",
+            "enemyHpAfter",
+            "enemyManaBefore",
+            "enemyManaAfter",
+            "cost",
+            "refund",
+            "item.typeId",
+            "item.name",
+            "item.power",
+            "consumedOnce",
+            "healOnlyDisposable",
+            "inventoryCountBefore",
+            "inventoryCountAfter",
+            "finishingHitConditional",
+            "finishingHitMinimum",
+        )
+        truncated_fields = 0
+
+        def scalar(value, byte_limit=64):
+            nonlocal truncated_fields
+            if value is None or isinstance(value, (bool, int, float)):
+                return value
+            if not isinstance(value, str):
+                truncated_fields += 1
+                return None
+            raw = value.encode("utf-8", errors="replace")
+            if len(raw) > byte_limit:
+                truncated_fields += 1
+                return raw[:byte_limit].decode("utf-8", errors="ignore")
+            return value
+
+        rows = []
+        for index, decision in enumerate(decisions[:256]):
+            row = [index]
+            for key in columns[1:]:
+                if key.startswith("item."):
+                    item = decision.get("item") if isinstance(decision, dict) else None
+                    value = item.get(key[5:]) if isinstance(item, dict) else None
+                else:
+                    value = decision.get(key) if isinstance(decision, dict) else None
+                row.append(scalar(value))
+            encoded = json.dumps(row, ensure_ascii=False, separators=(",", ":"))
+            if len(encoded.encode("utf-8")) > 4096:
+                truncated_fields += 1
+                encoded = json.dumps([index] + [None] * (len(columns) - 1), separators=(",", ":"))
+            rows.append(encoded)
+        metadata = {
+            key: scalar(report.get(key))
+            for key in (
+                "mode",
+                "saveSlot",
+                "seed",
+                "success",
+                "movements",
+                "cardinalVerified",
+                "paidBarriers",
+                "playerAlive",
+                "defeatReceiptUnchanged",
+                "sourceUnchanged",
+            )
+        }
+        metadata.update(returncode=returncode, error=scalar(report.get("error"), 256))
+        before = report.get("playerBefore", {})
+        metadata["playerBefore"] = (
+            {
+                key: scalar(before.get(key))
+                for key in (
+                    "name",
+                    "typeId",
+                    "classId",
+                    "level",
+                    "exp",
+                    "hp",
+                    "hpMax",
+                    "mana",
+                    "manaMax",
+                    "gold",
+                )
+            }
+            if isinstance(before, dict)
+            else None
+        )
+        composed = report.get("playerComposedStatsBefore", {})
+        properties = composed.get("properties", {}) if isinstance(composed, dict) else {}
+        metadata["composedStatsBefore"] = (
+            {
+                key: scalar(properties.get(key))
+                for key in (
+                    "dmgMin",
+                    "dmgMax",
+                    "damage",
+                    "hit",
+                    "attack",
+                    "armor",
+                    "normalResist",
+                    "shadowResist",
+                    "crit",
+                    "block",
+                )
+            }
+            if isinstance(properties, dict)
+            else None
+        )
+        metadata.update(
+            totalDecisions=len(decisions),
+            printedDecisions=len(rows),
+            decisionsTruncated=len(decisions) > 256,
+            truncatedFields=truncated_fields,
+            rowByteLimit=4096,
+            metadataByteLimit=8192,
+        )
+        metadata["artifactPaths"] = {key: scalar(value, 256) for key, value in evidence["paths"].items()}
+        metadata["truncatedFields"] = truncated_fields
+        encoded = json.dumps(metadata, ensure_ascii=False, separators=(",", ":"))
+        if len(encoded.encode("utf-8")) > 8192:
+            encoded = json.dumps(
+                {
+                    "returncode": returncode,
+                    "totalDecisions": len(decisions),
+                    "printedDecisions": len(rows),
+                    "decisionsTruncated": len(decisions) > 256,
+                    "metadataTruncated": True,
+                    "metadataByteLimit": 8192,
+                    "rowByteLimit": 4096,
+                },
+                separators=(",", ":"),
+            )
+        print("HUNT_DECISION_FAILURE_META " + encoded, file=sys.stderr, flush=True)
+        print("HUNT_DECISION_FAILURE_COLUMNS " + json.dumps(columns), file=sys.stderr, flush=True)
+        for row in rows:
+            print("HUNT_DECISION_FAILURE_ROW " + row, file=sys.stderr, flush=True)
+    except Exception:
+        pass
+
+
 class OctobogzMcpWalkthroughTest(unittest.TestCase):
     def setUp(self):
         import test as harness
@@ -223,6 +413,10 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
         self.pump()
         if capture:
             capture(origin, destination)
+        if not self.call(self.player, "isAlive"):
+            self.fail(self.snapshot("defeated during movement"))
+        if self.call(self.player, "getStringProperty", "uiDefeatReceipt") != defeat_before:
+            self.fail(self.snapshot("lost authored combat and respawned"))
         turn = self.call(self.game_map, "getTurn")
         self.call(self.game_map, "move")
         self.pump()
@@ -931,6 +1125,9 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
                 timeout=30,
                 check=False,
             )
+            evidence = retainDecisionReplayStreams(completed.stdout, completed.stderr)
+            if completed.returncode != 0:
+                reportDecisionReplayFailure(completed.stdout, completed.returncode, evidence)
             self.assertEqual(0, completed.returncode, (completed.stdout[-8192:], completed.stderr[-8192:]))
             marker = "NATIVE_HUNT_DECISION_RESULT "
             results = [
@@ -938,14 +1135,19 @@ class OctobogzMcpWalkthroughTest(unittest.TestCase):
             ]
             self.assertEqual(1, len(results), completed.stdout[-8192:])
             packets = self.validateDecisionReplay(results[0], expected)
+            self.assertFalse(evidence["errors"], ("Unable to retain the complete replay evidence", evidence))
             print("MCP hunt deterministic ordinary defensive replay", results[0], flush=True)
             return packets
         except subprocess.TimeoutExpired as error:
+            retainDecisionReplayStreams(error.stdout, error.stderr)
             for name in ("stdout", "stderr"):
                 output = getattr(error, name) or ""
                 if isinstance(output, bytes):
                     output = output.decode("utf-8", errors="replace")
-                print("Saved hunt decision replay timeout " + name, output[-8192:], file=sys.stderr, flush=True)
+                try:
+                    print("Saved hunt decision replay timeout " + name, output[-8192:], file=sys.stderr, flush=True)
+                except Exception:
+                    pass
             raise
         finally:
             self.assertEqual(
@@ -1232,6 +1434,85 @@ class OctobogzDiagnosticTest(unittest.TestCase):
             evidence = json.loads(path.with_suffix(".failure.jsonl").read_text(encoding="utf-8"))
             self.assertEqual("OSError", evidence["diagnosticError"]["type"])
             self.assertIn("last actual combat action", output.getvalue())
+
+    def testMovementStopsAtTheFirstDefeatBeforeAnotherMapTurn(self):
+        from types import SimpleNamespace
+
+        for mode in ("move-defeat", "move-dead", "pump-defeat", "turn-defeat", "success", "acknowledged-success"):
+            with self.subTest(mode=mode):
+                calls = []
+                prior_receipt = "earlier acknowledged defeat" if mode == "acknowledged-success" else ""
+                state = {"coords": (0, 0, 0), "receipt": prior_receipt, "alive": True, "turn": 7}
+                pumps = []
+
+                def pump():
+                    pumps.append(len(pumps) + 1)
+                    if mode == "pump-defeat" and len(pumps) == 1:
+                        state["receipt"] = "first defeat"
+                        state["coords"] = (0, 0, 0)
+
+                def call(actor, method, *args):
+                    calls.append((actor, method))
+                    if method == "getStringProperty":
+                        self.assertEqual(("uiDefeatReceipt",), args)
+                        return state["receipt"]
+                    if method == "getTile":
+                        return "tile"
+                    if method == "getBoolProperty":
+                        self.assertEqual(("canStep",), args)
+                        return True
+                    if method == "moveTo":
+                        state["coords"] = args
+                        if mode == "move-defeat":
+                            state["receipt"] = "first defeat"
+                            state["coords"] = (0, 0, 0)
+                        elif mode == "move-dead":
+                            state["alive"] = False
+                        return None
+                    if method == "getTurn":
+                        return state["turn"]
+                    if method == "move":
+                        state["turn"] += 1
+                        if mode == "turn-defeat":
+                            state["receipt"] = "first defeat"
+                            state["coords"] = (0, 0, 0)
+                        elif mode == "move-defeat":
+                            state["receipt"] = "overwritten defeat"
+                        return None
+                    if method == "isAlive":
+                        return state["alive"]
+                    self.fail("Unexpected movement RPC: " + method)
+
+                fixture = SimpleNamespace(
+                    coords=lambda: state["coords"],
+                    call=call,
+                    player="player",
+                    game_map="map",
+                    assertEqual=self.assertEqual,
+                    assertIsNotNone=self.assertIsNotNone,
+                    assertTrue=self.assertTrue,
+                    fail=self.fail,
+                    snapshot=lambda stage: stage,
+                    pump=pump,
+                    movement_steps=0,
+                )
+                if mode in ("success", "acknowledged-success"):
+                    self.assertEqual((1, 0, 0), OctobogzMcpWalkthroughTest.step(fixture, (1, 0, 0)))
+                    self.assertEqual(1, fixture.movement_steps)
+                else:
+                    with self.assertRaisesRegex(
+                        AssertionError,
+                        "defeated during movement" if mode == "move-dead" else "lost authored combat and respawned",
+                    ):
+                        OctobogzMcpWalkthroughTest.step(fixture, (1, 0, 0))
+                    self.assertEqual(0, fixture.movement_steps)
+                self.assertEqual(
+                    0 if mode.startswith("move-") or mode == "pump-defeat" else 1,
+                    calls.count(("map", "move")),
+                    "A failed move must not issue a turn that can overwrite its first defeat receipt",
+                )
+                self.assertEqual("first defeat" if "defeat" in mode else prior_receipt, state["receipt"])
+                self.assertEqual(1 if mode.startswith("move-") or mode == "pump-defeat" else 2, len(pumps))
 
     def testDiagnosticFailurePreservesTheOriginalCombatException(self):
         from types import SimpleNamespace

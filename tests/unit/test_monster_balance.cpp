@@ -45,6 +45,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <limits>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
@@ -903,6 +904,10 @@ void testMonsterRolesPreserveOrdinaryLoadoutWinsAndResourceBudget(const std::str
                               << roles.itemsSpent << '\n';
                 }
                 expect_true(!baseline.won || roles.won, "monster role must preserve every seeded baseline victory");
+                if (std::string(playerType) == "Wayfarer" && std::string(monsterType) == "OctoBogz" && seed == 109) {
+                    expect_true(baseline.won && roles.won,
+                                "deterministic effect ticks must preserve the historical seed 109 baseline victory");
+                }
                 baselineHp.push_back(baseline.healthSpent);
                 roleHp.push_back(roles.healthSpent);
                 baselineMana.push_back(baseline.manaSpent);
@@ -1194,6 +1199,33 @@ struct HuntDecisionActor {
     std::set<std::shared_ptr<CItem>> items;
 };
 
+int huntMinimumNormalHitOnSuccessfulUnblockedAttack(const std::shared_ptr<CCreature> &actor,
+                                                    const std::shared_ptr<CCreature> &opponent) {
+    if (!actor || !opponent || !actor->isAlive() || !opponent->isAlive()) {
+        return 0;
+    }
+    const auto attack = actor->getStats();
+    const auto defense = opponent->getStats();
+    if (static_cast<std::int64_t>(attack->getHit()) + attack->getAttack() <= 0 || defense->getBlock() > 0) {
+        return 0;
+    }
+    const auto raw =
+        static_cast<std::int64_t>(std::min(attack->getDmgMin(), attack->getDmgMax())) + attack->getDamage();
+    if (raw <= 0) {
+        return 0;
+    }
+    // Match the ordinary normal channel's two truncations; do not credit crits or weapon procs.
+    const auto boundedInt = [](double value) {
+        return static_cast<int>(std::clamp(value, 0.0, static_cast<double>(std::numeric_limits<int>::max())));
+    };
+    const int afterResistance = boundedInt(raw * ((100.0 - defense->getNormalResist()) / 100.0));
+    if (afterResistance == 0) {
+        return 0;
+    }
+    const int armor = std::min(95, defense->getArmor());
+    return std::max(1, boundedInt(afterResistance * ((100.0 - armor) / 100.0)));
+}
+
 class HuntDecisionController : public CFightController {
   public:
     HuntDecisionController(const std::shared_ptr<CPlayer> &player, std::vector<HuntDecisionActor> actors)
@@ -1296,7 +1328,10 @@ class HuntDecisionController : public CFightController {
         const int turn = ++playerTurns[opponent->getName()];
         const bool chooseBarrier = (slot == "brood" && turn <= 2) || (slot == "alpha" && phase == "charged");
         requireHuntDecision(decisions.size() < 256, "manual hunt decisions exceeded their fixed observation bound");
-        if (!chooseBarrier && me->getHpRatio() < 50) {
+        const int finishingMinimum = chooseBarrier ? 0 : huntMinimumNormalHitOnSuccessfulUnblockedAttack(me, opponent);
+        // This is a visible finishing attempt, conditional on the ordinary hit roll; it does not guarantee a hit.
+        const bool finishOnHit = finishingMinimum > 0 && finishingMinimum >= opponent->getHp();
+        if (!chooseBarrier && !finishOnHit && me->getHpRatio() < 50) {
             std::vector<std::shared_ptr<CItem>> healingItems;
             for (const auto &item : me->getItems()) {
                 if (item && carriedItems.contains(item) && item->hasTag(CTag::Heal) && !item->hasTag(CTag::Mana) &&
@@ -1387,6 +1422,8 @@ class HuntDecisionController : public CFightController {
             ++paidBarriers;
         }
         decisions[decisions.size()] = {{"action", actionId},
+                                       {"finishingHitConditional", finishOnHit},
+                                       {"finishingHitMinimum", finishingMinimum},
                                        {"slot", slot},
                                        {"target", opponent->getName()},
                                        {"round", me->getMap()->getNumericProperty("combatRound")},
@@ -1414,6 +1451,65 @@ class HuntDecisionController : public CFightController {
     const std::set<std::shared_ptr<CItem>> carriedItems;
     std::map<std::string, int> playerTurns;
 };
+
+void testManualHuntFinishingDecisionKeepsBarrierPriorityAndOwnedHealingFallback() {
+    enum class DefenseCase { FinishingBoundary, OneMoreHp, Resistant, Armored, Blocked };
+    for (const auto defenseCase : {DefenseCase::FinishingBoundary, DefenseCase::OneMoreHp, DefenseCase::Resistant,
+                                   DefenseCase::Armored, DefenseCase::Blocked}) {
+        auto game = CGameLoader::loadGame();
+        createOpenBalanceMap(game);
+        auto player = game->createObject<CPlayer>("Warrior");
+        player->setLevel(4);
+        game->getMap()->attachPlayer(player, ZERO);
+        player->heal(0);
+        player->addMana(0);
+        auto item = game->createObject<CItem>("LifePotion");
+        player->addItem(item);
+        auto opponent = game->createObject<CCreature>("OctoBogz");
+        opponent->setName("unitManualFinishingBrood");
+        opponent->setStringProperty("octobogzHuntSlot", "brood");
+        game->getMap()->addObject(opponent);
+        HuntDecisionController controller(player, {{"brood", opponent, opponent->getFightController(),
+                                                    opponent->getMana(), "predator", false, opponent->getItems()}});
+        for (int turn = 0; turn < 2; ++turn) {
+            expect_true(controller.control(player, opponent), "the first two manual Brood turns must act");
+            expect_true(controller.decisions.back().at("action") == "Barrier" && player->hasInInventory(item),
+                        "the two mandatory paid Barriers must precede finishing and healing choices");
+        }
+        player->setHp(8);
+        const auto rngBeforeForecast = vstd::rng();
+        const auto actorStatsBeforeForecast = *object_serialize(player->getStats());
+        const auto targetStatsBeforeForecast = *object_serialize(opponent->getStats());
+        const int unmodifiedMinimum = huntMinimumNormalHitOnSuccessfulUnblockedAttack(player, opponent);
+        expect_true(*object_serialize(player->getStats()) == actorStatsBeforeForecast &&
+                        *object_serialize(opponent->getStats()) == targetStatsBeforeForecast,
+                    "the conditional finishing forecast must not mutate either actor's composed stats");
+        expect_true(vstd::rng() == rngBeforeForecast && unmodifiedMinimum > 0,
+                    "the finishing forecast must use current stats without drawing damage or random state");
+        opponent->setHp(unmodifiedMinimum + (defenseCase == DefenseCase::OneMoreHp ? 1 : 0));
+        if (defenseCase == DefenseCase::Resistant) {
+            opponent->getBaseStats()->setNormalResist(95);
+        } else if (defenseCase == DefenseCase::Armored) {
+            opponent->getBaseStats()->setArmor(95);
+        } else if (defenseCase == DefenseCase::Blocked) {
+            opponent->getBaseStats()->setBlock(1);
+        }
+        const int manaBefore = player->getMana();
+        expect_true(controller.control(player, opponent), "the manual finishing/fallback decision must act once");
+        const auto &decision = controller.decisions.back();
+        if (defenseCase == DefenseCase::FinishingBoundary) {
+            expect_true(decision.at("action") == "Attack" && decision.at("finishingHitConditional") == true,
+                        "a sufficient conditional normal minimum must choose the real learned Attack before healing");
+            expect_true(player->hasInInventory(item) && player->getMana() == manaBefore && decision.at("cost") == 0,
+                        "the finishing attempt must preserve the loaded item and ordinary zero-mana Attack cost");
+        } else {
+            expect_true(decision.at("action") == "UseItem" && !player->hasInInventory(item),
+                        "insufficient minimum, resistance, armor or possible blocking must retain real owned healing");
+        }
+        expect_true(controller.paidBarriers == 2,
+                    "finishing eligibility must not alter the two mandatory defensive turn costs");
+    }
+}
 
 void walkHuntDecisionToActor(const std::shared_ptr<CGame> &game, const std::shared_ptr<CMap> &map,
                              const std::shared_ptr<CPlayer> &player, const std::shared_ptr<CCreature> &enemy,
@@ -1642,6 +1738,7 @@ int main(int argc, char **argv) {
         testCultistShadowPacketAndExpiryFollowActualFightInitiativeBoundaries();
         testObserverRetainsDamageConsumptionAndForwardsOrdinaryControllerCalls();
         testActivePlayerNeverUsesMonsterSignature();
+        testManualHuntFinishingDecisionKeepsBarrierPriorityAndOwnedHealingFallback();
     }
     if (huntRoute) {
         testRolePacketKeepsRandomStreamsAndConfiguredAttackWeaponCallbacks(false, false, true);

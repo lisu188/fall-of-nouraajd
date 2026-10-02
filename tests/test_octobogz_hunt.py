@@ -2632,7 +2632,7 @@ class OctobogzHuntTest(unittest.TestCase):
             walker.state = lambda: {"stage": "cleared"}
             walker.coords = lambda: (110, 111, 0)
             walker.call = lambda handle, method: {"getTurn": 1000, "getHp": 112, "getMana": 147}[method]
-            fake_harness = types.SimpleNamespace(extension_dirs=[])
+            fake_harness = types.SimpleNamespace(extension_dirs=[], TEST_OUTPUT_DIR=walker.build_dir / "test-output")
             completed = types.SimpleNamespace(
                 returncode=0, stdout="NATIVE_HUNT_DECISION_RESULT " + json.dumps(result) + "\n", stderr=""
             )
@@ -2672,6 +2672,377 @@ class OctobogzHuntTest(unittest.TestCase):
                         self.assertRaises(AssertionError),
                     ):
                         walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+
+    def decisionReplayLaunchFixture(self, directory):
+        from tests import test_octobogz_mcp as module
+
+        walker, expected, result = self.decisionReplayFixture()
+        walker.build_dir = Path(directory)
+        executable = walker.build_dir / (
+            "monster_balance_unit_tests.exe" if module.os.name == "nt" else "monster_balance_unit_tests"
+        )
+        executable.touch()
+        walker.decision_executable = executable
+        save_path = walker.build_dir / "partial.json"
+        save_path.write_bytes(b"genuinely-earned-save")
+        walker.game, walker.game_map, walker.player = "game", "map", "player"
+        walker.state = lambda: {"stage": "cleared"}
+        walker.coords = lambda: (110, 111, 0)
+        walker.call = lambda handle, method: {"getTurn": 1000, "getHp": 112, "getMana": 147}[method]
+        harness = types.SimpleNamespace(TEST_OUTPUT_DIR=walker.build_dir / "test-output")
+        return walker, expected, result, save_path, harness
+
+    def testManualReplayRetainsCompleteStreamsBeforeEveryCompletedFailure(self):
+        from tests import test_octobogz_mcp as module
+
+        for failure in ("returncode", "missingMarker", "invalidJson", "validator"):
+            with self.subTest(failure=failure), TemporaryDirectory() as temporary:
+                walker, expected, result, save_path, harness = self.decisionReplayLaunchFixture(temporary)
+                for number in range(14):
+                    result["decisions"].append({"action": "Attack", "decisionSentinel": number})
+                result["playerAlive"] = failure != "validator"
+                marker = "NATIVE_HUNT_DECISION_RESULT "
+                payload = json.dumps(result)
+                if failure == "missingMarker":
+                    marker = "MISSING_MARKER "
+                elif failure == "invalidJson":
+                    payload = "not valid json"
+                stdout = marker + payload + "\n" + "trailing padding " * 1000
+                stderr = "first native diagnostic\n" + "native stderr padding " * 1000
+                completed = types.SimpleNamespace(returncode=int(failure == "returncode"), stdout=stdout, stderr=stderr)
+                with (
+                    patch.dict(sys.modules, {"test": harness}),
+                    patch.object(module.subprocess, "run", return_value=completed) as run,
+                    patch("builtins.print"),
+                    self.assertRaises((AssertionError, ValueError)),
+                ):
+                    walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                retained = list(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))
+                self.assertEqual(1, len(retained))
+                self.assertEqual(stdout.encode("utf-8"), (retained[0] / "stdout.log").read_bytes())
+                self.assertEqual(stderr.encode("utf-8"), (retained[0] / "stderr.log").read_bytes())
+                if failure == "returncode":
+                    saved = json.loads(
+                        (retained[0] / "stdout.log").read_text(encoding="utf-8").splitlines()[0][len(marker) :]
+                    )
+                    self.assertEqual(
+                        list(range(14)),
+                        [entry["decisionSentinel"] for entry in saved["decisions"] if "decisionSentinel" in entry],
+                    )
+                run.assert_called_once()
+                self.assertEqual([str(walker.decision_executable), "--hunt-decision", "partial"], run.call_args.args[0])
+                self.assertEqual(walker.build_dir, run.call_args.kwargs["cwd"])
+                self.assertEqual(30, run.call_args.kwargs["timeout"])
+                self.assertEqual(b"genuinely-earned-save", save_path.read_bytes())
+                self.assertEqual(("game", "map", "player"), (walker.game, walker.game_map, walker.player))
+
+    def testManualReplayRetainsTimeoutBytesAndReraisesTheSameFailure(self):
+        from tests import test_octobogz_mcp as module
+
+        for stdout, stderr in (
+            (b"first twelve decisions\xff" + b"x" * 12000, b"first native stderr\xfe"),
+            ("text out", "text err"),
+            (None, None),
+        ):
+            with self.subTest(stdout_type=type(stdout).__name__), TemporaryDirectory() as temporary:
+                walker, expected, _, save_path, harness = self.decisionReplayLaunchFixture(temporary)
+                failure = module.subprocess.TimeoutExpired(["native", "child"], 30, output=stdout, stderr=stderr)
+                with (
+                    patch.dict(sys.modules, {"test": harness}),
+                    patch.object(module.subprocess, "run", side_effect=failure) as run,
+                    patch("builtins.print"),
+                    self.assertRaises(module.subprocess.TimeoutExpired) as raised,
+                ):
+                    walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                self.assertIs(failure, raised.exception)
+                retained = list(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))
+                self.assertEqual(1, len(retained))
+                for name, value in (("stdout", stdout), ("stderr", stderr)):
+                    raw = value if isinstance(value, bytes) else (value or "").encode("utf-8")
+                    self.assertEqual(raw, (retained[0] / (name + ".log")).read_bytes())
+                run.assert_called_once()
+                self.assertEqual(30, run.call_args.kwargs["timeout"])
+                self.assertEqual(b"genuinely-earned-save", save_path.read_bytes())
+
+    def testManualReplayArtifactsAreExclusiveAndNeverReplaceEarlierEvidence(self):
+        from tests import test_octobogz_mcp as module
+
+        with TemporaryDirectory() as temporary:
+            walker, expected, result, save_path, harness = self.decisionReplayLaunchFixture(temporary)
+            completed = types.SimpleNamespace(
+                returncode=0, stdout="NATIVE_HUNT_DECISION_RESULT " + json.dumps(result) + "\n", stderr="first stderr"
+            )
+            with (
+                patch.dict(sys.modules, {"test": harness}),
+                patch.object(module.subprocess, "run", return_value=completed),
+                patch("builtins.print"),
+            ):
+                walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                first = next(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))
+                first_streams = {path.name: path.read_bytes() for path in first.iterdir()}
+                completed.stderr = "second stderr"
+                walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+            retained = list(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))
+            self.assertEqual(2, len(retained))
+            self.assertEqual(first_streams, {path.name: path.read_bytes() for path in first.iterdir()})
+            second = next(path for path in retained if path != first)
+            self.assertEqual(b"second stderr", (second / "stderr.log").read_bytes())
+
+    def testReplayEvidenceWriteFailurePreservesChildFailureAndGatesSuccess(self):
+        from tests import test_octobogz_mcp as module
+
+        for outcome in ("nonzero", "timeout", "success"):
+            with self.subTest(outcome=outcome), TemporaryDirectory() as temporary:
+                walker, expected, result, save_path, harness = self.decisionReplayLaunchFixture(temporary)
+                completed = types.SimpleNamespace(
+                    returncode=int(outcome == "nonzero"),
+                    stdout="NATIVE_HUNT_DECISION_RESULT " + json.dumps(result),
+                    stderr="original native stderr",
+                )
+                timeout = module.subprocess.TimeoutExpired(
+                    ["native", "child"], 30, output=b"original stdout", stderr=b"original stderr"
+                )
+                original_open = Path.open
+
+                def failStderr(path, *args, **kwargs):
+                    if path.name == "stderr.log":
+                        raise OSError("retained stderr disk failure")
+                    return original_open(path, *args, **kwargs)
+
+                with (
+                    patch.dict(sys.modules, {"test": harness}),
+                    patch.object(
+                        module.subprocess,
+                        "run",
+                        side_effect=timeout if outcome == "timeout" else None,
+                        return_value=completed,
+                    ),
+                    patch.object(Path, "open", failStderr),
+                    patch("builtins.print"),
+                    self.assertRaises(
+                        module.subprocess.TimeoutExpired if outcome == "timeout" else AssertionError
+                    ) as raised,
+                ):
+                    walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                if outcome == "timeout":
+                    self.assertIs(timeout, raised.exception)
+                elif outcome == "nonzero":
+                    self.assertIn("original native stderr", str(raised.exception))
+                    self.assertNotIn("Unable to retain", str(raised.exception))
+                else:
+                    self.assertIn("Unable to retain the complete replay evidence", str(raised.exception))
+                directory = next(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))
+                self.assertTrue((directory / "stdout.log").is_file())
+                self.assertEqual(b"genuinely-earned-save", save_path.read_bytes())
+
+    def testReplayDiagnosticReportingAndImportFailuresPreserveTheOriginalChildFailure(self):
+        from tests import test_octobogz_mcp as module
+
+        for failed_diagnostic in ("report", "import"):
+            for outcome in ("nonzero", "timeout", "success"):
+                with self.subTest(diagnostic=failed_diagnostic, outcome=outcome), TemporaryDirectory() as temporary:
+                    walker, expected, result, save_path, harness = self.decisionReplayLaunchFixture(temporary)
+                    completed = types.SimpleNamespace(
+                        returncode=int(outcome == "nonzero"),
+                        stdout="NATIVE_HUNT_DECISION_RESULT " + json.dumps(result),
+                        stderr="original native stderr",
+                    )
+                    timeout = module.subprocess.TimeoutExpired(
+                        ["native", "child"], 30, output=b"original stdout\xff", stderr=b"original stderr"
+                    )
+                    original_import = builtins.__import__
+
+                    def importWithoutHarness(name, *args, **kwargs):
+                        if name == "test" and failed_diagnostic == "import":
+                            raise OSError("diagnostic harness import failure")
+                        return original_import(name, *args, **kwargs)
+
+                    with (
+                        patch.dict(sys.modules, {"test": harness}),
+                        patch.object(
+                            module.subprocess,
+                            "run",
+                            side_effect=timeout if outcome == "timeout" else None,
+                            return_value=completed,
+                        ) as run,
+                        patch("builtins.__import__", importWithoutHarness),
+                        patch("builtins.print", side_effect=OSError("diagnostic output unavailable")),
+                        self.assertRaises(
+                            module.subprocess.TimeoutExpired if outcome == "timeout" else AssertionError
+                        ) as raised,
+                    ):
+                        walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                    if outcome == "timeout":
+                        self.assertIs(timeout, raised.exception)
+                    elif outcome == "nonzero":
+                        self.assertIn("original native stderr", str(raised.exception))
+                    else:
+                        self.assertIn("Unable to retain the complete replay evidence", str(raised.exception))
+                    if failed_diagnostic == "report":
+                        retained = next(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))
+                        self.assertEqual(
+                            b"original stdout\xff" if outcome == "timeout" else completed.stdout.encode("utf-8"),
+                            (retained / "stdout.log").read_bytes(),
+                        )
+                    run.assert_called_once()
+                    self.assertEqual(30, run.call_args.kwargs["timeout"])
+                    self.assertEqual(b"genuinely-earned-save", save_path.read_bytes())
+
+    def testNonzeroReplayConsoleRetainsEveryEarlyDecisionWithoutIncreasingTheExistingTail(self):
+        import contextlib
+        import io
+        from tests import test_octobogz_mcp as module
+
+        for count in (14, 256, 257):
+            with self.subTest(count=count), TemporaryDirectory() as temporary:
+                walker, expected, result, save_path, harness = self.decisionReplayLaunchFixture(temporary)
+                result["decisions"] = [
+                    {
+                        "round": index + 1,
+                        "target": "actual-brood-" + str(index),
+                        "action": "Attack",
+                        "hpBefore": 100 - index,
+                        "hpAfter": 90 - index,
+                    }
+                    for index in range(count)
+                ]
+                result["playerComposedStatsBefore"] = {"properties": {"dmgMin": 18, "hit": 87, "attack": 5}}
+                result["error"] = "actual native survival failure"
+                result["success"] = False
+                stdout = "NATIVE_HUNT_DECISION_RESULT " + json.dumps(result) + "\n" + "x" * 12000
+                completed = types.SimpleNamespace(returncode=1, stdout=stdout, stderr="original native stderr")
+                console = io.StringIO()
+                with (
+                    patch.dict(sys.modules, {"test": harness}),
+                    patch.object(module.subprocess, "run", return_value=completed) as run,
+                    contextlib.redirect_stderr(console),
+                    self.assertRaisesRegex(AssertionError, "original native stderr"),
+                ):
+                    walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                lines = console.getvalue().splitlines()
+                self.assertTrue(any(line.startswith("HUNT_DECISION_FAILURE_META ") for line in lines))
+                metadata = next(
+                    json.loads(line.split(" ", 1)[1])
+                    for line in lines
+                    if line.startswith("HUNT_DECISION_FAILURE_META ")
+                )
+                columns = next(
+                    json.loads(line.split(" ", 1)[1])
+                    for line in lines
+                    if line.startswith("HUNT_DECISION_FAILURE_COLUMNS ")
+                )
+                rows = [
+                    json.loads(line.split(" ", 1)[1]) for line in lines if line.startswith("HUNT_DECISION_FAILURE_ROW ")
+                ]
+                self.assertEqual(min(count, 256), len(rows))
+                self.assertEqual(count, metadata["totalDecisions"])
+                self.assertEqual(len(rows), metadata["printedDecisions"])
+                self.assertEqual(count > 256, metadata["decisionsTruncated"])
+                self.assertEqual(18, metadata["composedStatsBefore"]["dmgMin"])
+                for index, row in enumerate(rows):
+                    observed = dict(zip(columns, row))
+                    self.assertEqual(index, observed["index"])
+                    self.assertEqual(index + 1, observed["round"])
+                    self.assertEqual("actual-brood-" + str(index), observed["target"])
+                    self.assertEqual(100 - index, observed["hpBefore"])
+                    self.assertEqual(90 - index, observed["hpAfter"])
+                    self.assertIsNone(observed["enemyHpBefore"], "The report must not invent missing native fields")
+                    self.assertLessEqual(len(json.dumps(row, ensure_ascii=False).encode("utf-8")), 4096)
+                retained = next(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))
+                self.assertEqual(stdout.encode("utf-8"), (retained / "stdout.log").read_bytes())
+                run.assert_called_once()
+                self.assertEqual(30, run.call_args.kwargs["timeout"])
+                self.assertEqual(b"genuinely-earned-save", save_path.read_bytes())
+
+    def testReplayFailureChronologyNeverReplacesTheOriginalFailureOrReportsSuccessfulRuns(self):
+        import contextlib
+        import io
+        from tests import test_octobogz_mcp as module
+
+        for outcome in ("missing", "duplicate", "malformed", "success"):
+            with self.subTest(outcome=outcome), TemporaryDirectory() as temporary:
+                walker, expected, result, save_path, harness = self.decisionReplayLaunchFixture(temporary)
+                stdout = "NATIVE_HUNT_DECISION_RESULT " + json.dumps(result) + "\n"
+                if outcome == "missing":
+                    stdout = "no native marker"
+                elif outcome == "duplicate":
+                    stdout *= 2
+                elif outcome == "malformed":
+                    stdout = "NATIVE_HUNT_DECISION_RESULT malformed\n"
+                completed = types.SimpleNamespace(
+                    returncode=0 if outcome == "success" else 1, stdout=stdout, stderr="original native failure"
+                )
+                console = io.StringIO()
+                with (
+                    patch.dict(sys.modules, {"test": harness}),
+                    patch.object(module.subprocess, "run", return_value=completed),
+                    contextlib.redirect_stderr(console),
+                    contextlib.redirect_stdout(io.StringIO()),
+                ):
+                    if outcome == "success":
+                        walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                    else:
+                        with self.assertRaisesRegex(AssertionError, "original native failure"):
+                            walker.replaySavedOrdinaryDefensiveDecisions("partial", save_path, expected)
+                self.assertNotIn("HUNT_DECISION_FAILURE_", console.getvalue())
+                self.assertEqual(1, len(list(harness.TEST_OUTPUT_DIR.glob("mcp-octobogz-decision-*"))))
+
+    def testFailureChronologyBoundsEachFieldAndPreservesItsOrderAndTruncationEvidence(self):
+        import contextlib
+        import io
+        from tests import test_octobogz_mcp as module
+
+        stdout = "NATIVE_HUNT_DECISION_RESULT " + json.dumps(
+            {
+                "decisions": [
+                    {"round": 1, "target": "ж" * 10000, "action": "Attack", "hpBefore": {"unexpected": "object"}}
+                ],
+                "error": "failure" * 10000,
+            }
+        )
+        console = io.StringIO()
+        with contextlib.redirect_stderr(console):
+            module.reportDecisionReplayFailure(stdout, 1, {"paths": {"stdout": "x" * 10000}})
+        lines = console.getvalue().splitlines()
+        metadata = json.loads(lines[0].split(" ", 1)[1])
+        columns = json.loads(lines[1].split(" ", 1)[1])
+        observed = dict(zip(columns, json.loads(lines[2].split(" ", 1)[1])))
+        self.assertGreater(metadata["truncatedFields"], 0)
+        self.assertLessEqual(len(observed["target"].encode("utf-8")), 64)
+        self.assertIsNone(observed["hpBefore"])
+        self.assertEqual(0, observed["index"])
+        self.assertLessEqual(len(lines[0].split(" ", 1)[1].encode("utf-8")), 8192)
+        self.assertLessEqual(len(lines[2].split(" ", 1)[1].encode("utf-8")), 4096)
+
+    def testHistoricalRoleVictoryWitnessCannotBeWaivedByANewLosingBaseline(self):
+        source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        condition = 'std::string(playerType) == "Wayfarer" && std::string(monsterType) == "OctoBogz" && seed == 109'
+        self.assertIn(condition, source)
+        start = source.index(condition, source.index("expect_true(!baseline.won || roles.won"))
+        block = source[start : source.index("\n                }", start)]
+        self.assertIn("expect_true(baseline.won && roles.won,", block)
+        self.assertIn(
+            'expect_true(!baseline.won || roles.won, "monster role must preserve every seeded baseline victory")',
+            source,
+        )
+        # The retained 82d8 trace reports both outcomes as AttackerDefeat. Relative parity alone admits that loss.
+        recorded_baseline_won, recorded_roles_won = False, False
+        self.assertTrue(not recorded_baseline_won or recorded_roles_won)
+        self.assertFalse(recorded_roles_won)
+
+    def testNativeManualFinishingForecastIsPureAndPreservesDefensivePriority(self):
+        source = (ROOT / "tests/unit/test_monster_balance.cpp").read_text(encoding="utf-8")
+        start = source.index("int huntMinimumNormalHitOnSuccessfulUnblockedAttack(")
+        end = source.index("class HuntDecisionController", start)
+        forecast = source[start:end]
+        for forbidden in ("getDmg(", "rand(", "srand(", ".seed(", "setHp(", "setMana(", "setBaseStats("):
+            self.assertNotIn(forbidden, forecast)
+        self.assertIn("getStats()", forecast)
+        self.assertIn("defense->getBlock() > 0", forecast)
+        self.assertIn("std::min(95, defense->getArmor())", forecast)
+        self.assertIn("chooseBarrier ? 0 : huntMinimumNormalHitOnSuccessfulUnblockedAttack", source)
+        self.assertIn("if (!chooseBarrier && !finishOnHit && me->getHpRatio() < 50)", source)
+        self.assertIn("testManualHuntFinishingDecisionKeepsBarrierPriorityAndOwnedHealingFallback();", source)
 
     def testNativeDecisionReplayCannotSilentlySkipAMissingBinaryInCi(self):
         from tests import test_octobogz_mcp as module
