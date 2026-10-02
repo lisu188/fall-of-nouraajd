@@ -21,11 +21,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CMap.h"
 #include "core/CStats.h"
 #include "core/CTypes.h"
+#include "core/CTags.h"
 #include "core/CUtil.h"
+#include "handler/CFightHandler.h"
 #include "gui/CGui.h"
 #include "gui/object/CMinimapGraphicsObject.h"
 #include "object/CCreature.h"
 #include "object/CCreatureClass.h"
+#include "object/CEffect.h"
 #include "object/CInteraction.h"
 #include "object/CItem.h"
 #include "object/CMapObject.h"
@@ -37,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <pybind11/embed.h>
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <memory>
@@ -666,6 +670,75 @@ void testMonsterRoleCallbackAndStateGrowthAreBounded() {
     expect_true(fixture.map->getObjects().empty(), "combat role selection must not spawn map objects");
 }
 
+class EffectTickBudgetProbe : public CEffect {
+  public:
+    EffectTickBudgetProbe(int index, std::vector<int> &order) : index(index), order(order) {}
+
+    void onEffect() override {
+        ++callbacks;
+        order.push_back(index);
+    }
+
+    int callbacks = 0;
+
+  private:
+    int index;
+    std::vector<int> &order;
+};
+
+void testEffectTickCallbacksAndExpiryAreBounded() {
+    constexpr int EFFECTS = 8;
+    constexpr int TICKS = 4;
+    auto fixture = make_open_map(1, 1);
+    auto actor = make_actor(fixture, "unitEffectTickActor", Coords(0, 0, 0), "");
+    const auto turn = fixture.map->getTurn();
+    std::vector<int> order;
+    order.reserve(EFFECTS * TICKS);
+    std::vector<std::shared_ptr<EffectTickBudgetProbe>> probes;
+    for (int index = EFFECTS - 1; index >= 0; --index) {
+        auto effect = std::make_shared<EffectTickBudgetProbe>(index, order);
+        effect->setGame(fixture.game);
+        effect->setTypeId("unitEffectTick" + std::to_string(index));
+        effect->setName("unitEffectTick" + std::to_string(index));
+        effect->setDuration(TICKS);
+        effect->setCaster(actor);
+        effect->setVictim(actor);
+        if (index % 2 == 0) {
+            effect->addTag(CTag::Buff);
+        }
+        actor->addEffect(effect);
+        probes.push_back(effect);
+    }
+    const std::vector<int> hurtOrder{0, 2, 4, 6, 1, 3, 5, 7};
+    const std::vector<int> fullOrder{1, 3, 5, 7, 0, 2, 4, 6};
+    for (int pass = 0; pass < TICKS; ++pass) {
+        actor->setHp(actor->getHpMax() - (pass < 2 ? 0 : 1));
+        const auto hpBefore = actor->getHp();
+        const auto &expectedPass = pass < 2 ? fullOrder : hurtOrder;
+        CFightHandler::applyEffects(actor);
+        expect_true(order.size() == static_cast<std::size_t>((pass + 1) * EFFECTS),
+                    "each effect pass must invoke each live effect exactly once");
+        expect_true(order.size() == static_cast<std::size_t>((pass + 1) * EFFECTS) &&
+                        std::equal(expectedPass.begin(), expectedPass.end(), order.begin() + pass * EFFECTS),
+                    "each effect pass must follow its initial-health tier and canonical identity order");
+        expect_true(actor->getHp() == hpBefore, "nonlethal order probes must not change actor health");
+    }
+    CFightHandler::applyEffects(actor);
+    CFightHandler::applyEffects(actor);
+    expect_true(actor->getEffects().empty() && order.size() == EFFECTS * TICKS,
+                "expiry and a subsequent empty pass must not add callbacks or retain effects");
+    for (const auto &effect : probes) {
+        expect_true(effect->callbacks == TICKS && effect->getTimeLeft() == 0,
+                    "each fixed-duration effect must receive exactly its four scheduled callbacks");
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
+    }
+    expect_true(fixture.map->getTurn() == turn && fixture.map->getObjects().empty(),
+                "effect tick ordering must not advance map turns or accumulate map objects");
+    std::cout << "effect tick guard: effects=" << EFFECTS << " ticks=" << TICKS << " callbacks=" << order.size()
+              << " callbackBudget=" << EFFECTS * TICKS << "\n";
+}
+
 void testMinimapTerrainCacheBuildsOnlyOnRelevantChanges() {
     constexpr int CACHED_FRAMES = 32;
     SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
@@ -733,5 +806,6 @@ void run_engine_hotspot_performance_tests() {
     test_moderate_actor_map_move_turn_state_and_revision_bounds();
     test_bulk_inventory_property_notifications_are_count_bounded();
     testMonsterRoleCallbackAndStateGrowthAreBounded();
+    testEffectTickCallbacksAndExpiryAreBounded();
     testMinimapTerrainCacheBuildsOnlyOnRelevantChanges();
 }

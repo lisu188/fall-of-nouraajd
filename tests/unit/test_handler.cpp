@@ -1002,9 +1002,15 @@ class AllocationOrderTickEffect : public CEffect {
     void prepare(bool restoresHealth, const std::shared_ptr<CCreature> &victim,
                  const std::shared_ptr<CCreature> &caster) {
         healTick = restoresHealth;
+        tickDamage = 3;
         ticks = 0;
         setTypeId(healTick ? "unitAllocationHealTick" : "unitAllocationDamageTick");
         setName(getTypeId());
+        if (healTick) {
+            addTag(CTag::Buff);
+        } else {
+            removeTag(CTag::Buff);
+        }
         setGame(victim->getGame());
         setDuration(1);
         setVictim(victim);
@@ -1017,12 +1023,15 @@ class AllocationOrderTickEffect : public CEffect {
             getVictim()->heal(2);
         } else {
             // A fixed native tick isolates ordering from attack, block and critical RNG.
-            getVictim()->setHp(getVictim()->getHp() - 3);
+            getVictim()->setHp(getVictim()->getHp() - tickDamage);
         }
     }
 
+    void setTickDamage(int amount) { tickDamage = amount; }
+
   private:
     bool healTick = false;
+    int tickDamage = 3;
 };
 
 using AllocationOrderEffectPair =
@@ -1089,8 +1098,8 @@ void testEffectTickCappingAndExpiryIgnoreAllocationOrder() {
 
         CFightHandler::applyEffects(victim);
         const auto sample = allocationOrderTickSample(victim, semanticEffects);
-        expect_true(sample.hp == hpMax - 3 || sample.hp == hpMax - 1,
-                    "both real native ticks must execute with immediate healing saturation");
+        expect_true(sample.hp == hpMax - 1,
+                    "at full health the damage tick must create room before the Buff recovery tick");
         expect_true(sample.healTicks == 1 && sample.damageTicks == 1 && sample.healTimeLeft == 0 &&
                         sample.damageTimeLeft == 0,
                     "both one-turn effects must tick exactly once and reach zero duration");
@@ -1108,6 +1117,32 @@ void testEffectTickCappingAndExpiryIgnoreAllocationOrder() {
         }
         game->getMap()->removeObject(victim);
         releaseAllocationOrderEndpoints(pointerRanked);
+    }
+
+    auto victim = add_test_creature(game, "unitFrozenHealthTierVictim");
+    const int hpMax = victim->getHpMax();
+    expect_true(hpMax > 2, "the tier crossover probe needs positive room above the lethal boundary");
+    victim->setHp(hpMax);
+    auto firstDamage = std::make_shared<AllocationOrderTickEffect>();
+    auto lastDamage = std::make_shared<AllocationOrderTickEffect>();
+    auto recovery = std::make_shared<AllocationOrderTickEffect>();
+    firstDamage->prepare(false, victim, victim);
+    firstDamage->setTypeId("unitAllocationADamageTick");
+    firstDamage->setTickDamage(hpMax - 2);
+    lastDamage->prepare(false, victim, victim);
+    lastDamage->setTypeId("unitAllocationBDamageTick");
+    recovery->prepare(true, victim, victim);
+    victim->addEffect(recovery);
+    victim->addEffect(lastDamage);
+    victim->addEffect(firstDamage);
+    CFightHandler::applyEffects(victim);
+    expect_true(victim->getHp() == -1 && firstDamage->ticks == 1 && lastDamage->ticks == 1 && recovery->ticks == 0 &&
+                    firstDamage->getTimeLeft() == 0 && lastDamage->getTimeLeft() == 0 && recovery->getTimeLeft() == 1,
+                "becoming hurt during a full-health phase must not reorder recovery ahead of the next lethal tick");
+    game->getMap()->removeObject(victim);
+    for (const auto &effect : {firstDamage, lastDamage, recovery}) {
+        effect->setCaster(nullptr);
+        effect->setVictim(nullptr);
     }
 }
 
@@ -1138,9 +1173,8 @@ void testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder() {
     auto map = game->getMap();
     const auto pointerRanked = makePointerRankedEffectPair();
 
-    // HP 1 dies under either sequential policy, proving actual caster attribution.
-    // HP 2 survives only if healing runs first, proving action eligibility at the boundary.
-    // A production fix must choose/document a stable policy; this proposal does not choose one.
+    // Buff-first recovery still permits lethal damage at HP 1, with the actual caster credited.
+    // At HP 2 it leaves the victim alive for its action, independent of pointer layout.
     for (int initialHp : {1, 2}) {
         std::optional<AllocationOrderFightSample> reference;
         for (bool healAtLowerPointer : {true, false}) {
@@ -1167,6 +1201,9 @@ void testEffectTickLethalityTimingAndCasterIgnoreAllocationOrder() {
                         "the controlled first actor turn must execute exactly one damage tick");
             expect_true(sample.selectedOpponentLoot == 0,
                         "the selected opponent must never receive another caster's lethal-effect loot");
+            expect_true(victim->isAlive() == (initialHp == 2) && sample.ticks.healTicks == 1 &&
+                            sample.ticks.healTimeLeft == 0,
+                        "the Buff recovery must tick before damage while retaining the real lethal boundary");
 
             if (victim->isAlive()) {
                 expect_true(initialHp == 2 && sample.ticks.hp == 1 && sample.outcome == CFightOutcome::Cancelled &&
