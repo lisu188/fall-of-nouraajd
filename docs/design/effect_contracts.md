@@ -43,6 +43,25 @@ duration-`N` passive bonus remains attached after its `N`th decrement and is
 removed at the next application. Combat checks stun after effect application,
 so the two-turn stun skips exactly two victim actions. Preserve this order.
 
+After removing expired effects, tick a snapshot in a deterministic sequential
+order. If the creature starts the phase below maximum health, `buff`-tagged
+effects tick first so existing recovery can protect the next action. At full
+health, other effects tick first so recovery is not spent before any damage.
+Within each group use configured type ID, stored class (`getType()`), and name
+in ascending order.
+This is an explicit tick-order rule; memory addresses do not determine priority.
+The initial health tier and keys are captured once before the first tick;
+the phase does not reorder itself after each callback. Healing still caps immediately,
+and the first lethal tick stops the phase, suppresses the controller action,
+and retains its actual caster for defeat attribution. A lethal tick at full
+health still prevents later recovery; damage is not cancelled or deferred.
+
+Normal attachment rejects duplicate configured IDs, or duplicate class/name
+identities for anonymous effects. Keep those identities distinct after
+attachment; mutating attached effects into a duplicate identity is unsupported.
+The ordering applies to all creatures and survives save/load through existing
+type IDs, classes, names, and tags. It does not change stat-composition order.
+
 Native map serialization preserves each effect's configured type, bonus,
 duration, remaining time, tags, and caster/victim object references. Restored
 effects must contribute the same stats and continue toward expiry, without
