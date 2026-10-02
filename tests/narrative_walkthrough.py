@@ -8,6 +8,10 @@ from tests.castle_walkthrough import TransitRoutes, shortestRoute
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def handleIds(handles):
+    return {handle["__handle__"] for handle in handles}
+
+
 def authoredRegion(map_name):
     directory = ROOT / "res/maps" / map_name
     document = json.loads((directory / "map.json").read_text())
@@ -120,30 +124,60 @@ class NarrativeWalkthrough:
             raise AssertionError(self.failureState("Walkthrough player was defeated", stage))
 
     def recoverBeforeAction(self, stage):
+        self.assertSurvival(stage)
         hp_max = self.call(self.player, "getHpMax")
         if self.call(self.player, "getHp") * 4 >= hp_max * 3:
             return
         candidates = []
         for item in self.call(self.player, "getItems"):
-            if not self.call(item, "hasTag", ["heal"]):
+            # The authored LifePotion class inherits disposable CPotion and only heals HP.
+            if self.call(item, "getType") != "LifePotion":
                 continue
-            power = self.call(item, "getPower")
+            if not self.call(item, "hasTag", ["heal"]) or self.call(item, "hasTag", ["mana"]):
+                continue
+            power = self.call(item, "getNumericProperty", ["power"])
             if power > 0:
                 candidates.append((power, self.call(item, "getTypeId"), self.call(item, "getName"), item))
         # Match the combat controller's 75% recovery threshold and weakest-first supplies.
         # Each carried candidate is used at most once; inventory use does not advance a map turn.
-        for _, type_id, _, item in sorted(candidates, key=lambda entry: entry[:3]):
+        for power, type_id, _, item in sorted(candidates, key=lambda entry: entry[:3]):
+            self.assertSurvival("before inventory recovery")
             hp_before = self.call(self.player, "getHp")
             if hp_before * 4 >= hp_max * 3:
                 break
+            owned_before = handleIds(self.call(self.player, "getItems"))
+            item_id = item["__handle__"]
+            if item_id not in owned_before:
+                raise AssertionError(self.failureState("Carried healing item was no longer owned", stage))
+            state_before = self.recoveryState()
             self.call(self.player, "useItem", [item])
             self.assertSurvival("after inventory recovery")
             hp_after = self.call(self.player, "getHp")
+            expected_hp = min(hp_max, hp_before + max(1, int(power * 20 / 100.0 * hp_max)))
             if hp_after <= hp_before:
                 raise AssertionError(self.failureState("Carried healing item did not restore health", stage))
+            if hp_after != expected_hp:
+                raise AssertionError(self.failureState("Carried healing item restored unexpected health", stage))
+            if handleIds(self.call(self.player, "getItems")) != owned_before - {item_id}:
+                raise AssertionError(self.failureState("Inventory recovery changed unexpected items", stage))
+            if self.recoveryState() != state_before:
+                raise AssertionError(self.failureState("Inventory recovery changed unrelated state", stage))
             self.log.setdefault("recoveryItems", []).append(
                 {"typeId": type_id, "hpBefore": hp_before, "hpAfter": hp_after, "stage": stage}
             )
+
+    def recoveryState(self):
+        return {
+            "hpMax": self.call(self.player, "getHpMax"),
+            "mana": self.call(self.player, "getMana"),
+            "manaMax": self.call(self.player, "getManaMax"),
+            "gold": self.call(self.player, "getGold"),
+            "turn": self.call(self.gameMap, "getTurn"),
+            "coords": self.coords(),
+            "progression": self.progression(),
+            "quests": sorted(handleIds(self.call(self.player, "getQuests"))),
+            "completedQuests": sorted(handleIds(self.call(self.player, "getCompletedQuests"))),
+        }
 
     def tick(self):
         self.assertSurvival("before map.move")
