@@ -1473,16 +1473,18 @@ void testManualHuntFinishingDecisionKeepsBarrierPriorityAndOwnedHealingFallback(
                                                     opponent->getMana(), "predator", false, opponent->getItems()}});
         for (int turn = 0; turn < 2; ++turn) {
             expect_true(controller.control(player, opponent), "the first two manual Brood turns must act");
-            expect_true(controller.decisions.back().at("action") == "Barrier" && player->hasInInventory(item),
+            expect_true(controller.decisions.at(controller.decisions.size() - 1).at("action").get<std::string>() ==
+                                "Barrier" &&
+                            player->hasInInventory(item),
                         "the two mandatory paid Barriers must precede finishing and healing choices");
         }
         player->setHp(8);
         const auto rngBeforeForecast = vstd::rng();
-        const auto actorStatsBeforeForecast = *object_serialize(player->getStats());
-        const auto targetStatsBeforeForecast = *object_serialize(opponent->getStats());
+        const auto actorStatsBeforeForecast = object_serialize(player->getStats())->dump();
+        const auto targetStatsBeforeForecast = object_serialize(opponent->getStats())->dump();
         const int unmodifiedMinimum = huntMinimumNormalHitOnSuccessfulUnblockedAttack(player, opponent);
-        expect_true(*object_serialize(player->getStats()) == actorStatsBeforeForecast &&
-                        *object_serialize(opponent->getStats()) == targetStatsBeforeForecast,
+        expect_true(object_serialize(player->getStats())->dump() == actorStatsBeforeForecast &&
+                        object_serialize(opponent->getStats())->dump() == targetStatsBeforeForecast,
                     "the conditional finishing forecast must not mutate either actor's composed stats");
         expect_true(vstd::rng() == rngBeforeForecast && unmodifiedMinimum > 0,
                     "the finishing forecast must use current stats without drawing damage or random state");
@@ -1496,14 +1498,16 @@ void testManualHuntFinishingDecisionKeepsBarrierPriorityAndOwnedHealingFallback(
         }
         const int manaBefore = player->getMana();
         expect_true(controller.control(player, opponent), "the manual finishing/fallback decision must act once");
-        const auto &decision = controller.decisions.back();
+        const auto &decision = controller.decisions.at(controller.decisions.size() - 1);
         if (defenseCase == DefenseCase::FinishingBoundary) {
-            expect_true(decision.at("action") == "Attack" && decision.at("finishingHitConditional") == true,
+            expect_true(decision.at("action").get<std::string>() == "Attack" &&
+                            decision.at("finishingHitConditional").get<bool>(),
                         "a sufficient conditional normal minimum must choose the real learned Attack before healing");
-            expect_true(player->hasInInventory(item) && player->getMana() == manaBefore && decision.at("cost") == 0,
+            expect_true(player->hasInInventory(item) && player->getMana() == manaBefore &&
+                            decision.at("cost").get<int>() == 0,
                         "the finishing attempt must preserve the loaded item and ordinary zero-mana Attack cost");
         } else {
-            expect_true(decision.at("action") == "UseItem" && !player->hasInInventory(item),
+            expect_true(decision.at("action").get<std::string>() == "UseItem" && !player->hasInInventory(item),
                         "insufficient minimum, resistance, armor or possible blocking must retain real owned healing");
         }
         expect_true(controller.paidBarriers == 2,
