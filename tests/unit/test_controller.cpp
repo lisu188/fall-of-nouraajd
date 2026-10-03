@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "core/CJson.h"
 #include "core/CLoader.h"
 #include "core/CMap.h"
+#include "core/CSerialization.h"
 #include "core/CStats.h"
 #include "core/CTypeRegistration.h"
 #include "core/CTypes.h"
@@ -45,7 +46,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <map>
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace {
@@ -273,6 +279,111 @@ void testGroundControllerReturnsReadyStepBeforeTransition() {
     expect_true(resolve_coords(result) == Coords(2, 1, 0),
                 "ground controller should retain its already-resolved passable matching step after a later transition");
     expect_true(creature->getCoords() == Coords(1, 1, 0), "controller planning should not commit a movement step");
+}
+
+void testCatacombsControllerCanLeaveItsAuthoredGrassSpawn() {
+    const auto resource_root = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "res";
+    auto readJson = [](const std::filesystem::path &path) {
+        std::ifstream input(path);
+        if (!input) {
+            throw std::runtime_error("Missing controller regression resource: " + path.string());
+        }
+        return json::parse(std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()));
+    };
+    const auto map_config = readJson(resource_root / "maps/nouraajd/config.json");
+    const auto map_document = readJson(resource_root / "maps/nouraajd/map.json");
+    const auto tile_config = readJson(resource_root / "config/tiles.json");
+    const auto &catacombs = map_config.at("catacombs").at("properties");
+    const auto &monster = catacombs.at("monster");
+    const auto &controller_config = monster.at("properties").at("controller");
+    expect_true(monster.at("ref").get<std::string>() == "Pritz", "Catacombs must retain their authored Pritz template");
+    expect_true(catacombs.at("monsters").get<std::string>() == "10" &&
+                    catacombs.at("chance").get<std::string>() == "10",
+                "Catacombs movement correction must retain the ten-spawn budget and chance");
+    expect_true(monster.at("properties").at("affiliation").get<std::string>() == "gooby",
+                "Catacombs movement correction must retain the enemy affiliation");
+    expect_true(map_config.at("cave1")
+                        .at("properties")
+                        .at("monster")
+                        .at("properties")
+                        .at("controller")
+                        .at("properties")
+                        .at("tileType")
+                        .get<std::string>() == "ground",
+                "The original Rolf cave must retain its separate ground controller");
+
+    const auto layer = std::ranges::find_if(map_document.at("layers"), [](const json &candidate) {
+        return candidate.at("type").get<std::string>() == "tilelayer";
+    });
+    expect_true(layer != map_document.at("layers").end(), "The authored Catacombs terrain layer must exist");
+    if (layer == map_document.at("layers").end()) {
+        return;
+    }
+    auto game = std::make_shared<CGame>();
+    auto map = open_tile_map(game, 5, 5);
+    for (int y = 0; y < 5; ++y) {
+        for (int x = 0; x < 5; ++x) {
+            const auto tile_id = layer->at("data")[55 + x + (101 + y) * map_document.at("width").get<int>()].get<int>();
+            const auto &tile_type =
+                map_document.at("tilesets")[0].at("tileproperties").at(std::to_string(tile_id - 1)).at("type");
+            expect_true(tile_type.get<std::string>() == "GrassTile",
+                        "The bounded fixture must use the actual grass neighborhood around Catacombs (57,103)");
+            const auto &properties = tile_config.at(tile_type.get<std::string>()).at("properties");
+            map->getTile(x, y, 0)->setTileType(properties.at("tileType").get<std::string>());
+            map->getTile(x, y, 0)->setCanStep(properties.at("canStep").get<bool>());
+        }
+    }
+    CTypes::register_type_metadata<CGroundController, CController>();
+    game->getObjectHandler()->registerType("CGroundController", []() { return std::make_shared<CGroundController>(); });
+    CSerialization::StrictScope strict;
+    auto controller = std::dynamic_pointer_cast<CGroundController>(
+        object_deserialize(game, std::make_shared<json>(controller_config)));
+    expect_true(controller != nullptr, "Catacombs must deserialize their actual native ground controller definition");
+    if (!controller) {
+        return;
+    }
+    expect_true(controller->getTileType() == "grass", "Catacombs enemies must walk on their authored grass terrain");
+    const Coords center(2, 2, 0);
+    auto creature = creature_at(center.x, center.y, center.z);
+    creature->setGame(game);
+    creature->setName("unitCatacombsWalker");
+    creature->setHp(1);
+    creature->setController(controller);
+    map->addObject(creature);
+    const auto adjacent = map->getAdjacentCoords(center, true);
+    expect_true(adjacent.size() == 5, "The passable authored center remains a valid stay-put choice");
+    for (const auto &coords : adjacent) {
+        expect_true(map->canStep(coords) && map->getTile(coords)->getTileType() == "grass",
+                    "Every native Catacombs controller candidate must be passable authored grass");
+    }
+    auto old_controller = std::make_shared<CGroundController>();
+    old_controller->setTileType("ground");
+    const auto previous_rng = vstd::rng();
+    struct RngRestore {
+        decltype(previous_rng) previous;
+        ~RngRestore() { vstd::rng() = previous; }
+    } restore_rng{previous_rng};
+    vstd::rng().seed(12345);
+    bool moved = false;
+    for (int attempt = 0; attempt < 16; ++attempt) {
+        expect_true(resolve_coords(old_controller->control(creature)) == center,
+                    "The old ground setting traps Catacombs enemies at their grass spawn");
+        const auto selected = resolve_coords(controller->control(creature));
+        const bool valid_step = std::ranges::find(adjacent, selected) != adjacent.end() && map->canStep(selected) &&
+                                map->getTile(selected)->getTileType() == "grass";
+        expect_true(valid_step, "The configured controller must select a native passable grass candidate");
+        if (!valid_step) {
+            return;
+        }
+        if (selected != center) {
+            creature->moveTo(selected);
+            expect_true(creature->getCoords() == selected, "The configured Catacombs step must commit actual movement");
+            moved = true;
+            creature->moveTo(center);
+            expect_true(creature->getCoords() == center, "The native fixture must return to its authored spawn");
+        }
+    }
+    expect_true(moved, "The fixed native RNG sequence must move the configured Catacombs enemy away from its spawn");
 }
 
 void test_player_controller_prefers_longer_lower_cost_route() {
@@ -1511,6 +1622,120 @@ void testMonsterRoleExclusionsAndMalformedActions() {
     }
 }
 
+void testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana() {
+    for (const auto &role : {"alpha", "shadow"}) {
+        auto game = fight_fixture_game();
+        auto actor = self_target_fixture_monster(game, false);
+        auto opponent = self_target_fixture_opponent(game);
+        opponent->setHp(opponent->getHpMax());
+        actor->setStringProperty("octobogzCombatRole", role);
+        actor->setStringProperty("octobogzCombatPhase", "predator");
+        actor->setMana(5);
+        auto action = [game, actor](const std::string &id, int cost) {
+            auto probe = std::make_shared<RoleActionProbe>();
+            probe->setGame(game);
+            probe->setName(id);
+            probe->setTypeId(id);
+            probe->setManaCost(cost);
+            actor->addAction(probe);
+            return probe;
+        };
+        auto attack = action("Attack", 0);
+        auto charge = action("octobogzCharge", 0);
+        auto pulse = action("octobogzShadowPulse", 5);
+        charge->setBoolProperty("enemySignature", true);
+        pulse->setBoolProperty("enemySignature", true);
+        auto brace = action("enemyBrace", 0);
+        brace->setBoolProperty("enemySignature", true);
+        brace->setStringProperty("enemyRole", "brute");
+        brace->setStringProperty("enemyRoleTrigger", "wounded");
+        auto creatureClass = std::make_shared<CCreatureClass>();
+        creatureClass->setCombatRole("brute");
+        actor->setCreatureClass(creatureClass);
+        CMonsterFightController controller;
+        expect_true(controller.control(actor, opponent), "healthy hunt actors must execute their selected Attack");
+        if (role == std::string("alpha")) {
+            expect_true(attack->calls == 1 && charge->calls == 0, "the Alpha warning must wait for half health");
+            actor->setHp(std::max(1, actor->getHpMax() / 2));
+            expect_true(controller.control(actor, opponent), "the wounded Alpha should warn on its selected Attack");
+        } else {
+            expect_true(attack->calls == 0 && charge->calls == 1,
+                        "the shadow brood must warn on its first selected Attack");
+        }
+        expect_true(charge->calls == 1 && brace->calls == 0,
+                    "warning must not also select the generic brace or another outer action");
+        expect_true(actor->getStringProperty("octobogzCombatPhase") == "charged", "charged phase must persist");
+        expect_true(controller.control(actor, opponent), "charged hunt actor should release one five-mana pulse");
+        expect_true(pulse->calls == 1 && actor->getMana() == 0 && actor->getBoolProperty("octobogzPulseUsed"),
+                    "pulse must cost exactly five mana and persist its consumed flag");
+        expect_true(controller.control(actor, opponent), "spent hunt actor should resume ordinary attacks");
+        expect_true(pulse->calls == 1 && charge->calls == 1 && brace->calls == 0,
+                    "Alpha and brood signatures must never repeat or fall through to the brute role");
+        actor->setStringProperty("octobogzCombatPhase", "charged");
+        actor->setBoolProperty("octobogzPulseUsed", false);
+        expect_true(controller.control(actor, opponent),
+                    "unaffordable charged pulse must fall back instead of stalling");
+        expect_true(actor->getStringProperty("octobogzCombatPhase") == "spent" && pulse->calls == 1,
+                    "no-mana fallback must consume the phase without granting a free pulse");
+        actor->setStringProperty("octobogzCombatPhase", "charged");
+        auto potion = std::make_shared<CPotion>();
+        potion->setGame(game);
+        potion->setPower(1);
+        potion->addTag(CTag::Mana);
+        actor->addItem(potion);
+        expect_true(controller.control(actor, opponent), "charged hunt actor may recover using a carried mana item");
+        expect_true(actor->getItems().empty() && pulse->calls == 1, "mana recovery must be an exclusive action turn");
+    }
+}
+
+void testHuntPhasesKeepOrdinarySpellAndItemPriority() {
+    for (const auto &role : {"alpha", "shadow"}) {
+        for (const auto &phase : {"predator", "charged"}) {
+            auto game = fight_fixture_game();
+            auto actor = self_target_fixture_monster(game, false);
+            auto opponent = self_target_fixture_opponent(game);
+            opponent->setHp(opponent->getHpMax());
+            actor->setHp(1);
+            actor->setStringProperty("octobogzCombatRole", role);
+            actor->setStringProperty("octobogzCombatPhase", phase);
+            auto addAction = [game, actor](const std::string &id, bool signature) {
+                auto action = std::make_shared<RoleActionProbe>();
+                action->setGame(game);
+                action->setName(id);
+                action->setTypeId(id);
+                action->setBoolProperty("enemySignature", signature);
+                actor->addAction(action);
+                return action;
+            };
+            auto attack = addAction("Attack", false);
+            auto charge = addAction("octobogzCharge", true);
+            auto pulse = addAction("octobogzShadowPulse", true);
+            pulse->setManaCost(5);
+            auto spell = addAction("Barrier", false);
+            spell->setSelfTarget(true);
+            spell->setEffect(named_self_effect(game, "ordinaryHuntBarrier", CTag::Buff));
+            CMonsterFightController controller;
+            expect_true(controller.control(actor, opponent), "a hunt actor must retain useful ordinary spell priority");
+            expect_true(spell->calls == 1 && attack->calls == 0 && charge->calls == 0 && pulse->calls == 0,
+                        "hunt phases must not replace a selected ordinary spell");
+            expect_true(actor->getStringProperty("octobogzCombatPhase") == phase &&
+                            !actor->getBoolProperty("octobogzPulseUsed"),
+                        "casting an ordinary spell must not advance the hunt phase");
+            actor->setMana(0);
+            auto potion = std::make_shared<CPotion>();
+            potion->setGame(game);
+            potion->setPower(1);
+            potion->addTag(CTag::Mana);
+            actor->addItem(potion);
+            expect_true(controller.control(actor, opponent), "a hunt actor must retain ordinary mana-item priority");
+            expect_true(actor->getItems().empty() && charge->calls == 0 && pulse->calls == 0,
+                        "an ordinary item turn must not additionally execute a hunt signature");
+            expect_true(actor->getStringProperty("octobogzCombatPhase") == phase,
+                        "ordinary item recovery must preserve the pending phase");
+        }
+    }
+}
+
 void testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack() {
     auto game = fight_fixture_game();
     auto monster = self_target_fixture_monster(game, false);
@@ -1599,6 +1824,7 @@ int main() {
     test_npc_random_controller_clears_current_tile_path();
     test_npc_random_controller_clears_stale_blocked_path();
     testGroundControllerReturnsReadyStepBeforeTransition();
+    testCatacombsControllerCanLeaveItsAuthoredGrassSpawn();
     test_player_controller_prefers_longer_lower_cost_route();
     test_player_controller_stops_and_clears_path_when_obstacle_appears();
     test_npc_random_controller_prefers_longer_lower_cost_route();
@@ -1629,6 +1855,8 @@ int main() {
     testMonsterRitualMinimumManaGatesEligibilityWithoutSpending();
     testCriticalHealthUsesExactQuarterInsteadOfTruncatedPercentage();
     testMonsterRoleExclusionsAndMalformedActions();
+    testOctobogzPhasesAreExclusiveBoundedAndNeverStallWithoutMana();
+    testHuntPhasesKeepOrdinarySpellAndItemPriority();
     testMonsterSignatureNeverReplacesAnOrdinaryDefensiveCast();
     testOpponentRoleEffectDuplicateRetainsUnusedSignatureAndOrdinaryAttack();
 

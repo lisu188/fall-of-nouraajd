@@ -362,6 +362,8 @@ class EngineMcpServer:
             ) from exc
         self._configure_native_logging()
         self.game_module = importlib.import_module("game")
+        # The game bootstrap sets its default sink; restore the caller's requested destination.
+        self._configure_native_logging()
         logger.info("modules imported successfully")
 
     def _extension_search_dirs(self) -> list[Path]:

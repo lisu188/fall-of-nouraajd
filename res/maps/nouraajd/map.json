@@ -41235,11 +41235,13 @@
   "nextobjectid": 148,
   "orientation": "orthogonal",
   "properties": {
+    "octobogzHuntCleared": false,
     "x": "110",
     "y": "111",
     "z": "0"
   },
   "propertytypes": {
+    "octobogzHuntCleared": "bool",
     "x": "string",
     "y": "string",
     "z": "string"

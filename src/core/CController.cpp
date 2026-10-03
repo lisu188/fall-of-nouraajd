@@ -535,6 +535,9 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
     if (!me || !opponent) {
         return false;
     }
+    const auto huntRole = me->getStringProperty("octobogzCombatRole");
+    const bool huntActor = (huntRole == "alpha" || huntRole == "shadow") && !me->isPlayer() && !me->isNpc() &&
+                           me->isAlive() && opponent->isAlive() && !me->isAffiliatedWith(opponent);
     if (me->getHpRatio() < 75 && heal_preserves_combatant(me, opponent)) {
         auto object = getLeastPowerfulItemWithTag(me, CTag::Heal);
         if (object) {
@@ -550,7 +553,31 @@ bool CMonsterFightController::control(std::shared_ptr<CCreature> me, std::shared
         }
     }
     if (auto action = selectInteraction(me, opponent)) {
-        if (action->getTypeId() == "Attack") {
+        if (action->getTypeId() == "Attack" && huntActor) {
+            auto use = [me, opponent](const std::string &typeId) {
+                for (const auto &signature : me->getInteractions()) {
+                    if (signature->getTypeId() == typeId && signature->getManaCost() <= me->getMana()) {
+                        me->useAction(signature, opponent);
+                        return true;
+                    }
+                }
+                return false;
+            };
+            const auto phase = me->getStringProperty("octobogzCombatPhase");
+            if ((phase.empty() || phase == "predator") && (huntRole == "shadow" || me->getHpRatio() <= 50) &&
+                use("octobogzCharge")) {
+                me->setStringProperty("octobogzCombatPhase", "charged");
+                return true;
+            }
+            if (phase == "charged") {
+                if (!me->getBoolProperty("octobogzPulseUsed") && use("octobogzShadowPulse")) {
+                    me->setStringProperty("octobogzCombatPhase", "spent");
+                    me->setBoolProperty("octobogzPulseUsed", true);
+                    return true;
+                }
+                me->setStringProperty("octobogzCombatPhase", "spent");
+            }
+        } else if (action->getTypeId() == "Attack") {
             if (auto signature = monsterRoleAction(me, opponent)) {
                 me->useAction(signature, opponent);
                 me->setBoolProperty("enemyRoleUsed", true);

@@ -242,5 +242,17 @@
         }
       }
     }
+  },
+  "octobogzShadowPulseEffect": {
+    "class": "OctobogzShadowPulseEffect",
+    "properties": {
+      "duration": 1,
+      "bonus": {
+        "class": "CStats",
+        "properties": {
+          "shadowResist": -1
+        }
+      }
+    }
   }
 }
