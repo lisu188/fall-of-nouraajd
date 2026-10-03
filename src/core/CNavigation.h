@@ -103,7 +103,9 @@ class CNavigationSnapshot {
     ~CNavigationSnapshot();
     bool canStep(Coords coords) const;
     int movementCost(Coords coords) const;
+    CNavigationCell cell(Coords coords) const;
     std::int64_t stepCost(Coords from, Coords to) const;
+    std::int64_t stepCost(Coords from, Coords to, int terrainCost) const;
     Coords normalize(Coords coords) const;
     CNavigationNeighbors neighbors(Coords coords, bool reverse = false) const;
     double heuristic(Coords from, Coords goal) const;
@@ -122,7 +124,6 @@ class CNavigationSnapshot {
   private:
     struct Data;
     std::unique_ptr<Data> data;
-    CNavigationCell cell(Coords coords) const;
     std::int64_t walkingLowerBound(Coords from, Coords to) const;
 };
 

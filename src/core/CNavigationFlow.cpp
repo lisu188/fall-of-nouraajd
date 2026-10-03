@@ -32,12 +32,20 @@ namespace {
 constexpr std::size_t MAX_FIELDS = 32;
 constexpr std::size_t MAX_CELLS = 1'000'000;
 constexpr std::size_t MAX_WORK_PER_START = 25'000;
+constexpr std::size_t MAX_REVALIDATIONS_PER_START = MAX_CELLS;
 constexpr std::uint32_t MAX_ROUTE_LENGTH = 100'000;
 constexpr std::size_t NOT_QUEUED = std::numeric_limits<std::size_t>::max();
 constexpr std::int64_t FLOW_INFINITE_COST = std::numeric_limits<std::int64_t>::max() / 4;
 
 struct CellLimit {};
 struct FlowStopped {};
+
+struct FlowWork {
+    std::size_t allowance;
+    std::size_t consumed = 0;
+    std::size_t revalidationAllowance;
+    std::size_t revalidations = 0;
+};
 
 struct Distance {
     std::int64_t cost = FLOW_INFINITE_COST;
@@ -68,6 +76,8 @@ struct Counters {
     std::atomic<std::uint64_t> cacheHits = 0;
     std::atomic<std::uint64_t> deferredRequests = 0;
     std::atomic<std::uint64_t> resourceLimits = 0;
+    std::atomic<std::uint64_t> dynamicCellSamples = 0;
+    std::atomic<std::uint64_t> dynamicCellRevalidations = 0;
 };
 
 template <typename Callback>
@@ -95,8 +105,11 @@ struct FlowField {
     bool initialized = false;
     std::pmr::unordered_map<Coords, FlowNode, CNavigationCoordsHash> nodes;
     std::pmr::vector<Coords> heap;
+    std::pmr::unordered_map<Coords, CNavigationCell, CNavigationCoordsHash> dynamicCells;
+    Counters &counters;
 
-    explicit FlowField(std::pmr::memory_resource *resource) : nodes(resource), heap(resource) {}
+    FlowField(std::pmr::memory_resource *resource, Counters &counters)
+        : nodes(resource), heap(resource), dynamicCells(resource), counters(counters) {}
 
     bool expired() const { return map.expired() || target.expired(); }
 
@@ -106,8 +119,47 @@ struct FlowField {
         // clear() cannot allocate, unlike constructing an empty MSVC unordered_map.
         nodes.clear();
         heap.clear();
+        dynamicCells.clear();
         snapshot.reset();
         initialized = false;
+    }
+
+    CNavigationCell cell(Coords coords) {
+        if (snapshot->persistentCacheable())
+            return snapshot->cell(coords);
+        auto found = dynamicCells.find(coords);
+        if (found != dynamicCells.end())
+            return found->second;
+        if (dynamicCells.size() >= MAX_CELLS)
+            throw CellLimit{};
+        const auto value = snapshot->cell(coords);
+        dynamicCells.emplace(coords, value);
+        ++counters.dynamicCellSamples;
+        return value;
+    }
+
+    bool canStep(Coords coords) { return cell(coords).walkable; }
+
+    std::int64_t stepCost(Coords from, Coords to) {
+        return snapshot->persistentCacheable() ? snapshot->stepCost(from, to)
+                                               : snapshot->stepCost(from, to, cell(to).cost);
+    }
+
+    bool revalidate(const std::shared_ptr<CNavigationSnapshot> &current, FlowWork &work) {
+        if (dynamicCells.size() > work.revalidationAllowance - work.revalidations)
+            return false;
+        for (const auto &[coords, old] : dynamicCells) {
+            if (work.revalidations % 256 == 0 && !current->isCurrent())
+                return true;
+            ++work.revalidations;
+            ++counters.dynamicCellRevalidations;
+            const auto value = current->cell(coords);
+            if (value.walkable != old.walkable || value.cost != old.cost) {
+                resetSearch();
+                break;
+            }
+        }
+        return true;
     }
 
     FlowNode &nodeAt(Coords coords) {
@@ -185,7 +237,7 @@ struct FlowField {
     }
 
     void updateVertex(Coords coords) {
-        const bool passable = snapshot->canStep(coords);
+        const bool passable = canStep(coords);
         if (!passable && !nodes.contains(coords)) {
             return;
         }
@@ -198,10 +250,10 @@ struct FlowField {
         } else if (passable) {
             forEachNeighbor(*snapshot, coords, false, [&](Coords successor) {
                 auto found = nodes.find(successor);
-                if (found == nodes.end() || !snapshot->canStep(successor)) {
+                if (found == nodes.end() || !canStep(successor)) {
                     return;
                 }
-                const auto candidate = found->second.g.preceding(snapshot->stepCost(coords, successor));
+                const auto candidate = found->second.g.preceding(stepCost(coords, successor));
                 if (candidate < node.rhs) {
                     node.rhs = candidate;
                     node.next = successor;
@@ -254,17 +306,19 @@ struct FlowField {
     }
 
     CNavigationFlowResult solve(const std::shared_ptr<CNavigationSnapshot> &current, Coords start, Coords newGoal,
-                                std::size_t allowance, std::size_t &work, Counters &counters) {
+                                FlowWork &work, Counters &counters) {
         if (!current->isCurrent()) {
             return {CNavigationFlowStatus::Cancelled, start, 0};
         }
         if (!current->persistentCacheable()) {
-            resetSearch();
-        }
-        synchronize(current, newGoal, counters);
-        auto &startNode = nodeAt(start);
-        while (!heap.empty() && (key(heap.front()) < key(start) || startNode.g != startNode.rhs)) {
-            if (work >= allowance) {
+            if (snapshot && snapshot->persistentCacheable()) {
+                resetSearch();
+            } else if (snapshot && snapshot->epoch() != current->epoch()) {
+                const auto changes = current->changesSince(snapshot->epoch());
+                if (!changes || changes->size() > MAX_WORK_PER_START)
+                    resetSearch();
+            }
+            if (!revalidate(current, work)) {
                 if (!current->isCurrent()) {
                     resetSearch();
                     return {CNavigationFlowStatus::Cancelled, start, 0};
@@ -272,11 +326,36 @@ struct FlowField {
                 ++counters.deferredRequests;
                 return {CNavigationFlowStatus::Deferred, start, 0};
             }
-            if ((work % 256 == 0) && !current->isCurrent()) {
+            if (!current->isCurrent()) {
                 resetSearch();
                 return {CNavigationFlowStatus::Cancelled, start, 0};
             }
-            ++work;
+        } else if (!dynamicCells.empty()) {
+            resetSearch();
+        }
+        synchronize(current, newGoal, counters);
+        if (!current->persistentCacheable() && (!canStep(start) || !canStep(newGoal))) {
+            if (!current->isCurrent()) {
+                resetSearch();
+                return {CNavigationFlowStatus::Cancelled, start, 0};
+            }
+            return {CNavigationFlowStatus::Unreachable, start, 0};
+        }
+        auto &startNode = nodeAt(start);
+        while (!heap.empty() && (key(heap.front()) < key(start) || startNode.g != startNode.rhs)) {
+            if (work.consumed >= work.allowance) {
+                if (!current->isCurrent()) {
+                    resetSearch();
+                    return {CNavigationFlowStatus::Cancelled, start, 0};
+                }
+                ++counters.deferredRequests;
+                return {CNavigationFlowStatus::Deferred, start, 0};
+            }
+            if ((work.consumed % 256 == 0) && !current->isCurrent()) {
+                resetSearch();
+                return {CNavigationFlowStatus::Cancelled, start, 0};
+            }
+            ++work.consumed;
             ++counters.expandedNodes;
             const auto coords = heap.front();
             removeQueued(coords);
@@ -326,6 +405,7 @@ struct CNavigationFlow::Impl {
     struct WorkCounter {
         std::weak_ptr<CMapObject> target;
         std::size_t charged = 0;
+        std::size_t revalidations = 0;
         explicit WorkCounter(const std::shared_ptr<CMapObject> &target) : target(target) {}
     };
     struct MapWork {
@@ -338,20 +418,22 @@ struct CNavigationFlow::Impl {
     struct WorkTicket {
         Impl *owner;
         std::shared_ptr<WorkCounter> counter;
-        std::size_t allowance;
-        std::size_t consumed = 0;
-        WorkTicket(Impl *owner, std::shared_ptr<WorkCounter> counter, std::size_t allowance)
-            : owner(owner), counter(std::move(counter)), allowance(allowance) {}
+        FlowWork work;
+        WorkTicket(Impl *owner, std::shared_ptr<WorkCounter> counter, std::size_t allowance,
+                   std::size_t revalidationAllowance)
+            : owner(owner), counter(std::move(counter)), work{allowance, 0, revalidationAllowance} {}
         WorkTicket(const WorkTicket &) = delete;
         WorkTicket &operator=(const WorkTicket &) = delete;
         ~WorkTicket() {
             std::lock_guard lock(owner->ledgerMutex);
-            counter->charged -= allowance - consumed;
+            counter->charged -= work.allowance - work.consumed;
+            counter->revalidations -= work.revalidationAllowance - work.revalidations;
         }
     };
 
-    explicit Impl(std::shared_ptr<CNavigationBudget> resource)
-        : budget(std::move(resource)), workLedger(std::in_place, budget.get()) {}
+    Impl(std::shared_ptr<CNavigationBudget> resource, std::size_t maxCellRevalidations)
+        : budget(std::move(resource)), workLedger(std::in_place, budget.get()),
+          maxCellRevalidations(std::min(MAX_REVALIDATIONS_PER_START, maxCellRevalidations)) {}
 
     std::shared_ptr<CNavigationBudget> budget;
     mutable std::mutex mutex;
@@ -362,6 +444,7 @@ struct CNavigationFlow::Impl {
     std::size_t ledgerEntries = 0;
     std::uint64_t clock = 0;
     Counters counters;
+    const std::size_t maxCellRevalidations;
 
     WorkTicket grantWork(const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &target, Coords start,
                          std::int64_t turn) {
@@ -404,10 +487,12 @@ struct CNavigationFlow::Impl {
         }
         auto counter = entry->second;
         const auto allowance = MAX_WORK_PER_START - counter->charged;
+        const auto revalidationAllowance = maxCellRevalidations - counter->revalidations;
         // Reserve before releasing the short ledger lock. Even cache clearing
         // during an active request cannot grant another field the same work.
         counter->charged += allowance;
-        return WorkTicket(this, std::move(counter), allowance);
+        counter->revalidations += revalidationAllowance;
+        return WorkTicket(this, std::move(counter), allowance, revalidationAllowance);
     }
 
     std::shared_ptr<FlowField> findField(const std::shared_ptr<CMap> &map, const std::shared_ptr<CMapObject> &target) {
@@ -439,7 +524,7 @@ struct CNavigationFlow::Impl {
             return {};
         }
         slot->reset();
-        auto field = std::allocate_shared<FlowField>(CNavigationAllocator<FlowField>(budget), budget.get());
+        auto field = std::allocate_shared<FlowField>(CNavigationAllocator<FlowField>(budget), budget.get(), counters);
         field->map = map;
         field->target = target;
         field->lastUse = ++clock;
@@ -473,8 +558,10 @@ struct CNavigationFlow::Impl {
     }
 };
 
-CNavigationFlow::CNavigationFlow(std::shared_ptr<CNavigationBudget> budget) : allocationBudget(std::move(budget)) {
-    impl = std::allocate_shared<Impl>(CNavigationAllocator<Impl>(allocationBudget), allocationBudget);
+CNavigationFlow::CNavigationFlow(std::shared_ptr<CNavigationBudget> budget, std::size_t maxCellRevalidations)
+    : allocationBudget(std::move(budget)) {
+    impl = std::allocate_shared<Impl>(CNavigationAllocator<Impl>(allocationBudget), allocationBudget,
+                                      maxCellRevalidations);
 }
 
 CNavigationFlow::~CNavigationFlow() = default;
@@ -494,7 +581,7 @@ CNavigationFlowResult CNavigationFlow::nextStep(const std::shared_ptr<CNavigatio
         return {CNavigationFlowStatus::Complete, start, 0};
     }
     try {
-        if (!snapshot->canStep(start) || !snapshot->canStep(goal)) {
+        if (snapshot->persistentCacheable() && (!snapshot->canStep(start) || !snapshot->canStep(goal))) {
             return {snapshot->isCurrent() && !impl->stopped.load(std::memory_order_acquire)
                         ? CNavigationFlowStatus::Unreachable
                         : CNavigationFlowStatus::Cancelled,
@@ -531,7 +618,7 @@ CNavigationFlowResult CNavigationFlow::nextStep(const std::shared_ptr<CNavigatio
     std::lock_guard lock(field->mutex);
     try {
         auto work = impl->grantWork(map, target, start, turn);
-        auto result = field->solve(snapshot, start, goal, work.allowance, work.consumed, impl->counters);
+        auto result = field->solve(snapshot, start, goal, work.work, impl->counters);
         if (impl->stopped.load(std::memory_order_acquire))
             return {CNavigationFlowStatus::Cancelled, start, 0};
         return result;
@@ -580,7 +667,8 @@ std::size_t CNavigationFlow::cacheSize() const {
 
 CNavigationFlowStatistics CNavigationFlow::statistics() const {
     const auto &counters = impl->counters;
-    return {counters.fieldsCreated.load(), counters.fieldRebuilds.load(), counters.incrementalRepairs.load(),
-            counters.expandedNodes.load(), counters.cacheHits.load(),     counters.deferredRequests.load(),
-            counters.resourceLimits.load()};
+    return {
+        counters.fieldsCreated.load(),  counters.fieldRebuilds.load(),      counters.incrementalRepairs.load(),
+        counters.expandedNodes.load(),  counters.cacheHits.load(),          counters.deferredRequests.load(),
+        counters.resourceLimits.load(), counters.dynamicCellSamples.load(), counters.dynamicCellRevalidations.load()};
 }
