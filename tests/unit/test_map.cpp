@@ -34,6 +34,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "object/CCreatureClass.h"
 #include "object/CCreatureRace.h"
 #include "object/CGameObject.h"
+#include "object/CItem.h"
 #include "object/CMapObject.h"
 #include "object/CPlayer.h"
 #include "object/CTile.h"
@@ -53,6 +54,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -488,6 +490,7 @@ class FixedStepController : public CController {
         : target(target), removeBeforeReturn(remove_before_return) {}
 
     std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        controlCount++;
         return vstd::later([this, creature]() {
             if (removeBeforeReturn && creature && creature->getMap()) {
                 creature->getMap()->removeObject(creature);
@@ -504,6 +507,7 @@ class FixedStepController : public CController {
 
     Coords target;
     bool removeBeforeReturn = false;
+    int controlCount = 0;
     int interruptCount = 0;
     int committedCount = 0;
     int turnEndedCount = 0;
@@ -599,6 +603,44 @@ class PostCombatSelfDefeatFightController : public CFightController {
         }
         return true;
     }
+};
+
+class PlannedMoveLethalFightController : public CFightController {
+  public:
+    bool control(std::shared_ptr<CCreature>, std::shared_ptr<CCreature> opponent) override {
+        ++lethalCalls;
+        opponent->setHp(0);
+        return true;
+    }
+
+    int lethalCalls = 0;
+};
+
+class RecordedPlayerMoveController : public CPlayerController {
+  public:
+    explicit RecordedPlayerMoveController(std::vector<std::string> &order) : order(order) {}
+
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        order.push_back(creature->getName());
+        return CPlayerController::control(creature);
+    }
+
+  private:
+    std::vector<std::string> &order;
+};
+
+class RecordedEnemyMoveController : public FixedStepController {
+  public:
+    RecordedEnemyMoveController(Coords target, std::vector<std::string> &order)
+        : FixedStepController(target), order(order) {}
+
+    std::shared_ptr<vstd::future<Coords, void>> control(std::shared_ptr<CCreature> creature) override {
+        order.push_back(creature->getName());
+        return FixedStepController::control(creature);
+    }
+
+  private:
+    std::vector<std::string> &order;
 };
 
 class PostCombatCancellingFightController : public CFightController {
@@ -1325,6 +1367,120 @@ void test_map_move_interrupts_invalid_planned_steps() {
                 "move should interrupt creatures whose planned step becomes blocked");
     expect_true(blocked_controller->committedCount == 0, "blocked planned steps should not be committed");
     expect_true(blocked_creature->getCoords() == Coords(1, 1, 0), "blocked creatures should stay in place");
+}
+
+void testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn() {
+    TraceReset trace_reset;
+    CPlaytestTrace::configure(true);
+    std::vector<std::string> planned_order;
+    planned_order.reserve(2);
+    auto game = std::make_shared<CGame>();
+    game->getObjectHandler()->registerType("CPlayerController", [&planned_order] {
+        return std::make_shared<RecordedPlayerMoveController>(planned_order);
+    });
+    game->getObjectHandler()->registerType("CPlayerFightController",
+                                           [] { return std::make_shared<CPlayerFightController>(); });
+    auto map = std::make_shared<CMap>();
+    game->setMap(map);
+    map->setGame(game);
+    map->setXBounds({{0, 2}});
+    map->setYBounds({{0, 0}});
+    map->setEntryX(0);
+    map->setEntryY(0);
+    map->setEntryZ(0);
+    for (int x = 0; x < 3; ++x) {
+        auto tile = std::make_shared<CTile>();
+        tile->setGame(game);
+        tile->setCanStep(true);
+        map->addTile(tile, x, 0, 0);
+    }
+
+    auto player = std::make_shared<CPlayer>();
+    player->setGame(game);
+    player->setBaseStats(creature_stats());
+    player->setLevel(1);
+    player->setHp(player->getHpMax());
+    map->setPlayer(player);
+    player->setFightController(std::make_shared<CFightController>());
+    player->relocateWithoutMoveHooks(Coords(1, 0, 0));
+    auto player_controller = std::dynamic_pointer_cast<CPlayerController>(player->getController());
+    expect_true(player_controller != nullptr, "stale-plan fixture must use the real player movement controller");
+
+    auto item = std::make_shared<CItem>();
+    item->setGame(game);
+    item->setName("plannedMoveOwnedItem");
+    item->setTypeId("plannedMoveOwnedItem");
+    player->addItem(item);
+    // Match CMap's unordered registry insertion, then verify the actual planning sequence below.
+    // Arrange enemy-first commits in the current standard library without assuming name order.
+    std::unordered_map<std::string, std::shared_ptr<CMapObject>> ordering_fixture;
+    ordering_fixture.emplace("player", player);
+    std::string enemy_name;
+    for (int candidate = 0; candidate < 128; ++candidate) {
+        const auto name = "plannedMoveEnemy" + std::to_string(candidate);
+        ordering_fixture.emplace(name, nullptr);
+        if (ordering_fixture.begin()->first == name) {
+            enemy_name = name;
+            break;
+        }
+        ordering_fixture.erase(name);
+    }
+    expect_true(!enemy_name.empty(), "stale-plan fixture must arrange an enemy before the canonical player");
+    if (enemy_name.empty()) {
+        return;
+    }
+    auto enemy_controller = std::make_shared<RecordedEnemyMoveController>(Coords(1, 0, 0), planned_order);
+    auto enemy = test_creature(game, enemy_name, Coords(2, 0, 0), enemy_controller);
+    enemy->setLevel(1);
+    enemy->getBaseStats()->setAgility(100);
+    auto lethal_controller = std::make_shared<PlannedMoveLethalFightController>();
+    enemy->setFightController(lethal_controller);
+    map->addObject(enemy);
+
+    const auto generation = game->getContext()->captureTransitionGeneration();
+    const auto turn_before = map->getTurn();
+    const auto enemy_exp_before = enemy->getExp();
+    drain_trace_json();
+    map->move();
+    const auto records = drain_trace_json();
+
+    expect_true(planned_order == std::vector<std::string>{enemy_name, "player"},
+                "the actual map turn must plan the enemy before the real player's idle movement");
+    expect_true(game->getContext()->isTransitionGenerationCurrent(generation),
+                "synchronous respawn must reproduce stale origin without a map-generation change");
+    expect_true(game->getMap() == map && map->getPlayer() == player && map->getObjectByName("player") == player,
+                "synchronous respawn must preserve the active map and registered player identity");
+    expect_true(player->getCoords() == map->getEntry() && player->getHp() == 1,
+                "a pre-respawn movement plan must not move the recovered player back into the enemy cell");
+    expect_true(lethal_controller->lethalCalls == 1, "one enemy move must cause exactly one lethal combat action");
+    expect_true(enemy->getExp() == enemy_exp_before + 250 && enemy->getLevel() == 1,
+                "the single level-one defeat must award exactly 250 experience once");
+    expect_true(!player->hasInInventory(item) && enemy->hasInInventory(item) && enemy->getInInventory().size() == 1,
+                "the player's one owned item must transfer to the enemy exactly once");
+    expect_true(!player->getUiDefeatReceipt().empty(), "real combat defeat must produce a native receipt");
+    int lost_item_count = -1;
+    if (!player->getUiDefeatReceipt().empty()) {
+        const auto receipt = json::parse(player->getUiDefeatReceipt());
+        lost_item_count = receipt["lostItemCount"].get<int>();
+        expect_true(receipt["lostItemCount"].get<int>() == 1 && receipt["lostItems"].size() == 1 &&
+                        receipt["lostItems"][0]["id"].get<std::string>() == item->getTypeId() &&
+                        receipt["lostItems"][0]["count"].get<int>() == 1,
+                    "the first defeat receipt must retain the actual transferred item instead of a second empty loss");
+    }
+    expect_true(
+        count_trace_event(records, "combat_started") == 1 && count_trace_event(records, "combat_finished") == 1 &&
+            count_trace_event(records, "reward_granted") == 1 && count_trace_event(records, "experience_changed") == 1,
+        "one map turn must resolve one real encounter and one reward/experience transaction");
+    expect_true(map->getTurn() == turn_before + 1 && !map->isMoving(),
+                "rejecting the stale player plan must still finish exactly one map turn");
+    expect_true(enemy_controller->controlCount == 1 && enemy_controller->committedCount == 1 &&
+                    enemy_controller->turnEndedCount == 1,
+                "the valid enemy movement plan must be requested, committed and finished once");
+    std::cout << "planned player respawn guard: lethalCalls=" << lethal_controller->lethalCalls
+              << " xpDelta=" << enemy->getExp() - enemy_exp_before << " lostItemCount=" << lost_item_count
+              << " encounters=" << count_trace_event(records, "combat_started")
+              << " rewards=" << count_trace_event(records, "reward_granted")
+              << " turnDelta=" << map->getTurn() - turn_before << " lethalBudget=1 xpBudget=250 encounterBudget=1\n";
 }
 
 void test_creature_tracks_pending_move_origin_only_during_after_move() {
@@ -2593,6 +2749,8 @@ int main() {
                             test_map_defensive_branches_and_strict_validation);
     nativeTestProfile().run("test_map_move_interrupts_invalid_planned_steps",
                             test_map_move_interrupts_invalid_planned_steps);
+    nativeTestProfile().run("testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn",
+                            testMapMoveRejectsPlayerPlanCapturedBeforeSynchronousRespawn);
     nativeTestProfile().run("test_creature_tracks_pending_move_origin_only_during_after_move",
                             test_creature_tracks_pending_move_origin_only_during_after_move);
     nativeTestProfile().run("test_map_object_relocate_without_move_hooks_updates_spatial_state_once",

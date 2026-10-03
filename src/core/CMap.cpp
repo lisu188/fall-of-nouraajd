@@ -821,11 +821,17 @@ void CMap::move() {
             return creature && vstd::castable<CMoveable>(object) && is_active_creature(creature);
         };
 
-        std::vector<std::shared_ptr<CCreature>> plannedCreatures;
+        struct PlannedCreature {
+            std::shared_ptr<CCreature> creature;
+            Coords origin;
+        };
+        std::vector<PlannedCreature> plannedCreatures;
         std::vector<std::shared_ptr<vstd::future<Coords, void>>> pending;
         for (auto object : map->mapObjects | std::views::values | std::views::filter(pred)) {
             auto creature = vstd::cast<CCreature>(object);
-            plannedCreatures.push_back(creature);
+            // A result is valid only from the cell observed before controller work, including
+            // when an earlier actor's combat synchronously respawns this same live instance.
+            plannedCreatures.push_back({creature, map->normalizeCoords(creature->getCoords())});
             pending.push_back(creature->getController()->control(creature));
         }
 
@@ -842,17 +848,18 @@ void CMap::move() {
             }
         }
         auto plannedCoordinates = plannedFuture->get();
-        std::list<std::pair<std::shared_ptr<CCreature>, Coords>> coordinates;
+        std::list<std::pair<PlannedCreature, Coords>> coordinates;
         if (canApplyDeferredMoveWork()) {
             for (std::size_t index = 0; index < plannedCoordinates.size(); ++index) {
                 coordinates.emplace_back(plannedCreatures[index], plannedCoordinates[index]);
             }
         }
 
-        for (auto [creature, coords] : coordinates) {
+        for (auto [planned, coords] : coordinates) {
             if (!canApplyDeferredMoveWork()) {
                 break;
             }
+            auto creature = planned.creature;
             auto controller_ptr = creature->getController();
             if (!is_active_creature(creature)) {
                 controller_ptr->interrupt(creature);
@@ -860,6 +867,10 @@ void CMap::move() {
             }
 
             auto current = map->normalizeCoords(creature->getCoords());
+            if (current != planned.origin) {
+                controller_ptr->interrupt(creature);
+                continue;
+            }
             auto target = map->normalizeCoords(coords);
             if (target == current) {
                 controller_ptr->interrupt(creature);
