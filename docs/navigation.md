@@ -41,6 +41,10 @@ allocated 32-by-32 chunks; a large map therefore does not require an eager dense
 change journal supports reuse of unaffected chunks and repair of affected flow cells. When precise changes are no longer
 available, consumers rebuild instead of guessing. Dynamic fallback factories use conservative nonpersistent caching.
 
+Bounds and wrapping changes rebuild the object coordinate index from registered actors without moving them or invoking
+movement hooks. Ordinary actor relocation still updates only its old and new indexed cells. Failed index allocation
+preserves the previous normalization settings, index and routing epoch.
+
 The map heuristic uses a lower bound on walking distance, including wrapping and registered connector endpoints. A
 relaxed connector graph uses each minimum connector fee as a terrain-independent lower bound, accounting for
 long-distance and cross-level transitions. Unknown topology or too many
@@ -69,6 +73,22 @@ Target controllers share bounded reverse fields keyed by map and target identity
 repair the field rather than discard every computed distance. Field work is bounded per start and turn, so repeated
 calls in the same turn cannot bypass the limit. `Deferred` leaves the actor in place and resumes later; a partial field
 must never become an arbitrary movement decision. Changes without safe incremental provenance rebuild the field.
+
+Dynamic fallback factories retain a budgeted scalar memo with an unfinished or completed field. Before reusing it,
+navigation rereads every sampled cell, including blocked cells: factory closures can change costs or passability without
+advancing the map epoch. A mismatch discards the field and samples the current terrain again. A fully revalidated field
+can repair a moving goal or a precise local journal change, including materializing an unchanged fallback tile after
+another actor moves. Unknown topology/configuration changes rebuild. Completing a nearer chaser's query does not discard
+the shared farther chaser's frontier.
+
+The memo has at most one million cells and shares the existing 128 MiB allocation budget. Scalar revalidation has a
+separate hard allowance of one million cell reads per target/start/turn; the existing 25,000 expansion allowance is
+unchanged. Both ledgers survive resets and eviction. An insufficient validation allowance returns `Deferred` before
+starting a partial scan. Full validation happens in one query because spreading it across turns could miss unversioned
+changes to earlier cells. This trades bounded factory callbacks for exact current costs; arbitrary factories may be
+expensive, so deterministic guards report actual callback, sample, revalidation and expansion counts. The optional
+flow-constructor validation limit can only reduce this allowance for focused tests. No dynamic memo is trusted merely
+because the epoch stayed unchanged, and shutdown releases its storage along with the field and work ledger.
 
 A player route stores a contiguous vector with a cursor. A coordinate index points to the earliest remaining occurrence
 and links repeated occurrences, preserving overlay direction without scanning the entire path for every visible cell.

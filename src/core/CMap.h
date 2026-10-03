@@ -304,6 +304,8 @@ class CMap : public CGameObject {
     bool navigationTileExtentOverflow = false;
     void includeNavigationTile(Coords coords);
 
+    void updateCoordinateNormalization(IntMap &setting, IntMap values);
+
     void routingChanged(std::optional<Coords> coords = std::nullopt);
     CNavigationCell lookupNavigationCell(Coords coords, std::optional<CNavigationCell> fallback);
 

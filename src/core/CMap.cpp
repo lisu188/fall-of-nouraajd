@@ -84,27 +84,11 @@ std::map<int, std::pair<int, int>> CMap::getBounds() {
 
 std::map<int, int> CMap::getXBounds() { return xBounds; }
 
-void CMap::setXBounds(std::map<int, int> bounds) {
-    std::lock_guard lock(navigationMutex);
-    if (xBounds == bounds)
-        return;
-    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
-        navigationDomainCanonical = false;
-    xBounds = std::move(bounds);
-    routingChanged();
-}
+void CMap::setXBounds(std::map<int, int> bounds) { updateCoordinateNormalization(xBounds, std::move(bounds)); }
 
 std::map<int, int> CMap::getYBounds() { return yBounds; }
 
-void CMap::setYBounds(std::map<int, int> bounds) {
-    std::lock_guard lock(navigationMutex);
-    if (yBounds == bounds)
-        return;
-    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
-        navigationDomainCanonical = false;
-    yBounds = std::move(bounds);
-    routingChanged();
-}
+void CMap::setYBounds(std::map<int, int> bounds) { updateCoordinateNormalization(yBounds, std::move(bounds)); }
 
 std::map<int, std::string> CMap::getDefaultTiles() { return defaultTiles; }
 
@@ -128,25 +112,31 @@ void CMap::setOutOfBoundsTiles(std::map<int, std::string> tiles) {
 
 std::map<int, int> CMap::getWrapX() { return wrapX; }
 
-void CMap::setWrapX(std::map<int, int> values) {
-    std::lock_guard lock(navigationMutex);
-    if (wrapX == values)
-        return;
-    if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
-        navigationDomainCanonical = false;
-    wrapX = std::move(values);
-    routingChanged();
-}
+void CMap::setWrapX(std::map<int, int> values) { updateCoordinateNormalization(wrapX, std::move(values)); }
 
 std::map<int, int> CMap::getWrapY() { return wrapY; }
 
-void CMap::setWrapY(std::map<int, int> values) {
+void CMap::setWrapY(std::map<int, int> values) { updateCoordinateNormalization(wrapY, std::move(values)); }
+
+void CMap::updateCoordinateNormalization(IntMap &setting, IntMap values) {
     std::lock_guard lock(navigationMutex);
-    if (wrapY == values)
+    if (setting == values)
         return;
+    setting.swap(values);
+    try {
+        std::unordered_multimap<Coords, std::string> normalizedObjects;
+        if (!mapObjects.empty())
+            normalizedObjects.reserve(mapObjects.size());
+        for (const auto &[name, object] : mapObjects)
+            if (object)
+                normalizedObjects.emplace(normalizeCoords(object->getCoords()), name);
+        mapObjectsCache.swap(normalizedObjects);
+    } catch (...) {
+        setting.swap(values);
+        throw;
+    }
     if (navigationService && (!tiles.empty() || !mapObjects.empty() || !navigationEdges.empty()))
         navigationDomainCanonical = false;
-    wrapY = std::move(values);
     routingChanged();
 }
 
